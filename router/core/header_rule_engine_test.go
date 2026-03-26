@@ -114,7 +114,7 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 func TestAddCacheControlPolicyToRules(t *testing.T) {
 	t.Parallel()
 
-	t.Run("nil rules and disabled cache returns nil", func(t *testing.T) {
+	t.Run("disabled cache returns rules unchanged", func(t *testing.T) {
 		t.Parallel()
 		result := AddCacheControlPolicyToRules(nil, config.CacheControlPolicy{
 			Enabled: false,
@@ -122,20 +122,46 @@ func TestAddCacheControlPolicyToRules(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("nil rules and enabled cache creates rules", func(t *testing.T) {
+	t.Run("enabled cache populates AfterSubgraphResponse", func(t *testing.T) {
 		t.Parallel()
 		result := AddCacheControlPolicyToRules(nil, config.CacheControlPolicy{
 			Enabled: true,
 			Value:   "max-age=300",
 		})
 		require.NotNil(t, result)
-		require.NotNil(t, result.All)
-		require.Len(t, result.All.Response, 1)
-		assert.Equal(t, config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, result.All.Response[0].Algorithm)
-		assert.Equal(t, "max-age=300", result.All.Response[0].Default)
+		require.Len(t, result.AfterSubgraphResponse, 1)
+		assert.Equal(t, config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, result.AfterSubgraphResponse[0].Algorithm)
+		assert.Equal(t, "max-age=300", result.AfterSubgraphResponse[0].Default)
 	})
 
-	t.Run("existing rules with enabled cache appends", func(t *testing.T) {
+	t.Run("subgraph-specific cache adds to AfterSubgraphResponse", func(t *testing.T) {
+		t.Parallel()
+		result := AddCacheControlPolicyToRules(nil, config.CacheControlPolicy{
+			Subgraphs: []config.SubgraphCacheControlRule{
+				{Name: "sg1", Value: "max-age=60"},
+			},
+		})
+		require.NotNil(t, result)
+		require.Len(t, result.AfterSubgraphResponse, 1)
+		assert.Equal(t, "max-age=60", result.AfterSubgraphResponse[0].Default)
+	})
+
+	t.Run("global and subgraph rules coexist", func(t *testing.T) {
+		t.Parallel()
+		result := AddCacheControlPolicyToRules(nil, config.CacheControlPolicy{
+			Enabled: true,
+			Value:   "max-age=300",
+			Subgraphs: []config.SubgraphCacheControlRule{
+				{Name: "sg1", Value: "max-age=60"},
+			},
+		})
+		require.NotNil(t, result)
+		require.Len(t, result.AfterSubgraphResponse, 2)
+		assert.Equal(t, "max-age=300", result.AfterSubgraphResponse[0].Default)
+		assert.Equal(t, "max-age=60", result.AfterSubgraphResponse[1].Default)
+	})
+
+	t.Run("preserves existing user rules", func(t *testing.T) {
 		t.Parallel()
 		existing := &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
@@ -149,45 +175,9 @@ func TestAddCacheControlPolicyToRules(t *testing.T) {
 			Value:   "max-age=300",
 		})
 		require.NotNil(t, result)
-		require.Len(t, result.All.Response, 2)
+		require.Len(t, result.All.Response, 1)
 		assert.Equal(t, "X-Existing", result.All.Response[0].Named)
-		assert.Equal(t, config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, result.All.Response[1].Algorithm)
-	})
-
-	t.Run("subgraph-specific cache creates per-subgraph response rule", func(t *testing.T) {
-		t.Parallel()
-		result := AddCacheControlPolicyToRules(nil, config.CacheControlPolicy{
-			Subgraphs: []config.SubgraphCacheControlRule{
-				{Name: "sg1", Value: "max-age=60"},
-			},
-		})
-		require.NotNil(t, result)
-		require.Contains(t, result.Subgraphs, "sg1")
-		require.Len(t, result.Subgraphs["sg1"].Response, 1)
-		assert.Equal(t, "max-age=60", result.Subgraphs["sg1"].Response[0].Default)
-	})
-
-	t.Run("existing subgraph gets cache rule appended", func(t *testing.T) {
-		t.Parallel()
-		existing := &config.HeaderRules{
-			All: &config.GlobalHeaderRule{},
-			Subgraphs: map[string]*config.GlobalHeaderRule{
-				"sg1": {
-					Response: []*config.ResponseHeaderRule{
-						{Operation: config.HeaderRuleOperationPropagate, Named: "X-Existing"},
-					},
-				},
-			},
-		}
-		result := AddCacheControlPolicyToRules(existing, config.CacheControlPolicy{
-			Subgraphs: []config.SubgraphCacheControlRule{
-				{Name: "sg1", Value: "max-age=60"},
-			},
-		})
-		require.NotNil(t, result)
-		require.Len(t, result.Subgraphs["sg1"].Response, 2)
-		assert.Equal(t, "X-Existing", result.Subgraphs["sg1"].Response[0].Named)
-		assert.Equal(t, config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, result.Subgraphs["sg1"].Response[1].Algorithm)
+		require.Len(t, result.AfterSubgraphResponse, 1)
 	})
 }
 
@@ -258,7 +248,7 @@ func TestApplyResponseRuleKeyValue(t *testing.T) {
 	})
 }
 
-func TestApplyResponseRuleSetNotForwarded(t *testing.T) {
+func TestApplyResponseRuleSetWritesToSubgraphResponse(t *testing.T) {
 	t.Parallel()
 
 	newPropagation := func() *responseHeaderPropagation {
@@ -270,32 +260,35 @@ func TestApplyResponseRuleSetNotForwarded(t *testing.T) {
 
 	hp := &HeaderPropagation{}
 
-	t.Run("set does not write to client header", func(t *testing.T) {
+	t.Run("set writes to subgraph response header, not propagation header", func(t *testing.T) {
 		t.Parallel()
 		prop := newPropagation()
+		res := &http.Response{Header: make(http.Header)}
 		rule := &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationSet,
 			Name:      "X-Custom",
 			Value:     "test-value",
 		}
-		hp.applyResponseRule(prop, &http.Response{}, rule)
-		require.Equal(t, "", prop.header.Get("X-Custom"))
+		hp.applyResponseRule(prop, res, rule)
+		require.Equal(t, "", prop.header.Get("X-Custom"), "set should not write to propagation header")
+		require.Equal(t, "test-value", res.Header.Get("X-Custom"), "set should write to subgraph response header")
 	})
 
-	t.Run("set Cache-Control writes to client header and sets flag", func(t *testing.T) {
+	t.Run("set Cache-Control writes to subgraph response header", func(t *testing.T) {
 		t.Parallel()
 		prop := newPropagation()
+		res := &http.Response{Header: make(http.Header)}
 		rule := &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationSet,
 			Name:      "Cache-Control",
 			Value:     "max-age=300",
 		}
-		hp.applyResponseRule(prop, &http.Response{}, rule)
-		require.Equal(t, "max-age=300", prop.header.Get("Cache-Control"))
-		require.True(t, prop.setCacheControl)
+		hp.applyResponseRule(prop, res, rule)
+		require.Equal(t, "", prop.header.Get("Cache-Control"), "set should not write to propagation header")
+		require.Equal(t, "max-age=300", res.Header.Get("Cache-Control"), "set should write to subgraph response header")
 	})
 
-	t.Run("propagate still writes to client header", func(t *testing.T) {
+	t.Run("propagate still writes to propagation header", func(t *testing.T) {
 		t.Parallel()
 		prop := newPropagation()
 		rule := &config.ResponseHeaderRule{

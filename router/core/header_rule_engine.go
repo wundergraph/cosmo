@@ -65,7 +65,6 @@ type responseHeaderPropagation struct {
 	header               http.Header
 	m                    *sync.Mutex
 	previousCacheControl *cachedirective.Object
-	setCacheControl      bool
 }
 
 func WithResponseHeaderPropagation(ctx *resolve.Context) *resolve.Context {
@@ -181,7 +180,7 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 
 	rhrs, rhrrs, rrs := hf.getAllRules()
 	hf.hasRequestRules = len(rhrs) > 0
-	hf.hasResponseRules = len(rhrrs) > 0
+	hf.hasResponseRules = len(rhrrs) > 0 || len(hf.rules.AfterSubgraphResponse) > 0
 
 	// Pre-compute request rule presence
 	hf.hasAllRequestRules = len(hf.rules.All.Request) > 0
@@ -206,6 +205,10 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 	return &hf, nil
 }
 
+// AddCacheControlPolicyToRules adds cache control rules to
+// rules.AfterSubgraphResponse so they run after all user-defined response
+// rules. This ensures set rules have already injected values into res.Header
+// before the cache control algorithm reads them.
 func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config.CacheControlPolicy) *config.HeaderRules {
 	if rules == nil {
 		rules = &config.HeaderRules{}
@@ -216,7 +219,7 @@ func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config
 
 	initHeaderRules(rules)
 	if cacheControl.Enabled {
-		rules.All.Response = append(rules.All.Response, &config.ResponseHeaderRule{
+		rules.AfterSubgraphResponse = append(rules.AfterSubgraphResponse, &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationPropagate,
 			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
 			Default:   cacheControl.Value,
@@ -251,6 +254,8 @@ func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*conf
 	for _, subgraph := range hf.rules.Subgraphs {
 		rhrrs = append(rhrrs, subgraph.Response...)
 	}
+
+	rhrrs = append(rhrrs, hf.rules.AfterSubgraphResponse...)
 
 	return rhrs, rhrrs, hf.rules.Router.Response
 }
@@ -445,6 +450,13 @@ func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, header
 			}
 		}
 	}
+
+	// AfterSubgraphResponse rules run last so that set rules (both global and
+	// subgraph-specific) have already injected values into res.Header before
+	// these rules (e.g. cache control algorithm) read them.
+	for _, rule := range h.rules.AfterSubgraphResponse {
+		h.applyResponseRule(propagation, resp, rule)
+	}
 }
 
 func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
@@ -456,14 +468,10 @@ func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestCon
 
 func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropagation, res *http.Response, rule *config.ResponseHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
-		propagation.m.Lock()
-		if rule.Name == cacheControlKey {
-			// Cache-Control set rules are forwarded to the client and disable the
-			// restrictive cache control algorithm.
-			propagation.header.Set(rule.Name, rule.Value)
-			propagation.setCacheControl = true
-		}
-		propagation.m.Unlock()
+		// Inject the value into the subgraph response headers so it looks like it
+		// came from the subgraph. Downstream rules (propagate, cache control
+		// algorithm, etc.) will process it naturally.
+		res.Header.Set(rule.Name, rule.Value)
 		return
 	}
 
@@ -658,11 +666,6 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 
 func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule) {
 	propagation.m.Lock()
-	if propagation.setCacheControl {
-		propagation.m.Unlock()
-		// Handle the case where the cache control header is set explicitly using the set propagation rule
-		return
-	}
 	previousCacheControl := propagation.previousCacheControl
 	propagation.m.Unlock()
 
@@ -681,10 +684,6 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	// Set no-cache for all mutations, to ensure that requests to mutate data always work as expected (without returning cached data)
 	if resolve.GetOperationTypeFromContext(ctx) == ast.OperationTypeMutation {
 		propagation.m.Lock()
-		if propagation.setCacheControl {
-			propagation.m.Unlock()
-			return
-		}
 		propagation.header.Set(cacheControlKey, noCache)
 		propagation.m.Unlock()
 		return
@@ -732,12 +731,6 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 
 	propagation.m.Lock()
 	defer propagation.m.Unlock()
-	if propagation.setCacheControl {
-		// We compute restrictivePolicy outside the lock. If a concurrent
-		// response applied an explicit `set` Cache-Control rule in the meantime,
-		// that explicit value must win; drop this computed result.
-		return
-	}
 	// Merge with the current shared state under lock to avoid lost updates when
 	// multiple subgraph responses compute policies concurrently.
 	policies := []*cachedirective.Object{obj}

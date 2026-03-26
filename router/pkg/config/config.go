@@ -284,6 +284,10 @@ type HeaderRules struct {
 	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
 	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
 	Router          RouterHeaderRules            `yaml:"router,omitempty"`
+	// AfterSubgraphResponse runs after all other response rules (All + Subgraph-specific).
+	// Set programmatically, not via YAML. Used by cache_control_policy so that set
+	// rules have already injected values before the algorithm reads them.
+	AfterSubgraphResponse []*ResponseHeaderRule `yaml:"-"`
 }
 
 type RouterHeaderRules struct {

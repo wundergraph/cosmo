@@ -64,7 +64,7 @@ headers:
 
 ### What does the snippet do?
 
-With `all` we address all subgraph responses. Next, we can define several rules on the response headers. The operation `propagate` forwards matching subgraph response headers to the client. The operation `set` stores a header value internally for use by the router (e.g., to override cache control behavior) but does not forward it to the client.
+With `all` we address all subgraph responses. Next, we can define several rules on the response headers. The operation `propagate` forwards matching subgraph response headers to the client. The operation `set` injects a header value into the subgraph response so it can be processed by downstream rules (e.g., the cache control algorithm or propagate rules).
 
 The `subgraphs` section allows to propagate headers for specific subgraphs. The name must match with the subgraph name in the Studio.
 
@@ -90,19 +90,35 @@ Currently, we support the following header rules:
   Go canonicalizes headers by default e.g. `x-my-header` to `X-My-Header.` Write your rule accordingly or use `(?i)``^X-Test-.*` flags to make your regex case insensitive.
 </Note>
 
+## Order of Execution
+
+Response header rules are applied per subgraph fetch in the following order:
+
+1. **`all` rules** — Rules defined under `headers.all.response` are applied first, in the order they are defined.
+2. **Subgraph-specific rules** — Rules defined under `headers.subgraphs.<name>.response` are applied next, in the order they are defined.
+3. **Cache control policy** — The `cache_control_policy` rules run last. This ensures that all `set` rules (both global and subgraph-specific) have already injected their values into the subgraph response before the [restrictive cache control algorithm](/router/proxy-capabilities/adjusting-cache-control) reads them.
+
+Within each scope, rules execute in definition order. This means a `set` rule defined before a `propagate` rule in the same scope will inject the value into the subgraph response before the `propagate` rule evaluates it.
+
 ## Response Header Set
 
-The `set` operation on response rules behaves differently depending on the header:
+The `set` operation injects a header value into the subgraph response, making it appear as if the subgraph returned it. This value is then processed by downstream rules (e.g., `propagate` rules or the [restrictive cache control algorithm](/router/proxy-capabilities/adjusting-cache-control)).
 
-- **`Cache-Control`**: The value is forwarded to the client response and the restrictive cache control algorithm is disabled. This lets you override computed cache control with an explicit value.
-- **All other headers**: The value is **not** forwarded to the client response. If you need to add custom headers to client responses, use [Router Response Header Operations](/router/proxy-capabilities/router-response-header-operations) instead.
+<Note>
+The `set` value is **not** forwarded to the client response.
+</Note>
+
+
+<Warning>
+You can use `set`, to set a header value and then use a `propagate` rule to propagate that same header to the client. Howevever we would caution against doing this, as no client header will be propagated in case no subgraph was actually called.
+<Warning>
 
 ### Configuration
 
 * `name` - The name of the header to set
 * `value` - The value to set for the header
 
-### Example: Overriding Cache Control for a Subgraph
+### Example: Setting Cache Control on a Subgraph Response
 
 ```yaml
 cache_control_policy:
@@ -118,4 +134,11 @@ headers:
           value: "max-age=5400"
 ```
 
-In this example, any request that hits `specific-subgraph` will have `Cache-Control: max-age=5400` set on the client response, overriding the restrictive cache control algorithm.
+In this example, when a request hits `specific-subgraph`, the `Cache-Control: max-age=5400` value is injected into the subgraph response. The restrictive cache control algorithm then processes this value alongside other subgraph responses to compute the final `Cache-Control` header sent to the client. This is equivalent to doing
+
+```
+cache_control_policy:
+  enabled: true
+  value: "max-age=180, public"
+
+```

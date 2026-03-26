@@ -130,10 +130,10 @@ The algorithm evaluates the following in order:
 
 By combining these mechanisms, the algorithm ensures that data handling adheres to the strictest cache control settings from all subgraph responses, promoting both security and performance integrity. Users can define global defaults to enforce a baseline cache policy, and can rely on `no-cache` or `no-store` directives for security sensitive subgraphs.
 
-### Overriding Cache Control Policy
+### Influencing Cache Control via Set Rules
 
 <Info>
-  By using the `set` operation in their header propagation rules, users can override the cache control algorithm with an explicit value. When a `set` rule targets the `Cache-Control` header, the restrictive algorithm is skipped and the set value is forwarded to the client instead.
+  By using the `set` operation in their header propagation rules, users can inject a `Cache-Control` value into a subgraph's response. The restrictive algorithm then includes this value when computing the most restrictive policy across all subgraph responses.
 </Info>
 
 For example, a configuration can be set like:
@@ -152,4 +152,14 @@ headers:
           value: "max-age=5400"
 ```
 
-For this configuration, any request which hits the `specific-subgraph` will have `Cache-Control: max-age=5400` set on the client response, bypassing the restrictive cache control algorithm.
+For this configuration, any request which hits the `specific-subgraph` will have `Cache-Control: max-age=5400` injected into the subgraph response. The restrictive cache control algorithm then considers this value alongside other subgraph responses to compute the final `Cache-Control` header sent to the client.
+
+This is however equivalent to the following
+
+```
+cache_control_policy:
+  enabled: true
+  value: "max-age=180, public"
+    - name: "specific-subgraph"
+      value: "max-age=5400, public"
+```
