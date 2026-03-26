@@ -9,11 +9,21 @@
         }
       },
       "hobbies": [
-        {},
-        {},
-        {},
-        {},
-        {}
+        {
+          "__typename": "Exercise"
+        },
+        {
+          "__typename": "Gaming"
+        },
+        {
+          "__typename": "Other"
+        },
+        {
+          "__typename": "Programming"
+        },
+        {
+          "__typename": "Travelling"
+        }
       ]
     },
     "teammates": [

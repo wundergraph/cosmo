@@ -6,6 +6,7 @@
         "notes": "Jens notes resolved by products",
         "hobbies": [
           {
+            "__typename": "Exercise",
             "employees": [
               {
                 "id": 1,
@@ -70,6 +71,7 @@
             ]
           },
           {
+            "__typename": "Gaming",
             "employees": [
               {
                 "id": 1,
@@ -104,6 +106,7 @@
             ]
           },
           {
+            "__typename": "Other",
             "employees": [
               {
                 "id": 1,
@@ -162,6 +165,7 @@
             ]
           },
           {
+            "__typename": "Programming",
             "employees": [
               {
                 "id": 1,
@@ -190,6 +194,7 @@
             ]
           },
           {
+            "__typename": "Travelling",
             "employees": [
               {
                 "id": 1,
@@ -230,6 +235,7 @@
         "notes": "Dustin notes resolved by products",
         "hobbies": [
           {
+            "__typename": "Exercise",
             "employees": [
               {
                 "id": 1,
@@ -294,6 +300,7 @@
             ]
           },
           {
+            "__typename": "Gaming",
             "employees": [
               {
                 "id": 1,
@@ -328,6 +335,7 @@
             ]
           },
           {
+            "__typename": "Programming",
             "employees": [
               {
                 "id": 1,
@@ -362,6 +370,7 @@
         "notes": "Stefan notes resolved by products",
         "hobbies": [
           {
+            "__typename": "Exercise",
             "employees": [
               {
                 "id": 1,
@@ -426,6 +435,7 @@
             ]
           },
           {
+            "__typename": "Exercise",
             "employees": [
               {
                 "id": 1,
@@ -490,6 +500,7 @@
             ]
           },
           {
+            "__typename": "Other",
             "employees": [
               {
                 "id": 1,
@@ -548,6 +559,7 @@
             ]
           },
           {
+            "__typename": "Travelling",
             "employees": [
               {
                 "id": 1,
@@ -588,6 +600,7 @@
         "notes": "Björn notes resolved by products",
         "hobbies": [
           {
+            "__typename": "Exercise",
             "employees": [
               {
                 "id": 1,
@@ -652,6 +665,7 @@
             ]
           },
           {
+            "__typename": "Flying",
             "employees": [
               {
                 "id": 4,
@@ -662,6 +676,7 @@
             ]
           },
           {
+            "__typename": "Travelling",
             "employees": [
               {
                 "id": 1,
@@ -702,6 +717,7 @@
         "notes": "Sergiy notes resolved by products",
         "hobbies": [
           {
+            "__typename": "Other",
             "employees": [
               {
                 "id": 1,
@@ -760,6 +776,7 @@
             ]
           },
           {
+            "__typename": "Other",
             "employees": [
               {
                 "id": 1,
@@ -818,6 +835,7 @@
             ]
           },
           {
+            "__typename": "Other",
             "employees": [
               {
                 "id": 1,
@@ -882,6 +900,7 @@
         "notes": "Suvij notes resolved by products",
         "hobbies": [
           {
+            "__typename": "Gaming",
             "employees": [
               {
                 "id": 1,
@@ -916,6 +935,7 @@
             ]
           },
           {
+            "__typename": "Other",
             "employees": [
               {
                 "id": 1,
@@ -980,6 +1000,7 @@
         "notes": "Nithin notes resolved by products",
         "hobbies": [
           {
+            "__typename": "Exercise",
             "employees": [
               {
                 "id": 1,
@@ -1044,6 +1065,7 @@
             ]
           },
           {
+            "__typename": "Gaming",
             "employees": [
               {
                 "id": 1,
@@ -1078,6 +1100,7 @@
             ]
           },
           {
+            "__typename": "Other",
             "employees": [
               {
                 "id": 1,
@@ -1142,6 +1165,7 @@
         "notes": "Eelco notes resolved by products",
         "hobbies": [
           {
+            "__typename": "Programming",
             "employees": [
               {
                 "id": 1,
@@ -1170,70 +1194,7 @@
             ]
           },
           {
-            "employees": [
-              {
-                "id": 1,
-                "details": {
-                  "forename": "Jens"
-                }
-              },
-              {
-                "id": 2,
-                "details": {
-                  "forename": "Dustin"
-                }
-              },
-              {
-                "id": 3,
-                "details": {
-                  "forename": "Stefan"
-                }
-              },
-              {
-                "id": 3,
-                "details": {
-                  "forename": "Stefan"
-                }
-              },
-              {
-                "id": 4,
-                "details": {
-                  "forename": "Björn"
-                }
-              },
-              {
-                "id": 8,
-                "details": {
-                  "forename": "Nithin"
-                }
-              },
-              {
-                "id": 10,
-                "details": {
-                  "forename": "Eelco"
-                }
-              },
-              {
-                "id": 10,
-                "details": {
-                  "forename": "Eelco"
-                }
-              },
-              {
-                "id": 10,
-                "details": {
-                  "forename": "Eelco"
-                }
-              },
-              {
-                "id": 12,
-                "details": {
-                  "forename": "David"
-                }
-              }
-            ]
-          },
-          {
+            "__typename": "Exercise",
             "employees": [
               {
                 "id": 1,
@@ -1298,6 +1259,7 @@
             ]
           },
           {
+            "__typename": "Exercise",
             "employees": [
               {
                 "id": 1,
@@ -1362,6 +1324,72 @@
             ]
           },
           {
+            "__typename": "Exercise",
+            "employees": [
+              {
+                "id": 1,
+                "details": {
+                  "forename": "Jens"
+                }
+              },
+              {
+                "id": 2,
+                "details": {
+                  "forename": "Dustin"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 3,
+                "details": {
+                  "forename": "Stefan"
+                }
+              },
+              {
+                "id": 4,
+                "details": {
+                  "forename": "Björn"
+                }
+              },
+              {
+                "id": 8,
+                "details": {
+                  "forename": "Nithin"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 10,
+                "details": {
+                  "forename": "Eelco"
+                }
+              },
+              {
+                "id": 12,
+                "details": {
+                  "forename": "David"
+                }
+              }
+            ]
+          },
+          {
+            "__typename": "Other",
             "employees": [
               {
                 "id": 1,
@@ -1420,6 +1448,7 @@
             ]
           },
           {
+            "__typename": "Travelling",
             "employees": [
               {
                 "id": 1,
@@ -1460,6 +1489,7 @@
         "notes": "Alexandra notes resolved by products",
         "hobbies": [
           {
+            "__typename": "Other",
             "employees": [
               {
                 "id": 1,
@@ -1524,6 +1554,7 @@
         "notes": "David notes resolved by products",
         "hobbies": [
           {
+            "__typename": "Programming",
             "employees": [
               {
                 "id": 1,
@@ -1552,6 +1583,7 @@
             ]
           },
           {
+            "__typename": "Exercise",
             "employees": [
               {
                 "id": 1,
@@ -1616,6 +1648,7 @@
             ]
           },
           {
+            "__typename": "Gaming",
             "employees": [
               {
                 "id": 1,
@@ -1650,6 +1683,7 @@
             ]
           },
           {
+            "__typename": "Travelling",
             "employees": [
               {
                 "id": 1,

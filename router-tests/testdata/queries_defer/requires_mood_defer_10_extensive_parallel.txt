@@ -12,7 +12,7 @@ Content-Type: application/json
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"lead":{}},"path":["products",0]}],"hasNext":true}
+{"incremental":[{"data":{"lead":{"__typename":"Employee"}},"path":["products",0]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json

@@ -7,7 +7,7 @@ Content-Type: application/json
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"details":{"forename":"Jens","location":{"language":"German"}},"hobbies":[{},{},{},{},{}]},"path":["employee"]}],"hasNext":false}
+{"incremental":[{"data":{"details":{"forename":"Jens","location":{"language":"German"}},"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"path":["employee"]}],"hasNext":false}
 
 --graphql
 --graphql--
