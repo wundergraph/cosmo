@@ -501,6 +501,7 @@ export class OperationsRepository {
       .limit(data.limit)
       .offset(data.offset);
 
+    // For pagination, we need the total count of unique operations that have an override. This is obtained by counting the full join of the two tables.
     const countQuery = this.db
       .select({
         count: count(),
