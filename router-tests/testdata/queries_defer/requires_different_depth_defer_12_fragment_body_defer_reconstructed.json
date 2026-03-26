@@ -1,0 +1,34 @@
+{
+  "data": {
+    "products": [
+      {
+        "__typename": "Consultancy",
+        "isLeadAvailable": false,
+        "lead": {
+          "__typename": "Employee",
+          "id": 1
+        }
+      },
+      {
+        "__typename": "Cosmo"
+      },
+      {
+        "__typename": "SDK"
+      }
+    ]
+  },
+  "errors": [
+    {
+      "message": "Enum \"Mood\" cannot represent value: \"\"",
+      "path": [
+        "products",
+        0,
+        "lead",
+        "derivedMood"
+      ],
+      "extensions": {
+        "code": "INTERNAL_SERVER_ERROR"
+      }
+    }
+  ]
+}

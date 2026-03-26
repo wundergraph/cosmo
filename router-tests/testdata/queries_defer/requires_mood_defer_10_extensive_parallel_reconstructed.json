@@ -1,0 +1,27 @@
+{
+  "data": {
+    "products": [
+      {
+        "lead": {
+          "id": 1
+        }
+      },
+      {},
+      {}
+    ]
+  },
+  "errors": [
+    {
+      "message": "Enum \"Mood\" cannot represent value: \"\"",
+      "path": [
+        "products",
+        0,
+        "lead",
+        "derivedMood"
+      ],
+      "extensions": {
+        "code": "INTERNAL_SERVER_ERROR"
+      }
+    }
+  ]
+}
