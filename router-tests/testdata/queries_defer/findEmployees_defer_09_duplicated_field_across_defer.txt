@@ -1,13 +1,1 @@
-
---graphql
-Content-Type: application/json
-
-{"data":{"a":[{"details":{"forename":"Stefan"}},{"details":{"forename":"Björn"}},{"details":{"forename":"Sergiy"}},{"details":{"forename":"Eelco"}},{"details":{"forename":"David"}}],"b":[{"details":{"forename":"Jens"}},{"details":{"forename":"Alexandra"}}],"c":[{"details":{"forename":"David"}}],"d":[]},"hasNext":true}
-
---graphql
-Content-Type: application/json
-
-{"incremental":[{"data":{"location":{"language":"English"}},"path":["a",0,"details"]},{"data":{"location":{"language":"German"}},"path":["a",1,"details"]},{"data":{"location":{"language":"Ukrainian"}},"path":["a",2,"details"]},{"data":{"location":{"language":"Dutch"}},"path":["a",3,"details"]},{"data":{"location":{"language":"English"}},"path":["a",4,"details"]}],"hasNext":false}
-
---graphql
---graphql--
+{"data":{"a":[{"details":{"forename":"Stefan"}},{"details":{"forename":"Björn"}},{"details":{"forename":"Sergiy"}},{"details":{"forename":"Eelco"}},{"details":{"forename":"David"}}],"b":[{"details":{"forename":"Jens"}},{"details":{"forename":"Alexandra"}}],"c":[{"details":{"forename":"David"}}],"d":[]}}
