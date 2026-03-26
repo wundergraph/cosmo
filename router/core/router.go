@@ -1308,7 +1308,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 			)
 
 			if err := poller.FetchInitial(ctx); err != nil {
-				r.logger.Warn("Failed to fetch initial PQL manifest, will retry on next poll", zap.Error(err))
+				return fmt.Errorf("failed to fetch initial PQL manifest: %w", err)
 			}
 
 			go poller.Poll(ctx)

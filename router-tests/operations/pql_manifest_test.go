@@ -585,4 +585,33 @@ func TestPQLManifest(t *testing.T) {
 			require.ErrorContains(t, err, "not supported for PQL manifest")
 		})
 	})
+
+	t.Run("fails to start when initial CDN manifest fetch fails", func(t *testing.T) {
+		t.Parallel()
+
+		cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasSuffix(r.URL.Path, "/operations/manifest.json") {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			// Serve other CDN requests normally
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer cdnServer.Close()
+
+		testenv.FailsOnStartup(t, &testenv.Config{
+			CdnSever: cdnServer,
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Manifest: config.PQLManifestConfig{
+						Enabled:      true,
+						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
+					},
+				}),
+			},
+		}, func(t *testing.T, err error) {
+			require.ErrorContains(t, err, "failed to fetch initial PQL manifest")
+		})
+	})
 }
