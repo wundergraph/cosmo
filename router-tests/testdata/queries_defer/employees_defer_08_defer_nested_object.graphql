@@ -1,0 +1,16 @@
+query {
+  employees {
+    id
+    role { departments title }
+    ... @defer {
+      details {
+        forename
+        surname
+        location { language }
+        hasChildren
+        maritalStatus
+        nationality
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+query {
+  ... @defer {
+    products {
+      ... @defer { upc }
+      ... on Cosmo {
+        ... @defer { name }
+        ... @defer { repositoryURL }
+        ... @defer { lead { details { forename } } }
+      }
+      ... on SDK {
+        ... @defer { clientLanguages }
+        ... @defer { unicode }
+        ... @defer { owner { details { forename } } }
+      }
+    }
+  }
+  ... @defer {
+    productTypes {
+      ... on Documentation { ... @defer { url(product: COSMO) } }
+      ... on Consultancy {
+        ... @defer { name }
+        ... @defer { lead { details { forename } } }
+      }
+    }
+  }
+}

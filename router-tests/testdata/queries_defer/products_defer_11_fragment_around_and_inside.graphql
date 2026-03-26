@@ -1,0 +1,18 @@
+fragment CosmoDetails on Cosmo {
+  name
+  repositoryURL
+  ... @defer { lead { details { forename } } }
+}
+
+query {
+  products {
+    upc
+    ...CosmoDetails @defer
+  }
+  productTypes {
+    ... on Consultancy {
+      name
+      lead { details { forename } }
+    }
+  }
+}

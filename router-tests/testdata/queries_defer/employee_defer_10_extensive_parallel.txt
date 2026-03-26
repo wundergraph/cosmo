@@ -1,0 +1,43 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"employee":{},"teammates":[{},{}]},"path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"id":1},"path":["employee"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Jens","location":{"language":"German"}}},"path":["employee"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"hobbies":[{},{},{},{},{}]},"path":["employee"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"id":4},"path":["teammates",0]},{"data":{"id":11},"path":["teammates",1]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Björn"}},"path":["teammates",0]},{"data":{"details":{"forename":"Alexandra"}},"path":["teammates",1]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},"path":["teammates",0]},{"data":{"products":["FINANCE"]},"path":["teammates",1]}],"hasNext":false}
+
+--graphql
+--graphql--

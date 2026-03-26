@@ -1,0 +1,13 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"products":[{"__typename":"Consultancy"},{"__typename":"Cosmo"},{"__typename":"SDK"}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"isLeadAvailable":false,"lead":{"id":1,"derivedMood":"HAPPY"}},"path":["products",0]}],"hasNext":false}
+
+--graphql
+--graphql--

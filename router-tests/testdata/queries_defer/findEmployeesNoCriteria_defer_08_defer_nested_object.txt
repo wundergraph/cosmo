@@ -1,0 +1,13 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"findEmployees":[{},{},{},{},{},{},{},{},{},{}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Jens"}},"path":["findEmployees",0]},{"data":{"details":{"forename":"Dustin"}},"path":["findEmployees",1]},{"data":{"details":{"forename":"Stefan"}},"path":["findEmployees",2]},{"data":{"details":{"forename":"Björn"}},"path":["findEmployees",3]},{"data":{"details":{"forename":"Sergiy"}},"path":["findEmployees",4]},{"data":{"details":{"forename":"Suvij"}},"path":["findEmployees",5]},{"data":{"details":{"forename":"Nithin"}},"path":["findEmployees",6]},{"data":{"details":{"forename":"Eelco"}},"path":["findEmployees",7]},{"data":{"details":{"forename":"Alexandra"}},"path":["findEmployees",8]},{"data":{"details":{"forename":"David"}},"path":["findEmployees",9]}],"hasNext":false}
+
+--graphql
+--graphql--

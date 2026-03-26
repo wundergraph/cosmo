@@ -1,0 +1,15 @@
+fragment EngineerRole on Engineer {
+  departments
+  title
+  ... @defer { engineerType }
+}
+
+query {
+  employees {
+    id
+    details { forename }
+    role {
+      ...EngineerRole
+    }
+  }
+}

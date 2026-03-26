@@ -1,0 +1,13 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}],"teammates":[{"id":4,"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"products":["FINANCE"]}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Jens","location":{"language":"German"}},"notes":"Jens notes resolved by products"},"path":["employees",0]},{"data":{"details":{"forename":"Dustin","location":{"language":"German"}},"notes":"Dustin notes resolved by products"},"path":["employees",1]},{"data":{"details":{"forename":"Stefan","location":{"language":"English"}},"notes":"Stefan notes resolved by products"},"path":["employees",2]},{"data":{"details":{"forename":"Björn","location":{"language":"German"}},"notes":"Björn notes resolved by products"},"path":["employees",3]},{"data":{"details":{"forename":"Sergiy","location":{"language":"Ukrainian"}},"notes":"Sergiy notes resolved by products"},"path":["employees",4]},{"data":{"details":{"forename":"Suvij","location":{"language":"Hindi"}},"notes":"Suvij notes resolved by products"},"path":["employees",5]},{"data":{"details":{"forename":"Nithin","location":{"language":"Hindi"}},"notes":"Nithin notes resolved by products"},"path":["employees",6]},{"data":{"details":{"forename":"Eelco","location":{"language":"Dutch"}},"notes":"Eelco notes resolved by products"},"path":["employees",7]},{"data":{"details":{"forename":"Alexandra","location":{"language":"German"}},"notes":"Alexandra notes resolved by products"},"path":["employees",8]},{"data":{"details":{"forename":"David","location":{"language":"English"}},"notes":"David notes resolved by products"},"path":["employees",9]}],"hasNext":false}
+
+--graphql
+--graphql--

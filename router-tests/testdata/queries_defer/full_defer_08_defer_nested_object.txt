@@ -1,0 +1,18 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"employees":[{"id":1,"details":{"forename":"Jens"}},{"id":2,"details":{"forename":"Dustin"}},{"id":3,"details":{"forename":"Stefan"}},{"id":4,"details":{"forename":"Björn"}},{"id":5,"details":{"forename":"Sergiy"}},{"id":7,"details":{"forename":"Suvij"}},{"id":8,"details":{"forename":"Nithin"}},{"id":10,"details":{"forename":"Eelco"}},{"id":11,"details":{"forename":"Alexandra"}},{"id":12,"details":{"forename":"David"}}],"employee":{"id":1},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}],"productTypes":[{},{"name":"CONSULTANCY"},{"url":"https://docs.wundergraph.com/"}],"a":[{"details":{"forename":"Sergiy"}}],"b":[{"details":{"forename":"Björn"}}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Jens","location":{"language":"German"}}},"path":["employee"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"lead":{"details":{"forename":"Jens"}}},"path":["productTypes",1]}],"hasNext":false}
+
+--graphql
+--graphql--

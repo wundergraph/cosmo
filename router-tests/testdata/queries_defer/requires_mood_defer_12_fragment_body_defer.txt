@@ -1,0 +1,12 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"products":[{"name":"CONSULTANCY","lead":{"__typename":"Employee","id":1}},{},{}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":null,"path":["products",0,"lead"],"errors":[{"message":"Enum \"Mood\" cannot represent value: \"\"","path":["products",0,"lead","derivedMood"],"extensions":{"code":"INTERNAL_SERVER_ERROR"}}]}],"hasNext":false}
+
+--graphql

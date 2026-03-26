@@ -1,0 +1,18 @@
+query {
+  ... @defer {
+    employees {
+      ... @defer { id }
+      ... @defer { notes }
+      ... @defer { details { forename surname location { language } hasChildren maritalStatus nationality } }
+      ... @defer { role { departments title ... on Engineer { engineerType } ... on Operator { operatorType } } }
+      ... @defer {
+        hobbies {
+          ... on Exercise { category }
+          ... on Gaming { genres name }
+          ... on Programming { languages }
+        }
+      }
+      ... @defer { products }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"employees":[{},{},{},{},{},{},{},{},{},{}]},"path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"id":1},"path":["employees",0]},{"data":{"id":2},"path":["employees",1]},{"data":{"id":3},"path":["employees",2]},{"data":{"id":4},"path":["employees",3]},{"data":{"id":5},"path":["employees",4]},{"data":{"id":7},"path":["employees",5]},{"data":{"id":8},"path":["employees",6]},{"data":{"id":10},"path":["employees",7]},{"data":{"id":11},"path":["employees",8]},{"data":{"id":12},"path":["employees",9]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"notes":"Jens notes resolved by products"},"path":["employees",0]},{"data":{"notes":"Dustin notes resolved by products"},"path":["employees",1]},{"data":{"notes":"Stefan notes resolved by products"},"path":["employees",2]},{"data":{"notes":"Björn notes resolved by products"},"path":["employees",3]},{"data":{"notes":"Sergiy notes resolved by products"},"path":["employees",4]},{"data":{"notes":"Suvij notes resolved by products"},"path":["employees",5]},{"data":{"notes":"Nithin notes resolved by products"},"path":["employees",6]},{"data":{"notes":"Eelco notes resolved by products"},"path":["employees",7]},{"data":{"notes":"Alexandra notes resolved by products"},"path":["employees",8]},{"data":{"notes":"David notes resolved by products"},"path":["employees",9]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Jens","surname":"Neuse","location":{"language":"German"},"hasChildren":true,"maritalStatus":"MARRIED","nationality":"GERMAN"}},"path":["employees",0]},{"data":{"details":{"forename":"Dustin","surname":"Deus","location":{"language":"German"},"hasChildren":false,"maritalStatus":"ENGAGED","nationality":"GERMAN"}},"path":["employees",1]},{"data":{"details":{"forename":"Stefan","surname":"Avram","location":{"language":"English"},"hasChildren":false,"maritalStatus":"ENGAGED","nationality":"AMERICAN"}},"path":["employees",2]},{"data":{"details":{"forename":"Björn","surname":"Schwenzer","location":{"language":"German"},"hasChildren":true,"maritalStatus":"MARRIED","nationality":"GERMAN"}},"path":["employees",3]},{"data":{"details":{"forename":"Sergiy","surname":"Petrunin","location":{"language":"Ukrainian"},"hasChildren":false,"maritalStatus":"ENGAGED","nationality":"UKRAINIAN"}},"path":["employees",4]},{"data":{"details":{"forename":"Suvij","surname":"Surya","location":{"language":"Hindi"},"hasChildren":false,"maritalStatus":null,"nationality":"INDIAN"}},"path":["employees",5]},{"data":{"details":{"forename":"Nithin","surname":"Kumar","location":{"language":"Hindi"},"hasChildren":false,"maritalStatus":null,"nationality":"INDIAN"}},"path":["employees",6]},{"data":{"details":{"forename":"Eelco","surname":"Wiersma","location":{"language":"Dutch"},"hasChildren":false,"maritalStatus":null,"nationality":"DUTCH"}},"path":["employees",7]},{"data":{"details":{"forename":"Alexandra","surname":"Neuse","location":{"language":"German"},"hasChildren":true,"maritalStatus":"MARRIED","nationality":"GERMAN"}},"path":["employees",8]},{"data":{"details":{"forename":"David","surname":"Stutt","location":{"language":"English"},"hasChildren":false,"maritalStatus":"MARRIED","nationality":"ENGLISH"}},"path":["employees",9]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"role":{"departments":["ENGINEERING","MARKETING"],"title":["Founder","CEO"],"engineerType":"BACKEND"}},"path":["employees",0]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Co-founder","Tech Lead"],"engineerType":"FULLSTACK"}},"path":["employees",1]},{"data":{"role":{"departments":["MARKETING"],"title":["Co-founder","Head of Growth"]}},"path":["employees",2]},{"data":{"role":{"departments":["OPERATIONS","MARKETING"],"title":["Co-founder","COO"],"operatorType":["HUMAN_RESOURCES","FINANCE"]}},"path":["employees",3]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Senior GO Engineer"],"engineerType":"BACKEND"}},"path":["employees",4]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"],"engineerType":"FULLSTACK"}},"path":["employees",5]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"],"engineerType":"FULLSTACK"}},"path":["employees",6]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Senior Frontend Engineer"],"engineerType":"FRONTEND"}},"path":["employees",7]},{"data":{"role":{"departments":["OPERATIONS"],"title":["Accounting & Finance"],"operatorType":["FINANCE"]}},"path":["employees",8]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"],"engineerType":"FULLSTACK"}},"path":["employees",9]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"hobbies":[{"category":"SPORT"},{"genres":["FPS"],"name":"Counter Strike"},{},{"languages":["GO","TYPESCRIPT"]},{}]},"path":["employees",0]},{"data":{"hobbies":[{"category":"STRENGTH_TRAINING"},{"genres":["FPS"],"name":"Counter Strike"},{"languages":["GO","RUST"]}]},"path":["employees",1]},{"data":{"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{},{}]},"path":["employees",2]},{"data":{"hobbies":[{"category":"HIKING"},{},{}]},"path":["employees",3]},{"data":{"hobbies":[{},{},{}]},"path":["employees",4]},{"data":{"hobbies":[{"genres":["BOARD"],"name":"Chess"},{}]},"path":["employees",5]},{"data":{"hobbies":[{"category":"STRENGTH_TRAINING"},{"genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"name":"Miscellaneous"},{}]},"path":["employees",6]},{"data":{"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{},{}]},"path":["employees",7]},{"data":{"hobbies":[{}]},"path":["employees",8]},{"data":{"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"name":"Miscellaneous"},{}]},"path":["employees",9]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"products":["CONSULTANCY","COSMO","ENGINE","MARKETING","SDK"]},"path":["employees",0]},{"data":{"products":["COSMO","SDK"]},"path":["employees",1]},{"data":{"products":["CONSULTANCY","MARKETING"]},"path":["employees",2]},{"data":{"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},"path":["employees",3]},{"data":{"products":["ENGINE","SDK"]},"path":["employees",4]},{"data":{"products":["COSMO","SDK"]},"path":["employees",5]},{"data":{"products":["COSMO","SDK"]},"path":["employees",6]},{"data":{"products":["CONSULTANCY","COSMO","SDK"]},"path":["employees",7]},{"data":{"products":["FINANCE"]},"path":["employees",8]},{"data":{"products":["CONSULTANCY","COSMO","ENGINE","SDK"]},"path":["employees",9]}],"hasNext":false}
+
+--graphql
+--graphql--

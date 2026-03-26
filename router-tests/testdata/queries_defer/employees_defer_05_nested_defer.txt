@@ -1,0 +1,18 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"role":{"departments":["ENGINEERING","MARKETING"],"title":["Founder","CEO"]}},"path":["employees",0]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Co-founder","Tech Lead"]}},"path":["employees",1]},{"data":{"role":{"departments":["MARKETING"],"title":["Co-founder","Head of Growth"]}},"path":["employees",2]},{"data":{"role":{"departments":["OPERATIONS","MARKETING"],"title":["Co-founder","COO"]}},"path":["employees",3]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Senior GO Engineer"]}},"path":["employees",4]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"]}},"path":["employees",5]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"]}},"path":["employees",6]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Senior Frontend Engineer"]}},"path":["employees",7]},{"data":{"role":{"departments":["OPERATIONS"],"title":["Accounting & Finance"]}},"path":["employees",8]},{"data":{"role":{"departments":["ENGINEERING"],"title":["Software Engineer"]}},"path":["employees",9]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"hobbies":[{"category":"SPORT"},{"genres":["FPS"],"name":"Counter Strike"},{},{"languages":["GO","TYPESCRIPT"]},{}]},"path":["employees",0]},{"data":{"hobbies":[{"category":"STRENGTH_TRAINING"},{"genres":["FPS"],"name":"Counter Strike"},{"languages":["GO","RUST"]}]},"path":["employees",1]},{"data":{"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{},{}]},"path":["employees",2]},{"data":{"hobbies":[{"category":"HIKING"},{},{}]},"path":["employees",3]},{"data":{"hobbies":[{},{},{}]},"path":["employees",4]},{"data":{"hobbies":[{"genres":["BOARD"],"name":"Chess"},{}]},"path":["employees",5]},{"data":{"hobbies":[{"category":"STRENGTH_TRAINING"},{"genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"name":"Miscellaneous"},{}]},"path":["employees",6]},{"data":{"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{},{}]},"path":["employees",7]},{"data":{"hobbies":[{}]},"path":["employees",8]},{"data":{"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"name":"Miscellaneous"},{}]},"path":["employees",9]}],"hasNext":false}
+
+--graphql
+--graphql--

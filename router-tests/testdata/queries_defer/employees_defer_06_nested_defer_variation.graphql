@@ -1,0 +1,16 @@
+query {
+  employees {
+    id
+    ... @defer {
+      details { forename surname }
+      role { departments title }
+      ... @defer {
+        hobbies {
+          ... on Exercise { category }
+          ... on Gaming { genres name }
+          ... on Programming { languages }
+        }
+      }
+    }
+  }
+}
