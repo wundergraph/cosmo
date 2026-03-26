@@ -286,6 +286,7 @@ describe('Overrides', (ctx) => {
     });
     expect(allRes.response?.code).toBe(EnumStatusCode.OK);
     expect(allRes.totalCount).toBe(3);
+    expect(allRes.overrides.map((o) => o.hash)).toEqual(['hash0', 'hash1', 'hash2']);
 
     // Fetch first page with limit 2
     const page1 = await client.getAllOverrides({
@@ -297,6 +298,7 @@ describe('Overrides', (ctx) => {
     expect(page1.response?.code).toBe(EnumStatusCode.OK);
     expect(page1.overrides.length).toBe(2);
     expect(page1.totalCount).toBe(3);
+    expect(page1.overrides.map((o) => o.hash)).toEqual(['hash0', 'hash1']);
 
     // Fetch second page with limit 2, offset 2
     const page2 = await client.getAllOverrides({
@@ -308,6 +310,7 @@ describe('Overrides', (ctx) => {
     expect(page2.response?.code).toBe(EnumStatusCode.OK);
     expect(page2.overrides.length).toBe(1);
     expect(page2.totalCount).toBe(3);
+    expect(page2.overrides.map((o) => o.hash)).toEqual(['hash2']);
 
     // Fetch with offset beyond total — should return empty but correct totalCount
     const page3 = await client.getAllOverrides({

@@ -8,7 +8,7 @@ import {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, normalizePagination } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getAllOverrides(
@@ -43,9 +43,7 @@ export function getAllOverrides(
 
     const operationsRepo = new OperationsRepository(opts.db, graph.id);
 
-    // default to 10 if no limit is provided
-    const limit = clamp(req.limit || 10, 1, 50);
-    const offset = clamp(req.offset || 0, 0, 500_000);
+    const { limit, offset } = normalizePagination({ limit: req.limit, offset: req.offset });
 
     const { overrides, totalCount } = await operationsRepo.getConsolidatedOverridesView({
       namespaceId: graph.namespaceId,
