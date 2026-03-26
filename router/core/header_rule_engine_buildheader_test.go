@@ -22,7 +22,7 @@ func TestBuildRequestHeaderForSubgraph_GlobalRulesAndHashStable(t *testing.T) {
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	}, nil, nil)
+	}, nil)
 	require.NoError(t, err)
 	require.NotNil(t, ht)
 
@@ -66,7 +66,7 @@ func TestBuildRequestHeaderForSubgraph_SubgraphSpecificRules(t *testing.T) {
 				},
 			},
 		},
-	}, nil, nil)
+	}, nil)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()
@@ -118,7 +118,7 @@ func BenchmarkBuildRequestHeaderForSubgraph(b *testing.B) {
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	}, nil, nil)
+	}, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestSubgraphHeadersBuilder_PrePopulatesAndClones_SyncPlan(t *testing.T) {
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	}, nil, nil)
+	}, nil)
 	require.NoError(t, err)
 
 	// Prepare client request
@@ -212,7 +212,7 @@ func TestSubgraphHeadersBuilder_IgnoresClientHeaderChangesAfterPrepopulate(t *te
 				{Operation: "propagate", Named: "X-A"},
 			},
 		},
-	}, nil, nil)
+	}, nil)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()
@@ -257,7 +257,7 @@ func TestSubgraphHeadersBuilder_SubscriptionPlan_IncludesTriggerAndResponse(t *t
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	}, nil, nil)
+	}, nil)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()
@@ -330,7 +330,7 @@ func TestSubgraphHeadersBuilder_MissingPrePopulatedCache(t *testing.T) {
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	}, nil, nil)
+	}, nil)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()
@@ -388,7 +388,7 @@ func TestSubgraphHeadersBuilder_ConcurrentAccessSameSubgraph(t *testing.T) {
 				{Operation: "set", Name: "X-Static", Value: "static"},
 			},
 		},
-	}, nil, nil)
+	}, nil)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()

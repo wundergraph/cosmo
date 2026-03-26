@@ -154,12 +154,25 @@ type HeaderPropagation struct {
 	// Precomputed request rule presence for fast-path checks
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
-	// afterSubgraphResponse* runs after all other response rules (All + Subgraph-specific).
+	// postResponseRules runs after all other response rules (All + Subgraph-specific).
 	// Used by cache_control_policy so that set rules have already injected
 	// values into res.Header before the algorithm reads them.
-	// Execution order: afterSubgraphResponseAll (every fetch), then afterSubgraphResponseSubgraphs[name].
-	afterSubgraphResponseAll       []*config.ResponseHeaderRule
-	afterSubgraphResponseSubgraphs map[string][]*config.ResponseHeaderRule
+	postResponseRules *PostResponseRules
+}
+
+// PostResponseRules holds response rules that execute after all user-defined
+// response rules have been applied. Execution order: All (every fetch), then
+// Subgraphs[name] (only for that subgraph).
+type PostResponseRules struct {
+	All       []*config.ResponseHeaderRule
+	Subgraphs map[string][]*config.ResponseHeaderRule
+}
+
+func (p *PostResponseRules) hasRules() bool {
+	if p == nil {
+		return false
+	}
+	return len(p.All) > 0 || len(p.Subgraphs) > 0
 }
 
 func initHeaderRules(rules *config.HeaderRules) {
@@ -171,27 +184,27 @@ func initHeaderRules(rules *config.HeaderRules) {
 	}
 }
 
-func NewHeaderPropagation(rules *config.HeaderRules, afterAll []*config.ResponseHeaderRule, afterSubgraphs map[string][]*config.ResponseHeaderRule) (*HeaderPropagation, error) {
-	if rules == nil && len(afterAll) == 0 && len(afterSubgraphs) == 0 {
+func NewHeaderPropagation(rules *config.HeaderRules, postRules *PostResponseRules) (*HeaderPropagation, error) {
+	if rules == nil && !postRules.hasRules() {
 		return nil, nil
 	}
+
 	if rules == nil {
 		rules = &config.HeaderRules{}
 	}
 
 	initHeaderRules(rules)
 	hf := HeaderPropagation{
-		rules:                          rules,
-		regex:                          map[string]*regexp.Regexp{},
-		compiledRules:                  map[string]*vm.Program{},
-		compiledRouterResponseRules:    map[string]*vm.Program{},
-		afterSubgraphResponseAll:       afterAll,
-		afterSubgraphResponseSubgraphs: afterSubgraphs,
+		rules:                       rules,
+		regex:                       map[string]*regexp.Regexp{},
+		compiledRules:               map[string]*vm.Program{},
+		compiledRouterResponseRules: map[string]*vm.Program{},
+		postResponseRules:           postRules,
 	}
 
 	rhrs, rhrrs, rrs := hf.getAllRules()
 	hf.hasRequestRules = len(rhrs) > 0
-	hf.hasResponseRules = len(rhrrs) > 0 || len(hf.afterSubgraphResponseAll) > 0 || len(hf.afterSubgraphResponseSubgraphs) > 0
+	hf.hasResponseRules = len(rhrrs) > 0 || postRules.hasRules()
 
 	// Pre-compute request rule presence
 	hf.hasAllRequestRules = len(hf.rules.All.Request) > 0
@@ -216,32 +229,34 @@ func NewHeaderPropagation(rules *config.HeaderRules, afterAll []*config.Response
 	return &hf, nil
 }
 
-// AddCacheControlPolicyToRules builds cache control rules that run after all
-// user-defined response rules. Returns the global after-rules (run for every
-// fetch) and per-subgraph after-rules.
-func AddCacheControlPolicyToRules(cacheControl config.CacheControlPolicy) ([]*config.ResponseHeaderRule, map[string][]*config.ResponseHeaderRule) {
-	var afterAll []*config.ResponseHeaderRule
+// CreateCacheControlPolicyHeaderRules builds cache control rules that run after
+// all user-defined response rules.
+func CreateCacheControlPolicyHeaderRules(cacheControl config.CacheControlPolicy) *PostResponseRules {
+	var rules PostResponseRules
+
 	if cacheControl.Enabled {
-		afterAll = append(afterAll, &config.ResponseHeaderRule{
+		rules.All = append(rules.All, &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationPropagate,
 			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
 			Default:   cacheControl.Value,
 		})
 	}
 
-	var afterSubgraphs map[string][]*config.ResponseHeaderRule
 	for _, graph := range cacheControl.Subgraphs {
-		if afterSubgraphs == nil {
-			afterSubgraphs = make(map[string][]*config.ResponseHeaderRule)
+		if rules.Subgraphs == nil {
+			rules.Subgraphs = make(map[string][]*config.ResponseHeaderRule)
 		}
-		afterSubgraphs[graph.Name] = append(afterSubgraphs[graph.Name], &config.ResponseHeaderRule{
+		rules.Subgraphs[graph.Name] = append(rules.Subgraphs[graph.Name], &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationPropagate,
 			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
 			Default:   graph.Value,
 		})
 	}
 
-	return afterAll, afterSubgraphs
+	if !rules.hasRules() {
+		return nil
+	}
+	return &rules
 }
 
 func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*config.ResponseHeaderRule, []*config.RouterResponseHeaderRule) {
@@ -255,9 +270,11 @@ func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*conf
 		rhrrs = append(rhrrs, subgraph.Response...)
 	}
 
-	rhrrs = append(rhrrs, hf.afterSubgraphResponseAll...)
-	for _, sgRules := range hf.afterSubgraphResponseSubgraphs {
-		rhrrs = append(rhrrs, sgRules...)
+	if hf.postResponseRules != nil {
+		rhrrs = append(rhrrs, hf.postResponseRules.All...)
+		for _, sgRules := range hf.postResponseRules.Subgraphs {
+			rhrrs = append(rhrrs, sgRules...)
+		}
 	}
 
 	return rhrs, rhrrs, hf.rules.Router.Response
@@ -457,12 +474,14 @@ func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, header
 	// AfterSubgraphResponse rules run last so that set rules (both global and
 	// subgraph-specific) have already injected values into res.Header before
 	// these rules (e.g. cache control algorithm) read them.
-	for _, rule := range h.afterSubgraphResponseAll {
-		h.applyResponseRule(propagation, resp, rule)
-	}
-	if subgraphName != "" {
-		for _, rule := range h.afterSubgraphResponseSubgraphs[subgraphName] {
+	if h.postResponseRules != nil {
+		for _, rule := range h.postResponseRules.All {
 			h.applyResponseRule(propagation, resp, rule)
+		}
+		if subgraphName != "" {
+			for _, rule := range h.postResponseRules.Subgraphs[subgraphName] {
+				h.applyResponseRule(propagation, resp, rule)
+			}
 		}
 	}
 }

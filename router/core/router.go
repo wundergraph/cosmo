@@ -311,12 +311,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
-	afterAll, afterSubgraphs := AddCacheControlPolicyToRules(r.cacheControlPolicy)
+	postRules := CreateCacheControlPolicyHeaderRules(r.cacheControlPolicy)
 	var err error
-	r.headerPropagation, err = NewHeaderPropagation(r.headerRules, afterAll, afterSubgraphs)
+	r.headerPropagation, err = NewHeaderPropagation(r.headerRules, postRules)
 	if err != nil {
 		return nil, err
 	}
+	
 	defaultCorsHeaders := []string{
 		// Common headers
 		"authorization",
