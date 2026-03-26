@@ -114,70 +114,63 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 func TestAddCacheControlPolicyToRules(t *testing.T) {
 	t.Parallel()
 
-	t.Run("disabled cache returns rules unchanged", func(t *testing.T) {
+	t.Run("disabled cache returns nil after-rules", func(t *testing.T) {
 		t.Parallel()
-		result := AddCacheControlPolicyToRules(nil, config.CacheControlPolicy{
+		afterAll, afterSG := AddCacheControlPolicyToRules(config.CacheControlPolicy{
 			Enabled: false,
 		})
-		assert.Nil(t, result)
+		assert.Nil(t, afterAll)
+		assert.Nil(t, afterSG)
 	})
 
-	t.Run("enabled cache populates AfterSubgraphResponse", func(t *testing.T) {
+	t.Run("enabled cache returns global after-rule", func(t *testing.T) {
 		t.Parallel()
-		result := AddCacheControlPolicyToRules(nil, config.CacheControlPolicy{
+		afterAll, afterSG := AddCacheControlPolicyToRules(config.CacheControlPolicy{
 			Enabled: true,
 			Value:   "max-age=300",
 		})
-		require.NotNil(t, result)
-		require.Len(t, result.AfterSubgraphResponse, 1)
-		assert.Equal(t, config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, result.AfterSubgraphResponse[0].Algorithm)
-		assert.Equal(t, "max-age=300", result.AfterSubgraphResponse[0].Default)
+		require.Len(t, afterAll, 1)
+		assert.Equal(t, config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, afterAll[0].Algorithm)
+		assert.Equal(t, "max-age=300", afterAll[0].Default)
+		assert.Nil(t, afterSG)
 	})
 
-	t.Run("subgraph-specific cache adds to AfterSubgraphResponse", func(t *testing.T) {
+	t.Run("subgraph-specific cache returns per-subgraph after-rule", func(t *testing.T) {
 		t.Parallel()
-		result := AddCacheControlPolicyToRules(nil, config.CacheControlPolicy{
+		afterAll, afterSG := AddCacheControlPolicyToRules(config.CacheControlPolicy{
 			Subgraphs: []config.SubgraphCacheControlRule{
 				{Name: "sg1", Value: "max-age=60"},
 			},
 		})
-		require.NotNil(t, result)
-		require.Len(t, result.AfterSubgraphResponse, 1)
-		assert.Equal(t, "max-age=60", result.AfterSubgraphResponse[0].Default)
+		assert.Nil(t, afterAll)
+		require.Contains(t, afterSG, "sg1")
+		require.Len(t, afterSG["sg1"], 1)
+		assert.Equal(t, "max-age=60", afterSG["sg1"][0].Default)
 	})
 
 	t.Run("global and subgraph rules coexist", func(t *testing.T) {
 		t.Parallel()
-		result := AddCacheControlPolicyToRules(nil, config.CacheControlPolicy{
+		afterAll, afterSG := AddCacheControlPolicyToRules(config.CacheControlPolicy{
 			Enabled: true,
 			Value:   "max-age=300",
 			Subgraphs: []config.SubgraphCacheControlRule{
 				{Name: "sg1", Value: "max-age=60"},
 			},
 		})
-		require.NotNil(t, result)
-		require.Len(t, result.AfterSubgraphResponse, 2)
-		assert.Equal(t, "max-age=300", result.AfterSubgraphResponse[0].Default)
-		assert.Equal(t, "max-age=60", result.AfterSubgraphResponse[1].Default)
+		require.Len(t, afterAll, 1)
+		assert.Equal(t, "max-age=300", afterAll[0].Default)
+		require.Contains(t, afterSG, "sg1")
+		assert.Equal(t, "max-age=60", afterSG["sg1"][0].Default)
 	})
 
-	t.Run("preserves existing user rules", func(t *testing.T) {
+	t.Run("enabled with value returns after-rule with default", func(t *testing.T) {
 		t.Parallel()
-		existing := &config.HeaderRules{
-			All: &config.GlobalHeaderRule{
-				Response: []*config.ResponseHeaderRule{
-					{Operation: config.HeaderRuleOperationPropagate, Named: "X-Existing"},
-				},
-			},
-		}
-		result := AddCacheControlPolicyToRules(existing, config.CacheControlPolicy{
+		afterAll, _ := AddCacheControlPolicyToRules(config.CacheControlPolicy{
 			Enabled: true,
 			Value:   "max-age=300",
 		})
-		require.NotNil(t, result)
-		require.Len(t, result.All.Response, 1)
-		assert.Equal(t, "X-Existing", result.All.Response[0].Named)
-		require.Len(t, result.AfterSubgraphResponse, 1)
+		require.Len(t, afterAll, 1)
+		assert.Equal(t, "max-age=300", afterAll[0].Default)
 	})
 }
 
@@ -387,14 +380,14 @@ func TestNewHeaderPropagation(t *testing.T) {
 
 	t.Run("nil rules returns nil", func(t *testing.T) {
 		t.Parallel()
-		hp, err := NewHeaderPropagation(nil)
+		hp, err := NewHeaderPropagation(nil, nil, nil)
 		require.NoError(t, err)
 		assert.Nil(t, hp)
 	})
 
 	t.Run("empty rules returns valid instance", func(t *testing.T) {
 		t.Parallel()
-		hp, err := NewHeaderPropagation(&config.HeaderRules{})
+		hp, err := NewHeaderPropagation(&config.HeaderRules{}, nil, nil)
 		require.NoError(t, err)
 		require.NotNil(t, hp)
 	})
@@ -407,7 +400,7 @@ func TestNewHeaderPropagation(t *testing.T) {
 					{Operation: config.HeaderRuleOperationPropagate, Matching: "[invalid"},
 				},
 			},
-		})
+		}, nil, nil)
 		require.Error(t, err)
 	})
 
@@ -419,7 +412,7 @@ func TestNewHeaderPropagation(t *testing.T) {
 					{Operation: config.HeaderRuleOperationPropagate, Matching: "[invalid"},
 				},
 			},
-		})
+		}, nil, nil)
 		require.Error(t, err)
 	})
 

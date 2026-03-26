@@ -311,9 +311,9 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
-	r.headerRules = AddCacheControlPolicyToRules(r.headerRules, r.cacheControlPolicy)
+	afterAll, afterSubgraphs := AddCacheControlPolicyToRules(r.cacheControlPolicy)
 	var err error
-	r.headerPropagation, err = NewHeaderPropagation(r.headerRules)
+	r.headerPropagation, err = NewHeaderPropagation(r.headerRules, afterAll, afterSubgraphs)
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +525,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("The engine execution configuration field 'enable_normalization_cache_response_header' is deprecated, and will be removed. Use 'enable_cache_response_headers' instead.")
 		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
 	}
-
 
 	if r.securityConfiguration.DepthLimit != nil {
 		r.logger.Warn("The security configuration field 'depth_limit' is deprecated, and will be removed. Use 'security.complexity_limits.depth' instead.")
