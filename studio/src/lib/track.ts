@@ -38,9 +38,9 @@ const identify = ({
     return;
   }
 
-  // if (process.env.NODE_ENV !== 'production') {
-  //   return;
-  // }
+  if (process.env.NODE_ENV !== 'production') {
+    return;
+  }
 
   // Identify with Reo
   window.Reo?.identify({
