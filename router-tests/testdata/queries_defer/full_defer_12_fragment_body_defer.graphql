@@ -35,7 +35,7 @@ fragment EmployeesFields on Employee {
   }
 }
 
-fragment ProductTypesFields on ProductType {
+fragment ProductTypesFields on Products {
   ... on Documentation {
     url(product: SDK)
     urls(products: [COSMO, MARKETING])
