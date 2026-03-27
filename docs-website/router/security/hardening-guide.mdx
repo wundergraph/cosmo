@@ -127,10 +127,13 @@ By default the subgraph routing URL from the [wgc subgraph create](/cli/subgraph
 
 [Persistent operations](/router/persisted-queries/persisted-operations) are a great way to save bandwidth but also to reduce the attack vectors by only allowing known queries to be executed.
 
-By default, both persistent queries and regular queries are allowed. To allow only persistent queries, the following configuration should be applied:
+We recommend enabling the [PQL manifest](/router/persisted-queries/persisted-operations#pql-manifest) to load all persisted operations at startup and serve them from memory. This eliminates per-request network calls and ensures the router has a complete, authoritative view of all allowed operations.
 
 <CodeGroup>
   ```yaml router.yaml
+  persisted_operations:
+    manifest:
+      enabled: true
   security:
     block_non_persisted_operations:
       enabled: true

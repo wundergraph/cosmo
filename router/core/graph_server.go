@@ -1450,6 +1450,56 @@ func (s *graphServer) buildGraphMux(
 		}
 	}
 
+	// Prewarm all persisted operations from the PQL manifest so that the first request is served from cache.
+	// This runs independently of the cache warmup configuration above.
+	manifestWarmup := s.persistedOperationsConfig.Manifest.Warmup
+	if manifestWarmup.Enabled && s.persistedOperationClient != nil {
+		if pqlStore := s.persistedOperationClient.PQLStore(); pqlStore != nil && pqlStore.IsLoaded() {
+			manifestProcessor := NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
+				OperationProcessor:        operationProcessor,
+				OperationPlanner:          operationPlanner,
+				ComplexityLimits:          s.securityConfiguration.ComplexityLimits,
+				RouterSchema:              executor.RouterSchema,
+				TrackSchemaUsage:          s.graphqlMetricsConfig.Enabled,
+				DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
+			})
+
+			manifestWarmupConfig := &CacheWarmupConfig{
+				Log:            s.logger,
+				Processor:      manifestProcessor,
+				Workers:        manifestWarmup.Workers,
+				ItemsPerSecond: manifestWarmup.ItemsPerSecond,
+				Timeout:        manifestWarmup.Timeout,
+				Source:         NewManifestWarmupSource(pqlStore),
+			}
+
+			err = WarmupCaches(ctx, manifestWarmupConfig)
+			if err != nil {
+				s.logger.Error("Failed to warmup PQL manifest operations", zap.Error(err))
+			}
+
+			// Re-warm when the manifest is updated by the poller.
+			// The callback runs in a new goroutine to avoid blocking the poll loop.
+			pqlStore.SetOnUpdate(func() {
+				rewarmCtx, cancel := context.WithTimeout(context.Background(), manifestWarmup.Timeout)
+				defer cancel()
+
+				rewarmConfig := &CacheWarmupConfig{
+					Log:            s.logger,
+					Processor:      manifestProcessor,
+					Workers:        manifestWarmup.Workers,
+					ItemsPerSecond: manifestWarmup.ItemsPerSecond,
+					Timeout:        manifestWarmup.Timeout,
+					Source:         NewManifestWarmupSource(pqlStore),
+				}
+
+				if rewarmErr := WarmupCaches(rewarmCtx, rewarmConfig); rewarmErr != nil {
+					s.logger.Error("Failed to re-warm PQL manifest operations after update", zap.Error(rewarmErr))
+				}
+			})
+		}
+	}
+
 	authorizerOptions := &CosmoAuthorizerOptions{
 		FieldConfigurations:           opts.EngineConfig.FieldConfigurations,
 		RejectOperationIfUnauthorized: false,
