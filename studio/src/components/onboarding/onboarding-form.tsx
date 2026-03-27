@@ -3,8 +3,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useZodForm } from '@/hooks/use-form';
 import { emailSchema, organizationNameSchema } from '@/lib/form-schemas';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { Cross1Icon, PlusIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/router';
+import { useEffect } from 'react';
 import { Controller, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -25,22 +27,29 @@ type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 
 export function OnboardingForm() {
   const router = useRouter();
-  const organizationSlug = router.query.organizationSlug as string;
+  const org = useCurrentOrganization();
 
   const {
     register,
     control,
     handleSubmit,
+    reset,
     formState: { isValid, errors },
   } = useZodForm<OnboardingFormValues>({
     mode: 'onChange',
     schema: onboardingSchema,
     defaultValues: {
       organizationName: '',
-      members: [{ email: '' }],
-      channels: { slack: false, email: false },
+      members: [],
+      channels: { slack: true, email: false },
     },
   });
+
+  useEffect(() => {
+    if (org?.name) {
+      reset((prev) => ({ ...prev, organizationName: org.name }));
+    }
+  }, [org?.name, reset]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -70,11 +79,9 @@ export function OnboardingForm() {
           {fields.map((field, index) => (
             <div key={field.id} className="flex items-center gap-2">
               <Input placeholder="janedoe@example.com" className="max-w-md" {...register(`members.${index}.email`)} />
-              {fields.length > 1 && (
-                <Button type="button" variant="ghost" size="icon-sm" onClick={() => remove(index)}>
-                  <Cross1Icon />
-                </Button>
-              )}
+              <Button type="button" variant="ghost" size="icon-sm" onClick={() => remove(index)}>
+                <Cross1Icon />
+              </Button>
             </div>
           ))}
           {fields.map((_, index) =>
@@ -124,7 +131,7 @@ export function OnboardingForm() {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button type="button" variant="outline" onClick={() => router.push(`/${organizationSlug}/graphs`)}>
+        <Button type="button" variant="outline" onClick={() => router.push(`/${org?.slug}/graphs`)}>
           Skip
         </Button>
         <Button type="submit" disabled={!isValid}>
