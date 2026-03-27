@@ -1,10 +1,55 @@
 {
-  "errors": [
-    {
-      "message": "Unknown type \"ProductType\".",
-      "path": [
-        "ProductType"
-      ]
-    }
-  ]
+  "data": {
+    "products": [
+      {},
+      {
+        "name": "COSMO",
+        "repositoryURL": "https://github.com/wundergraph/cosmo",
+        "upc": "cosmo",
+        "lead": {
+          "details": {
+            "forename": "Dustin"
+          }
+        }
+      },
+      {
+        "clientLanguages": [
+          "RUST",
+          "TYPESCRIPT"
+        ],
+        "unicode": "😀♥!\u0015\u0010🝥",
+        "owner": {
+          "details": {
+            "forename": "Jens"
+          }
+        },
+        "upc": "sdk"
+      }
+    ],
+    "productTypes": [
+      {
+        "__typename": "Cosmo",
+        "upc": "cosmo"
+      },
+      {
+        "__typename": "Consultancy",
+        "lead": {
+          "details": {
+            "forename": "Jens"
+          }
+        },
+        "name": "CONSULTANCY"
+      },
+      {
+        "__typename": "Documentation",
+        "url": "https://cosmo-docs.wundergraph.com/",
+        "urls": [
+          "https://cal.com/stefan-avram-wundergraph/wundergraph-introduction",
+          "https://github.com/wundergraph/graphql-go-tools/blob/master/README.md",
+          "N/A",
+          "https://docs.wundergraph.com/"
+        ]
+      }
+    ]
+  }
 }

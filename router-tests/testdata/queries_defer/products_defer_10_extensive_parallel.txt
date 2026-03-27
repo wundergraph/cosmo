@@ -12,6 +12,62 @@ Content-Type: application/json
 --graphql
 Content-Type: application/json
 
-{"incremental":[],"hasNext":false}
+{"incremental":[{"data":{"upc":"cosmo"},"path":["products",1]},{"data":{"upc":"sdk"},"path":["products",2]}],"hasNext":true}
 
 --graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"name":"COSMO"},"path":["products",1]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"repositoryURL":"https://github.com/wundergraph/cosmo"},"path":["products",1]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"lead":{"details":{"forename":"Dustin"}}},"path":["products",1]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"clientLanguages":["RUST","TYPESCRIPT"]},"path":["products",2]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"unicode":"😀♥!\u0015\u0010🝥"},"path":["products",2]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"owner":{"details":{"forename":"Jens"}}},"path":["products",2]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"productTypes":[{"__typename":"Cosmo"},{"__typename":"Consultancy"},{"__typename":"Documentation"}]},"path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"upc":"cosmo"},"path":["productTypes",0]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"url":"https://cosmo-docs.wundergraph.com/","urls":["https://cal.com/stefan-avram-wundergraph/wundergraph-introduction","https://github.com/wundergraph/graphql-go-tools/blob/master/README.md","N/A","https://docs.wundergraph.com/"]},"path":["productTypes",2]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"name":"CONSULTANCY"},"path":["productTypes",1]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"lead":{"details":{"forename":"Jens"}}},"path":["productTypes",1]}],"hasNext":false}
+
+--graphql
+--graphql--
