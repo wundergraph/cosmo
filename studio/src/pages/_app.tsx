@@ -38,6 +38,8 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   }, []);
 
   useEffect(() => {
+    if (posthog.__loaded) return;
+
     posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
       api_host: '/ingest',
       loaded: (ph) => {
