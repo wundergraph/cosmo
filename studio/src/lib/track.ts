@@ -38,6 +38,21 @@ const identify = ({
     return;
   }
 
+  // We allow PostHog tracking for any environment, if the key is provided
+  if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+    // Identify with PostHog
+    // We use the id posthog sets to identify the user. This way we do not lose cross domain tracking.
+    const posthog = PostHogClient();
+    posthog.identify(posthog.get_distinct_id(), {
+      id,
+      email,
+      organizationId,
+      organizationName,
+      organizationSlug,
+      plan,
+    });
+  }
+
   if (process.env.NODE_ENV !== 'production') {
     return;
   }
@@ -46,18 +61,6 @@ const identify = ({
   window.Reo?.identify({
     username: email,
     type: 'email',
-  });
-
-  // Identify with PostHog
-  // We use the id posthog sets to identify the user. This way we do not lose cross domain tracking.
-  const posthog = PostHogClient();
-  posthog.identify(posthog.get_distinct_id(), {
-    id,
-    email,
-    organizationId,
-    organizationName,
-    organizationSlug,
-    plan,
   });
 };
 
