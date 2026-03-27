@@ -107,7 +107,6 @@ const fetchSession = async () => {
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const currentOrgSlug = router.query.organizationSlug;
-
   // we store the current org slug in a cookie, so that we can redirect to the correct org after login
   // as well as being able to access the cookie on the server.
   const [cookieOrgSlug, setOrgSlugCookie] = useCookieOrganization();
