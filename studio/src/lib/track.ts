@@ -2,7 +2,6 @@
 // Reo, PostHog
 
 import posthog from 'posthog-js';
-import PostHogClient from './posthog';
 
 declare global {
   interface Window {
@@ -42,7 +41,6 @@ const identify = ({
   if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
     // Identify with PostHog
     // We use the id posthog sets to identify the user. This way we do not lose cross domain tracking.
-    const posthog = PostHogClient();
     posthog.identify(posthog.get_distinct_id(), {
       id,
       email,
