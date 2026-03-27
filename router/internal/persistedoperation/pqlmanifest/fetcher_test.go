@@ -53,6 +53,7 @@ func newETagCDNHandler(m *Manifest) http.Handler {
 }
 
 func TestFetch_SendsIfNoneMatchHeader(t *testing.T) {
+	t.Parallel()
 	var receivedHeaders http.Header
 	var receivedMethod string
 	var receivedBody []byte
@@ -88,6 +89,7 @@ func TestFetch_SendsIfNoneMatchHeader(t *testing.T) {
 }
 
 func TestFetch_NoIfNoneMatchOnFirstRequest(t *testing.T) {
+	t.Parallel()
 	var receivedHeaders http.Header
 
 	m := &Manifest{
@@ -118,6 +120,7 @@ func TestFetch_NoIfNoneMatchOnFirstRequest(t *testing.T) {
 }
 
 func TestFetch_Handles304Response(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotModified)
 	}))
@@ -132,6 +135,7 @@ func TestFetch_Handles304Response(t *testing.T) {
 }
 
 func TestFetch_Handles200WithManifest(t *testing.T) {
+	t.Parallel()
 	m := &Manifest{
 		Version:     1,
 		Revision:    "rev-456",
@@ -153,6 +157,7 @@ func TestFetch_Handles200WithManifest(t *testing.T) {
 }
 
 func TestFetch_ETagRoundTrip(t *testing.T) {
+	t.Parallel()
 	m := &Manifest{
 		Version:     1,
 		Revision:    "rev-rt",
@@ -180,6 +185,7 @@ func TestFetch_ETagRoundTrip(t *testing.T) {
 }
 
 func TestFetch_UsesGETMethod(t *testing.T) {
+	t.Parallel()
 	var receivedMethod string
 
 	m := &Manifest{

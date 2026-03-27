@@ -18,6 +18,7 @@ type Manifest struct {
 
 type Store struct {
 	manifest atomic.Pointer[Manifest]
+	onUpdate atomic.Value // stores func()
 	logger   *zap.Logger
 }
 
@@ -27,9 +28,19 @@ func NewStore(logger *zap.Logger) *Store {
 	}
 }
 
-// Load swaps the manifest atomically.
+// SetOnUpdate registers a callback that is invoked after the manifest is updated via Load.
+// The callback is called asynchronously in a new goroutine to avoid blocking the poller.
+func (s *Store) SetOnUpdate(fn func()) {
+	s.onUpdate.Store(fn)
+}
+
+// Load swaps the manifest atomically and invokes the onUpdate callback if set.
 func (s *Store) Load(manifest *Manifest) {
 	s.manifest.Store(manifest)
+
+	if fn, ok := s.onUpdate.Load().(func()); ok && fn != nil {
+		go fn()
+	}
 }
 
 // LookupByHash performs an O(1) map lookup by sha256 hash.
@@ -113,4 +124,14 @@ func (s *Store) OperationCount() int {
 		return 0
 	}
 	return len(m.Operations)
+}
+
+// AllOperations returns all operations from the manifest for iteration (e.g., warmup).
+// Returns nil if no manifest is loaded.
+func (s *Store) AllOperations() map[string]string {
+	m := s.manifest.Load()
+	if m == nil {
+		return nil
+	}
+	return m.Operations
 }

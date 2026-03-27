@@ -546,7 +546,13 @@
     "Manifest": {
       "Enabled": false,
       "PollInterval": 10000000000,
-      "PollJitter": 5000000000
+      "PollJitter": 5000000000,
+      "Warmup": {
+        "Enabled": true,
+        "Workers": 4,
+        "ItemsPerSecond": 50,
+        "Timeout": 30000000000
+      }
     }
   },
   "AutomaticPersistedQueries": {

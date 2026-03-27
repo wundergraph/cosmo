@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -46,6 +45,19 @@ func TestPQLManifest(t *testing.T) {
 			Enabled:      true,
 			PollInterval: 10 * time.Second,
 			PollJitter:   5 * time.Second,
+		},
+	}
+
+	manifestConfigWithWarmup := config.PersistedOperationsConfig{
+		Manifest: config.PQLManifestConfig{
+			Enabled:      true,
+			PollInterval: 10 * time.Second,
+			PollJitter:   5 * time.Second,
+			Warmup: config.PQLManifestWarmupConfig{
+				Enabled: true,
+				Workers: 4,
+				Timeout: 30 * time.Second,
+			},
 		},
 	}
 
@@ -420,13 +432,12 @@ func TestPQLManifest(t *testing.T) {
 		})
 	})
 
-	t.Run("manifest update invalidates normalization cache", func(t *testing.T) {
+	t.Run("manifest reload preserves cache hits", func(t *testing.T) {
 		t.Parallel()
 
 		employeesHash := "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
 		employeesQuery := "query Employees {\n  employees {\n    id\n    }\n}"
 
-		// manifestV1 has the Employees operation
 		manifestV1, _ := json.Marshal(map[string]interface{}{
 			"version":     1,
 			"revision":    "rev-v1",
@@ -435,28 +446,30 @@ func TestPQLManifest(t *testing.T) {
 				employeesHash: employeesQuery,
 			},
 		})
-		// manifestV2 removes the Employees operation
+		// manifestV2 has the same operation but a new revision
 		manifestV2, _ := json.Marshal(map[string]interface{}{
 			"version":     1,
 			"revision":    "rev-v2",
 			"generatedAt": "2024-01-02T00:00:00Z",
-			"operations":  map[string]string{},
+			"operations": map[string]string{
+				employeesHash: employeesQuery,
+			},
 		})
 
 		var currentManifest atomic.Value
 		currentManifest.Store(manifestV1)
 
+		var manifestFetchCount atomic.Int32
+
 		cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "/operations/manifest.json") {
 				manifest := currentManifest.Load().([]byte)
 
-				// Parse manifest to get its revision
 				var m struct {
 					Revision string `json:"revision"`
 				}
 				_ = json.Unmarshal(manifest, &m)
 
-				// Check If-None-Match header for ETag-based conditional request
 				ifNoneMatch := r.Header.Get("If-None-Match")
 				if ifNoneMatch == `"`+m.Revision+`"` {
 					w.Header().Set("ETag", ifNoneMatch)
@@ -464,6 +477,7 @@ func TestPQLManifest(t *testing.T) {
 					return
 				}
 
+				manifestFetchCount.Add(1)
 				w.Header().Set("Content-Type", "application/json")
 				w.Header().Set("ETag", `"`+m.Revision+`"`)
 				w.WriteHeader(http.StatusOK)
@@ -471,7 +485,6 @@ func TestPQLManifest(t *testing.T) {
 				return
 			}
 
-			// For non-manifest requests, return 404
 			w.WriteHeader(http.StatusNotFound)
 		}))
 		defer cdnServer.Close()
@@ -484,6 +497,11 @@ func TestPQLManifest(t *testing.T) {
 						Enabled:      true,
 						PollInterval: 100 * time.Millisecond,
 						PollJitter:   5 * time.Millisecond,
+						Warmup: config.PQLManifestWarmupConfig{
+							Enabled: true,
+							Workers: 4,
+							Timeout: 30 * time.Second,
+						},
 					},
 				}),
 			},
@@ -491,7 +509,7 @@ func TestPQLManifest(t *testing.T) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
 
-			// 1. Operation succeeds with manifest v1
+			// 1. First request is a cache HIT from warmup
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
 				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
@@ -499,8 +517,18 @@ func TestPQLManifest(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, expectedEmployeesBody, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
-			// 2. Make the same request again to populate the normalization cache
+			// 2. Swap to manifest v2 (new revision, same operations)
+			currentManifest.Store(manifestV2)
+
+			// 3. Wait for the poller to pick up the new manifest
+			require.Eventually(t, func() bool {
+				return manifestFetchCount.Load() >= 2
+			}, 5*time.Second, 50*time.Millisecond)
+
+			// 4. After manifest reload, the operation should still be a cache HIT
+			// because the SHA is the same — no revision in the cache key.
 			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"Employees"`),
 				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
@@ -508,19 +536,68 @@ func TestPQLManifest(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, expectedEmployeesBody, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		})
+	})
 
-			// 3. Swap to manifest v2 (which removes the operation)
-			currentManifest.Store(manifestV2)
+	t.Run("manifest warmup serves first request from cache", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(manifestConfigWithWarmup),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
 
-			// 4. Wait for poller to pick up the new manifest and cache to be invalidated
-			require.EventuallyWithT(t, func(ct *assert.CollectT) {
-				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			// The very first request should hit ALL caches because the manifest warmup
+			// pre-processed all operations through the full pipeline at startup.
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, expectedEmployeesBody, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, "HIT", res.Response.Header.Get(core.VariablesNormalizationCacheHeader))
+			require.Equal(t, "HIT", res.Response.Header.Get(core.VariablesRemappingCacheHeader))
+			require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+		})
+	})
+
+	t.Run("manifest warmup cache hit is independent of client name", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(manifestConfigWithWarmup),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Warmup runs without a client name. Requests from any client should still hit
+			// all caches because PQL manifest cache keys exclude clientName.
+			for _, clientName := range []string{"client-a", "client-b", "another-client"} {
+				header := make(http.Header)
+				header.Add("graphql-client-name", clientName)
+
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
 					Header:        header,
 				})
-				assert.Equal(ct, persistedNotFoundResp, res.Body)
-			}, 5*time.Second, 100*time.Millisecond)
+				require.NoError(t, err)
+				require.Equal(t, expectedEmployeesBody, res.Body)
+				require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader),
+					"expected persisted operation cache HIT for client %q", clientName)
+				require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader),
+					"expected normalization cache HIT for client %q", clientName)
+				require.Equal(t, "HIT", res.Response.Header.Get(core.VariablesNormalizationCacheHeader),
+					"expected variables normalization cache HIT for client %q", clientName)
+				require.Equal(t, "HIT", res.Response.Header.Get(core.VariablesRemappingCacheHeader),
+					"expected variables remapping cache HIT for client %q", clientName)
+				require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader),
+					"expected execution plan cache HIT for client %q", clientName)
+			}
 		})
 	})
 
@@ -580,6 +657,76 @@ func TestPQLManifest(t *testing.T) {
 		}, func(t *testing.T, err error) {
 			require.ErrorContains(t, err, "filesystem storage provider")
 			require.ErrorContains(t, err, "not supported for PQL manifest")
+		})
+	})
+
+	t.Run("warmup disabled skips cache pre-processing", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Manifest: config.PQLManifestConfig{
+						Enabled:      true,
+						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
+						Warmup: config.PQLManifestWarmupConfig{
+							Enabled: false,
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			// With warmup disabled, the first request should still resolve the persisted operation
+			// from the manifest, but all processing caches should be cold.
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, expectedEmployeesBody, res.Body)
+			require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, "MISS", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+		})
+	})
+
+	t.Run("warmup with custom workers and timeout", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Manifest: config.PQLManifestConfig{
+						Enabled:      true,
+						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
+						Warmup: config.PQLManifestWarmupConfig{
+							Enabled:        true,
+							Workers:        2,
+							ItemsPerSecond: 100,
+							Timeout:        10 * time.Second,
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			// With custom warmup config, all caches should still be warm on the first request.
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, expectedEmployeesBody, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 		})
 	})
 

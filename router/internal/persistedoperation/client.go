@@ -127,13 +127,14 @@ func (c *Client) APQEnabled() bool {
 	return c.apqClient != nil && c.apqClient.Enabled()
 }
 
-// ManifestRevision returns the current PQL manifest revision, or "" if no manifest is loaded.
-// Used to include in cache keys so entries naturally invalidate when the manifest changes.
-func (c *Client) ManifestRevision() string {
-	if c.pqlStore == nil {
-		return ""
-	}
-	return c.pqlStore.Revision()
+// ManifestEnabled returns whether a PQL manifest is configured and loaded.
+func (c *Client) ManifestEnabled() bool {
+	return c.pqlStore != nil && c.pqlStore.IsLoaded()
+}
+
+// PQLStore returns the PQL manifest store, or nil if no manifest is configured.
+func (c *Client) PQLStore() *pqlmanifest.Store {
+	return c.pqlStore
 }
 
 func (c *Client) Close() {

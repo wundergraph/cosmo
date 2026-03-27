@@ -1000,6 +1000,11 @@ func TestConfigMerging(t *testing.T) {
 				Manifest: PQLManifestConfig{
 					PollInterval: 10 * time.Second,
 					PollJitter:   5 * time.Second,
+					Warmup: PQLManifestWarmupConfig{
+						Enabled: true,
+						Workers: 4,
+						Timeout: 30 * time.Second,
+					},
 				},
 			},
 			AutomaticPersistedQueries: AutomaticPersistedQueriesConfig{

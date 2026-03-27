@@ -220,6 +220,39 @@
               "duration": {
                 "minimum": "1s"
               }
+            },
+            "warmup": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Configuration for cache warmup of PQL manifest operations. When enabled, the router pre-processes all operations from the manifest on startup and after manifest updates.",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable cache warmup for PQL manifest operations.",
+                  "default": true
+                },
+                "workers": {
+                  "type": "integer",
+                  "description": "The number of concurrent workers used to warm up the cache.",
+                  "default": 4,
+                  "minimum": 1
+                },
+                "items_per_second": {
+                  "type": "integer",
+                  "description": "Rate limit for items processed per second. Set to 0 for unlimited throughput.",
+                  "default": 50,
+                  "minimum": 0
+                },
+                "timeout": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "description": "The maximum time allowed for the warmup to complete. The period is specified as a string with a number and a unit, e.g. 10s, 1m, 5m.",
+                  "default": "30s",
+                  "duration": {
+                    "minimum": "1s"
+                  }
+                }
+              }
             }
           }
         }

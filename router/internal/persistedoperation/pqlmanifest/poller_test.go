@@ -14,6 +14,7 @@ import (
 )
 
 func TestPoller_FetchInitial(t *testing.T) {
+	t.Parallel()
 	m := &Manifest{
 		Version:     1,
 		Revision:    "rev-1",
@@ -37,6 +38,7 @@ func TestPoller_FetchInitial(t *testing.T) {
 }
 
 func TestPoller_FetchInitialError(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
@@ -51,6 +53,7 @@ func TestPoller_FetchInitialError(t *testing.T) {
 }
 
 func TestPoller_PollUpdatesManifest(t *testing.T) {
+	t.Parallel()
 	manifestV1 := &Manifest{
 		Version:     1,
 		Revision:    "rev-1",
@@ -114,6 +117,7 @@ func TestPoller_PollUpdatesManifest(t *testing.T) {
 }
 
 func TestPoller_PollStopsOnContextCancel(t *testing.T) {
+	t.Parallel()
 	var fetchCount atomic.Int32
 
 	m := &Manifest{
@@ -148,6 +152,7 @@ func TestPoller_PollStopsOnContextCancel(t *testing.T) {
 }
 
 func TestPoller_PollContinuesOnFetchError(t *testing.T) {
+	t.Parallel()
 	var requestCount atomic.Int32
 
 	m := &Manifest{

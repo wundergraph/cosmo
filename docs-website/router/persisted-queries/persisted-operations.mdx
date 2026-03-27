@@ -132,6 +132,30 @@ The manifest is automatically updated in the Cosmo CDN whenever operations are a
   When the manifest is enabled, it is **authoritative** — the router does not fall back to fetching individual operations from the CDN. Unknown operation hashes are rejected immediately.
 </Note>
 
+### Cache warmup
+
+When the PQL manifest is enabled, the router automatically warms up its caches by pre-processing all operations from the manifest at startup and after each manifest update. Each operation goes through parsing, normalization, validation, and query planning — the same steps that happen on a regular request. Once warmed, every operation is served entirely from cache with zero processing overhead on the first request.
+
+Cache warmup is enabled by default and can be configured or disabled:
+
+```yaml
+persisted_operations:
+  manifest:
+    enabled: true
+    warmup:
+      enabled: true        # default: true
+      workers: 4            # number of concurrent workers (default: 4)
+      items_per_second: 50  # rate limit, 0 = unlimited (default: 50)
+      timeout: 30s          # maximum time for warmup to complete (default: 30s)
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `enabled` | `true` | Set to `false` to disable cache warmup for manifest operations. |
+| `workers` | `4` | Number of concurrent workers used to pre-process operations. Increase for large manifests. |
+| `items_per_second` | `50` | Rate limit for items processed per second. Set to `0` for unlimited throughput. |
+| `timeout` | `30s` | Maximum time allowed for the warmup to complete. If the timeout is exceeded, the router logs an error but continues serving requests normally. |
+
 ## Using a custom storage provider
 
 You can load persisted operations from your own S3-compatible storage instead of the Cosmo CDN. First, [define a storage provider](/router/storage-providers), then reference it in your persisted operations configuration.
