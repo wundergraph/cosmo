@@ -8,7 +8,7 @@ export interface OnboardingContextValue {
 
 export const OnboardingContext = createContext<OnboardingContextValue>({ enabled: false });
 
-const ONBOARDING_PATH = '/[organizationSlug]/onboarding';
+const ONBOARDING_PATH_PREFIX = '/onboarding';
 
 export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   const onboarding = useOnboarding();
@@ -16,13 +16,10 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   useEffect(
     function handleRedirectInOnboardingProvider() {
       if (!onboarding.enabled) return;
-      if (Router.pathname === ONBOARDING_PATH) return;
-
-      const slug = Router.query.organizationSlug as string;
-      if (!slug) return;
+      if (Router.pathname.startsWith(ONBOARDING_PATH_PREFIX)) return;
 
       // Using static Router instance so this effect is not triggered on route changes
-      Router.replace(`/${slug}/onboarding`);
+      Router.replace('/onboarding/welcome');
     },
     [onboarding.enabled],
   );
