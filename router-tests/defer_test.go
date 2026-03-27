@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -27,6 +28,8 @@ func TestDeferTestDataQueries(t *testing.T) {
 	entries, err := os.ReadDir(testDir)
 	require.NoError(t, err)
 
+	groupQueries := map[string][]string{}
+
 	for _, entry := range entries {
 		fileName := entry.Name()
 		ext := filepath.Ext(fileName)
@@ -42,87 +45,127 @@ func TestDeferTestDataQueries(t *testing.T) {
 			continue
 		}
 
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+		groupQueries[source] = append(groupQueries[source], name)
+	}
 
-			gMultipart := goldie.New(
-				t,
-				goldie.WithFixtureDir("testdata/queries_defer"),
-				goldie.WithNameSuffix(".txt"),
-				goldie.WithDiffEngine(goldie.ClassicDiff),
-			)
-			gFull := goldie.New(
-				t,
-				goldie.WithFixtureDir("testdata/queries_defer"),
-				goldie.WithNameSuffix(".json"),
-				goldie.WithDiffEngine(goldie.ClassicDiff),
-			)
+	groups := make([]string, 0, len(groupQueries))
+	for k, _ := range groupQueries {
+		groups = append(groups, k)
+	}
+	slices.Sort(groups)
 
-			testenv.Run(t, &testenv.Config{
-				NoRetryClient: true,
-				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-					cfg.Debug.PrintIntermediateQueryPlans = true
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				queryFilePath := filepath.Join(testDir, fmt.Sprintf("%s.graphql", name))
-				t.Cleanup(func() {
-					if t.Failed() {
-						abs, _ := filepath.Abs(queryFilePath)
-						t.Logf("query file: %s", abs)
-					}
-				})
+	for _, group := range groups {
+		t.Run(group, func(t *testing.T) {
+			for _, name := range groupQueries[group] {
+				t.Run(name, func(t *testing.T) {
+					// t.Parallel()
 
-				queryData, err := os.ReadFile(queryFilePath)
-				require.NoError(t, err)
+					gMultipart := goldie.New(
+						t,
+						goldie.WithFixtureDir("testdata/queries_defer"),
+						goldie.WithNameSuffix(".txt"),
+						goldie.WithDiffEngine(goldie.ClassicDiff),
+					)
+					gFull := goldie.New(
+						t,
+						goldie.WithFixtureDir("testdata/queries_defer"),
+						goldie.WithNameSuffix(".json"),
+						goldie.WithDiffEngine(goldie.ClassicDiff),
+					)
 
-				payload := map[string]any{"query": string(queryData)}
-				payloadData, err := json.Marshal(payload)
-				require.NoError(t, err)
+					testenv.Run(t, &testenv.Config{
+						NoRetryClient: true,
+						ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+							cfg.Debug.PrintIntermediateQueryPlans = true
+							cfg.Debug.PrintPlanningPaths = true
+							// cfg.Debug.PrintNodeSuggestions = true
+							cfg.Debug.PrintOperationTransformations = true
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						queryFilePath := filepath.Join(testDir, fmt.Sprintf("%s.graphql", name))
+						t.Cleanup(func() {
+							if t.Failed() {
+								abs, _ := filepath.Abs(queryFilePath)
+								t.Logf("query file: %s", abs)
+							}
+						})
 
-				req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payloadData))
-				res, err := xEnv.RouterClient.Do(req)
-				require.NoError(t, err)
-				defer func() { require.NoError(t, res.Body.Close()) }()
-
-				assert.Equal(t, http.StatusOK, res.StatusCode)
-
-				// defer could be fully discarded in case query has duplicate field which are not deffered
-				isMultipart := strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed")
-
-				body, err := io.ReadAll(res.Body)
-				require.NoError(t, err)
-
-				t.Run("raw multipart body", func(t *testing.T) {
-					gMultipart.Assert(t, name, body)
-				})
-
-				t.Run("full response", func(t *testing.T) {
-					var actual []byte
-
-					if isMultipart {
-						// Reconstruct the full response from chunks
-						reconstructed, err := reconstructDeferResponse(body)
+						queryData, err := os.ReadFile(queryFilePath)
 						require.NoError(t, err)
-						actual = normalizeJSON(t, reconstructed)
-					} else {
-						actual = normalizeJSON(t, body)
-					}
 
-					gFull.Assert(t, name+"_reconstructed", actual)
-
-					// compare with original
-					if false {
-						expected, err := os.ReadFile(gFull.GoldenFileName(t, source+"_original"))
+						payload := map[string]any{"query": string(queryData)}
+						payloadData, err := json.Marshal(payload)
 						require.NoError(t, err)
-						// manually assert to never update the original when the update flag is specified
-						if diff := goldie.Diff(goldie.ClassicDiff, string(actual), string(expected)); diff != "" {
-							t.Fatal(diff)
+
+						req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payloadData))
+						res, err := xEnv.RouterClient.Do(req)
+						require.NoError(t, err)
+						defer func() { require.NoError(t, res.Body.Close()) }()
+
+						assert.Equal(t, http.StatusOK, res.StatusCode)
+
+						// defer could be fully discarded in case query has duplicate field which are not deffered
+						isMultipart := strings.HasPrefix(res.Header.Get("Content-Type"), "multipart/mixed")
+
+						body, err := io.ReadAll(res.Body)
+						require.NoError(t, err)
+
+						update := false
+
+						t.Run("raw multipart body", func(t *testing.T) {
+							if !update {
+								gMultipart.Assert(t, name, body)
+							} else {
+								gMultipart.Update(t, name, body)
+							}
+						})
+
+						var actual []byte
+
+						if isMultipart {
+							// Reconstruct the full response from chunks
+							reconstructed, err := reconstructDeferResponse(body)
+							require.NoError(t, err)
+							actual = normalizeJSON(t, reconstructed)
+						} else {
+							actual = normalizeJSON(t, body)
 						}
-					}
+
+						t.Run("assert full response", func(t *testing.T) {
+							if !update {
+								gFull.Assert(t, name+"_reconstructed", actual)
+							} else {
+								gFull.Update(t, name+"_reconstructed", actual)
+							}
+						})
+
+						t.Run("compare with response without defer", func(t *testing.T) {
+							expected, err := os.ReadFile(gFull.GoldenFileName(t, group+"_original"))
+							require.NoError(t, err)
+
+							expected = normalizeWithKeysSort(t, expected)
+							actual = normalizeWithKeysSort(t, actual)
+
+							// manually assert to never update the original when the update flag is specified
+							if diff := goldie.Diff(goldie.ClassicDiff, string(actual), string(expected)); diff != "" {
+								t.Fatal(diff)
+							}
+						})
+					})
 				})
-			})
+			}
 		})
 	}
+}
+
+func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
+	var val map[string]interface{}
+	require.NoError(tb, json.Unmarshal(data, &val))
+
+	out, err := json.MarshalIndent(val, "", "  ")
+	require.NoError(tb, err)
+
+	return out
 }
 
 // reconstructDeferResponse parses a multipart/mixed defer body, merges all
