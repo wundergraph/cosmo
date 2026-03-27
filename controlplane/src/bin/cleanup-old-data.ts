@@ -46,21 +46,23 @@ try {
   let deleteDurationInSeconds = (performance.now() - deleteStart) / 1000;
   console.log(`  ${schemaChecksDeleted} schema checks deleted in ${deleteDurationInSeconds.toFixed(3)} seconds`);
 
-  // Delete compositions
-  deleteStart = performance.now();
-  console.log(`Deleting compositions created before ${CUTOFF_DATE.toDateString()}...`);
-  const compositionsDeleted = await deleteOldDataInChunks(db, schema.graphCompositions);
-
-  deleteDurationInSeconds = (performance.now() - deleteStart) / 1000;
-  console.log(`  ${compositionsDeleted} compositions deleted in ${deleteDurationInSeconds.toFixed(3)} seconds`);
-
   // Delete schema versions
   deleteStart = performance.now();
   console.log(`Deleting schema versions created before ${CUTOFF_DATE.toDateString()}...`);
-  const schemaVersionsDeleted = await deleteOldSchemaVersions(db);
+  const [schemaVersionsDeleted, idsOfSchemaVersionsToKeep] = await deleteOldSchemaVersions(db);
 
   deleteDurationInSeconds = (performance.now() - deleteStart) / 1000;
   console.log(`  ${schemaVersionsDeleted} schema versions deleted in ${deleteDurationInSeconds.toFixed(3)} seconds`);
+
+  // Delete compositions
+  if (schemaVersionsDeleted > 0) {
+    deleteStart = performance.now();
+    console.log(`Deleting compositions created before ${CUTOFF_DATE.toDateString()}...`);
+    const compositionsDeleted = await deleteOldCompositions(db, idsOfSchemaVersionsToKeep);
+
+    deleteDurationInSeconds = (performance.now() - deleteStart) / 1000;
+    console.log(`  ${compositionsDeleted} compositions deleted in ${deleteDurationInSeconds.toFixed(3)} seconds`);
+  }
 
   // Delete audit logs
   deleteStart = performance.now();
@@ -175,7 +177,52 @@ async function getFederatedGraphsFlags(db: PostgresJsDatabase<typeof schema>) {
   ];
 }
 
-async function deleteOldSchemaVersions(db: PostgresJsDatabase<typeof schema>) {
+async function deleteOldCompositions(db: PostgresJsDatabase<typeof schema>, idsOfSchemaVersionsToKeep: Set<string>) {
+  // Retrieve all the existing graph compositions
+  console.log('  Retrieving list of existing graph compositions...');
+  const graphCompositions = await db
+    .select({
+      id: schema.graphCompositions.id,
+      schemaVersionId: schema.graphCompositions.schemaVersionId,
+    })
+    .from(schema.graphCompositions)
+    .where(lte(schema.graphCompositions.createdAt, CUTOFF_DATE))
+    .execute();
+
+  if (graphCompositions.length === 0) {
+    return 0;
+  }
+
+  // Delete the graph compositions whose schema version is set to be not be deleted
+  let deleteCount = 0;
+  while (graphCompositions.length > 0) {
+    const start = performance.now();
+    const setOfItemsToBeDeleted = graphCompositions
+      .splice(0, ITEMS_PER_CHUNK * NUMBER_OF_PARALLEL_TRANSACTIONS)
+      .filter((composition) => !idsOfSchemaVersionsToKeep.has(composition.schemaVersionId))
+      .map((composition) => composition.id);
+
+    if (setOfItemsToBeDeleted.length === 0) {
+      continue;
+    }
+
+    await Promise.all(
+      chunkArray(setOfItemsToBeDeleted, ITEMS_PER_CHUNK).map((idsToDelete) =>
+        db.transaction((tx) =>
+          tx.delete(schema.graphCompositions).where(inArray(schema.graphCompositions.id, idsToDelete)).execute(),
+        ),
+      ),
+    );
+
+    deleteCount += setOfItemsToBeDeleted.length;
+    const duration = (performance.now() - start) / 1000;
+    console.log(`  ${setOfItemsToBeDeleted.length} graph compositions deleted in ${duration.toFixed(3)} seconds`);
+  }
+
+  return deleteCount;
+}
+
+async function deleteOldSchemaVersions(db: PostgresJsDatabase<typeof schema>): Promise<[number, Set<string>]> {
   // Retrieve all the existing schema versions
   console.log('  Retrieving list of existing schema versions...');
   const schemaVersions = await db
@@ -185,7 +232,7 @@ async function deleteOldSchemaVersions(db: PostgresJsDatabase<typeof schema>) {
     .execute();
 
   if (schemaVersions.length === 0) {
-    return 0;
+    return [0, new Set<string>()];
   }
 
   // Retrieve the schema versions that are still in use
@@ -230,5 +277,5 @@ async function deleteOldSchemaVersions(db: PostgresJsDatabase<typeof schema>) {
     console.log(`  ${setOfItemsToBeDeleted.length} schema versions deleted in ${duration.toFixed(3)} seconds`);
   }
 
-  return deleteCount;
+  return [deleteCount, idsOfSchemaVersionsToKeep];
 }
