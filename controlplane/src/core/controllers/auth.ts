@@ -14,12 +14,14 @@ import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
 import { IPlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { AuthenticationError } from '../errors/errors.js';
+import { OnboardingRepository } from '../repositories/OnboardingRepository.js';
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
   organizationRepository: OrganizationRepository;
   orgInvitationRepository: OrganizationInvitationRepository;
+  onboardingRepository: OnboardingRepository;
   webAuth: WebSessionAuthenticator;
   authUtils: AuthUtils;
   webBaseUrl: string;
@@ -89,6 +91,14 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         userId: userSession.userId,
       });
 
+      const currentOrgSlug = cookie.parse(req.headers.cookie || '')?.cosmo_org;
+      const currentOrg = orgs.find((o) => o.slug === currentOrgSlug) ?? orgs[0];
+
+      const onboarding = await opts.onboardingRepository.getOnboarding({
+        userId: userSession.userId,
+        organizationId: currentOrg?.id,
+      });
+
       return {
         id: userSession.userId,
         email: userInfoData.email,
@@ -102,6 +112,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           })),
         invitations,
         expiresAt: userSession.expiresAt,
+        onboarding,
       };
     } catch (err: any) {
       if (err instanceof AuthenticationError) {

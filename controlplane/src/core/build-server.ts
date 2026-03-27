@@ -35,6 +35,7 @@ import { OrganizationInvitationRepository } from './repositories/OrganizationInv
 import { Authorization } from './services/Authorization.js';
 import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
+import { OnboardingRepository } from './repositories/OnboardingRepository.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
 import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName, isGoogleCloudStorageUrl } from './util.js';
@@ -265,6 +266,7 @@ export default async function build(opts: BuildConfig) {
 
   const organizationRepository = new OrganizationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);
   const orgInvitationRepository = new OrganizationInvitationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);
+  const onboardingRepository = new OnboardingRepository(logger, fastify.db);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const userRepo = new UserRepository(logger, fastify.db);
   const apiKeyRepository = new ApiKeyRepository(fastify.db);
@@ -469,6 +471,7 @@ export default async function build(opts: BuildConfig) {
   await fastify.register(AuthController, {
     organizationRepository,
     orgInvitationRepository,
+    onboardingRepository,
     webAuth,
     authUtils,
     prefix: '/v1/auth',
