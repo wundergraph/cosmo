@@ -4,25 +4,12 @@
       {
         "lead": {
           "__typename": "Employee",
-          "id": 1
+          "id": 1,
+          "derivedMood": "HAPPY"
         }
       },
       {},
       {}
     ]
-  },
-  "errors": [
-    {
-      "message": "Enum \"Mood\" cannot represent value: \"\"",
-      "path": [
-        "products",
-        0,
-        "lead",
-        "derivedMood"
-      ],
-      "extensions": {
-        "code": "INTERNAL_SERVER_ERROR"
-      }
-    }
-  ]
+  }
 }
