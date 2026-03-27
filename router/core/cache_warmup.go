@@ -306,6 +306,25 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
+	// When the query body is already present (e.g., manifest warmup provides both query
+	// and hash), FetchPersistedOperation below is skipped. Check if the operation was
+	// already processed by a previous warmup pass (e.g., cache warmup ran before manifest
+	// warmup) to avoid re-parsing, re-normalizing, and re-planning the same operation.
+	// We check persistedOperationVariableNames instead of the ristretto cache to avoid
+	// registering false cache misses in metrics.
+	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query != "" {
+		if k.isPersistedOperationAlreadyCached() {
+			return &CacheWarmupOperationPlanResult{
+				OperationHash: k.parsedOperation.IDString(),
+				OperationName: k.parsedOperation.Request.OperationName,
+				OperationType: k.parsedOperation.Type,
+				ClientName:    item.Client.Name,
+				ClientVersion: item.Client.Version,
+				PlanningTime:  0,
+			}, nil
+		}
+	}
+
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {

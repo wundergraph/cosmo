@@ -1402,7 +1402,7 @@ func (s *graphServer) buildGraphMux(
 						otel.WgFeatureFlag.String(opts.FeatureFlagName),
 						otel.WgOperationHash.String(item.OperationHash),
 						otel.WgOperationType.String(item.OperationType),
-						otel.WgEnginePlanCacheHit.Bool(false),
+						otel.WgEnginePlanCacheHit.Bool(item.PlanningTime == 0),
 					}, baseMetricAttributes...)...,
 				),
 			)
@@ -1464,6 +1464,24 @@ func (s *graphServer) buildGraphMux(
 				DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 			})
 
+			manifestAfterOperation := func(item *CacheWarmupOperationPlanResult) {
+				gm.metricStore.MeasureOperationPlanningTime(ctx,
+					item.PlanningTime,
+					nil,
+					otelmetric.WithAttributes(
+						append([]attribute.KeyValue{
+							otel.WgOperationName.String(item.OperationName),
+							otel.WgClientName.String(item.ClientName),
+							otel.WgClientVersion.String(item.ClientVersion),
+							otel.WgFeatureFlag.String(opts.FeatureFlagName),
+							otel.WgOperationHash.String(item.OperationHash),
+							otel.WgOperationType.String(item.OperationType),
+							otel.WgEnginePlanCacheHit.Bool(item.PlanningTime == 0),
+						}, baseMetricAttributes...)...,
+					),
+				)
+			}
+
 			manifestWarmupConfig := &CacheWarmupConfig{
 				Log:            s.logger,
 				Processor:      manifestProcessor,
@@ -1471,6 +1489,7 @@ func (s *graphServer) buildGraphMux(
 				ItemsPerSecond: manifestWarmup.ItemsPerSecond,
 				Timeout:        manifestWarmup.Timeout,
 				Source:         NewManifestWarmupSource(pqlStore),
+				AfterOperation: manifestAfterOperation,
 			}
 
 			err = WarmupCaches(ctx, manifestWarmupConfig)
@@ -1491,6 +1510,7 @@ func (s *graphServer) buildGraphMux(
 					ItemsPerSecond: manifestWarmup.ItemsPerSecond,
 					Timeout:        manifestWarmup.Timeout,
 					Source:         NewManifestWarmupSource(pqlStore),
+					AfterOperation: manifestAfterOperation,
 				}
 
 				if rewarmErr := WarmupCaches(rewarmCtx, rewarmConfig); rewarmErr != nil {
