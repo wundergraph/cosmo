@@ -2,13 +2,7 @@ package mcpserver
 
 import "go.uber.org/zap"
 
-// Logger interface as expected by the server.WithLogger function
-type Logger interface {
-	Infof(format string, v ...any)
-	Errorf(format string, v ...any)
-}
-
-// ZapAdapter struct that wraps a zap.SugaredLogger to implement the Logger interface
+// ZapAdapter wraps a zap.SugaredLogger to implement the mcp-go server.Logger interface.
 type ZapAdapter struct {
 	logger *zap.SugaredLogger
 }
