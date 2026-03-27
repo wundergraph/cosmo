@@ -2616,6 +2616,27 @@ export const pluginImageVersionsRelations = relations(pluginImageVersions, ({ on
   }),
 }));
 
+export const onboarding = pgTable('onboarding', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp('finished_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+  version: text('version').notNull().default('v1').unique(),
+  step: integer('step').notNull().default(0),
+  slack: boolean('slack').notNull().default(false),
+  email: boolean('email').notNull().default(false),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+});
+
+export const onboardingRelations = relations(onboarding, ({ one }) => ({
+  user: one(users, {
+    fields: [onboarding.userId],
+    references: [users.id],
+  }),
+}));
+
 export const namespaceSubgraphCheckExtensionConfig = pgTable(
   'namespace_subgraph_check_extensions_config',
   {
