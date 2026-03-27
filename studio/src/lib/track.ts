@@ -38,9 +38,9 @@ const identify = ({
     return;
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    return;
-  }
+  // if (process.env.NODE_ENV !== 'production') {
+  //   return;
+  // }
 
   // Identify with Reo
   window.Reo?.identify({
@@ -51,7 +51,8 @@ const identify = ({
   // Identify with PostHog
   // We use the id posthog sets to identify the user. This way we do not lose cross domain tracking.
   const posthog = PostHogClient();
-  posthog.identify(posthog.get_distinct_id(), {
+  let distinctId = posthog.get_distinct_id();
+  posthog.identify(email, {
     id,
     email,
     organizationId,
@@ -59,6 +60,11 @@ const identify = ({
     organizationSlug,
     plan,
   });
+  posthog.group('orgslug', organizationSlug)
+  if (distinctId != email) {
+    // This was an old session, aliases it to the new id
+    posthog.alias(email, distinctId);
+  }
 };
 
 export { resetTracking, identify };
