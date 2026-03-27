@@ -794,9 +794,10 @@ func TestPQLManifest(t *testing.T) {
 						PollInterval: 10 * time.Second,
 						PollJitter:   5 * time.Second,
 						Warmup: config.PQLManifestWarmupConfig{
-							Enabled: true,
-							Workers: 4,
-							Timeout: 30 * time.Second,
+							Enabled:        true,
+							Workers:        2,
+							ItemsPerSecond: 100,
+							Timeout:        30 * time.Second,
 						},
 					},
 				}),
@@ -805,8 +806,9 @@ func TestPQLManifest(t *testing.T) {
 				BaseGraphAssertions: testenv.CacheMetricsAssertion{
 					// Cache warmup processes dc675... first (1 validation+plan miss).
 					// Manifest warmup runs after cache warmup completes: dc675... is skipped
-					// (already cached), 33651... hits dc675...'s validation/plan entries
-					// (same normalized form), {__typename} misses (unique query).
+					// (already cached). ItemsPerSecond=100 serializes remaining items so
+					// 33651... reliably hits dc675...'s validation/plan entries (same
+					// normalized form), {__typename} misses (unique query).
 					// Total: 2 misses (dc675 + __typename), 2 hits (33651 + request).
 					PersistedQueryNormalizationHits: 1,
 					ValidationMisses:                2,
