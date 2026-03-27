@@ -10,7 +10,7 @@ fragment SDKDetails on SDK {
   owner { details { forename } }
 }
 
-fragment ProductTypeDetails on ProductType {
+fragment ProductTypeDetails on Products {
   ... on IProduct {
     upc
   }
