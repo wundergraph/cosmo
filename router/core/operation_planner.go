@@ -73,11 +73,11 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlan
 
 	// create and postprocess the plan
 	// planning uses the router schema
-	if ctx.executionOptions.IncludeQueryPlanInResponse {
-		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report, plan.IncludeQueryPlanInResponse())
-	} else {
-		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report)
-	}
+	// if ctx.executionOptions.IncludeQueryPlanInResponse {
+	preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report, plan.IncludeQueryPlanInResponse())
+	// } else {
+	// 	preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report)
+	// }
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
