@@ -2,7 +2,6 @@
 // Reo, PostHog
 
 import posthog from 'posthog-js';
-import PostHogClient from './posthog';
 
 declare global {
   interface Window {
@@ -40,7 +39,6 @@ const identify = ({
 
   // We allow PostHog tracking for any environment, if the key is provided
   // Identify with PostHog
-  const posthog = PostHogClient();
   let distinctId = posthog.get_distinct_id();
   if (distinctId == organizationSlug) {
     // It was already identified with the old logic
