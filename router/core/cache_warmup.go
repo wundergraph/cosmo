@@ -175,7 +175,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 						)
 					}
 
-					if err == nil && w.afterOperation != nil {
+					if err == nil && res != nil && w.afterOperation != nil {
 						w.afterOperation(res)
 					}
 
@@ -314,14 +314,9 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	// registering false cache misses in metrics.
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query != "" {
 		if k.isPersistedOperationAlreadyCached() {
-			return &CacheWarmupOperationPlanResult{
-				OperationHash: k.parsedOperation.IDString(),
-				OperationName: k.parsedOperation.Request.OperationName,
-				OperationType: k.parsedOperation.Type,
-				ClientName:    item.Client.Name,
-				ClientVersion: item.Client.Version,
-				PlanningTime:  0,
-			}, nil
+			// Return nil result so AfterOperation (metrics) is not called —
+			// Parse/NormalizeVariables haven't run, so Type and ID are unset.
+			return nil, nil
 		}
 	}
 
