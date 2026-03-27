@@ -87,6 +87,35 @@ rate_limit:
     key_prefix: cosmo_rate_limit
 ```
 </Note>
+
+### Per-Key Rate Limit Overrides
+
+You can apply different rate limits to specific keys by defining overrides under `simple_strategy`. Each override includes a `matching` field, a [Go regex](https://pkg.go.dev/regexp/syntax) tested against the suffix portion of the rate-limit key (the result of `key_suffix_expression`), not the full prefixed Redis key. The first matching override wins; unmatched keys fall back to the global defaults.
+
+```yaml router.yaml
+rate_limit:
+  enabled: true
+  storage:
+    cluster_enabled: false
+    urls:
+      - redis://localhost:6379
+    key_prefix: cosmo_rate_limit
+  simple_strategy:
+    rate: 100
+    burst: 200
+    period: 1s
+    key_suffix_expression: "request.header.Get('X-Plan-Tier')"
+    overrides:
+      - matching: "^premium-.*"
+        rate: 1000
+        burst: 2000
+        period: 1s
+      - matching: "^internal-.*"
+        rate: 5000
+        burst: 10000
+        period: 1s
+```
+
 ## Configure CORS
 
 If you don't have an intermediate proxy handling CORS requests, we recommend allowing only the origins you trust. This also applies to headers and methods.
