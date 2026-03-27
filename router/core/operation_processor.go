@@ -1241,7 +1241,17 @@ func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, ski
 		// If there are multiple operations in the document, we need to include the operation name in the cache key
 		_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
 	}
-	_, _ = o.kit.keyGen.WriteString(clientName)
+	manifestEnabled := o.operationProcessor.persistedOperationClient != nil &&
+		o.operationProcessor.persistedOperationClient.ManifestEnabled()
+
+	if !manifestEnabled {
+		// Non-manifest mode: include clientName since operations are per-client.
+		// Manifest mode: exclude clientName because manifest operations are global
+		// and the SHA256 hash already uniquely identifies the operation body.
+		// Cache entries persist across manifest reloads — removed operations are
+		// naturally evicted by the LRU.
+		_, _ = o.kit.keyGen.WriteString(clientName)
+	}
 	o.writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames)
 	sum := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
