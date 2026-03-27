@@ -972,12 +972,27 @@ type AutomaticPersistedQueriesCacheConfig struct {
 	TTL  int         `yaml:"ttl" env:"APQ_CACHE_TTL" envDefault:"-1"`
 }
 
+type PQLManifestWarmupConfig struct {
+	Enabled        bool          `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	Workers        int           `yaml:"workers" envDefault:"4" env:"WORKERS"`
+	ItemsPerSecond int           `yaml:"items_per_second" envDefault:"50" env:"ITEMS_PER_SECOND"`
+	Timeout        time.Duration `yaml:"timeout" envDefault:"30s" env:"TIMEOUT"`
+}
+
+type PQLManifestConfig struct {
+	Enabled      bool                    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	PollInterval time.Duration           `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
+	PollJitter   time.Duration           `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER"`
+	Warmup       PQLManifestWarmupConfig `yaml:"warmup" envPrefix:"WARMUP_"`
+}
+
 type PersistedOperationsConfig struct {
 	Disabled   bool                             `yaml:"disabled" env:"DISABLED" envDefault:"false"`
 	LogUnknown bool                             `yaml:"log_unknown" env:"LOG_UNKNOWN" envDefault:"false"`
 	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"SAFELIST_"`
 	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
 	Storage    PersistedOperationsStorageConfig `yaml:"storage"`
+	Manifest   PQLManifestConfig                `yaml:"manifest" envPrefix:"MANIFEST_"`
 }
 
 type SafelistConfiguration struct {
@@ -1165,7 +1180,7 @@ type Config struct {
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
-	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
+	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty" envPrefix:"TRAFFIC_SHAPING_"`
 	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
 	AccessLogs     AccessLogsConfig       `yaml:"access_logs,omitempty"`
 	Batching       BatchingConfig         `yaml:"batching,omitempty"`
