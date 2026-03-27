@@ -573,8 +573,14 @@ export class FederatedGraphRepository {
         )`,
       })
       .from(schema.targets)
-      // TODO: add condition for checking whether subgraph is of demo type
-      .where(and(eq(schema.targets.type, 'federated'), eq(schema.targets.organizationId, this.organizationId)))
+      .innerJoin(schema.federatedGraphs, eq(schema.federatedGraphs.targetId, schema.targets.id))
+      .where(
+        and(
+          eq(schema.targets.type, 'federated'),
+          eq(schema.targets.organizationId, this.organizationId),
+          eq(schema.federatedGraphs.demo, true),
+        ),
+      )
       .execute();
 
     return result[0]?.count > 0;

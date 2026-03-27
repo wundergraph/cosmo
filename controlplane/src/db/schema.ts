@@ -43,6 +43,10 @@ export const federatedGraphs = pgTable(
      * with a specific router version.
      */
     routerCompatibilityVersion: text('router_compatibility_version').notNull().default('1'),
+    // We are marking federated graphs as demo if they are created as part of onboarding
+    // because we need to distinguish them from other graphs. We need to check whether
+    // any of these graphs exist in order to display onboarding flow
+    demo: boolean('demo').notNull().default(false),
   },
   (t) => ({
     targetIdIndex: index('fgs_target_id_idx').on(t.targetId),

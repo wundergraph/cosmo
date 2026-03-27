@@ -967,6 +967,13 @@
       "when": 1774620213264,
       "tag": "0137_bizarre_aaron_stack",
       "breakpoints": true
+    },
+    {
+      "idx": 138,
+      "version": "7",
+      "when": 1774644904398,
+      "tag": "0138_sturdy_captain_britain",
+      "breakpoints": true
     }
   ]
 }
