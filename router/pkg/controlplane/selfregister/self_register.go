@@ -1,17 +1,18 @@
 package selfregister
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
-	"net/http"
-	"time"
 )
 
 type Option func(cp *selfRegister)
@@ -61,8 +62,13 @@ func New(endpoint, token string, opts ...Option) (SelfRegister, error) {
 		}
 	}
 
+	// Set the max time to try to register to control plane
+	// This will also interrupt the process if control plane is slow to answer
+	httpClient := retryClient.StandardClient()
+	httpClient.Timeout = 15 * time.Second
+
 	// Uses connect binary protocol by default + gzip compression
-	c.nodeServiceClient = nodev1connect.NewNodeServiceClient(retryClient.StandardClient(), c.controlplaneEndpoint,
+	c.nodeServiceClient = nodev1connect.NewNodeServiceClient(httpClient, c.controlplaneEndpoint,
 		brotli.WithCompression(),
 		// Compress requests with Brotli.
 		connect.WithSendCompression(brotli.Name),
