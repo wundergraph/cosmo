@@ -2,7 +2,7 @@ import { ReactNode, useEffect } from 'react';
 import Router from 'next/router';
 import { useFeatureFlags } from '@/components/feature-flag-provider';
 
-const ONBOARDING_PATH = '/[organizationSlug]/onboarding';
+const ONBOARDING_PATH_PREFIX = '/onboarding';
 
 export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   const { onboarding } = useFeatureFlags();
@@ -10,12 +10,9 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   useEffect(
     function handleRedirectInOnboardingProvider() {
       if (!onboarding.enabled) return;
-      if (Router.pathname === ONBOARDING_PATH) return;
+      if (Router.pathname.startsWith(ONBOARDING_PATH_PREFIX)) return;
 
-      const slug = Router.query.organizationSlug as string;
-      if (!slug) return;
-
-      Router.replace(`/${slug}/onboarding`);
+      Router.replace('/onboarding');
     },
     [onboarding.enabled],
   );

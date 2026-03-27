@@ -1,12 +1,9 @@
 import { getDashboardLayout } from '@/components/layout/dashboard-layout';
+import { OnboardingForm } from '@/components/onboarding/onboarding-form';
 import type { NextPageWithLayout } from '@/lib/page';
 
 const OnboardingPage: NextPageWithLayout = () => {
-  return (
-    <>
-      <h2>TODO</h2>
-    </>
-  );
+  return <OnboardingForm />;
 };
 
 OnboardingPage.getLayout = (page) => {
