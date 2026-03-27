@@ -42,6 +42,7 @@ export function updateContract(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     req.excludeTags = [...new Set(req.excludeTags)];

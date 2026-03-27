@@ -40,6 +40,7 @@ export function createFederatedGraph(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
