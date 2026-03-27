@@ -34,20 +34,11 @@ const identify = ({
   organizationSlug: string;
   plan?: string;
 }) => {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || !process.env.NEXT_PUBLIC_POSTHOG_KEY) {
     return;
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    return;
-  }
-
-  // Identify with Reo
-  window.Reo?.identify({
-    username: email,
-    type: 'email',
-  });
-
+  // We allow PostHog tracking for any environment, if the key is provided
   // Identify with PostHog
   const posthog = PostHogClient();
   let distinctId = posthog.get_distinct_id();
@@ -77,6 +68,16 @@ const identify = ({
     slug: organizationSlug,
     name: organizationName,
     plan: plan,
+  });
+
+  if (process.env.NODE_ENV !== 'production') {
+    return;
+  }
+
+  // Identify with Reo
+  window.Reo?.identify({
+    username: email,
+    type: 'email',
   });
 };
 
