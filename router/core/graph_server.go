@@ -1474,7 +1474,7 @@ func (s *graphServer) buildGraphMux(
 		Executor:                        executor,
 		Log:                             s.logger,
 		EnableCacheResponseHeaders:      s.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders,
-		EnableResponseHeaderPropagation: s.headerRules != nil,
+		EnableResponseHeaderPropagation: s.headerPropagation.HasResponseRules(),
 		EnableCostResponseHeaders:       s.securityConfiguration.CostControl != nil && s.securityConfiguration.CostControl.ExposeHeaders,
 		EngineStats:                     s.engineStats,
 		TracerProvider:                  s.tracerProvider,

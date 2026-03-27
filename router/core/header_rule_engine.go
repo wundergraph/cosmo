@@ -65,7 +65,6 @@ type responseHeaderPropagation struct {
 	header               http.Header
 	m                    *sync.Mutex
 	previousCacheControl *cachedirective.Object
-	setCacheControl      bool
 }
 
 func WithResponseHeaderPropagation(ctx *resolve.Context) *resolve.Context {
@@ -155,6 +154,22 @@ type HeaderPropagation struct {
 	// Precomputed request rule presence for fast-path checks
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
+	postResponseRules       *PostResponseRules
+}
+
+// PostResponseRules holds response rules that execute after all user-defined
+// response rules have been applied. Execution order: All (every fetch), then
+// Subgraphs[name] (only for that subgraph).
+type PostResponseRules struct {
+	All       []*config.ResponseHeaderRule
+	Subgraphs map[string][]*config.ResponseHeaderRule
+}
+
+func (p *PostResponseRules) hasRules() bool {
+	if p == nil {
+		return false
+	}
+	return len(p.All) > 0 || len(p.Subgraphs) > 0
 }
 
 func initHeaderRules(rules *config.HeaderRules) {
@@ -166,9 +181,13 @@ func initHeaderRules(rules *config.HeaderRules) {
 	}
 }
 
-func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error) {
-	if rules == nil {
+func NewHeaderPropagation(rules *config.HeaderRules, postRules *PostResponseRules) (*HeaderPropagation, error) {
+	if rules == nil && !postRules.hasRules() {
 		return nil, nil
+	}
+
+	if rules == nil {
+		rules = &config.HeaderRules{}
 	}
 
 	initHeaderRules(rules)
@@ -177,11 +196,12 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 		regex:                       map[string]*regexp.Regexp{},
 		compiledRules:               map[string]*vm.Program{},
 		compiledRouterResponseRules: map[string]*vm.Program{},
+		postResponseRules:           postRules,
 	}
 
 	rhrs, rhrrs, rrs := hf.getAllRules()
 	hf.hasRequestRules = len(rhrs) > 0
-	hf.hasResponseRules = len(rhrrs) > 0
+	hf.hasResponseRules = len(rhrrs) > 0 || postRules.hasRules()
 
 	// Pre-compute request rule presence
 	hf.hasAllRequestRules = len(hf.rules.All.Request) > 0
@@ -206,17 +226,13 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 	return &hf, nil
 }
 
-func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config.CacheControlPolicy) *config.HeaderRules {
-	if rules == nil {
-		rules = &config.HeaderRules{}
-		if !cacheControl.Enabled && cacheControl.Subgraphs == nil {
-			return nil
-		}
-	}
+// CreateCacheControlPolicyHeaderRules builds cache control rules that run after
+// all user-defined response rules.
+func CreateCacheControlPolicyHeaderRules(cacheControl config.CacheControlPolicy) *PostResponseRules {
+	var rules PostResponseRules
 
-	initHeaderRules(rules)
 	if cacheControl.Enabled {
-		rules.All.Response = append(rules.All.Response, &config.ResponseHeaderRule{
+		rules.All = append(rules.All, &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationPropagate,
 			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
 			Default:   cacheControl.Value,
@@ -224,21 +240,20 @@ func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config
 	}
 
 	for _, graph := range cacheControl.Subgraphs {
-		subgraphRules, ok := rules.Subgraphs[graph.Name]
-		if !ok {
-			subgraphRules = &config.GlobalHeaderRule{Response: make([]*config.ResponseHeaderRule, 0)}
+		if rules.Subgraphs == nil {
+			rules.Subgraphs = make(map[string][]*config.ResponseHeaderRule)
 		}
-
-		subgraphRules.Response = append(subgraphRules.Response, &config.ResponseHeaderRule{
+		rules.Subgraphs[graph.Name] = append(rules.Subgraphs[graph.Name], &config.ResponseHeaderRule{
 			Operation: config.HeaderRuleOperationPropagate,
 			Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
 			Default:   graph.Value,
 		})
-
-		rules.Subgraphs[graph.Name] = subgraphRules
 	}
 
-	return rules
+	if !rules.hasRules() {
+		return nil
+	}
+	return &rules
 }
 
 func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*config.ResponseHeaderRule, []*config.RouterResponseHeaderRule) {
@@ -250,6 +265,13 @@ func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*conf
 	rhrrs := hf.rules.All.Response
 	for _, subgraph := range hf.rules.Subgraphs {
 		rhrrs = append(rhrrs, subgraph.Response...)
+	}
+
+	if hf.postResponseRules != nil {
+		rhrrs = append(rhrrs, hf.postResponseRules.All...)
+		for _, sgRules := range hf.postResponseRules.Subgraphs {
+			rhrrs = append(rhrrs, sgRules...)
+		}
 	}
 
 	return rhrs, rhrrs, hf.rules.Router.Response
@@ -445,6 +467,20 @@ func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, header
 			}
 		}
 	}
+
+	// AfterSubgraphResponse rules run last so that set rules (both global and
+	// subgraph-specific) have already injected values into res.Header before
+	// these rules (e.g. cache control algorithm) read them.
+	if h.postResponseRules != nil {
+		for _, rule := range h.postResponseRules.All {
+			h.applyResponseRule(propagation, resp, rule)
+		}
+		if subgraphName != "" {
+			for _, rule := range h.postResponseRules.Subgraphs[subgraphName] {
+				h.applyResponseRule(propagation, resp, rule)
+			}
+		}
+	}
 }
 
 func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
@@ -456,13 +492,10 @@ func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestCon
 
 func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropagation, res *http.Response, rule *config.ResponseHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
-		propagation.m.Lock()
-		propagation.header.Set(rule.Name, rule.Value)
-		if rule.Name == cacheControlKey {
-			// Handle the case where the cache control header is set explicitly
-			propagation.setCacheControl = true
-		}
-		propagation.m.Unlock()
+		// Inject the value into the subgraph response headers so it looks like it
+		// came from the subgraph. Downstream rules (propagate, cache control
+		// algorithm, etc.) will process it naturally.
+		res.Header.Set(rule.Name, rule.Value)
 		return
 	}
 
@@ -657,11 +690,6 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 
 func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule) {
 	propagation.m.Lock()
-	if propagation.setCacheControl {
-		propagation.m.Unlock()
-		// Handle the case where the cache control header is set explicitly using the set propagation rule
-		return
-	}
 	previousCacheControl := propagation.previousCacheControl
 	propagation.m.Unlock()
 
@@ -680,10 +708,6 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	// Set no-cache for all mutations, to ensure that requests to mutate data always work as expected (without returning cached data)
 	if resolve.GetOperationTypeFromContext(ctx) == ast.OperationTypeMutation {
 		propagation.m.Lock()
-		if propagation.setCacheControl {
-			propagation.m.Unlock()
-			return
-		}
 		propagation.header.Set(cacheControlKey, noCache)
 		propagation.m.Unlock()
 		return
@@ -731,12 +755,6 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 
 	propagation.m.Lock()
 	defer propagation.m.Unlock()
-	if propagation.setCacheControl {
-		// We compute restrictivePolicy outside the lock. If a concurrent
-		// response applied an explicit `set` Cache-Control rule in the meantime,
-		// that explicit value must win; drop this computed result.
-		return
-	}
 	// Merge with the current shared state under lock to avoid lost updates when
 	// multiple subgraph responses compute policies concurrently.
 	policies := []*cachedirective.Object{obj}
