@@ -1,5 +1,5 @@
-import { getDashboardLayout } from '@/components/layout/dashboard-layout';
 import { OnboardingForm } from '@/components/onboarding/onboarding-form';
+import { getOnboardingLayout } from '@/components/onboarding/onboarding-layout';
 import type { NextPageWithLayout } from '@/lib/page';
 
 const WelcomePage: NextPageWithLayout = () => {
@@ -7,7 +7,7 @@ const WelcomePage: NextPageWithLayout = () => {
 };
 
 WelcomePage.getLayout = (page) => {
-  return getDashboardLayout(page, 'Onboarding', 'Discover Cosmo platform');
+  return getOnboardingLayout(page, 0);
 };
 
 export default WelcomePage;
