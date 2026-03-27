@@ -9,6 +9,7 @@ import { useCookieOrganization } from '@/hooks/use-cookie-organization';
 import { setUser as setSentryUser } from '@sentry/nextjs';
 import { OrganizationRole } from '@/lib/constants';
 import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
+import { useOnboarding } from '@/hooks/use-onboarding';
 
 const sessionQueryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ const fetchSession = async () => {
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const currentOrgSlug = router.query.organizationSlug;
+  const onboarding = useOnboarding();
 
   // we store the current org slug in a cookie, so that we can redirect to the correct org after login
   // as well as being able to access the cookie on the server.
@@ -184,7 +186,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       setVerifiedOrganizationSlug(organization.slug);
 
-      if (
+      if (onboarding.enabled) {
+        router.replace(`/${organization.slug}/onboarding`);
+      } else if (
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
         router.pathname !== '/account/invitations'
       ) {
@@ -193,7 +197,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         router.replace(params.size !== 0 ? `/${organization.slug}?${params}` : `/${organization.slug}`);
       }
     }
-  }, [router, data, isFetching, error, cookieOrgSlug]);
+  }, [router, data, isFetching, error, cookieOrgSlug, onboarding.enabled]);
 
   useEffect(() => {
     if (!verifiedOrganizationSlug) {
