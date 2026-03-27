@@ -22,6 +22,7 @@ import posthog from 'posthog-js';
 import { PostHogProvider } from 'posthog-js/react';
 import { withErrorBoundary } from '@sentry/nextjs';
 import { Footer } from '@/components/layout/footer';
+import { FeatureFlagProvider } from '@/components/feature-flag-provider';
 
 const queryClient = new QueryClient();
 
@@ -71,12 +72,14 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
       <PostHogProvider client={posthog}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <QueryClientProvider client={queryClient}>
-            <AppProvider>
-              <TooltipProvider>
-                <Toaster />
-                {getLayout(<Component {...pageProps} />)}
-              </TooltipProvider>
-            </AppProvider>
+            <FeatureFlagProvider>
+              <AppProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  {getLayout(<Component {...pageProps} />)}
+                </TooltipProvider>
+              </AppProvider>
+            </FeatureFlagProvider>
           </QueryClientProvider>
         </ThemeProvider>
       </PostHogProvider>
