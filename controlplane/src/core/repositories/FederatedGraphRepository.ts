@@ -561,6 +561,31 @@ export class FederatedGraphRepository {
     return result[0]?.count || 0;
   }
 
+  // Returns whether any namespace has demo federated graph
+  public async hasDemoFederatedGraph(): Promise<boolean> {
+    const result = await this.db
+      .select({
+        count: sql<number>`cast(count(
+        ${targets.id}
+        )
+        as
+        int
+        )`,
+      })
+      .from(schema.targets)
+      .innerJoin(schema.federatedGraphs, eq(schema.federatedGraphs.targetId, schema.targets.id))
+      .where(
+        and(
+          eq(schema.targets.type, 'federated'),
+          eq(schema.targets.organizationId, this.organizationId),
+          eq(schema.federatedGraphs.demo, true),
+        ),
+      )
+      .execute();
+
+    return result[0]?.count > 0;
+  }
+
   private async getFederatedGraph(conditions: (SQL<unknown> | undefined)[]): Promise<FederatedGraphDTO | undefined> {
     const resp = await this.db
       .select({

@@ -43,6 +43,10 @@ export const federatedGraphs = pgTable(
      * with a specific router version.
      */
     routerCompatibilityVersion: text('router_compatibility_version').notNull().default('1'),
+    // We are marking federated graphs as demo if they are created as part of onboarding
+    // because we need to distinguish them from other graphs. We need to check whether
+    // any of these graphs exist in order to display onboarding flow
+    demo: boolean('demo').notNull().default(false),
   },
   (t) => ({
     targetIdIndex: index('fgs_target_id_idx').on(t.targetId),
@@ -2613,6 +2617,27 @@ export const pluginImageVersionsRelations = relations(pluginImageVersions, ({ on
   schemaVersion: one(schemaVersion, {
     fields: [pluginImageVersions.schemaVersionId],
     references: [schemaVersion.id],
+  }),
+}));
+
+export const onboarding = pgTable('onboarding', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp('finished_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+  version: text('version').notNull().default('v1').unique(),
+  step: integer('step').notNull().default(0),
+  slack: boolean('slack').notNull().default(false),
+  email: boolean('email').notNull().default(false),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+});
+
+export const onboardingRelations = relations(onboarding, ({ one }) => ({
+  user: one(users, {
+    fields: [onboarding.userId],
+    references: [users.id],
   }),
 }));
 

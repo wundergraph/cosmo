@@ -1,0 +1,1 @@
+ALTER TABLE "federated_graphs" ADD COLUMN "demo" boolean DEFAULT false NOT NULL;
