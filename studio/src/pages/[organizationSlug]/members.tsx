@@ -47,6 +47,7 @@ import { useRouter } from 'next/router';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { z } from 'zod';
+import { emailSchema } from '@/lib/form-schemas';
 import { usePaginationParams } from '@/hooks/use-pagination-params';
 import { UpdateMemberGroupDialog } from '@/components/members/update-member-group-dialog';
 import { useIsAdmin } from '@/hooks/use-is-admin';
@@ -54,7 +55,7 @@ import { formatDateTime } from '@/lib/format-date';
 import { MultiGroupSelect } from '@/components/multi-group-select';
 
 const emailInputSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   groups: z.array(z.string().uuid()).min(1),
 });
 
