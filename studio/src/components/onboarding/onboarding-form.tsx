@@ -2,16 +2,17 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useZodForm } from '@/hooks/use-form';
+import { emailSchema, organizationNameSchema } from '@/lib/form-schemas';
 import { Cross1Icon, PlusIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/router';
 import { Controller, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
 
 const onboardingSchema = z.object({
-  organizationName: z.string().min(1, 'Organization name is required').max(100),
+  organizationName: organizationNameSchema,
   members: z.array(
     z.object({
-      email: z.string().email('Invalid email address'),
+      email: emailSchema,
     }),
   ),
   channels: z.object({
