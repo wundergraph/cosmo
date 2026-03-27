@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
@@ -302,7 +304,7 @@ func LogLevelHandler(r *http.Request) zapcore.Level {
 		return zapcore.InfoLevel
 	}
 
-	if reqContext.error != nil {
+	if reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled) {
 		return zapcore.ErrorLevel
 	}
 

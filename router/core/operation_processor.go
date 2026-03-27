@@ -1399,6 +1399,13 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 	// Compute and cache estimated cost once after planning
 	if opCtx.preparedPlan != nil && opCtx.preparedPlan.preparedPlan != nil {
 		if costCalc := opCtx.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
+
+			// Validate that variables/arguments are correct for the requirements in listSize
+			var sliceReport operationreport.Report
+			costCalc.ValidateSliceArguments(opCtx.planConfig, opCtx.variables, &sliceReport)
+			if sliceReport.HasErrors() {
+				return &reportError{report: &sliceReport}
+			}
 			opCtx.costEstimated = costCalc.EstimateCost(opCtx.planConfig, opCtx.variables)
 			opCtx.costEstimatedSet = true
 		}
