@@ -8,6 +8,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppPropsWithLayout } from '@/lib/page';
 import '@graphiql/plugin-explorer/dist/style.css';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
+import { PostHogFeatureFlagProvider } from '@/components/posthog-feature-flag-provider';
 import 'graphiql/graphiql.css';
 import App, { AppContext, AppInitialProps } from 'next/app';
 import 'react-date-range/dist/styles.css'; // main css file
@@ -71,12 +72,14 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
       <PostHogProvider client={posthog}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <QueryClientProvider client={queryClient}>
-            <AppProvider>
-              <TooltipProvider>
-                <Toaster />
-                {getLayout(<Component {...pageProps} />)}
-              </TooltipProvider>
-            </AppProvider>
+            <PostHogFeatureFlagProvider>
+              <AppProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  {getLayout(<Component {...pageProps} />)}
+                </TooltipProvider>
+              </AppProvider>
+            </PostHogFeatureFlagProvider>
           </QueryClientProvider>
         </ThemeProvider>
       </PostHogProvider>
