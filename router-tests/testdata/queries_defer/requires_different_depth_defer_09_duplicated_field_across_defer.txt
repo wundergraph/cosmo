@@ -7,6 +7,7 @@ Content-Type: application/json
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":null,"path":["products",0],"errors":[{"message":"Enum \"Mood\" cannot represent value: \"\"","path":["products",0,"lead","derivedMood"],"extensions":{"code":"INTERNAL_SERVER_ERROR"}}]}],"hasNext":false}
+{"incremental":[{"data":{"isLeadAvailable":false},"path":["products",0]},{"data":{"derivedMood":"HAPPY"},"path":["products",0,"lead"]}],"hasNext":false}
 
 --graphql
+--graphql--
