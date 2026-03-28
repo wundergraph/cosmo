@@ -60,6 +60,11 @@ func (s *Store) Load(manifest *Manifest) {
 	}
 }
 
+// Close stops the update worker goroutine.
+func (s *Store) Close() {
+	close(s.updateCh)
+}
+
 // LookupByHash performs an O(1) map lookup by sha256 hash.
 func (s *Store) LookupByHash(sha256Hash string) (body []byte, found bool) {
 	m := s.manifest.Load()

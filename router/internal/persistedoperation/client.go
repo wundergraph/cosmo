@@ -155,4 +155,7 @@ func (c *Client) Close() {
 	if c.apqClient != nil {
 		c.apqClient.Close()
 	}
+	if c.pqlStore != nil {
+		c.pqlStore.Close()
+	}
 }
