@@ -615,6 +615,14 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 	return nil
 }
 
+// startPQLPoller starts the PQL manifest poller in a background goroutine if configured.
+// Must be called after newServer so that SetOnUpdate has been registered on the store.
+func (r *Router) startPQLPoller(ctx context.Context) {
+	if r.pqlPoller != nil {
+		go r.pqlPoller.Poll(ctx)
+	}
+}
+
 func (r *Router) listenAndServe() error {
 	go func() {
 		// Mark the server as not ready when the server is stopped
@@ -1297,8 +1305,10 @@ func (r *Router) buildClients(ctx context.Context) error {
 				return fmt.Errorf("failed to create PQL manifest fetcher: %w", err)
 			}
 
+			pqlStore = pqlmanifest.NewStore(r.logger)
 			poller := pqlmanifest.NewPoller(
 				fetcher,
+				pqlStore,
 				r.persistedOperationsConfig.Manifest.PollInterval,
 				r.persistedOperationsConfig.Manifest.PollJitter,
 				r.logger,
@@ -1308,10 +1318,10 @@ func (r *Router) buildClients(ctx context.Context) error {
 				return fmt.Errorf("failed to fetch initial PQL manifest: %w", err)
 			}
 
-			go poller.Poll(ctx)
-
-			pqlStore = fetcher.Store()
+			r.pqlPoller = poller
 		}
+
+		r.pqlStore = pqlStore
 
 		// Manifest is authoritative — individual operation fetches are not needed.
 		pClient = nil
@@ -1398,6 +1408,8 @@ func (r *Router) Start(ctx context.Context) error {
 		if err := r.newServer(ctx, r.staticExecutionConfig); err != nil {
 			return err
 		}
+
+		r.startPQLPoller(ctx)
 
 		defer func() {
 			r.httpServer.healthcheck.SetReady(true)
@@ -1490,6 +1502,8 @@ func (r *Router) Start(ctx context.Context) error {
 	if err := r.newServer(ctx, cfg.Config); err != nil {
 		return err
 	}
+
+	r.startPQLPoller(ctx)
 
 	if r.playgroundConfig.Enabled {
 		r.logger.Info("GraphQL endpoint",
@@ -1711,6 +1725,9 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	// Shutdown the CDN operation client and free up resources
 	if r.persistedOperationClient != nil {
 		r.persistedOperationClient.Close()
+	}
+	if r.pqlStore != nil {
+		r.pqlStore.Close()
 	}
 
 	r.usage.Close()

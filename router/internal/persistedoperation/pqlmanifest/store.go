@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"sync/atomic"
 
 	"go.uber.org/zap"
@@ -17,25 +18,18 @@ type Manifest struct {
 }
 
 type Store struct {
-	manifest atomic.Pointer[Manifest]
-	updateCh chan struct{}
-	onUpdate atomic.Value // stores func()
-	logger   *zap.Logger
+	manifest  atomic.Pointer[Manifest]
+	updateCh  chan struct{}
+	onUpdate  atomic.Value // stores func()
+	startOnce sync.Once
+	logger    *zap.Logger
 }
 
 func NewStore(logger *zap.Logger) *Store {
-	s := &Store{
+	return &Store{
 		logger:   logger,
 		updateCh: make(chan struct{}, 1),
 	}
-	go func() {
-		for range s.updateCh {
-			if fn, ok := s.onUpdate.Load().(func()); ok && fn != nil {
-				fn()
-			}
-		}
-	}()
-	return s
 }
 
 // SetOnUpdate registers a callback that is invoked after the manifest is updated via Load.
@@ -45,13 +39,26 @@ func NewStore(logger *zap.Logger) *Store {
 // Safe to call multiple times (e.g. on config reload): the callback is swapped atomically.
 func (s *Store) SetOnUpdate(fn func()) {
 	s.onUpdate.Store(fn)
+	s.startOnce.Do(func() {
+		go func() {
+			for range s.updateCh {
+				if f, ok := s.onUpdate.Load().(func()); ok && f != nil {
+					f()
+				}
+			}
+		}()
+	})
 }
 
-// Load swaps the manifest atomically and signals the update worker.
+// Load swaps the manifest atomically and signals the update worker if a callback is registered.
 // If the worker is busy processing a previous update, the signal is dropped (coalesced)
 // so back-to-back manifest updates don't queue unbounded work.
 func (s *Store) Load(manifest *Manifest) {
 	s.manifest.Store(manifest)
+
+	if s.onUpdate.Load() == nil {
+		return
+	}
 
 	select {
 	case s.updateCh <- struct{}{}:
