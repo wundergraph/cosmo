@@ -1532,9 +1532,6 @@ func (s *graphServer) buildGraphMux(
 			// The store handles coalescing — if a re-warm is already running or pending,
 			// new signals are dropped. The worker always reads the latest manifest.
 			pqlStore.SetOnUpdate(func() {
-				rewarmCtx, cancel := context.WithTimeout(context.Background(), manifestWarmup.Timeout)
-				defer cancel()
-
 				rewarmConfig := &CacheWarmupConfig{
 					Log:            s.logger,
 					Processor:      manifestProcessor,
@@ -1545,7 +1542,7 @@ func (s *graphServer) buildGraphMux(
 					AfterOperation: manifestAfterOperation,
 				}
 
-				if rewarmErr := WarmupCaches(rewarmCtx, rewarmConfig); rewarmErr != nil {
+				if rewarmErr := WarmupCaches(ctx, rewarmConfig); rewarmErr != nil {
 					s.logger.Error("Failed to re-warm PQL manifest operations after update", zap.Error(rewarmErr))
 				}
 			})

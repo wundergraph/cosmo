@@ -19,40 +19,44 @@ type Manifest struct {
 type Store struct {
 	manifest atomic.Pointer[Manifest]
 	updateCh chan struct{}
+	onUpdate atomic.Value // stores func()
 	logger   *zap.Logger
 }
 
 func NewStore(logger *zap.Logger) *Store {
-	return &Store{
-		logger: logger,
+	s := &Store{
+		logger:   logger,
+		updateCh: make(chan struct{}, 1),
 	}
+	go func() {
+		for range s.updateCh {
+			if fn, ok := s.onUpdate.Load().(func()); ok && fn != nil {
+				fn()
+			}
+		}
+	}()
+	return s
 }
 
 // SetOnUpdate registers a callback that is invoked after the manifest is updated via Load.
-// It spawns a dedicated worker goroutine that processes update signals sequentially.
+// The callback runs on a dedicated worker goroutine that processes signals sequentially.
 // If an update arrives while the callback is still running, it is coalesced into a single
 // pending signal — at most one signal is buffered, so rapid updates don't queue up.
+// Safe to call multiple times (e.g. on config reload): the callback is swapped atomically.
 func (s *Store) SetOnUpdate(fn func()) {
-	s.updateCh = make(chan struct{}, 1)
-	go func() {
-		for range s.updateCh {
-			fn()
-		}
-	}()
+	s.onUpdate.Store(fn)
 }
 
-// Load swaps the manifest atomically and signals the update worker if registered.
+// Load swaps the manifest atomically and signals the update worker.
 // If the worker is busy processing a previous update, the signal is dropped (coalesced)
 // so back-to-back manifest updates don't queue unbounded work.
 func (s *Store) Load(manifest *Manifest) {
 	s.manifest.Store(manifest)
 
-	if s.updateCh != nil {
-		select {
-		case s.updateCh <- struct{}{}:
-		default:
-			s.logger.Debug("Skipping PQL manifest update signal, worker is busy")
-		}
+	select {
+	case s.updateCh <- struct{}{}:
+	default:
+		s.logger.Debug("Skipping PQL manifest update signal, worker is busy")
 	}
 }
 

@@ -117,6 +117,14 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 
 func (c *Client) SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error {
 	if c.apqClient != nil && c.apqClient.Enabled() {
+		// For in-memory APQ, skip saving operations the manifest already has —
+		// the manifest is the authoritative source and avoids redundant cache entries.
+		// For distributed APQ (Redis), always save so all router instances can resolve the operation.
+		if !c.apqClient.IsDistributed() && c.ManifestEnabled() {
+			if _, found := c.pqlStore.LookupByHash(sha256Hash); found {
+				return nil
+			}
+		}
 		return c.apqClient.SaveOperation(ctx, clientName, sha256Hash, []byte(operationBody))
 	}
 

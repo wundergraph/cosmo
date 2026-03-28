@@ -241,6 +241,39 @@ func TestStore(t *testing.T) {
 
 		close(block)
 	})
+
+	t.Run("SetOnUpdate can be called multiple times without leaking goroutines", func(t *testing.T) {
+		store := NewStore(zap.NewNop())
+
+		var firstCalls atomic.Int32
+		var secondCalls atomic.Int32
+
+		// Register first callback
+		store.SetOnUpdate(func() {
+			firstCalls.Add(1)
+		})
+
+		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
+		require.Eventually(t, func() bool {
+			return firstCalls.Load() >= 1
+		}, time.Second, 10*time.Millisecond)
+
+		// Replace with second callback — old worker should stop
+		store.SetOnUpdate(func() {
+			secondCalls.Add(1)
+		})
+
+		firstCountBefore := firstCalls.Load()
+
+		// New loads should only trigger the second callback
+		store.Load(&Manifest{Version: 1, Revision: "rev-2", Operations: map[string]string{"a": "q"}})
+		require.Eventually(t, func() bool {
+			return secondCalls.Load() >= 1
+		}, time.Second, 10*time.Millisecond)
+
+		// First callback should not have been called again
+		require.Equal(t, firstCountBefore, firstCalls.Load())
+	})
 }
 
 func TestParseManifest(t *testing.T) {
