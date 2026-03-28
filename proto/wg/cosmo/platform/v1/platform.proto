@@ -1801,6 +1801,8 @@ message GetOperationOverridesResponse {
 message GetAllOverridesRequest {
   string graph_name = 1;
   string namespace = 2;
+  int32 limit = 3;
+  int32 offset = 4;
 }
 
 message GetAllOverridesResponse {
@@ -1814,6 +1816,7 @@ message GetAllOverridesResponse {
 
   Response response = 1;
   repeated Override overrides = 2;
+  int32 total_count = 3;
 }
 
 message IsGitHubAppInstalledRequest {

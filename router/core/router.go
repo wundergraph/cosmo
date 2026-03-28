@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"sync"
 	"time"
 
@@ -36,6 +37,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
@@ -525,7 +527,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("The engine execution configuration field 'enable_normalization_cache_response_header' is deprecated, and will be removed. Use 'enable_cache_response_headers' instead.")
 		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
 	}
-
 
 	if r.securityConfiguration.DepthLimit != nil {
 		r.logger.Warn("The security configuration field 'depth_limit' is deprecated, and will be removed. Use 'security.complexity_limits.depth' instead.")
@@ -1096,7 +1097,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.staticExecutionConfig = executionConfig
 	}
 
-	if err := r.buildClients(); err != nil {
+	if err := r.buildClients(ctx); err != nil {
 		return err
 	}
 
@@ -1119,7 +1120,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 }
 
 // buildClients initializes the storage clients for persisted operations and router config.
-func (r *Router) buildClients() error {
+func (r *Router) buildClients(ctx context.Context) error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.CDNStorageProvider{}
 	redisProviders := map[string]config.RedisStorageProvider{}
@@ -1153,6 +1154,9 @@ func (r *Router) buildClients() error {
 		fileSystemProviders[provider.ID] = provider
 	}
 
+	// Create the storage client for persisted operations based on the configured provider.
+	// The same client is reused for manifest fetching when the manifest feature is enabled,
+	// since both features are exclusive (manifest replaces individual operation fetches).
 	var pClient persistedoperation.StorageClient
 
 	if !r.persistedOperationsConfig.Disabled {
@@ -1165,7 +1169,7 @@ func (r *Router) buildClients() error {
 				Logger: r.logger,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create CDN client: %w", err)
 			}
 			pClient = c
 
@@ -1184,7 +1188,7 @@ func (r *Router) buildClients() error {
 				TraceProvider:    r.tracerProvider,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create S3 client: %w", err)
 			}
 			pClient = c
 
@@ -1196,7 +1200,7 @@ func (r *Router) buildClients() error {
 				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create filesystem client: %w", err)
 			}
 			pClient = c
 
@@ -1212,7 +1216,7 @@ func (r *Router) buildClients() error {
 				Logger: r.logger,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create CDN client: %w", err)
 			}
 			pClient = c
 
@@ -1251,7 +1255,69 @@ func (r *Router) buildClients() error {
 		}
 	}
 
-	if pClient != nil || apqClient != nil {
+	var pqlStore *pqlmanifest.Store
+
+	if r.persistedOperationsConfig.Manifest.Enabled && !r.persistedOperationsConfig.Disabled {
+		const manifestFileName = "manifest.json"
+
+		storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
+
+		if _, ok := fileSystemProviders[storageProviderID]; ok {
+			return fmt.Errorf("filesystem storage provider %q is not supported for PQL manifest; use S3 or CDN instead", storageProviderID)
+		}
+
+		if storageProviderID != "" {
+			// An explicit storage provider is configured — read the manifest once at startup.
+			objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
+			objectPath := manifestFileName
+			if objectPrefix != "" {
+				objectPath = path.Join(objectPrefix, manifestFileName)
+			}
+
+			manifest, err := pClient.ReadManifest(ctx, objectPath)
+			if err != nil {
+				return fmt.Errorf("failed to fetch PQL manifest from storage provider %q: %w",
+					storageProviderID, err)
+			}
+
+			pqlStore = pqlmanifest.NewStore(r.logger)
+			pqlStore.Load(manifest)
+			r.logger.Info("Loaded PQL manifest from storage provider",
+				zap.String("provider_id", storageProviderID),
+				zap.Int("operations", pqlStore.OperationCount()),
+			)
+		} else {
+			// No storage provider configured — fetch manifest from Cosmo CDN and poll for updates.
+			if r.graphApiToken == "" {
+				return errors.New("graph token is required for PQL manifest")
+			}
+
+			fetcher, err := pqlmanifest.NewFetcher(r.cdnConfig.URL, r.graphApiToken, r.logger)
+			if err != nil {
+				return fmt.Errorf("failed to create PQL manifest fetcher: %w", err)
+			}
+
+			poller := pqlmanifest.NewPoller(
+				fetcher,
+				r.persistedOperationsConfig.Manifest.PollInterval,
+				r.persistedOperationsConfig.Manifest.PollJitter,
+				r.logger,
+			)
+
+			if err := poller.FetchInitial(ctx); err != nil {
+				return fmt.Errorf("failed to fetch initial PQL manifest: %w", err)
+			}
+
+			go poller.Poll(ctx)
+
+			pqlStore = fetcher.Store()
+		}
+
+		// Manifest is authoritative — individual operation fetches are not needed.
+		pClient = nil
+	}
+
+	if pClient != nil || apqClient != nil || pqlStore != nil {
 		// For backwards compatibility with cdn config field
 		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
 		if cacheSize <= 0 {
@@ -1263,6 +1329,7 @@ func (r *Router) buildClients() error {
 			Logger:         r.logger,
 			ProviderClient: pClient,
 			ApqClient:      apqClient,
+			PQLStore:       pqlStore,
 		})
 		if err != nil {
 			return err
