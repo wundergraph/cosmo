@@ -1,0 +1,41 @@
+---
+title: 'Overview'
+description: 'Understand how OAuth 2.1 authorization works in the MCP server, including token validation, scope enforcement, and integration with identity providers.'
+icon: 'shield-check'
+---
+
+The MCP server supports OAuth 2.1 authorization, enabling integration with identity providers like Keycloak, Auth0, and Okta.
+
+<Info>OAuth is disabled by default. Existing MCP configurations continue to work unchanged.</Info>
+
+## How It Works
+
+When OAuth is enabled, every HTTP request to the MCP server must include a valid JWT bearer token in the `Authorization` header. The server validates the token using configured JWKS providers and enforces scope requirements at multiple levels.
+
+All scope enforcement happens at the HTTP transport level per the MCP specification, returning `403 Forbidden` responses with `WWW-Authenticate` headers that enable [step-up authorization](/router/mcp/oauth/scopes#token-upgrade-flow).
+
+## Token Validation
+
+The MCP server validates JWT bearer tokens using JWKS (JSON Web Key Sets). You can configure one or more JWKS providers — either remote JWKS URLs (for production with providers like Keycloak, Auth0, Okta) or symmetric secrets (for development and testing).
+
+The MCP OAuth config uses the **same JWKS format** as the router's top-level [authentication configuration](/router/authentication-and-authorization), though it is configured independently. You can point the MCP JWKS to the same JWKS URL as your router authentication, or to a different identity provider entirely.
+
+## OAuth Discovery (RFC 9728)
+
+When OAuth is enabled, the MCP server exposes a public metadata endpoint at `/.well-known/oauth-protected-resource/mcp` following [RFC 9728](https://datatracker.ietf.org/doc/rfc9728/). MCP clients use this endpoint to automatically discover the authorization server and all supported scopes without any manual configuration.
+
+The `scopes_supported` field is **automatically computed** as the union of all configured static scopes and all scopes extracted from `@requiresScopes` directives on fields used by registered operations. This means MCP clients can request all supported scopes upfront during the initial OAuth authorization, avoiding step-up challenges entirely.
+
+## Get Started
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/router/mcp/oauth/quickstart">
+    Step-by-step guide to adding OAuth to your MCP server with a working example.
+  </Card>
+  <Card title="Scope Enforcement" icon="layer-group" href="/router/mcp/oauth/scopes">
+    Understand the multi-level scope enforcement model and how scopes combine.
+  </Card>
+  <Card title="Configuration Reference" icon="sliders-up" href="/router/mcp/oauth/configuration">
+    Complete reference for all OAuth configuration options, JWKS settings, and error responses.
+  </Card>
+</CardGroup>
