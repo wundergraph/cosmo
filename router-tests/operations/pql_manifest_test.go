@@ -832,48 +832,6 @@ func TestPQLManifest(t *testing.T) {
 		})
 	})
 
-	t.Run("APQ skips save for manifest-known operations", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			ApqConfig: config.AutomaticPersistedQueriesConfig{
-				Enabled: true,
-				Cache: config.AutomaticPersistedQueriesCacheConfig{
-					Size: 1024 * 1024,
-					TTL:  2,
-				},
-			},
-			RouterOptions: []core.Option{
-				core.WithPersistedOperationsConfig(manifestConfig),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			header := make(http.Header)
-			header.Add("graphql-client-name", "my-client")
-
-			// Send query + hash for a manifest-known operation.
-			// With our change, this should NOT be saved to APQ.
-			// sha256("{__typename}") = ecf4e... which is in the manifest.
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query:      `{__typename}`,
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
-			})
-			require.NoError(t, err)
-			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
-
-			// Wait for APQ TTL to expire. If the operation was saved to APQ,
-			// a hash-only request would fail after this.
-			time.Sleep(3 * time.Second)
-
-			// Hash-only request must still succeed — served from manifest, not expired APQ.
-			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
-				Header:     header,
-			})
-			require.NoError(t, err)
-			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
-		})
-	})
-
 	t.Run("APQ works for non-manifest operations when both enabled", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{

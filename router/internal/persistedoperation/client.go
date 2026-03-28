@@ -117,13 +117,6 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 
 func (c *Client) SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error {
 	if c.apqClient != nil && c.apqClient.Enabled() {
-		// Don't duplicate into APQ what the manifest already has.
-		// The manifest is the authoritative source and doesn't need TTL management.
-		if c.ManifestEnabled() {
-			if _, found := c.pqlStore.LookupByHash(sha256Hash); found {
-				return nil
-			}
-		}
 		return c.apqClient.SaveOperation(ctx, clientName, sha256Hash, []byte(operationBody))
 	}
 
