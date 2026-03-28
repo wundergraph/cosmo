@@ -775,7 +775,7 @@ func TestPQLManifest(t *testing.T) {
 		})
 	})
 
-	t.Run("cache warmup and manifest warmup deduplicate shared operations", func(t *testing.T) {
+	t.Run("cache warmup and manifest warmup both warm overlapping operations", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
@@ -804,17 +804,17 @@ func TestPQLManifest(t *testing.T) {
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 				BaseGraphAssertions: testenv.CacheMetricsAssertion{
-					// Cache warmup processes dc675... first (1 validation+plan miss).
-					// Manifest warmup runs after cache warmup completes: dc675... is skipped
-					// (already cached). ItemsPerSecond=100 serializes remaining items so
-					// 33651... reliably hits dc675...'s validation/plan entries (same
-					// normalized form), {__typename} misses (unique query).
-					// Total: 2 misses (dc675 + __typename), 2 hits (33651 + request).
+					// Cache warmup plans dc675... (1 plan+validation miss).
+					// waitForCaches() flushes ristretto so all entries are visible.
+					// Manifest warmup: dc675... hits plan cache, 33651... hits (same
+					// normalized form), ecf4e... misses (unique query).
+					// Request for dc675... hits all caches.
+					// Total: 2 misses (dc675 warmup + ecf4e manifest), 3 hits (dc675+33651 manifest + request).
 					PersistedQueryNormalizationHits: 1,
 					ValidationMisses:                2,
-					ValidationHits:                  2,
+					ValidationHits:                  3,
 					PlanMisses:                      2,
-					PlanHits:                        2,
+					PlanHits:                        3,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {

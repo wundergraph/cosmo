@@ -725,6 +725,32 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 	return computeSha256, nil
 }
 
+// waitForCaches blocks until all pending ristretto async writes have been applied.
+// This ensures that items stored during one warmup pass are visible to the next pass.
+func (s *graphMux) waitForCaches() {
+	if s.planCache != nil {
+		s.planCache.Wait()
+	}
+	if s.persistedOperationCache != nil {
+		s.persistedOperationCache.Wait()
+	}
+	if s.normalizationCache != nil {
+		s.normalizationCache.Wait()
+	}
+	if s.variablesNormalizationCache != nil {
+		s.variablesNormalizationCache.Wait()
+	}
+	if s.remapVariablesCache != nil {
+		s.remapVariablesCache.Wait()
+	}
+	if s.validationCache != nil {
+		s.validationCache.Wait()
+	}
+	if s.operationHashCache != nil {
+		s.operationHashCache.Wait()
+	}
+}
+
 // configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
 func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []attribute.KeyValue) error {
 	if srv.metricConfig.OpenTelemetry.GraphqlCache {
@@ -1402,7 +1428,7 @@ func (s *graphServer) buildGraphMux(
 						otel.WgFeatureFlag.String(opts.FeatureFlagName),
 						otel.WgOperationHash.String(item.OperationHash),
 						otel.WgOperationType.String(item.OperationType),
-						otel.WgEnginePlanCacheHit.Bool(item.PlanningTime == 0),
+						otel.WgEnginePlanCacheHit.Bool(item.PlanCacheHit),
 					}, baseMetricAttributes...)...,
 				),
 			)
@@ -1450,8 +1476,13 @@ func (s *graphServer) buildGraphMux(
 		}
 	}
 
+	// Flush all ristretto async writes so that items cached during the warmup pass above
+	// are visible to the manifest warmup below. This ensures overlapping operations hit
+	// the plan cache instead of being planned again.
+	gm.waitForCaches()
+
 	// Prewarm all persisted operations from the PQL manifest so that the first request is served from cache.
-	// This runs independently of the cache warmup configuration above.
+	// This runs sequentially after the cache warmup above — the plan cache handles dedup naturally.
 	manifestWarmup := s.persistedOperationsConfig.Manifest.Warmup
 	if manifestWarmup.Enabled && s.persistedOperationClient != nil {
 		if pqlStore := s.persistedOperationClient.PQLStore(); pqlStore != nil && pqlStore.IsLoaded() {
@@ -1476,7 +1507,7 @@ func (s *graphServer) buildGraphMux(
 							otel.WgFeatureFlag.String(opts.FeatureFlagName),
 							otel.WgOperationHash.String(item.OperationHash),
 							otel.WgOperationType.String(item.OperationType),
-							otel.WgEnginePlanCacheHit.Bool(item.PlanningTime == 0),
+							otel.WgEnginePlanCacheHit.Bool(item.PlanCacheHit),
 						}, baseMetricAttributes...)...,
 					),
 				)
@@ -1498,7 +1529,8 @@ func (s *graphServer) buildGraphMux(
 			}
 
 			// Re-warm when the manifest is updated by the poller.
-			// The callback runs in a new goroutine to avoid blocking the poll loop.
+			// The store handles coalescing — if a re-warm is already running or pending,
+			// new signals are dropped. The worker always reads the latest manifest.
 			pqlStore.SetOnUpdate(func() {
 				rewarmCtx, cancel := context.WithTimeout(context.Background(), manifestWarmup.Timeout)
 				defer cancel()

@@ -1228,24 +1228,6 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 	o.cache.persistedOperationVariableNamesLock.Unlock()
 }
 
-// isPersistedOperationAlreadyCached checks whether a persisted operation has already been
-// processed and cached (e.g., by a prior warmup pass). It checks the persistedOperationVariableNames
-// map which is populated by savePersistedOperationToCache, avoiding ristretto Get calls that
-// would register false cache misses in metrics.
-func (o *OperationKit) isPersistedOperationAlreadyCached() bool {
-	if o.cache == nil || o.cache.persistedOperationVariableNames == nil {
-		return false
-	}
-	h := o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
-	if h == "" {
-		return false
-	}
-	o.cache.persistedOperationVariableNamesLock.RLock()
-	_, exists := o.cache.persistedOperationVariableNames[h]
-	o.cache.persistedOperationVariableNamesLock.RUnlock()
-	return exists
-}
-
 func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuerySha256Hash string, includeOperationName bool) (key uint64, ok bool) {
 	o.cache.persistedOperationVariableNamesLock.RLock()
 	variableNames := o.cache.persistedOperationVariableNames[persistedQuerySha256Hash]

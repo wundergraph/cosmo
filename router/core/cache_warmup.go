@@ -252,6 +252,7 @@ type CacheWarmupOperationPlanResult struct {
 	ClientName    string
 	ClientVersion string
 	PlanningTime  time.Duration
+	PlanCacheHit  bool
 }
 
 type CacheWarmupPlanningProcessor struct {
@@ -304,20 +305,6 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	err = k.ComputeOperationSha256()
 	if err != nil {
 		return nil, err
-	}
-
-	// When the query body is already present (e.g., manifest warmup provides both query
-	// and hash), FetchPersistedOperation below is skipped. Check if the operation was
-	// already processed by a previous warmup pass (e.g., cache warmup ran before manifest
-	// warmup) to avoid re-parsing, re-normalizing, and re-planning the same operation.
-	// We check persistedOperationVariableNames instead of the ristretto cache to avoid
-	// registering false cache misses in metrics.
-	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query != "" {
-		if k.isPersistedOperationAlreadyCached() {
-			// Return nil result so AfterOperation (metrics) is not called —
-			// Parse/NormalizeVariables haven't run, so Type and ID are unset.
-			return nil, nil
-		}
 	}
 
 	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
@@ -396,5 +383,6 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		ClientName:    item.Client.Name,
 		ClientVersion: item.Client.Version,
 		PlanningTime:  time.Since(planningStart),
+		PlanCacheHit:  opContext.planCacheHit,
 	}, nil
 }
