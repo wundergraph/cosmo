@@ -1222,6 +1222,7 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 		o.cache.persistedOperationNormalizationCache.Set(cacheKey, entry, 1)
 	}
 
+	// This should be the final step to confirm the operation was successfully handled. We rely on this in isPersistedOperationAlreadyCached.
 	o.cache.persistedOperationVariableNamesLock.Lock()
 	o.cache.persistedOperationVariableNames[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash] = skipIncludeVariableNames
 	o.cache.persistedOperationVariableNamesLock.Unlock()

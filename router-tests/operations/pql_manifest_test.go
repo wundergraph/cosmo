@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -12,8 +13,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -546,6 +550,9 @@ func TestPQLManifest(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(manifestConfigWithWarmup),
 			},
+			// No AssertCacheMetrics here: Workers=4 with no rate limit means the 2 employees
+			// variants (same normalized form) race for validation/plan caches, making exact
+			// counts non-deterministic. Cache correctness is verified via response headers below.
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
@@ -598,6 +605,23 @@ func TestPQLManifest(t *testing.T) {
 				require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader),
 					"expected execution plan cache HIT for client %q", clientName)
 			}
+		})
+	})
+
+	t.Run("APQ GET request with operation query parameter and manifest-known operation hits cache", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(manifestConfigWithWarmup),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Query:      "{__typename}",
+				Extensions: []byte(`{"persistedQuery":{"version":1,"sha256Hash":"ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		})
 	})
 
@@ -675,6 +699,16 @@ func TestPQLManifest(t *testing.T) {
 					},
 				}),
 			},
+			AssertCacheMetrics: &testenv.CacheMetricsAssertions{
+				BaseGraphAssertions: testenv.CacheMetricsAssertion{
+					// No warmup → all caches cold on first request.
+					// 2 persisted normalization misses: loadPersistedOperationFromCache checks
+					// once without operation name, once with (because OperationName is set).
+					PersistedQueryNormalizationMisses: 2,
+					ValidationMisses:                  1,
+					PlanMisses:                        1,
+				},
+			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
@@ -712,6 +746,17 @@ func TestPQLManifest(t *testing.T) {
 					},
 				}),
 			},
+			AssertCacheMetrics: &testenv.CacheMetricsAssertions{
+				BaseGraphAssertions: testenv.CacheMetricsAssertion{
+					// Custom warmup config (Workers=2, ItemsPerSecond=100) still warms all caches.
+					// 3 manifest ops → 2 unique plans during warmup, 1 hit from the request.
+					PersistedQueryNormalizationHits: 1,
+					ValidationMisses:                2,
+					ValidationHits:                  2,
+					PlanMisses:                      2,
+					PlanHits:                        2,
+				},
+			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
@@ -727,6 +772,174 @@ func TestPQLManifest(t *testing.T) {
 			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 			require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
 			require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+		})
+	})
+
+	t.Run("cache warmup and manifest warmup both warm overlapping operations", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled: true,
+					Source: config.CacheWarmupSource{
+						Filesystem: &config.CacheWarmupFileSystemSource{
+							// Contains hash dc675... which also exists in the manifest.
+							Path: "testdata/cache_warmup/json_po_manifest_overlap",
+						},
+					},
+				}),
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Manifest: config.PQLManifestConfig{
+						Enabled:      true,
+						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
+						Warmup: config.PQLManifestWarmupConfig{
+							Enabled:        true,
+							Workers:        2,
+							ItemsPerSecond: 100,
+							Timeout:        30 * time.Second,
+						},
+					},
+				}),
+			},
+			AssertCacheMetrics: &testenv.CacheMetricsAssertions{
+				BaseGraphAssertions: testenv.CacheMetricsAssertion{
+					// Cache warmup plans dc675... (1 plan+validation miss).
+					// waitForCaches() flushes ristretto so all entries are visible.
+					// Manifest warmup: dc675... hits plan cache, 33651... hits (same
+					// normalized form), ecf4e... misses (unique query).
+					// Request for dc675... hits all caches.
+					// Total: 2 misses (dc675 warmup + ecf4e manifest), 3 hits (dc675+33651 manifest + request).
+					PersistedQueryNormalizationHits: 1,
+					ValidationMisses:                2,
+					ValidationHits:                  3,
+					PlanMisses:                      2,
+					PlanHits:                        3,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, expectedEmployeesBody, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		})
+	})
+
+	t.Run("in-memory APQ skips save for manifest-known operations", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+					TTL:  2,
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(manifestConfig),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			// Send query + hash for a manifest-known operation.
+			// For in-memory APQ, this should NOT be saved to APQ — the manifest is authoritative.
+			// sha256("{__typename}") = ecf4e... which is in the manifest.
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:      `{__typename}`,
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+			// Wait for APQ TTL to expire. If the operation was saved to APQ,
+			// a hash-only request would fail after this.
+			time.Sleep(3 * time.Second)
+
+			// Hash-only request must still succeed — served from manifest, not expired APQ.
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+		})
+	})
+
+	t.Run("APQ works for non-manifest operations when both enabled", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(manifestConfig),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			// Use an operation NOT in the manifest. APQ should work normally.
+			// sha256("query { employees { id details { forename } } }") = 6083e15e...
+			nonManifestHash := "6083e15eded39dbd64279ae4cffbc6e3bee52b177f7003ebba9532a17e6231f2"
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:      `query { employees { id details { forename } } }`,
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + nonManifestHash + `"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"data"`)
+
+			// Subsequent hash-only request should succeed — APQ saved the operation.
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + nonManifestHash + `"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"data"`)
+		})
+	})
+
+	t.Run("manifest warmup emits planning time metrics", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(manifestConfigWithWarmup),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// No requests — collect metrics emitted purely by manifest warmup at startup.
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			metricScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			require.NotNil(t, metricScope)
+
+			m := testutils.GetMetricByName(metricScope, "router.graphql.operation.planning_time")
+			require.NotNil(t, m, "planning_time metric should be emitted during manifest warmup")
+
+			dataPoints := m.Data.(metricdata.Histogram[float64]).DataPoints
+			require.NotEmpty(t, dataPoints)
+
+			// Find the warmup data point (cache miss during warmup planning)
+			warmupDP := findDataPoint(t, dataPoints, false)
+			require.Greater(t, warmupDP.Count, uint64(0), "manifest warmup should record planning time metrics")
+			require.Greater(t, warmupDP.Sum, float64(0), "manifest warmup planning time should be non-zero")
 		})
 	})
 
