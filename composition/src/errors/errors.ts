@@ -77,6 +77,14 @@ export function composeDirectiveBuiltInError(name: string): Error {
   );
 }
 
+// @composeDirective — two subgraphs define the directive with disjoint location sets
+export function composeDirectiveNoMutualLocationsError(name: string, subgraphNames: Set<string>): Error {
+  return new Error(
+    `The composed directive "@${name}" has no mutually supported locations across subgraphs: [${[...subgraphNames].join(', ')}].` +
+      ` All subgraphs that define a composed directive must share at least one location.`,
+  );
+}
+
 // @composeDirective with conflicting repeatable declarations across subgraphs
 export function composeDirectiveRepeatableConflictError(name: string, subgraphNames: Set<string>): Error {
   return new Error(

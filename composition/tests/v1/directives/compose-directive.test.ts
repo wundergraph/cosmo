@@ -1,6 +1,7 @@
 import {
   composeDirectiveBuiltInError,
   composeDirectiveNameMissingAtPrefixError,
+  composeDirectiveNoMutualLocationsError,
   composeDirectiveRepeatableConflictError,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -174,7 +175,20 @@ describe('@composeDirective tests', () => {
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toStrictEqual(composeDirectiveRepeatableConflictError('myDirective', new Set(['subgraph-a'])));
+    expect(errors[0]).toStrictEqual(
+      composeDirectiveRepeatableConflictError('myDirective', new Set(['subgraph-a', 'subgraph-b'])),
+    );
+  });
+
+  test('that a composed directive with disjoint locations across subgraphs returns a composition error', () => {
+    const { errors } = federateSubgraphsFailure(
+      [subgraphDirectiveOnFieldDefinition, subgraphDirectiveOnObject],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      composeDirectiveNoMutualLocationsError('myDirective', new Set(['subgraph-a', 'subgraph-b'])),
+    );
   });
 });
 
@@ -369,6 +383,47 @@ const subgraphRepeatableB: Subgraph = {
     extend schema @composeDirective(name: "@myDirective")
 
     directive @myDirective(reason: String!) on FIELD_DEFINITION
+
+    type Query {
+      user: User
+    }
+
+    type Product @shareable {
+      id: ID!
+    }
+
+    type User {
+      id: ID!
+    }
+  `),
+};
+
+// subgraph-a declares @myDirective on FIELD_DEFINITION; subgraph-b declares it on OBJECT only — disjoint
+const subgraphDirectiveOnFieldDefinition: Subgraph = {
+  name: 'subgraph-a',
+  url: '',
+  definitions: parse(`
+    extend schema @composeDirective(name: "@myDirective")
+
+    directive @myDirective(reason: String!) on FIELD_DEFINITION
+
+    type Query {
+      product: Product
+    }
+
+    type Product @shareable {
+      id: ID! @myDirective(reason: "a")
+    }
+  `),
+};
+
+const subgraphDirectiveOnObject: Subgraph = {
+  name: 'subgraph-b',
+  url: '',
+  definitions: parse(`
+    extend schema @composeDirective(name: "@myDirective")
+
+    directive @myDirective(reason: String!) on OBJECT
 
     type Query {
       user: User

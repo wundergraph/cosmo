@@ -71,6 +71,7 @@ import {
   undefinedTypeError,
   unexpectedNonCompositeOutputTypeError,
   unknownFieldDataError,
+  composeDirectiveNoMutualLocationsError,
   composeDirectiveRepeatableConflictError,
   unknownFieldSubgraphNameError,
   unknownNamedTypeError,
@@ -1627,8 +1628,12 @@ export class FederationFactory {
   federateInternalSubgraphData() {
     // Pre-pass: register composed directives before any type/field upserts so that
     // extractPersistedDirectives can find them when walking type/field nodes.
+    const rejectedComposedDirectiveNames = new Set<string>();
     for (const internalSubgraph of this.internalSubgraphBySubgraphName.values()) {
       for (const [directiveName, data] of internalSubgraph.composedDirectiveDefinitionDataByDirectiveName) {
+        if (rejectedComposedDirectiveNames.has(directiveName)) {
+          continue;
+        }
         if (!this.persistedDirectiveDefinitionByDirectiveName.has(directiveName)) {
           const node = internalSubgraph.directiveDefinitionByName.get(directiveName);
           if (node) {
@@ -1661,15 +1666,27 @@ export class FederationFactory {
             }
           }
           setMutualExecutableLocations(existing, data.executableLocations);
+          // Reject if no locations remain after intersection
+          const effectiveLocationsEmpty =
+            existing.locations !== undefined
+              ? existing.locations.size === 0
+              : existing.executableLocations.size === 0;
+          if (effectiveLocationsEmpty) {
+            addIterableToSet({ source: data.subgraphNames, target: existing.subgraphNames });
+            this.errors.push(composeDirectiveNoMutualLocationsError(directiveName, existing.subgraphNames));
+            this.composedDirectiveDefinitionDataByDirectiveName.delete(directiveName);
+            rejectedComposedDirectiveNames.add(directiveName);
+            continue;
+          }
           for (const inputValueData of data.argumentDataByName.values()) {
             this.namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
             this.upsertInputValueData(existing.argumentDataByName, inputValueData, `@${directiveName}`, false);
           }
           setLongestDescription(existing, data);
+          addIterableToSet({ source: data.subgraphNames, target: existing.subgraphNames });
           if (existing.repeatable !== data.repeatable) {
             this.errors.push(composeDirectiveRepeatableConflictError(directiveName, existing.subgraphNames));
           }
-          addIterableToSet({ source: data.subgraphNames, target: existing.subgraphNames });
         }
       }
     }
