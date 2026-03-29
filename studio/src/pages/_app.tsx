@@ -23,6 +23,7 @@ import { PostHogProvider } from 'posthog-js/react';
 import { withErrorBoundary } from '@sentry/nextjs';
 import { Footer } from '@/components/layout/footer';
 import { FeatureFlagProvider } from '@/components/feature-flag-provider';
+import { OnboardingProvider } from '@/components/onboarding/onboarding-provider';
 
 const queryClient = new QueryClient();
 
@@ -73,12 +74,14 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <QueryClientProvider client={queryClient}>
             <FeatureFlagProvider>
-              <AppProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  {getLayout(<Component {...pageProps} />)}
-                </TooltipProvider>
-              </AppProvider>
+              <OnboardingProvider>
+                <AppProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    {getLayout(<Component {...pageProps} />)}
+                  </TooltipProvider>
+                </AppProvider>
+              </OnboardingProvider>
             </FeatureFlagProvider>
           </QueryClientProvider>
         </ThemeProvider>

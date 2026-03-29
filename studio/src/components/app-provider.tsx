@@ -4,13 +4,14 @@ import { TransportProvider } from '@connectrpc/connect-query';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/router';
-import { ReactNode, createContext, useEffect, useState } from 'react';
+import { ReactNode, createContext, useEffect, useState, useRef } from 'react';
 import { useCookieOrganization } from '@/hooks/use-cookie-organization';
 import { setUser as setSentryUser } from '@sentry/nextjs';
 import { OrganizationRole } from '@/lib/constants';
 import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
 import { useFeatureFlags } from '@/components/feature-flag-provider';
-import { OnboardingProvider } from '@/components/onboarding/onboarding-provider';
+import { type Onboarding } from '@/components/onboarding/onboarding-provider';
+import { useOnboarding } from '@/hooks/use-onboarding';
 
 const sessionQueryClient = new QueryClient();
 
@@ -78,6 +79,7 @@ export interface Session {
   email: string;
   organizations: Organization[];
   invitations: InvitedOrgs[];
+  onboarding?: Onboarding;
 }
 
 export class UnauthorizedError extends Error {
@@ -106,7 +108,9 @@ const fetchSession = async () => {
   }
 };
 
+let renderCount = 0;
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const isInitialUserLoaded = useRef<boolean | undefined>(undefined);
   const router = useRouter();
   const currentOrgSlug = router.query.organizationSlug;
   // we store the current org slug in a cookie, so that we can redirect to the correct org after login
@@ -122,7 +126,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
 
   const [user, setUser] = useState<User>();
-  const { onboarding } = useFeatureFlags();
+  const { onboarding: onboardingFeatureFlag } = useFeatureFlags();
+  const { setOnboarding, dismissed } = useOnboarding();
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -163,6 +168,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         invitations: data.invitations,
       });
 
+      if (isInitialUserLoaded.current === undefined) {
+        isInitialUserLoaded.current = true;
+      }
+
+      // Set onboarding data for initial load only
+      if (isInitialUserLoaded.current) {
+        setOnboarding(data.onboarding);
+      }
+
+      if (isInitialUserLoaded.current) {
+        isInitialUserLoaded.current = false;
+      }
+
       if (process.env.NEXT_PUBLIC_SENTRY_ENABLED) {
         setSentryUser({
           id: data.id,
@@ -190,8 +208,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
         router.pathname !== '/account/invitations';
 
-      // If onboarding is enabled, OnboardingProvider handles the redirect instead
-      if (onboarding.enabled) return;
+      // Onboarding triggers when feature flag is ON and when user has not finished
+      // step 1. `dismissed` is set when onboarding is skipped for the given session.
+      // other steps do not immediately redirect to onboarding, instead banner is raised
+      if (
+        onboardingFeatureFlag.enabled &&
+        !data.onboarding?.step &&
+        data.onboarding?.step !== 0 &&
+        !dismissed &&
+        router.pathname !== '/onboarding'
+      ) {
+        router.replace('/onboarding');
+        return;
+      }
 
       if (shouldRedirectToOrg) {
         const url = new URL(window.location.origin + router.basePath + router.asPath);
@@ -199,7 +228,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         router.replace(params.size !== 0 ? `/${organization.slug}?${params}` : `/${organization.slug}`);
       }
     }
-  }, [router, data, isFetching, error, cookieOrgSlug, onboarding.enabled]);
+  }, [router, data, isFetching, error, cookieOrgSlug, onboardingFeatureFlag.enabled, setOnboarding, dismissed]);
 
   useEffect(() => {
     if (!verifiedOrganizationSlug) {
@@ -241,9 +270,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return (
       <UserContext.Provider value={user}>
         <SessionClientContext.Provider value={sessionQueryClient}>
-          <WorkspaceProvider>
-            <OnboardingProvider>{children}</OnboardingProvider>
-          </WorkspaceProvider>
+          <WorkspaceProvider>{children}</WorkspaceProvider>
         </SessionClientContext.Provider>
       </UserContext.Provider>
     );
@@ -253,9 +280,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     <TransportProvider transport={transport}>
       <UserContext.Provider value={user}>
         <SessionClientContext.Provider value={sessionQueryClient}>
-          <WorkspaceProvider>
-            <OnboardingProvider>{children}</OnboardingProvider>
-          </WorkspaceProvider>
+          <WorkspaceProvider>{children}</WorkspaceProvider>
         </SessionClientContext.Provider>
       </UserContext.Provider>
     </TransportProvider>

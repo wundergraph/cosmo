@@ -30,6 +30,9 @@ import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useUser } from '@/hooks/use-user';
 import { useStarBannerDisabled } from '@/hooks/use-star-banner-disabled';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { useOnboarding } from '@/hooks/use-onboarding';
+import { Link } from '../ui/link';
+import { Button } from '../ui/button';
 
 export const StarBanner = ({
   isDisabled,
@@ -71,6 +74,43 @@ export const StarBanner = ({
   );
 };
 
+export const OnboardingBanner = ({ hasFinishedOnboarding }: { hasFinishedOnboarding: boolean }) => {
+  const content = hasFinishedOnboarding ? (
+    <>
+      Feeling stuck? {/* TODO - handle resetting the onboarding */}
+      <Button
+        variant="link"
+        size="sm"
+        className="h-auto p-0 text-xs text-black underline dark:text-white xl:text-sm"
+        onClick={() => undefined}
+      >
+        Take the tour again.
+      </Button>
+    </>
+  ) : (
+    <>
+      Don&apos;t know what to do?{' '}
+      <span className="underline">
+        <Link href="/onboarding">Finish onboarding.</Link>
+      </span>
+      <span className="hidden font-bold lg:flex">👈</span>
+    </>
+  );
+  return (
+    <div className={cn('flex h-8 justify-center')}>
+      <div className="flex w-screen bg-gradient-to-r from-purple-500 to-pink-400 text-xs lg:justify-center xl:text-sm">
+        <span className="flex items-center gap-x-2">
+          <span className="relative hidden h-3 w-3 md:flex">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pink-400 opacity-75 dark:bg-white"></span>
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-pink-400 dark:bg-white"></span>
+          </span>
+          <span className="flex gap-x-1 text-gray-950 dark:text-slate-100">{content}</span>
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export const OrganizationBanner = () => {
   const org = useCurrentOrganization();
 
@@ -107,6 +147,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const organizationSlug = router.query.organizationSlug as string;
   const checkUserAccess = useCheckUserAccess();
   const [isStarBannerDisabled, setDisableStarBanner] = useStarBannerDisabled();
+  const { onboarding } = useOnboarding();
   const { namespace } = useWorkspace();
 
   const isAdmin = checkUserAccess({ rolesToBe: ['organization-admin'] });
@@ -278,7 +319,10 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      <StarBanner isDisabled={isStarBannerDisabled} setDisableStarBanner={setDisableStarBanner} />
+      {onboarding && onboarding.nonDemoFederatedGraphsCount === 0 && router.pathname !== '/onboarding' && (
+        <OnboardingBanner hasFinishedOnboarding={Boolean(onboarding.finishedAt)} />
+      )}
+      {!onboarding && <StarBanner isDisabled={isStarBannerDisabled} setDisableStarBanner={setDisableStarBanner} />}
       <OrganizationBanner />
       <div
         className={cn(

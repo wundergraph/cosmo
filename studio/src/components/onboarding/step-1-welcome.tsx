@@ -1,13 +1,19 @@
+import { useEffect, type Dispatch } from 'react';
 import { OnboardingForm } from '@/components/onboarding/onboarding-form';
 import { useToast } from '@/components/ui/use-toast';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useMutation } from '@connectrpc/connect-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { completeOnboardingStep1 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { useRouter } from 'next/router';
+import { SetStateAction } from 'react';
+import { Onboarding } from './onboarding-provider';
 
-export function Step1Welcome() {
-  const router = useRouter();
+interface Step1WelcomeProps {
+  onDismiss: () => void;
+  onSubmitSuccess: Dispatch<SetStateAction<Onboarding | undefined>>;
+}
+
+export function Step1Welcome({ onSubmitSuccess, onDismiss }: Step1WelcomeProps) {
   const org = useCurrentOrganization();
   const { toast } = useToast();
 
@@ -27,8 +33,14 @@ export function Step1Welcome() {
       },
       {
         onSuccess(res) {
-          if (res.response?.code === EnumStatusCode.OK) {
-            router.push(`/${org?.slug}/graphs`);
+          if (res.response?.code === EnumStatusCode.OK && res.onboarding) {
+            onSubmitSuccess({
+              ...res.onboarding,
+              createdAt: new Date(res.onboarding.createdAt),
+              finishedAt: res.onboarding.finishedAt ? new Date(res.onboarding.finishedAt) : null,
+              updatedAt: res.onboarding.updatedAt ? new Date(res.onboarding.updatedAt) : null,
+              federatedGraphId: res.onboarding.federatedGraphId || undefined,
+            });
           } else if (res.response?.details) {
             toast({ description: res.response.details, duration: 3000 });
           }
@@ -43,5 +55,11 @@ export function Step1Welcome() {
     );
   };
 
-  return <OnboardingForm onSubmit={onSubmit} isPending={isPending} />;
+  useEffect(() => {
+    return () => {
+      onDismiss();
+    };
+  }, [onDismiss]);
+
+  return <OnboardingForm onSubmit={onSubmit} onDismiss={onDismiss} isPending={isPending} />;
 }

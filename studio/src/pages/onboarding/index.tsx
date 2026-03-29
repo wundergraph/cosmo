@@ -4,11 +4,12 @@ import { Step3CreateGraph } from '@/components/onboarding/step-3-create-graph';
 import { Step4RunServices } from '@/components/onboarding/step-4-run-services';
 import { getOnboardingLayout } from '@/components/onboarding/onboarding-layout';
 import type { NextPageWithLayout } from '@/lib/page';
+import { useOnboarding } from '@/hooks/use-onboarding';
 
 const OnboardingPage: NextPageWithLayout = () => {
-  const step: number = 0;
+  const { onboarding, setOnboarding, dismissOnboarding } = useOnboarding();
 
-  switch (step) {
+  switch (onboarding?.step) {
     case 1:
       return <Step2Federation />;
     case 2:
@@ -17,12 +18,12 @@ const OnboardingPage: NextPageWithLayout = () => {
       return <Step4RunServices />;
     case 0:
     default:
-      return <Step1Welcome />;
+      return <Step1Welcome onSubmitSuccess={setOnboarding} onDismiss={dismissOnboarding} />;
   }
 };
 
 OnboardingPage.getLayout = (page) => {
-  return getOnboardingLayout(page, 0);
+  return getOnboardingLayout(page);
 };
 
 export default OnboardingPage;

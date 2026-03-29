@@ -1,21 +1,52 @@
-import { ReactNode, useEffect } from 'react';
-import Router from 'next/router';
-import { useFeatureFlags } from '@/components/feature-flag-provider';
+import { createContext, useCallback, useState, type Dispatch, type SetStateAction, type ReactNode } from 'react';
 
-const ONBOARDING_PATH_PREFIX = '/onboarding';
+export interface Onboarding {
+  id: string;
+  userId: string;
+  organizationId: string;
+  step: number;
+  version: string;
+  slack: boolean;
+  email: boolean;
+  federatedGraphId?: string;
+  finishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date | null;
+  nonDemoFederatedGraphsCount: number;
+}
+
+export interface OnboardingState {
+  onboarding?: Onboarding;
+  dismissed: boolean;
+  dismissOnboarding: () => void;
+  setOnboarding: Dispatch<SetStateAction<Onboarding | undefined>>;
+}
+
+export const OnboardingContext = createContext<OnboardingState>({
+  onboarding: undefined,
+  dismissed: false,
+  dismissOnboarding: () => undefined,
+  setOnboarding: () => undefined,
+});
 
 export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
-  const { onboarding } = useFeatureFlags();
+  const [onboarding, setOnboarding] = useState<Onboarding | undefined>(undefined);
+  const [dismissed, setDismissed] = useState(false);
 
-  useEffect(
-    function handleRedirectInOnboardingProvider() {
-      if (!onboarding.enabled) return;
-      if (Router.pathname.startsWith(ONBOARDING_PATH_PREFIX)) return;
+  const dismissOnboarding = useCallback(() => {
+    setDismissed(true);
+  }, []);
 
-      Router.replace('/onboarding');
-    },
-    [onboarding.enabled],
+  return (
+    <OnboardingContext.Provider
+      value={{
+        onboarding,
+        dismissed,
+        dismissOnboarding,
+        setOnboarding,
+      }}
+    >
+      {children}
+    </OnboardingContext.Provider>
   );
-
-  return children;
 };

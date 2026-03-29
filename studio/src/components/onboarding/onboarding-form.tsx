@@ -26,11 +26,12 @@ const onboardingSchema = z.object({
 type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 
 interface OnboardingFormProps {
+  onDismiss: () => void;
   onSubmit: (data: OnboardingFormValues) => void;
   isPending: boolean;
 }
 
-export function OnboardingForm({ onSubmit, isPending }: OnboardingFormProps) {
+export function OnboardingForm({ onDismiss, onSubmit, isPending }: OnboardingFormProps) {
   const router = useRouter();
   const org = useCurrentOrganization();
 
@@ -135,7 +136,10 @@ export function OnboardingForm({ onSubmit, isPending }: OnboardingFormProps) {
           type="button"
           variant="outline"
           disabled={isPending}
-          onClick={() => router.push(`/${org?.slug}/graphs`)}
+          onClick={() => {
+            onDismiss();
+            router.push(`/${org?.slug}/graphs`);
+          }}
         >
           Skip
         </Button>
