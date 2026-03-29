@@ -58,7 +58,7 @@ export const TitleLayout = ({
           <div className={cn('flex flex-col justify-between gap-y-4 px-4 lg:flex-row lg:items-center lg:px-8')}>
             <div>
               <h1 className="text-lg font-semibold">{title}</h1>
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
+              <div className="text-sm text-muted-foreground">{subtitle}</div>
             </div>
             {items}
           </div>
