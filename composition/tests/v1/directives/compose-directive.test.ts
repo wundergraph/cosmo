@@ -1,6 +1,7 @@
 import {
   composeDirectiveBuiltInError,
   composeDirectiveNameMissingAtPrefixError,
+  composeDirectiveRepeatableConflictError,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
@@ -10,6 +11,7 @@ import { describe, expect, test } from 'vitest';
 import { SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
   federateSubgraphsSuccess,
+  federateSubgraphsFailure,
   normalizeString,
   normalizeSubgraphFailure,
   schemaToSortedNormalizedString,
@@ -164,6 +166,15 @@ describe('@composeDirective tests', () => {
     const sdl = schemaToSortedNormalizedString(federatedGraphSchema);
     const occurrences = (sdl.match(/directive @myDirective/g) ?? []).length;
     expect(occurrences).toBe(1);
+  });
+
+  test('that conflicting repeatable declarations for a composed directive return a composition error', () => {
+    const { errors } = federateSubgraphsFailure(
+      [subgraphRepeatableA, subgraphRepeatableB],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(composeDirectiveRepeatableConflictError('myDirective', new Set(['subgraph-a'])));
   });
 });
 
@@ -328,6 +339,47 @@ const subgraphWithRepeatedComposeDirective: Subgraph = {
 
     type Query {
       dummy: String @myDirective(reason: "test")
+    }
+  `),
+};
+
+// subgraph-a declares @myDirective as repeatable; subgraph-b does not
+const subgraphRepeatableA: Subgraph = {
+  name: 'subgraph-a',
+  url: '',
+  definitions: parse(`
+    extend schema @composeDirective(name: "@myDirective")
+
+    directive @myDirective(reason: String!) repeatable on FIELD_DEFINITION
+
+    type Query {
+      product: Product
+    }
+
+    type Product @shareable {
+      id: ID! @myDirective(reason: "a") @myDirective(reason: "b")
+    }
+  `),
+};
+
+const subgraphRepeatableB: Subgraph = {
+  name: 'subgraph-b',
+  url: '',
+  definitions: parse(`
+    extend schema @composeDirective(name: "@myDirective")
+
+    directive @myDirective(reason: String!) on FIELD_DEFINITION
+
+    type Query {
+      user: User
+    }
+
+    type Product @shareable {
+      id: ID!
+    }
+
+    type User {
+      id: ID!
     }
   `),
 };

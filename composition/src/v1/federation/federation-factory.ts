@@ -71,6 +71,7 @@ import {
   undefinedTypeError,
   unexpectedNonCompositeOutputTypeError,
   unknownFieldDataError,
+  composeDirectiveRepeatableConflictError,
   unknownFieldSubgraphNameError,
   unknownNamedTypeError,
 } from '../../errors/errors';
@@ -1665,7 +1666,9 @@ export class FederationFactory {
             this.upsertInputValueData(existing.argumentDataByName, inputValueData, `@${directiveName}`, false);
           }
           setLongestDescription(existing, data);
-          existing.repeatable &&= data.repeatable;
+          if (existing.repeatable !== data.repeatable) {
+            this.errors.push(composeDirectiveRepeatableConflictError(directiveName, existing.subgraphNames));
+          }
           addIterableToSet({ source: data.subgraphNames, target: existing.subgraphNames });
         }
       }

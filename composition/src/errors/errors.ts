@@ -77,6 +77,14 @@ export function composeDirectiveBuiltInError(name: string): Error {
   );
 }
 
+// @composeDirective with conflicting repeatable declarations across subgraphs
+export function composeDirectiveRepeatableConflictError(name: string, subgraphNames: Set<string>): Error {
+  return new Error(
+    `The composed directive "@${name}" has conflicting "repeatable" declarations across subgraphs: [${[...subgraphNames].join(', ')}].` +
+      ` All subgraphs that define a composed directive must agree on whether it is repeatable.`,
+  );
+}
+
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
 export function multipleNamedTypeDefinitionError(
