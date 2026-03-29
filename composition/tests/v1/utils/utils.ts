@@ -100,10 +100,6 @@ export const OPENFED_SUBSCRIPTION_FILTER_VALUE = `
   scalar openfed__SubscriptionFilterValue
 `;
 
-export const COMPOSE_DIRECTIVE_DIRECTIVE = `
-  directive @composeDirective(name: String!) repeatable on SCHEMA
-`;
-
 export const ONE_OF_DIRECTIVE = `
   directive @oneOf on INPUT_OBJECT
 `;

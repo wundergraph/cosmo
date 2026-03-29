@@ -3868,59 +3868,58 @@ export class NormalizationFactory {
   }
 
   extractComposedDirectiveDefinitionData(): Map<DirectiveName, PersistedDirectiveDefinitionData> {
-  const composedDirectiveDefinitionDataByDirectiveName = new Map<DirectiveName, PersistedDirectiveDefinitionData>();
-  const composeDirectiveNodes = this.schemaData.directivesByName.get(COMPOSE_DIRECTIVE);
-  if (!composeDirectiveNodes || composeDirectiveNodes.length === 0) {
+    const composedDirectiveDefinitionDataByDirectiveName = new Map<DirectiveName, PersistedDirectiveDefinitionData>();
+    const composeDirectiveNodes = this.schemaData.directivesByName.get(COMPOSE_DIRECTIVE);
+    if (!composeDirectiveNodes || composeDirectiveNodes.length === 0) {
+      return composedDirectiveDefinitionDataByDirectiveName;
+    }
+    // NOTE: No v1 check needed here — @composeDirective is in V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
+    // so using it automatically sets isSubgraphVersionTwo = true during directive definition processing.
+    for (const node of composeDirectiveNodes) {
+      const nameArg = node.arguments?.find(a => a.name.value === NAME);
+      if (!nameArg || nameArg.value.kind !== Kind.STRING) {
+        continue; // already caught by validateDirectives
+      }
+      const rawName = nameArg.value.value; // e.g. "@myDirective"
+      if (!rawName.startsWith('@')) {
+        this.errors.push(composeDirectiveNameMissingAtPrefixError(rawName));
+        continue;
+      }
+      const directiveName = rawName.slice(1);
+      // Check built-ins first so the error message is maximally helpful.
+      if (V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(directiveName) || DIRECTIVE_DEFINITION_BY_NAME.has(directiveName)) {
+        this.errors.push(composeDirectiveBuiltInError(directiveName));
+        continue;
+      }
+      const directiveDefinitionNode = this.directiveDefinitionByName.get(directiveName);
+      if (!directiveDefinitionNode) {
+        this.errors.push(undefinedComposeDirectiveNameError(directiveName));
+        continue;
+      }
+      if (composedDirectiveDefinitionDataByDirectiveName.has(directiveName)) {
+        continue; // repeated @composeDirective for the same directive
+      }
+      // Separate executable locations from the full location set.
+      // executableLocations is used for argument validation; locations carries all locations
+      // (including type-system ones like OBJECT, FIELD_DEFINITION) for the emitted definition.
+      const executableLocations = extractExecutableDirectiveLocations(
+        directiveDefinitionNode.locations,
+        new Set<string>(),
+      );
+      const allLocations = new Set<string>();
+      for (const locationNode of directiveDefinitionNode.locations) {
+        allLocations.add(locationNode.value);
+      }
+      this.addPersistedDirectiveDefinitionDataByNode(
+        composedDirectiveDefinitionDataByDirectiveName,
+        directiveDefinitionNode,
+        executableLocations,
+      );
+      const data = composedDirectiveDefinitionDataByDirectiveName.get(directiveName)!;
+      data.locations = allLocations;
+    }
     return composedDirectiveDefinitionDataByDirectiveName;
   }
-  // NOTE: No v1 check needed here — @composeDirective is in V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
-  // so using it automatically sets isSubgraphVersionTwo = true during directive definition processing.
-  for (const node of composeDirectiveNodes) {
-    const nameArg = node.arguments?.find(a => a.name.value === NAME);
-    if (!nameArg || nameArg.value.kind !== Kind.STRING) {
-      continue; // already caught by validateDirectives
-    }
-    const rawName = nameArg.value.value; // e.g. "@myDirective"
-    if (!rawName.startsWith('@')) {
-      this.errors.push(composeDirectiveNameMissingAtPrefixError(rawName));
-      continue;
-    }
-    const directiveName = rawName.slice(1);
-    // Check built-ins first so the error message is maximally helpful.
-    if (V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(directiveName) ||
-        DIRECTIVE_DEFINITION_BY_NAME.has(directiveName)) {
-      this.errors.push(composeDirectiveBuiltInError(directiveName));
-      continue;
-    }
-    const directiveDefinitionNode = this.directiveDefinitionByName.get(directiveName);
-    if (!directiveDefinitionNode) {
-      this.errors.push(undefinedComposeDirectiveNameError(directiveName));
-      continue;
-    }
-    if (composedDirectiveDefinitionDataByDirectiveName.has(directiveName)) {
-      continue; // repeated @composeDirective for the same directive
-    }
-    // Separate executable locations from the full location set.
-    // executableLocations is used for argument validation; locations carries all locations
-    // (including type-system ones like OBJECT, FIELD_DEFINITION) for the emitted definition.
-    const executableLocations = extractExecutableDirectiveLocations(
-      directiveDefinitionNode.locations,
-      new Set<string>(),
-    );
-    const allLocations = new Set<string>();
-    for (const locationNode of directiveDefinitionNode.locations) {
-      allLocations.add(locationNode.value);
-    }
-    this.addPersistedDirectiveDefinitionDataByNode(
-      composedDirectiveDefinitionDataByDirectiveName,
-      directiveDefinitionNode,
-      executableLocations,
-    );
-    const data = composedDirectiveDefinitionDataByDirectiveName.get(directiveName)!;
-    data.locations = allLocations;
-  }
-  return composedDirectiveDefinitionDataByDirectiveName;
-}
 
   normalize(document: DocumentNode): NormalizationResult {
     // Collect any renamed root types

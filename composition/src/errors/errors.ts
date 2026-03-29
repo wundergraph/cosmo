@@ -56,6 +56,7 @@ import {
   type TypeName,
 } from '../types/types';
 
+// @composeDirective(name: "myDirective") — missing @ prefix
 export function composeDirectiveNameMissingAtPrefixError(name: string): Error {
   return new Error(
     `The name argument of "@composeDirective" must start with "@", but received "${name}".`
