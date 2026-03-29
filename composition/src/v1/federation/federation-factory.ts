@@ -1636,14 +1636,37 @@ export class FederationFactory {
         }
         const existing = this.composedDirectiveDefinitionDataByDirectiveName.get(directiveName);
         if (!existing) {
+          const argumentDataByName = new Map<string, InputValueData>();
+          for (const inputValueData of data.argumentDataByName.values()) {
+            this.namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
+            this.upsertInputValueData(argumentDataByName, inputValueData, `@${directiveName}`, false);
+          }
           this.composedDirectiveDefinitionDataByDirectiveName.set(directiveName, {
-            ...data,
+            argumentDataByName,
+            executableLocations: new Set(data.executableLocations),
+            locations: data.locations ? new Set(data.locations) : undefined,
+            name: data.name,
+            repeatable: data.repeatable,
             subgraphNames: new Set(data.subgraphNames),
+            description: data.description,
           });
         } else {
-          for (const subgraphName of data.subgraphNames) {
-            existing.subgraphNames.add(subgraphName);
+          // Intersect locations so only mutually supported locations are emitted
+          if (existing.locations && data.locations) {
+            for (const loc of existing.locations) {
+              if (!data.locations.has(loc)) {
+                existing.locations.delete(loc);
+              }
+            }
           }
+          setMutualExecutableLocations(existing, data.executableLocations);
+          for (const inputValueData of data.argumentDataByName.values()) {
+            this.namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
+            this.upsertInputValueData(existing.argumentDataByName, inputValueData, `@${directiveName}`, false);
+          }
+          setLongestDescription(existing, data);
+          existing.repeatable &&= data.repeatable;
+          addIterableToSet({ source: data.subgraphNames, target: existing.subgraphNames });
         }
       }
     }
