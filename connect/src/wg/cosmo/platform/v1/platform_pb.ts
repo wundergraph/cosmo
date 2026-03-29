@@ -24977,3 +24977,204 @@ export class RecomposeGraphResponse extends Message<RecomposeGraphResponse> {
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.CompleteOnboardingStep1Request
+ */
+export class CompleteOnboardingStep1Request extends Message<CompleteOnboardingStep1Request> {
+  /**
+   * @generated from field: string organization_name = 1;
+   */
+  organizationName = "";
+
+  /**
+   * @generated from field: repeated string member_emails = 2;
+   */
+  memberEmails: string[] = [];
+
+  /**
+   * @generated from field: bool slack = 3;
+   */
+  slack = false;
+
+  /**
+   * @generated from field: bool email = 4;
+   */
+  email = false;
+
+  constructor(data?: PartialMessage<CompleteOnboardingStep1Request>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CompleteOnboardingStep1Request";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organization_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "member_emails", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "slack", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "email", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CompleteOnboardingStep1Request {
+    return new CompleteOnboardingStep1Request().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CompleteOnboardingStep1Request {
+    return new CompleteOnboardingStep1Request().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CompleteOnboardingStep1Request {
+    return new CompleteOnboardingStep1Request().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CompleteOnboardingStep1Request | PlainMessage<CompleteOnboardingStep1Request> | undefined, b: CompleteOnboardingStep1Request | PlainMessage<CompleteOnboardingStep1Request> | undefined): boolean {
+    return proto3.util.equals(CompleteOnboardingStep1Request, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CompleteOnboardingStep1Response
+ */
+export class CompleteOnboardingStep1Response extends Message<CompleteOnboardingStep1Response> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.CompleteOnboardingStep1Response.Onboarding onboarding = 2;
+   */
+  onboarding?: CompleteOnboardingStep1Response_Onboarding;
+
+  constructor(data?: PartialMessage<CompleteOnboardingStep1Response>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CompleteOnboardingStep1Response";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "onboarding", kind: "message", T: CompleteOnboardingStep1Response_Onboarding },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CompleteOnboardingStep1Response {
+    return new CompleteOnboardingStep1Response().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CompleteOnboardingStep1Response {
+    return new CompleteOnboardingStep1Response().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CompleteOnboardingStep1Response {
+    return new CompleteOnboardingStep1Response().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CompleteOnboardingStep1Response | PlainMessage<CompleteOnboardingStep1Response> | undefined, b: CompleteOnboardingStep1Response | PlainMessage<CompleteOnboardingStep1Response> | undefined): boolean {
+    return proto3.util.equals(CompleteOnboardingStep1Response, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CompleteOnboardingStep1Response.Onboarding
+ */
+export class CompleteOnboardingStep1Response_Onboarding extends Message<CompleteOnboardingStep1Response_Onboarding> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string userId = 2;
+   */
+  userId = "";
+
+  /**
+   * @generated from field: string organizationId = 3;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: string createdAt = 4;
+   */
+  createdAt = "";
+
+  /**
+   * @generated from field: string finishedAt = 5;
+   */
+  finishedAt = "";
+
+  /**
+   * @generated from field: string updatedAt = 6;
+   */
+  updatedAt = "";
+
+  /**
+   * @generated from field: string version = 7;
+   */
+  version = "";
+
+  /**
+   * @generated from field: int32 step = 8;
+   */
+  step = 0;
+
+  /**
+   * @generated from field: bool slack = 9;
+   */
+  slack = false;
+
+  /**
+   * @generated from field: bool email = 10;
+   */
+  email = false;
+
+  /**
+   * @generated from field: string federatedGraphId = 11;
+   */
+  federatedGraphId = "";
+
+  /**
+   * @generated from field: int32 nonDemoFederatedGraphsCount = 12;
+   */
+  nonDemoFederatedGraphsCount = 0;
+
+  constructor(data?: PartialMessage<CompleteOnboardingStep1Response_Onboarding>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CompleteOnboardingStep1Response.Onboarding";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "userId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "organizationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "finishedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "updatedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "step", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 9, name: "slack", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "email", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 11, name: "federatedGraphId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 12, name: "nonDemoFederatedGraphsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CompleteOnboardingStep1Response_Onboarding {
+    return new CompleteOnboardingStep1Response_Onboarding().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CompleteOnboardingStep1Response_Onboarding {
+    return new CompleteOnboardingStep1Response_Onboarding().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CompleteOnboardingStep1Response_Onboarding {
+    return new CompleteOnboardingStep1Response_Onboarding().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CompleteOnboardingStep1Response_Onboarding | PlainMessage<CompleteOnboardingStep1Response_Onboarding> | undefined, b: CompleteOnboardingStep1Response_Onboarding | PlainMessage<CompleteOnboardingStep1Response_Onboarding> | undefined): boolean {
+    return proto3.util.equals(CompleteOnboardingStep1Response_Onboarding, a, b);
+  }
+}
+

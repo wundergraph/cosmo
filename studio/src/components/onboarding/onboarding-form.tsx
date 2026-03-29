@@ -25,7 +25,12 @@ const onboardingSchema = z.object({
 
 type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 
-export function OnboardingForm() {
+interface OnboardingFormProps {
+  onSubmit: (data: OnboardingFormValues) => void;
+  isPending: boolean;
+}
+
+export function OnboardingForm({ onSubmit, isPending }: OnboardingFormProps) {
   const router = useRouter();
   const org = useCurrentOrganization();
 
@@ -55,11 +60,6 @@ export function OnboardingForm() {
     control,
     name: 'members',
   });
-
-  const onSubmit = (data: OnboardingFormValues) => {
-    // TODO: wire up submission
-    console.log(data);
-  };
 
   return (
     <form className="space-y-8" onSubmit={handleSubmit(onSubmit)}>
@@ -131,10 +131,15 @@ export function OnboardingForm() {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button type="button" variant="outline" onClick={() => router.push(`/${org?.slug}/graphs`)}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => router.push(`/${org?.slug}/graphs`)}
+        >
           Skip
         </Button>
-        <Button type="submit" disabled={!isValid}>
+        <Button type="submit" disabled={!isValid} isLoading={isPending}>
           Continue
         </Button>
       </div>

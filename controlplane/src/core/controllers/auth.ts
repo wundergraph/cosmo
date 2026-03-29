@@ -113,7 +113,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           })),
         invitations,
         expiresAt: userSession.expiresAt,
-        onboarding: userIsOrgCreator && onboarding.nonDemoFederatedGraphsCount === 0 ? onboarding : undefined,
+        onboarding: userIsOrgCreator && onboarding?.nonDemoFederatedGraphsCount === 0 ? onboarding : undefined,
       };
     } catch (err: any) {
       if (err instanceof AuthenticationError) {

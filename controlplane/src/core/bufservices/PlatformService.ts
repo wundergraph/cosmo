@@ -179,6 +179,7 @@ import { configureSubgraphCheckExtensions } from './check-extensions/configureSu
 import { initializeCosmoUser } from './user/initializeCosmoUser.js';
 import { listOrganizations } from './organization/listOrganizations.js';
 import { recomposeGraph } from './graph/recomposeGraph.js';
+import { completeOnboardingStep1 } from './onboarding/completeOnboardingStep1.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -905,6 +906,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     recomposeGraph: (req, ctx) => {
       return recomposeGraph(opts, req, ctx);
+    },
+
+    completeOnboardingStep1: (req, ctx) => {
+      return completeOnboardingStep1(opts, req, ctx);
     },
   };
 }

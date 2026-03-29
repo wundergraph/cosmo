@@ -804,3 +804,18 @@ export interface ProposalSubgraphDTO {
   isNew: boolean;
   labels: Label[];
 }
+
+export interface OnboardingDTO {
+  id: string;
+  userId: string;
+  organizationId: string;
+  step: number;
+  version: string;
+  slack: boolean;
+  email: boolean;
+  federatedGraphId: string | null;
+  finishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date | null;
+  nonDemoFederatedGraphsCount: number;
+}
