@@ -101,8 +101,7 @@ export const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// @composeDirective is currently unimplemented
-/* directive @composeDirective(name: String!) repeatable on SCHEMA */
+// directive @composeDirective(name: String!) repeatable on SCHEMA
 export const COMPOSE_DIRECTIVE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {

@@ -138,6 +138,7 @@ import {
 } from '../../schema-building/types';
 import {
   addValidPersistedDirectiveDefinitionNodeByData,
+  buildValidPersistedDirectiveDefinitionNode,
   areKindsEqual,
   compareAndValidateInputValueDefaultValues,
   generateDeprecatedDirective,
@@ -298,6 +299,7 @@ export class FederationFactory {
     [SEMANTIC_NON_NULL, SEMANTIC_NON_NULL_DEFINITION],
     [TAG, TAG_DEFINITION],
   ]);
+  composedDirectiveDefinitionDataByDirectiveName = new Map<DirectiveName, PersistedDirectiveDefinitionData>();
   potentialPersistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
   referencedPersistedDirectiveNames = new Set<DirectiveName>();
   routerDefinitions: Array<MutableDefinitionNode | DefinitionNode> = [];
@@ -1622,6 +1624,29 @@ export class FederationFactory {
    * This method is always necessary, regardless of whether federating a source graph or contract graph.
    * */
   federateInternalSubgraphData() {
+    // Pre-pass: register composed directives before any type/field upserts so that
+    // extractPersistedDirectives can find them when walking type/field nodes.
+    for (const internalSubgraph of this.internalSubgraphBySubgraphName.values()) {
+      for (const [directiveName, data] of internalSubgraph.composedDirectiveDefinitionDataByDirectiveName) {
+        if (!this.persistedDirectiveDefinitionByDirectiveName.has(directiveName)) {
+          const node = internalSubgraph.directiveDefinitionByName.get(directiveName);
+          if (node) {
+            this.persistedDirectiveDefinitionByDirectiveName.set(directiveName, node);
+          }
+        }
+        const existing = this.composedDirectiveDefinitionDataByDirectiveName.get(directiveName);
+        if (!existing) {
+          this.composedDirectiveDefinitionDataByDirectiveName.set(directiveName, {
+            ...data,
+            subgraphNames: new Set(data.subgraphNames),
+          });
+        } else {
+          for (const subgraphName of data.subgraphNames) {
+            existing.subgraphNames.add(subgraphName);
+          }
+        }
+      }
+    }
     let subgraphNumber = 0;
     let shouldSkipPersistedExecutableDirectives = false;
     for (const internalSubgraph of this.internalSubgraphBySubgraphName.values()) {
@@ -1993,6 +2018,7 @@ export class FederationFactory {
   }
 
   pushParentDefinitionDataToDocumentDefinitions(interfaceImplementations: InterfaceImplementationData[]) {
+    const composedDirectiveNames = new Set(this.composedDirectiveDefinitionDataByDirectiveName.keys());
     for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
       if (parentDefinitionData.extensionType !== ExtensionType.NONE) {
         this.errors.push(noBaseDefinitionForExtensionError(kindToNodeType(parentDefinitionData.kind), parentTypeName));
@@ -2011,7 +2037,7 @@ export class FederationFactory {
             const isValueInaccessible = isNodeDataInaccessible(enumValueData);
             const clientEnumValueNode: MutableEnumValueNode = {
               ...enumValueData.node,
-              directives: getClientPersistedDirectiveNodes(enumValueData),
+              directives: getClientPersistedDirectiveNodes(enumValueData, composedDirectiveNames),
             };
             switch (mergeMethod) {
               case MergeMethod.CONSISTENT:
@@ -2058,7 +2084,7 @@ export class FederationFactory {
           }
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
-            directives: getClientPersistedDirectiveNodes(parentDefinitionData),
+            directives: getClientPersistedDirectiveNodes(parentDefinitionData, composedDirectiveNames),
             values: clientEnumValueNodes,
           });
           break;
@@ -2082,7 +2108,7 @@ export class FederationFactory {
               }
               clientInputValueNodes.push({
                 ...inputValueData.node,
-                directives: getClientPersistedDirectiveNodes(inputValueData),
+                directives: getClientPersistedDirectiveNodes(inputValueData, composedDirectiveNames),
               });
             } else if (isTypeRequired(inputValueData.type)) {
               invalidRequiredInputs.push({
@@ -2128,7 +2154,7 @@ export class FederationFactory {
           }
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
-            directives: getClientPersistedDirectiveNodes(parentDefinitionData),
+            directives: getClientPersistedDirectiveNodes(parentDefinitionData, composedDirectiveNames),
             fields: clientInputValueNodes,
           });
           break;
@@ -2154,7 +2180,7 @@ export class FederationFactory {
             if (isNodeDataInaccessible(fieldData)) {
               continue;
             }
-            clientSchemaFieldNodes.push(getClientSchemaFieldNodeByFieldData(fieldData));
+            clientSchemaFieldNodes.push(getClientSchemaFieldNodeByFieldData(fieldData, composedDirectiveNames));
             graphFieldDataByFieldName.set(fieldName, this.fieldDataToGraphFieldData(fieldData));
           }
           if (isObject) {
@@ -2198,7 +2224,7 @@ export class FederationFactory {
           }
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
-            directives: getClientPersistedDirectiveNodes(parentDefinitionData),
+            directives: getClientPersistedDirectiveNodes(parentDefinitionData, composedDirectiveNames),
             fields: clientSchemaFieldNodes,
           });
           break;
@@ -2216,7 +2242,7 @@ export class FederationFactory {
           }
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
-            directives: getClientPersistedDirectiveNodes(parentDefinitionData),
+            directives: getClientPersistedDirectiveNodes(parentDefinitionData, composedDirectiveNames),
           });
           break;
         }
@@ -2235,7 +2261,7 @@ export class FederationFactory {
           }
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
-            directives: getClientPersistedDirectiveNodes(parentDefinitionData),
+            directives: getClientPersistedDirectiveNodes(parentDefinitionData, composedDirectiveNames),
             types: clientMembers,
           });
           break;
@@ -2303,6 +2329,7 @@ export class FederationFactory {
   validateInterfaceImplementationsAndPushToDocumentDefinitions(
     interfaceImplementations: InterfaceImplementationData[],
   ) {
+    const composedDirectiveNames = new Set(this.composedDirectiveDefinitionDataByDirectiveName.keys());
     for (const { data, clientSchemaFieldNodes } of interfaceImplementations) {
       data.node.interfaces = this.getValidImplementedInterfaces(data);
       this.routerDefinitions.push(this.getNodeForRouterSchemaByData(data));
@@ -2323,7 +2350,7 @@ export class FederationFactory {
        * */
       this.clientDefinitions.push({
         ...data.node,
-        directives: getClientPersistedDirectiveNodes(data),
+        directives: getClientPersistedDirectiveNodes(data, composedDirectiveNames),
         fields: clientSchemaFieldNodes,
         interfaces: clientInterfaces,
       });
@@ -2859,6 +2886,17 @@ export class FederationFactory {
         this.errors,
       );
     }
+    for (const data of this.composedDirectiveDefinitionDataByDirectiveName.values()) {
+      const node = buildValidPersistedDirectiveDefinitionNode(
+        data,
+        this.persistedDirectiveDefinitionByDirectiveName,
+        this.errors,
+      );
+      if (node) {
+        this.routerDefinitions.push(node);
+        this.clientDefinitions.push(node);
+      }
+    }
     const definitionsWithInterfaces: InterfaceImplementationData[] = [];
     this.pushParentDefinitionDataToDocumentDefinitions(definitionsWithInterfaces);
     this.validateInterfaceImplementationsAndPushToDocumentDefinitions(definitionsWithInterfaces);
@@ -3181,6 +3219,17 @@ export class FederationFactory {
         this.persistedDirectiveDefinitionByDirectiveName,
         this.errors,
       );
+    }
+    for (const data of this.composedDirectiveDefinitionDataByDirectiveName.values()) {
+      const node = buildValidPersistedDirectiveDefinitionNode(
+        data,
+        this.persistedDirectiveDefinitionByDirectiveName,
+        this.errors,
+      );
+      if (node) {
+        this.routerDefinitions.push(node);
+        this.clientDefinitions.push(node);
+      }
     }
     const interfaceImplementations: InterfaceImplementationData[] = [];
     this.pushParentDefinitionDataToDocumentDefinitions(interfaceImplementations);

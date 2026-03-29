@@ -56,6 +56,26 @@ import {
   type TypeName,
 } from '../types/types';
 
+export function composeDirectiveNameMissingAtPrefixError(name: string): Error {
+  return new Error(
+    `The name argument of "@composeDirective" must start with "@", but received "${name}".`
+  );
+}
+
+// @composeDirective(name: "@unknownDirective") — directive not defined
+export function undefinedComposeDirectiveNameError(name: string): Error {
+  return new Error(
+    `The directive "@${name}" declared in "@composeDirective" is not defined in this subgraph.`
+  );
+}
+
+// @composeDirective(name: "@key") — built-in federation directive
+export function composeDirectiveBuiltInError(name: string): Error {
+  return new Error(
+    `The directive "@${name}" is a built-in federation directive and cannot be used with "@composeDirective".`
+  );
+}
+
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
 export function multipleNamedTypeDefinitionError(

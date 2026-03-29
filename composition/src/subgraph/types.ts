@@ -34,6 +34,7 @@ export type SubgraphConfig = {
 };
 
 export type InternalSubgraph = {
+  composedDirectiveDefinitionDataByDirectiveName: Map<DirectiveName, PersistedDirectiveDefinitionData>;
   conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
   configurationDataByTypeName: Map<TypeName, ConfigurationData>;
   definitions: DocumentNode;

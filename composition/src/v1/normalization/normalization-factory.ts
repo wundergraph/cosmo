@@ -75,6 +75,8 @@ import {
   upsertEntityData,
 } from '../utils/utils';
 import {
+  composeDirectiveBuiltInError,
+  composeDirectiveNameMissingAtPrefixError,
   configureDescriptionNoDescriptionError,
   costOnInterfaceFieldErrorMessage,
   duplicateArgumentsError,
@@ -164,6 +166,7 @@ import {
   subgraphValidationError,
   subgraphValidationFailureError,
   typeNameAlreadyProvidedErrorMessage,
+  undefinedComposeDirectiveNameError,
   undefinedCompositeOutputTypeError,
   undefinedDirectiveError,
   undefinedFieldInFieldSetErrorMessage,
@@ -276,6 +279,7 @@ import {
   BOOLEAN_SCALAR,
   CHANNEL,
   CHANNELS,
+  COMPOSE_DIRECTIVE,
   CONFIGURE_DESCRIPTION,
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
@@ -312,6 +316,7 @@ import {
   LINK_PURPOSE,
   LIST_SIZE,
   MUTATION,
+  NAME,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
   NON_NULLABLE_INT,
@@ -3862,6 +3867,61 @@ export class NormalizationFactory {
     definitions.push(...dependencies);
   }
 
+  extractComposedDirectiveDefinitionData(): Map<DirectiveName, PersistedDirectiveDefinitionData> {
+  const composedDirectiveDefinitionDataByDirectiveName = new Map<DirectiveName, PersistedDirectiveDefinitionData>();
+  const composeDirectiveNodes = this.schemaData.directivesByName.get(COMPOSE_DIRECTIVE);
+  if (!composeDirectiveNodes || composeDirectiveNodes.length === 0) {
+    return composedDirectiveDefinitionDataByDirectiveName;
+  }
+  // NOTE: No v1 check needed here — @composeDirective is in V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
+  // so using it automatically sets isSubgraphVersionTwo = true during directive definition processing.
+  for (const node of composeDirectiveNodes) {
+    const nameArg = node.arguments?.find(a => a.name.value === NAME);
+    if (!nameArg || nameArg.value.kind !== Kind.STRING) {
+      continue; // already caught by validateDirectives
+    }
+    const rawName = nameArg.value.value; // e.g. "@myDirective"
+    if (!rawName.startsWith('@')) {
+      this.errors.push(composeDirectiveNameMissingAtPrefixError(rawName));
+      continue;
+    }
+    const directiveName = rawName.slice(1);
+    // Check built-ins first so the error message is maximally helpful.
+    if (V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.has(directiveName) ||
+        DIRECTIVE_DEFINITION_BY_NAME.has(directiveName)) {
+      this.errors.push(composeDirectiveBuiltInError(directiveName));
+      continue;
+    }
+    const directiveDefinitionNode = this.directiveDefinitionByName.get(directiveName);
+    if (!directiveDefinitionNode) {
+      this.errors.push(undefinedComposeDirectiveNameError(directiveName));
+      continue;
+    }
+    if (composedDirectiveDefinitionDataByDirectiveName.has(directiveName)) {
+      continue; // repeated @composeDirective for the same directive
+    }
+    // Separate executable locations from the full location set.
+    // executableLocations is used for argument validation; locations carries all locations
+    // (including type-system ones like OBJECT, FIELD_DEFINITION) for the emitted definition.
+    const executableLocations = extractExecutableDirectiveLocations(
+      directiveDefinitionNode.locations,
+      new Set<string>(),
+    );
+    const allLocations = new Set<string>();
+    for (const locationNode of directiveDefinitionNode.locations) {
+      allLocations.add(locationNode.value);
+    }
+    this.addPersistedDirectiveDefinitionDataByNode(
+      composedDirectiveDefinitionDataByDirectiveName,
+      directiveDefinitionNode,
+      executableLocations,
+    );
+    const data = composedDirectiveDefinitionDataByDirectiveName.get(directiveName)!;
+    data.locations = allLocations;
+  }
+  return composedDirectiveDefinitionDataByDirectiveName;
+}
+
   normalize(document: DocumentNode): NormalizationResult {
     // Collect any renamed root types
     upsertDirectiveSchemaAndEntityDefinitions(this, document);
@@ -3869,6 +3929,7 @@ export class NormalizationFactory {
     const definitions: Array<DefinitionNode> = [];
     this.#addDirectiveDefinitionsToDocument(definitions);
     this.validateDirectives(this.schemaData, SCHEMA);
+    const composedDirectiveDefinitionDataByDirectiveName = this.extractComposedDirectiveDefinitionData();
     const schemaNode = this.getSchemaNodeByData(this.schemaData);
     /* Schema extension orphans are not supported on old routers.
      * Consequently, it is a breaking change that requires a new composition version, and that composition version
@@ -4144,6 +4205,7 @@ export class NormalizationFactory {
     };
     return {
       authorizationDataByParentTypeName: this.authorizationDataByParentTypeName,
+      composedDirectiveDefinitionDataByDirectiveName,
       // configurationDataMap is map of ConfigurationData per type name.
       // It is an Intermediate configuration object that will be converted to an engine configuration in the router
       concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
@@ -4261,6 +4323,7 @@ export function batchNormalize({ options, subgraphs }: BatchNormalizeParams): Ba
       internalSubgraphBySubgraphName.set(subgraphName, {
         conditionalFieldDataByCoordinates: normalizationResult.conditionalFieldDataByCoordinates,
         configurationDataByTypeName: normalizationResult.configurationDataByTypeName,
+        composedDirectiveDefinitionDataByDirectiveName: normalizationResult.composedDirectiveDefinitionDataByDirectiveName,
         costs: normalizationResult.costs,
         definitions: normalizationResult.subgraphAST,
         directiveDefinitionByName: normalizationResult.directiveDefinitionByName,

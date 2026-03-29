@@ -193,6 +193,7 @@ export type ObjectDefinitionData = {
 export type PersistedDirectiveDefinitionData = {
   argumentDataByName: Map<string, InputValueData>;
   executableLocations: Set<string>;
+  locations?: Set<string>;
   name: DirectiveName;
   repeatable: boolean;
   subgraphNames: Set<SubgraphName>;
