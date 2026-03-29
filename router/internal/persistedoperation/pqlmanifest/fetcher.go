@@ -26,7 +26,6 @@ type Fetcher struct {
 	organizationID string
 	httpClient     *http.Client
 	logger         *zap.Logger
-	store          *Store
 }
 
 // NewFetcher creates a new manifest fetcher. It reuses JWT extraction and HTTP client
@@ -58,13 +57,7 @@ func NewFetcher(endpoint, token string, logger *zap.Logger) (*Fetcher, error) {
 		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          httpclient.NewRetryableHTTPClient(logger),
 		logger:              logger,
-		store:               NewStore(logger),
 	}, nil
-}
-
-// Store returns the underlying manifest store for read access (lookups, revision).
-func (f *Fetcher) Store() *Store {
-	return f.store
 }
 
 // Fetch downloads the manifest from the CDN. It GETs /{orgId}/{fedGraphId}/operations/manifest.json
