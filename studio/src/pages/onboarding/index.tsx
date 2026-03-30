@@ -15,7 +15,8 @@ const OnboardingPage: NextPageWithLayout = () => {
     case 2:
       return <Step3CreateGraph onDismiss={dismissOnboarding} onSubmitSuccess={setOnboarding} />;
     case 3:
-      return <Step4RunServices />;
+    case 4:
+      return <Step4RunServices onDismiss={dismissOnboarding} onSubmitSuccess={setOnboarding} />;
     case 0:
     default:
       return <Step1Welcome onSubmitSuccess={setOnboarding} onDismiss={dismissOnboarding} />;
