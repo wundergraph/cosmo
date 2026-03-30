@@ -396,6 +396,17 @@ export function rainbow(text: string): string {
   );
 }
 
+/** Strips ANSI SGR escape sequences (colors, bold, dim, etc.) from a string. */
+export function stripAnsi(s: string): string {
+  const ESC = String.fromCodePoint(0x1b);
+  return s.replaceAll(new RegExp(`${ESC}\\[[\\d;]*m`, 'g'), '');
+}
+
+/** Returns the visible character count of a string, ignoring ANSI escape sequences. */
+export function visibleLength(s: string): number {
+  return stripAnsi(s).length;
+}
+
 // Gradient color stops: pink → orange → yellow → green → cyan → blue → purple
 const gradientStops: [number, number, number][] = [
   [255, 100, 150], // pink
