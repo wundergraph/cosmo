@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 
@@ -390,6 +391,12 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 		// In a custom View function, we need to explicitly copy the name, description, and unit.
 		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
 
+		// We currently don't want to expose the otelhttp scope metrics.
+		if i.Scope.Name == otelhttp.ScopeName {
+			s.Aggregation = sdkmetric.AggregationDrop{}
+			return s, true
+		}
+
 		// Filter out metrics that match the excludeMetrics regexes
 		for _, re := range c.Prometheus.ExcludeMetrics {
 			promName := SanitizeName(i.Name)
@@ -447,6 +454,13 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 	var view sdkmetric.View = func(i sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 		// In a custom View function, we need to explicitly copy the name, description, and unit.
 		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
+
+		// We currently don't want to expose the otelhttp scope metrics.
+		if i.Scope.Name == otelhttp.ScopeName {
+			s.Aggregation = sdkmetric.AggregationDrop{}
+			return s, true
+		}
+
 		// Filter out metrics that match the excludeMetrics regexes
 		for _, re := range c.OpenTelemetry.ExcludeMetrics {
 			if re.MatchString(i.Name) {
