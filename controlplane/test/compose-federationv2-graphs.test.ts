@@ -72,7 +72,7 @@ describe('ComposeFederationV2Graphs', (ctx) => {
       name: 'pandas',
       namespace: 'default',
       schema: pandasSchema,
-    });
+    }) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     resp = await client.createFederatedSubgraph({
@@ -87,7 +87,7 @@ describe('ComposeFederationV2Graphs', (ctx) => {
       name: 'products',
       namespace: 'default',
       schema: productsSchema,
-    });
+    }) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     resp = await client.createFederatedSubgraph({
@@ -102,7 +102,7 @@ describe('ComposeFederationV2Graphs', (ctx) => {
       name: 'reviews',
       namespace: 'default',
       schema: reviewsSchema,
-    });
+    }) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     resp = await client.createFederatedSubgraph({
@@ -117,7 +117,7 @@ describe('ComposeFederationV2Graphs', (ctx) => {
       name: 'users',
       namespace: 'default',
       schema: usersSchema,
-    });
+    }) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     const graph = await client.getFederatedGraphByName({

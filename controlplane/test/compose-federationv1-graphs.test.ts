@@ -118,7 +118,7 @@ describe('ComposeFederationV1Graphs', (ctx) => {
       name: 'inventory',
       namespace: 'default',
       schema: inventorySchema,
-    });
+    }) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     const graph = await client.getFederatedGraphByName({

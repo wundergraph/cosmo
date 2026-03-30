@@ -75,7 +75,7 @@ describe('CheckSubgraphSchema', (ctx) => {
       name: subgraphName,
       namespace: 'default',
       schema: 'type Query { hello: String! }',
-    });
+    }) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -127,7 +127,7 @@ describe('CheckSubgraphSchema', (ctx) => {
       name: subgraphName,
       namespace: 'default',
       schema: 'type Query { hello: String! }',
-    });
+    }) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -184,7 +184,7 @@ describe('CheckSubgraphSchema', (ctx) => {
         name: subgraphName,
         namespace: 'default',
         schema: 'type Query { hello: String! }',
-      });
+      }) as any;
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -268,7 +268,7 @@ describe('CheckSubgraphSchema', (ctx) => {
       name: subgraphName,
       namespace: 'default',
       schema: 'type Query { hello: String! }',
-    });
+    }) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -315,7 +315,7 @@ describe('CheckSubgraphSchema', (ctx) => {
       name: subgraphName,
       namespace: DEFAULT_NAMESPACE,
       schema: 'type Query { hello: String! }',
-    });
+    }) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -368,7 +368,7 @@ describe('CheckSubgraphSchema', (ctx) => {
       name: subgraphName,
       namespace: DEFAULT_NAMESPACE,
       schema: 'type Query { hello: String! }',
-    });
+    }) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -712,7 +712,7 @@ type Department {
       name: subgraph1Name,
       namespace: 'default',
       schema: subgraph1Schema,
-    });
+    }) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     // Create and publish second subgraph
@@ -728,7 +728,7 @@ type Department {
       name: subgraph2Name,
       namespace: 'default',
       schema: subgraph2Schema,
-    });
+    }) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     // Now run another check with delete option set to true
@@ -808,7 +808,7 @@ type Category {
       name: subgraph1Name,
       namespace: 'default',
       schema: subgraph1Schema,
-    });
+    }) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     // Create and publish second subgraph
@@ -824,7 +824,7 @@ type Category {
       name: subgraph2Name,
       namespace: 'default',
       schema: subgraph2Schema,
-    });
+    }) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     let checkResp = await client.checkSubgraphSchema({
@@ -1783,7 +1783,7 @@ type Category {
         name: subgraphName,
         namespace: 'default',
         schema: initialSchema,
-      });
+      }) as any;
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
       // Run schema check with only description changes
@@ -1851,7 +1851,7 @@ type Category {
         name: subgraphAName,
         namespace: 'default',
         schema: subgraphASchema,
-      });
+      }) as any;
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
       // Create subgraph B (but don't publish yet)
@@ -2048,7 +2048,7 @@ type Category {
         name: subgraphName,
         namespace: 'default',
         schema: initialSchema,
-      });
+      }) as any;
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
       // Run schema check with field removal

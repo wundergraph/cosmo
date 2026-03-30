@@ -257,7 +257,7 @@ describe('Graph Pruning Tests', (ctx) => {
       name: subgraphName,
       namespace: 'default',
       schema: initSchema,
-    });
+    }) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -418,7 +418,7 @@ describe('Graph Pruning Tests', (ctx) => {
       name: subgraphName,
       namespace: 'default',
       schema: initSchema,
-    });
+    }) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
     const response = await client.enableGraphPruning({

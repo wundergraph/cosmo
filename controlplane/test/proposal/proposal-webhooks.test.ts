@@ -1,4 +1,3 @@
-import { PartialMessage } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { ProposalNamingConvention, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -160,7 +159,7 @@ describe('Schema updated webhook tests', () => {
     const fedGraph2Id = fedGraph2Res.graph!.id;
 
     // Create webhook configs for each federated graph with different endpoints
-    const eventsMeta1: PartialMessage<EventMeta>[] = [
+    const eventsMeta1: any[] = [
       {
         eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
         meta: {
@@ -191,7 +190,7 @@ describe('Schema updated webhook tests', () => {
     });
     expect(webhook1Res.response?.code).toBe(EnumStatusCode.OK);
 
-    const eventsMeta2: PartialMessage<EventMeta>[] = [
+    const eventsMeta2: any[] = [
       {
         eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
         meta: {

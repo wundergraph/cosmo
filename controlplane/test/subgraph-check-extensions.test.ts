@@ -75,7 +75,7 @@ async function setupTestGraphs(postSpy: ReturnType<typeof vi.spyOn>) {
     name: subgraph1Name,
     namespace: 'default',
     schema: subgraph1Schema,
-  });
+  }) as any;
 
   expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -93,7 +93,7 @@ async function setupTestGraphs(postSpy: ReturnType<typeof vi.spyOn>) {
     name: subgraph2Name,
     namespace: 'default',
     schema: subgraph2Schema,
-  });
+  }) as any;
 
   expect(resp.response?.code).toBe(EnumStatusCode.OK);
 

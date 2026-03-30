@@ -1,4 +1,3 @@
-import { PartialMessage } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
@@ -77,7 +76,7 @@ describe('Federated Graph', (ctx) => {
     });
     expect(monographRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const eventsMeta: PartialMessage<EventMeta>[] = [
+    const eventsMeta: any[] = [
       {
         eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
         meta: {
@@ -158,7 +157,7 @@ describe('Federated Graph', (ctx) => {
     });
     expect(monographRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const eventsMeta: PartialMessage<EventMeta>[] = [
+    const eventsMeta: any[] = [
       {
         eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
         meta: {

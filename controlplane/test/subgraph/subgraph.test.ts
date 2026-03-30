@@ -55,7 +55,7 @@ describe('Subgraph', (ctx) => {
       name: subgraphName,
       namespace: 'default',
       schema: 'type Query { hello: String! }',
-    });
+    }) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
   });
