@@ -16,7 +16,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@bufbuild/protobuf": "^2.2.2",
     "@wundergraph/composition": "workspace:*",
+    "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
     "graphql": "^16.9.0"
   },

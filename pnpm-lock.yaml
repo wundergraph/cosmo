@@ -413,9 +413,15 @@ importers:
 
   composition-go/shim:
     dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.2.2
+        version: 2.11.0
       '@wundergraph/composition':
         specifier: workspace:*
         version: link:../../composition
+      '@wundergraph/cosmo-connect':
+        specifier: workspace:*
+        version: link:../../connect
       '@wundergraph/cosmo-shared':
         specifier: workspace:*
         version: link:../../shared
