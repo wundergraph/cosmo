@@ -66,7 +66,6 @@ export default (opts: CommonGraphCommandOptions) => {
           ({
             createdAt: op.createdAt,
             schemaVersionId: op.schemaVersionId,
-
             changelogs: op.changelogs.map((cl) => ({
               id: cl.id,
               path: cl.path,
