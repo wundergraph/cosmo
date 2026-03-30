@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { create, fromJsonString, toJsonString } from '@bufbuild/protobuf';
 import { readFile, writeFile } from 'node:fs/promises';
+import { create, fromJsonString, toJsonString } from '@bufbuild/protobuf';
 import {
   buildRouterConfig,
   type ComposedSubgraph,

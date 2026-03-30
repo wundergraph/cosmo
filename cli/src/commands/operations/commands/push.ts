@@ -8,7 +8,10 @@ import pc from 'picocolors';
 import cliProgress from 'cli-progress';
 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { PersistedOperationSchema, PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  PersistedOperationSchema,
+  PublishedOperationStatus,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { PublishedOperation, PersistedOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { BaseCommandOptions } from '../../../core/types/types.js';
@@ -46,9 +49,11 @@ const parseApolloPersistedQueryManifest = (data: ApolloPersistedQueryManifest): 
   if (data.version !== 1) {
     throw new Error(`unknown Apollo persisted query manifest version ${data.version}`);
   }
-  return (data.operations
-    ?.filter((op) => op.id && op.body)
-    .map((op) => create(PersistedOperationSchema, { id: op.id, contents: op.body })) ?? []);
+  return (
+    data.operations
+      ?.filter((op) => op.id && op.body)
+      .map((op) => create(PersistedOperationSchema, { id: op.id, contents: op.body })) ?? []
+  );
 };
 
 const isRelayQueryMap = (data: any): boolean => {

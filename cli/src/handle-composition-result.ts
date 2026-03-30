@@ -5,9 +5,7 @@ import { Ora } from 'ora';
 import Table from 'cli-table3';
 import pc from 'picocolors';
 
-import {
-  SubgraphPublishStatsSchema,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { SubgraphPublishStatsSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import type {
   CompositionError,

@@ -32,10 +32,10 @@ export default (opts: BaseCommandOptions) => {
     if (options.out) {
       const output = resp.namespaces.map(
         (n) =>
-          (({
+          ({
             id: n.id,
-            name: n.name
-          }) as OutputFile[number]),
+            name: n.name,
+          }) as OutputFile[number],
       );
       await writeFile(options.out, JSON.stringify(output));
       return;

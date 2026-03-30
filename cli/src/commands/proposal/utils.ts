@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { create } from '@bufbuild/protobuf';
 import { readFile } from 'node:fs/promises';
+import { create } from '@bufbuild/protobuf';
 import { program } from 'commander';
 import pc from 'picocolors';
 import { resolve } from 'pathe';

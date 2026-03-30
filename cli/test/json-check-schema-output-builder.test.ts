@@ -1,7 +1,7 @@
 import { readFileSync, rmSync } from 'node:fs';
-import { create } from '@bufbuild/protobuf';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { create } from '@bufbuild/protobuf';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 

@@ -63,7 +63,7 @@ export default (opts: CommonGraphCommandOptions) => {
     if (resp.response?.code === EnumStatusCode.OK) {
       const output = resp.federatedGraphChangelogOutput.map(
         (op) =>
-          (({
+          ({
             createdAt: op.createdAt,
             schemaVersionId: op.schemaVersionId,
 
@@ -73,8 +73,8 @@ export default (opts: CommonGraphCommandOptions) => {
               changeType: cl.changeType,
               changeMessage: cl.changeMessage,
               createdAt: cl.createdAt,
-            }))
-          }) as OutputFile[number]),
+            })),
+          }) as OutputFile[number],
       );
       await writeFile(resolve(options.out), JSON.stringify(output));
     } else {

@@ -1,6 +1,6 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { create } from '@bufbuild/protobuf';
-import { existsSync } from 'node:fs';
 import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import ora from 'ora';
