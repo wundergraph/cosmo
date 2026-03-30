@@ -304,6 +304,51 @@ type PrintTruncationWarningParams = {
   totalErrorCounts?: SubgraphPublishStats;
 };
 
+/**
+ * Waits for a single keypress matching one of the keys in the provided map.
+ * Keys are case-sensitive strings. Use 'Enter' for the enter key.
+ * For non-Enter keys, the callback fires immediately on keypress (no Enter required).
+ * Ctrl+C always exits the process.
+ */
+export function waitForKeyPress(keyMap: Record<string, (() => void) | undefined>, message?: string): Promise<void> {
+  const { promise, resolve } = Promise.withResolvers<void>();
+
+  if (message) {
+    process.stdout.write(pc.dim(message));
+  }
+
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+
+  const onData = (data: Buffer) => {
+    const key = data.toString();
+
+    // Ctrl+C
+    if (key === '\u0003') {
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+      process.stdout.write('\n');
+      process.exit(0);
+    }
+
+    // Normalize Enter (\r or \n)
+    const normalized = key === '\r' || key === '\n' ? 'Enter' : key;
+
+    if (normalized in keyMap) {
+      process.stdin.removeListener('data', onData);
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+      process.stdout.write('\n');
+      keyMap[normalized]?.();
+      resolve();
+    }
+  };
+
+  process.stdin.on('data', onData);
+
+  return promise;
+}
+
 export function printTruncationWarning({ displayedErrorCounts, totalErrorCounts }: PrintTruncationWarningParams) {
   if (!totalErrorCounts) {
     return;
@@ -330,4 +375,45 @@ export function printTruncationWarning({ displayedErrorCounts, totalErrorCounts 
   if (truncatedItems.length > 0) {
     console.log(pc.yellow(`\nNote: Some results were truncated: ${truncatedItems.join(', ')}.`));
   }
+}
+
+/**
+ * Prints text with rainbow-like effect. Respects NO_COLOR
+ */
+export function rainbow(text: string): string {
+  if (!pc.isColorSupported) {
+    return text;
+  }
+  const chars = [...text];
+  return (
+    chars
+      .map((char, i) => {
+        const t = chars.length > 1 ? i / (chars.length - 1) : 0;
+        const [r, g, b] = interpolateColor(t);
+        return `\u001B[38;2;${r};${g};${b}m${char}`;
+      })
+      .join('') + '\u001B[0m'
+  );
+}
+
+// Gradient color stops: pink → orange → yellow → green → cyan → blue → purple
+const gradientStops: [number, number, number][] = [
+  [255, 100, 150], // pink
+  [255, 160, 50], // orange
+  [255, 220, 50], // yellow
+  [80, 220, 100], // green
+  [50, 200, 220], // cyan
+  [80, 120, 255], // blue
+  [180, 100, 255], // purple
+];
+
+function interpolateColor(t: number): [number, number, number] {
+  const segment = t * (gradientStops.length - 1);
+  const i = Math.min(Math.floor(segment), gradientStops.length - 2);
+  const f = segment - i;
+  return [
+    Math.round(gradientStops[i][0] + (gradientStops[i + 1][0] - gradientStops[i][0]) * f),
+    Math.round(gradientStops[i][1] + (gradientStops[i + 1][1] - gradientStops[i][1]) * f),
+    Math.round(gradientStops[i][2] + (gradientStops[i + 1][2] - gradientStops[i][2]) * f),
+  ];
 }
