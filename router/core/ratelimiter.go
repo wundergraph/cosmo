@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,7 +9,6 @@ import (
 	"reflect"
 	"regexp"
 	"sync"
-	"time"
 
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 
@@ -39,9 +37,7 @@ type CosmoRateLimiterOptions struct {
 
 type compiledOverride struct {
 	pattern *regexp.Regexp
-	rate    int
-	burst   int
-	period  time.Duration
+	limit   redis_rate.Limit
 }
 
 func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, err error) {
@@ -72,9 +68,11 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 
 		rl.overrides = append(rl.overrides, compiledOverride{
 			pattern: re,
-			rate:    o.Rate,
-			burst:   o.Burst,
-			period:  o.Period,
+			limit: redis_rate.Limit{
+				Rate:   o.Rate,
+				Burst:  o.Burst,
+				Period: o.Period,
+			},
 		})
 	}
 
@@ -95,11 +93,7 @@ type CosmoRateLimiter struct {
 func (c *CosmoRateLimiter) resolveLimit(key string, defaultLimit redis_rate.Limit) redis_rate.Limit {
 	for _, o := range c.overrides {
 		if o.pattern.MatchString(key) {
-			return redis_rate.Limit{
-				Rate:   o.rate,
-				Burst:  o.burst,
-				Period: o.period,
-			}
+			return o.limit
 		}
 	}
 
@@ -161,12 +155,7 @@ func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (fullKey, suffix st
 		return "", "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, len(ctx.RateLimitOptions.RateLimitKey)+len(suffix)+1))
-	_, _ = buf.WriteString(ctx.RateLimitOptions.RateLimitKey)
-	_ = buf.WriteByte(':')
-	_, _ = buf.WriteString(suffix)
-
-	return buf.String(), suffix, nil
+	return ctx.RateLimitOptions.RateLimitKey + ":" + suffix, suffix, nil
 }
 
 func (c *CosmoRateLimiter) RejectStatusCode() int {
@@ -247,6 +236,8 @@ func (c *CosmoRateLimiter) getRateLimitStats(ctx *resolve.Context) RateLimitStat
 	}
 
 	statsCtx := v.(*rateLimitStatsCtx)
+	statsCtx.mux.Lock()
+	defer statsCtx.mux.Unlock()
 
 	return statsCtx.stats
 }
