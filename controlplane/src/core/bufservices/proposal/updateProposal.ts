@@ -48,6 +48,7 @@ export function updateProposal(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
@@ -512,6 +513,7 @@ export function updateProposal(
           authContext.organizationId,
           opts.logger,
           opts.billingDefaultPlanId,
+          opts.webhookProxyUrl,
         ),
       });
 
