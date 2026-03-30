@@ -138,7 +138,7 @@ export type { GraphQLToProtoTextVisitorOptions, ProtoOption } from './sdl-to-pro
 export type { ProtoOptions } from './proto-options.js';
 export type { ProtoLock } from './proto-lock.js';
 export type { ValidationResult } from './sdl-validation-visitor.js';
-export {
+export type {
   GRPCMapping,
   OperationMapping,
   EntityMapping,
@@ -147,6 +147,8 @@ export {
   ArgumentMapping,
   EnumMapping,
   EnumValueMapping,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+export {
   OperationType,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 

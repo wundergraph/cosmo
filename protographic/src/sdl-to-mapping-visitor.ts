@@ -38,9 +38,7 @@ import type {
   GRPCMapping,
   LookupFieldMapping,
   LookupMapping,
-  LookupType,
   OperationMapping,
-  OperationType,
   RequiredFieldMapping,
   TypeFieldMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
