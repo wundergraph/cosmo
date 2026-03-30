@@ -13,7 +13,7 @@ const OnboardingPage: NextPageWithLayout = () => {
     case 1:
       return <Step2Federation onDismiss={dismissOnboarding} onSubmitSuccess={setOnboarding} />;
     case 2:
-      return <Step3CreateGraph />;
+      return <Step3CreateGraph onDismiss={dismissOnboarding} onSubmitSuccess={setOnboarding} />;
     case 3:
       return <Step4RunServices />;
     case 0:
