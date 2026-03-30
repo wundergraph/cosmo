@@ -18,6 +18,7 @@ import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
 import { ProposalOrigin, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
 import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
+import { paginationDefaults } from './constants.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 
@@ -543,6 +544,23 @@ export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: 
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Normalizes pagination parameters by applying defaults and clamping to safe bounds.
+ * Uses the standard pagination defaults from constants unless overridden.
+ */
+export function normalizePagination(
+  opts: { limit?: number; offset?: number },
+  overrides?: { maxLimit?: number; maxOffset?: number },
+): { limit: number; offset: number } {
+  const maxLimit = overrides?.maxLimit ?? paginationDefaults.maxLimit;
+  const maxOffset = overrides?.maxOffset ?? paginationDefaults.maxOffset;
+
+  return {
+    limit: clamp(opts.limit || paginationDefaults.defaultLimit, paginationDefaults.minLimit, maxLimit),
+    offset: clamp(opts.offset || 0, paginationDefaults.minOffset, maxOffset),
+  };
 }
 
 export const isCheckSuccessful = ({

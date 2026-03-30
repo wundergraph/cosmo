@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.12.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.11.0...@wundergraph/cosmo-cdn@0.12.0) (2026-03-27)
+
+### Features
+
+* add PQL manifest support for persisted operations ([#2635](https://github.com/wundergraph/cosmo/issues/2635)) ([38a648c](https://github.com/wundergraph/cosmo/commit/38a648cff927b45d5ee5323bf303f83198c64411)) (@StarpTech)
+
 # [0.11.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.10.0...@wundergraph/cosmo-cdn@0.11.0) (2025-11-29)
 
 ### Features

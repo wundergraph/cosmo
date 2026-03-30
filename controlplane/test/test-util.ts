@@ -116,7 +116,7 @@ export const SetupTest = async function ({
 
   const realm = 'test';
   const loginRealm = 'master';
-  const apiUrl = 'http://localhost:8080';
+  const apiUrl = process.env.KC_API_URL || 'http://localhost:8080';
   const clientId = 'studio';
   const adminUser = 'admin';
   const adminPassword = 'changeme';

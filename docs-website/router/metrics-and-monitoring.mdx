@@ -173,11 +173,15 @@ All metrics are tracked along different dimensions. A dimension is an attribute 
 
 You can use the `router.http.requests.error` metric to track errors across router and subgraph requests. In addition to that, you can also use the `router.http.requests` metric to identify errors. We attach the following fields:
 
-* `wg.request.error`: Identify if an error occurred. This applies to a request that didn't result in a successful HTTP or GraphQL response. Only set when it is `true`. Be aware that a Status-Code `200` can still be an error in GraphQL.
+* `wg.request.error`: Identify if a server-side error occurred. This applies to a request that didn't result in a successful HTTP or GraphQL response. Only set when it is `true`. Be aware that a Status-Code `200` can still be an error in GraphQL. Client disconnections are **not** counted as errors.
 
 * `http.status_code`: The status code of the response.
 
 You have two ways to query for errors. Both metrics can be quite useful depending on the query scenario. In general, we recommend to use the `router.http.requests.error` metric.
+
+<Info>
+  For a detailed breakdown of which scenarios mark spans as ERROR and increment error metrics, see [Span Error Status & Error Metrics](/router/metrics-and-monitoring/span-error-status).
+</Info>
 
 #### Subgraph specific
 

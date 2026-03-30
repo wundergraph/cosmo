@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -56,7 +57,10 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	o := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
 
-	if reqContext.error != nil {
+	// Client disconnections are not server-side errors and should not inflate error metrics.
+	isError := reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled)
+
+	if isError {
 		rm.MeasureRequestError(ctx, sliceAttrs, o)
 
 		attrs = append(attrs, rotel.WgRequestError.Bool(true))
@@ -82,16 +86,18 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 		}
 	}
 
-	// Export schema usage info to configured exporters
+	// Export schema usage info to configured exporters.
+	// Client disconnections are excluded from the error flag to stay consistent with
+	// the error metrics above.
 	if reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
 		// GraphQL metrics export (to metrics service)
 		if m.trackUsageInfo {
-			m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
+			m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, isError, exportSynchronous)
 		}
 
 		// Prometheus metrics export (to local Prometheus metrics)
 		if m.prometheusTrackUsageInfo {
-			m.routerMetrics.ExportSchemaUsageInfoPrometheus(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
+			m.routerMetrics.ExportSchemaUsageInfoPrometheus(reqContext.operation, statusCode, isError, exportSynchronous)
 		}
 	}
 }

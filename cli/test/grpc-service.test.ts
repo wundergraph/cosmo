@@ -166,6 +166,9 @@ describe('gRPC Generate Command', () => {
 
     const program = new Command();
     program.addCommand(GenerateCommand({ client }));
+    program.exitOverride((err) => {
+      expect(err.message).toContain('Schema validation failed');
+    });
 
     const tmpDir = join(tmpdir(), `grpc-test-${Date.now()}`);
     mkdirSync(tmpDir, { recursive: true });
@@ -181,7 +184,7 @@ describe('gRPC Generate Command', () => {
       program.parseAsync(['generate', 'testservice', '-i', schemaPath, '-o', tmpDir], {
         from: 'user',
       }),
-    ).rejects.toThrow('Schema validation failed');
+    ).rejects.toThrow('process.exit unexpectedly called with "1"');
 
     // Verify no output files were created (generation should stop on errors)
     expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(false);
@@ -196,6 +199,9 @@ describe('gRPC Generate Command', () => {
 
     const program = new Command();
     program.addCommand(GenerateCommand({ client }));
+    program.exitOverride((err) => {
+      expect(err.message).toContain('Schema validation failed');
+    });
 
     const tmpDir = join(tmpdir(), `grpc-test-${Date.now()}`);
     mkdirSync(tmpDir, { recursive: true });
@@ -211,7 +217,7 @@ describe('gRPC Generate Command', () => {
       program.parseAsync(['generate', 'testservice', '-i', schemaPath, '-o', tmpDir], {
         from: 'user',
       }),
-    ).rejects.toThrow('Schema validation failed');
+    ).rejects.toThrow('process.exit unexpectedly called with "1"');
 
     // Verify no output files were created (generation should stop on errors)
     expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(false);

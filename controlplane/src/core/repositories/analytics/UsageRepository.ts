@@ -211,6 +211,10 @@ export class UsageRepository {
     rangeInHours: number;
     fields: Field[];
   }): Promise<{ name: string; typeName: string }[]> {
+    if (fields.length === 0) {
+      return [];
+    }
+
     // Escape single quotes in field names and type names
     const arrayJoinFields = fields
       .map((field) => {
@@ -300,6 +304,10 @@ export class UsageRepository {
     range: number;
     fields: Field[];
   }): Promise<{ name: string; typeName: string }[]> {
+    if (fields.length === 0) {
+      return [];
+    }
+
     // Escape single quotes in field names and type names
     const arrayJoinFields = fields
       .map((field) => {
