@@ -3,10 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Command } from 'commander';
 import { beforeEach, afterEach, describe, expect, onTestFinished, test, vi, type MockInstance } from 'vitest';
-import { type PartialMessage } from '@bufbuild/protobuf';
 import { createClient, createRouterTransport } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { CheckSubgraphSchemaResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Client } from '../src/core/client/client.js';
 import { config } from '../src/core/config.js';
@@ -18,14 +16,14 @@ vi.mock('../src/core/config.js', async (importOriginal) => {
   return { ...mod, config: { ...mod.config } };
 });
 
-function createMockTransport(response: PartialMessage<CheckSubgraphSchemaResponse>) {
+function createMockTransport(response: any) {
   return createRouterTransport(({ service }) => {
     service(PlatformService, {
-      checkSubgraphSchema: () => response,
+      checkSubgraphSchema: () => response as any,
       isGitHubAppInstalled: () => ({
         response: { code: EnumStatusCode.OK },
         isInstalled: false,
-      }),
+      }) as any,
     });
   });
 }
@@ -43,7 +41,7 @@ function resetVcsConfig() {
 }
 
 async function runCheck(
-  response: PartialMessage<CheckSubgraphSchemaResponse>,
+  response: any,
   opts: {
     limit?: number | string;
     schema?: string | null;

@@ -3,6 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import type {
   CheckOperationUsageStats,
   CompositionError,
+  CompositionWarning,
   FederatedGraphSchemaChange,
   GraphPruningIssue,
   LintIssue,
@@ -27,7 +28,7 @@ export type JsonCheckSchemaOutputDescriptor = {
   };
   composition?: {
     errors: CompositionError[];
-    warnings: CompositionError[];
+    warnings: CompositionWarning[];
   };
   lint?: {
     errors: LintIssue[];
@@ -132,7 +133,7 @@ export class JsonCheckSchemaOutputBuilder {
     return this;
   }
 
-  addCompositionWarnings(warnings: CompositionError[]): this {
+  addCompositionWarnings(warnings: CompositionWarning[]): this {
     this.data.composition = {
       errors: [...(this.data.composition?.errors ?? [])],
       warnings: [...(this.data.composition?.warnings ?? []), ...warnings],

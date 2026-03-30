@@ -8,6 +8,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   CheckOperationUsageStatsSchema,
   CompositionErrorSchema,
+  CompositionWarningSchema,
   FederatedGraphSchemaChangeSchema,
   GraphPruningIssueSchema,
   LintIssueSchema,
@@ -155,7 +156,7 @@ describe('JsonCheckSchemaOutputBuilder', () => {
       namespace: 'ns',
       featureFlag: '',
     });
-    const warn = create(CompositionErrorSchema, {
+    const warn = create(CompositionWarningSchema, {
       message: 'compose warning',
       federatedGraphName: 'g',
       namespace: 'ns',

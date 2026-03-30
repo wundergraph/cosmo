@@ -1,5 +1,5 @@
 import { compressionBrotli, compressionGzip, createConnectTransport } from '@connectrpc/connect-node';
-import { createClient, Client } from '@connectrpc/connect';
+import { createClient, Client as ConnectClient } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { HttpsProxyAgent } from 'https-proxy-agent';
@@ -11,8 +11,8 @@ export interface ClientOptions {
 }
 
 export interface Client {
-  platform: Client<typeof PlatformService>;
-  node?: Client<typeof NodeService>;
+  platform: ConnectClient<typeof PlatformService>;
+  node?: ConnectClient<typeof NodeService>;
 }
 
 export const CreateClient = (opts: ClientOptions): Client => {

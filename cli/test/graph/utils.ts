@@ -1,12 +1,10 @@
-import type { PartialMessage } from '@bufbuild/protobuf';
-import { RecomposeGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { createClient, createRouterTransport, Transport } from '@connectrpc/connect';
+import { createClient as createConnectClient, createRouterTransport, Transport } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Command } from 'commander';
 import RecomposeCommand from '../../src/commands/graph/common/recompose.js';
 import { Client } from '../../src/core/client/client.js';
 
-export function createMockTransport(response: PartialMessage<RecomposeGraphResponse>): Transport {
+export function createMockTransport(response: any): Transport {
   return createRouterTransport(({ service }): void => {
     service(PlatformService, {
       recomposeGraph: () => response,
@@ -14,14 +12,14 @@ export function createMockTransport(response: PartialMessage<RecomposeGraphRespo
   });
 }
 
-export function createClient(response: PartialMessage<RecomposeGraphResponse>): Client {
+export function createTestClient(response: any): Client {
   return {
-    platform: createClient(PlatformService, createMockTransport(response)),
+    platform: createConnectClient(PlatformService, createMockTransport(response)),
   };
 }
 
 export async function runRecompose(
-  response: PartialMessage<RecomposeGraphResponse>,
+  response: any,
   opts: {
     isMonograph?: boolean;
     namespace?: string;
@@ -45,6 +43,6 @@ export async function runRecompose(
   }
 
   const program = new Command();
-  program.addCommand(RecomposeCommand({ client: createClient(response), isMonograph: opts.isMonograph ?? false }));
+  program.addCommand(RecomposeCommand({ client: createTestClient(response), isMonograph: opts.isMonograph ?? false }));
   await program.parseAsync(args, { from: 'user' });
 }

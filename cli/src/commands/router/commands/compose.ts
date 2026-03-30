@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { create, fromJsonString } from '@bufbuild/protobuf';
+import { create, fromJsonString, toJsonString } from '@bufbuild/protobuf';
 import { readFile, writeFile } from 'node:fs/promises';
 import {
   buildRouterConfig,
@@ -24,6 +24,7 @@ import {
   FeatureFlagRouterExecutionConfigSchema,
   FeatureFlagRouterExecutionConfigsSchema,
   GRPCMappingSchema,
+  RouterConfigSchema,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import type {
@@ -278,10 +279,10 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.out) {
-      await writeFile(options.out, routerConfig.toJsonString());
+      await writeFile(options.out, toJsonString(RouterConfigSchema, routerConfig));
       console.log(pc.green(`Router config successfully written to ${pc.bold(options.out)}`));
     } else {
-      console.log(routerConfig.toJsonString());
+      console.log(toJsonString(RouterConfigSchema, routerConfig));
     }
   });
 

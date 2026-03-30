@@ -6,9 +6,6 @@ import Table from 'cli-table3';
 import pc from 'picocolors';
 
 import {
-  CompositionError,
-  CompositionWarning,
-  DeploymentError,
   SubgraphPublishStatsSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
