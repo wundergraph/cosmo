@@ -1,6 +1,12 @@
 import { useQuery } from '@connectrpc/connect-query';
 import { create } from '@bufbuild/protobuf';
-import { EventMeta, EventMetaSchema, GraphSchemaUpdatedMetaSchema, ProposalStateUpdatedMetaSchema, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
+import {
+  EventMeta,
+  EventMetaSchema,
+  GraphSchemaUpdatedMetaSchema,
+  ProposalStateUpdatedMetaSchema,
+  OrganizationEventName,
+} from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { getFederatedGraphs } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -79,14 +85,15 @@ export const SelectGraphs = ({
 
     const metaCase =
       eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
-        ? 'federatedGraphSchemaUpdated' as const
+        ? ('federatedGraphSchemaUpdated' as const)
         : eventName === OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED
-          ? 'monographSchemaUpdated' as const
-          : 'proposalStateUpdated' as const;
+          ? ('monographSchemaUpdated' as const)
+          : ('proposalStateUpdated' as const);
 
-    const metaValue = metaCase === 'proposalStateUpdated'
-      ? create(ProposalStateUpdatedMetaSchema, { graphIds: newGraphIds })
-      : create(GraphSchemaUpdatedMetaSchema, { graphIds: newGraphIds });
+    const metaValue =
+      metaCase === 'proposalStateUpdated'
+        ? create(ProposalStateUpdatedMetaSchema, { graphIds: newGraphIds })
+        : create(GraphSchemaUpdatedMetaSchema, { graphIds: newGraphIds });
 
     const entry = create(EventMetaSchema, {
       eventName,

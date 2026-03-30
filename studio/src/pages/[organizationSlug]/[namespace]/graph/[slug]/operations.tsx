@@ -102,17 +102,21 @@ const OperationsToolbar = () => {
           isLoading={!!isFetching}
           onClick={() => {
             client.invalidateQueries({
-              queryKey: createConnectQueryKey({ schema: getGraphMetrics, input: {
-                namespace: graphContext?.graph?.namespace,
-                federatedGraphName: graphContext?.graph?.name,
-                range,
-                dateRange: range
-                  ? undefined
-                  : {
-                      start: formatISO(dateRange.start),
-                      end: formatISO(dateRange.end),
-                    },
-              }, cardinality: "finite" }),
+              queryKey: createConnectQueryKey({
+                schema: getGraphMetrics,
+                input: {
+                  namespace: graphContext?.graph?.namespace,
+                  federatedGraphName: graphContext?.graph?.name,
+                  range,
+                  dateRange: range
+                    ? undefined
+                    : {
+                        start: formatISO(dateRange.start),
+                        end: formatISO(dateRange.end),
+                      },
+                },
+                cardinality: 'finite',
+              }),
             });
           }}
           variant="outline"
@@ -398,7 +402,7 @@ const OperationsRightPanel = ({
     <div className="scrollbar-custom h-full space-y-4 overflow-y-auto px-1 md:px-0 md:pr-1">
       {selectedOperation ? (
         // Selected Operation State
-        (<>
+        <>
           {/* Operation Header */}
           <div className="flex flex-col gap-4 px-1 md:flex-row md:items-center md:justify-between md:gap-0">
             <div>
@@ -453,14 +457,14 @@ const OperationsRightPanel = ({
             <LatencyMetricsCard data={data?.latency} syncId={syncId} showTopList={false} chartClassName="h-36" />
             <ErrorMetricsCard data={data?.errors} syncId={syncId} showTopList={false} chartClassName="h-36" />
           </div>
-        </>)
+        </>
       ) : (
         // Default State - All Operations Charts
-        (<div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <RequestMetricsCard data={data?.requests} syncId={syncId} showTopList={false} chartClassName="h-36" />
           <LatencyMetricsCard data={data?.latency} syncId={syncId} showTopList={false} chartClassName="h-36" />
           <ErrorMetricsCard data={data?.errors} syncId={syncId} showTopList={false} chartClassName="h-36" />
-        </div>)
+        </div>
       )}
       {selectedOperation && (
         <OperationContentModal

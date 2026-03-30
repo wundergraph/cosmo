@@ -455,13 +455,17 @@ const MembersToolbar = () => {
           {!limitReached && (
             <InviteForm
               onSuccess={() => {
-                const pendingKey = createConnectQueryKey({ schema: getPendingOrganizationMembers, input: {
-                  pagination: {
-                    limit: pageSize,
-                    offset,
+                const pendingKey = createConnectQueryKey({
+                  schema: getPendingOrganizationMembers,
+                  input: {
+                    pagination: {
+                      limit: pageSize,
+                      offset,
+                    },
+                    search,
                   },
-                  search,
-                }, cardinality: "finite" });
+                  cardinality: 'finite',
+                });
                 client.invalidateQueries({
                   queryKey: pendingKey,
                 });

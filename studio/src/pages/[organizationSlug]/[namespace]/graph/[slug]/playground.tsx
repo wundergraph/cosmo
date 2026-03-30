@@ -58,7 +58,11 @@ import {
   publishPersistedOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { create } from '@bufbuild/protobuf';
-import { PersistedOperation, PersistedOperationSchema, PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  PersistedOperation,
+  PersistedOperationSchema,
+  PublishedOperationStatus,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { sentenceCase } from 'change-case';
 import crypto from 'crypto';
 import { GraphiQL } from 'graphiql';

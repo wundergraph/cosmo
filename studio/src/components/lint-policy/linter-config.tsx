@@ -7,7 +7,12 @@ import {
   configureNamespaceLintConfig,
   enableLintingForTheNamespace,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { type LintConfig, GetNamespaceLintConfigResponse, LintConfigSchema, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  type LintConfig,
+  GetNamespaceLintConfigResponse,
+  LintConfigSchema,
+  LintSeverity,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
