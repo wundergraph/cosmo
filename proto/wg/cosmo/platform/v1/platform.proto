@@ -3192,6 +3192,29 @@ message RecomposeGraphResponse {
   optional SubgraphPublishStats errorCounts = 5;
 }
 
+message GetOnboardingRequest {
+}
+
+message GetOnboardingResponse {
+  Response response = 1;
+  message Onboarding {
+    string id = 1;
+    string userId = 2;
+    string organizationId = 3;
+    string createdAt = 4;
+    string finishedAt = 5;
+    string updatedAt = 6;
+    string version = 7;
+    int32 step = 8;
+    bool slack = 9;
+    bool email = 10;
+    string federatedGraphId = 11;
+    int32 nonDemoFederatedGraphsCount = 12;
+  }
+
+  Onboarding onboarding = 2;
+}
+
 message CompleteOnboardingStep1Request {
   string organization_name = 1;
   repeated string member_emails = 2;
@@ -3690,6 +3713,8 @@ service PlatformService {
   rpc VerifyAPIKeyGraphAccess(VerifyAPIKeyGraphAccessRequest) returns (VerifyAPIKeyGraphAccessResponse) {}
   // RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
   rpc RecomposeGraph(RecomposeGraphRequest) returns (RecomposeGraphResponse) {}
+  // GetOnboarding returns onboarding record
+  rpc GetOnboarding(GetOnboardingRequest) returns (GetOnboardingResponse) {}
   // CompleteOnboardingStep1 saves onboarding wizard step 1 (org name, member invites, notification channels)
   rpc CompleteOnboardingStep1(CompleteOnboardingStep1Request) returns (CompleteOnboardingStep1Response) {}
   // CompleteOnboardingStep2 advances onboarding wizard to step 2 (federation concepts acknowledged)

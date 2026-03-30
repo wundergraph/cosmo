@@ -2,8 +2,8 @@ import pc from 'picocolors';
 import ora from 'ora';
 
 import { Command, program } from 'commander';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import type { WhoAmIResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders, config } from '../../../core/config.js';
 import { waitForKeyPress, rainbow } from '../../../utils.js';
@@ -41,6 +41,11 @@ async function printAccountDisclaimer() {
   );
 }
 
+function resetLayout() {
+  clearScreen();
+  printLogo();
+}
+
 async function checkExistingOnboarding(client: BaseCommandOptions['client']) {
   const { response, onboarding } = await client.platform.getOnboarding(
     {},
@@ -49,78 +54,113 @@ async function checkExistingOnboarding(client: BaseCommandOptions['client']) {
     },
   );
 
-  if (response?.code !== EnumStatusCode.OK) {
-    return {
-      error: new Error(response?.details ?? 'Failed to fetch onboarding metadata.'),
-      status: 'error',
-    } as const;
-  }
+  switch (response?.code) {
+    case EnumStatusCode.OK: {
+      if (!onboarding) {
+        return { status: 'not-initiated' } as const;
+      }
 
-  if (!onboarding) {
-    return { status: 'not-initiated' } as const;
-  }
+      if (onboarding && onboarding.finishedAt) {
+        return {
+          status: 'finished',
+        } as const;
+      }
 
-  if (onboarding && onboarding.step < 2) {
-    return {
-      status: 'step-too-soon',
-    } as const;
-  }
+      if (onboarding && onboarding.step < 2) {
+        return {
+          status: 'step-too-soon',
+          onboarding,
+        } as const;
+      }
 
-  return {
-    onboarding,
-    status: 'ok',
-  } as const;
+      return {
+        status: 'ok',
+        onboarding,
+      } as const;
+    }
+    default: {
+      return {
+        status: 'error',
+        error: new Error(response?.details ?? 'Failed to fetch onboarding metadata.'),
+      } as const;
+    }
+  }
 }
 
 async function handleGetOnboardingResponse(client: BaseCommandOptions['client'], userInfo: UserInfo) {
+  const spinner = ora().start();
   const onboardingCheck = await checkExistingOnboarding(client);
 
   async function retryFn() {
+    resetLayout();
     return await handleGetOnboardingResponse(client, userInfo);
   }
 
   switch (onboardingCheck.status) {
     case 'ok': {
-      return onboardingCheck.onboarding;
+      spinner.stop();
+      return onboardingCheck;
+    }
+    case 'finished': {
+      spinner.succeed(
+        `You have finished the onboarding already. Restart it by visiting ${config.baseURL} and click the link in top banner.`,
+      );
+      break;
     }
     case 'not-initiated': {
-      console.log(`Please start onboarding at ${config.baseURL}/onboarding first.`);
+      spinner.warn(`Please start onboarding at ${config.baseURL}/onboarding first.`);
       await waitForKeyPress(
         {
-          Enter: retryFn,
+          r: retryFn,
+          R: retryFn,
         },
-        'Hit Enter to refresh. CTRL+C to quite',
+        'Hit [r] to refresh. CTRL+C to quit',
       );
       break;
     }
     case 'step-too-soon': {
-      console.log(`Go through onboarding steps at ${config.baseURL}/onboarding first.`);
+      spinner.warn(`Go through onboarding steps at ${config.baseURL}/onboarding first.`);
       await waitForKeyPress(
         {
-          Enter: retryFn,
+          r: retryFn,
+          R: retryFn,
           c: undefined,
           C: undefined,
         },
-        'Hit Enter to refresh. Hit "c" to continue anyway. CTRL+C to quit',
+        'Hit [r] to refresh, [c] to continue anyway. CTRL+C to quit',
       );
 
-      break;
+      return onboardingCheck;
     }
     case 'error': {
-      console.error('An issue occured while fetching the onboarding status');
+      spinner.fail('An issue occured while fetching the onboarding status');
       console.error(onboardingCheck.error);
 
-      await waitForKeyPress({ Enter: retryFn }, 'Hit Enter to retry. CTRL+C to quit.');
+      await waitForKeyPress(
+        {
+          R: retryFn,
+          r: retryFn,
+        },
+        'Hit [r] to retry. CTRL+C to quit.',
+      );
       break;
     }
     default: {
+      spinner.stop();
       program.error('Invariant');
     }
   }
 }
 
 async function handleStep1(opts: BaseCommandOptions, userInfo: UserInfo) {
-  await handleGetOnboardingResponse(opts.client, userInfo);
+  resetLayout();
+  const check = await handleGetOnboardingResponse(opts.client, userInfo);
+
+  if (!check) {
+    return;
+  }
+
+  console.debug('TBD - to implement');
 }
 
 async function fetchUserInfo(client: BaseCommandOptions['client']) {

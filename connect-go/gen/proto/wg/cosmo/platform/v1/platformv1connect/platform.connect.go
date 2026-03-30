@@ -568,6 +568,9 @@ const (
 	// PlatformServiceRecomposeGraphProcedure is the fully-qualified name of the PlatformService's
 	// RecomposeGraph RPC.
 	PlatformServiceRecomposeGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/RecomposeGraph"
+	// PlatformServiceGetOnboardingProcedure is the fully-qualified name of the PlatformService's
+	// GetOnboarding RPC.
+	PlatformServiceGetOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOnboarding"
 	// PlatformServiceCompleteOnboardingStep1Procedure is the fully-qualified name of the
 	// PlatformService's CompleteOnboardingStep1 RPC.
 	PlatformServiceCompleteOnboardingStep1Procedure = "/wg.cosmo.platform.v1.PlatformService/CompleteOnboardingStep1"
@@ -766,6 +769,7 @@ var (
 	platformServiceUnlinkSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
 	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
 	platformServiceRecomposeGraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
+	platformServiceGetOnboardingMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetOnboarding")
 	platformServiceCompleteOnboardingStep1MethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CompleteOnboardingStep1")
 	platformServiceCompleteOnboardingStep2MethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CompleteOnboardingStep2")
 	platformServiceCompleteOnboardingStep3MethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CompleteOnboardingStep3")
@@ -1111,6 +1115,8 @@ type PlatformServiceClient interface {
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
 	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
+	// GetOnboarding returns onboarding record
+	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
 	// CompleteOnboardingStep1 saves onboarding wizard step 1 (org name, member invites, notification channels)
 	CompleteOnboardingStep1(context.Context, *connect.Request[v1.CompleteOnboardingStep1Request]) (*connect.Response[v1.CompleteOnboardingStep1Response], error)
 	// CompleteOnboardingStep2 advances onboarding wizard to step 2 (federation concepts acknowledged)
@@ -2208,6 +2214,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getOnboarding: connect.NewClient[v1.GetOnboardingRequest, v1.GetOnboardingResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOnboardingProcedure,
+			connect.WithSchema(platformServiceGetOnboardingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		completeOnboardingStep1: connect.NewClient[v1.CompleteOnboardingStep1Request, v1.CompleteOnboardingStep1Response](
 			httpClient,
 			baseURL+PlatformServiceCompleteOnboardingStep1Procedure,
@@ -2421,6 +2433,7 @@ type platformServiceClient struct {
 	unlinkSubgraph                        *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
 	verifyAPIKeyGraphAccess               *connect.Client[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse]
 	recomposeGraph                        *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
+	getOnboarding                         *connect.Client[v1.GetOnboardingRequest, v1.GetOnboardingResponse]
 	completeOnboardingStep1               *connect.Client[v1.CompleteOnboardingStep1Request, v1.CompleteOnboardingStep1Response]
 	completeOnboardingStep2               *connect.Client[v1.CompleteOnboardingStep2Request, v1.CompleteOnboardingStep2Response]
 	completeOnboardingStep3               *connect.Client[v1.CompleteOnboardingStep3Request, v1.CompleteOnboardingStep3Response]
@@ -3355,6 +3368,11 @@ func (c *platformServiceClient) RecomposeGraph(ctx context.Context, req *connect
 	return c.recomposeGraph.CallUnary(ctx, req)
 }
 
+// GetOnboarding calls wg.cosmo.platform.v1.PlatformService.GetOnboarding.
+func (c *platformServiceClient) GetOnboarding(ctx context.Context, req *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error) {
+	return c.getOnboarding.CallUnary(ctx, req)
+}
+
 // CompleteOnboardingStep1 calls wg.cosmo.platform.v1.PlatformService.CompleteOnboardingStep1.
 func (c *platformServiceClient) CompleteOnboardingStep1(ctx context.Context, req *connect.Request[v1.CompleteOnboardingStep1Request]) (*connect.Response[v1.CompleteOnboardingStep1Response], error) {
 	return c.completeOnboardingStep1.CallUnary(ctx, req)
@@ -3718,6 +3736,8 @@ type PlatformServiceHandler interface {
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
 	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
+	// GetOnboarding returns onboarding record
+	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
 	// CompleteOnboardingStep1 saves onboarding wizard step 1 (org name, member invites, notification channels)
 	CompleteOnboardingStep1(context.Context, *connect.Request[v1.CompleteOnboardingStep1Request]) (*connect.Response[v1.CompleteOnboardingStep1Response], error)
 	// CompleteOnboardingStep2 advances onboarding wizard to step 2 (federation concepts acknowledged)
@@ -4811,6 +4831,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetOnboardingHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOnboardingProcedure,
+		svc.GetOnboarding,
+		connect.WithSchema(platformServiceGetOnboardingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceCompleteOnboardingStep1Handler := connect.NewUnaryHandler(
 		PlatformServiceCompleteOnboardingStep1Procedure,
 		svc.CompleteOnboardingStep1,
@@ -5199,6 +5225,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceVerifyAPIKeyGraphAccessHandler.ServeHTTP(w, r)
 		case PlatformServiceRecomposeGraphProcedure:
 			platformServiceRecomposeGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOnboardingProcedure:
+			platformServiceGetOnboardingHandler.ServeHTTP(w, r)
 		case PlatformServiceCompleteOnboardingStep1Procedure:
 			platformServiceCompleteOnboardingStep1Handler.ServeHTTP(w, r)
 		case PlatformServiceCompleteOnboardingStep2Procedure:
@@ -5928,6 +5956,10 @@ func (UnimplementedPlatformServiceHandler) VerifyAPIKeyGraphAccess(context.Conte
 
 func (UnimplementedPlatformServiceHandler) RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RecomposeGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOnboarding is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CompleteOnboardingStep1(context.Context, *connect.Request[v1.CompleteOnboardingStep1Request]) (*connect.Response[v1.CompleteOnboardingStep1Response], error) {
