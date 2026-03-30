@@ -188,6 +188,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.secretName" . }}
                   key: webhookSecret
+            {{- if .Values.configuration.webhookProxyUrl }}
+            - name: WEBHOOK_PROXY_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: webhookProxyUrl
+            {{- end }}
             - name: GITHUB_APP_CLIENT_ID
               valueFrom:
                 configMapKeyRef:

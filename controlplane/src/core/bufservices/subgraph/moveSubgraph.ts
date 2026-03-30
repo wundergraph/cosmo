@@ -33,6 +33,7 @@ export function moveSubgraph(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     const subgraph = await subgraphRepo.byName(req.name, req.namespace);
