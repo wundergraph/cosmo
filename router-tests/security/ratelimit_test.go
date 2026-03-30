@@ -780,6 +780,36 @@ func TestRateLimit(t *testing.T) {
 			require.NoError(t, err)
 			require.Contains(t, res.Body, `"remaining":2`)
 			require.NotContains(t, res.Body, `"errors"`)
+
+			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			}, map[string]string{
+				"X-Client-ID": "premium-user",
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"remaining":1`)
+			require.NotContains(t, res.Body, `"errors"`)
+
+			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			}, map[string]string{
+				"X-Client-ID": "premium-user",
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"remaining":0`)
+			require.NotContains(t, res.Body, `"errors"`)
+
+			// Premium user: fifth request exceeds override limit
+			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			}, map[string]string{
+				"X-Client-ID": "premium-user",
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"errors"`)
 		})
 	})
 	t.Run("Cluster Mode", func(t *testing.T) {
