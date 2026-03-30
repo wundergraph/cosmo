@@ -38,6 +38,7 @@ export function whoAmI(
       },
       organizationName: organization.name,
       organizationSlug: organization.slug,
+      userEmail: authContext.userDisplayName,
     };
   });
 }
