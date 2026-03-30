@@ -1,5 +1,6 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
+import { create } from '@bufbuild/protobuf';
+import { EventMeta, EventMetaSchema, GraphSchemaUpdatedMetaSchema, ProposalStateUpdatedMetaSchema, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { getFederatedGraphs } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -7,14 +8,13 @@ import { useMemo } from 'react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
-import { PartialMessage } from '@bufbuild/protobuf';
 import { PiWebhooksLogo } from 'react-icons/pi';
 import { FaSlack } from 'react-icons/fa';
 import { Toolbar } from '../ui/toolbar';
 import { FederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { SelectGroup, SelectLabel } from '../ui/select';
 
-export type EventsMeta = Array<PartialMessage<EventMeta>>;
+export type EventsMeta = EventMeta[];
 
 type NotificationTab = 'webhooks' | 'integrations';
 
@@ -77,20 +77,24 @@ export const SelectGraphs = ({
       newGraphIds.push(...graphIds.filter((g) => g !== graphId));
     }
 
-    const entry: EventsMeta[number] = {
+    const metaCase =
+      eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
+        ? 'federatedGraphSchemaUpdated' as const
+        : eventName === OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED
+          ? 'monographSchemaUpdated' as const
+          : 'proposalStateUpdated' as const;
+
+    const metaValue = metaCase === 'proposalStateUpdated'
+      ? create(ProposalStateUpdatedMetaSchema, { graphIds: newGraphIds })
+      : create(GraphSchemaUpdatedMetaSchema, { graphIds: newGraphIds });
+
+    const entry = create(EventMetaSchema, {
       eventName,
       meta: {
-        case:
-          eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
-            ? 'federatedGraphSchemaUpdated'
-            : eventName === OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED
-              ? 'monographSchemaUpdated'
-              : 'proposalStateUpdated',
-        value: {
-          graphIds: newGraphIds,
-        },
-      },
-    };
+        case: metaCase,
+        value: metaValue,
+      } as EventMeta['meta'],
+    });
 
     const idx = tempMeta.findIndex((v) => v.eventName === eventName);
 

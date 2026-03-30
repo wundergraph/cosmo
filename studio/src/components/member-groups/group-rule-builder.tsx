@@ -1,4 +1,5 @@
 import {
+  type UpdateOrganizationGroupRequest_GroupRule,
   UpdateOrganizationGroupRequest_GroupRuleSchema,
   GetUserAccessibleResourcesResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';

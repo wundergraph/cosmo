@@ -57,7 +57,8 @@ import {
   getSubgraphSDLFromLatestComposition,
   publishPersistedOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { PersistedOperation, PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { create } from '@bufbuild/protobuf';
+import { PersistedOperation, PersistedOperationSchema, PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { sentenceCase } from 'change-case';
 import crypto from 'crypto';
 import { GraphiQL } from 'graphiql';
@@ -365,7 +366,7 @@ const PersistOperation = () => {
     }
 
     const operations = [
-      new PersistedOperation({
+      create(PersistedOperationSchema, {
         id: crypto.createHash('sha256').update(query).digest('hex'),
         contents: query,
       }),

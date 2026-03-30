@@ -12,6 +12,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 
 import {
+  type GraphPruningConfig,
   GetNamespaceGraphPruningConfigResponse,
   GraphPruningConfigSchema,
   LintSeverity,

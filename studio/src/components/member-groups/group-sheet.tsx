@@ -1,6 +1,6 @@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { create, fromJson } from '@bufbuild/protobuf';
-import { OrganizationGroup, UpdateOrganizationGroupRequest_GroupRuleSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { OrganizationGroup, type UpdateOrganizationGroupRequest_GroupRule, UpdateOrganizationGroupRequest_GroupRuleSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Button } from '@/components/ui/button';
 import { InfoCircledIcon, PlusIcon } from '@radix-ui/react-icons';
 import { PencilIcon } from '@heroicons/react/24/outline';

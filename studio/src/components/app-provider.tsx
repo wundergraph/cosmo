@@ -210,7 +210,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         },
       ],
       // Allow cookies to be sent to the server
-      credentials: 'include',
+      fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
     });
 
     setTransport(newTransport);

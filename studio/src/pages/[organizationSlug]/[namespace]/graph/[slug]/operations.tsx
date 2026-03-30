@@ -26,7 +26,6 @@ import { useFeatureLimit } from '@/hooks/use-feature-limit';
 import { useOperationsFilters } from '@/hooks/use-operations-filters';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { NextPageWithLayout } from '@/lib/page';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
 import { ChartBarIcon, ExclamationTriangleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { UpdateIcon } from '@radix-ui/react-icons';
@@ -36,8 +35,10 @@ import {
   getGraphMetrics,
   getOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { create } from '@bufbuild/protobuf';
 import {
   AnalyticsFilter,
+  AnalyticsFilterSchema,
   AnalyticsViewFilterOperator,
   GetOperationsResponse,
   GetOperationsResponse_OperationType,
@@ -101,7 +102,7 @@ const OperationsToolbar = () => {
           isLoading={!!isFetching}
           onClick={() => {
             client.invalidateQueries({
-              queryKey: createConnectQueryKey(getGraphMetrics, {
+              queryKey: createConnectQueryKey({ schema: getGraphMetrics, input: {
                 namespace: graphContext?.graph?.namespace,
                 federatedGraphName: graphContext?.graph?.name,
                 range,
@@ -111,7 +112,7 @@ const OperationsToolbar = () => {
                       start: formatISO(dateRange.start),
                       end: formatISO(dateRange.end),
                     },
-              }),
+              }, cardinality: "finite" }),
             });
           }}
           variant="outline"
@@ -144,7 +145,7 @@ const OperationsLeftPanel = ({
       }
     | undefined;
   onOperationSelect: (operationHash: string, operationName: string) => void;
-  operations: PlainMessage<GetOperationsResponse>['operations'];
+  operations: GetOperationsResponse['operations'];
   isLoading: boolean;
   localSearchQuery: string;
   onSearchQueryChange: (query: string) => void;
@@ -283,7 +284,7 @@ const OperationsRightPanel = ({
         name: string;
       }
     | undefined;
-  operations: PlainMessage<GetOperationsResponse>['operations'];
+  operations: GetOperationsResponse['operations'];
 }) => {
   const router = useRouter();
   const graphContext = useContext(GraphContext);
@@ -319,7 +320,7 @@ const OperationsRightPanel = ({
     const operationFilters = [];
     if (selectedOperation) {
       operationFilters.push(
-        new AnalyticsFilter({
+        create(AnalyticsFilterSchema, {
           field: 'operationHash',
           value: selectedOperation.hash,
           operator: AnalyticsViewFilterOperator.EQUALS,
@@ -328,7 +329,7 @@ const OperationsRightPanel = ({
       // Only add operationName filter if operation has a name (not unnamed)
       if (selectedOperation.name) {
         operationFilters.push(
-          new AnalyticsFilter({
+          create(AnalyticsFilterSchema, {
             field: 'operationName',
             value: selectedOperation.name,
             operator: AnalyticsViewFilterOperator.EQUALS,

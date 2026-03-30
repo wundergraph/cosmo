@@ -112,7 +112,7 @@ export const CreateGraphForm = ({ isMonograph = false }: { isMonograph?: boolean
       onSuccess: async (d: CreateFederatedGraphResponse | CreateMonographResponse) => {
         if (d.response?.code === EnumStatusCode.OK) {
           // We need to refresh the workspace after creating a graph
-          await queryClient.refetchQueries({ queryKey: createConnectQueryKey(getWorkspace) });
+          await queryClient.refetchQueries({ queryKey: createConnectQueryKey({ schema: getWorkspace, cardinality: undefined }) });
           router.replace(`/${user?.currentOrganization.slug}/${namespace}/graph/${data.name}`);
         } else if (d.response?.details) {
           toast({ description: d.response.details, duration: 3000 });

@@ -115,18 +115,18 @@ const OverviewToolbar = ({ filters }: { filters?: AnalyticsViewResultFilter[] })
           isLoading={!!isFetching}
           onClick={() => {
             client.invalidateQueries({
-              queryKey: createConnectQueryKey(getGraphMetrics, {
+              queryKey: createConnectQueryKey({ schema: getGraphMetrics, input: {
                 namespace: graphContext?.graph?.namespace,
                 federatedGraphName: graphContext?.graph?.name,
                 range,
-              }),
+              }, cardinality: "finite" }),
             });
             client.invalidateQueries({
-              queryKey: createConnectQueryKey(getMetricsErrorRate, {
+              queryKey: createConnectQueryKey({ schema: getMetricsErrorRate, input: {
                 namespace: graphContext?.graph?.namespace,
                 federatedGraphName: graphContext?.graph?.name,
                 range,
-              }),
+              }, cardinality: "finite" }),
             });
           }}
           variant="outline"

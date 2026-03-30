@@ -267,18 +267,18 @@ const OverviewToolbar = () => {
           isLoading={!!isFetching}
           onClick={() => {
             client.invalidateQueries({
-              queryKey: createConnectQueryKey(getSubgraphMetrics, {
+              queryKey: createConnectQueryKey({ schema: getSubgraphMetrics, input: {
                 subgraphName: subgraph?.subgraph?.name,
                 namespace: subgraph?.subgraph?.namespace,
                 range,
-              }),
+              }, cardinality: "finite" }),
             });
             client.invalidateQueries({
-              queryKey: createConnectQueryKey(getSubgraphMetricsErrorRate, {
+              queryKey: createConnectQueryKey({ schema: getSubgraphMetricsErrorRate, input: {
                 subgraphName: subgraph?.subgraph?.name,
                 namespace: subgraph?.subgraph?.namespace,
                 range,
-              }),
+              }, cardinality: "finite" }),
             });
           }}
           variant="outline"

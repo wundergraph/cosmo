@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { ConfigureSubgraphCheckExtensionsRequest } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -21,7 +20,7 @@ import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useWorkspace } from '@/hooks/use-workspace';
 import Link from 'next/link';
 
-export type SubgraphCheckExtensionsConfig = Omit<PlainMessage<ConfigureSubgraphCheckExtensionsRequest>, 'namespace'>;
+export type SubgraphCheckExtensionsConfig = Omit<ConfigureSubgraphCheckExtensionsRequest, 'namespace' | '$typeName' | '$unknown'>;
 
 const validationSchema = z.object({
   endpoint: z
