@@ -315,7 +315,7 @@ describe('JsonCheckSchemaOutputBuilder', () => {
       await b.write();
 
       expect(spy).toHaveBeenCalledWith(
-        '{"status":"error","code":0,"rowLimit":10,"lint":{"errors":[{"lintRuleType":"RULE_A","severity":"warn","message":"lint error"}],"warnings":[{"lintRuleType":"RULE_B","severity":"warn","message":"lint warn"}]}}',
+        '{"status":"error","code":0,"rowLimit":10,"lint":{"errors":[{"severity":0,"message":"lint error","lintRuleType":"RULE_A"}],"warnings":[{"severity":0,"message":"lint warn","lintRuleType":"RULE_B"}]}}',
       );
     });
 

@@ -211,9 +211,24 @@ export class JsonCheckSchemaOutputBuilder {
     }
   }
 
+  /**
+   * JSON.stringify replacer that strips protobuf V2 internal fields
+   * (like $typeName) so the output remains a clean, user-facing format.
+   */
+  private static jsonReplacer(_key: string, value: unknown): unknown {
+    if (value != null && typeof value === 'object' && !Array.isArray(value)) {
+      const record = value as Record<string, unknown>;
+      if ('$typeName' in record) {
+        const { $typeName, ...rest } = record;
+        return rest;
+      }
+    }
+    return value;
+  }
+
   private serializeOutput(formatted = false): string {
     try {
-      return JSON.stringify(this.build(), null, formatted ? 2 : 0);
+      return JSON.stringify(this.build(), JsonCheckSchemaOutputBuilder.jsonReplacer, formatted ? 2 : 0);
     } catch (err) {
       console.error('Failed to serialize JSON data.');
       throw err;
