@@ -2,6 +2,9 @@ import { Button } from '@/components/ui/button';
 import { docsBaseURL } from '@/lib/constants';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { CheckCircledIcon, CubeIcon } from '@radix-ui/react-icons';
+import { useMutation } from '@connectrpc/connect-query';
+import { completeOnboardingStep3 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/router';
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
@@ -109,9 +112,27 @@ export function Step3CreateGraph({ onDismiss, onSubmitSuccess }: Step3CreateGrap
     return () => clearTimeout(timer);
   }, []);
 
+  const { mutate, isPending } = useMutation(completeOnboardingStep3);
+
   const onContinue = () => {
-    // TODO: wire to completeOnboardingStep3 RPC when available
-    onSubmitSuccess((prev) => (prev ? { ...prev, step: prev.step + 1 } : prev));
+    mutate(
+      {
+        federatedGraphId: '',
+      },
+      {
+        onSuccess(res) {
+          if (res.response?.code === EnumStatusCode.OK && res.onboarding) {
+            onSubmitSuccess({
+              ...res.onboarding,
+              createdAt: new Date(res.onboarding.createdAt),
+              finishedAt: res.onboarding.finishedAt ? new Date(res.onboarding.finishedAt) : null,
+              updatedAt: res.onboarding.updatedAt ? new Date(res.onboarding.updatedAt) : null,
+              federatedGraphId: res.onboarding.federatedGraphId || undefined,
+            });
+          }
+        },
+      },
+    );
   };
 
   return (
@@ -149,7 +170,7 @@ export function Step3CreateGraph({ onDismiss, onSubmitSuccess }: Step3CreateGrap
         >
           Skip
         </Button>
-        <Button type="button" onClick={onContinue} disabled={!compositionComplete}>
+        <Button type="button" onClick={onContinue} disabled={!compositionComplete || isPending}>
           Continue
         </Button>
       </div>

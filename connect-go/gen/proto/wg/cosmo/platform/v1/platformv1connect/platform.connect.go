@@ -574,6 +574,9 @@ const (
 	// PlatformServiceCompleteOnboardingStep2Procedure is the fully-qualified name of the
 	// PlatformService's CompleteOnboardingStep2 RPC.
 	PlatformServiceCompleteOnboardingStep2Procedure = "/wg.cosmo.platform.v1.PlatformService/CompleteOnboardingStep2"
+	// PlatformServiceCompleteOnboardingStep3Procedure is the fully-qualified name of the
+	// PlatformService's CompleteOnboardingStep3 RPC.
+	PlatformServiceCompleteOnboardingStep3Procedure = "/wg.cosmo.platform.v1.PlatformService/CompleteOnboardingStep3"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -759,6 +762,7 @@ var (
 	platformServiceRecomposeGraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
 	platformServiceCompleteOnboardingStep1MethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CompleteOnboardingStep1")
 	platformServiceCompleteOnboardingStep2MethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CompleteOnboardingStep2")
+	platformServiceCompleteOnboardingStep3MethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CompleteOnboardingStep3")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -1103,6 +1107,8 @@ type PlatformServiceClient interface {
 	CompleteOnboardingStep1(context.Context, *connect.Request[v1.CompleteOnboardingStep1Request]) (*connect.Response[v1.CompleteOnboardingStep1Response], error)
 	// CompleteOnboardingStep2 advances onboarding wizard to step 2 (federation concepts acknowledged)
 	CompleteOnboardingStep2(context.Context, *connect.Request[v1.CompleteOnboardingStep2Request]) (*connect.Response[v1.CompleteOnboardingStep2Response], error)
+	// CompleteOnboardingStep3 advances onboarding wizard to step 3 (demo graph created)
+	CompleteOnboardingStep3(context.Context, *connect.Request[v1.CompleteOnboardingStep3Request]) (*connect.Response[v1.CompleteOnboardingStep3Response], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -2202,6 +2208,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceCompleteOnboardingStep2MethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		completeOnboardingStep3: connect.NewClient[v1.CompleteOnboardingStep3Request, v1.CompleteOnboardingStep3Response](
+			httpClient,
+			baseURL+PlatformServiceCompleteOnboardingStep3Procedure,
+			connect.WithSchema(platformServiceCompleteOnboardingStep3MethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2387,6 +2399,7 @@ type platformServiceClient struct {
 	recomposeGraph                        *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
 	completeOnboardingStep1               *connect.Client[v1.CompleteOnboardingStep1Request, v1.CompleteOnboardingStep1Response]
 	completeOnboardingStep2               *connect.Client[v1.CompleteOnboardingStep2Request, v1.CompleteOnboardingStep2Response]
+	completeOnboardingStep3               *connect.Client[v1.CompleteOnboardingStep3Request, v1.CompleteOnboardingStep3Response]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -3326,6 +3339,11 @@ func (c *platformServiceClient) CompleteOnboardingStep2(ctx context.Context, req
 	return c.completeOnboardingStep2.CallUnary(ctx, req)
 }
 
+// CompleteOnboardingStep3 calls wg.cosmo.platform.v1.PlatformService.CompleteOnboardingStep3.
+func (c *platformServiceClient) CompleteOnboardingStep3(ctx context.Context, req *connect.Request[v1.CompleteOnboardingStep3Request]) (*connect.Response[v1.CompleteOnboardingStep3Response], error) {
+	return c.completeOnboardingStep3.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3668,6 +3686,8 @@ type PlatformServiceHandler interface {
 	CompleteOnboardingStep1(context.Context, *connect.Request[v1.CompleteOnboardingStep1Request]) (*connect.Response[v1.CompleteOnboardingStep1Response], error)
 	// CompleteOnboardingStep2 advances onboarding wizard to step 2 (federation concepts acknowledged)
 	CompleteOnboardingStep2(context.Context, *connect.Request[v1.CompleteOnboardingStep2Request]) (*connect.Response[v1.CompleteOnboardingStep2Response], error)
+	// CompleteOnboardingStep3 advances onboarding wizard to step 3 (demo graph created)
+	CompleteOnboardingStep3(context.Context, *connect.Request[v1.CompleteOnboardingStep3Request]) (*connect.Response[v1.CompleteOnboardingStep3Response], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4763,6 +4783,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceCompleteOnboardingStep2MethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceCompleteOnboardingStep3Handler := connect.NewUnaryHandler(
+		PlatformServiceCompleteOnboardingStep3Procedure,
+		svc.CompleteOnboardingStep3,
+		connect.WithSchema(platformServiceCompleteOnboardingStep3MethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -5125,6 +5151,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceCompleteOnboardingStep1Handler.ServeHTTP(w, r)
 		case PlatformServiceCompleteOnboardingStep2Procedure:
 			platformServiceCompleteOnboardingStep2Handler.ServeHTTP(w, r)
+		case PlatformServiceCompleteOnboardingStep3Procedure:
+			platformServiceCompleteOnboardingStep3Handler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5852,4 +5880,8 @@ func (UnimplementedPlatformServiceHandler) CompleteOnboardingStep1(context.Conte
 
 func (UnimplementedPlatformServiceHandler) CompleteOnboardingStep2(context.Context, *connect.Request[v1.CompleteOnboardingStep2Request]) (*connect.Response[v1.CompleteOnboardingStep2Response], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CompleteOnboardingStep2 is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CompleteOnboardingStep3(context.Context, *connect.Request[v1.CompleteOnboardingStep3Request]) (*connect.Response[v1.CompleteOnboardingStep3Response], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CompleteOnboardingStep3 is not implemented"))
 }

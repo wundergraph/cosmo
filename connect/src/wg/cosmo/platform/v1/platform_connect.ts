@@ -20,6 +20,8 @@ import {
   CompleteOnboardingStep1Response,
   CompleteOnboardingStep2Request,
   CompleteOnboardingStep2Response,
+  CompleteOnboardingStep3Request,
+  CompleteOnboardingStep3Response,
   ComputeCacheWarmerOperationsRequest,
   ComputeCacheWarmerOperationsResponse,
   ConfigureCacheWarmerRequest,
@@ -2313,6 +2315,17 @@ export const PlatformService = {
       name: 'CompleteOnboardingStep2',
       I: CompleteOnboardingStep2Request,
       O: CompleteOnboardingStep2Response,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * CompleteOnboardingStep3 advances onboarding wizard to step 3 (demo graph created)
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.CompleteOnboardingStep3
+     */
+    completeOnboardingStep3: {
+      name: 'CompleteOnboardingStep3',
+      I: CompleteOnboardingStep3Request,
+      O: CompleteOnboardingStep3Response,
       kind: MethodKind.Unary,
     },
   },

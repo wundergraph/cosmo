@@ -181,6 +181,7 @@ import { listOrganizations } from './organization/listOrganizations.js';
 import { recomposeGraph } from './graph/recomposeGraph.js';
 import { completeOnboardingStep1 } from './onboarding/completeOnboardingStep1.js';
 import { completeOnboardingStep2 } from './onboarding/completeOnboardingStep2.js';
+import { completeOnboardingStep3 } from './onboarding/completeOnboardingStep3.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -915,6 +916,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     completeOnboardingStep2: (req, ctx) => {
       return completeOnboardingStep2(opts, req, ctx);
+    },
+
+    completeOnboardingStep3: (req, ctx) => {
+      return completeOnboardingStep3(opts, req, ctx);
     },
   };
 }

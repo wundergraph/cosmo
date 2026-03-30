@@ -77,6 +77,29 @@ export class OnboardingRepository {
     return this.createOnboardingDTO(record);
   }
 
+  public async completeStep3({
+    userId,
+    organizationId,
+    federatedGraphId,
+  }: {
+    userId: string;
+    organizationId: string;
+    federatedGraphId: string;
+  }): Promise<OnboardingDTO | undefined> {
+    const [record] = await this.db
+      .update(onboarding)
+      .set({
+        step: 3,
+        federatedGraphId: federatedGraphId || null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(onboarding.userId, userId), eq(onboarding.organizationId, organizationId)))
+      .returning()
+      .execute();
+
+    return this.createOnboardingDTO(record);
+  }
+
   private async createOnboardingDTO(record?: typeof onboarding.$inferSelect): Promise<OnboardingDTO | undefined> {
     if (!record) {
       return undefined;
