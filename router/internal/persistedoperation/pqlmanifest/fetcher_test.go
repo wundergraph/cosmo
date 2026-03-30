@@ -22,7 +22,6 @@ func newTestFetcher(serverURL string) *Fetcher {
 		organizationID:      "org-id",
 		httpClient:          &http.Client{},
 		logger:              zap.NewNop(),
-		store:               NewStore(zap.NewNop()),
 	}
 }
 
