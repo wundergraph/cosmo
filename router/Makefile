@@ -24,6 +24,14 @@ test-coverage:
 test-fresh: clean-testcache test
 
 lint:
+	@unformatted=$$(gofmt -l .); \
+	if [ -n "$$unformatted" ]; then \
+		echo "The following files are not formatted correctly:"; \
+		echo "$$unformatted"; \
+		echo ""; \
+		echo "Run 'gofmt -w .' to fix formatting."; \
+		exit 1; \
+	fi
 	go vet ./...
 	staticcheck ./...
 

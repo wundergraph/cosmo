@@ -21,3 +21,16 @@ runs:
         version: 2025.1.1
         install-go: false
         working-directory: ${{ inputs.working-directory }}
+
+    - name: Check code formatting
+      run: |
+        unformatted=$(gofmt -l .)
+        if [ -n "$unformatted" ]; then
+          echo "The following files are not formatted correctly:"
+          echo "$unformatted"
+          echo ""
+          echo "Run 'gofmt -w .' to fix formatting."
+          exit 1
+        fi
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
