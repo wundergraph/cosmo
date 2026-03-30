@@ -1,11 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   DeleteMonographRequest,
   DeleteMonographResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { FederatedGraphDTO } from '../../../types/index.js';
+import { PlainMessage, FederatedGraphDTO } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -15,11 +14,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function deleteMonograph(
-  opts: RouterOptions,
-  req: DeleteMonographRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<DeleteMonographResponse>> {
+export function deleteMonograph(opts: RouterOptions, req: DeleteMonographRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteMonographResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteMonographResponse>>(ctx, logger, async () => {

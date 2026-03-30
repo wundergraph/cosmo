@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -10,12 +9,9 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getProposalChecks(
-  opts: RouterOptions,
-  req: GetProposalChecksRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetProposalChecksResponse>> {
+export function getProposalChecks(opts: RouterOptions, req: GetProposalChecksRequest, ctx: HandlerContext): Promise<PlainMessage<GetProposalChecksResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetProposalChecksResponse>>(ctx, logger, async () => {

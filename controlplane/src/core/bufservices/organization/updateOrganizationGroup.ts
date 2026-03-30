@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -12,12 +11,9 @@ import { OrganizationGroupRepository } from '../../repositories/OrganizationGrou
 import { OrganizationRole } from '../../../db/models.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function updateOrganizationGroup(
-  opts: RouterOptions,
-  req: UpdateOrganizationGroupRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<UpdateOrganizationGroupResponse>> {
+export function updateOrganizationGroup(opts: RouterOptions, req: UpdateOrganizationGroupRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateOrganizationGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateOrganizationGroupResponse>>(ctx, logger, async () => {

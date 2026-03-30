@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -12,12 +11,9 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function forceCheckSuccess(
-  opts: RouterOptions,
-  req: ForceCheckSuccessRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<ForceCheckSuccessResponse>> {
+export function forceCheckSuccess(opts: RouterOptions, req: ForceCheckSuccessRequest, ctx: HandlerContext): Promise<PlainMessage<ForceCheckSuccessResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<ForceCheckSuccessResponse>>(ctx, logger, async () => {

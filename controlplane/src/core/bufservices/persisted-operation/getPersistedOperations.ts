@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -9,12 +8,9 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getPersistedOperations(
-  opts: RouterOptions,
-  req: GetPersistedOperationsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetPersistedOperationsResponse>> {
+export function getPersistedOperations(opts: RouterOptions, req: GetPersistedOperationsRequest, ctx: HandlerContext): Promise<PlainMessage<GetPersistedOperationsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetPersistedOperationsResponse>>(ctx, logger, async () => {

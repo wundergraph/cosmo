@@ -1,4 +1,15 @@
 import {
+  CacheWarmerOperationsSchema,
+  ClientInfoSchema,
+  ExtensionSchema,
+  OperationSchema,
+  OperationRequestSchema,
+  PersistedQuerySchema,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
+import { create, toJsonString } from '@bufbuild/protobuf';
+
+import type {
   CacheWarmerOperations,
   ClientInfo,
   Extension,
@@ -6,10 +17,12 @@ import {
   OperationRequest,
   PersistedQuery,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
 import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { CacheWarmerOperation as ProtoCacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { CacheWarmerOperationSchema as ProtoCacheWarmerOperationSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { CacheWarmerOperation as ProtoCacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import { cacheWarmerOperations, namespaceCacheWarmerConfig, users } from '../../db/schema.js';
 import { DateRange } from '../../types/index.js';
@@ -186,19 +199,19 @@ export class CacheWarmerRepository {
         }
 
         computedOperations.push(
-          new Operation({
-            request: new OperationRequest({
+          create(OperationSchema, {
+            request: create(OperationRequestSchema, {
               operationName: operation.operationName || undefined,
               query: persistedOperation.contents,
-              extensions: new Extension({
-                persistedQuery: new PersistedQuery({
+              extensions: create(ExtensionSchema, {
+                persistedQuery: create(PersistedQuerySchema, {
                   version: 1,
                   sha256Hash: operation.operationPersistedID,
                 }),
               }),
             }),
             client: operation.clientName
-              ? new ClientInfo({
+              ? create(ClientInfoSchema, {
                   name: operation.clientName,
                   version: operation.clientVersion || undefined,
                 })
@@ -207,13 +220,13 @@ export class CacheWarmerRepository {
         );
       } else if (operation.operationContent) {
         computedOperations.push(
-          new Operation({
-            request: new OperationRequest({
+          create(OperationSchema, {
+            request: create(OperationRequestSchema, {
               operationName: operation.operationName || undefined,
               query: operation.operationContent,
             }),
             client: operation.clientName
-              ? new ClientInfo({
+              ? create(ClientInfoSchema, {
                   name: operation.clientName,
                   version: operation.clientVersion || undefined,
                 })
@@ -229,7 +242,7 @@ export class CacheWarmerRepository {
     });
 
     if (topOperationsByPlanningTime.length === 0) {
-      return new CacheWarmerOperations({
+      return create(CacheWarmerOperationsSchema, {
         operations: computedOperations,
       });
     }
@@ -253,19 +266,19 @@ export class CacheWarmerRepository {
         }
 
         computedOperations.push(
-          new Operation({
-            request: new OperationRequest({
+          create(OperationSchema, {
+            request: create(OperationRequestSchema, {
               operationName: operation.operationName,
               query: persistedOperation.contents,
-              extensions: new Extension({
-                persistedQuery: new PersistedQuery({
+              extensions: create(ExtensionSchema, {
+                persistedQuery: create(PersistedQuerySchema, {
                   version: 1,
                   sha256Hash: operation.operationPersistedID,
                 }),
               }),
             }),
             client: operation.clientName
-              ? new ClientInfo({
+              ? create(ClientInfoSchema, {
                   name: operation.clientName,
                   version: operation.clientVersion,
                 })
@@ -308,13 +321,13 @@ export class CacheWarmerRepository {
       });
 
       computedOperations.push(
-        new Operation({
-          request: new OperationRequest({
+        create(OperationSchema, {
+          request: create(OperationRequestSchema, {
             operationName: operation.operationName,
             query: operationContent,
           }),
           client: operation.clientName
-            ? new ClientInfo({
+            ? create(ClientInfoSchema, {
                 name: operation.clientName,
                 version: operation.clientVersion,
               })
@@ -335,7 +348,7 @@ export class CacheWarmerRepository {
       });
     });
 
-    return new CacheWarmerOperations({
+    return create(CacheWarmerOperationsSchema, {
       operations: computedOperations,
     });
   }
@@ -498,7 +511,10 @@ export class CacheWarmerRepository {
       maxOperationsCount: cacheWarmerConfig?.maxOperationsCount || 100,
     });
 
-    const cacheWarmerOperationsBytes = Buffer.from(cacheWarmerOperations.toJsonString(), 'utf8');
+    const cacheWarmerOperationsBytes = Buffer.from(
+      toJsonString(CacheWarmerOperationsSchema, cacheWarmerOperations),
+      'utf8',
+    );
     const path = `${organizationId}/${federatedGraphId}/cache_warmup/operations.json`;
     try {
       await blobStorage.putObject<S3RouterConfigMetadata>({
@@ -548,7 +564,7 @@ export class CacheWarmerRepository {
     if (operations.length === 0) {
       return undefined;
     }
-    return new ProtoCacheWarmerOperation({
+    return create(ProtoCacheWarmerOperationSchema, {
       id: operations[0].id,
       operationContent: operations[0].operationContent || '',
       operationName: operations[0].operationName || '',

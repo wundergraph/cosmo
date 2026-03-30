@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -9,12 +8,9 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getFeatureFlags(
-  opts: RouterOptions,
-  req: GetFeatureFlagsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetFeatureFlagsResponse>> {
+export function getFeatureFlags(opts: RouterOptions, req: GetFeatureFlagsRequest, ctx: HandlerContext): Promise<PlainMessage<GetFeatureFlagsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetFeatureFlagsResponse>>(ctx, logger, async () => {

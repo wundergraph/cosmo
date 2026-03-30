@@ -1,5 +1,5 @@
 import { buildSchema, GraphQLSchema } from 'graphql';
-import { GRPCMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type { GRPCMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { GraphQLToMappingVisitor } from './sdl-to-mapping-visitor.js';
 import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
 import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
@@ -138,7 +138,7 @@ export type { GraphQLToProtoTextVisitorOptions, ProtoOption } from './sdl-to-pro
 export type { ProtoOptions } from './proto-options.js';
 export type { ProtoLock } from './proto-lock.js';
 export type { ValidationResult } from './sdl-validation-visitor.js';
-export {
+export type {
   GRPCMapping,
   OperationMapping,
   EntityMapping,
@@ -147,8 +147,8 @@ export {
   ArgumentMapping,
   EnumMapping,
   EnumValueMapping,
-  OperationType,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+export { OperationType } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 export {
   CONNECT_FIELD_RESOLVER,

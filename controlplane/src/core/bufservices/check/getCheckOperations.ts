@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -12,12 +11,9 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getCheckOperations(
-  opts: RouterOptions,
-  req: GetCheckOperationsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetCheckOperationsResponse>> {
+export function getCheckOperations(opts: RouterOptions, req: GetCheckOperationsRequest, ctx: HandlerContext): Promise<PlainMessage<GetCheckOperationsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetCheckOperationsResponse>>(ctx, logger, async () => {

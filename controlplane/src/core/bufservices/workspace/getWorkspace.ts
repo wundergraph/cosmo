@@ -1,24 +1,25 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { fromJson } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
   GetWorkspaceRequest,
   GetWorkspaceResponse,
-  WorkspaceNamespace,
-  WorkspaceFederatedGraph,
+  WorkspaceNamespaceSchema,
+  WorkspaceFederatedGraphSchema,
   type WorkspaceSubgraph,
+  type WorkspaceNamespace,
+  type WorkspaceFederatedGraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getWorkspace(
-  opts: RouterOptions,
-  req: GetWorkspaceRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetWorkspaceResponse>> {
+export function getWorkspace(opts: RouterOptions, req: GetWorkspaceRequest, ctx: HandlerContext): Promise<PlainMessage<GetWorkspaceResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetWorkspaceResponse>>(ctx, logger, async () => {
@@ -39,11 +40,11 @@ export function getWorkspace(
     // Initialize the response
     const result = namespaces
       .map((ns) =>
-        WorkspaceNamespace.fromJson({
+        fromJson(WorkspaceNamespaceSchema, {
           id: ns.id,
           name: ns.name,
           graphs: [],
-        } satisfies PlainMessage<WorkspaceNamespace>),
+        } as any),
       )
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
@@ -81,7 +82,7 @@ export function getWorkspace(
 
         //
         namespace.graphs.push(
-          WorkspaceFederatedGraph.fromJson({
+          fromJson(WorkspaceFederatedGraphSchema, {
             id: graph.id,
             targetId: graph.targetId,
             name: graph.name,
@@ -93,10 +94,10 @@ export function getWorkspace(
                     id: subgraph.id,
                     targetId: subgraph.targetId,
                     name: subgraph.name,
-                  }) satisfies PlainMessage<WorkspaceSubgraph>,
+                  }) as any,
               )
               .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })),
-          } satisfies PlainMessage<WorkspaceFederatedGraph>),
+          } as any),
         );
       }),
     );

@@ -26,7 +26,6 @@ import { useFeatureLimit } from '@/hooks/use-feature-limit';
 import { useOperationsFilters } from '@/hooks/use-operations-filters';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { NextPageWithLayout } from '@/lib/page';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
 import { ChartBarIcon, ExclamationTriangleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { UpdateIcon } from '@radix-ui/react-icons';
@@ -36,8 +35,10 @@ import {
   getGraphMetrics,
   getOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { create } from '@bufbuild/protobuf';
 import {
   AnalyticsFilter,
+  AnalyticsFilterSchema,
   AnalyticsViewFilterOperator,
   GetOperationsResponse,
   GetOperationsResponse_OperationType,
@@ -101,16 +102,20 @@ const OperationsToolbar = () => {
           isLoading={!!isFetching}
           onClick={() => {
             client.invalidateQueries({
-              queryKey: createConnectQueryKey(getGraphMetrics, {
-                namespace: graphContext?.graph?.namespace,
-                federatedGraphName: graphContext?.graph?.name,
-                range,
-                dateRange: range
-                  ? undefined
-                  : {
-                      start: formatISO(dateRange.start),
-                      end: formatISO(dateRange.end),
-                    },
+              queryKey: createConnectQueryKey({
+                schema: getGraphMetrics,
+                input: {
+                  namespace: graphContext?.graph?.namespace,
+                  federatedGraphName: graphContext?.graph?.name,
+                  range,
+                  dateRange: range
+                    ? undefined
+                    : {
+                        start: formatISO(dateRange.start),
+                        end: formatISO(dateRange.end),
+                      },
+                },
+                cardinality: 'finite',
               }),
             });
           }}
@@ -144,7 +149,7 @@ const OperationsLeftPanel = ({
       }
     | undefined;
   onOperationSelect: (operationHash: string, operationName: string) => void;
-  operations: PlainMessage<GetOperationsResponse>['operations'];
+  operations: GetOperationsResponse['operations'];
   isLoading: boolean;
   localSearchQuery: string;
   onSearchQueryChange: (query: string) => void;
@@ -283,7 +288,7 @@ const OperationsRightPanel = ({
         name: string;
       }
     | undefined;
-  operations: PlainMessage<GetOperationsResponse>['operations'];
+  operations: GetOperationsResponse['operations'];
 }) => {
   const router = useRouter();
   const graphContext = useContext(GraphContext);
@@ -319,7 +324,7 @@ const OperationsRightPanel = ({
     const operationFilters = [];
     if (selectedOperation) {
       operationFilters.push(
-        new AnalyticsFilter({
+        create(AnalyticsFilterSchema, {
           field: 'operationHash',
           value: selectedOperation.hash,
           operator: AnalyticsViewFilterOperator.EQUALS,
@@ -328,7 +333,7 @@ const OperationsRightPanel = ({
       // Only add operationName filter if operation has a name (not unnamed)
       if (selectedOperation.name) {
         operationFilters.push(
-          new AnalyticsFilter({
+          create(AnalyticsFilterSchema, {
             field: 'operationName',
             value: selectedOperation.name,
             operator: AnalyticsViewFilterOperator.EQUALS,
@@ -399,7 +404,6 @@ const OperationsRightPanel = ({
         // Selected Operation State
         <>
           {/* Operation Header */}
-
           <div className="flex flex-col gap-4 px-1 md:flex-row md:items-center md:justify-between md:gap-0">
             <div>
               <h3 className="text-lg font-semibold">{operationName || 'Unnamed Operation'}</h3>
@@ -440,19 +444,13 @@ const OperationsRightPanel = ({
               </Button>
             </div>
           </div>
-
           <Separator className="my-4" />
-
           {/* Client Usage Table - Always at the top */}
           <ClientUsageTable operationHash={selectedOperation.hash} operationName={operationName} />
-
           <Separator className="my-4" />
-
           {/* Deprecated Fields Table - Below Client Usage */}
           <DeprecatedFieldsTable operationHash={selectedOperation.hash} operationName={operationName} />
-
           <Separator className="my-4" />
-
           {/* Operation-specific Charts */}
           <div className="flex flex-col gap-4">
             <RequestMetricsCard data={data?.requests} syncId={syncId} showTopList={false} chartClassName="h-36" />

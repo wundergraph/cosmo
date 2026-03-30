@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -9,7 +8,7 @@ import {
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, PlainMessage } from '../../../types/index.js';
 import { PublicError, UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
@@ -19,11 +18,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidGraphName, isValidSchemaTags } from '../../util.js';
 
-export function createContract(
-  opts: RouterOptions,
-  req: CreateContractRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<CreateContractResponse>> {
+export function createContract(opts: RouterOptions, req: CreateContractRequest, ctx: HandlerContext): Promise<PlainMessage<CreateContractResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreateContractResponse>>(ctx, logger, async () => {

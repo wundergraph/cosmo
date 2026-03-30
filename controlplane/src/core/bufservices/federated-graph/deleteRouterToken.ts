@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -11,12 +10,9 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function deleteRouterToken(
-  opts: RouterOptions,
-  req: DeleteRouterTokenRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<DeleteRouterTokenResponse>> {
+export function deleteRouterToken(opts: RouterOptions, req: DeleteRouterTokenRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteRouterTokenResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteRouterTokenResponse>>(ctx, logger, async () => {

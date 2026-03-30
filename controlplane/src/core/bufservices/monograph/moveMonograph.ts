@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { MoveGraphRequest, MoveGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -11,12 +10,9 @@ import { TargetRepository } from '../../repositories/TargetRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function moveMonograph(
-  opts: RouterOptions,
-  req: MoveGraphRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<MoveGraphResponse>> {
+export function moveMonograph(opts: RouterOptions, req: MoveGraphRequest, ctx: HandlerContext): Promise<PlainMessage<MoveGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<MoveGraphResponse>>(ctx, logger, async () => {

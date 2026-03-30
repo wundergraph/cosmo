@@ -1,13 +1,15 @@
-/* eslint-disable camelcase */
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
   GetCheckSummaryRequest,
   GetCheckSummaryResponse,
-  GetCheckSummaryResponse_AffectedGraph,
+  GetCheckSummaryResponse_AffectedGraphSchema,
   LintSeverity,
+  type GetCheckSummaryResponse_AffectedGraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
@@ -19,12 +21,9 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isCheckSuccessful } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getCheckSummary(
-  opts: RouterOptions,
-  req: GetCheckSummaryRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetCheckSummaryResponse>> {
+export function getCheckSummary(opts: RouterOptions, req: GetCheckSummaryRequest, ctx: HandlerContext): Promise<PlainMessage<GetCheckSummaryResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetCheckSummaryResponse>>(ctx, logger, async () => {
@@ -182,7 +181,7 @@ export function getCheckSummary(
       checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking);
 
     affectedGraphs.push(
-      new GetCheckSummaryResponse_AffectedGraph({
+      create(GetCheckSummaryResponse_AffectedGraphSchema, {
         ...currentAffectedGraph,
         name: graph.name,
         isCheckSuccessful: isCheckSuccessful({
@@ -238,7 +237,7 @@ export function getCheckSummary(
         checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking);
 
       affectedGraphs.push(
-        new GetCheckSummaryResponse_AffectedGraph({
+        create(GetCheckSummaryResponse_AffectedGraphSchema, {
           ...ag,
           name: fedGraph.name,
           isCheckSuccessful: isCheckSuccessful({

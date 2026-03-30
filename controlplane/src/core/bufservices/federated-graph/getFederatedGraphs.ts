@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -7,7 +6,7 @@ import {
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { subHours } from 'date-fns';
-import { FederatedGraphDTO } from '../../../types/index.js';
+import { FederatedGraphDTO, PlainMessage } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { AnalyticsDashboardViewRepository } from '../../repositories/analytics/AnalyticsDashboardViewRepository.js';
@@ -15,11 +14,7 @@ import { parseTimeFilters } from '../../repositories/analytics/util.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getFederatedGraphs(
-  opts: RouterOptions,
-  req: GetFederatedGraphsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetFederatedGraphsResponse>> {
+export function getFederatedGraphs(opts: RouterOptions, req: GetFederatedGraphsRequest, ctx: HandlerContext): Promise<PlainMessage<GetFederatedGraphsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetFederatedGraphsResponse>>(ctx, logger, async () => {

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -7,7 +6,7 @@ import {
   CheckSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { PlainMessage, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -30,11 +29,7 @@ import {
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { maxRowLimitForChecks, defaultRetentionLimitInDays } from '../../constants.js';
 
-export function checkSubgraphSchema(
-  opts: RouterOptions,
-  req: CheckSubgraphSchemaRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<CheckSubgraphSchemaResponse>> {
+export function checkSubgraphSchema(opts: RouterOptions, req: CheckSubgraphSchemaRequest, ctx: HandlerContext): Promise<PlainMessage<CheckSubgraphSchemaResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CheckSubgraphSchemaResponse>>(ctx, logger, async () => {

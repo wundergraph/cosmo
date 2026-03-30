@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { AddReadmeRequest, AddReadmeResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -6,12 +5,9 @@ import { TargetRepository } from '../../repositories/TargetRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function addReadme(
-  opts: RouterOptions,
-  req: AddReadmeRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<AddReadmeResponse>> {
+export function addReadme(opts: RouterOptions, req: AddReadmeRequest, ctx: HandlerContext): Promise<PlainMessage<AddReadmeResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<AddReadmeResponse>>(ctx, logger, async () => {

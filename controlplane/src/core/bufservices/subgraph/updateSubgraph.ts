@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -8,7 +7,7 @@ import {
   UpdateSubgraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { PlainMessage, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -27,11 +26,7 @@ import {
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function updateSubgraph(
-  opts: RouterOptions,
-  req: UpdateSubgraphRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<UpdateSubgraphResponse>> {
+export function updateSubgraph(opts: RouterOptions, req: UpdateSubgraphRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateSubgraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateSubgraphResponse>>(ctx, logger, async () => {

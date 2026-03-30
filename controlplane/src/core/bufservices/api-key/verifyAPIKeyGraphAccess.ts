@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -9,12 +8,9 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function verifyAPIKeyGraphAccess(
-  opts: RouterOptions,
-  req: VerifyAPIKeyGraphAccessRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<VerifyAPIKeyGraphAccessResponse>> {
+export function verifyAPIKeyGraphAccess(opts: RouterOptions, req: VerifyAPIKeyGraphAccessRequest, ctx: HandlerContext): Promise<PlainMessage<VerifyAPIKeyGraphAccessResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<VerifyAPIKeyGraphAccessResponse>>(ctx, logger, async () => {

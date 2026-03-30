@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -12,6 +11,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function getNamespaceProposalConfig(
   opts: RouterOptions,

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -7,12 +6,9 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function deleteUser(
-  opts: RouterOptions,
-  req: DeleteUserRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<DeleteUserResponse>> {
+export function deleteUser(opts: RouterOptions, req: DeleteUserRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteUserResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteUserResponse>>(ctx, logger, async () => {

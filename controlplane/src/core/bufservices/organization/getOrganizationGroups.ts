@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -10,12 +9,9 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import OidcProvider from '../../services/OidcProvider.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getOrganizationGroups(
-  opts: RouterOptions,
-  req: GetOrganizationGroupsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetOrganizationGroupsResponse>> {
+export function getOrganizationGroups(opts: RouterOptions, req: GetOrganizationGroupsRequest, ctx: HandlerContext): Promise<PlainMessage<GetOrganizationGroupsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOrganizationGroupsResponse>>(ctx, logger, async () => {

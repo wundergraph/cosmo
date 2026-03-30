@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -11,6 +10,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { SubgraphCheckExtensionsRepository } from '../../repositories/SubgraphCheckExtensionsRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function configureSubgraphCheckExtensions(
   opts: RouterOptions,

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -9,12 +8,9 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getSubgraphMembers(
-  opts: RouterOptions,
-  req: GetSubgraphMembersRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetSubgraphMembersResponse>> {
+export function getSubgraphMembers(opts: RouterOptions, req: GetSubgraphMembersRequest, ctx: HandlerContext): Promise<PlainMessage<GetSubgraphMembersResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetSubgraphMembersResponse>>(ctx, logger, async () => {

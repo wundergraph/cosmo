@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { createPromiseClient } from '@connectrpc/connect';
+import { createClient } from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-node';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import build from '../src/core/build-server.js';
@@ -85,7 +85,7 @@ describe('Authentication', (ctx) => {
       baseUrl: addr,
     });
 
-    const platformClient = createPromiseClient(PlatformService, transport);
+    const platformClient = createClient(PlatformService, transport);
 
     const createPandasSubgraph = await platformClient.createFederatedSubgraph({
       name: genID('fedGraph'),

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { LinkSubgraphRequest, LinkSubgraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -8,12 +7,9 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function linkSubgraph(
-  opts: RouterOptions,
-  req: LinkSubgraphRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<LinkSubgraphResponse>> {
+export function linkSubgraph(opts: RouterOptions, req: LinkSubgraphRequest, ctx: HandlerContext): Promise<PlainMessage<LinkSubgraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<LinkSubgraphResponse>>(ctx, logger, async () => {

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import {
   AnalyticsConfig,
   AnalyticsFilter,
@@ -614,7 +613,7 @@ export class AnalyticsRequestViewRepository {
     clientNames: string[],
     clientVersions: string[],
     httpStatusCodes: string[],
-  ): Record<string, PlainMessage<AnalyticsViewResultFilter>> {
+  ) {
     const filters = this.getBaseFiltersForGroup(name);
 
     if (filters.operationName) {
@@ -690,7 +689,7 @@ export class AnalyticsRequestViewRepository {
     federatedGraphId: string,
     name: AnalyticsViewGroupName,
     opts?: AnalyticsConfig,
-  ): Promise<PlainMessage<AnalyticsViewResult>> {
+  ) {
     const inputFilters = this.omitGroupedFilters(name, opts?.filters ?? []);
     const columnMetaData = fillColumnMetaData(this.columnMetadata);
     const paginationSql = `LIMIT {limit:Int16} OFFSET {offset:Int64}`;
@@ -795,8 +794,8 @@ export class AnalyticsRequestViewRepository {
     const columns = buildAnalyticsViewColumns(result[0], columnMetaData);
     const filters = buildAnalyticsViewFilters(result[0], columnFilters);
 
-    const rows: PlainMessage<AnalyticsViewRow>[] = result.map((row) => {
-      const viewRow: Record<string, PlainMessage<AnalyticsViewRowValue>> = {};
+    const rows = result.map((row) => {
+      const viewRow: Record<string, any> = {};
 
       /**
        * JSON to protobuf conversion

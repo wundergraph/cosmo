@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -11,12 +10,9 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
 import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function configureCacheWarmer(
-  opts: RouterOptions,
-  req: ConfigureCacheWarmerRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<ConfigureCacheWarmerResponse>> {
+export function configureCacheWarmer(opts: RouterOptions, req: ConfigureCacheWarmerRequest, ctx: HandlerContext): Promise<PlainMessage<ConfigureCacheWarmerResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<ConfigureCacheWarmerResponse>>(ctx, logger, async () => {

@@ -51,11 +51,11 @@ describe('Subgraph', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: 'type Query { hello: String! }',
-    });
+    })) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
   });

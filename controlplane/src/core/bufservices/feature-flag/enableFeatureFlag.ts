@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -9,7 +8,7 @@ import {
   EnableFeatureFlagRequest,
   EnableFeatureFlagResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, PlainMessage } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -20,11 +19,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function enableFeatureFlag(
-  opts: RouterOptions,
-  req: EnableFeatureFlagRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<EnableFeatureFlagResponse>> {
+export function enableFeatureFlag(opts: RouterOptions, req: EnableFeatureFlagRequest, ctx: HandlerContext): Promise<PlainMessage<EnableFeatureFlagResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<EnableFeatureFlagResponse>>(ctx, logger, async () => {

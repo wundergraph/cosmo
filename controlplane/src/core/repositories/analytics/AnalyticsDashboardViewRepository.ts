@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import {
   FederatedGraphMetrics,
   OperationRequestCount,
@@ -18,10 +17,7 @@ import {
 export class AnalyticsDashboardViewRepository {
   constructor(private client: ClickHouseClient) {}
 
-  public async getWeeklyRequestSeries(
-    federatedGraphId: string,
-    organizationId: string,
-  ): Promise<PlainMessage<RequestSeriesItem>[]> {
+  public async getWeeklyRequestSeries(federatedGraphId: string, organizationId: string) {
     const query = `
     SELECT toDate(timestamp) as timestamp, totalRequests, erroredRequests
       FROM (
@@ -59,11 +55,7 @@ export class AnalyticsDashboardViewRepository {
     return [];
   }
 
-  public async getRequestSeries(
-    federatedGraphId: string,
-    organizationId: string,
-    filter: TimeFilters,
-  ): Promise<PlainMessage<RequestSeriesItem>[]> {
+  public async getRequestSeries(federatedGraphId: string, organizationId: string, filter: TimeFilters) {
     if (filter?.dateRange && filter.dateRange.start > filter.dateRange.end) {
       const tmp = filter.dateRange.start;
       filter.dateRange.start = filter.dateRange.end;
@@ -120,7 +112,7 @@ export class AnalyticsDashboardViewRepository {
     federatedGraphId: string,
     organizationId: string,
     dateRange: DateRange<number>,
-  ): Promise<PlainMessage<OperationRequestCount>[]> {
+  ): Promise<OperationRequestCount[]> {
     const query = `
     SELECT
       OperationHash as operationHash,
@@ -201,7 +193,7 @@ export class AnalyticsDashboardViewRepository {
     organizationId: string,
     dateRange: DateRange<number>,
     rangeInHours: number,
-  ): Promise<PlainMessage<FederatedGraphMetrics>> {
+  ) {
     const [requestRates] = await Promise.all([
       this.getFederatedGraphRates(federatedGraphId, organizationId, dateRange, rangeInHours),
     ]);
@@ -321,8 +313,8 @@ export class AnalyticsDashboardViewRepository {
     dateRange: DateRange<number>,
     subgraphs: SubgraphDTO[],
     rangeInHours: number,
-  ): Promise<PlainMessage<SubgraphMetrics>[]> {
-    const metrics: PlainMessage<SubgraphMetrics>[] = [];
+  ) {
+    const metrics: any[] = [];
 
     if (subgraphs.length === 0) {
       return metrics;
@@ -336,7 +328,7 @@ export class AnalyticsDashboardViewRepository {
     for (const subgraph of subgraphs) {
       const rate = requestRates.find((r) => r.subgraphID === subgraph.id);
       const lat = latency.find((l) => l.subgraphID === subgraph.id);
-      const metric: PlainMessage<SubgraphMetrics> = {
+      const metric: any = {
         subgraphID: subgraph.id,
         requestRate: 0,
         errorRate: 0,

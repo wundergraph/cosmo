@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { InviteUserRequest, InviteUserResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -7,12 +6,9 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { UserInviteService } from '../../services/UserInviteService.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function inviteUser(
-  opts: RouterOptions,
-  req: InviteUserRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<InviteUserResponse>> {
+export function inviteUser(opts: RouterOptions, req: InviteUserRequest, ctx: HandlerContext): Promise<PlainMessage<InviteUserResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<InviteUserResponse>>(ctx, logger, async () => {

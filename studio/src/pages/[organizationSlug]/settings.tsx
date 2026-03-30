@@ -1156,9 +1156,7 @@ const LeaveOrganization = () => {
 
   const handleLeaveOrg = () => {
     mutate(
-      {
-        userID: user?.id,
-      },
+      {},
       {
         onSuccess: (d) => {
           if (d.response?.code === EnumStatusCode.OK) {

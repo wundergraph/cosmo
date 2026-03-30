@@ -30,6 +30,8 @@ import {
   removeOperationOverrides,
   toggleChangeOverridesForAllOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { create } from '@bufbuild/protobuf';
+import { OverrideChangeSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import copy from 'copy-to-clipboard';
 import Fuse from 'fuse.js';
 import { useRouter } from 'next/router';
@@ -473,14 +475,18 @@ export const CheckOperations = () => {
                                           graphName: graphContext?.graph?.name,
                                           namespace: graphContext?.graph?.namespace,
                                           operationHash: hash,
-                                          changes: impactingChanges,
+                                          changes: impactingChanges.map((c) =>
+                                            create(OverrideChangeSchema, { changeType: c.changeType, path: c.path }),
+                                          ),
                                         })
                                       : createOverrides({
                                           graphName: graphContext?.graph?.name,
                                           namespace: graphContext?.graph?.namespace,
                                           operationHash: hash,
                                           operationName: name,
-                                          changes: impactingChanges,
+                                          changes: impactingChanges.map((c) =>
+                                            create(OverrideChangeSchema, { changeType: c.changeType, path: c.path }),
+                                          ),
                                         });
                                   }}
                                   className="cursor-pointer flex-col items-start gap-1"

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -10,12 +9,9 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getGraphMetrics(
-  opts: RouterOptions,
-  req: GetGraphMetricsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetGraphMetricsResponse>> {
+export function getGraphMetrics(opts: RouterOptions, req: GetGraphMetricsRequest, ctx: HandlerContext): Promise<PlainMessage<GetGraphMetricsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetGraphMetricsResponse>>(ctx, logger, async () => {

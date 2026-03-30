@@ -1,22 +1,19 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetAnalyticsViewRequest,
   GetAnalyticsViewResponse,
-  DateRange as DateRangeProto,
+  DateRangeSchema as DateRangeProtoSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { AnalyticsRequestViewRepository } from '../../repositories/analytics/AnalyticsRequestViewRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getAnalyticsView(
-  opts: RouterOptions,
-  req: GetAnalyticsViewRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetAnalyticsViewResponse>> {
+export function getAnalyticsView(opts: RouterOptions, req: GetAnalyticsViewRequest, ctx: HandlerContext): Promise<PlainMessage<GetAnalyticsViewResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetAnalyticsViewResponse>>(ctx, logger, async () => {
@@ -60,7 +57,7 @@ export function getAnalyticsView(
         req.config.range = range;
       }
       if (dateRange) {
-        req.config.dateRange = new DateRangeProto({
+        req.config.dateRange = create(DateRangeProtoSchema, {
           start: dateRange.start,
           end: dateRange.end,
         });

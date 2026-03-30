@@ -195,9 +195,13 @@ export const ConfigureOverride = () => {
   );
 
   const invalidateOverrides = () => {
-    const key = createConnectQueryKey(getAllOverrides, {
-      graphName: graphContext?.graph?.name,
-      namespace: graphContext?.graph?.namespace,
+    const key = createConnectQueryKey({
+      schema: getAllOverrides,
+      input: {
+        graphName: graphContext?.graph?.name,
+        namespace: graphContext?.graph?.namespace,
+      },
+      cardinality: 'finite',
     });
     client.invalidateQueries({
       queryKey: key,

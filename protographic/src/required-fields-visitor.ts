@@ -18,7 +18,9 @@ import {
   SelectionSetNode,
   visit,
 } from 'graphql';
-import { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { create } from '@bufbuild/protobuf';
+import { FieldMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositeMessageDefinition, CompositeMessageKind, ProtoMessage, RPCMethod, VisitContext } from './types.js';
 import { KEY_DIRECTIVE_NAME } from './string-constants.js';
 import {
@@ -143,7 +145,7 @@ export class RequiredFieldsVisitor {
       }
 
       this.mapping[this.currentKeyFieldsString] = {
-        requiredFieldMapping: new FieldMapping({
+        requiredFieldMapping: create(FieldMappingSchema, {
           original: this.requiredField.name,
           mapped: graphqlFieldToProtoField(this.requiredField.name),
         }),

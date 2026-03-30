@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -15,12 +14,9 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function publishMonograph(
-  opts: RouterOptions,
-  req: PublishMonographRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<PublishMonographResponse>> {
+export function publishMonograph(opts: RouterOptions, req: PublishMonographRequest, ctx: HandlerContext): Promise<PlainMessage<PublishMonographResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<PublishMonographResponse>>(ctx, logger, async () => {

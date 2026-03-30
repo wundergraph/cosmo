@@ -1,13 +1,16 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
   GetFederatedGraphByNameRequest,
   GetFederatedGraphByNameResponse,
   RequestSeriesItem,
-  Subgraph,
+  SubgraphSchema,
+  type Subgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { FeatureFlagDTO } from '../../../types/index.js';
+
+import { FeatureFlagDTO, PlainMessage } from '../../../types/index.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
@@ -17,11 +20,7 @@ import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getFederatedGraphByName(
-  opts: RouterOptions,
-  req: GetFederatedGraphByNameRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetFederatedGraphByNameResponse>> {
+export function getFederatedGraphByName(opts: RouterOptions, req: GetFederatedGraphByNameRequest, ctx: HandlerContext): Promise<PlainMessage<GetFederatedGraphByNameResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetFederatedGraphByNameResponse>>(ctx, logger, async () => {
@@ -93,7 +92,7 @@ export function getFederatedGraphByName(
       for (const fs of ff.featureSubgraphs) {
         if (!featureSubgraphs.some((f) => f.id === fs.id)) {
           featureSubgraphs.push(
-            new Subgraph({
+            create(SubgraphSchema, {
               id: fs.id,
               name: fs.name,
               routingURL: fs.routingUrl,

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -9,12 +8,9 @@ import { FastifyBaseLogger } from 'fastify';
 import { BillingRepository } from '../../repositories/BillingRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getBillingPlans(
-  opts: RouterOptions,
-  req: GetBillingPlansRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetBillingPlansResponse>> {
+export function getBillingPlans(opts: RouterOptions, req: GetBillingPlansRequest, ctx: HandlerContext): Promise<PlainMessage<GetBillingPlansResponse>> {
   const logger = ctx.values.get<FastifyBaseLogger>({ id: Symbol('logger'), defaultValue: opts.logger });
 
   return handleError<PlainMessage<GetBillingPlansResponse>>(ctx, logger, async () => {

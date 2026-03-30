@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -23,12 +22,9 @@ import {
   isValidGraphName,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function createMonograph(
-  opts: RouterOptions,
-  req: CreateMonographRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<CreateMonographResponse>> {
+export function createMonograph(opts: RouterOptions, req: CreateMonographRequest, ctx: HandlerContext): Promise<PlainMessage<CreateMonographResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreateMonographResponse>>(ctx, logger, async () => {

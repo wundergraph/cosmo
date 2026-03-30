@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { toJson } from '@bufbuild/protobuf';
+import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { compileGraphQLToMapping } from '../../src/index.js';
 
 describe('SDL to Mapping Field Resolvers', () => {
@@ -22,7 +24,7 @@ describe('SDL to Mapping Field Resolvers', () => {
 
     const mappingText = compileGraphQLToMapping(sdl);
 
-    expect(mappingText.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mappingText)).toMatchInlineSnapshot(`
       {
         "operationMappings": [
           {
@@ -127,7 +129,7 @@ describe('SDL to Mapping Field Resolvers', () => {
 
     const mappingText = compileGraphQLToMapping(sdl);
 
-    expect(mappingText.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mappingText)).toMatchInlineSnapshot(`
       {
         "operationMappings": [
           {
@@ -213,7 +215,7 @@ describe('SDL to Mapping Field Resolvers', () => {
 
     const mappingText = compileGraphQLToMapping(sdl);
 
-    expect(mappingText.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mappingText)).toMatchInlineSnapshot(`
       {
         "operationMappings": [
           {

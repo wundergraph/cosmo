@@ -1,18 +1,13 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetSubgraphsRequest, GetSubgraphsResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { SubgraphDTO } from '../../../types/index.js';
+import { PlainMessage, SubgraphDTO } from '../../../types/index.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getSubgraphs(
-  opts: RouterOptions,
-  req: GetSubgraphsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetSubgraphsResponse>> {
+export function getSubgraphs(opts: RouterOptions, req: GetSubgraphsRequest, ctx: HandlerContext): Promise<PlainMessage<GetSubgraphsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetSubgraphsResponse>>(ctx, logger, async () => {

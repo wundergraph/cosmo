@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { UpdateAPIKeyRequest, UpdateAPIKeyResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -9,12 +8,9 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function updateAPIKey(
-  opts: RouterOptions,
-  req: UpdateAPIKeyRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<UpdateAPIKeyResponse>> {
+export function updateAPIKey(opts: RouterOptions, req: UpdateAPIKeyRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateAPIKeyResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateAPIKeyResponse>>(ctx, logger, async () => {

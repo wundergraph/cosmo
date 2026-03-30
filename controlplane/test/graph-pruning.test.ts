@@ -1,7 +1,8 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { create } from '@bufbuild/protobuf';
 import {
-  GraphPruningConfig,
-  GraphPruningIssue,
+  GraphPruningConfigSchema,
+  GraphPruningIssueSchema,
   LintSeverity,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
@@ -153,17 +154,17 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(getNamespaceGraphPruningConfigResponse.configs).toStrictEqual([]);
 
     const graphPruningConfigs = [
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'UNUSED_FIELDS',
         severityLevel: LintSeverity.error,
         gracePeriodInDays: 7,
       }),
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'DEPRECATED_FIELDS',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
       }),
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
@@ -203,17 +204,17 @@ describe('Graph Pruning Tests', (ctx) => {
     authenticator.changeUser(TestUser.viewerTimCompanyA);
 
     const graphPruningConfigs = [
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'UNUSED_FIELDS',
         severityLevel: LintSeverity.error,
         gracePeriodInDays: 7,
       }),
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'DEPRECATED_FIELDS',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
       }),
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
@@ -256,11 +257,11 @@ describe('Graph Pruning Tests', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: initSchema,
-    });
+    })) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -271,19 +272,19 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
 
     const graphPruningConfigs = [
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'UNUSED_FIELDS',
         severityLevel: LintSeverity.error,
         gracePeriodInDays: 7,
         schemaUsageCheckPeriodInDays: 7,
       }),
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'DEPRECATED_FIELDS',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
         schemaUsageCheckPeriodInDays: 7,
       }),
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
@@ -346,7 +347,7 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(checkResp.breakingChanges.length).toBe(2);
     expect(checkResp.graphPruneErrors).toHaveLength(1);
     expect(checkResp.graphPruneErrors).toEqual([
-      new GraphPruningIssue({
+      create(GraphPruningIssueSchema, {
         federatedGraphName,
         fieldPath: 'Hello.a',
         graphPruningRuleType: 'UNUSED_FIELDS',
@@ -362,7 +363,7 @@ describe('Graph Pruning Tests', (ctx) => {
     ]);
     expect(checkResp.graphPruneWarnings).toHaveLength(2);
     expect(checkResp.graphPruneWarnings).toEqual([
-      new GraphPruningIssue({
+      create(GraphPruningIssueSchema, {
         federatedGraphName,
         fieldPath: 'Hello.a',
         graphPruningRuleType: 'DEPRECATED_FIELDS',
@@ -376,7 +377,7 @@ describe('Graph Pruning Tests', (ctx) => {
           'Field a of type Hello was deprecated, is no longer in use, and is now safe for removal following the expiration of the grace period.',
         severity: LintSeverity.warn,
       }),
-      new GraphPruningIssue({
+      create(GraphPruningIssueSchema, {
         federatedGraphName,
         fieldPath: 'Hello.removedField',
         graphPruningRuleType: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
@@ -417,11 +418,11 @@ describe('Graph Pruning Tests', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: initSchema,
-    });
+    })) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
     const response = await client.enableGraphPruning({
@@ -431,17 +432,17 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
 
     const graphPruningConfigs = [
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'UNUSED_FIELDS',
         severityLevel: LintSeverity.error,
         gracePeriodInDays: 7,
       }),
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'DEPRECATED_FIELDS',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
       }),
-      new GraphPruningConfig({
+      create(GraphPruningConfigSchema, {
         ruleName: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,

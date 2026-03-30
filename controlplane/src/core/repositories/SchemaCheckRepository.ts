@@ -1,16 +1,21 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
   CompositionError,
   CompositionWarning,
-  GraphPruningIssue,
-  LintIssue,
+  GraphPruningIssueSchema,
+  LintIssueSchema,
   LintSeverity,
   ProposalSubgraph,
-  SchemaChange,
+  SchemaChangeSchema,
   VCSContext,
+  type GraphPruningIssue,
+  type LintIssue,
+  type SchemaChange,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -34,6 +39,7 @@ import {
   NamespaceDTO,
   SchemaGraphPruningIssues,
   SchemaLintIssues,
+  PlainMessage,
 } from '../../types/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { CheckSubgraph, Composer } from '../composition/composer.js';
@@ -1068,57 +1074,51 @@ export class SchemaCheckRepository {
       }
 
       breakingChanges.push(
-        ...schemaChanges.breakingChanges.map(
-          (c) =>
-            new SchemaChange({
-              ...c,
-              subgraphName,
-            }),
+        ...schemaChanges.breakingChanges.map((c) =>
+          create(SchemaChangeSchema, {
+            ...c,
+            subgraphName,
+          }),
         ),
       );
       nonBreakingChanges.push(
-        ...schemaChanges.nonBreakingChanges.map(
-          (c) =>
-            new SchemaChange({
-              ...c,
-              subgraphName,
-            }),
+        ...schemaChanges.nonBreakingChanges.map((c) =>
+          create(SchemaChangeSchema, {
+            ...c,
+            subgraphName,
+          }),
         ),
       );
       lintErrors.push(
-        ...lintIssues.errors.map(
-          (e) =>
-            new LintIssue({
-              ...e,
-              subgraphName,
-            }),
+        ...lintIssues.errors.map((e) =>
+          create(LintIssueSchema, {
+            ...e,
+            subgraphName,
+          }),
         ),
       );
       lintWarnings.push(
-        ...lintIssues.warnings.map(
-          (w) =>
-            new LintIssue({
-              ...w,
-              subgraphName,
-            }),
+        ...lintIssues.warnings.map((w) =>
+          create(LintIssueSchema, {
+            ...w,
+            subgraphName,
+          }),
         ),
       );
       graphPruneErrors.push(
-        ...graphPruningIssues.errors.map(
-          (e) =>
-            new GraphPruningIssue({
-              ...e,
-              subgraphName,
-            }),
+        ...graphPruningIssues.errors.map((e) =>
+          create(GraphPruningIssueSchema, {
+            ...e,
+            subgraphName,
+          }),
         ),
       );
       graphPruneWarnings.push(
-        ...graphPruningIssues.warnings.map(
-          (w) =>
-            new GraphPruningIssue({
-              ...w,
-              subgraphName,
-            }),
+        ...graphPruningIssues.warnings.map((w) =>
+          create(GraphPruningIssueSchema, {
+            ...w,
+            subgraphName,
+          }),
         ),
       );
 
@@ -1368,8 +1368,8 @@ export class SchemaCheckRepository {
           check.lintIssues.warnings.push(...sceLintIssues.filter((issue) => issue.severity === LintSeverity.warn));
           check.lintIssues.errors.push(...sceLintIssues.filter((issue) => issue.severity === LintSeverity.error));
 
-          lintWarnings.push(...sceLintWarnings.map((issue) => new LintIssue({ ...issue, subgraphName })));
-          lintErrors.push(...sceLintErrors.map((issue) => new LintIssue({ ...issue, subgraphName })));
+          lintWarnings.push(...sceLintWarnings.map((issue) => create(LintIssueSchema, { ...issue, subgraphName })));
+          lintErrors.push(...sceLintErrors.map((issue) => create(LintIssueSchema, { ...issue, subgraphName })));
 
           // Then, we need to add the overwritten lint issues
           await schemaLintRepo.addSchemaCheckLintIssues({

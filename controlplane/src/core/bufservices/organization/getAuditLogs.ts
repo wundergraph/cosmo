@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -11,12 +10,9 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getAuditLogs(
-  opts: RouterOptions,
-  req: GetAuditLogsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetAuditLogsResponse>> {
+export function getAuditLogs(opts: RouterOptions, req: GetAuditLogsRequest, ctx: HandlerContext): Promise<PlainMessage<GetAuditLogsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetAuditLogsResponse>>(ctx, logger, async () => {
@@ -71,7 +67,7 @@ export function getAuditLogs(
       endDate: dateRange.end,
     });
 
-    const logs: PlainMessage<AuditLog>[] = auditLogs.map((log) => ({
+    const logs = auditLogs.map((log) => ({
       actorDisplayName: log.actorDisplayName ?? '',
       actorType: log.actorType ?? '',
       apiKeyName: log.apiKeyName ?? '',

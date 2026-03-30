@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -8,12 +7,9 @@ import {
 import { PlaygroundScriptsRepository } from '../../repositories/PlaygroundScriptsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getPlaygroundScripts(
-  opts: RouterOptions,
-  req: GetPlaygroundScriptsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetPlaygroundScriptsResponse>> {
+export function getPlaygroundScripts(opts: RouterOptions, req: GetPlaygroundScriptsRequest, ctx: HandlerContext): Promise<PlainMessage<GetPlaygroundScriptsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetPlaygroundScriptsResponse>>(ctx, logger, async () => {

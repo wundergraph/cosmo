@@ -1,10 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetProposalsByFederatedGraphRequest,
   GetProposalsByFederatedGraphResponse,
-  Proposal,
+  ProposalSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
@@ -13,6 +13,7 @@ import { clamp, enrichLogger, fromProposalOriginEnum, getLogger, handleError, va
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function getProposalsByFederatedGraph(
   opts: RouterOptions,
@@ -123,27 +124,26 @@ export function getProposalsByFederatedGraph(
       response: {
         code: EnumStatusCode.OK,
       },
-      proposals: proposalsWithChecks.map(
-        (proposal) =>
-          new Proposal({
-            id: proposal.proposal.id,
-            name: proposal.proposal.name,
-            createdAt: proposal.proposal.createdAt,
-            createdByEmail: proposal.proposal.createdByEmail || '',
-            state: proposal.proposal.state,
-            federatedGraphId: proposal.proposal.federatedGraphId,
-            federatedGraphName: req.federatedGraphName,
-            subgraphs: proposal.proposalSubgraphs.map((subgraph) => ({
-              name: subgraph.subgraphName,
-              schemaSDL: subgraph.schemaSDL,
-              isDeleted: subgraph.isDeleted,
-              isNew: subgraph.isNew,
-              labels: subgraph.labels || [],
-            })),
-            latestCheckSuccess: proposal.latestCheckSuccess,
-            latestCheckId: proposal.latestCheckId,
-            origin: fromProposalOriginEnum(proposal.proposal.origin),
-          }),
+      proposals: proposalsWithChecks.map((proposal) =>
+        create(ProposalSchema, {
+          id: proposal.proposal.id,
+          name: proposal.proposal.name,
+          createdAt: proposal.proposal.createdAt,
+          createdByEmail: proposal.proposal.createdByEmail || '',
+          state: proposal.proposal.state,
+          federatedGraphId: proposal.proposal.federatedGraphId,
+          federatedGraphName: req.federatedGraphName,
+          subgraphs: proposal.proposalSubgraphs.map((subgraph) => ({
+            name: subgraph.subgraphName,
+            schemaSDL: subgraph.schemaSDL,
+            isDeleted: subgraph.isDeleted,
+            isNew: subgraph.isNew,
+            labels: subgraph.labels || [],
+          })),
+          latestCheckSuccess: proposal.latestCheckSuccess,
+          latestCheckId: proposal.latestCheckId,
+          origin: fromProposalOriginEnum(proposal.proposal.origin),
+        }),
       ),
       isProposalsEnabled: true,
     };

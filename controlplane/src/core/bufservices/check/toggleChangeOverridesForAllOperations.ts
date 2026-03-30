@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -13,6 +12,7 @@ import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function toggleChangeOverridesForAllOperations(
   opts: RouterOptions,
@@ -79,7 +79,7 @@ export function toggleChangeOverridesForAllOperations(
             namespaceId: graph.namespaceId,
             operationHash: affectedOperation.hash,
             operationName: affectedOperation.name,
-            changes: impactingChanges,
+            changes: impactingChanges as any,
             actorId: authContext.userId,
           });
           affectedRows.push(...res);
@@ -87,7 +87,7 @@ export function toggleChangeOverridesForAllOperations(
           const res = await operationsRepo.removeOperationOverrides({
             operationHash: affectedOperation.hash,
             namespaceId: graph.namespaceId,
-            changes: impactingChanges,
+            changes: impactingChanges as any,
           });
           affectedRows.push(...res);
         }

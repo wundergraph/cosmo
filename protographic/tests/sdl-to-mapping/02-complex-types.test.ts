@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { toJson } from '@bufbuild/protobuf';
+import { GRPCMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { compileGraphQLToMapping } from '../../src/index.js';
 
 describe('Complex GraphQL Types to Proto Mapping', () => {
@@ -24,7 +26,7 @@ describe('Complex GraphQL Types to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'UserService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "enumMappings": [
           {
@@ -147,7 +149,7 @@ describe('Complex GraphQL Types to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'StarWarsService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "operationMappings": [
           {
@@ -298,7 +300,7 @@ describe('Complex GraphQL Types to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ContentService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "operationMappings": [
           {
@@ -399,7 +401,7 @@ describe('Complex GraphQL Types to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
-    expect(mapping.toJson()).toMatchInlineSnapshot(`
+    expect(toJson(GRPCMappingSchema, mapping)).toMatchInlineSnapshot(`
       {
         "operationMappings": [
           {

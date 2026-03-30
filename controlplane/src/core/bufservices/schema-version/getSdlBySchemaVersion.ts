@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -8,12 +7,9 @@ import {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getSdlBySchemaVersion(
-  opts: RouterOptions,
-  req: GetSdlBySchemaVersionRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetSdlBySchemaVersionResponse>> {
+export function getSdlBySchemaVersion(opts: RouterOptions, req: GetSdlBySchemaVersionRequest, ctx: HandlerContext): Promise<PlainMessage<GetSdlBySchemaVersionResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetSdlBySchemaVersionResponse>>(ctx, logger, async () => {

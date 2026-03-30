@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -11,12 +10,9 @@ import { MetricsRepository } from '../../repositories/analytics/MetricsRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { isoDateRangeToTimestamps, getDateRange } from '../../repositories/analytics/util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getOperationClients(
-  opts: RouterOptions,
-  req: GetOperationClientsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetOperationClientsResponse>> {
+export function getOperationClients(opts: RouterOptions, req: GetOperationClientsRequest, ctx: HandlerContext): Promise<PlainMessage<GetOperationClientsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOperationClientsResponse>>(ctx, logger, async () => {

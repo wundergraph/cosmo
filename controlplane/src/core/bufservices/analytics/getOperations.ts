@@ -1,35 +1,33 @@
-/* eslint-disable camelcase */
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  AnalyticsFilter,
+  AnalyticsFilterSchema,
   AnalyticsViewFilterOperator,
   GetOperationsRequest,
   GetOperationsResponse,
-  GetOperationsResponse_Operation,
+  GetOperationsResponse_OperationSchema,
   GetOperationsResponse_OperationType,
   OperationsFetchBasedOn,
   SortDirection,
+  type AnalyticsFilter,
+  type GetOperationsResponse_Operation,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { buildASTSchema } from '@wundergraph/composition';
 import { parse } from 'graphql';
 import { deafultRangeInHoursForGetOperations } from '../../constants.js';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
+import { UsageRepository } from '../../repositories/analytics/UsageRepository.js';
 import { CacheWarmerRepository } from '../../repositories/CacheWarmerRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
-import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
-import { UsageRepository } from '../../repositories/analytics/UsageRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
+import type { RouterOptions } from '../../routes.js';
+import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
+import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getOperations(
-  opts: RouterOptions,
-  req: GetOperationsRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetOperationsResponse>> {
+export function getOperations(opts: RouterOptions, req: GetOperationsRequest, ctx: HandlerContext): Promise<PlainMessage<GetOperationsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOperationsResponse>>(ctx, logger, async () => {
@@ -153,7 +151,7 @@ export function getOperations(
       // Multiple filters with the same field are combined with OR
       for (const clientName of req.clientNames) {
         filters.push(
-          new AnalyticsFilter({
+          create(AnalyticsFilterSchema, {
             field: 'clientName',
             operator: AnalyticsViewFilterOperator.EQUALS,
             value: clientName,
@@ -249,7 +247,7 @@ export function getOperations(
         };
       }
 
-      computedOperations.push(new GetOperationsResponse_Operation(operationData));
+      computedOperations.push(create(GetOperationsResponse_OperationSchema, operationData));
     }
 
     let totalCount: number | undefined;

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -8,7 +7,7 @@ import {
   CompositionWarning,
   Subgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, PlainMessage } from '../../../types/index.js';
 import { composeGraphsInWorker } from '../../composition/composeGraphs.pool.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
@@ -26,11 +25,7 @@ import {
 import { UnauthorizedError } from '../../errors/errors.js';
 import { maxRowLimitForChecks } from '../../constants.js';
 
-export function checkFederatedGraph(
-  opts: RouterOptions,
-  req: CheckFederatedGraphRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<CheckFederatedGraphResponse>> {
+export function checkFederatedGraph(opts: RouterOptions, req: CheckFederatedGraphRequest, ctx: HandlerContext): Promise<PlainMessage<CheckFederatedGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CheckFederatedGraphResponse>>(ctx, logger, async () => {
@@ -86,7 +81,7 @@ export function checkFederatedGraph(
 
     const subgraphsUsedForComposition = subgraphs.filter((s) => !!s.schemaSDL);
 
-    const subgraphsDetails: PlainMessage<Subgraph>[] = subgraphsUsedForComposition.map((s) => ({
+    const subgraphsDetails = subgraphsUsedForComposition.map((s) => ({
       id: s.id,
       name: s.name,
       routingURL: s.routingUrl,

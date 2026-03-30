@@ -44,7 +44,7 @@ export interface SerializedComposedGraphArtifact {
   shouldIncludeClientSchema: boolean;
   fieldConfigurations: FieldConfiguration[];
   subgraphs: SerializedComposedSubgraph[];
-  routerExecutionConfigJson?: ReturnType<RouterConfig['toJson']>;
+  routerExecutionConfigJson?: any;
 }
 
 export interface SerializedContractCompositionArtifact {

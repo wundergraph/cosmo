@@ -1,4 +1,3 @@
-import { PartialMessage, PlainMessage } from '@bufbuild/protobuf';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   Integration,
@@ -10,6 +9,16 @@ import { addDays } from 'date-fns';
 import { and, asc, count, desc, eq, gt, inArray, like, lt, not, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import {
+  PlainMessage,
+  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+  Feature,
+  FeatureIds,
+  OrganizationDTO,
+  OrganizationGroupDTO,
+  OrganizationMemberDTO,
+  WebhooksConfigDTO,
+} from '../../types/index.js';
 import { NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -25,15 +34,6 @@ import {
   slackSchemaUpdateEventConfigs,
   users,
 } from '../../db/schema.js';
-import {
-  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-  Feature,
-  FeatureIds,
-  OrganizationDTO,
-  OrganizationGroupDTO,
-  OrganizationMemberDTO,
-  WebhooksConfigDTO,
-} from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';
@@ -744,7 +744,7 @@ export class OrganizationRepository {
     });
   }
 
-  public async getWebhookMeta(id: string, organizationId: string): Promise<PlainMessage<EventMeta>[]> {
+  public async getWebhookMeta(id: string, organizationId: string): Promise<EventMeta[]> {
     const results = await this.db
       .select({
         graphId: schema.webhookGraphSchemaUpdate.federatedGraphId,
@@ -761,7 +761,7 @@ export class OrganizationRepository {
         ),
       );
 
-    const meta: PartialMessage<EventMeta>[] = [];
+    const meta: any[] = [];
 
     const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
     const federatedGraphIds = [];
@@ -835,7 +835,7 @@ export class OrganizationRepository {
       },
     });
 
-    return meta as PlainMessage<EventMeta>[];
+    return meta as EventMeta[];
   }
 
   public async getWebhookConfigById(id: string, organizationId: string): Promise<WebhooksConfigDTO | null> {
@@ -1165,7 +1165,7 @@ export class OrganizationRepository {
           return undefined;
         }
 
-        const config: PartialMessage<IntegrationConfig> = {
+        const config: any = {
           type: IntegrationType.SLACK,
           config: {
             case: 'slackIntegrationConfig',
@@ -1221,7 +1221,7 @@ export class OrganizationRepository {
             continue;
           }
 
-          const config: PartialMessage<IntegrationConfig> = {
+          const config: any = {
             type: IntegrationType.SLACK,
             config: {
               case: 'slackIntegrationConfig',
@@ -1564,7 +1564,7 @@ export class OrganizationRepository {
     limit?: number;
     startDate: string;
     endDate: string;
-  }): Promise<{ deliveries: PlainMessage<WebhookDelivery>[]; totalCount: number }> {
+  }): Promise<{ deliveries: any[]; totalCount: number }> {
     const conditions = and(
       eq(schema.webhookDeliveries.organizationId, input.organizationID),
       gt(schema.webhookDeliveries.createdAt, new Date(input.startDate)),

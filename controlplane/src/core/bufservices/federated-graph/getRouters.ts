@@ -1,9 +1,8 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetRoutersRequest, GetRoutersResponse, Router } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { validate as validateUUID } from 'uuid';
-import { GraphCompositionDTO } from '../../../types/index.js';
+import { GraphCompositionDTO, PlainMessage } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { RouterMetricsRepository } from '../../repositories/analytics/RouterMetricsRepository.js';
@@ -11,11 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getRouters(
-  opts: RouterOptions,
-  req: GetRoutersRequest,
-  ctx: HandlerContext,
-): Promise<PlainMessage<GetRoutersResponse>> {
+export function getRouters(opts: RouterOptions, req: GetRoutersRequest, ctx: HandlerContext): Promise<PlainMessage<GetRoutersResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetRoutersResponse>>(ctx, logger, async () => {
