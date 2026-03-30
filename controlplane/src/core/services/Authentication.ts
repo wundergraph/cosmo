@@ -62,7 +62,7 @@ export class Authentication implements Authenticator {
       const organization = await this.orgRepo.bySlug(user.organizationSlug);
 
       if (!organization) {
-        throw new Error('Organization not found');
+        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Organization not found');
       }
 
       const cacheKey = `${user.userId}:${organization.id}`;
@@ -110,12 +110,12 @@ export class Authentication implements Authenticator {
 
       return userContext;
     } catch (error: unknown) {
-      this.logger.error(error, 'Failed to authenticate request');
       if (error instanceof AuthenticationError || (error instanceof Error && error.name === 'AuthenticationError')) {
         // Just forward authentication errors to surface better error messages
         throw error;
       }
 
+      this.logger.error(error, 'Failed to authenticate request');
       const authError = new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
       authError.cause = error;
 

@@ -4,6 +4,67 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.298.0](https://github.com/wundergraph/cosmo/compare/router@0.297.0...router@0.298.0) (2026-03-29)
+
+### Features
+
+* **cache:** deduplicate persisted operations and avoid planning twice ([#2701](https://github.com/wundergraph/cosmo/issues/2701)) ([932f436](https://github.com/wundergraph/cosmo/commit/932f4365f7c1b5249a0ce89c9507691bc877cb06)) (@StarpTech)
+
+# [0.297.0](https://github.com/wundergraph/cosmo/compare/router@0.296.0...router@0.297.0) (2026-03-27)
+
+### Features
+
+* add PQL manifest support for persisted operations ([#2635](https://github.com/wundergraph/cosmo/issues/2635)) ([38a648c](https://github.com/wundergraph/cosmo/commit/38a648cff927b45d5ee5323bf303f83198c64411)) (@StarpTech)
+
+# [0.296.0](https://github.com/wundergraph/cosmo/compare/router@0.295.0...router@0.296.0) (2026-03-26)
+
+### Bug Fixes
+
+* documenting and updating span / metric error cases ([#2681](https://github.com/wundergraph/cosmo/issues/2681)) ([d413a26](https://github.com/wundergraph/cosmo/commit/d413a269fa5fb657d883be1eb5bf008e016ecbb0)) (@SkArchon)
+
+### Features
+
+* **router:** validate slicing arguments in Cost Control ([#2692](https://github.com/wundergraph/cosmo/issues/2692)) ([4416030](https://github.com/wundergraph/cosmo/commit/44160304075c3505862c000e4f78c7c802b42ea7)) (@ysmolski)
+
+# [0.295.0](https://github.com/wundergraph/cosmo/compare/router@0.294.0...router@0.295.0) (2026-03-19)
+
+### Features
+
+* slow plan cache ([#2611](https://github.com/wundergraph/cosmo/issues/2611)) ([9a96032](https://github.com/wundergraph/cosmo/commit/9a9603285fdc457287b4153be615314022f4c529)) (@SkArchon)
+
+# [0.294.0](https://github.com/wundergraph/cosmo/compare/router@0.293.0...router@0.294.0) (2026-03-17)
+
+### Features
+
+* expose costs ([#2470](https://github.com/wundergraph/cosmo/issues/2470)) ([d43aa40](https://github.com/wundergraph/cosmo/commit/d43aa40f2429fbb212e5618cd5586774e1b6ae7e)) (@ysmolski)
+
+# [0.293.0](https://github.com/wundergraph/cosmo/compare/router@0.292.0...router@0.293.0) (2026-03-16)
+
+### Features
+
+* add cache hit statuses to expr context ([#2643](https://github.com/wundergraph/cosmo/issues/2643)) ([4e0213c](https://github.com/wundergraph/cosmo/commit/4e0213ccab91203d5c1b9559db84ccebb540c320)) (@SkArchon)
+
+# [0.292.0](https://github.com/wundergraph/cosmo/compare/router@0.291.0...router@0.292.0) (2026-03-13)
+
+### Bug Fixes
+
+* **ci:** improve reliability of the router-tests ([#2577](https://github.com/wundergraph/cosmo/issues/2577)) ([4aacdee](https://github.com/wundergraph/cosmo/commit/4aacdee3dc257e274507d5eb7fbebca66e9cc667)) (@jensneuse)
+
+### Features
+
+* **router:** add router support for field resolvers without arguments ([#2645](https://github.com/wundergraph/cosmo/issues/2645)) ([0406c7a](https://github.com/wundergraph/cosmo/commit/0406c7ae7d2b6cee73e379d94e45a5f76ded9eef)) (@Noroth)
+
+# [0.291.0](https://github.com/wundergraph/cosmo/compare/router@0.290.1...router@0.291.0) (2026-03-12)
+
+### Bug Fixes
+
+* **mcp:** reset registeredTools between reloads to prevent false tool name collisions ([#2625](https://github.com/wundergraph/cosmo/issues/2625)) ([fbbd11f](https://github.com/wundergraph/cosmo/commit/fbbd11f765518045d2425b749b2fde58968be377)) (@asoorm)
+* **router:** make computeSha256 independent of metric/access log attributes ([#2633](https://github.com/wundergraph/cosmo/issues/2633)) ([f03d96e](https://github.com/wundergraph/cosmo/commit/f03d96e9790df213334c949e89f8e43090ade1be)) (@endigma)
+
+### Features
+
+* **router:** add support for [@requires](https://github.com/requires) in grpc ([#2610](https://github.com/wundergraph/cosmo/issues/2610)) ([670f75d](https://github.com/wundergraph/cosmo/commit/670f75de00b9f5e669860360ec2c5ebaae22e81a)) (@Noroth)
+
 ## [0.290.1](https://github.com/wundergraph/cosmo/compare/router@0.290.0...router@0.290.1) (2026-03-11)
 
 ### Bug Fixes

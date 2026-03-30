@@ -25,8 +25,12 @@ Examples of good PR titles:
 - [ ] I have discussed my proposed changes in an issue and have received approval to proceed.
 - [ ] I have followed the coding standards of the project.
 - [ ] Tests or benchmarks have been added or updated.
-- [ ] Documentation has been updated on [https://github.com/wundergraph/cosmo-docs](https://github.com/wundergraph/cosmo-docs).
+- [ ] Documentation has been updated on [https://github.com/wundergraph/docs-website](https://github.com/wundergraph/docs-website).
 - [ ] I have read the [Contributors Guide](https://github.com/wundergraph/cosmo/blob/main/CONTRIBUTING.md).
+
+## Open Source AI Manifesto
+
+This project follows the principles of the [Open Source AI Manifesto](https://human-oss.dev). Please ensure your contribution aligns with its principles.
 
 <!--
 Please add any additional information or context regarding your changes here.

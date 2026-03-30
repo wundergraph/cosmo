@@ -1,0 +1,158 @@
+---
+title: "Custom Attributes"
+description: "We provide default attributes for every metric and span, but it's often necessary to add extra context. To achieve this, we support both static and dynamic values based on headers."
+icon: "globe"
+---
+
+# Global Custom Attributes
+
+<Info>
+  **Available since Router version 0.92.0**.
+</Info>
+
+<Note>
+  Attributes based on request header values may potentially leak sensitive information when stored on the telemetry storage provider. You should only attach headers that have been sanitized by your infrastructure.
+</Note>
+
+<Warning>
+  Each attribute increases the cardinality of a metric. Higher cardinality can be costly, as it increases the system’s memory usage and processing overhead.
+
+  To mitigate this, a limit of 2,000 unique combinations (variations) per metric is enforced. When this limit is exceeded, a new metric—without any attributes—is created and used instead. This approach helps maintain system stability and prevents excessive memory consumption.
+</Warning>
+
+There are scenarios where you may want to add additional attributes to your metrics and spans. One common use case is to add environment information, such as `env=prod`. We provide an easy way to achieve this by adding a few lines of configuration.
+
+### Prometheus
+
+All attributes are also added to the Prometheus metrics. Resource attributes are special and are only added as labels to the `target_info` metric.
+
+## Static Attribute Value
+
+```yaml
+telemetry:
+  resource_attributes:
+    - key: env
+      value: "prod"
+  attributes:
+    - key: service
+      default: "static"
+```
+
+This configuration will add the resource attribute `env=prod` to every metric and span export. Additionally, the attribute `service=static` is also added. Resource attributes identify the entity producing the traces and metrics. Since Prometheus metrics rely on OpenTelemetry metrics, the resource attributes are also added to the Prometheus `target_info` series.
+
+## Dynamic Attribute Value
+
+We also support setting attributes based on client request headers. To do this, simply specify the mapping in the `value_from` property. If the headers could not be found, we will fallback to the default value. This functionality is only available to `attributes` **not** `resource_attributes`.
+
+```yaml
+cors:
+  allow_headers:
+    - "x-service"
+
+telemetry:
+  attributes:
+    - key: service
+      default: "static"
+      value_from:
+        request_header: "x-service"
+```
+
+This will add the attribute `service=static` unless the client has provided a request header `x-service`, in which case the value of this header will be used instead of the default value. Remember to add the header to the allowlist in the CORS configuration; otherwise, CORS issues will occur on the frontend.
+
+## Expression Attributes
+
+We also support using expressions for telemetry attributes (as well as metrics and tracing).
+
+```yaml
+telemetry:
+  attributes:
+    - key: "url_method"
+      value_from:
+        expression: "request.url.method"
+```
+
+Users can also use subgraph expressions in telemetry metrics as follows:
+
+```yaml
+telemetry:
+  attributes:
+    - key: "sg_name"
+      value_from:
+        expression: "subgraph.name"
+```
+
+Unlike previously in this case, any expression with `subgraph` in it, will only be evaluated for the "Engine - Fetch" span. Thus "sg_name" can only be found in the "Engine - Fetch" span.
+
+You can find more information about expressions and the fields accessible for expressions [here](/router/configuration/template-expressions).
+
+<Warning>
+At the moment, we only allow expressions to return string values. If, for example, an expression returns an integer, you will need to cast it using exprlang’s string function.
+</Warning>
+
+### Evaluation Order
+
+The router processes requests in multiple internal steps (e.g., authentication, parsing, normalization, validation, planning). Expressions need to be evaluated at the appropriate step. For example, we cannot expose `sha256Hash` in the expression context until it has been computed. We make a best effort to evaluate expressions at the right time. As a result:
+
+* Not all spans will have the attribute
+* Not all metrics will have the attribute
+
+For example, the "Parse" span won't include information related to `validationTime` because the validation step hasn't occurred yet.
+
+In case of evaluating two attributes in a single expression, such as:
+
+```
+request.operation.sha256Hash != "somehash" ? string(request.operation.validationTime) : ""
+```
+
+This will be evaluated as late as possible, when the values for both `sha256Hash` and `validationTime` are available.
+
+# Metrics Only Attributes
+
+<Info>
+  **Available since Router version 0.126.0**.
+</Info>
+
+While using the `telemetry` configuration allows users to specify attributes which will be attached to both spans AND metrics, there may be cases users want to attach values to metrics only. In this case you can use metrics only attributes.
+
+```yaml
+cors:
+  allow_headers:
+    - "x-service"
+
+telemetry:
+  metrics:
+    attributes:
+      - key: service
+        default: "static"
+        value_from:
+          request_header: "x-service"
+      - key: "error_codes"
+        value_from:
+          context_field: graphql_error_codes
+```
+
+The above configuration will ensure that the attribute `service` will only be attached to metrics. Headers are pre-evaluated before metrics are emitted, while request context fields are determined at different stages. Consequently, request context fields may not be included in all metrics.
+
+Additionally, the unique list of subgraph error codes will be appended to all emitted metric values. This enables correlation between error cases and corresponding metrics.
+
+# Tracing Only Attributes
+
+<Info>
+  **Available since Router version 0.213.0**.
+</Info>
+
+While using the `telemetry` configuration allows users to specify attributes which will be attached to both spans AND metrics, there may be cases users want to attach values to spans only.
+In this case you can use trace only attributes.
+
+```yaml
+telemetry:
+  tracing:
+    attributes:
+      - key: service
+        value_from:
+          expression: "request.url.method"
+```
+
+The above configuration will ensure that the attribute `service` will only be attached to spans.
+
+For a complete list of available options, please refer to the relevant documentation [section](/router/configuration#telemetry-2).

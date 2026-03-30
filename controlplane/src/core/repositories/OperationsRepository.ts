@@ -1,10 +1,14 @@
+import crypto from 'node:crypto';
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { aliasedTable, and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { aliasedTable, and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
+import { FastifyBaseLogger } from 'fastify';
 import { DBSchemaChangeType } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations, users } from '../../db/schema.js';
+import type { BlobStorage } from '../blobstorage/index.js';
+import { createManifestBlobStoragePath } from '../bufservices/persisted-operation/utils.js';
 import {
   ClientDTO,
   PersistedOperationDTO,
@@ -14,6 +18,15 @@ import {
   UpdatedPersistedOperation,
 } from '../../types/index.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
+
+export const MAX_MANIFEST_OPERATIONS = 3000;
+
+export interface PQLManifest {
+  version: 1;
+  revision: string;
+  generatedAt: string;
+  operations: Record<string, string>; // sha256 hash -> operation body
+}
 
 type ChangeOverride = IgnoreAllOverride & {
   changeType: DBSchemaChangeType;
@@ -225,6 +238,38 @@ export class OperationsRepository {
       ),
     });
     return result!.id;
+  }
+
+  public async getAllPersistedOperationsForGraph(): Promise<
+    Array<{
+      hash: string;
+      operationContent: string;
+      operationId: string;
+      operationNames: string[];
+      clientName: string;
+    }>
+  > {
+    const results = await this.db
+      .select({
+        hash: federatedGraphPersistedOperations.hash,
+        operationContent: federatedGraphPersistedOperations.operationContent,
+        operationId: federatedGraphPersistedOperations.operationId,
+        operationNames: federatedGraphPersistedOperations.operationNames,
+        clientName: federatedGraphClients.name,
+      })
+      .from(federatedGraphPersistedOperations)
+      .innerJoin(federatedGraphClients, eq(federatedGraphClients.id, federatedGraphPersistedOperations.clientId))
+      .where(eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId));
+
+    return results
+      .filter((r) => r.operationContent != null)
+      .map((r) => ({
+        hash: r.hash,
+        operationContent: r.operationContent!,
+        operationId: r.operationId,
+        operationNames: r.operationNames ?? [],
+        clientName: r.clientName,
+      }));
   }
 
   public async getRegisteredClients(): Promise<ClientDTO[]> {
@@ -443,7 +488,7 @@ export class OperationsRepository {
     };
   }
 
-  public getConsolidatedOverridesView(data: { namespaceId: string }) {
+  public async getConsolidatedOverridesView(data: { namespaceId: string; limit: number; offset: number }) {
     const change = this.db
       .select({
         hash: schema.operationChangeOverrides.hash,
@@ -484,7 +529,7 @@ export class OperationsRepository {
     // We need to retrieve a consolidated view of overrides from both tables.
     // There is no guarantee that an entry for hash exists in both.
 
-    return this.db
+    const baseQuery = this.db
       .select({
         hash: sql<string>`coalesce(${change.hash}, ${ignore.hash})`,
         name: sql<string>`coalesce(${change.name}, ${ignore.name})`,
@@ -497,7 +542,75 @@ export class OperationsRepository {
       .from(change)
       .fullJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)))
       .leftJoin(changeCounts, and(eq(change.hash, changeCounts.hash), eq(change.namespaceId, changeCounts.namespaceId)))
-      .orderBy(({ name, hash }) => [asc(name), asc(hash)]);
+      .orderBy(({ name, hash }) => [asc(name), asc(hash)])
+      .limit(data.limit)
+      .offset(data.offset);
+
+    // For pagination, we need the total count of unique operations that have an override. This is obtained by counting the full join of the two tables.
+    const countQuery = this.db
+      .select({
+        count: count(),
+      })
+      .from(change)
+      .fullJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)));
+
+    const [overrides, countResult] = await Promise.all([baseQuery, countQuery]);
+
+    return {
+      overrides,
+      totalCount: countResult[0]?.count ?? 0,
+    };
+  }
+
+  public async generateAndUploadManifest(params: {
+    organizationId: string;
+    blobStorage: BlobStorage;
+    logger: FastifyBaseLogger;
+  }): Promise<{ revision: string; operationCount: number }> {
+    const { organizationId, blobStorage, logger } = params;
+
+    const allOperations = await this.getAllPersistedOperationsForGraph();
+
+    if (allOperations.length === 0) {
+      logger.warn(
+        { federatedGraphId: this.federatedGraphId },
+        'No persisted operations with content found for manifest generation',
+      );
+    }
+
+    const operations: Record<string, string> = {};
+    for (const op of allOperations) {
+      operations[op.operationId] = op.operationContent;
+    }
+
+    // Compute revision as SHA256 of the deterministic JSON serialization (sorted keys)
+    const sortedKeys = Object.keys(operations).sort();
+    const sortedOperations: Record<string, string> = {};
+    for (const key of sortedKeys) {
+      sortedOperations[key] = operations[key];
+    }
+    const serialized = JSON.stringify(sortedOperations);
+    const revision = crypto.createHash('sha256').update(serialized).digest('hex');
+
+    const manifest: PQLManifest = {
+      version: 1,
+      revision,
+      generatedAt: new Date().toISOString(),
+      operations: sortedOperations,
+    };
+
+    const path = createManifestBlobStoragePath({ organizationId, fedGraphId: this.federatedGraphId });
+
+    await blobStorage.putObject({
+      key: path,
+      body: Buffer.from(JSON.stringify(manifest), 'utf8'),
+      contentType: 'application/json; charset=utf-8',
+      metadata: { version: revision },
+    });
+
+    logger.debug({ revision, operationCount: allOperations.length, path }, 'PQL manifest generated and uploaded');
+
+    return { revision, operationCount: allOperations.length };
   }
 
   private static createPersistedOperationDTO({

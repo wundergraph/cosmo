@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -30,8 +30,9 @@ describe('Delete feature subgraph tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that an error is returned if a non-extant feature-graph is attempted to be deleted', async () => {
+  test('that an error is returned if a non-extant feature-graph is attempted to be deleted', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const featureSubgraphName = genID('nonExtantFeatureSubgraph');
 
@@ -43,12 +44,11 @@ describe('Delete feature subgraph tests', () => {
     expect(deleteFederatedSubgraphResponse.response?.details).toBe(
       `The subgraph "${featureSubgraphName}" was not found.`,
     );
-
-    await server.close();
   });
 
-  test('that a feature subgraph that has been published can be deleted', async () => {
+  test('that a feature subgraph that has been published can be deleted', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -84,14 +84,13 @@ describe('Delete feature subgraph tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(getSubgraphByNameResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
     '%s should be able to delete feature subgraph',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const baseSubgraphName = genID('subgraph');
       const featureSubgraphName = genID('featureSubgraph');
@@ -128,13 +127,12 @@ describe('Delete feature subgraph tests', () => {
         namespace: DEFAULT_NAMESPACE,
       });
       expect(getSubgraphByNameResponse.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     },
   );
 
-  test('subgraph-admin should be able to delete feature subgraph from allowed namespace', async (role) => {
+  test('subgraph-admin should be able to delete feature subgraph from allowed namespace', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -179,8 +177,6 @@ describe('Delete feature subgraph tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(getSubgraphByNameResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test.each([
@@ -194,6 +190,7 @@ describe('Delete feature subgraph tests', () => {
     'subgraph-viewer',
   ])('%s should not be able to delete feature subgraph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -216,7 +213,5 @@ describe('Delete feature subgraph tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 });

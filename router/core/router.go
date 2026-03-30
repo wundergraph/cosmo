@@ -10,13 +10,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"sync"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
-	"github.com/wundergraph/cosmo/router/internal/track"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -37,9 +37,11 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
+	"github.com/wundergraph/cosmo/router/internal/track"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -54,6 +56,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
@@ -612,6 +615,14 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 	return nil
 }
 
+// startPQLPoller starts the PQL manifest poller in a background goroutine if configured.
+// Must be called after newServer so that SetOnUpdate has been registered on the store.
+func (r *Router) startPQLPoller(ctx context.Context) {
+	if r.pqlPoller != nil {
+		go r.pqlPoller.Poll(ctx)
+	}
+}
+
 func (r *Router) listenAndServe() error {
 	go func() {
 		// Mark the server as not ready when the server is stopped
@@ -1062,8 +1073,10 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.connectRPCServer = crpcServer
 	}
 
-	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
-		r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
+	if _, isNoop := r.EngineStats.(*statistics.NoopEngineStats); isNoop {
+		if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+			r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
+		}
 	}
 
 	if r.engineExecutionConfiguration.Debug.ReportMemoryUsage {
@@ -1092,7 +1105,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.staticExecutionConfig = executionConfig
 	}
 
-	if err := r.buildClients(); err != nil {
+	if err := r.buildClients(ctx); err != nil {
 		return err
 	}
 
@@ -1115,7 +1128,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 }
 
 // buildClients initializes the storage clients for persisted operations and router config.
-func (r *Router) buildClients() error {
+func (r *Router) buildClients(ctx context.Context) error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.CDNStorageProvider{}
 	redisProviders := map[string]config.RedisStorageProvider{}
@@ -1149,6 +1162,9 @@ func (r *Router) buildClients() error {
 		fileSystemProviders[provider.ID] = provider
 	}
 
+	// Create the storage client for persisted operations based on the configured provider.
+	// The same client is reused for manifest fetching when the manifest feature is enabled,
+	// since both features are exclusive (manifest replaces individual operation fetches).
 	var pClient persistedoperation.StorageClient
 
 	if !r.persistedOperationsConfig.Disabled {
@@ -1161,7 +1177,7 @@ func (r *Router) buildClients() error {
 				Logger: r.logger,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create CDN client: %w", err)
 			}
 			pClient = c
 
@@ -1180,7 +1196,7 @@ func (r *Router) buildClients() error {
 				TraceProvider:    r.tracerProvider,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create S3 client: %w", err)
 			}
 			pClient = c
 
@@ -1192,7 +1208,7 @@ func (r *Router) buildClients() error {
 				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create filesystem client: %w", err)
 			}
 			pClient = c
 
@@ -1208,7 +1224,7 @@ func (r *Router) buildClients() error {
 				Logger: r.logger,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create CDN client: %w", err)
 			}
 			pClient = c
 
@@ -1247,7 +1263,71 @@ func (r *Router) buildClients() error {
 		}
 	}
 
-	if pClient != nil || apqClient != nil {
+	var pqlStore *pqlmanifest.Store
+
+	if r.persistedOperationsConfig.Manifest.Enabled && !r.persistedOperationsConfig.Disabled {
+		const manifestFileName = "manifest.json"
+
+		storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
+
+		if _, ok := fileSystemProviders[storageProviderID]; ok {
+			return fmt.Errorf("filesystem storage provider %q is not supported for PQL manifest; use S3 or CDN instead", storageProviderID)
+		}
+
+		if storageProviderID != "" {
+			// An explicit storage provider is configured — read the manifest once at startup.
+			objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
+			objectPath := manifestFileName
+			if objectPrefix != "" {
+				objectPath = path.Join(objectPrefix, manifestFileName)
+			}
+
+			manifest, err := pClient.ReadManifest(ctx, objectPath)
+			if err != nil {
+				return fmt.Errorf("failed to fetch PQL manifest from storage provider %q: %w",
+					storageProviderID, err)
+			}
+
+			pqlStore = pqlmanifest.NewStore(r.logger)
+			pqlStore.Load(manifest)
+			r.logger.Info("Loaded PQL manifest from storage provider",
+				zap.String("provider_id", storageProviderID),
+				zap.Int("operations", pqlStore.OperationCount()),
+			)
+		} else {
+			// No storage provider configured — fetch manifest from Cosmo CDN and poll for updates.
+			if r.graphApiToken == "" {
+				return errors.New("graph token is required for PQL manifest")
+			}
+
+			fetcher, err := pqlmanifest.NewFetcher(r.cdnConfig.URL, r.graphApiToken, r.logger)
+			if err != nil {
+				return fmt.Errorf("failed to create PQL manifest fetcher: %w", err)
+			}
+
+			pqlStore = pqlmanifest.NewStore(r.logger)
+			poller := pqlmanifest.NewPoller(
+				fetcher,
+				pqlStore,
+				r.persistedOperationsConfig.Manifest.PollInterval,
+				r.persistedOperationsConfig.Manifest.PollJitter,
+				r.logger,
+			)
+
+			if err := poller.FetchInitial(ctx); err != nil {
+				return fmt.Errorf("failed to fetch initial PQL manifest: %w", err)
+			}
+
+			r.pqlPoller = poller
+		}
+
+		r.pqlStore = pqlStore
+
+		// Manifest is authoritative — individual operation fetches are not needed.
+		pClient = nil
+	}
+
+	if pClient != nil || apqClient != nil || pqlStore != nil {
 		// For backwards compatibility with cdn config field
 		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
 		if cacheSize <= 0 {
@@ -1259,6 +1339,7 @@ func (r *Router) buildClients() error {
 			Logger:         r.logger,
 			ProviderClient: pClient,
 			ApqClient:      apqClient,
+			PQLStore:       pqlStore,
 		})
 		if err != nil {
 			return err
@@ -1327,6 +1408,8 @@ func (r *Router) Start(ctx context.Context) error {
 		if err := r.newServer(ctx, r.staticExecutionConfig); err != nil {
 			return err
 		}
+
+		r.startPQLPoller(ctx)
 
 		defer func() {
 			r.httpServer.healthcheck.SetReady(true)
@@ -1419,6 +1502,8 @@ func (r *Router) Start(ctx context.Context) error {
 	if err := r.newServer(ctx, cfg.Config); err != nil {
 		return err
 	}
+
+	r.startPQLPoller(ctx)
 
 	if r.playgroundConfig.Enabled {
 		r.logger.Info("GraphQL endpoint",
@@ -1641,12 +1726,21 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	if r.persistedOperationClient != nil {
 		r.persistedOperationClient.Close()
 	}
+	if r.pqlStore != nil {
+		r.pqlStore.Close()
+	}
 
 	r.usage.Close()
 
 	wg.Wait()
 
 	return err.ErrOrNil()
+}
+
+func WithEngineStats(stats statistics.EngineStatistics) Option {
+	return func(r *Router) {
+		r.EngineStats = stats
+	}
 }
 
 func WithListenerAddr(addr string) Option {
@@ -2236,6 +2330,14 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	}
 }
 
+// WithPlanningDurationOverride sets a function that overrides the measured planning duration.
+// Used in tests to simulate slow queries that exceed the expensive query threshold.
+func WithPlanningDurationOverride(fn func(content string) time.Duration) Option {
+	return func(r *Router) {
+		r.planningDurationOverride = fn
+	}
+}
+
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg
@@ -2447,6 +2549,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			},
 			Exporters:           openTelemetryExporters,
 			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
+			CostStats:           cfg.Metrics.OTLP.CostStats,
 			Streams:             cfg.Metrics.OTLP.Streams,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
@@ -2466,6 +2569,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
 			CircuitBreaker:      cfg.Metrics.Prometheus.CircuitBreaker,
+			CostStats:           cfg.Metrics.Prometheus.CostStats,
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 			Streams:             cfg.Metrics.Prometheus.Streams,

@@ -483,27 +483,31 @@ async function generateProtoAndMapping({
   const schema = await readFile(schemaFile, 'utf8');
   const serviceName = upperFirst(camelCase(name));
 
-  // Validate the GraphQL schema
-  spinner.text = 'Validating GraphQL schema...';
-  const validationResult = validateGraphQLSDL(schema);
-  renderValidationResults(validationResult, schemaFile);
+  try {
+    // Validate the GraphQL schema
+    spinner.text = 'Validating GraphQL schema...';
+    const validationResult = validateGraphQLSDL(schema);
+    renderValidationResults(validationResult, schemaFile);
 
-  // Determine generation mode
-  if (operationsDir) {
-    const operationsPath = resolve(operationsDir);
-    return generateFromOperations(
-      schema,
-      serviceName,
-      operationsPath,
-      spinner,
-      packageName || 'service.v1',
-      languageOptions,
-      lockFile,
-      customScalarMappings,
-      maxDepth,
-    );
-  } else {
-    return generateFromSDL(schema, serviceName, spinner, packageName, languageOptions, lockFile);
+    // Determine generation mode
+    if (operationsDir) {
+      const operationsPath = resolve(operationsDir);
+      return generateFromOperations(
+        schema,
+        serviceName,
+        operationsPath,
+        spinner,
+        packageName || 'service.v1',
+        languageOptions,
+        lockFile,
+        customScalarMappings,
+        maxDepth,
+      );
+    } else {
+      return generateFromSDL(schema, serviceName, spinner, packageName, languageOptions, lockFile);
+    }
+  } catch (error) {
+    program.error(error instanceof Error ? error.message : String(error));
   }
 }
 

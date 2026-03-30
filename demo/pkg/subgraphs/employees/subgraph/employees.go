@@ -41,7 +41,8 @@ var Employees = []*model.Employee{
 			},
 			Surname: "Neuse",
 		},
-		ID: 1,
+		ID:        1,
+		Expertise: "Backend Architecture",
 		Role: model.Engineer{
 			Departments:  []model.Department{model.DepartmentEngineering, model.DepartmentMarketing},
 			EngineerType: model.EngineerTypeBackend,
@@ -50,6 +51,36 @@ var Employees = []*model.Employee{
 		Notes:     strPtr("Jens notes resolved by employees"),
 		StartDate: "January 2020",
 		UpdatedAt: "2021-09-01T00:00:00Z",
+		PrimaryWorkItem: model.TechnicalWorkItem{
+			Name:      "API Development",
+			Priority:  1,
+			CodeCount: 15000,
+			Handler: &model.WorkItemHandler{
+				Name: "Alice Manager",
+				AssignedItem: model.ManagementWorkItem{
+					Name:     "Team Planning",
+					Priority: 2,
+					TeamSize: "large",
+				},
+			},
+			Specs: &model.TechnicalSpecs{
+				Name:       "Backend Specs",
+				Complexity: 8.5,
+				Metrics:    &model.WorkMetrics{Score: 95.5, Efficiency: 0.9},
+			},
+		},
+		LastWorkReview: model.WorkApproval{
+			Comment:    "Excellent work on the API",
+			ApprovedAt: "2024-01-15",
+		},
+		WorkSetup: &model.WorkSetup{
+			Priority: "high",
+			PrimaryItem: model.TechnicalWorkItem{
+				Name:      "API Development",
+				Priority:  1,
+				CodeCount: 15000,
+			},
+		},
 	},
 	{
 		Details: &model.Details{
@@ -81,7 +112,8 @@ var Employees = []*model.Employee{
 			},
 			Surname: "Deus",
 		},
-		ID: 2,
+		ID:        2,
+		Expertise: "Fullstack Development",
 		Role: model.Engineer{
 			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeFullstack,
@@ -90,6 +122,36 @@ var Employees = []*model.Employee{
 		Notes:     strPtr("Dustin notes resolved by employees"),
 		StartDate: "July 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
+		PrimaryWorkItem: model.ManagementWorkItem{
+			Name:     "Sprint Planning",
+			Priority: 2,
+			TeamSize: "medium",
+			Handler: &model.WorkItemHandler{
+				Name: "Bob Lead",
+				AssignedItem: model.TechnicalWorkItem{
+					Name:      "Code Review",
+					Priority:  3,
+					CodeCount: 5000,
+				},
+			},
+			Specs: &model.ManagementSpecs{
+				Name:    "Leadership Specs",
+				Scope:   7.0,
+				Metrics: &model.WorkMetrics{Score: 88.0, Efficiency: 0.9},
+			},
+		},
+		LastWorkReview: model.WorkRejection{
+			Reason:        "Needs more documentation",
+			RejectionCode: "DOC_001",
+		},
+		WorkSetup: &model.WorkSetup{
+			Priority: "medium",
+			PrimaryItem: model.ManagementWorkItem{
+				Name:     "Sprint Planning",
+				Priority: 2,
+				TeamSize: "medium",
+			},
+		},
 	},
 	{
 		Details: &model.Details{
@@ -121,7 +183,8 @@ var Employees = []*model.Employee{
 			},
 			Surname: "Avram",
 		},
-		ID: 3,
+		ID:        3,
+		Expertise: "Growth Marketing",
 		Role: model.Marketer{
 			Departments: []model.Department{model.DepartmentMarketing},
 			Title:       []string{"Co-founder", "Head of Growth"},
@@ -160,7 +223,8 @@ var Employees = []*model.Employee{
 			},
 			Surname: "Schwenzer",
 		},
-		ID: 4,
+		ID:        4,
+		Expertise: "Operations Management",
 		Role: model.Operator{
 			Departments: []model.Department{model.DepartmentOperations, model.DepartmentMarketing},
 			OperatorType: []model.OperationType{
@@ -203,6 +267,7 @@ var Employees = []*model.Employee{
 			},
 			Surname: "Petrunin",
 		},
+		Expertise: "Backend Systems",
 		Role: model.Engineer{
 			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeBackend,
@@ -242,7 +307,8 @@ var Employees = []*model.Employee{
 			},
 			Surname: "Surya",
 		},
-		ID: 7,
+		ID:        7,
+		Expertise: "Fullstack Development",
 		Role: model.Engineer{
 			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeFullstack,
@@ -282,7 +348,8 @@ var Employees = []*model.Employee{
 			},
 			Surname: "Kumar",
 		},
-		ID: 8,
+		ID:        8,
+		Expertise: "Fullstack Development",
 		Role: model.Engineer{
 			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeFullstack,
@@ -322,7 +389,8 @@ var Employees = []*model.Employee{
 			},
 			Surname: "Wiersma",
 		},
-		ID: 10,
+		ID:        10,
+		Expertise: "Frontend Engineering",
 		Role: model.Engineer{
 			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeFrontend,
@@ -362,7 +430,8 @@ var Employees = []*model.Employee{
 			},
 			Surname: "Neuse",
 		},
-		ID: 11,
+		ID:        11,
+		Expertise: "Finance & Accounting",
 		Role: model.Operator{
 			Departments: []model.Department{model.DepartmentOperations},
 			OperatorType: []model.OperationType{
@@ -404,7 +473,8 @@ var Employees = []*model.Employee{
 			},
 			Surname: "Stutt",
 		},
-		ID: 12,
+		ID:        12,
+		Expertise: "Fullstack Development",
 		Role: model.Engineer{
 			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeFullstack,

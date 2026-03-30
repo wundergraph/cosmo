@@ -111,21 +111,28 @@ func logInternalErrorsFromReport(report *operationreport.Report, requestLogger *
 // trackFinalResponseError sets the final response error on the request context and
 // attaches it to the span. This is used to process the error in the outer middleware
 // and therefore only intended to be used in the GraphQL handler.
+// Client disconnections (context.Canceled) are tracked separately and do not mark
+// the span as ERROR or count toward error metrics, since they are not server-side failures.
 func trackFinalResponseError(ctx context.Context, err error) {
 	if err == nil {
 		return
 	}
 
-	span := trace.SpanFromContext(ctx)
 	requestContext := getRequestContext(ctx)
 	if requestContext == nil {
 		return
 	}
 
 	requestContext.SetError(err)
+
+	if errors.Is(err, context.Canceled) {
+		return
+	}
+
 	requestContext.graphQLErrorServices = getAggregatedSubgraphServiceNames(requestContext.error)
 	requestContext.graphQLErrorCodes = getAggregatedSubgraphErrorCodes(requestContext.error)
 
+	span := trace.SpanFromContext(ctx)
 	rtrace.AttachErrToSpan(span, err)
 }
 

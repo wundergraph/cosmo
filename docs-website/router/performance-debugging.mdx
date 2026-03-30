@@ -1,0 +1,27 @@
+---
+title: "Performance Debugging"
+description: "Use tracing with Cosmo Studio to analyze the performance of your GraphQL request and to pinpoint bottlenecks during the query planning or execution phase."
+icon: gauge-high
+---
+
+<Frame caption="Cosmo Studio trace view for GraphQL query performance analysis">
+  <img 
+    src="/images/router/cosmo-studio-query-tracing-performance.png"
+    alt="Cosmo Studio showing GraphQL trace spans with timing breakdown for planning and execution phases."
+  />
+</Frame>
+
+
+In the default setup, the Router sends Open Telemetry data about the incoming GraphQL traffic. This data includes spans pertaining to the planning and execution phases of the GraphQL operations. This provides you with a powerful tool to understand how much time is spent on these processes and whether a cache is utilized. The following are the spans included:
+
+1. **Authenticate:** (Optional) Is enabled only when the request is made against the configured authentication provider. An error indicates an unauthorized request.
+
+2. **Operation - Parse and Validate:** This is the first step in the query execution. It parses the variables, query and validates it against the schema.
+
+3. **Operation - Planning:** Describes the process of building the optimized query plan for a given GraphQL query. This includes normalization, validating it against the schema. We provide additional attributes:
+
+   1. **engineRequestTracingEnabled:** Indicates if ART has been enabled for the request. [ART](/router/advanced-request-tracing-art) has a performance penalty and should not be used for all traffic.
+
+   2. **enginePlanCacheHit**: Indicates whether the query plan was retrieved from the cache. This should occur after the second execution of the query. Missing this could suggest that either [ART](/router/advanced-request-tracing-art) was used or the cache is full. Additionally, if you run multiple instances of the router, a cache miss could occur several times until the cache is warmed up on all instances.
+
+4. **Operation - Execution:** Describes the process of executing the query plan for an operation. This includes fetching data from the subgraphs, aggregating the data and returning it to the client.
