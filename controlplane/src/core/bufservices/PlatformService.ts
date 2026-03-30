@@ -117,6 +117,8 @@ import { whoAmI } from './organization/whoAmI.js';
 import { getClients } from './persisted-operation/getClients.js';
 import { getPersistedOperations } from './persisted-operation/getPersistedOperations.js';
 import { publishPersistedOperations } from './persisted-operation/publishPersistedOperations.js';
+import { deletePersistedOperation } from './persisted-operation/deletePersistedOperation.js';
+import { checkPersistedOperationTraffic } from './persisted-operation/check-persisted-operation-traffic.js';
 import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
@@ -174,6 +176,9 @@ import { getWorkspace } from './workspace/getWorkspace.js';
 import { verifyAPIKeyGraphAccess } from './api-key/verifyAPIKeyGraphAccess.js';
 import { getSubgraphCheckExtensionsConfig } from './check-extensions/getSubgraphCheckExtensionsConfig.js';
 import { configureSubgraphCheckExtensions } from './check-extensions/configureSubgraphCheckExtensions.js';
+import { initializeCosmoUser } from './user/initializeCosmoUser.js';
+import { listOrganizations } from './organization/listOrganizations.js';
+import { recomposeGraph } from './graph/recomposeGraph.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -425,6 +430,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return publishPersistedOperations(opts, req, ctx);
     },
 
+    checkPersistedOperationTraffic: (req, ctx) => {
+      return checkPersistedOperationTraffic(opts, req, ctx);
+    },
+
+    deletePersistedOperation: (req, ctx) => {
+      return deletePersistedOperation(opts, req, ctx);
+    },
+
     acceptOrDeclineInvitation: (req, ctx) => {
       return acceptOrDeclineInvitation(opts, req, ctx);
     },
@@ -476,12 +489,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getSubgraphByName(opts, req, ctx);
     },
 
+    initializeCosmoUser: (req, ctx) => {
+      return initializeCosmoUser(opts, req, ctx);
+    },
+
     getFederatedGraphs: (req, ctx) => {
       return getFederatedGraphs(opts, req, ctx);
     },
 
     getFederatedGraphsBySubgraphLabels: (req, ctx) => {
       return getFederatedGraphsBySubgraphLabels(opts, req, ctx);
+    },
+
+    listOrganizations: (req, ctx) => {
+      return listOrganizations(opts, req, ctx);
     },
 
     getFederatedGraphSDLByName: (req, ctx) => {
@@ -880,6 +901,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     verifyAPIKeyGraphAccess: (req, ctx) => {
       return verifyAPIKeyGraphAccess(opts, req, ctx);
+    },
+
+    recomposeGraph: (req, ctx) => {
+      return recomposeGraph(opts, req, ctx);
     },
   };
 }

@@ -37,12 +37,13 @@ describe('Delete Organization Audit Logs', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-
   test('should queue audit logs deletion when org is deleted and delete after scheduled', async (testContext) => {
     const { client, server, keycloakClient, realm, users, authenticator, queues, blobStorage } = await SetupTest({
       dbname,
       chClient,
     });
+    testContext.onTestFinished(() => server.close());
+
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
@@ -83,6 +84,7 @@ describe('Delete Organization Audit Logs', (ctx) => {
       blobStorage,
       deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
     });
+    testContext.onTestFinished(() => worker.close());
 
     const job = await orgRepo.queueOrganizationDeletion({
       organizationId: org!.id,
@@ -113,6 +115,7 @@ describe('Delete Organization Audit Logs', (ctx) => {
       db: server.db,
       logger: server.log,
     });
+    testContext.onTestFinished(() => auditLogsWorker.close());
 
     await deleteLogsJob!.changeDelay(0);
     await deleteLogsJob!.waitUntilFinished(new QueueEvents(deleteLogsJob!.queueName));
@@ -126,10 +129,5 @@ describe('Delete Organization Audit Logs', (ctx) => {
     });
 
     expect(logsAfterDeletion.length).toBe(0);
-
-    await worker.close();
-    await auditLogsWorker.close();
-
-    await server.close();
   });
 });

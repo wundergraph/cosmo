@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -63,8 +64,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")
@@ -92,6 +95,11 @@ var (
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
 
+	// routerTestsDir is the absolute path to the router-tests directory,
+	// derived from this source file's location. Used internally by testexec.go
+	// to locate the router binary.
+	routerTestsDir string
+
 	DemoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
 	DemoKafkaProviders = []string{myKafkaProviderID}
 	DemoRedisProviders = []string{myRedisProviderID}
@@ -99,6 +107,9 @@ var (
 
 func init() {
 	freeport.SetLogLevel(freeport.ERROR)
+
+	_, thisFile, _, _ := runtime.Caller(0)
+	routerTestsDir = filepath.Dir(filepath.Dir(thisFile))
 }
 
 // Run runs the test and fails the test if an error occurs
@@ -260,6 +271,13 @@ type EngineStatOptions struct {
 	EnableSubscription bool
 }
 
+type MetricsLogExporterOptions struct {
+	Enabled        bool
+	ExcludeMetrics []*regexp.Regexp
+	IncludeMetrics []*regexp.Regexp
+	ExportInterval time.Duration
+}
+
 type MetricOptions struct {
 	MetricExclusions                      MetricExclusions
 	EnableRuntimeMetrics                  bool
@@ -274,6 +292,9 @@ type MetricOptions struct {
 	EnablePrometheusConnectionMetrics     bool
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
+	LogExporter                           MetricsLogExporterOptions
+	OTLPCostStats                         config.CostStats
+	PrometheusCostStats                   config.CostStats
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -308,6 +329,8 @@ type Config struct {
 	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
+	TracingSanitizeUTF8                *config.SanitizeUTF8Config
+	IPAnonymization                    *core.IPAnonymizationConfig
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
 	CustomTracingAttributes            []config.CustomAttribute
@@ -341,6 +364,7 @@ type Config struct {
 	UseVersionedGraph                  bool
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
+	MCPOperationsPath                  string
 	EnableRedis                        bool
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
@@ -349,8 +373,9 @@ type Config struct {
 }
 
 type PluginConfig struct {
-	Path    string
-	Enabled bool
+	Path        string
+	Enabled     bool
+	RegistryURL string // for OCI plugin tests
 }
 
 type CacheMetricsAssertions struct {
@@ -387,9 +412,14 @@ type SubgraphsConfig struct {
 }
 
 type SubgraphConfig struct {
-	Middleware   func(http.Handler) http.Handler
-	Delay        time.Duration
-	CloseOnStart bool
+	Middleware      func(http.Handler) http.Handler
+	GRPCInterceptor grpc.UnaryServerInterceptor
+	Delay           time.Duration
+	CloseOnStart    bool
+
+	// TLSConfig enables TLS on this subgraph server. When set, the subgraph uses StartTLS()
+	// instead of Start(). This is useful for testing mTLS between the router and subgraphs.
+	TLSConfig *tls.Config
 }
 
 type LogObservationConfig struct {
@@ -425,6 +455,14 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		)
 		if err != nil {
 			return nil, err
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		err = client.Ping(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not connect to kafka: %w", err)
 		}
 
 		kafkaClient = client
@@ -572,15 +610,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Countries.Delay,
 	}
 
-	employeesServer := makeSafeHttpTestServer(t, employees)
-	familyServer := makeSafeHttpTestServer(t, family)
-	hobbiesServer := makeSafeHttpTestServer(t, hobbies)
-	productsServer := makeSafeHttpTestServer(t, products)
-	test1Server := makeSafeHttpTestServer(t, test1)
-	availabilityServer := makeSafeHttpTestServer(t, availability)
-	moodServer := makeSafeHttpTestServer(t, mood)
-	countriesServer := makeSafeHttpTestServer(t, countries)
-	productFgServer := makeSafeHttpTestServer(t, productsFg)
+	employeesServer := makeSubgraphTestServer(t, employees, cfg.Subgraphs.Employees.TLSConfig)
+	familyServer := makeSubgraphTestServer(t, family, cfg.Subgraphs.Family.TLSConfig)
+	hobbiesServer := makeSubgraphTestServer(t, hobbies, cfg.Subgraphs.Hobbies.TLSConfig)
+	productsServer := makeSubgraphTestServer(t, products, cfg.Subgraphs.Products.TLSConfig)
+	test1Server := makeSubgraphTestServer(t, test1, cfg.Subgraphs.Test1.TLSConfig)
+	availabilityServer := makeSubgraphTestServer(t, availability, cfg.Subgraphs.Availability.TLSConfig)
+	moodServer := makeSubgraphTestServer(t, mood, cfg.Subgraphs.Mood.TLSConfig)
+	countriesServer := makeSubgraphTestServer(t, countries, cfg.Subgraphs.Countries.TLSConfig)
+	productFgServer := makeSubgraphTestServer(t, productsFg, cfg.Subgraphs.ProductsFg.TLSConfig)
 
 	var (
 		projectServer *grpc.Server
@@ -588,19 +626,19 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
 	}
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.EmployeesDefaultDemoURL:    GqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       GqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      GqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     GqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        GqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: GqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         GqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    GqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   GqlURL(productFgServer),
 		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
@@ -849,6 +887,14 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			return nil, err
 		}
 
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		err = client.Ping(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not connect to kafka: %w", err)
+		}
+
 		kafkaClient = client
 		kafkaAdminClient = kadm.NewClient(kafkaClient)
 	}
@@ -994,15 +1040,15 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Countries.Delay,
 	}
 
-	employeesServer := makeSafeHttpTestServer(t, employees)
-	familyServer := makeSafeHttpTestServer(t, family)
-	hobbiesServer := makeSafeHttpTestServer(t, hobbies)
-	productsServer := makeSafeHttpTestServer(t, products)
-	test1Server := makeSafeHttpTestServer(t, test1)
-	availabilityServer := makeSafeHttpTestServer(t, availability)
-	moodServer := makeSafeHttpTestServer(t, mood)
-	countriesServer := makeSafeHttpTestServer(t, countries)
-	productFgServer := makeSafeHttpTestServer(t, productsFg)
+	employeesServer := makeSubgraphTestServer(t, employees, cfg.Subgraphs.Employees.TLSConfig)
+	familyServer := makeSubgraphTestServer(t, family, cfg.Subgraphs.Family.TLSConfig)
+	hobbiesServer := makeSubgraphTestServer(t, hobbies, cfg.Subgraphs.Hobbies.TLSConfig)
+	productsServer := makeSubgraphTestServer(t, products, cfg.Subgraphs.Products.TLSConfig)
+	test1Server := makeSubgraphTestServer(t, test1, cfg.Subgraphs.Test1.TLSConfig)
+	availabilityServer := makeSubgraphTestServer(t, availability, cfg.Subgraphs.Availability.TLSConfig)
+	moodServer := makeSubgraphTestServer(t, mood, cfg.Subgraphs.Mood.TLSConfig)
+	countriesServer := makeSubgraphTestServer(t, countries, cfg.Subgraphs.Countries.TLSConfig)
+	productFgServer := makeSubgraphTestServer(t, productsFg, cfg.Subgraphs.ProductsFg.TLSConfig)
 
 	var (
 		projectServer *grpc.Server
@@ -1010,19 +1056,19 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
 	}
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.EmployeesDefaultDemoURL:    GqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       GqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      GqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     GqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        GqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: GqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         GqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    GqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   GqlURL(productFgServer),
 		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
@@ -1298,11 +1344,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableNetPoll:            true,
-		EnableSingleFlight:       true,
-		EnableRequestTracing:     true,
-		EnableNormalizationCache: true,
-		NormalizationCacheSize:   1024,
+		EnableNetPoll:                     true,
+		EnableSingleFlight:                true,
+		EnableInboundRequestDeduplication: false,
+		EnableRequestTracing:              true,
+		EnableNormalizationCache:          true,
+		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
 			PrintQueryPlans:            false,
@@ -1438,12 +1485,15 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.MCP.Enabled {
-		// Add Storage provider
+		mcpOperationsPath := "testdata/mcp_operations"
+		if testConfig.MCPOperationsPath != "" {
+			mcpOperationsPath = testConfig.MCPOperationsPath
+		}
 		routerOpts = append(routerOpts, core.WithStorageProviders(config.StorageProviders{
 			FileSystem: []config.FileSystemStorageProvider{
 				{
 					ID:   "test",
-					Path: "testdata/mcp_operations",
+					Path: mcpOperationsPath,
 				},
 			},
 		}))
@@ -1453,34 +1503,54 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
 
-	routerOpts = append(routerOpts, core.WithPlugins(config.PluginsConfiguration{
+	pluginsCfg := config.PluginsConfiguration{
 		Path:    testConfig.Plugins.Path,
 		Enabled: testConfig.Plugins.Enabled,
-	}))
+	}
+	if testConfig.Plugins.RegistryURL != "" {
+		if strings.HasPrefix(testConfig.Plugins.RegistryURL, "http://") || strings.HasPrefix(testConfig.Plugins.RegistryURL, "https://") {
+			return nil, fmt.Errorf("RegistryURL must be a host-only OCI registry address (no http:// or https:// scheme), got %q", testConfig.Plugins.RegistryURL)
+		}
+		pluginsCfg.Registry = config.PluginRegistryConfiguration{
+			URL: testConfig.Plugins.RegistryURL,
+		}
+	}
+	routerOpts = append(routerOpts, core.WithPlugins(pluginsCfg))
 
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true
 
+		tracingConfig := config.Tracing{
+			Enabled:                    true,
+			SamplingRate:               1,
+			ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
+			OperationContentAttributes: testConfig.OperationContentAttributes,
+			Exporters:                  []config.TracingExporter{},
+			Propagation:                testConfig.PropagationConfig,
+			TracingGlobalFeatures:      config.TracingGlobalFeatures{},
+			ResponseTraceHeader:        testConfig.ResponseTraceHeader,
+		}
+
+		if testConfig.TracingSanitizeUTF8 != nil {
+			tracingConfig.SanitizeUTF8 = *testConfig.TracingSanitizeUTF8
+		}
+
 		c := core.TraceConfigFromTelemetry(&config.Telemetry{
 			ServiceName:        "cosmo-router",
 			ResourceAttributes: testConfig.CustomResourceAttributes,
-			Tracing: config.Tracing{
-				Enabled:                    true,
-				SamplingRate:               1,
-				ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
-				OperationContentAttributes: testConfig.OperationContentAttributes,
-				Exporters:                  []config.TracingExporter{},
-				Propagation:                testConfig.PropagationConfig,
-				TracingGlobalFeatures:      config.TracingGlobalFeatures{},
-				ResponseTraceHeader:        testConfig.ResponseTraceHeader,
-			},
+			Tracing:            tracingConfig,
 		})
 
 		c.TestMemoryExporter = testConfig.TraceExporter
+		c.TestErrorHandler = rtrace.NewOtelErrorHandler(testConfig.Logger)
 
 		routerOpts = append(routerOpts,
 			core.WithTracing(c),
 		)
+	}
+
+	if testConfig.IPAnonymization != nil {
+		routerOpts = append(routerOpts, core.WithAnonymization(testConfig.IPAnonymization))
 	}
 
 	if testConfig.CustomTelemetryAttributes != nil {
@@ -1532,6 +1602,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
 			CircuitBreaker:       testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
+			CostStats:            testConfig.MetricOptions.PrometheusCostStats,
 			ExcludeMetrics:       testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels:  testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 			Streams:              testConfig.MetricOptions.EnablePrometheusStreamMetrics,
@@ -1560,14 +1631,21 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
 					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
+					CostStats:           testConfig.MetricOptions.OTLPCostStats,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
+					LogExporter: config.MetricsLogExporter{
+						Enabled:        testConfig.MetricOptions.LogExporter.Enabled,
+						ExcludeMetrics: testConfig.MetricOptions.LogExporter.ExcludeMetrics,
+						IncludeMetrics: testConfig.MetricOptions.LogExporter.IncludeMetrics,
+					},
 				},
 			},
 		})
 
 		c.Prometheus = prometheusConfig
 		c.OpenTelemetry.TestReader = testConfig.MetricReader
+		c.OpenTelemetry.LogExporter.ExportInterval = testConfig.MetricOptions.LogExporter.ExportInterval
 		c.IsUsingCloudExporter = !testConfig.DisableSimulateCloudExporter
 
 		routerOpts = append(routerOpts, core.WithMetrics(c))
@@ -1576,6 +1654,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	if testConfig.OverrideGraphQLPath != "" {
 		routerOpts = append(routerOpts, core.WithGraphQLPath(testConfig.OverrideGraphQLPath))
 	}
+
+	syncReporter := NewSyncReporter(context.Background(), testConfig.Logger)
+	routerOpts = append(routerOpts, core.WithEngineStats(syncReporter))
 
 	if !testConfig.DisableWebSockets {
 		wsConfig := &config.WebSocketConfiguration{
@@ -1642,17 +1723,23 @@ func testVersionedTokenClaims() jwt.MapClaims {
 	}
 }
 
-func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
+func makeSubgraphTestServer(_ testing.TB, handler http.Handler, tlsConfig *tls.Config) *httptest.Server {
 	// NewUnstartedServer binds an ephemeral port.
 	// We want to avoid using freeport because it creates too much strain on the network stack:
 	// freeport checks if port is available by listening on it and then closing the listener.
 	// On Linux trying to listen on the just-closed port could lead to the "unable to bind" error.
 	s := httptest.NewUnstartedServer(handler)
+
+	if tlsConfig != nil {
+		s.TLS = tlsConfig
+		s.StartTLS()
+		return s
+	}
 	s.Start()
 	return s
 }
 
-func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.Server, string) {
+func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interceptor grpc.UnaryServerInterceptor) (*grpc.Server, string) {
 	t.Helper()
 
 	// We could use freeport here, but it is easy to use ephemeral port and get the endpoint
@@ -1663,7 +1750,12 @@ func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.
 
 	require.NotNil(t, service)
 
-	s := grpc.NewServer()
+	var opts []grpc.ServerOption
+	if interceptor != nil {
+		opts = append(opts, grpc.ChainUnaryInterceptor(interceptor))
+	}
+
+	s := grpc.NewServer(opts...)
 	s.RegisterService(sd, service)
 
 	go func() {
@@ -1708,7 +1800,7 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 	return cdnServer, port
 }
 
-func gqlURL(srv *httptest.Server) string {
+func GqlURL(srv *httptest.Server) string {
 	path, err := url.JoinPath(srv.URL, "/graphql")
 	if err != nil {
 		panic(err)
@@ -1846,6 +1938,10 @@ func (e *Environment) Shutdown() {
 		// Do not call s.Close() here, as it will get stuck on connections left open!
 		lErr := s.Listener.Close()
 		if lErr != nil {
+			if errors.Is(lErr, net.ErrClosed) {
+				// skip, server was already closed, e.g. through manual (intentional) intervention
+				continue
+			}
 			e.t.Logf("could not close server listener: %s", lErr)
 		}
 	}
@@ -1933,6 +2029,15 @@ func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs i
 	for {
 		if maxAttempts == 0 {
 			return errors.New("max attempts reached, timed out waiting for server to be ready")
+		}
+		// If we're running a router binary process, check if it has exited
+		// by testing the process context (cancelled by cmd.Wait goroutine in testexec.go)
+		if e.routerCmd != nil && e.Context != nil {
+			select {
+			case <-e.Context.Done():
+				return fmt.Errorf("router process exited unexpectedly: %v", context.Cause(e.Context))
+			default:
+			}
 		}
 		select {
 		case <-ctx.Done():
@@ -2112,8 +2217,12 @@ func (e *Environment) newGraphQLRequestOverGET(baseURL string, request GraphQLRe
 }
 
 func (e *Environment) MakeGraphQLRequestRaw(request *http.Request) (*TestResponse, error) {
+	return MakeGraphQLRequestRawFromClient(request, e.RouterClient)
+}
+
+func MakeGraphQLRequestRawFromClient(request *http.Request, routerClient *http.Client) (*TestResponse, error) {
 	request.Header.Set("Accept-Encoding", "identity")
-	resp, err := e.RouterClient.Do(request)
+	resp, err := routerClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -2488,28 +2597,32 @@ func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initia
 	return conn
 }
 
+func (e *Environment) syncReporter() *SyncReporter {
+	sr, ok := e.Router.EngineStats.(*SyncReporter)
+	if !ok {
+		e.t.Fatal("EngineStats is not a *SyncReporter; test environment misconfigured")
+		return nil
+	}
+	return sr
+}
+
 func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Subscriptions == desiredCount {
-		return
-	}
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.Subscriptions == desiredCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.Subscriptions == desiredCount {
-				return
-			}
+	if report == nil || report.Subscriptions != desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.Subscriptions
 		}
+		e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", got, desiredCount)
 	}
 }
 
@@ -2519,22 +2632,17 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Connections == desiredCount {
-		return
-	}
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.Connections == desiredCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.Connections == desiredCount {
-				return
-			}
+	if report == nil || report.Connections != desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.Connections
 		}
+		e.t.Fatalf("timed out waiting for connection count, got %d, want %d", got, desiredCount)
 	}
 }
 
@@ -2590,21 +2698,131 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.MessagesSent == desiredCount {
-		return
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.MessagesSent >= desiredCount
+	})
+
+	if report == nil || report.MessagesSent < desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.MessagesSent
+		}
+		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", got, desiredCount)
 	}
+}
+
+// NATSPublishUntilReceived publishes a NATS message and retries until
+// the subscription processes it. Handles the race between NATS ChanSubscribe
+// (which buffers the SUB command) and server-side subscription registration.
+func (e *Environment) NATSPublishUntilReceived(conn *nats.Conn, subject string, data []byte, _ uint64, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sr := e.syncReporter()
 
 	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
+		err := conn.Publish(subject, data)
+		require.NoError(e.t, err)
+		err = conn.Flush()
+		require.NoError(e.t, err)
+
+		// Wait for SubscriptionUpdateSent event confirming message delivery
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
+		ok := sr.WaitForEvent(shortCtx, EventSubscriptionUpdateSent)
+		shortCancel()
+
+		if ok {
 			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.MessagesSent == desiredCount {
-				return
-			}
+		}
+
+		if ctx.Err() != nil {
+			e.t.Fatalf("timed out: no SubscriptionUpdateSent received after publish")
+		}
+	}
+}
+
+// KafkaPublishUntilReceived produces a Kafka message and retries until
+// the subscription processes it. Handles the race between Kafka consumer
+// group join/partition assignment and message production.
+func (e *Environment) KafkaPublishUntilReceived(topicName string, message string, _ uint64, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sr := e.syncReporter()
+
+	for {
+		pErrCh := make(chan error, 1)
+		e.KafkaClient.Produce(ctx, &kgo.Record{
+			Topic: e.GetPubSubName(topicName),
+			Value: []byte(message),
+		}, func(_ *kgo.Record, err error) {
+			pErrCh <- err
+		})
+
+		select {
+		case pErr := <-pErrCh:
+			require.NoError(e.t, pErr)
+		case <-ctx.Done():
+			e.t.Fatalf("timed out producing Kafka message")
+		}
+
+		// Wait for SubscriptionUpdateSent event confirming message delivery
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
+		ok := sr.WaitForEvent(shortCtx, EventSubscriptionUpdateSent)
+		shortCancel()
+
+		if ok {
+			return
+		}
+
+		if ctx.Err() != nil {
+			e.t.Fatalf("timed out: no SubscriptionUpdateSent received after Kafka produce")
+		}
+	}
+}
+
+// RedisPublishUntilReceived publishes a Redis message and retries until
+// the subscription processes it. Handles the race between Redis subscription
+// setup and message publishing, similar to NATSPublishUntilReceived.
+func (e *Environment) RedisPublishUntilReceived(topicName string, message string, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sr := e.syncReporter()
+
+	parsedURL, err := url.Parse(e.RedisHosts[0])
+	require.NoError(e.t, err, "failed to parse Redis URL")
+
+	var redisConn redis.UniversalClient
+	if !e.RedisWithClusterMode {
+		redisConn = redis.NewClient(&redis.Options{
+			Addr: parsedURL.Host,
+		})
+	} else {
+		redisConn = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: []string{parsedURL.Host},
+		})
+	}
+	defer redisConn.Close()
+
+	for {
+		intCmd := redisConn.Publish(ctx, e.GetPubSubName(topicName), message)
+		require.NoError(e.t, intCmd.Err())
+
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
+		ok := sr.WaitForEvent(shortCtx, EventSubscriptionUpdateSent)
+		shortCancel()
+
+		if ok {
+			return
+		}
+
+		if ctx.Err() != nil {
+			e.t.Fatalf("timed out: no SubscriptionUpdateSent received after Redis publish")
 		}
 	}
 }
@@ -2615,22 +2833,17 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.MessagesSent >= minCount {
-		return
-	}
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.MessagesSent >= minCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.MessagesSent >= minCount {
-				return
-			}
+	if report == nil || report.MessagesSent < minCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.MessagesSent
 		}
+		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", got, minCount)
 	}
 }
 
@@ -2640,21 +2853,53 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Triggers == desiredCount {
-		return
-	}
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.Triggers >= desiredCount
+	})
 
+	if report == nil || report.Triggers < desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.Triggers
+		}
+		e.t.Fatalf("timed out waiting for trigger count, got %d, want at least %d", got, desiredCount)
+	}
+}
+
+// NATSPublishUntilMinMessagesSent publishes a NATS message repeatedly until the
+// total MessagesSent count reaches minCount. This handles fan-out scenarios where
+// multiple subscriptions must all receive the message: if some consumers aren't
+// fully wired when the first publish goes out, subsequent publishes cover them.
+func (e *Environment) NATSPublishUntilMinMessagesSent(conn *nats.Conn, subject string, data []byte, minCount uint64, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sr := e.syncReporter()
 	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
+		err := conn.Publish(subject, data)
+		require.NoError(e.t, err)
+		err = conn.Flush()
+		require.NoError(e.t, err)
+
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
+		report := sr.Wait(shortCtx, func(r *statistics.UsageReport) bool {
+			return r.MessagesSent >= minCount
+		})
+		shortCancel()
+
+		if report != nil && report.MessagesSent >= minCount {
 			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.Triggers == desiredCount {
-				return
+		}
+
+		if ctx.Err() != nil {
+			got := uint64(0)
+			if report != nil {
+				got = report.MessagesSent
 			}
+			e.t.Fatalf("timed out: messages sent count %d did not reach %d after publishing", got, minCount)
+			return
 		}
 	}
 }
@@ -2702,6 +2947,35 @@ func WSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byt
 	return 0, nil, fmt.Errorf("failed to read from WebSocket: %w", err)
 }
 
+// ReadSSELine reads the next non-comment line from an SSE stream.
+// SSE comment lines (starting with ':') like heartbeats are silently skipped.
+func ReadSSELine(t testing.TB, reader *bufio.Reader) string {
+	t.Helper()
+	for {
+		line, _, err := reader.ReadLine()
+		require.NoError(t, err)
+		s := string(line)
+		if !strings.HasPrefix(s, ":") {
+			return s
+		}
+	}
+}
+
+// ReadSSEField reads the next SSE field line, skipping comments and empty lines.
+// Use this instead of ReadSSELine when reading "event:" or "data:" fields,
+// as heartbeats produce both a comment line and a trailing empty delimiter.
+func ReadSSEField(t testing.TB, reader *bufio.Reader) string {
+	t.Helper()
+	for {
+		line, _, err := reader.ReadLine()
+		require.NoError(t, err)
+		s := string(line)
+		if s != "" && !strings.HasPrefix(s, ":") {
+			return s
+		}
+	}
+}
+
 func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
@@ -2718,7 +2992,7 @@ func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 			return err
 		}
 
-		require.NoError(t, ReadAndCheckJSON(t, conn, v))
+		err = ReadAndCheckJSON(t, conn, v)
 
 		// Reset the deadline to prevent future operations from timing out
 		if resetErr := conn.SetReadDeadline(time.Time{}); resetErr != nil {
@@ -2840,7 +3114,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 	}
 	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
 	for _, sourceName := range DemoNatsProviders {
-		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", datasource.ProviderOpts{
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", false, datasource.ProviderOpts{
 			StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
 		})
 		require.NoError(t, err)

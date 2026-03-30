@@ -20,14 +20,10 @@ import (
 	"github.com/gobwas/ws/wsutil"
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
-	"github.com/wundergraph/astjson"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
-
+	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
@@ -36,6 +32,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
 var (
@@ -336,7 +336,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// We can parse the request options before creating the handler
 	// this avoids touching the client request across goroutines
 
-	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(r, clientInfo, requestLogger)
+	executionOptions, traceOptions, err := h.preHandler.parseExecutionAndTraceOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		requestLogger.Error("Parse request options", zap.Error(err))
 		_ = c.Close()
@@ -398,11 +398,13 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			handler.request, err = h.accessController.Access(w, r)
 			if err != nil {
 				statusCode := http.StatusForbidden
+				errorMessage := err
 				if errors.Is(err, ErrUnauthorized) {
 					statusCode = http.StatusUnauthorized
+					errorMessage = ErrUnauthorized
 				}
 				http.Error(handler.w, http.StatusText(statusCode), statusCode)
-				_ = handler.writeErrorMessage(requestID, err)
+				_ = handler.writeErrorMessage(requestID, errorMessage)
 				handler.Close(false)
 				return
 			}
@@ -925,6 +927,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	opContext.normalizationTime = time.Since(startNormalization)
 	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
+	opContext.variablesHash = operationKit.parsedOperation.VariablesHash
 	opContext.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
 		return nil, nil, err
@@ -954,6 +957,10 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	}
 
 	opContext.planningTime = time.Since(startPlanning)
+
+	if err := operationKit.ValidateStaticCost(opContext); err != nil {
+		return operationKit.parsedOperation, nil, err
+	}
 
 	opContext.initialPayload = h.initialPayload
 
@@ -1007,7 +1014,6 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 			return
 		}
 	}
-
 	reqContext := buildRequestContext(requestContextOptions{
 		operationContext:    operationCtx,
 		requestLogger:       h.logger,
@@ -1016,25 +1022,38 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		r:                   registration.clientRequest,
 	})
 
-	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
-		reqContext.expressionContext = *origCtx.expressionContext.Clone()
-	}
+	reqContext.operation.protocol = OperationProtocolWS
+	reqContext.operation.executionOptions = h.plannerOptions.ExecutionOptions
+	reqContext.operation.traceOptions = h.plannerOptions.TraceOptions
 
 	resolveCtx := resolve.NewContext(withRequestContext(h.ctx, reqContext))
+
 	resolveCtx.Variables = operationCtx.Variables()
+	resolveCtx.RemapVariables = operationCtx.remapVariables
+	resolveCtx.VariablesHash = operationCtx.variablesHash
 	resolveCtx.Request = resolve.Request{
 		Header: registration.clientRequest.Header,
-		ID:     h.initRequestID,
+		ID:     operationCtx.internalHash,
 	}
 	resolveCtx.RenameTypeNames = h.graphqlHandler.executor.RenameTypeNames
-	resolveCtx.RemapVariables = operationCtx.remapVariables
 	resolveCtx.TracingOptions = operationCtx.traceOptions
 	resolveCtx.Extensions = operationCtx.extensions
+	resolveCtx.ExecutionOptions = operationCtx.executionOptions
 
 	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
 		resolveCtx.InitialPayload = operationCtx.initialPayload
 	}
 
+	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
+		reqContext.expressionContext = *origCtx.expressionContext.Clone()
+		if h.graphqlHandler.headerPropagation != nil {
+			resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
+				origCtx,
+				h.graphqlHandler.headerPropagation,
+				operationCtx.preparedPlan.preparedPlan,
+			)
+		}
+	}
 	if h.graphqlHandler.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)

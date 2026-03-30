@@ -1,0 +1,60 @@
+---
+title: "Graph Pruning"
+description: "**Graph Pruning Linter** helps manage the cleanliness and efficiency of your GraphQL schema by running various checks on the schema. When enabled, the lint check will be performed on every [check](https://cosmo-docs.wundergraph.com/cli/subgraph/check) operation of that namespace."
+icon: "broom-wide"
+---
+
+<Frame caption="Graph Pruning Lint Rules Overview">
+  <img
+    src="/images/studio/graph-pruning-lint-rules-overview.png"
+    alt="Cosmo Studio Graph Pruning Linter interface showing rules for unused, deprecated, and deleted fields with severity and period settings."
+    title="Graph Pruning Lint Rules Overview"
+  />
+</Frame>
+
+## Rules
+
+1. UNUSED_FIELDS
+   - Identifies and lists all fields that are not being used in the schema.
+2. DEPRECATED_FIELDS
+   - Detects fields that have been deprecated but have not yet been removed from the schema.
+3. REQUIRE_DEPRECATION_BEFORE_DELETION
+   - Identifies fields that were deleted without being marked as deprecated beforehand.
+
+## Rule Configurations
+
+### Severity Level
+
+- Error:- If any configured rules are violated, it causes the check operation to fail.
+- Warning:- If any configured rules are violated, they are flagged as warnings, but they don't cause the check operation to fail.
+
+### Grace Period
+
+This is the time period provided to the fields modified on schema publications, allowing time before enforcing these rules during checks.
+
+### Schema Usage Check Period (Enterprise only)
+
+- This is the time period used to check the usage of the field.
+- For non-enterprise customers, the value is determined by the limits imposed on the organization according to its current billing plan.
+
+## How to configure graph pruning linter
+
+<Steps>
+  <Step>
+    Navigate to the Lint Policy page on Cosmo.
+  </Step>
+  <Step>
+    Select the namespace.
+  </Step>
+  <Step>
+    Enable the graph pruning linter.
+  </Step>
+  <Step>
+    Configure the linter rules:
+
+    - Check the checkbox to enable each rule.
+    - Select the **severity level** (Warning or Error) for each rule.
+    - Set the **grace period** for fields that are modified upon schema publication, allowing time before enforcing these rules during checks.
+    - Configure the **schema usage check period** (available only for enterprise customers).
+  </Step>
+</Steps>

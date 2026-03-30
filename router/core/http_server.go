@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -14,15 +15,40 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/health"
 )
 
+// serverState holds the mux and graph server together for atomic swaps.
+// This ensures both values are always consistent - a single atomic operation
+// swaps both the handler and the graph server reference together.
+// Storing *chi.Mux directly (instead of http.Handler interface) avoids vtable indirection.
+type serverState struct {
+	mux         *chi.Mux     // HTTP handler, never nil (uses newNotReadyMux as sentinel)
+	graphServer *graphServer // graph server for shutdown, nil until first config loaded
+}
+
+// newNotReadyMux returns 503 Service Unavailable for all requests.
+// Used as sentinel before server is ready or after shutdown.
+func newNotReadyMux() *chi.Mux {
+	mux := chi.NewMux()
+	mux.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "server not ready", http.StatusServiceUnavailable)
+	})
+	return mux
+}
+
+// notReadyState is the sentinel state used before initialization and after shutdown.
+// Using a sentinel instead of nil eliminates nil checks on the hot path.
+var notReadyState = &serverState{
+	mux:         newNotReadyMux(),
+	graphServer: nil,
+}
+
 type server struct {
 	mu          sync.RWMutex
 	httpServer  *http.Server
 	tlsConfig   *TlsConfig
 	logger      *zap.Logger
-	handler     http.Handler
+	state       atomic.Pointer[serverState]
 	healthcheck health.Checker
 	baseURL     string
-	graphServer *graphServer
 }
 
 type httpServerOptions struct {
@@ -63,18 +89,19 @@ func newServer(opts *httpServerOptions) *server {
 		mu:          sync.RWMutex{},
 		healthcheck: opts.healthcheck,
 		baseURL:     opts.baseURL,
-		handler:     httpRouter,
 	}
 
-	httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Multiple requests can read the handler at the same time, but only one goroutine can write it.
-		// When swapping the graph server there might be in-flight requests that are still being processed
-		// but this is tolerable because we are waiting for them to finish before shutting down the old server.
-		n.mu.RLock()
-		handler := n.handler
-		n.mu.RUnlock()
+	// Store the initial state with health check mux (graphServer nil until first config)
+	n.state.Store(&serverState{
+		mux:         httpRouter,
+		graphServer: nil,
+	})
 
-		handler.ServeHTTP(w, r)
+	httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Lock-free hot path: single atomic load gets both mux and graphServer.
+		// The state is never nil (initialized with health mux, swapped to notReadyState on shutdown).
+		// Direct method call on *chi.Mux avoids interface vtable indirection.
+		n.state.Load().mux.ServeHTTP(w, r)
 	})
 
 	return n
@@ -96,28 +123,21 @@ func (s *server) HttpServer() *http.Server {
 // a complete message to the client and wait until in-flight messages are delivered before closing the connection.
 // NOT SAFE FOR CONCURRENT USE.
 func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
-	s.mu.RLock()
-	needsShutdown := s.handler != nil && s.graphServer != nil
-	s.mu.RUnlock()
+	// Single atomic swap of both mux and graphServer together.
+	// This ensures consistency - both values change atomically.
+	newState := &serverState{
+		mux:         svr.mux,
+		graphServer: svr,
+	}
+	oldState := s.state.Swap(newState)
 
-	// Swap the handler immediately, so we can shut down the old server in the same goroutine
-	// and no other config changes can happen in the meantime.
-	s.mu.Lock()
-	s.handler = svr.mux
-	s.mu.Unlock()
-
-	// If the graph server is nil, we don't need to shutdown anything
-	// This is the case when the router is starting for the first time
-	if needsShutdown {
-		if err := s.graphServer.Shutdown(ctx); err != nil {
+	// Shutdown the old graph server if it exists.
+	// On first startup, oldState.graphServer is nil.
+	if oldState != nil && oldState.graphServer != nil {
+		if err := oldState.graphServer.Shutdown(ctx); err != nil {
 			s.logger.Error("Failed to shutdown old graph", zap.Error(err))
 		}
 	}
-
-	// Swap the graph server
-	s.mu.Lock()
-	s.graphServer = svr
-	s.mu.Unlock()
 }
 
 // listenAndServe starts the server and blocks until the server is shutdown.
@@ -138,25 +158,22 @@ func (s *server) listenAndServe() error {
 func (s *server) Shutdown(ctx context.Context) error {
 	var err error
 
+	// httpServer is not on the hot path, so we keep using the mutex for it
 	s.mu.RLock()
-
 	httpServer := s.httpServer
-	graphServer := s.graphServer
-
 	s.mu.RUnlock()
+
+	// Get current state and swap to notReadyState atomically
+	// This ensures new requests get 503 immediately while we shut down
+	oldState := s.state.Swap(notReadyState)
 
 	if httpServer != nil {
 		err = errors.Join(err, httpServer.Shutdown(ctx))
 	}
 
-	if graphServer != nil {
-		err = errors.Join(err, graphServer.Shutdown(ctx))
+	if oldState != nil && oldState.graphServer != nil {
+		err = errors.Join(err, oldState.graphServer.Shutdown(ctx))
 	}
-
-	s.mu.Lock()
-	s.graphServer = nil
-	s.handler = nil
-	s.mu.Unlock()
 
 	return err
 }

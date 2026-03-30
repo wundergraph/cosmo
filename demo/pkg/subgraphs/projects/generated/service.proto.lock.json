@@ -351,12 +351,7 @@
         "resourceGroups": 16,
         "tasksByPhase": 17,
         "milestoneGroups": 18,
-        "priorityMatrix": 19,
-        "filteredTasks": 20,
-        "completionRate": 21,
-        "estimatedDaysRemaining": 22,
-        "criticalDeadline": 23,
-        "topPriorityItem": 24
+        "priorityMatrix": 19
       }
     },
     "Milestone": {
@@ -371,9 +366,7 @@
         "completionPercentage": 8,
         "dependencies": 9,
         "subtasks": 10,
-        "reviewers": 11,
-        "isAtRisk": 12,
-        "daysUntilDue": 13
+        "reviewers": 11
       }
     },
     "Task": {
@@ -394,10 +387,12 @@
         "subtasks": 14,
         "dependencies": 15,
         "attachmentUrls": 16,
-        "reviewerIds": 17,
-        "isBlocked": 18,
-        "totalEffort": 19
-      }
+        "reviewerIds": 17
+      },
+      "reservedNumbers": [
+        18,
+        19
+      ]
     },
     "Employee": {
       "fields": {
@@ -407,9 +402,7 @@
         "completedTasks": 4,
         "skills": 5,
         "certifications": 6,
-        "projectHistory": 7,
-        "currentWorkload": 8,
-        "averageTaskCompletionDays": 9
+        "projectHistory": 7
       }
     },
     "Product": {
@@ -532,6 +525,80 @@
     },
     "QueryPanicRequest": {
       "fields": {}
+    },
+    "EmployeeWorkItemImplementations": {
+      "fields": {
+        "TechnicalWorkItem": 1,
+        "ManagementWorkItem": 2
+      }
+    },
+    "TechnicalWorkItem": {
+      "fields": {
+        "name": 1,
+        "priority": 2,
+        "codeCount": 3,
+        "handler": 4,
+        "specs": 5
+      }
+    },
+    "ManagementWorkItem": {
+      "fields": {
+        "name": 1,
+        "priority": 2,
+        "teamSize": 3,
+        "handler": 4,
+        "specs": 5
+      }
+    },
+    "WorkItemHandler": {
+      "fields": {
+        "name": 1,
+        "assignedItem": 2
+      }
+    },
+    "TechnicalSpecs": {
+      "fields": {
+        "name": 1,
+        "complexity": 2,
+        "metrics": 3
+      }
+    },
+    "ManagementSpecs": {
+      "fields": {
+        "name": 1,
+        "scope": 2,
+        "metrics": 3
+      }
+    },
+    "WorkMetrics": {
+      "fields": {
+        "score": 1,
+        "efficiency": 2
+      }
+    },
+    "WorkReviewResultMembers": {
+      "fields": {
+        "WorkApproval": 1,
+        "WorkRejection": 2
+      }
+    },
+    "WorkApproval": {
+      "fields": {
+        "comment": 1,
+        "approvedAt": 2
+      }
+    },
+    "WorkRejection": {
+      "fields": {
+        "reason": 1,
+        "rejectionCode": 2
+      }
+    },
+    "WorkSetup": {
+      "fields": {
+        "priority": 1,
+        "primaryItem": 2
+      }
     }
   },
   "enums": {

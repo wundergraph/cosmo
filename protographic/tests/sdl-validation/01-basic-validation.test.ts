@@ -1,6 +1,6 @@
 import { buildSchema } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { SDLValidationVisitor } from '../../src/sdl-validation-visitor';
+import { SDLValidationVisitor } from '../../src/sdl-validation-visitor.js';
 
 describe('SDL Validation', () => {
   test('should validate a basic schema', () => {
@@ -46,6 +46,11 @@ describe('SDL Validation', () => {
             users: [User!]!
             matrix: [[Matrix!]]!
             tags: [[String!]]
+        }
+
+        type Matrix {
+            id: ID!
+            name: String!
         }
     `;
 
@@ -110,7 +115,7 @@ describe('SDL Validation', () => {
     expect(result.errors[0]).toContain('Nested key directives are not supported');
   });
 
-  test('should return a warning if a field has a requires directive', () => {
+  test('should not return a warning if a field has a requires directive', () => {
     const sdl = `
         type Query {
             user: User!
@@ -127,8 +132,7 @@ describe('SDL Validation', () => {
     const result = visitor.visit();
 
     expect(result.errors).toHaveLength(0);
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('Use of requires is not supported yet');
+    expect(result.warnings).toHaveLength(0);
   });
 
   test('should return an error if a field has an invalid resolver context', () => {
@@ -171,6 +175,10 @@ describe('SDL Validation', () => {
             id: ID!
             name: String!
         }
+
+        input UserInput {
+            name: String!
+        }
     `;
 
     const visitor = new SDLValidationVisitor(sdl);
@@ -200,7 +208,7 @@ describe('SDL Validation', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain(
-      'No @connect__fieldResolver directive found on the field name - falling back to ID field',
+      '@connect__fieldResolver directive on the field name has no context provided - falling back to ID field',
     );
     expect(result.errors[0]).toContain('No fields with type ID found');
   });
@@ -226,8 +234,31 @@ describe('SDL Validation', () => {
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain(
-      'No @connect__fieldResolver directive found on the field name - falling back to ID field',
+      '@connect__fieldResolver directive on the field name has no context provided - falling back to ID field',
     );
+  });
+
+  test('should not return warnings for a field without arguments that has @connect__fieldResolver with context', () => {
+    const sdl = `
+        directive @connect__fieldResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
+        scalar openfed__FieldSet
+
+        type Query {
+            user(id: ID!): User!
+        }
+
+        type User {
+            id: ID!
+            name: String!
+            avatar: String! @connect__fieldResolver(context: "id name")
+        }
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
   });
 
   test('should return an error if multiple ID fields are present but no context is provided', () => {
@@ -252,7 +283,7 @@ describe('SDL Validation', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain(
-      'No @connect__fieldResolver directive found on the field name - falling back to ID field',
+      '@connect__fieldResolver directive on the field name has no context provided - falling back to ID field',
     );
     expect(result.errors[0]).toContain(
       'Multiple fields with type ID found - provide a context with the fields you want to use in the @connect__fieldResolver directive',
@@ -474,5 +505,28 @@ describe('SDL Validation', () => {
     expect(result.errors[2]).toContain(
       '[Error] Cycle detected in context: field "baz" is referenced in the following path: "baz.bar.foo"',
     );
+  });
+
+  test('should correctly handle nested fields in requires directives', () => {
+    const sdl = `
+    type Warehouse @key(fields: "id") {
+      id: ID!
+      name: String!
+      location: String!
+      inventoryCount: Int! @external
+      restockData: RestockData! @external
+      stockHealthScore: Float! @requires(fields: "inventoryCount restockData { lastRestockDate }")
+    }
+
+    type RestockData {
+        lastRestockDate: String!
+    }
+`;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
   });
 });

@@ -4,6 +4,280 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.211.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.210.0...controlplane@0.211.0) (2026-03-27)
+
+### Features
+
+* add PQL manifest support for persisted operations ([#2635](https://github.com/wundergraph/cosmo/issues/2635)) ([38a648c](https://github.com/wundergraph/cosmo/commit/38a648cff927b45d5ee5323bf303f83198c64411)) (@StarpTech)
+
+# [0.210.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.209.1...controlplane@0.210.0) (2026-03-27)
+
+### Features
+
+* add server-side pagination to operation overrides with limit and offset parameters ([#2695](https://github.com/wundergraph/cosmo/issues/2695)) ([41bb6b9](https://github.com/wundergraph/cosmo/commit/41bb6b9bd149ac9a1eb153ebbeb1c0baf0196351)) (@JivusAyrus)
+
+## [0.209.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.209.0...controlplane@0.209.1) (2026-03-24)
+
+### Bug Fixes
+
+* handle arrayJoin of empty arrays in clickhouse queries ([#2682](https://github.com/wundergraph/cosmo/issues/2682)) ([733c14b](https://github.com/wundergraph/cosmo/commit/733c14b4710ed093f9ccee19836054f7e92647a4)) (@JivusAyrus)
+
+# [0.209.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.208.0...controlplane@0.209.0) (2026-03-23)
+
+### Features
+
+* improve efficiency of operation check by parallelizing processing of changes ([#2676](https://github.com/wundergraph/cosmo/issues/2676)) ([1ca1fd0](https://github.com/wundergraph/cosmo/commit/1ca1fd0d41292f784e9f05610674ddf08b611021)) (@JivusAyrus)
+
+# [0.208.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.207.0...controlplane@0.208.0) (2026-03-18)
+
+### Features
+
+* add subgraph check extension outcome to proposals screen ([#2661](https://github.com/wundergraph/cosmo/issues/2661)) ([638af2f](https://github.com/wundergraph/cosmo/commit/638af2fd85cfcf715eb887b3f0606a898b2f7999)) (@wilsonrivera)
+* update the `throw` statements for authentication errors ([#2662](https://github.com/wundergraph/cosmo/issues/2662)) ([b580b94](https://github.com/wundergraph/cosmo/commit/b580b949f2d333e1f585d49ce91726ebf659cec2)) (@wilsonrivera)
+
+# [0.207.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.206.0...controlplane@0.207.0) (2026-03-17)
+
+### Features
+
+* expose costs ([#2470](https://github.com/wundergraph/cosmo/issues/2470)) ([d43aa40](https://github.com/wundergraph/cosmo/commit/d43aa40f2429fbb212e5618cd5586774e1b6ae7e)) (@ysmolski)
+
+# [0.206.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.205.0...controlplane@0.206.0) (2026-03-17)
+
+### Features
+
+* add graph recompose ([#2652](https://github.com/wundergraph/cosmo/issues/2652)) ([8bdb7d0](https://github.com/wundergraph/cosmo/commit/8bdb7d08485cb8bde84efb033663e49ed23e060f)) (@Aenimus)
+
+# [0.205.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.204.0...controlplane@0.205.0) (2026-03-17)
+
+### Features
+
+* configure composeGraphsPool to use child_process runtime ([#2657](https://github.com/wundergraph/cosmo/issues/2657)) ([76c16ce](https://github.com/wundergraph/cosmo/commit/76c16ce7fd9134d8fc5b37d97e6bb414cab2edd9)) (@StarpTech)
+
+# [0.204.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.203.1...controlplane@0.204.0) (2026-03-16)
+
+### Features
+
+* implement worker-based graph composition with Tinypool ([#2637](https://github.com/wundergraph/cosmo/issues/2637)) ([ead3683](https://github.com/wundergraph/cosmo/commit/ead3683febe84ef8d4b41bc72b2b63e56f7c5bd8)) (@StarpTech)
+
+## [0.203.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.203.0...controlplane@0.203.1) (2026-03-13)
+
+**Note:** Version bump only for package controlplane
+
+# [0.203.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.202.0...controlplane@0.203.0) (2026-03-12)
+
+### Features
+
+* add composedSchemaBreakingChanges to CreateProposalResponse ([#2640](https://github.com/wundergraph/cosmo/issues/2640)) ([2e0c11e](https://github.com/wundergraph/cosmo/commit/2e0c11ef59a294a726ec6b5dc45ee3b869d6cc46)) (@JivusAyrus)
+* add limit option for error/warning display in publish command ([#2634](https://github.com/wundergraph/cosmo/issues/2634)) ([1d0085d](https://github.com/wundergraph/cosmo/commit/1d0085d4de4db6ccab82bd42df5cd2a1500f3413)) (@JivusAyrus)
+* reduce logging verbosity ([#2642](https://github.com/wundergraph/cosmo/issues/2642)) ([e735694](https://github.com/wundergraph/cosmo/commit/e7356944fcc90dd58109f687335c0c1dce133250)) (@wilsonrivera)
+
+# [0.202.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.201.0...controlplane@0.202.0) (2026-03-12)
+
+### Features
+
+* issue subgraph check extensions for proposals ([#2615](https://github.com/wundergraph/cosmo/issues/2615)) ([0ea3e7d](https://github.com/wundergraph/cosmo/commit/0ea3e7db71ed512226662c94aec6c8111e1df400)) (@wilsonrivera)
+
+# [0.201.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.200.0...controlplane@0.201.0) (2026-03-11)
+
+### Features
+
+* add composedSchemaBreakingChanges to UpdateProposalResponse ([#2627](https://github.com/wundergraph/cosmo/issues/2627)) ([2375cd8](https://github.com/wundergraph/cosmo/commit/2375cd845a9da0bd1933d6f3596b9a495a9228bd)) (@JivusAyrus)
+
+# [0.200.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.199.0...controlplane@0.200.0) (2026-03-10)
+
+### Features
+
+* **keycloak:** update to 26.5.4 ([#2612](https://github.com/wundergraph/cosmo/issues/2612)) ([47a0fb5](https://github.com/wundergraph/cosmo/commit/47a0fb5ce166d2e489b8214fcd7da2e6c0b7f11d)) (@pepol)
+
+# [0.199.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.198.0...controlplane@0.199.0) (2026-03-10)
+
+### Features
+
+* add composition options ([#2595](https://github.com/wundergraph/cosmo/issues/2595)) ([1cba9ab](https://github.com/wundergraph/cosmo/commit/1cba9ab997a64e8bea18a7f6f01507f2ec2dd82b)) (@Aenimus)
+
+# [0.198.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.197.0...controlplane@0.198.0) (2026-03-09)
+
+### Features
+
+* add ignore external keys feature ([#2616](https://github.com/wundergraph/cosmo/issues/2616)) ([f29f5aa](https://github.com/wundergraph/cosmo/commit/f29f5aa3b93dfd5332de9aaeed066e86b86bb624)) (@Aenimus)
+
+# [0.197.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.196.0...controlplane@0.197.0) (2026-03-07)
+
+### Bug Fixes
+
+* formatting drift + CI improvements ([#2599](https://github.com/wundergraph/cosmo/issues/2599)) ([dc6dc2d](https://github.com/wundergraph/cosmo/commit/dc6dc2df088a392e01d0582c8e3dcf82a21666cf)) (@comatory)
+
+### Features
+
+* improve invitation handling ([#2581](https://github.com/wundergraph/cosmo/issues/2581)) ([d5b3b45](https://github.com/wundergraph/cosmo/commit/d5b3b45b83355aaadf2557f2455b81c050348b93)) (@wilsonrivera)
+
+# [0.196.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.195.0...controlplane@0.196.0) (2026-03-05)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+# [0.195.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.194.0...controlplane@0.195.0) (2026-03-04)
+
+### Features
+
+* add support for federated graph schema changes ([#2566](https://github.com/wundergraph/cosmo/issues/2566)) ([2f0a666](https://github.com/wundergraph/cosmo/commit/2f0a666d8c82d649707e57f6ccd085197e485da5)) (@JivusAyrus)
+
+# [0.194.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.193.1...controlplane@0.194.0) (2026-03-04)
+
+### Features
+
+* ignore pascal case + input prefix lint rules for EDFS ([#2574](https://github.com/wundergraph/cosmo/issues/2574)) ([ffeaf59](https://github.com/wundergraph/cosmo/commit/ffeaf59e0efa1ee041a0867b3c2939cf3c2103a7)) (@comatory)
+
+## [0.193.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.193.0...controlplane@0.193.1) (2026-03-03)
+
+### Bug Fixes
+
+* use specific @wundergraph/composition version to avoid breaking changes in control plane ([#2578](https://github.com/wundergraph/cosmo/issues/2578)) ([671c889](https://github.com/wundergraph/cosmo/commit/671c8893b5d330a20cacaa38bdd067435f5e676b)) (@alepane21)
+
+# [0.193.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.192.2...controlplane@0.193.0) (2026-03-02)
+
+### Features
+
+* **studio:** delete persisted operations ([#2553](https://github.com/wundergraph/cosmo/issues/2553)) ([1adf02c](https://github.com/wundergraph/cosmo/commit/1adf02c0a84bb3ae63b1d900d1075ae2c8f8c069)) (@comatory)
+
+## [0.192.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.192.1...controlplane@0.192.2) (2026-02-28)
+
+### Bug Fixes
+
+* histogram clickhouse calculation ([#2567](https://github.com/wundergraph/cosmo/issues/2567)) ([9b69e59](https://github.com/wundergraph/cosmo/commit/9b69e590ebca7b3489873d8f2c919dbf293f24ba)) (@StarpTech)
+
+## [0.192.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.192.0...controlplane@0.192.1) (2026-02-26)
+
+### Bug Fixes
+
+* return client error for payload size limit violations ([#2560](https://github.com/wundergraph/cosmo/issues/2560)) ([1393f43](https://github.com/wundergraph/cosmo/commit/1393f43480127a0e581215f6cf5ba0749be016f8)) (@alepane21)
+
+# [0.192.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.191.3...controlplane@0.192.0) (2026-02-26)
+
+### Features
+
+* improve ControlPlane seeding ([#2562](https://github.com/wundergraph/cosmo/issues/2562)) ([59c3b86](https://github.com/wundergraph/cosmo/commit/59c3b868da1cac536840abe440c0a4fe27fc9c1b)) (@wilsonrivera)
+
+## [0.191.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.191.2...controlplane@0.191.3) (2026-02-25)
+
+### Bug Fixes
+
+* resolve cve-2026-25896 ([#2552](https://github.com/wundergraph/cosmo/issues/2552)) ([f271ff2](https://github.com/wundergraph/cosmo/commit/f271ff267c01bc1e8af5f6aeed6ceae187db0fbc)) (@pepol)
+
+## [0.191.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.191.1...controlplane@0.191.2) (2026-02-20)
+
+**Note:** Version bump only for package controlplane
+
+## [0.191.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.191.0...controlplane@0.191.1) (2026-02-18)
+
+### Bug Fixes
+
+* solves the `dist` restructuring issue ([#2519](https://github.com/wundergraph/cosmo/issues/2519)) ([5b3a1b1](https://github.com/wundergraph/cosmo/commit/5b3a1b17d1137c378344045e6d0ceae74b2ee0c8)) (@wilsonrivera)
+
+# [0.191.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.190.0...controlplane@0.191.0) (2026-02-16)
+
+### Features
+
+* add support to mark API keys as external ([#2507](https://github.com/wundergraph/cosmo/issues/2507)) ([483d5c8](https://github.com/wundergraph/cosmo/commit/483d5c8e7ffbc2f71fcafdb745d20fc68670bb0c)) (@wilsonrivera)
+
+# [0.190.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.189.1...controlplane@0.190.0) (2026-02-12)
+
+### Features
+
+* endpoint to list user organizations ([#2502](https://github.com/wundergraph/cosmo/issues/2502)) ([a9a0955](https://github.com/wundergraph/cosmo/commit/a9a0955a87276104f963e9d19fc23822a9aa8d33)) (@wilsonrivera)
+* implement endpoint to ensure user is initialized in Cosmo ([#2497](https://github.com/wundergraph/cosmo/issues/2497)) ([31b005f](https://github.com/wundergraph/cosmo/commit/31b005f4ac0845e9e54ff0c89b971ddde5589eaa)) (@wilsonrivera)
+
+## [0.189.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.189.0...controlplane@0.189.1) (2026-02-12)
+
+**Note:** Version bump only for package controlplane
+
+# [0.189.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.188.0...controlplane@0.189.0) (2026-02-09)
+
+### Bug Fixes
+
+* vulnerabilities ([#2494](https://github.com/wundergraph/cosmo/issues/2494)) ([89cb868](https://github.com/wundergraph/cosmo/commit/89cb868664d1a35d85a7010aa19139b30f02a49a)) (@JivusAyrus)
+
+### Features
+
+* max number of persistent operations per request ([#2477](https://github.com/wundergraph/cosmo/issues/2477)) ([7b219ac](https://github.com/wundergraph/cosmo/commit/7b219acefa9439b51739da313acc8ad0d7b8239f)) (@alepane21)
+* update @graphql-tools/utils version to 11.0.0 ([#2495](https://github.com/wundergraph/cosmo/issues/2495)) ([526b1a4](https://github.com/wundergraph/cosmo/commit/526b1a498ae709b67ec37626bfc665babafd8aa8)) (@thisisnithin)
+
+# [0.188.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.187.0...controlplane@0.188.0) (2026-02-05)
+
+### Features
+
+* add UTM parameter tracking for new user signups ([#2488](https://github.com/wundergraph/cosmo/issues/2488)) ([4dfdd7b](https://github.com/wundergraph/cosmo/commit/4dfdd7b8d83b34d193311c77b4c71fe0bca51a97)) (@wunderhawk)
+
+# [0.187.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.186.0...controlplane@0.187.0) (2026-02-02)
+
+### Features
+
+* add gRPC naming scheme validation for subgraph routing URLs ([#2473](https://github.com/wundergraph/cosmo/issues/2473)) ([4d29351](https://github.com/wundergraph/cosmo/commit/4d29351ce0288f69417accb906863882cc97de4d)) (@alepane21)
+
+# [0.186.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.185.0...controlplane@0.186.0) (2026-01-29)
+
+### Features
+
+* enhance redirect logic in auth controller to include onboarding parameter ([#2476](https://github.com/wundergraph/cosmo/issues/2476)) ([fd9302f](https://github.com/wundergraph/cosmo/commit/fd9302f5756d38ea6a764a3e60853b1f8c92c709)) (@JivusAyrus)
+* include schema version in graph update webhook ([#2467](https://github.com/wundergraph/cosmo/issues/2467)) ([6a51aaa](https://github.com/wundergraph/cosmo/commit/6a51aaa6d1ecec4cefc884bb05a5152e0b297b78)) (@thisisnithin)
+
+# [0.185.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.184.2...controlplane@0.185.0) (2026-01-27)
+
+### Features
+
+* add pagination and limit handling for API keys ([#2430](https://github.com/wundergraph/cosmo/issues/2430)) ([eca6aac](https://github.com/wundergraph/cosmo/commit/eca6aac00ffb13527b241a45ab552ef0b87788e4)) (@JivusAyrus)
+* improve `authenticateClient` by avoiding unnecessary token creation ([#2443](https://github.com/wundergraph/cosmo/issues/2443)) ([e6f5aa8](https://github.com/wundergraph/cosmo/commit/e6f5aa83eb318e9d8fefa553a811dddebfb24540)) (@wilsonrivera)
+
+## [0.184.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.184.1...controlplane@0.184.2) (2026-01-20)
+
+**Note:** Version bump only for package controlplane
+
+## [0.184.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.184.0...controlplane@0.184.1) (2026-01-16)
+
+**Note:** Version bump only for package controlplane
+
+# [0.184.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.183.4...controlplane@0.184.0) (2026-01-14)
+
+### Features
+
+* add namespace in the slack notification ([#2452](https://github.com/wundergraph/cosmo/issues/2452)) ([8721174](https://github.com/wundergraph/cosmo/commit/87211748d0ece37984bb44dc9ef71b0a4c58d10d)) (@alepane21)
+
+## [0.183.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.183.3...controlplane@0.183.4) (2026-01-12)
+
+### Bug Fixes
+
+* **infra:** ensure base images use target platform ([#2401](https://github.com/wundergraph/cosmo/issues/2401)) ([45d65c4](https://github.com/wundergraph/cosmo/commit/45d65c4c260e7888ecfc46fb46db0d73d33fc75e)) (@endigma)
+
+## [0.183.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.183.2...controlplane@0.183.3) (2026-01-09)
+
+**Note:** Version bump only for package controlplane
+
+## [0.183.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.183.1...controlplane@0.183.2) (2026-01-08)
+
+### Bug Fixes
+
+* limit the number of entries shown in the table for schema checks on the cli ([#2417](https://github.com/wundergraph/cosmo/issues/2417)) ([2a2cd52](https://github.com/wundergraph/cosmo/commit/2a2cd5207d1575518cf459bd05c702406d7f6ef6)) (@SkArchon)
+
+## [0.183.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.183.0...controlplane@0.183.1) (2026-01-07)
+
+### Bug Fixes
+
+* field usage when arguments have the same name as root fields ([#2440](https://github.com/wundergraph/cosmo/issues/2440)) ([2b77baf](https://github.com/wundergraph/cosmo/commit/2b77baf4fc17170133a64d789c5623e2de44dcf6)) (@JivusAyrus)
+
+# [0.183.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.182.0...controlplane@0.183.0) (2026-01-07)
+
+### Bug Fixes
+
+* improve composition and changelog queries ([#2429](https://github.com/wundergraph/cosmo/issues/2429)) ([8237c8d](https://github.com/wundergraph/cosmo/commit/8237c8d4df17e1c0562df85d1bf3526d657e1e35)) (@JivusAyrus)
+* usage of input fields on the ui ([#2437](https://github.com/wundergraph/cosmo/issues/2437)) ([b61556c](https://github.com/wundergraph/cosmo/commit/b61556ce3864d045c596771ecdb98326075238da)) (@JivusAyrus)
+
+### Features
+
+* add Keycloak cleanup script ([#2426](https://github.com/wundergraph/cosmo/issues/2426)) ([98bb8e9](https://github.com/wundergraph/cosmo/commit/98bb8e93e7e80abc3c8d2850fe32b4a65f13960d)) (@wilsonrivera)
+* prevent privilege escalation ([#2428](https://github.com/wundergraph/cosmo/issues/2428)) ([bd68eec](https://github.com/wundergraph/cosmo/commit/bd68eecadf83159a1606b5b307c41cac34fb8b10)) (@wilsonrivera)
+* update `billing.json` ([#2442](https://github.com/wundergraph/cosmo/issues/2442)) ([aa4c66a](https://github.com/wundergraph/cosmo/commit/aa4c66a45715dcd8be6147ff7f6a762b582d0596)) (@wilsonrivera)
+
 # [0.182.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.181.0...controlplane@0.182.0) (2025-12-16)
 
 ### Features

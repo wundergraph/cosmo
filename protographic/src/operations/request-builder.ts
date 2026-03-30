@@ -11,14 +11,16 @@ import {
   GraphQLEnumType,
   typeFromAST,
 } from 'graphql';
-import { mapGraphQLTypeToProto } from './type-mapper.js';
-import { assignFieldNumbersFromLockData, FieldNumberManager } from './field-numbering.js';
 import {
   graphqlFieldToProtoField,
   graphqlArgumentToProtoField,
   createEnumUnspecifiedValue,
   graphqlEnumValueToProtoEnumValue,
+  protoFieldToProtoJSON,
 } from '../naming-conventions.js';
+import { mapGraphQLTypeToProto } from './type-mapper.js';
+import { assignFieldNumbersFromLockData, FieldNumberManager } from './field-numbering.js';
+import { GRAPHQL_VARIABLE_NAME } from './proto-field-options.js';
 
 /**
  * Options for building request messages
@@ -77,7 +79,9 @@ export function buildRequestMessage(
   let fieldNumber = 1;
   for (const protoVariableName of orderedVariableNames) {
     const variable = variableMap.get(protoVariableName);
-    if (!variable) continue;
+    if (!variable) {
+      continue;
+    }
 
     const variableName = variable.variable.name.value;
     const field = buildVariableField(variableName, variable.type, schema, messageName, options, fieldNumber);
@@ -108,7 +112,7 @@ export function buildVariableField(
   schema: GraphQLSchema,
   messageName: string,
   options?: RequestBuilderOptions,
-  defaultFieldNumber: number = 1,
+  defaultFieldNumber = 1,
 ): protobuf.Field | null {
   const protoFieldName = graphqlArgumentToProtoField(variableName);
   const fieldNumberManager = options?.fieldNumberManager;
@@ -155,6 +159,18 @@ export function buildVariableField(
     field.repeated = true;
   }
 
+  // Add wundergraph.connectrpc.graphql_variable_name option if the GraphQL variable name doesn't match
+  // the expected protobuf JSON format (camelCase of snake_case field name)
+  const expectedProtoJSON = protoFieldToProtoJSON(protoFieldName);
+  if (variableName !== expectedProtoJSON) {
+    // Store the GraphQL variable name as a custom option
+    // This will be used by the handler to map proto JSON to GraphQL variables
+    if (!field.options) {
+      field.options = {};
+    }
+    field.options[GRAPHQL_VARIABLE_NAME.optionName] = variableName;
+  }
+
   return field;
 }
 
@@ -195,7 +211,9 @@ export function buildInputObjectMessage(
   // Process fields in reconciled order
   for (const protoFieldName of orderedFieldNames) {
     const inputField = fieldMap.get(protoFieldName);
-    if (!inputField) continue;
+    if (!inputField) {
+      continue;
+    }
 
     const typeInfo = mapGraphQLTypeToProto(inputField.type, {
       customScalarMappings: options?.customScalarMappings,
@@ -240,6 +258,11 @@ export function buildInputObjectMessage(
 /**
  * Builds an enum type from a GraphQL enum type
  *
+ * An auto-generated UNSPECIFIED value is added at position 0 (required by proto3).
+ * If the GraphQL enum contains a value that maps to the same proto name (e.g.
+ * `UNSPECIFIED` in enum `State` producing `STATE_UNSPECIFIED`), it is deduplicated
+ * into the auto-generated zero-position entry rather than being assigned a separate number.
+ *
  * @param enumType - The GraphQL enum type
  * @param options - Optional configuration
  * @returns A protobuf Enum object
@@ -257,6 +280,12 @@ export function buildEnumType(enumType: GraphQLEnumType, options?: RequestBuilde
   for (const enumValue of enumValues) {
     // Prefix enum values with the enum type name to avoid collisions
     const protoEnumValue = graphqlEnumValueToProtoEnumValue(enumType.name, enumValue.name);
+
+    // Skip if this collides with the auto-generated UNSPECIFIED value at position 0
+    if (protoEnumValue === unspecifiedValue) {
+      continue;
+    }
+
     protoEnum.add(protoEnumValue, enumNumber);
 
     // Note: protobufjs doesn't have direct comment support for enum values

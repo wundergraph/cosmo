@@ -8,6 +8,7 @@ import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../../github.js';
 import { handleCheckResult } from '../../../../handle-check-result.js';
+import { limitMaxValue } from '../../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
@@ -19,8 +20,12 @@ export default (opts: BaseCommandOptions) => {
     '--skip-traffic-check',
     'This will skip checking for client traffic and any breaking change will fail the run.',
   );
+  command.option('-l, --limit [number]', 'The amount of entries shown in the schema checks output.', '50');
+  command.option('-j, --json', 'Prints to the console in json format instead of table');
+  command.option('-o, --out [string]', 'Destination file for the json output.');
 
   command.action(async (name, options) => {
+    let outFile;
     const schemaFile = resolve(options.schema);
 
     if (!existsSync(schemaFile)) {
@@ -30,6 +35,17 @@ export default (opts: BaseCommandOptions) => {
         ),
       );
       return;
+    }
+
+    if (options.out) {
+      outFile = resolve(options.out);
+    }
+
+    const limit = Number(options.limit);
+    if (Number.isNaN(limit) || limit <= 0 || limit > limitMaxValue) {
+      program.error(
+        pc.red(`The limit must be a valid number between 1 and ${limitMaxValue}. Received: '${options.limit}'`),
+      );
     }
 
     const { gitInfo, ignoreErrorsDueToGitHubIntegration } = await verifyGitHubIntegration(opts.client);
@@ -63,13 +79,19 @@ export default (opts: BaseCommandOptions) => {
         gitInfo,
         delete: false,
         skipTrafficCheck: options.skipTrafficCheck,
+        limit,
       },
       {
         headers: getBaseHeaders(),
       },
     );
 
-    const success = handleCheckResult(resp);
+    const success = await handleCheckResult({
+      response: resp,
+      rowLimit: limit,
+      shouldOutputJson: options.json || !!outFile,
+      outFile,
+    });
 
     if (!success && !ignoreErrorsDueToGitHubIntegration) {
       process.exitCode = 1;

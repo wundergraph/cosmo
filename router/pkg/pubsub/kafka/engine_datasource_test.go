@@ -1,7 +1,6 @@
 package kafka
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -108,7 +107,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 				})).Return(nil)
 			},
 			expectError:     false,
-			expectedOutput:  `{"success": true}`,
+			expectedOutput:  `{"__typename": "edfs__PublishResult", "success": true}`,
 			expectPublished: true,
 		},
 		{
@@ -118,7 +117,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 				m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
-			expectedOutput:  `{"success": false}`,
+			expectedOutput:  `{"__typename": "edfs__PublishResult", "success": false}`,
 			expectPublished: true,
 		},
 		{
@@ -140,15 +139,14 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 			}
 			ctx := context.Background()
 			input := []byte(tt.input)
-			out := &bytes.Buffer{}
 
-			err := dataSource.Load(ctx, input, out)
+			data, err := dataSource.Load(ctx, nil, input)
 
 			if tt.expectError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedOutput, out.String())
+				assert.Equal(t, tt.expectedOutput, string(data))
 			}
 		})
 	}
@@ -161,7 +159,7 @@ func TestKafkaPublishDataSource_LoadWithFiles(t *testing.T) {
 		}
 
 		assert.Panics(t, func() {
-			dataSource.LoadWithFiles(context.Background(), nil, nil, &bytes.Buffer{})
+			_, _ = dataSource.LoadWithFiles(context.Background(), nil, nil, nil)
 		})
 	})
 }

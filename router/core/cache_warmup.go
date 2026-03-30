@@ -34,6 +34,7 @@ type CacheWarmupProcessor interface {
 type CacheWarmupConfig struct {
 	Log            *zap.Logger
 	Source         CacheWarmupSource
+	FallbackSource CacheWarmupSource
 	Workers        int
 	ItemsPerSecond int
 	Timeout        time.Duration
@@ -45,6 +46,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	w := &cacheWarmup{
 		log:            cfg.Log.With(zap.String("component", "cache_warmup")),
 		source:         cfg.Source,
+		fallbackSource: cfg.FallbackSource,
 		workers:        cfg.Workers,
 		itemsPerSecond: cfg.ItemsPerSecond,
 		timeout:        cfg.Timeout,
@@ -60,7 +62,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	if cfg.Timeout <= 0 {
 		w.timeout = time.Second * 30
 	}
-	w.log.Info("Warmup started",
+	w.log.Debug("Warmup started",
 		zap.Int("workers", cfg.Workers),
 		zap.Int("items_per_second", cfg.ItemsPerSecond),
 		zap.Duration("timeout", cfg.Timeout),
@@ -82,7 +84,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 		)
 		return err
 	}
-	w.log.Info("Warmup completed",
+	w.log.Debug("Warmup completed",
 		zap.Int("processed_items", completed),
 		zap.Duration("duration", time.Since(start)),
 	)
@@ -92,6 +94,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 type cacheWarmup struct {
 	log            *zap.Logger
 	source         CacheWarmupSource
+	fallbackSource CacheWarmupSource
 	workers        int
 	itemsPerSecond int
 	timeout        time.Duration
@@ -105,6 +108,12 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	defer cancel()
 
 	items, err := w.source.LoadItems(ctx, w.log)
+
+	// Try fallback if no items were loaded OR there was an error loading from main source
+	if len(items) == 0 || err != nil {
+		items, err = w.loadFromFallbackSource(ctx, err)
+	}
+
 	if err != nil {
 		return 0, err
 	}
@@ -114,7 +123,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 		return 0, nil
 	}
 
-	w.log.Info("Starting processing",
+	w.log.Debug("Starting processing",
 		zap.Int("items", len(items)),
 	)
 
@@ -123,7 +132,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	done := ctx.Done()
 	index := make(chan int, len(items))
 	defer close(index)
-	itemCompleted := make(chan struct{})
+	itemCompleted := make(chan struct{}, w.workers)
 
 	for i, item := range items {
 		if item.Client == nil {
@@ -166,7 +175,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 						)
 					}
 
-					if err == nil && w.afterOperation != nil {
+					if err == nil && res != nil && w.afterOperation != nil {
 						w.afterOperation(res)
 					}
 
@@ -197,6 +206,25 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	return len(items), nil
 }
 
+func (w *cacheWarmup) loadFromFallbackSource(ctx context.Context, mainErr error) ([]*nodev1.Operation, error) {
+	if w.fallbackSource == nil {
+		return nil, mainErr
+	}
+
+	fallbackItems, err := w.fallbackSource.LoadItems(ctx, w.log)
+	if err != nil {
+		// If fallback source also failed, log the fallback error and return the original error
+		w.log.Error("Failed to load cache warmup config from fallback source", zap.Error(err))
+		return nil, mainErr
+	}
+
+	// In case we went to the fallback because the main source had an error, log the original error
+	if mainErr != nil {
+		w.log.Error("Falling back to PlanSource due to error loading cache warmup config from CDN", zap.Error(mainErr))
+	}
+	return fallbackItems, nil
+}
+
 type CacheWarmupPlanningProcessorOptions struct {
 	OperationProcessor        *OperationProcessor
 	OperationPlanner          *OperationPlanner
@@ -224,6 +252,7 @@ type CacheWarmupOperationPlanResult struct {
 	ClientName    string
 	ClientVersion string
 	PlanningTime  time.Duration
+	PlanCacheHit  bool
 }
 
 type CacheWarmupPlanningProcessor struct {
@@ -334,6 +363,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		internalHash: k.parsedOperation.InternalID,
 	}
 
+	opContext.variablesHash = k.parsedOperation.VariablesHash
 	opContext.variables, err = astjson.ParseBytes(k.parsedOperation.Request.Variables)
 	if err != nil {
 		return nil, err
@@ -353,5 +383,6 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		ClientName:    item.Client.Name,
 		ClientVersion: item.Client.Version,
 		PlanningTime:  time.Since(planningStart),
+		PlanCacheHit:  opContext.planCacheHit,
 	}, nil
 }

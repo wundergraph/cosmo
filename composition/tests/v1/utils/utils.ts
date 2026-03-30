@@ -1,5 +1,5 @@
-import { MutableIntermediateTypeNode, MutableTypeNode } from '../../../src';
-import { Kind, TypeNode } from 'graphql';
+import { type MutableIntermediateTypeNode, type MutableTypeNode } from '../../../src';
+import { Kind, type TypeNode } from 'graphql';
 
 export const AUTHENTICATED_DIRECTIVE = `
   directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
@@ -11,6 +11,10 @@ export const CONFIGURE_DESCRIPTION_DIRECTIVE = `
 
 export const CONNECT_FIELD_RESOLVER_DIRECTIVE = `
   directive @connect__fieldResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
+`;
+
+export const COST_DIRECTIVE = `
+  directive @cost(weight: Int!) on ARGUMENT_DEFINITION | ENUM | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | OBJECT | SCALAR
 `;
 
 export const EDFS_NATS_PUBLISH_DIRECTIVE = `
@@ -66,6 +70,10 @@ export const REQUIRES_SCOPES_DIRECTIVE = `
 
 export const KEY_DIRECTIVE = `
   directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
+`;
+
+export const LIST_SIZE_DIRECTIVE = `
+  directive @listSize(assumedSize: Int, requireOneSlicingArgument: Boolean = true, sizedFields: [String!], slicingArguments: [String!]) on FIELD_DEFINITION
 `;
 
 export const OPENFED_FIELD_SET = `  scalar openfed__FieldSet`;

@@ -1,20 +1,13 @@
-import { FieldUsageSheet } from "@/components/analytics/field-usage";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import {
-  DatePickerWithRange,
-  DateRangePickerChangeHandler,
-} from "@/components/date-picker-with-range";
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphContext,
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { EmptySchema } from "@/components/schema/empty-schema-state";
-import { SchemaToolbar } from "@/components/schema/toolbar";
-import { Badge, badgeVariants } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { FieldUsageSheet } from '@/components/analytics/field-usage';
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
+import { EmptyState } from '@/components/empty-state';
+import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { EmptySchema } from '@/components/schema/empty-schema-state';
+import { SchemaToolbar } from '@/components/schema/toolbar';
+import { Badge, badgeVariants } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   CommandDialog,
   CommandEmpty,
@@ -22,7 +15,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from '@/components/ui/command';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,42 +28,19 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Kbd } from "@/components/ui/kbd";
-import { Loader } from "@/components/ui/loader";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { TooltipPortal } from "@radix-ui/react-tooltip";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useUser } from "@/hooks/use-user";
-import { useChartData } from "@/lib/insights-helpers";
-import { NextPageWithLayout } from "@/lib/page";
+} from '@/components/ui/dropdown-menu';
+import { Kbd } from '@/components/ui/kbd';
+import { Loader } from '@/components/ui/loader';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipPortal } from '@radix-ui/react-tooltip';
+import { useFeatureLimit } from '@/hooks/use-feature-limit';
+import { useUser } from '@/hooks/use-user';
+import { useChartData } from '@/lib/insights-helpers';
+import { NextPageWithLayout } from '@/lib/page';
 import {
   FieldMatch,
   GraphQLTypeCategory,
@@ -91,44 +61,35 @@ import {
   mapGraphQLType,
   searchSchema,
   useParseSchema,
-} from "@/lib/schema-helpers";
-import { cn } from "@/lib/utils";
-import { useQuery } from "@connectrpc/connect-query";
+} from '@/lib/schema-helpers';
+import { cn } from '@/lib/utils';
+import { useQuery } from '@connectrpc/connect-query';
 import {
   ChevronUpDownIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
   LockClosedIcon,
   XMarkIcon,
-} from "@heroicons/react/24/outline";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+} from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getFederatedGraphSDLByName,
   getFieldUsage,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { sentenceCase } from "change-case";
-import { CommandLoading, useCommandState } from "cmdk";
-import { formatISO } from "date-fns";
-import { GraphQLSchema, buildASTSchema, parse } from "graphql";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import {
-  Dispatch,
-  SetStateAction,
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { MdOutlineFeaturedPlayList } from "react-icons/md";
-import { PiGraphLight } from "react-icons/pi";
-import { Line, LineChart, ResponsiveContainer } from "recharts";
-import { useDebounce } from "use-debounce";
-import { useWorkspace } from "@/hooks/use-workspace";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { sentenceCase } from 'change-case';
+import { CommandLoading, useCommandState } from 'cmdk';
+import { formatISO } from 'date-fns';
+import { GraphQLSchema, buildASTSchema, parse } from 'graphql';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { Dispatch, SetStateAction, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { MdOutlineFeaturedPlayList } from 'react-icons/md';
+import { PiGraphLight } from 'react-icons/pi';
+import { Line, LineChart, ResponsiveContainer } from 'recharts';
+import { useDebounce } from 'use-debounce';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 const fallback = buildASTSchema(parse(`type Query { dummy: String! }`));
 
@@ -136,21 +97,15 @@ const ExplorerContext = createContext<{
   schemaVersionId: string;
   ast: GraphQLSchema;
 }>({
-  schemaVersionId: "",
+  schemaVersionId: '',
   ast: fallback,
 });
 
-const TypeLink = ({
-  name,
-  isHeading = false,
-}: {
-  name: string;
-  isHeading?: boolean;
-}) => {
+const TypeLink = ({ name, isHeading = false }: { name: string; isHeading?: boolean }) => {
   const { ast } = useContext(ExplorerContext);
 
   const router = useRouter();
-  const cleanName = name.replace(/[\[\]!: ]/g, "");
+  const cleanName = name.replace(/[\[\]!: ]/g, '');
   const category = getCategoryForType(ast, cleanName);
 
   if (!category) {
@@ -170,12 +125,9 @@ const TypeLink = ({
       }}
     >
       <span
-        className={cn(
-          "font-semibold text-primary underline-offset-2 hover:underline",
-          {
-            "text-xl text-foreground": isHeading,
-          },
-        )}
+        className={cn('font-semibold text-primary underline-offset-2 hover:underline', {
+          'text-xl text-foreground': isHeading,
+        })}
       >
         {name}
       </span>
@@ -183,17 +135,15 @@ const TypeLink = ({
   );
 };
 
-const FieldUsageColumn = ({
-  fieldName,
-  typename,
-}: {
-  typename: string;
-  fieldName: string;
-}) => {
+const FieldUsageColumn = ({ fieldName, typename }: { typename: string; fieldName: string }) => {
   const { range, dateRange } = useAnalyticsQueryState();
   const graph = useContext(GraphContext);
   const router = useRouter();
   const featureFlagName = router.query.featureFlag as string;
+  const { ast } = useContext(ExplorerContext);
+
+  const category = getCategoryForType(ast, typename);
+  const isInput = category === 'inputs';
 
   const { data: usageData } = useQuery(
     getFieldUsage,
@@ -208,6 +158,7 @@ const FieldUsageColumn = ({
         end: formatISO(dateRange.end),
       },
       featureFlagName,
+      isInput,
     },
     {
       enabled: !!graph?.graph?.name,
@@ -237,19 +188,15 @@ const FieldUsageColumn = ({
   );
 };
 
-const Fields = (props: {
-  typename: string;
-  category: GraphQLTypeCategory;
-  fields: ParsedGraphQLField[];
-}) => {
+const Fields = (props: { typename: string; category: GraphQLTypeCategory; fields: ParsedGraphQLField[] }) => {
   const router = useRouter();
 
   const openUsage = (fieldName: string) => {
     const query: Record<string, string> = {};
-    if (props.category === "unions") {
+    if (props.category === 'unions') {
       query.showUsage = fieldName;
     } else {
-      query.showUsage = `${props.typename || "Query"}.${fieldName}`;
+      query.showUsage = `${props.typename || 'Query'}.${fieldName}`;
     }
 
     router.replace({
@@ -263,22 +210,14 @@ const Fields = (props: {
 
   const fieldName = router.query.fieldName as string;
   const filteredFields = useMemo(() => {
-    return props.fields.filter((f) =>
-      fieldName ? f.name === fieldName : true,
-    );
+    return props.fields.filter((f) => (fieldName ? f.name === fieldName : true));
   }, [fieldName, props.fields]);
 
   const hasArgs = filteredFields.some((f) => !!f.args);
   const hasDetails = filteredFields.some(
-    (f) =>
-      !!f.description ||
-      !!f.deprecationReason ||
-      f.authenticated ||
-      !f.requiresScopes,
+    (f) => !!f.description || !!f.deprecationReason || f.authenticated || !f.requiresScopes,
   );
-  const hasUsage = !(["scalars", "enums"] as GraphQLTypeCategory[]).includes(
-    props.category,
-  );
+  const hasUsage = !(['scalars', 'enums'] as GraphQLTypeCategory[]).includes(props.category);
 
   const parentRef = useRef<HTMLTableElement>(null);
   const count = filteredFields.length;
@@ -287,8 +226,7 @@ const Fields = (props: {
     getScrollElement: () => parentRef.current,
     estimateSize: () => 300,
     measureElement:
-      typeof window !== "undefined" &&
-      navigator.userAgent.indexOf("Firefox") === -1
+      typeof window !== 'undefined' && navigator.userAgent.indexOf('Firefox') === -1
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
     overscan: 5,
@@ -300,27 +238,11 @@ const Fields = (props: {
       <Table className="min-w-[1150px] lg:min-w-full">
         <TableHeader className="sticky top-0 z-10 bg-background">
           <TableRow>
-            <TableHead
-              className={cn(
-                "w-3/12",
-                router.query.category !== "deprecated" && "w-4/12",
-              )}
-            >
-              Field
-            </TableHead>
+            <TableHead className={cn('w-3/12', router.query.category !== 'deprecated' && 'w-4/12')}>Field</TableHead>
             {(hasArgs || hasDetails) && (
-              <TableHead
-                className={cn(
-                  "w-5/2",
-                  router.query.category !== "deprecated" && "w-6/12",
-                )}
-              >
-                Details
-              </TableHead>
+              <TableHead className={cn('w-5/2', router.query.category !== 'deprecated' && 'w-6/12')}>Details</TableHead>
             )}
-            {router.query.category === "deprecated" && (
-              <TableHead className="w-2/12">Requests</TableHead>
-            )}
+            {router.query.category === 'deprecated' && <TableHead className="w-2/12">Requests</TableHead>}
             {hasUsage && <TableHead />}
           </TableRow>
         </TableHeader>
@@ -334,10 +256,7 @@ const Fields = (props: {
             const field = filteredFields[virtualRow.index];
             const fieldHasArgs = !!field.args;
             const fieldHasDetails =
-              !!field.description ||
-              !!field.deprecationReason ||
-              field.authenticated ||
-              !!field.requiresScopes;
+              !!field.description || !!field.deprecationReason || field.authenticated || !!field.requiresScopes;
             return (
               <TableRow
                 className="group absolute flex w-full py-1 even:bg-secondary/20 hover:bg-secondary/40"
@@ -350,16 +269,16 @@ const Fields = (props: {
               >
                 <TableCell
                   className={cn(
-                    "my-1.5 w-3/12 flex-shrink-0 align-top font-semibold",
-                    router.query.category !== "deprecated" && "w-4/12",
+                    'my-1.5 w-3/12 flex-shrink-0 align-top font-semibold',
+                    router.query.category !== 'deprecated' && 'w-4/12',
                   )}
                 >
                   <p className="flex flex-wrap items-center gap-x-1 truncate">
-                    {props.category !== "unions" ? (
+                    {props.category !== 'unions' ? (
                       <button
                         disabled={!hasUsage}
                         onClick={() => openUsage(field.name)}
-                        className={cn(hasUsage && "hover:underline")}
+                        className={cn(hasUsage && 'hover:underline')}
                       >
                         {field.name}
                       </button>
@@ -370,28 +289,17 @@ const Fields = (props: {
                   </p>
                 </TableCell>
                 {(fieldHasDetails || fieldHasArgs) && (
-                  <TableCell
-                    className={cn(
-                      "my-1.5 w-5/12",
-                      router.query.category !== "deprecated" && "w-6/12",
-                    )}
-                  >
+                  <TableCell className={cn('my-1.5 w-5/12', router.query.category !== 'deprecated' && 'w-6/12')}>
                     <div
-                      className={cn("flex flex-col", {
-                        "gap-y-4":
-                          fieldHasDetails &&
-                          field.args &&
-                          field.args.length > 0,
+                      className={cn('flex flex-col', {
+                        'gap-y-4': fieldHasDetails && field.args && field.args.length > 0,
                       })}
                     >
-                      {(!field.args || field.args?.length === 0) &&
-                        !fieldHasDetails && <span>-</span>}
+                      {(!field.args || field.args?.length === 0) && !fieldHasDetails && <span>-</span>}
                       {fieldHasDetails && (
                         <div className="flex flex-col gap-y-4">
                           {field.description && (
-                            <p className="text-muted-foreground group-hover:text-current">
-                              {field.description}
-                            </p>
+                            <p className="text-muted-foreground group-hover:text-current">{field.description}</p>
                           )}
                           <DeprecatedBadge reason={field.deprecationReason} />
                           <AuthenticatedBadge
@@ -405,17 +313,10 @@ const Fields = (props: {
                         <div className="flex flex-col gap-y-2">
                           {field.args.map((arg) => {
                             return (
-                              <div
-                                key={arg.name}
-                                className="flex flex-wrap items-center gap-x-1"
-                              >
+                              <div key={arg.name} className="flex flex-wrap items-center gap-x-1">
                                 <Tooltip
                                   delayDuration={200}
-                                  open={
-                                    !arg.description && !arg.deprecationReason
-                                      ? false
-                                      : undefined
-                                  }
+                                  open={!arg.description && !arg.deprecationReason ? false : undefined}
                                 >
                                   <TooltipTrigger>
                                     <Badge variant="secondary">
@@ -428,12 +329,8 @@ const Fields = (props: {
                                   <TooltipPortal>
                                     <TooltipContent>
                                       <div className="flex w-96 flex-col gap-y-4">
-                                        {arg.description && (
-                                          <p>{arg.description}</p>
-                                        )}
-                                        <DeprecatedBadge
-                                          reason={arg.deprecationReason}
-                                        />
+                                        {arg.description && <p>{arg.description}</p>}
+                                        <DeprecatedBadge reason={arg.deprecationReason} />
                                       </div>
                                     </TooltipContent>
                                   </TooltipPortal>
@@ -448,22 +345,14 @@ const Fields = (props: {
                     </div>
                   </TableCell>
                 )}
-                {router.query.category === "deprecated" && (
+                {router.query.category === 'deprecated' && (
                   <TableCell className="w-2/12 flex-shrink-0">
-                    <FieldUsageColumn
-                      fieldName={field.name}
-                      typename={props.typename}
-                    />
+                    <FieldUsageColumn fieldName={field.name} typename={props.typename} />
                   </TableCell>
                 )}
                 {hasUsage && (
                   <TableCell className="flex-shrink-0 text-right align-top">
-                    <Button
-                      onClick={() => openUsage(field.name)}
-                      variant="ghost"
-                      size="sm"
-                      className="table-action"
-                    >
+                    <Button onClick={() => openUsage(field.name)} variant="ghost" size="sm" className="table-action">
                       View usage
                     </Button>
                   </TableCell>
@@ -474,9 +363,7 @@ const Fields = (props: {
         </TableBody>
       </Table>
       {filteredFields.length === 0 && (
-        <div className="my-4 text-center text-sm text-muted-foreground">
-          No fields found
-        </div>
+        <div className="my-4 text-center text-sm text-muted-foreground">No fields found</div>
       )}
     </TableWrapper>
   );
@@ -515,17 +402,13 @@ const Type = (props: {
                 {props.name}
               </h3>
               {props.interfaces && props.interfaces.length > 0 && (
-                <div className="font-normal text-muted-foreground">
-                  implements
-                </div>
+                <div className="font-normal text-muted-foreground">implements</div>
               )}
               {props.interfaces &&
                 props.interfaces.map((t, index) => (
                   <div key={index} className="flex items-center gap-x-2">
                     <TypeLink name={t} isHeading />
-                    {index !== props.interfaces!.length - 1 && (
-                      <p className="font-normal text-muted-foreground">&</p>
-                    )}
+                    {index !== props.interfaces!.length - 1 && <p className="font-normal text-muted-foreground">&</p>}
                   </div>
                 ))}
             </div>
@@ -546,7 +429,9 @@ const Type = (props: {
 
             {props.requiresScopes?.length && (
               <AuthenticatedScopes isType scopes={props.requiresScopes} asChild>
-                <button type="button" className={badgeVariants({ className: "w-max" })}>View scopes</button>
+                <button type="button" className={badgeVariants({ className: 'w-max' })}>
+                  View scopes
+                </button>
               </AuthenticatedScopes>
             )}
           </div>
@@ -562,9 +447,7 @@ const Type = (props: {
           <div className="flex w-full max-w-lg items-center gap-x-2 rounded-md border border-dashed px-2 py-1.5 text-sm lg:w-auto lg:max-w-none">
             <div>Filter:</div>
             <Badge variant="muted" className="w-full overflow-hidden">
-              <p className="w-full overflow-hidden truncate">
-                {router.query.fieldName}
-              </p>
+              <p className="w-full overflow-hidden truncate">{router.query.fieldName}</p>
             </Badge>
           </div>
           <Button
@@ -585,25 +468,13 @@ const Type = (props: {
         </div>
       )}
       <div className="mt-6 h-4/5 flex-1">
-        {props.fields && (
-          <Fields
-            typename={props.name}
-            category={props.category}
-            fields={props.fields}
-          />
-        )}
+        {props.fields && <Fields typename={props.name} category={props.category} fields={props.fields} />}
       </div>
     </div>
   );
 };
 
-const TypeWrapper = ({
-  typename,
-  category,
-}: {
-  typename: string;
-  category: GraphQLTypeCategory;
-}) => {
+const TypeWrapper = ({ typename, category }: { typename: string; category: GraphQLTypeCategory }) => {
   const router = useRouter();
 
   const { ast } = useContext(ExplorerContext);
@@ -617,8 +488,7 @@ const TypeWrapper = ({
     getScrollElement: () => parentRef.current,
     estimateSize: () => 60,
     measureElement:
-      typeof window !== "undefined" &&
-      navigator.userAgent.indexOf("Firefox") === -1
+      typeof window !== 'undefined' && navigator.userAgent.indexOf('Firefox') === -1
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
     overscan: 5,
@@ -632,7 +502,7 @@ const TypeWrapper = ({
         query: {
           ...router.query,
           showUsage: type,
-          isNamedType: category !== "objects",
+          isNamedType: category !== 'objects',
         },
       });
     };
@@ -649,12 +519,8 @@ const TypeWrapper = ({
 
     return (
       <div className="mt-2 flex h-[90%] flex-col">
-        <h3 className="text-lg font-semibold tracking-tight">
-          {sentenceCase(category)}
-        </h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {getCategoryDescription(category)}
-        </p>
+        <h3 className="text-lg font-semibold tracking-tight">{sentenceCase(category)}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{getCategoryDescription(category)}</p>
         <div className="mt-6 h-full">
           <TableWrapper ref={parentRef} className="max-h-full">
             <Table className="min-w-[1150px] lg:min-w-full">
@@ -688,7 +554,7 @@ const TypeWrapper = ({
                         <TypeLink name={l.name} />
                       </TableCell>
                       <TableCell className="my-1.5 w-5/12 text-muted-foreground group-hover:text-current">
-                        {l.description || "-"}
+                        {l.description || '-'}
                         <AuthenticatedBadge
                           isType
                           authenticated={directives.authenticated}
@@ -696,12 +562,7 @@ const TypeWrapper = ({
                         />
                       </TableCell>
                       <TableCell className="w-3/12 flex-shrink-0 text-right align-top">
-                        <Button
-                          onClick={() => openUsage(l.name)}
-                          variant="ghost"
-                          size="sm"
-                          className="table-action"
-                        >
+                        <Button onClick={() => openUsage(l.name)} variant="ghost" size="sm" className="table-action">
                           View usage
                         </Button>
                       </TableCell>
@@ -716,7 +577,7 @@ const TypeWrapper = ({
     );
   }
 
-  const astType = ast.getType(typename || "Query");
+  const astType = ast.getType(typename || 'Query');
 
   if (!astType) {
     return (
@@ -763,7 +624,11 @@ const DeprecatedBadge = ({ reason }: { reason: string | undefined | null }) => {
   );
 };
 
-const AuthenticatedBadge = ({ isType, authenticated, requiresScopes }: {
+const AuthenticatedBadge = ({
+  isType,
+  authenticated,
+  requiresScopes,
+}: {
   isType: boolean;
   authenticated?: boolean;
   requiresScopes?: string[][];
@@ -797,17 +662,17 @@ const AuthenticatedScopes = ({
   return (
     <Popover>
       <PopoverTrigger asChild={asChild}>
-        {children
-          ? children
-          : (
-            <Button variant="link" size="sm" className="h-auto p-0">
-              View scopes
-            </Button>
-          )}
+        {children ? (
+          children
+        ) : (
+          <Button variant="link" size="sm" className="h-auto p-0">
+            View scopes
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent className="px-0">
         <div className="mb-3 border-b border-border px-4 pb-3">
-          The following scope(s) are required to access this {isType ? "type" : "field"}:
+          The following scope(s) are required to access this {isType ? 'type' : 'field'}:
         </div>
 
         {scopes
@@ -817,9 +682,7 @@ const AuthenticatedScopes = ({
               {i > 0 && (
                 <div className="relative flex items-center py-2 text-xs">
                   <div className="flex-grow border-t border-border"></div>
-                  <span className="mx-4 flex-shrink text-muted-foreground">
-                    OR
-                  </span>
+                  <span className="mx-4 flex-shrink text-muted-foreground">OR</span>
                   <div className="flex-grow border-t border-border"></div>
                 </div>
               )}
@@ -828,8 +691,7 @@ const AuthenticatedScopes = ({
                   s[0]
                 ) : (
                   <>
-                    {s.slice(0, -1).join(", ")}{" "}
-                    <span className="font-semibold">AND</span> {s[s.length - 1]}
+                    {s.slice(0, -1).join(', ')} <span className="font-semibold">AND</span> {s[s.length - 1]}
                   </>
                 )}
               </div>
@@ -853,11 +715,11 @@ const SearchDescription = ({
     return null;
   }
 
-  const [category, index, _] = activeValue?.split("-");
+  const [category, index, _] = activeValue?.split('-');
   const matchingType = results.types[Number(index)];
   const type = matchingType?.type;
 
-  const [fieldIndex] = activeValue?.split(".")?.map((v) => v.trim());
+  const [fieldIndex] = activeValue?.split('.')?.map((v) => v.trim());
   const field = results.fields[Number(fieldIndex)]?.field;
   const parsedField = results.fields[Number(fieldIndex)]?.parsed;
 
@@ -867,9 +729,7 @@ const SearchDescription = ({
         <>
           <Badge className="w-max">{category}</Badge>
           <p className="mt-4 break-words text-sm text-muted-foreground">
-            {type.description || (
-              <span className="italic">No description provided</span>
-            )}
+            {type.description || <span className="italic">No description provided</span>}
           </p>
           <AuthenticatedBadge
             isType
@@ -881,9 +741,7 @@ const SearchDescription = ({
         <div>
           <div className="flex flex-col gap-y-4 text-sm">
             <p className="break-words text-muted-foreground">
-              {field.description || (
-                <span className="italic">No description provided</span>
-              )}
+              {field.description || <span className="italic">No description provided</span>}
             </p>
             <DeprecatedBadge reason={field.deprecationReason} />
             {parsedField && (
@@ -896,36 +754,28 @@ const SearchDescription = ({
           </div>
         </div>
       ) : (
-        <div className="text-sm italic text-muted-foreground">
-          No info available
-        </div>
+        <div className="text-sm italic text-muted-foreground">No info available</div>
       )}
     </div>
   );
 };
 
-const SearchType = ({
-  open,
-  setOpen,
-}: {
-  open: boolean;
-  setOpen: Dispatch<SetStateAction<boolean>>;
-}) => {
+const SearchType = ({ open, setOpen }: { open: boolean; setOpen: Dispatch<SetStateAction<boolean>> }) => {
   const router = useRouter();
   const { ast } = useContext(ExplorerContext);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setOpen((open) => !open);
       }
     };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
   }, [setOpen]);
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [debouncedSearch, { isPending }] = useDebounce(query, 300);
   const debouncing = isPending();
 
@@ -945,17 +795,13 @@ const SearchType = ({
       open={open}
       onOpenChange={setOpen}
     >
-      <CommandInput
-        value={query}
-        onValueChange={setQuery}
-        placeholder="Search for a type"
-      />
+      <CommandInput value={query} onValueChange={setQuery} placeholder="Search for a type" />
       {debouncing && (
         <CommandLoading>
           <Loader className="my-12" />
         </CommandLoading>
       )}
-      <div className={cn("flex divide-x", debouncing && "hidden")}>
+      <div className={cn('flex divide-x', debouncing && 'hidden')}>
         <CommandList className="scrollbar-custom w-full">
           <CommandEmpty>No results found</CommandEmpty>
           <CommandGroup heading="Types">
@@ -986,10 +832,7 @@ const SearchType = ({
                 <CommandItem
                   onSelect={() => {
                     const newQuery = { ...router.query };
-                    newQuery.category = getCategoryForType(
-                      ast,
-                      f.type.name,
-                    ) as string;
+                    newQuery.category = getCategoryForType(ast, f.type.name) as string;
                     newQuery.typename = f.type.name;
                     newQuery.fieldName = f.field.name;
                     setOpen(false);
@@ -1000,8 +843,7 @@ const SearchType = ({
                   key={f.type.name + f.field.name + i}
                   value={`${i} . ${f.type.name} . ${f.field.name}`}
                 >
-                  <span className="text-primary">{f.type.name}</span>.
-                  {f.field.name}
+                  <span className="text-primary">{f.type.name}</span>.{f.field.name}
                 </CommandItem>
               );
             })}
@@ -1013,9 +855,7 @@ const SearchType = ({
         <>
           <Separator />
           <div className="p-2 text-end text-xs text-muted-foreground">
-            {totalResults >= 100
-              ? "Showing first 100 results"
-              : `Found ${totalResults} results`}
+            {totalResults >= 100 ? 'Showing first 100 results' : `Found ${totalResults} results`}
           </div>
         </>
       )}
@@ -1031,8 +871,8 @@ export const GraphSelector = () => {
   const schemaType = router.query.schemaType as string;
 
   const fullPath = router.asPath;
-  const pathWithHash = fullPath.split("?")[0];
-  const pathname = pathWithHash.split("#")[0];
+  const pathWithHash = fullPath.split('?')[0];
+  const pathname = pathWithHash.split('#')[0];
 
   const applyParams = useApplyParams();
   const featureFlags =
@@ -1045,8 +885,8 @@ export const GraphSelector = () => {
 
   const activeGraphWithSDL = {
     title: activeFeatureFlag || graphName,
-    targetId: graphData?.graph?.targetId ?? "",
-    routingUrl: graphData?.graph?.routingURL ?? "",
+    targetId: graphData?.graph?.targetId ?? '',
+    routingUrl: graphData?.graph?.routingURL ?? '',
   };
 
   if (featureFlags.length > 0) {
@@ -1058,18 +898,12 @@ export const GraphSelector = () => {
           asChild
         >
           <div className="flex items-center justify-center">
-            <Button
-              className="flex w-[220px] text-sm"
-              variant="outline"
-              asChild
-            >
+            <Button className="flex w-[220px] text-sm" variant="outline" asChild>
               <div className="flex justify-between">
                 <div className="flex">
-                  <p className="max-w-[120px] truncate">
-                    {activeGraphWithSDL.title}
-                  </p>
+                  <p className="max-w-[120px] truncate">{activeGraphWithSDL.title}</p>
                   <Badge variant="secondary" className="ml-2">
-                    {schemaType === "router" ? "router" : "client"}
+                    {schemaType === 'router' ? 'router' : 'client'}
                   </Badge>
                 </div>
                 <ChevronUpDownIcon className="h-4 w-4" />
@@ -1083,18 +917,12 @@ export const GraphSelector = () => {
               <PiGraphLight className="h-3 w-3" /> Graph
             </DropdownMenuLabel>
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                {graphData?.graph?.name}
-              </DropdownMenuSubTrigger>
+              <DropdownMenuSubTrigger>{graphData?.graph?.name}</DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent>
                   <DropdownMenuRadioGroup
                     onValueChange={(query) => router.push(pathname + query)}
-                    value={`${
-                      !activeFeatureFlag
-                        ? `?schemaType=${schemaType}`
-                        : undefined
-                    }`}
+                    value={`${!activeFeatureFlag ? `?schemaType=${schemaType}` : undefined}`}
                   >
                     <DropdownMenuRadioItem
                       className="w-[150px] items-center justify-between pl-2"
@@ -1128,9 +956,7 @@ export const GraphSelector = () => {
                       <DropdownMenuSubContent>
                         <DropdownMenuRadioGroup
                           value={`?featureFlag=${activeFeatureFlag}&schemaType=${schemaType}`}
-                          onValueChange={(query) =>
-                            router.push(pathname + query)
-                          }
+                          onValueChange={(query) => router.push(pathname + query)}
                         >
                           <DropdownMenuRadioItem
                             className="w-[150px] items-center justify-between pl-2"
@@ -1163,17 +989,14 @@ export const GraphSelector = () => {
             schemaType: v,
           });
         }}
-        value={(router.query.schemaType as string) || "client"}
+        value={(router.query.schemaType as string) || 'client'}
       >
         <SelectTrigger className="w-max">
-          <SelectValue>
-            {sentenceCase((router.query.schemaType as string) || "client")}{" "}
-            Schema
-          </SelectValue>
+          <SelectValue>{sentenceCase((router.query.schemaType as string) || 'client')} Schema</SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="client">
-            Client Schema{" "}
+            Client Schema{' '}
             <p className="mt-1 max-w-xs text-xs text-muted-foreground">
               The schema available to the clients and through introspection
             </p>
@@ -1201,19 +1024,16 @@ const Toolbar = ({
   authenticatedTypesCount: number;
 }) => {
   const router = useRouter();
-  const selectedCategory = (router.query.category as string) ?? "query";
+  const selectedCategory = (router.query.category as string) ?? 'query';
   const [open, setOpen] = useState(false);
 
   const { ast } = useContext(ExplorerContext);
 
-  const analyticsRetention = useFeatureLimit("analytics-retention", 7);
+  const analyticsRetention = useFeatureLimit('analytics-retention', 7);
 
   const applyParams = useApplyParams();
   const { range, dateRange } = useAnalyticsQueryState();
-  const onDateRangeChange: DateRangePickerChangeHandler = ({
-    range,
-    dateRange,
-  }) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ range, dateRange }) => {
     if (range) {
       applyParams({
         range: range.toString(),
@@ -1239,11 +1059,7 @@ const Toolbar = ({
       {ast && (
         <>
           <SearchType open={open} setOpen={setOpen} />
-          <Button
-            onClick={() => setOpen(true)}
-            variant="outline"
-            className="gap-x-2 text-muted-foreground shadow-none"
-          >
+          <Button onClick={() => setOpen(true)} variant="outline" className="gap-x-2 text-muted-foreground shadow-none">
             <MagnifyingGlassIcon />
             Search <Kbd>Cmd K</Kbd>
           </Button>
@@ -1257,7 +1073,7 @@ const Toolbar = ({
           if (graphqlRootCategories.includes(category as any)) {
             newQuery.typename = sentenceCase(category);
           } else {
-            delete newQuery["typename"];
+            delete newQuery['typename'];
           }
 
           router.push({
@@ -1266,9 +1082,7 @@ const Toolbar = ({
         }}
       >
         <SelectTrigger className="flex-1 md:w-[200px] md:flex-none xl:hidden">
-          <SelectValue aria-label={selectedCategory}>
-            {sentenceCase(selectedCategory)}
-          </SelectValue>
+          <SelectValue aria-label={selectedCategory}>{sentenceCase(selectedCategory)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
@@ -1319,7 +1133,7 @@ const Toolbar = ({
           </SelectGroup>
         </SelectContent>
       </Select>
-      {selectedCategory === "deprecated" && (
+      {selectedCategory === 'deprecated' && (
         <DatePickerWithRange
           range={range}
           dateRange={dateRange}
@@ -1341,13 +1155,7 @@ const TypesList = ({
   emptyDescription: string;
 }) => {
   if (types.length === 0) {
-    return (
-      <EmptyState
-        icon={<InformationCircleIcon />}
-        title={emptyTitle}
-        description={emptyDescription}
-      />
-    );
+    return <EmptyState icon={<InformationCircleIcon />} title={emptyTitle} description={emptyDescription} />;
   }
 
   return (
@@ -1383,21 +1191,15 @@ const DeprecatedTypes = ({ types }: { types: GraphQLTypeDefinition[] }) => {
   );
 };
 
-const AuthenticatedTypes = ({
-  types,
-  isRouterSchema,
-}: {
-  types: GraphQLTypeDefinition[];
-  isRouterSchema: boolean;
-}) => {
+const AuthenticatedTypes = ({ types, isRouterSchema }: { types: GraphQLTypeDefinition[]; isRouterSchema: boolean }) => {
   return (
     <TypesList
       types={types}
       emptyTitle="No authenticated fields found"
       emptyDescription={
         isRouterSchema
-          ? "You can view all authenticated fields here"
-          : "To view authenticated fields, switch to the router schema"
+          ? 'You can view all authenticated fields here'
+          : 'To view authenticated fields, switch to the router schema'
       }
     />
   );
@@ -1408,43 +1210,44 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const user = useUser();
 
   const organizationSlug = user?.currentOrganization.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const graphName = router.query.slug as string;
-  const selectedCategory = (router.query.category as string) ?? "query";
+  const selectedCategory = (router.query.category as string) ?? 'query';
   const typename = router.query.typename as string;
   const category = router.query.category as GraphQLTypeCategory;
   const featureFlagName = router.query.featureFlag as string;
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getFederatedGraphSDLByName,
-    {
-      name: graphName,
-      namespace,
-      featureFlagName: featureFlagName,
-    },
-  );
+  const { data, isLoading, error, refetch } = useQuery(getFederatedGraphSDLByName, {
+    name: graphName,
+    namespace,
+    featureFlagName: featureFlagName,
+  });
 
   const schemaType = router.query.schemaType as string;
-  const schema =
-    schemaType === "router" ? data?.sdl : data?.clientSchema || data?.sdl;
+  const schema = schemaType === 'router' ? data?.sdl : data?.clientSchema || data?.sdl;
 
   const { ast, doc, isParsing } = useParseSchema(schema);
   const parsedTypes = useMemo(() => (doc ? getParsedTypes(doc) : []), [doc]);
 
-  const typeCounts = useMemo(() => (ast ? getTypeCounts(ast) : undefined), [ast],);
+  const typeCounts = useMemo(() => (ast ? getTypeCounts(ast) : undefined), [ast]);
   const [deprecatedTypesCount, deprecatedTypes] = useMemo(() => getDeprecatedTypes(parsedTypes), [parsedTypes]);
-  const [authenticatedTypesCount, authenticatedTypes] = useMemo(() => getAuthenticatedTypes(parsedTypes), [parsedTypes]);
+  const [authenticatedTypesCount, authenticatedTypes] = useMemo(
+    () => getAuthenticatedTypes(parsedTypes),
+    [parsedTypes],
+  );
 
   const isLoadingAST = isLoading || isParsing;
 
-  let title = "Schema";
+  let title = 'Schema';
   let breadcrumbs = [];
   if (selectedCategory) {
     title = sentenceCase(selectedCategory);
     breadcrumbs.push(
       <Link
         href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?schemaType=${
-          router.query.schemaType || "client"
+          router.query.schemaType || 'client'
         }`}
       >
         Schema
@@ -1458,7 +1261,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
       breadcrumbs.push(
         <Link
           href={`/${organizationSlug}/${namespace}/graph/${graphName}/schema?category=${selectedCategory}&schemaType=${
-            router.query.schemaType || "client"
+            router.query.schemaType || 'client'
           }`}
         >
           {sentenceCase(selectedCategory)}
@@ -1471,7 +1274,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     <ExplorerContext.Provider
       value={{
         ast: ast ?? fallback,
-        schemaVersionId: data?.versionId ?? "",
+        schemaVersionId: data?.versionId ?? '',
       }}
     >
       <GraphPageLayout
@@ -1495,9 +1298,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                   key={category}
                   asChild
                   variant="ghost"
-                  className={cn("justify-start px-3", {
-                    "bg-accent text-accent-foreground":
-                      selectedCategory === category,
+                  className={cn('justify-start px-3', {
+                    'bg-accent text-accent-foreground': selectedCategory === category,
                   })}
                 >
                   <Link
@@ -1513,10 +1315,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                   >
                     {sentenceCase(category)}
                     {typeCounts && (
-                      <Badge
-                        variant="secondary"
-                        className="ml-auto bg-accent/50 px-1.5"
-                      >
+                      <Badge variant="secondary" className="ml-auto bg-accent/50 px-1.5">
                         {typeCounts[category]}
                       </Badge>
                     )}
@@ -1532,9 +1331,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                     key={gType}
                     asChild
                     variant="ghost"
-                    className={cn("justify-start px-3", {
-                      "bg-accent text-accent-foreground":
-                        selectedCategory === gType,
+                    className={cn('justify-start px-3', {
+                      'bg-accent text-accent-foreground': selectedCategory === gType,
                     })}
                   >
                     <Link
@@ -1549,10 +1347,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                     >
                       <span>{sentenceCase(gType)}</span>
                       {typeCounts && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-auto bg-accent/50 px-1.5"
-                        >
+                        <Badge variant="secondary" className="ml-auto bg-accent/50 px-1.5">
                           {typeCounts[gType]}
                         </Badge>
                       )}
@@ -1566,9 +1361,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               <Button
                 asChild
                 variant="ghost"
-                className={cn("justify-start px-3", {
-                  "bg-accent text-accent-foreground":
-                    selectedCategory === "deprecated",
+                className={cn('justify-start px-3', {
+                  'bg-accent text-accent-foreground': selectedCategory === 'deprecated',
                 })}
               >
                 <Link
@@ -1576,17 +1370,14 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                     pathname: `${router.pathname}`,
                     query: {
                       ...router.query,
-                      category: "deprecated",
+                      category: 'deprecated',
                       typename: undefined,
                     },
                   }}
                 >
                   <span>Deprecated</span>
                   {typeCounts && ast && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-auto bg-accent/50 px-1.5"
-                    >
+                    <Badge variant="secondary" className="ml-auto bg-accent/50 px-1.5">
                       {deprecatedTypesCount}
                     </Badge>
                   )}
@@ -1596,9 +1387,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               <Button
                 asChild
                 variant="ghost"
-                className={cn("justify-start px-3", {
-                  "bg-accent text-accent-foreground":
-                    selectedCategory === "authenticated",
+                className={cn('justify-start px-3', {
+                  'bg-accent text-accent-foreground': selectedCategory === 'authenticated',
                 })}
               >
                 <Link
@@ -1606,17 +1396,14 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                     pathname: `${router.pathname}`,
                     query: {
                       ...router.query,
-                      category: "authenticated",
+                      category: 'authenticated',
                       typename: undefined,
                     },
                   }}
                 >
                   <span>Authentication</span>
                   {typeCounts && ast && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-auto bg-accent/50 px-1.5"
-                    >
+                    <Badge variant="secondary" className="ml-auto bg-accent/50 px-1.5">
                       {authenticatedTypesCount}
                     </Badge>
                   )}
@@ -1626,9 +1413,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
           </div>
           <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin lg:px-8">
             {isLoadingAST && <Loader fullscreen />}
-            {!isLoadingAST &&
-              data?.response?.code === EnumStatusCode.ERR_NOT_FOUND &&
-              !schema && <EmptySchema />}
+            {!isLoadingAST && data?.response?.code === EnumStatusCode.ERR_NOT_FOUND && !schema && <EmptySchema />}
             {!isLoadingAST && error && (
               <EmptyState
                 icon={<ExclamationTriangleIcon />}
@@ -1637,19 +1422,13 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                 actions={<Button onClick={() => refetch()}>Retry</Button>}
               />
             )}
-            {ast && selectedCategory === "deprecated" && (
-              <DeprecatedTypes types={deprecatedTypes} />
+            {ast && selectedCategory === 'deprecated' && <DeprecatedTypes types={deprecatedTypes} />}
+            {ast && selectedCategory === 'authenticated' && (
+              <AuthenticatedTypes types={authenticatedTypes} isRouterSchema={schemaType === 'router'} />
             )}
-            {ast && selectedCategory === "authenticated" && (
-              <AuthenticatedTypes
-                types={authenticatedTypes}
-                isRouterSchema={schemaType === "router"}
-              />
+            {ast && !['deprecated', 'authenticated'].includes(selectedCategory) && (
+              <TypeWrapper typename={typename} category={category} />
             )}
-            {ast &&
-              !["deprecated", "authenticated"].includes(selectedCategory) && (
-                <TypeWrapper typename={typename} category={category} />
-              )}
             <FieldUsageSheet />
           </div>
         </div>
@@ -1660,7 +1439,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
 
 SchemaExplorerPage.getLayout = (page) =>
   getGraphLayout(page, {
-    title: "Schema Explorer",
+    title: 'Schema Explorer',
   });
 
 export default SchemaExplorerPage;

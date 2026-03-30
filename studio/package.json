@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.148.0",
+  "version": "0.163.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -17,7 +17,8 @@
     "lint": "next lint",
     "test": "vitest run --reporter=default --reporter=hanging-process",
     "test:coverage": "vitest run --reporter=default --reporter=hanging-process --coverage",
-    "lint:fix": "next lint --fix",
+    "lint:fix": "next lint --fix && pnpm format",
+    "format": "prettier -w .",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "pnpm run copy-monaco",
     "postversion": "name=$(jq -r .name package.json); version=$(jq -r .version package.json); gh workflow run image-release.yml -F name=$name -F workingDirectory=studio -F tag=$version -F dockerContext=."
@@ -94,7 +95,7 @@
     "lz-string": "^1.5.0",
     "monaco-editor": "^0.45.0",
     "monaco-graphql": "^1.4.0",
-    "next": "15.4.10",
+    "next": "15.4.11",
     "next-themes": "^0.2.1",
     "posthog-js": "^1.240.6",
     "pretty-bytes": "^6.1.1",
@@ -120,7 +121,7 @@
     "tiptap-markdown": "^0.8.8",
     "use-debounce": "^10.0.0",
     "use-deep-compare-effect": "^1.8.1",
-    "zod": "^3.24.2"
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.9",

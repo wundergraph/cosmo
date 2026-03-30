@@ -7,36 +7,38 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"time"
 
 	"github.com/buger/jsonparser"
-	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
-
-	"github.com/wundergraph/cosmo/router/pkg/config"
-
 	"github.com/jensneuse/abstractlogger"
 	"go.uber.org/zap"
 
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-
-	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
+// Loader translates the protobuf-based router engine configuration into a
+// plan.Configuration consumed by the GraphQL engine planner. It resolves
+// data source factories (HTTP, gRPC, pub/sub) for each subgraph through the
+// FactoryResolver and maps field configs, type configs, federation metadata,
+// and cost configs into the planner's internal representation.
 type Loader struct {
 	ctx               context.Context
 	resolver          FactoryResolver
 	subscriptionHooks subscriptionHooks
-	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
-	includeInfo bool
-	logger      *zap.Logger
+	includeInfo       bool
+	logger            *zap.Logger
 }
 
 type InstanceData struct {
@@ -51,25 +53,30 @@ type FactoryResolver interface {
 }
 
 type ApiTransportFactory interface {
-	RoundTripper(enableSingleFlight bool, transport http.RoundTripper) http.RoundTripper
+	RoundTripper(transport http.RoundTripper) http.RoundTripper
 	DefaultHTTPProxyURL() *url.URL
 }
 
+// DefaultFactoryResolver is the production FactoryResolver. It creates
+// per-subgraph planner factories backed by HTTP, gRPC, or static transports depending on the
+// subgraph's configuration. When transport is nil (in the plan generator CLI),
+// it produces dummy factories that plan without making network calls.
 type DefaultFactoryResolver struct {
 	static *staticdatasource.Factory[staticdatasource.Configuration]
 	log    *zap.Logger
 
-	engineCtx          context.Context
-	enableSingleFlight bool
-	streamingClient    *http.Client
-	subscriptionClient graphql_datasource.GraphQLSubscriptionClient
+	engineCtx context.Context
 
-	httpClient          *http.Client
 	subgraphHTTPClients map[string]*http.Client
 	connector           *grpcconnector.Connector
 
 	factoryLogger abstractlogger.Logger
 	instanceData  InstanceData
+
+	baseTransport                 http.RoundTripper
+	transportFactory              ApiTransportFactory
+	defaultSubgraphRequestTimeout time.Duration
+	subscriptionClientOptions     []graphql_datasource.Options
 }
 
 func NewDefaultFactoryResolver(
@@ -80,20 +87,10 @@ func NewDefaultFactoryResolver(
 	subgraphTransports map[string]http.RoundTripper,
 	connector *grpcconnector.Connector,
 	log *zap.Logger,
-	enableSingleFlight bool,
 	enableNetPoll bool,
 	instanceData InstanceData,
 ) *DefaultFactoryResolver {
 	transportFactory := NewTransport(transportOptions)
-
-	defaultHTTPClient := &http.Client{
-		Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
-		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
-	}
-
-	streamingClient := &http.Client{
-		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
-	}
 
 	subgraphHTTPClients := map[string]*http.Client{}
 
@@ -105,11 +102,23 @@ func NewDefaultFactoryResolver(
 
 		// make a new http client
 		subgraphClient := &http.Client{
-			Transport: transportFactory.RoundTripper(enableSingleFlight, subgraphTransport),
+			Transport: transportFactory.RoundTripper(subgraphTransport),
 			Timeout:   subgraphOpts.RequestTimeout,
 		}
 
 		subgraphHTTPClients[subgraph] = subgraphClient
+	}
+
+	// Create HTTP clients for subgraphs that have per-subgraph TLS
+	// but no per-subgraph transport options. These use the default request timeout.
+	for subgraph, subgraphTransport := range subgraphTransports {
+		if _, exists := subgraphHTTPClients[subgraph]; !exists {
+			subgraphClient := &http.Client{
+				Transport: transportFactory.RoundTripper(subgraphTransport),
+				Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
+			}
+			subgraphHTTPClients[subgraph] = subgraphClient
+		}
 	}
 
 	var factoryLogger abstractlogger.Logger
@@ -143,26 +152,18 @@ func NewDefaultFactoryResolver(
 		}
 	}
 
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		defaultHTTPClient,
-		streamingClient,
-		ctx,
-		options...,
-	)
-
 	return &DefaultFactoryResolver{
-		static:             &staticdatasource.Factory[staticdatasource.Configuration]{},
-		log:                log,
-		factoryLogger:      factoryLogger,
-		engineCtx:          ctx,
-		enableSingleFlight: enableSingleFlight,
-		streamingClient:    streamingClient,
-		subscriptionClient: subscriptionClient,
-
-		httpClient:          defaultHTTPClient,
-		subgraphHTTPClients: subgraphHTTPClients,
-		connector:           connector,
-		instanceData:        instanceData,
+		static:                        &staticdatasource.Factory[staticdatasource.Configuration]{},
+		log:                           log,
+		factoryLogger:                 factoryLogger,
+		engineCtx:                     ctx,
+		subgraphHTTPClients:           subgraphHTTPClients,
+		connector:                     connector,
+		instanceData:                  instanceData,
+		baseTransport:                 baseTransport,
+		transportFactory:              transportFactory,
+		defaultSubgraphRequestTimeout: transportOptions.SubgraphTransportOptions.RequestTimeout,
+		subscriptionClientOptions:     options,
 	}
 }
 
@@ -176,11 +177,44 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 		}
 	}
 
-	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
-		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, d.subscriptionClient)
+	// we're creating one http client per subgraph
+	// learn more:
+	// https://goperf.dev/02-networking/efficient-net-use/?h=http.client#dont-share-httpclient-across-multiple-hosts
+
+	if d.transportFactory == nil || d.baseTransport == nil {
+		// dummy implementation for plan generator that doesn't make requests
+		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
+			http.DefaultClient,
+			http.DefaultClient,
+			d.engineCtx,
+			d.subscriptionClientOptions...,
+		)
+		return graphql_datasource.NewFactory(d.engineCtx, http.DefaultClient, subscriptionClient)
 	}
 
-	return graphql_datasource.NewFactory(d.engineCtx, d.httpClient, d.subscriptionClient)
+	defaultHTTPClient := &http.Client{
+		Timeout:   d.defaultSubgraphRequestTimeout,
+		Transport: d.transportFactory.RoundTripper(d.baseTransport),
+	}
+
+	streamingClient := &http.Client{
+		Transport: d.transportFactory.RoundTripper(d.baseTransport),
+	}
+
+	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
+		defaultHTTPClient,
+		streamingClient,
+		d.engineCtx,
+		d.subscriptionClientOptions...,
+	)
+
+	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
+		// it's intentional that we're not using the subgraphClient for subscriptions
+		// custom subgraph clients are intended to be used for custom timeouts, which is not relevant for subscriptions
+		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, subscriptionClient)
+	}
+
+	return graphql_datasource.NewFactory(d.engineCtx, defaultHTTPClient, subscriptionClient)
 }
 
 func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFactory[staticdatasource.Configuration], err error) {
@@ -216,6 +250,7 @@ type RouterEngineConfiguration struct {
 	Events                   config.EventsConfiguration
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	StreamMetricStore        rmetric.StreamMetricStore
+	CostControl              *config.CostControl
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
@@ -271,6 +306,11 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	return nil
 }
 
+// Load converts the protobuf engine configuration into a plan.Configuration.
+// For each data source it resolves the appropriate planner factory via the
+// FactoryResolver (GraphQL, static, or pub/sub) and assembles field configs,
+// type configs, and federation metadata. It returns the plan configuration
+// along with any pub/sub providers that need lifecycle management.
 func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, []pubsub_datasource.Provider, error) {
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
@@ -541,6 +581,7 @@ func (l *Loader) subgraphName(subgraphs []*nodev1.Subgraph, dataSourceID string)
 	return ""
 }
 
+// dataSourceMetaData converts a protobuf configuration into the planner's DataSourceMetadata.
 func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.DataSourceMetadata {
 	var d plan.DirectiveConfigurations = make([]plan.DirectiveConfiguration, 0, len(in.Directives))
 
@@ -555,6 +596,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			EntityInterfaces: make([]plan.EntityInterfaceConfiguration, 0, len(in.EntityInterfaces)),
 			InterfaceObjects: make([]plan.EntityInterfaceConfiguration, 0, len(in.InterfaceObjects)),
 		},
+		CostConfig: plan.NewDataSourceCostConfig(),
 	}
 
 	for _, node := range in.RootNodes {
@@ -636,6 +678,48 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		})
 	}
 
+	// Costs
+	costConfig := in.GetCostConfiguration()
+	if costConfig == nil {
+		return out
+	}
+	for _, fw := range costConfig.GetFieldWeights() {
+		w := &plan.FieldWeight{}
+		if fw.Weight != nil {
+			w.HasWeight = true
+			w.Weight = int(*fw.Weight)
+		}
+		if args := fw.GetArgumentWeights(); len(args) > 0 {
+			w.ArgumentWeights = make(map[string]int, len(args))
+			for k, v := range args {
+				w.ArgumentWeights[k] = int(v)
+			}
+		}
+		coordinate := plan.FieldCoordinate{TypeName: fw.GetTypeName(), FieldName: fw.GetFieldName()}
+		out.CostConfig.Weights[coordinate] = w
+	}
+	for _, ls := range costConfig.GetListSizes() {
+		listSizes := &plan.FieldListSize{
+			SlicingArguments: ls.GetSlicingArguments(),
+			SizedFields:      ls.GetSizedFields(),
+		}
+		if ls.AssumedSize != nil {
+			listSizes.AssumedSize = int(*ls.AssumedSize)
+		}
+		if ls.RequireOneSlicingArgument != nil {
+			listSizes.RequireOneSlicingArgument = *ls.RequireOneSlicingArgument
+		} else {
+			// By default, it is enabled. It should be explicitly disabled.
+			listSizes.RequireOneSlicingArgument = true
+		}
+		coordinate := plan.FieldCoordinate{TypeName: ls.GetTypeName(), FieldName: ls.GetFieldName()}
+		out.CostConfig.ListSizes[coordinate] = listSizes
+	}
+	for k, v := range costConfig.GetTypeWeights() {
+		out.CostConfig.Types[k] = int(v)
+	}
+	// Directives with argument weights are TBD.
+
 	return out
 }
 
@@ -693,14 +777,30 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 	}
 
 	for _, entity := range in.EntityMappings {
-		result.EntityRPCs[entity.TypeName] = append(result.EntityRPCs[entity.TypeName], grpcdatasource.EntityRPCConfig{
+		entityRPCConfig := grpcdatasource.EntityRPCConfig{
 			Key: entity.Key,
 			RPCConfig: grpcdatasource.RPCConfig{
 				RPC:      entity.Rpc,
 				Request:  entity.Request,
 				Response: entity.Response,
 			},
-		})
+		}
+
+		if len(entity.RequiredFieldMappings) > 0 {
+			entityRPCConfig.RequiredFields = make(grpcdatasource.RequiredFieldsRPCMapping, len(entity.RequiredFieldMappings))
+			for _, requiredField := range entity.RequiredFieldMappings {
+				entityRPCConfig.RequiredFields[requiredField.FieldMapping.Original] = grpcdatasource.RequiredFieldsRPCTypeField{
+					TargetName: requiredField.FieldMapping.Mapped,
+					RPCConfig: grpcdatasource.RPCConfig{
+						RPC:      requiredField.Rpc,
+						Request:  requiredField.Request,
+						Response: requiredField.Response,
+					},
+				}
+			}
+		}
+
+		result.EntityRPCs[entity.TypeName] = append(result.EntityRPCs[entity.TypeName], entityRPCConfig)
 	}
 
 	for _, resolve := range in.ResolveMappings {

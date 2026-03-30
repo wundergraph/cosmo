@@ -93,7 +93,8 @@ export type AuditLogAction =
   | 'added'
   | 'removed'
   | 'linked'
-  | 'unlinked';
+  | 'unlinked'
+  | 'recomposed';
 
 export type AuditLogFullAction =
   | 'namespace.created'
@@ -108,13 +109,15 @@ export type AuditLogFullAction =
   | 'graph_token.created'
   | 'graph_token.deleted'
   | 'monograph.created'
-  | 'monograph.updated'
   | 'monograph.deleted'
   | 'monograph.moved'
+  | 'monograph.recomposed'
+  | 'monograph.updated'
   | 'federated_graph.created'
   | 'federated_graph.deleted'
-  | 'federated_graph.updated'
   | 'federated_graph.moved'
+  | 'federated_graph.recomposed'
+  | 'federated_graph.updated'
   | 'subgraph.created'
   | 'subgraph.deleted'
   | 'subgraph.updated'

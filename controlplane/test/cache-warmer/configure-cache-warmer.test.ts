@@ -1,12 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  createTestGroup,
-  createTestRBACEvaluator,
-} from '../../src/core/test-util.js';
+import { afterAllSetup, beforeAllSetup, createTestGroup, createTestRBACEvaluator } from '../../src/core/test-util.js';
 import { SetupTest } from '../test-util.js';
 
 let dbname = '';
@@ -45,6 +40,7 @@ describe('DeleteCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     let configureCacheWarmerResp = await client.configureCacheWarmer({
       namespace: 'default',
@@ -87,8 +83,6 @@ describe('DeleteCacheOperation', (ctx) => {
     expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
     expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(false);
     expect(cacheWarmerConfigResp.maxOperationsCount).toBe(0);
-
-    await server.close();
   });
 
   test('Should not be able to set the max operations count to more than 1000', async (testContext) => {
@@ -99,6 +93,7 @@ describe('DeleteCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     let configureCacheWarmerResp = await client.configureCacheWarmer({
       namespace: 'default',
@@ -139,55 +134,52 @@ describe('DeleteCacheOperation', (ctx) => {
     });
     expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
     expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(false);
-
-    await server.close();
   });
 
-  test.each([
-    'organization-admin',
-    'organization-developer',
-  ])('%s should be able to enable and disable cache warmer', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({
-      dbname,
-      chClient,
-      setupBilling: {
-        plan: 'enterprise',
-      },
-    });
+  test.each(['organization-admin', 'organization-developer'])(
+    '%s should be able to enable and disable cache warmer',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({
+        dbname,
+        chClient,
+        setupBilling: {
+          plan: 'enterprise',
+        },
+      });
+      onTestFinished(() => server.close());
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role })),
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(createTestGroup({ role })),
+      });
 
-    let configureCacheWarmerResp = await client.configureCacheWarmer({
-      namespace: 'default',
-      enableCacheWarmer: true,
-      maxOperationsCount: 100,
-    });
-    expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
+      let configureCacheWarmerResp = await client.configureCacheWarmer({
+        namespace: 'default',
+        enableCacheWarmer: true,
+        maxOperationsCount: 100,
+      });
+      expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
 
-    let cacheWarmerConfigResp = await client.getCacheWarmerConfig({
-      namespace: 'default',
-    });
-    expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(true);
-    expect(cacheWarmerConfigResp.maxOperationsCount).toBe(100);
+      let cacheWarmerConfigResp = await client.getCacheWarmerConfig({
+        namespace: 'default',
+      });
+      expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(true);
+      expect(cacheWarmerConfigResp.maxOperationsCount).toBe(100);
 
-    configureCacheWarmerResp = await client.configureCacheWarmer({
-      namespace: 'default',
-      enableCacheWarmer: false,
-    });
-    expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
+      configureCacheWarmerResp = await client.configureCacheWarmer({
+        namespace: 'default',
+        enableCacheWarmer: false,
+      });
+      expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
 
-    cacheWarmerConfigResp = await client.getCacheWarmerConfig({
-      namespace: 'default',
-    });
-    expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(false);
-
-    await server.close();
-  });
+      cacheWarmerConfigResp = await client.getCacheWarmerConfig({
+        namespace: 'default',
+      });
+      expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(false);
+    },
+  );
 
   test.each([
     'organization-apikey-manager',
@@ -207,6 +199,7 @@ describe('DeleteCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    onTestFinished(() => server.close());
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
@@ -219,7 +212,5 @@ describe('DeleteCacheOperation', (ctx) => {
       maxOperationsCount: 500,
     });
     expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 });

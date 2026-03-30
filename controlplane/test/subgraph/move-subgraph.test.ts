@@ -3,8 +3,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
 import {
   createBaseAndFeatureSubgraph,
-  createNamespace,
-  createSubgraph, DEFAULT_NAMESPACE,
+  DEFAULT_NAMESPACE,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
@@ -21,8 +20,9 @@ describe('Move subgraph tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that a subgraph that forms the base of a feature subgraph cannot be moved', async () => {
+  test('that a subgraph that forms the base of a feature subgraph cannot be moved', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -41,9 +41,8 @@ describe('Move subgraph tests', () => {
       newNamespace: 'prod',
     });
     expect(moveSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(moveSubgraphResponse.response?.details)
-      .toBe('Subgraphs that form the base of one or more feature subgraphs cannot be moved.');
-
-    await server.close();
+    expect(moveSubgraphResponse.response?.details).toBe(
+      'Subgraphs that form the base of one or more feature subgraphs cannot be moved.',
+    );
   });
 });

@@ -35,11 +35,13 @@ describe('Restore Organization', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('should removed queued job and keep organization', async () => {
+  test('should removed queued job and keep organization', async (testContext) => {
     const { client, server, keycloakClient, realm, users, authenticator, queues, blobStorage } = await SetupTest({
       dbname,
       chClient,
     });
+    testContext.onTestFinished(() => server.close());
+
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
@@ -95,6 +97,7 @@ describe('Restore Organization', (ctx) => {
       blobStorage,
       deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
     });
+    testContext.onTestFinished(() => worker.close());
 
     await orgRepo.queueOrganizationDeletion({
       organizationId: org!.id,
@@ -120,9 +123,5 @@ describe('Restore Organization', (ctx) => {
     expect(orgAfterDeletion).not.toBeNull();
 
     expect(blobStorage.keys().includes(graphKey)).toEqual(true);
-
-    await worker.close();
-
-    await server.close();
   });
 });

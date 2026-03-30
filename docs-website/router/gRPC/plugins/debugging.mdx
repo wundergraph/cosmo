@@ -1,0 +1,211 @@
+---
+title: 'Debugging'
+description: 'Debug router plugins using various IDEs and tools'
+sidebarTitle: Debugging
+icon: 'bug'
+---
+
+When developing router plugins, you might need to debug your code to understand its behavior or fix issues. This guide explains how to build plugins in debug mode and attach debuggers using different tools.
+
+## Design Philosophy
+
+When designing the router plugin system, we prioritized providing an excellent developer experience (DX). One of the key reasons we chose a native plugin approach over a scripting solution was the superior debugging capabilities and IDE support. 
+
+Plugins allow developers to:
+- Use full-featured debugging tools
+- Benefit from IDE features like code completion and type checking
+- Leverage existing Go tooling and workflows
+- Get immediate feedback during development
+
+These advantages significantly improve the development process compared to scripting approaches, which often lack comprehensive debugging support and IDE integration.
+
+## Required Tools
+
+The cli command will automatically check for and install the necessary toolchain (like protoc, protoc-gen-go, etc.) when required tools can't be found in the right version on your system.
+
+However, for the best experience, we recommend installing the tools manually. The following table shows the current versions and download links for the required tools:
+
+| Tool | Version | Installation Link |
+|------|---------|---------------|
+| Go | >=1.22.0 (Last 2 versions) | [Releases](https://go.dev/doc/install) |
+| Protocol Buffers (protoc) | ^29.3 | [Releases](https://protobuf.dev/installation/) |
+| protoc-gen-go | ^1.34.2 | [GitHub Releases](https://github.com/protocolbuffers/protobuf-go/releases) |
+| protoc-gen-go-grpc | ^1.5.1 | [GitHub Releases](https://github.com/grpc/grpc-go/releases) |
+| Bun | ^1.2.15 | [GitHub Releases](https://github.com/oven-sh/bun/releases) |
+| Node | ^22.11.0 | [Releases](https://nodejs.org/en/about/previous-releases) |
+
+
+## Building for Debug
+
+To build your plugin with debug information, use the `--debug` flag with the build command:
+
+```bash
+wgc router plugin build --debug ./my-plugin
+```
+
+Based on the language you select the process for debugging is a bit different.
+
+<Tabs>
+<Tab title="Go">
+This will compile the plugin with debug symbols and without optimizations, making it suitable for debugging.
+
+## Debugging with Delve
+
+[Delve](https://github.com/go-delve/delve) is a debugger for Go programs. To debug your plugin with Delve:
+
+1. First, find the process ID (PID) of your router that's running the plugin:
+```bash
+# The process name follows the pattern: <os>_<arch>
+# For example: darwin_arm64, linux_amd64, etc.
+ps aux | grep "$(go env GOOS)_$(go env GOARCH)"
+```
+
+2. Attach Delve to the process:
+```bash
+dlv attach <PID>
+```
+
+3. Set breakpoints in your plugin code:
+```
+(dlv) break src/main.go:42
+```
+
+4. Use Delve commands to debug:
+- `continue` (or `c`): Continue execution
+- `next` (or `n`): Step over
+- `step` (or `s`): Step into
+- `print` (or `p`): Print variable values
+- `vars`: List local variables
+
+## Debugging with GoLand
+
+To debug your plugin in GoLand:
+
+1. Build the plugin with debug mode enabled
+2. In GoLand, go to Run → Attach to Process
+3. Find and select the router process running your plugin
+4. Set breakpoints in your plugin code by clicking the gutter
+5. Use the debug toolbar to:
+   - Step Over (F8)
+   - Step Into (F7)
+   - Resume Program (F9)
+   - View variables in the Debug tool window
+
+## Debugging with VS Code
+
+To debug your plugin in VS Code:
+
+1. Install the Go extension for VS Code
+2. Create a `.vscode/launch.json` file with this configuration:
+3. After running the router, press F5 or click Run → Start Debugging
+4. Select the router process when prompted. The process name follows the pattern: `os_arch`
+5. Set breakpoints by clicking the gutter
+6. Use the debug toolbar or keyboard shortcuts:
+   - F5: Continue
+   - F10: Step Over
+   - F11: Step Into
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach to Router Process",
+            "type": "go",
+            "request": "attach",
+            "mode": "local",
+            "processId": "${command:pickProcess}"
+        }
+    ]
+}
+```
+3. Start debugging:
+   - Press F5 or click Run → Start Debugging
+   - Select the router process when prompted (the process name follows the pattern: `os_arch`)
+   - Set breakpoints by clicking the gutter
+   - Use the debug toolbar or keyboard shortcuts:
+     - F5: Continue
+     - F10: Step Over
+     - F11: Step Into
+
+## Troubleshooting
+
+- If you can't attach to the process, ensure you have the necessary permissions
+- For production environments, make sure to rebuild without the `--debug` flag
+- When debugging fails to hit breakpoints, verify the source code paths match
+- If symbols are missing, confirm you built with the `--debug` flag
+</Tab>
+
+<Tab title="TypeScript">
+When we want to debug a TypeScript plugin we cannot create a bun binary as debugging is not supported, instead when you pass the `--debug` argument, we will copy over all the source and create a thin bash script that acts as a wrapper which mimics the usual binary. Doing this allows us to pass in `--inspect` to bun allowing us to hook into it for debugging.
+
+## Debugging with debug.bun.sh
+When the plugin is started in debug mode, it will create a link that can be accessed to debug your plugin, all in your browser. In order to find the generated URL, you should access `plugin_stderr.log`, which should be inside the `plugin/bin` folder after startup. What you are looking for is text similar to
+
+```
+Inspect in browser:
+  https://debug.bun.sh/#localhost:6499/ai8omlnz82t
+```
+
+All you need to do now is simply go to the above URL and you can start debugging. You can find more info on the Bun web debugger [here](https://bun.com/docs/guides/runtime/web-debugger).
+
+## Debugging with VS Code
+
+To debug your plugin in VS Code:
+
+1. Ensure that you have installed the [Bun VS Code Extension](https://bun.com/guides/runtime/vscode-debugger)
+2. You will need to copy the WebSocket URL from `plugin_stderr.log` which would look like the following, and paste it in the URL in step 3 below.
+
+<Note>
+Bun officially recommends using the web debugger for now as their VS Code support improves.
+</Note>
+
+```
+Listening:
+  ws://localhost:6499/ai8omlnz82t
+```
+
+3. Create a `.vscode/launch.json` file with this configuration (replace the URL with your actual WebSocket URL from step 2):
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "bun",
+            "request": "attach",
+            "name": "Attach To Bun",
+            "url": "ws://localhost:6499/ai8omlnz82t"
+        }
+    ]
+}
+```
+
+4. Start debugging:
+   - Press F5 or click Run → Start Debugging
+   - Set breakpoints by clicking the gutter
+   - Use the debug toolbar or keyboard shortcuts:
+     - F5: Continue
+     - F10: Step Over
+     - F11: Step Into
+
+## Troubleshooting
+
+- If you can't attach to the process, ensure you have the necessary permissions
+- For production environments, make sure to rebuild without the `--debug` flag
+- When debugging fails to hit breakpoints, verify the source code paths match
+- If symbols are missing, confirm you built with the `--debug` flag
+</Tab>
+</Tabs>
+
+## Tips for Effective Debugging
+
+1. **Log Points**: Consider adding log points instead of breakpoints for less intrusive debugging
+2. **Conditional Breakpoints**: Use conditional breakpoints to break only when specific conditions are met
+3. **Watch Expressions**: Set watch expressions to monitor variable values during execution
+
+
+
+<Note>
+Debugging in production environments is not recommended as it can impact performance. Always use debug builds in development environments only.
+</Note> 
+

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -33,6 +33,7 @@ describe('List namespaces', (ctx) => {
     'subgraph-viewer',
   ])('%s should be able to retrieve all namespaces', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     await createNamespace(client, 'prod');
     await createNamespace(client, 'stag');
@@ -48,12 +49,11 @@ describe('List namespaces', (ctx) => {
     expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getNamespacesResponse.namespaces).toBeDefined();
     expect(getNamespacesResponse.namespaces).toHaveLength(4);
-
-    await server.close();
   });
 
-  test('Should be able to retrieve all namespaces when using legacy API key', async () => {
+  test('Should be able to retrieve all namespaces when using legacy API key', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     await createNamespace(client, 'prod');
     await createNamespace(client, 'stag');
@@ -69,176 +69,173 @@ describe('List namespaces', (ctx) => {
     expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getNamespacesResponse.namespaces).toBeDefined();
     expect(getNamespacesResponse.namespaces).toHaveLength(4);
-
-    await server.close();
   });
 
-  test.each([
-    'namespace-admin',
-    'namespace-viewer',
-    'subgraph-admin',
-    'subgraph-publisher',
-    'subgraph-viewer',
-  ])('%s should be able to retrieve only allowed namespaces', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname });
+  test.each(['namespace-admin', 'namespace-viewer', 'subgraph-admin', 'subgraph-publisher', 'subgraph-viewer'])(
+    '%s should be able to retrieve only allowed namespaces',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
-    await createNamespace(client, 'prod');
-    await createNamespace(client, 'stag');
-    await createNamespace(client, 'dev');
+      await createNamespace(client, 'prod');
+      await createNamespace(client, 'stag');
+      await createNamespace(client, 'dev');
 
-    const getNamespaceResponse = await client.getNamespace({ name: 'dev' });
-    expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+      const getNamespaceResponse = await client.getNamespace({ name: 'dev' });
+      expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role,
-        namespaces: [getNamespaceResponse.namespace!.id],
-      })),
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            namespaces: [getNamespaceResponse.namespace!.id],
+          }),
+        ),
+      });
 
-    const getNamespacesResponse = await client.getNamespaces({});
+      const getNamespacesResponse = await client.getNamespaces({});
 
-    expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getNamespacesResponse.namespaces).toBeDefined();
-    expect(getNamespacesResponse.namespaces).toHaveLength(1);
-    expect(getNamespacesResponse.namespaces[0].name).toBe('dev');
+      expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getNamespacesResponse.namespaces).toBeDefined();
+      expect(getNamespacesResponse.namespaces).toHaveLength(1);
+      expect(getNamespacesResponse.namespaces[0].name).toBe('dev');
+    },
+  );
 
-    await server.close();
-  });
+  test.each(['subgraph-admin', 'subgraph-publisher', 'subgraph-viewer'])(
+    '%s should be able to retrieve namespaces for allowed resources',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
-  test.each([
-    'subgraph-admin',
-    'subgraph-publisher',
-    'subgraph-viewer',
-  ])('%s should be able to retrieve namespaces for allowed resources', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname });
+      await createNamespace(client, 'prod');
+      await createNamespace(client, 'stag');
+      await createNamespace(client, 'dev');
 
-    await createNamespace(client, 'prod');
-    await createNamespace(client, 'stag');
-    await createNamespace(client, 'dev');
+      const subgraphName = genID('subgraph');
+      await createSubgraph(client, subgraphName, 'http://localhost:3003/graphql', 'stag');
 
-    const subgraphName = genID('subgraph');
-    await createSubgraph(client, subgraphName, 'http://localhost:3003/graphql', 'stag');
+      const getSubgraphResponse = await client.getSubgraphByName({ name: subgraphName, namespace: 'stag' });
+      expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    const getSubgraphResponse = await client.getSubgraphByName({ name: subgraphName, namespace: 'stag', });
-    expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            resources: [getSubgraphResponse.graph!.targetId],
+          }),
+        ),
+      });
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role,
-        resources: [getSubgraphResponse.graph!.targetId],
-      })),
-    });
+      const getNamespacesResponse = await client.getNamespaces({});
 
-    const getNamespacesResponse = await client.getNamespaces({});
+      expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getNamespacesResponse.namespaces).toBeDefined();
+      expect(getNamespacesResponse.namespaces).toHaveLength(1);
+      expect(getNamespacesResponse.namespaces[0].name).toBe('stag');
+    },
+  );
 
-    expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getNamespacesResponse.namespaces).toBeDefined();
-    expect(getNamespacesResponse.namespaces).toHaveLength(1);
-    expect(getNamespacesResponse.namespaces[0].name).toBe('stag');
+  test.each(['subgraph-admin', 'subgraph-publisher', 'subgraph-viewer'])(
+    '%s should return only `default` when user does not have access to any valid namespace',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
-    await server.close();
-  });
+      await createNamespace(client, 'prod');
+      await createNamespace(client, 'stag');
+      await createNamespace(client, 'dev');
 
-  test.each([
-    'subgraph-admin',
-    'subgraph-publisher',
-    'subgraph-viewer',
-  ])('%s should return only `default` when user does not have access to any valid namespace', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            resources: [randomUUID()],
+          }),
+        ),
+      });
 
-    await createNamespace(client, 'prod');
-    await createNamespace(client, 'stag');
-    await createNamespace(client, 'dev');
+      const getNamespacesResponse = await client.getNamespaces({});
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role,
-        resources: [randomUUID()],
-      })),
-    });
+      expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getNamespacesResponse.namespaces).toBeDefined();
+      expect(getNamespacesResponse.namespaces).toHaveLength(1);
+      expect(getNamespacesResponse.namespaces[0].name).toBe('default');
+    },
+  );
 
-    const getNamespacesResponse = await client.getNamespaces({});
+  test.each(['graph-admin', 'graph-viewer'])(
+    '%s should be able to list namespaces where have been allowed federated graphs',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
-    expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getNamespacesResponse.namespaces).toBeDefined();
-    expect(getNamespacesResponse.namespaces).toHaveLength(1);
-    expect(getNamespacesResponse.namespaces[0].name).toBe('default');
+      const fedGraphName = genID('federated-graph');
 
-    await server.close();
-  });
+      await createNamespace(client, 'prod');
+      await createNamespace(client, 'stag');
+      await createNamespace(client, 'dev');
 
-  test.each([
-    'graph-admin',
-    'graph-viewer',
-  ])('%s should be able to list namespaces where have been allowed federated graphs', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname });
+      await createFederatedGraph(client, fedGraphName, 'stag', [], 'http://localhost:3003/graphql');
 
-    const fedGraphName = genID('federated-graph');
+      const fedGraph = await client.getFederatedGraphByName({ name: fedGraphName, namespace: 'stag' });
+      expect(fedGraph.response?.code).toBe(EnumStatusCode.OK);
 
-    await createNamespace(client, 'prod');
-    await createNamespace(client, 'stag');
-    await createNamespace(client, 'dev');
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            resources: [fedGraph.graph!.targetId],
+          }),
+        ),
+      });
 
-    await createFederatedGraph(client, fedGraphName, 'stag', [], 'http://localhost:3003/graphql');
+      const getNamespacesResponse = await client.getNamespaces({});
 
-    const fedGraph = await client.getFederatedGraphByName({ name: fedGraphName, namespace: 'stag' });
-    expect(fedGraph.response?.code).toBe(EnumStatusCode.OK);
+      expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getNamespacesResponse.namespaces).toBeDefined();
+      expect(getNamespacesResponse.namespaces).toHaveLength(1);
+      expect(getNamespacesResponse.namespaces[0].name).toBe('stag');
+    },
+  );
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role,
-        resources: [fedGraph.graph!.targetId],
-      })),
-    });
+  test.each(['subgraph-admin', 'subgraph-publisher', 'subgraph-viewer'])(
+    '%s should be able to list namespaces where have been allowed subgraphs',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
-    const getNamespacesResponse = await client.getNamespaces({});
+      const subgraphName = genID('subgraph');
 
-    expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getNamespacesResponse.namespaces).toBeDefined();
-    expect(getNamespacesResponse.namespaces).toHaveLength(1);
-    expect(getNamespacesResponse.namespaces[0].name).toBe('stag');
+      await createNamespace(client, 'prod');
+      await createNamespace(client, 'stag');
+      await createNamespace(client, 'dev');
 
-    await server.close();
-  });
+      await createSubgraph(client, subgraphName, 'http://localhost:3003/graphql', 'dev');
 
-  test.each([
-    'subgraph-admin',
-    'subgraph-publisher',
-    'subgraph-viewer',
-  ])('%s should be able to list namespaces where have been allowed subgraphs', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname });
+      const subgraph = await client.getSubgraphByName({ name: subgraphName, namespace: 'dev' });
+      expect(subgraph.response?.code).toBe(EnumStatusCode.OK);
 
-    const subgraphName = genID('subgraph');
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            resources: [subgraph.graph!.targetId],
+          }),
+        ),
+      });
 
-    await createNamespace(client, 'prod');
-    await createNamespace(client, 'stag');
-    await createNamespace(client, 'dev');
+      const getNamespacesResponse = await client.getNamespaces({});
 
-    await createSubgraph(client, subgraphName, 'http://localhost:3003/graphql', 'dev');
-
-    const subgraph = await client.getSubgraphByName({ name: subgraphName, namespace: 'dev' });
-    expect(subgraph.response?.code).toBe(EnumStatusCode.OK);
-
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role,
-        resources: [subgraph.graph!.targetId],
-      })),
-    });
-
-    const getNamespacesResponse = await client.getNamespaces({});
-
-    expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getNamespacesResponse.namespaces).toBeDefined();
-    expect(getNamespacesResponse.namespaces).toHaveLength(1);
-    expect(getNamespacesResponse.namespaces[0].name).toBe('dev');
-
-    await server.close();
-  });
+      expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getNamespacesResponse.namespaces).toBeDefined();
+      expect(getNamespacesResponse.namespaces).toHaveLength(1);
+      expect(getNamespacesResponse.namespaces[0].name).toBe('dev');
+    },
+  );
 });

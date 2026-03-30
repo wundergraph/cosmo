@@ -23,8 +23,7 @@ type UsageTrackerConfig struct {
 func NewUsageTracker(log *zap.Logger, config UsageTrackerConfig) (*UsageTracker, error) {
 	uid, err := uuid.NewUUID()
 	if err != nil {
-		log.Error("failed to create uuid", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to create uuid: %w", err)
 	}
 	tracker := &UsageTracker{
 		log:     log,
@@ -49,8 +48,7 @@ func NewUsageTracker(log *zap.Logger, config UsageTrackerConfig) (*UsageTracker,
 	if config.GraphApiToken != "" {
 		claims, err := jwt.ExtractFederatedGraphTokenClaims(config.GraphApiToken)
 		if err != nil {
-			log.Error("failed to extract claims from graph api token", zap.Error(err))
-			return nil, err
+			return nil, fmt.Errorf("failed to extract claims from graph api token: %w", err)
 		}
 		tracker.organizationID = claims.OrganizationID
 		tracker.federatedGraphID = claims.FederatedGraphID
@@ -61,8 +59,7 @@ func NewUsageTracker(log *zap.Logger, config UsageTrackerConfig) (*UsageTracker,
 	}
 	tracker.client, err = posthog.NewWithConfig("phc_h2Efq192t8Jz2eW14BDRt3I8Vrs2WMd3oQ4KOpMu3xT", cfg)
 	if err != nil {
-		log.Error("failed to create posthog client", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to create posthog client: %w", err)
 	}
 	return tracker, nil
 }
@@ -153,7 +150,7 @@ func (u *UsageTracker) TrackExecutionConfigUsage(usage map[string]any) {
 		DistinctId: u.distinctID,
 	})
 	if err != nil {
-		u.log.Error("failed to track event", zap.Error(err))
+		u.log.Debug("failed to track event", zap.Error(err))
 	}
 }
 
@@ -169,7 +166,7 @@ func (u *UsageTracker) TrackRouterConfigUsage(usage map[string]any) {
 		Properties: props,
 	})
 	if err != nil {
-		u.log.Error("failed to track event", zap.Error(err))
+		u.log.Debug("failed to track event", zap.Error(err))
 	}
 }
 
@@ -182,7 +179,7 @@ func (p *hogLog) Logf(format string, args ...interface{}) {
 }
 
 func (p *hogLog) Errorf(format string, args ...interface{}) {
-	p.log.Error(fmt.Sprintf(format, args...))
+	p.log.Debug(fmt.Sprintf(format, args...))
 }
 
 func (u *UsageTracker) posthogLogger() posthog.Logger {
@@ -206,7 +203,7 @@ func (u *UsageTracker) TrackUptime(ctx context.Context) {
 
 	err = u.trackRouterUptime(uptimeOptions{})
 	if err != nil {
-		u.log.Error("failed to track event", zap.Error(err))
+		u.log.Debug("failed to track event", zap.Error(err))
 	}
 
 	for {
@@ -216,7 +213,7 @@ func (u *UsageTracker) TrackUptime(ctx context.Context) {
 		case <-tick.C:
 			err = u.trackRouterUptime(uptimeOptions{})
 			if err != nil {
-				u.log.Error("failed to track event", zap.Error(err))
+				u.log.Debug("failed to track event", zap.Error(err))
 			}
 		}
 	}

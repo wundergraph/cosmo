@@ -1,5 +1,18 @@
 import * as z from 'zod';
 
+export const hubUserAgent = 'cosmo-hub';
+
+export const maxRowLimitForChecks = 100_000;
+
+// Pagination defaults used by server-side paginated endpoints
+export const paginationDefaults = {
+  defaultLimit: 10,
+  minLimit: 1,
+  maxLimit: 50,
+  minOffset: 0,
+  maxOffset: 500_000,
+} as const;
+
 export const apiKeyPermissions = [
   {
     displayName: 'System for Cross-domain Identity Management (SCIM)',
@@ -40,3 +53,5 @@ export const organizationSchema = z.object({
     .max(32, { message: 'Invalid name. It must be of 3-32 characters in length.' }),
   slug: organizationSlugSchema,
 });
+
+export const defaultRetentionLimitInDays = 7;

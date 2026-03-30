@@ -1,6 +1,3 @@
-export const formatNumber = (
-  value: number,
-  options?: Intl.NumberFormatOptions
-) => {
+export const formatNumber = (value: number, options?: Intl.NumberFormatOptions) => {
   return Intl.NumberFormat(undefined, options).format(value).toString();
 };

@@ -11,11 +11,11 @@ import {
   parseGraphQLWebsocketSubprotocol,
   splitLabel,
 } from '@wundergraph/cosmo-shared';
-import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { SubgraphPublishStats, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
-import { validateSubscriptionProtocols } from '../../../utils.js';
-import { websocketSubprotocolDescription } from '../../../constants.js';
+import { printTruncationWarning, validateSubscriptionProtocols } from '../../../utils.js';
+import { limitMaxValue, websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -74,6 +74,11 @@ export default (opts: BaseCommandOptions) => {
     '--disable-resolvability-validation',
     'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
   );
+  command.option(
+    '-l, --limit <number>',
+    'The maximum number of composition errors, warnings, and deployment errors to display.',
+    '50',
+  );
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -98,6 +103,13 @@ export default (opts: BaseCommandOptions) => {
       websocketSubprotocol: options.websocketSubprotocol,
     });
 
+    const limit = Number(options.limit);
+    if (!Number.isInteger(limit) || limit <= 0 || limit > limitMaxValue) {
+      program.error(
+        pc.red(`The limit must be a valid number between 1 and ${limitMaxValue}. Received: '${options.limit}'`),
+      );
+    }
+
     const spinner = ora('Subgraph is being published...').start();
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
@@ -118,6 +130,7 @@ export default (opts: BaseCommandOptions) => {
           : undefined,
         labels: options.label.map((label: string) => splitLabel(label)),
         type: SubgraphType.STANDARD,
+        limit,
       },
       {
         headers: getBaseHeaders(),
@@ -177,6 +190,15 @@ export default (opts: BaseCommandOptions) => {
         console.log(compositionErrorsTable.toString());
 
         if (options.failOnCompositionError) {
+          // Only composition errors were displayed at this point, warnings come after switch
+          printTruncationWarning({
+            displayedErrorCounts: new SubgraphPublishStats({
+              compositionErrors: resp.compositionErrors.length,
+              compositionWarnings: 0,
+              deploymentErrors: 0,
+            }),
+            totalErrorCounts: resp.counts,
+          });
           program.error(pc.red(pc.bold('The command failed due to composition errors.')));
         }
 
@@ -208,6 +230,15 @@ export default (opts: BaseCommandOptions) => {
         console.log(deploymentErrorsTable.toString());
 
         if (options.failOnAdmissionWebhookError) {
+          // Only deployment errors were displayed at this point, warnings come after switch
+          printTruncationWarning({
+            displayedErrorCounts: new SubgraphPublishStats({
+              compositionErrors: 0,
+              compositionWarnings: 0,
+              deploymentErrors: resp.deploymentErrors.length,
+            }),
+            totalErrorCounts: resp.counts,
+          });
           program.error(pc.red(pc.bold('The command failed due to admission webhook errors.')));
         }
 
@@ -222,6 +253,9 @@ export default (opts: BaseCommandOptions) => {
         return;
       }
     }
+
+    // Track what was actually displayed
+    const displayedWarnings = options.suppressWarnings ? 0 : resp.compositionWarnings.length;
 
     if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
       const compositionWarningsTable = new Table({
@@ -246,6 +280,16 @@ export default (opts: BaseCommandOptions) => {
       }
       console.log(compositionWarningsTable.toString());
     }
+
+    // Determine what was actually displayed based on the response code
+    const displayedErrorCounts = new SubgraphPublishStats({
+      compositionErrors:
+        resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED ? resp.compositionErrors.length : 0,
+      compositionWarnings: displayedWarnings,
+      deploymentErrors: resp.response?.code === EnumStatusCode.ERR_DEPLOYMENT_FAILED ? resp.deploymentErrors.length : 0,
+    });
+
+    printTruncationWarning({ displayedErrorCounts, totalErrorCounts: resp.counts });
   });
 
   return command;

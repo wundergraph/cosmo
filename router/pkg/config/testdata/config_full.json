@@ -49,7 +49,11 @@
       ],
       "OperationContentAttributes": false,
       "ExportGraphQLVariables": true,
-      "WithNewRoot": false
+      "WithNewRoot": false,
+      "SanitizeUTF8": {
+        "Enabled": false,
+        "LogSanitizations": false
+      }
     },
     "Metrics": {
       "Attributes": null,
@@ -60,6 +64,10 @@
         "ConnectionStats": true,
         "EngineStats": {
           "Subscriptions": true
+        },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false
         },
         "CircuitBreaker": false,
         "Streams": false,
@@ -74,7 +82,15 @@
             "Headers": {},
             "Temporality": ""
           }
-        ]
+        ],
+        "LogExporter": {
+          "Enabled": true,
+          "ExcludeMetrics": [
+            "process\\.",
+            "server\\.uptime"
+          ],
+          "IncludeMetrics": null
+        }
       },
       "Prometheus": {
         "Enabled": true,
@@ -85,6 +101,10 @@
         "Streams": false,
         "EngineStats": {
           "Subscriptions": true
+        },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false
         },
         "CircuitBreaker": false,
         "ExcludeMetrics": null,
@@ -144,6 +164,22 @@
         "CertFile": "",
         "Required": false
       }
+    },
+    "Client": {
+      "All": {
+        "CertFile": "/path/to/client.crt",
+        "KeyFile": "/path/to/client.key",
+        "CaFile": "/path/to/ca.crt",
+        "InsecureSkipCaVerification": false
+      },
+      "Subgraphs": {
+        "products": {
+          "CertFile": "/path/to/products-client.crt",
+          "KeyFile": "/path/to/products-client.key",
+          "CaFile": "/path/to/products-ca.crt",
+          "InsecureSkipCaVerification": false
+        }
+      }
     }
   },
   "CacheControl": {
@@ -172,7 +208,19 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "RouterURL": "https://cosmo-router.wundergraph.com"
+    "RouterURL": "https://cosmo-router.wundergraph.com",
+    "OmitToolNamePrefix": false
+  },
+  "ConnectRPC": {
+    "Enabled": false,
+    "Server": {
+      "ListenAddr": "localhost:5026",
+      "BaseURL": ""
+    },
+    "Storage": {
+      "ProviderID": ""
+    },
+    "GraphQLEndpoint": ""
   },
   "DemoMode": true,
   "Modules": {
@@ -309,7 +357,19 @@
     "CookieWhitelist": [
       "cookie1",
       "cookie2"
-    ]
+    ],
+    "Router": {
+      "Response": [
+        {
+          "Name": "X-Client-Version",
+          "Expression": "request.header.Get('User-Agent')"
+        },
+        {
+          "Name": "X-Request-ID",
+          "Expression": "request.header.Get('X-Request-ID') ?? 'default-request-id'"
+        }
+      ]
+    }
   },
   "TrafficShaping": {
     "All": {
@@ -475,6 +535,7 @@
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
+  "LogServiceName": "my-custom-router",
   "ShutdownDelay": 15000000000,
   "GracePeriod": 20000000000,
   "PollInterval": 10000000000,
@@ -489,6 +550,7 @@
       "JWKS": [
         {
           "URL": "https://example.com/.well-known/jwks.json",
+          "AllowedUse": null,
           "Algorithms": [
             "RS256"
           ],
@@ -506,6 +568,7 @@
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
+          "AllowedUse": null,
           "Algorithms": [
             "RS256",
             "ES256"
@@ -524,6 +587,7 @@
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
+          "AllowedUse": null,
           "Algorithms": null,
           "RefreshInterval": 0,
           "RefreshUnknownKID": {
@@ -600,7 +664,8 @@
         {
           "ID": "default",
           "URL": "nats://localhost:4222",
-          "Authentication": null
+          "Authentication": null,
+          "DeleteDurableConsumersOnShutdown": false
         },
         {
           "ID": "my-nats",
@@ -611,7 +676,8 @@
               "Username": "admin"
             },
             "Token": null
-          }
+          },
+          "DeleteDurableConsumersOnShutdown": false
         }
       ],
       "Kafka": [
@@ -657,11 +723,15 @@
   "CacheWarmup": {
     "Enabled": false,
     "Source": {
-      "Filesystem": null
+      "Filesystem": null,
+      "CdnSource": {
+        "Enabled": true
+      }
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
-    "Timeout": 30000000000
+    "Timeout": 30000000000,
+    "InMemoryFallback": true
   },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
@@ -724,6 +794,13 @@
       },
       "IgnoreIntrospection": false
     },
+    "CostControl": {
+      "Enabled": true,
+      "Mode": "enforce",
+      "MaxEstimatedLimit": 1000,
+      "EstimatedListSize": 10,
+      "ExposeHeaders": false
+    },
     "DepthLimit": null,
     "ParserLimits": {
       "ApproximateDepthLimit": 200,
@@ -752,6 +829,9 @@
       "AlwaysSkipLoader": false
     },
     "EnableSingleFlight": true,
+    "ForceEnableSingleFlight": false,
+    "EnableInboundRequestDeduplication": true,
+    "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
@@ -764,6 +844,8 @@
     "WebSocketClientPingTimeout": 30000000000,
     "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
+    "SlowPlanCacheSize": 300,
+    "SlowPlanCacheThreshold": 100000000,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
@@ -778,7 +860,8 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
-    "ValidateRequiredExternalFields": false
+    "ValidateRequiredExternalFields": false,
+    "RelaxSubgraphOperationFieldSelectionMergingNullability": false
   },
   "WebSocket": {
     "Enabled": true,
@@ -894,6 +977,17 @@
     "Storage": {
       "ProviderID": "s3",
       "ObjectPrefix": "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+    },
+    "Manifest": {
+      "Enabled": true,
+      "PollInterval": 30000000000,
+      "PollJitter": 10000000000,
+      "Warmup": {
+        "Enabled": true,
+        "Workers": 4,
+        "ItemsPerSecond": 50,
+        "Timeout": 30000000000
+      }
     }
   },
   "AutomaticPersistedQueries": {

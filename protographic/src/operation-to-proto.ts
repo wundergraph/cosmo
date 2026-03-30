@@ -17,25 +17,19 @@ import {
   GraphQLEnumType,
   FragmentDefinitionNode,
   TypeNode,
-  NonNullTypeNode,
-  ListTypeNode,
   NamedTypeNode,
   Kind,
   validate,
   specifiedRules,
   KnownDirectivesRule,
 } from 'graphql';
+import { upperFirst, camelCase } from 'lodash-es';
 import { createFieldNumberManager } from './operations/field-numbering.js';
 import { buildMessageFromSelectionSet } from './operations/message-builder.js';
 import { buildRequestMessage, buildInputObjectMessage, buildEnumType } from './operations/request-builder.js';
 import { rootToProtoText } from './operations/proto-text-generator.js';
 import { mapGraphQLTypeToProto } from './operations/type-mapper.js';
-import {
-  createRequestMessageName,
-  createResponseMessageName,
-  createOperationMethodName,
-} from './naming-conventions.js';
-import { upperFirst, camelCase } from 'lodash-es';
+import { createRequestMessageName, createResponseMessageName } from './naming-conventions.js';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
 import { IdempotencyLevel, MethodWithIdempotency } from './types.js';
 
@@ -104,7 +98,7 @@ export function compileOperationsToProto(
     const operationNames = namedOperations.map((op) => (op as OperationDefinitionNode).name!.value).join(', ');
     throw new Error(
       `Multiple operations found in document: ${operationNames}. ` +
-        'Only a single named operation per document is supported for proto reversibility. ' +
+        'Only a single named operation per document is supported for deterministic proto schema generation. ' +
         'Please compile each operation separately.',
     );
   }
@@ -264,21 +258,37 @@ class OperationsToProtoVisitor {
       return;
     }
 
-    // 2. Validate no root-level field aliases (breaks reversibility)
+    // 2. Validate operation name starts with uppercase letter
+    // This follows protobuf RPC naming conventions while allowing flexibility
+    // Must start with uppercase letter, followed by letters/numbers
+    if (!/^[A-Z][\dA-Za-z]*$/.test(operationName)) {
+      const suggestedName = upperFirst(camelCase(operationName));
+      throw new Error(
+        `Operation name "${operationName}" must start with an uppercase letter ` +
+          `and contain only letters and numbers. ` +
+          `Examples: GetUser, CreatePost, HRService, GETUSER. ` +
+          `Suggested name: "${suggestedName}". ` +
+          `This follows protobuf RPC naming conventions.`,
+      );
+    }
+
+    // 3. Validate no root-level field aliases (breaks proto schema consistency)
     if (node.selectionSet) {
       for (const selection of node.selectionSet.selections) {
         if (selection.kind === 'Field' && selection.alias) {
           throw new Error(
             `Root-level field alias "${selection.alias.value}: ${selection.name.value}" is not supported. ` +
-              'Field aliases at the root level break proto-to-GraphQL reversibility. ' +
+              'Field aliases at the root level break proto schema generation consistency. ' +
+              'Each GraphQL field must map to exactly one proto field name. ' +
               'Please remove the alias or use it only on nested fields.',
           );
         }
       }
     }
 
-    // 3. Create method name from operation name, optionally prefixed with operation type
-    let methodName = upperFirst(camelCase(operationName));
+    // 4. Create method name from operation name
+    // Use operation name as-is to ensure exact matching (no transformation)
+    let methodName = operationName;
 
     // Add operation type prefix if requested
     if (this.prefixOperationType) {
@@ -438,12 +448,15 @@ class OperationsToProtoVisitor {
    */
   private getRootType(operationType: OperationTypeNode): GraphQLObjectType {
     switch (operationType) {
-      case OperationTypeNode.QUERY:
+      case OperationTypeNode.QUERY: {
         return this.schema.getQueryType()!;
-      case OperationTypeNode.MUTATION:
+      }
+      case OperationTypeNode.MUTATION: {
         return this.schema.getMutationType()!;
-      case OperationTypeNode.SUBSCRIPTION:
+      }
+      case OperationTypeNode.SUBSCRIPTION: {
         return this.schema.getSubscriptionType()!;
+      }
     }
   }
 

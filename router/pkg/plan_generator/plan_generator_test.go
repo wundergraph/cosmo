@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wundergraph/cosmo/router/core"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/core"
 )
 
 func getTestDataDir() string {
@@ -212,14 +212,14 @@ func TestPlanGenerator(t *testing.T) {
 		resultsExpected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", ReportFileName))
 		assert.NoError(t, err)
 		resultsStruct := QueryPlanResults{}
-		json.Unmarshal(results, &resultsStruct)
+		_ = json.Unmarshal(results, &resultsStruct)
 		resultsExpectedStruct := QueryPlanResults{}
-		json.Unmarshal(resultsExpected, &resultsExpectedStruct)
+		_ = json.Unmarshal(resultsExpected, &resultsExpectedStruct)
 		require.Len(t, resultsStruct.Plans, len(resultsExpectedStruct.Plans))
 		for i := range resultsStruct.Plans {
-			assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
-			assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)
-			assert.Equal(t, resultsStruct.Plans[i].Warning, resultsExpectedStruct.Plans[i].Warning)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Plan, resultsStruct.Plans[i].Plan)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Error, resultsStruct.Plans[i].Error)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Warning, resultsStruct.Plans[i].Warning)
 		}
 	})
 
@@ -252,14 +252,14 @@ func TestPlanGenerator(t *testing.T) {
 		resultsExpected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", ReportFileName))
 		assert.NoError(t, err)
 		resultsStruct := QueryPlanResults{}
-		json.Unmarshal(results, &resultsStruct)
+		_ = json.Unmarshal(results, &resultsStruct)
 		resultsExpectedStruct := QueryPlanResults{}
-		json.Unmarshal(resultsExpected, &resultsExpectedStruct)
+		_ = json.Unmarshal(resultsExpected, &resultsExpectedStruct)
 		require.Len(t, resultsStruct.Plans, len(resultsExpectedStruct.Plans))
 		for i := range resultsStruct.Plans {
-			assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
-			assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)
-			assert.Equal(t, resultsStruct.Plans[i].Warning, resultsExpectedStruct.Plans[i].Warning)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Plan, resultsStruct.Plans[i].Plan)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Error, resultsStruct.Plans[i].Error)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Warning, resultsStruct.Plans[i].Warning)
 		}
 	})
 
@@ -290,13 +290,13 @@ func TestPlanGenerator(t *testing.T) {
 				expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", filename))
 				assert.NoError(t, err)
 				resultsStruct := QueryPlanResults{}
-				json.Unmarshal(queryPlan, &resultsStruct)
+				_ = json.Unmarshal(queryPlan, &resultsStruct)
 				resultsExpectedStruct := QueryPlanResults{}
-				json.Unmarshal(expected, &resultsExpectedStruct)
+				_ = json.Unmarshal(expected, &resultsExpectedStruct)
 				for i := range resultsStruct.Plans {
-					assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
-					assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)
-					assert.Equal(t, resultsStruct.Plans[i].Warning, resultsExpectedStruct.Plans[i].Warning)
+					assert.Equal(t, resultsExpectedStruct.Plans[i].Plan, resultsStruct.Plans[i].Plan)
+					assert.Equal(t, resultsExpectedStruct.Plans[i].Error, resultsStruct.Plans[i].Error)
+					assert.Equal(t, resultsExpectedStruct.Plans[i].Warning, resultsStruct.Plans[i].Warning)
 				}
 			})
 		}
@@ -406,4 +406,22 @@ func TestPlanGenerator(t *testing.T) {
 		}
 	})
 
+}
+
+func BenchmarkPlanGenerator(b *testing.B) {
+	tempDir := b.TempDir()
+	cfg := QueryPlanConfig{
+		SourceDir:       path.Join(getTestDataDir(), "queries", "bench"),
+		OutDir:          tempDir,
+		ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
+		Timeout:         "30s",
+		Concurrency:     1,
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		err := PlanGenerator(context.Background(), cfg)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
 }

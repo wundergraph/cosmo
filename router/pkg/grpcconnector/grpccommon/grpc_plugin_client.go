@@ -3,8 +3,9 @@ package grpccommon
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel/trace"
 	"io"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"sync"
 	"sync/atomic"
@@ -17,6 +18,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	otelcodes "go.opentelemetry.io/otel/codes"
 )
 
 type GRPCPluginClient struct {
@@ -53,6 +56,8 @@ func WithReconnectConfig(reconnectTimeout time.Duration, pingInterval time.Durat
 }
 
 var _ grpc.ClientConnInterface = &GRPCPluginClient{}
+
+var errPluginNotActive = errors.New("plugin is not active")
 
 type GRPCTraceAttributeGetter func(context.Context) (string, trace.SpanStartEventOption)
 
@@ -136,7 +141,7 @@ func (g *GRPCPluginClient) SetClients(pluginClient *plugin.Client, clientConn gr
 	// Close the previous client connection if it exists
 	if g.cc != nil {
 		if closer, ok := g.cc.(io.Closer); ok {
-			closer.Close()
+			_ = closer.Close()
 		}
 	}
 
@@ -153,13 +158,16 @@ func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, 
 	if g.IsPluginProcessExited() {
 		if err := g.waitForPluginToBeActive(); err != nil {
 			span.RecordError(err)
+			span.SetStatus(otelcodes.Error, err.Error())
 			return err
 		}
 	}
 
 	if g.isClosed.Load() {
-		span.RecordError(errors.New("plugin is not active"))
-		return status.Error(codes.Unavailable, "plugin is not active")
+		span.RecordError(errPluginNotActive)
+		span.SetStatus(otelcodes.Error, errPluginNotActive.Error())
+
+		return status.Error(codes.Unavailable, errPluginNotActive.Error())
 	}
 
 	g.mu.RLock()

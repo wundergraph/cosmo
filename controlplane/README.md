@@ -18,6 +18,8 @@ Run the controlplane in watch mode:
 pnpm dev
 ```
 
+If you need to attach a debugger, run `pnpm dev:debug`.
+
 # ESM
 
 We use Node.js in ESM mode. This means that we can use `import` instead of `require` at runtime. However, it also means that we have to use `.js` as file extension to import files.
@@ -73,4 +75,4 @@ A user session "cookie" is valid for 1 day. The refresh token has the same lifes
 That implies that the user can interact with the app for 1 day until the refresh token is expired. The user can renew the session by calling the session endpoint `/v1/auth/session`.
 The session endpoint will refresh the access and refresh token and update the session cookie. The user can interact with the app for another day.
 
-__Summary: If the frontend ensure that the session endpoint `/v1/auth/session` is called on focus and load. The user might never be logged out again.__
+**Summary: If the frontend ensure that the session endpoint `/v1/auth/session` is called on focus and load. The user might never be logged out again.**

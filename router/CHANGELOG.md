@@ -4,6 +4,277 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.298.0](https://github.com/wundergraph/cosmo/compare/router@0.297.0...router@0.298.0) (2026-03-29)
+
+### Features
+
+* **cache:** deduplicate persisted operations and avoid planning twice ([#2701](https://github.com/wundergraph/cosmo/issues/2701)) ([932f436](https://github.com/wundergraph/cosmo/commit/932f4365f7c1b5249a0ce89c9507691bc877cb06)) (@StarpTech)
+
+# [0.297.0](https://github.com/wundergraph/cosmo/compare/router@0.296.0...router@0.297.0) (2026-03-27)
+
+### Features
+
+* add PQL manifest support for persisted operations ([#2635](https://github.com/wundergraph/cosmo/issues/2635)) ([38a648c](https://github.com/wundergraph/cosmo/commit/38a648cff927b45d5ee5323bf303f83198c64411)) (@StarpTech)
+
+# [0.296.0](https://github.com/wundergraph/cosmo/compare/router@0.295.0...router@0.296.0) (2026-03-26)
+
+### Bug Fixes
+
+* documenting and updating span / metric error cases ([#2681](https://github.com/wundergraph/cosmo/issues/2681)) ([d413a26](https://github.com/wundergraph/cosmo/commit/d413a269fa5fb657d883be1eb5bf008e016ecbb0)) (@SkArchon)
+
+### Features
+
+* **router:** validate slicing arguments in Cost Control ([#2692](https://github.com/wundergraph/cosmo/issues/2692)) ([4416030](https://github.com/wundergraph/cosmo/commit/44160304075c3505862c000e4f78c7c802b42ea7)) (@ysmolski)
+
+# [0.295.0](https://github.com/wundergraph/cosmo/compare/router@0.294.0...router@0.295.0) (2026-03-19)
+
+### Features
+
+* slow plan cache ([#2611](https://github.com/wundergraph/cosmo/issues/2611)) ([9a96032](https://github.com/wundergraph/cosmo/commit/9a9603285fdc457287b4153be615314022f4c529)) (@SkArchon)
+
+# [0.294.0](https://github.com/wundergraph/cosmo/compare/router@0.293.0...router@0.294.0) (2026-03-17)
+
+### Features
+
+* expose costs ([#2470](https://github.com/wundergraph/cosmo/issues/2470)) ([d43aa40](https://github.com/wundergraph/cosmo/commit/d43aa40f2429fbb212e5618cd5586774e1b6ae7e)) (@ysmolski)
+
+# [0.293.0](https://github.com/wundergraph/cosmo/compare/router@0.292.0...router@0.293.0) (2026-03-16)
+
+### Features
+
+* add cache hit statuses to expr context ([#2643](https://github.com/wundergraph/cosmo/issues/2643)) ([4e0213c](https://github.com/wundergraph/cosmo/commit/4e0213ccab91203d5c1b9559db84ccebb540c320)) (@SkArchon)
+
+# [0.292.0](https://github.com/wundergraph/cosmo/compare/router@0.291.0...router@0.292.0) (2026-03-13)
+
+### Bug Fixes
+
+* **ci:** improve reliability of the router-tests ([#2577](https://github.com/wundergraph/cosmo/issues/2577)) ([4aacdee](https://github.com/wundergraph/cosmo/commit/4aacdee3dc257e274507d5eb7fbebca66e9cc667)) (@jensneuse)
+
+### Features
+
+* **router:** add router support for field resolvers without arguments ([#2645](https://github.com/wundergraph/cosmo/issues/2645)) ([0406c7a](https://github.com/wundergraph/cosmo/commit/0406c7ae7d2b6cee73e379d94e45a5f76ded9eef)) (@Noroth)
+
+# [0.291.0](https://github.com/wundergraph/cosmo/compare/router@0.290.1...router@0.291.0) (2026-03-12)
+
+### Bug Fixes
+
+* **mcp:** reset registeredTools between reloads to prevent false tool name collisions ([#2625](https://github.com/wundergraph/cosmo/issues/2625)) ([fbbd11f](https://github.com/wundergraph/cosmo/commit/fbbd11f765518045d2425b749b2fde58968be377)) (@asoorm)
+* **router:** make computeSha256 independent of metric/access log attributes ([#2633](https://github.com/wundergraph/cosmo/issues/2633)) ([f03d96e](https://github.com/wundergraph/cosmo/commit/f03d96e9790df213334c949e89f8e43090ade1be)) (@endigma)
+
+### Features
+
+* **router:** add support for [@requires](https://github.com/requires) in grpc ([#2610](https://github.com/wundergraph/cosmo/issues/2610)) ([670f75d](https://github.com/wundergraph/cosmo/commit/670f75de00b9f5e669860360ec2c5ebaae22e81a)) (@Noroth)
+
+## [0.290.1](https://github.com/wundergraph/cosmo/compare/router@0.290.0...router@0.290.1) (2026-03-11)
+
+### Bug Fixes
+
+* flag option as experimental ([#2628](https://github.com/wundergraph/cosmo/issues/2628)) ([bea448f](https://github.com/wundergraph/cosmo/commit/bea448fabc7489ea9633da9dcf77d69e0548b490)) (@dkorittki)
+
+# [0.290.0](https://github.com/wundergraph/cosmo/compare/router@0.289.0...router@0.290.0) (2026-03-11)
+
+### Features
+
+* option to remove nats consumers on shutdown ([#2600](https://github.com/wundergraph/cosmo/issues/2600)) ([30fab93](https://github.com/wundergraph/cosmo/commit/30fab93263e0655dd0f96f766a3b93f7c87912c4)) (@dkorittki)
+
+# [0.289.0](https://github.com/wundergraph/cosmo/compare/router@0.288.2...router@0.289.0) (2026-03-10)
+
+### Features
+
+* add composition options ([#2595](https://github.com/wundergraph/cosmo/issues/2595)) ([1cba9ab](https://github.com/wundergraph/cosmo/commit/1cba9ab997a64e8bea18a7f6f01507f2ec2dd82b)) (@Aenimus)
+
+## [0.288.2](https://github.com/wundergraph/cosmo/compare/router@0.288.1...router@0.288.2) (2026-03-07)
+
+### Bug Fixes
+
+* propagate ResponseWriter through module prevent double write ([#2605](https://github.com/wundergraph/cosmo/issues/2605)) ([391bffe](https://github.com/wundergraph/cosmo/commit/391bffe82707da9b0c24f261553268c8975ee3c6)) (@StarpTech)
+
+## [0.288.1](https://github.com/wundergraph/cosmo/compare/router@0.288.0...router@0.288.1) (2026-03-06)
+
+### Bug Fixes
+
+* fix selecting parent of unique nodes ([#2593](https://github.com/wundergraph/cosmo/issues/2593)) ([87af642](https://github.com/wundergraph/cosmo/commit/87af6425890431dac8af8cf2e3ac0a52611f7b46)) (@Aenimus)
+
+# [0.288.0](https://github.com/wundergraph/cosmo/compare/router@0.287.0...router@0.288.0) (2026-03-05)
+
+### Bug Fixes
+
+* upgrade docker cli dependency ([#2589](https://github.com/wundergraph/cosmo/issues/2589)) ([fad6b1c](https://github.com/wundergraph/cosmo/commit/fad6b1cfe9f7ba162a7e99765cce01794739ae2b)) (@SkArchon)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+# [0.287.0](https://github.com/wundergraph/cosmo/compare/router@0.286.1...router@0.287.0) (2026-03-04)
+
+### Features
+
+* metrics log exporter for otel to print span information ([#2538](https://github.com/wundergraph/cosmo/issues/2538)) ([f7f2a11](https://github.com/wundergraph/cosmo/commit/f7f2a11dc820a615988e838470084823d3c9060a)) (@SkArchon)
+* **router:** make log service name configurable via LOG_SERVICE_NAME ([#2533](https://github.com/wundergraph/cosmo/issues/2533)) ([4c5384d](https://github.com/wundergraph/cosmo/commit/4c5384decc5603a4efdcbe614fce0b401ad55923)) (@jensneuse)
+
+## [0.286.1](https://github.com/wundergraph/cosmo/compare/router@0.286.0...router@0.286.1) (2026-03-03)
+
+**Note:** Version bump only for package router
+
+# [0.286.0](https://github.com/wundergraph/cosmo/compare/router@0.285.0...router@0.286.0) (2026-02-26)
+
+### Bug Fixes
+
+* flaky router tests for error extensions ([#2554](https://github.com/wundergraph/cosmo/issues/2554)) ([cc360a6](https://github.com/wundergraph/cosmo/commit/cc360a6958283ad43cf21e94364602ce2a9e187c)) (@Noroth)
+
+### Features
+
+* add support for requires in protographic ([#2439](https://github.com/wundergraph/cosmo/issues/2439)) ([48a1613](https://github.com/wundergraph/cosmo/commit/48a1613285c978589b95a2c18d7618c9569b8f4f)) (@Noroth)
+
+# [0.285.0](https://github.com/wundergraph/cosmo/compare/router@0.284.2...router@0.285.0) (2026-02-24)
+
+### Bug Fixes
+
+* add back NewServer ([#2546](https://github.com/wundergraph/cosmo/issues/2546)) ([602e0ab](https://github.com/wundergraph/cosmo/commit/602e0abda280606bfaf4d43c15745e473882bb05)) (@SkArchon)
+* bump go-m1cpu to v0.1.7 to fix compiler warnings ([#2550](https://github.com/wundergraph/cosmo/issues/2550)) ([88e4878](https://github.com/wundergraph/cosmo/commit/88e48782c392c84e6e0bd2cd7e79072409712f82)) (@jensneuse)
+
+### Features
+
+* add mTLS support ([#2514](https://github.com/wundergraph/cosmo/issues/2514)) ([153432d](https://github.com/wundergraph/cosmo/commit/153432d04b201f231420f85dc03a07c525f60fd7)) (@SkArchon)
+* sanitize utf8 strings with binary in spans ([#2485](https://github.com/wundergraph/cosmo/issues/2485)) ([43aa77e](https://github.com/wundergraph/cosmo/commit/43aa77e6c2951a34c67afdadcf206c0933233cbc)) (@SkArchon)
+
+## [0.284.2](https://github.com/wundergraph/cosmo/compare/router@0.284.1...router@0.284.2) (2026-02-21)
+
+**Note:** Version bump only for package router
+
+## [0.284.1](https://github.com/wundergraph/cosmo/compare/router@0.284.0...router@0.284.1) (2026-02-20)
+
+### Bug Fixes
+
+* **router:** do not reuse planners in the plan generator ([#2537](https://github.com/wundergraph/cosmo/issues/2537)) ([480efa5](https://github.com/wundergraph/cosmo/commit/480efa5022ec910c4f14c7b0e93ec1c969f9080f)) (@ysmolski)
+
+# [0.284.0](https://github.com/wundergraph/cosmo/compare/router@0.283.0...router@0.284.0) (2026-02-20)
+
+### Bug Fixes
+
+* **router:** fix append algorithm producing multiple headers instead of comma-separated ([#2532](https://github.com/wundergraph/cosmo/issues/2532)) ([88927f6](https://github.com/wundergraph/cosmo/commit/88927f6205cfac1fb49be3c0d3a85bbe13f54bdd)) (@jensneuse)
+
+### Features
+
+* **router:** update engine, enable grpc header forwarding ([#2524](https://github.com/wundergraph/cosmo/issues/2524)) ([5ba48f6](https://github.com/wundergraph/cosmo/commit/5ba48f6c3fa2cd8b5ff58b133bbad20e118f1b37)) (@dkorittki)
+
+# [0.283.0](https://github.com/wundergraph/cosmo/compare/router@0.282.0...router@0.283.0) (2026-02-18)
+
+### Features
+
+* **router:** add connectrpc handler for graphql-to-grpc bridge ([#2379](https://github.com/wundergraph/cosmo/issues/2379)) ([9cb6ad3](https://github.com/wundergraph/cosmo/commit/9cb6ad3351319744f196a83bcec1cb4a1ec109f6)) (@asoorm)
+
+# [0.282.0](https://github.com/wundergraph/cosmo/compare/router@0.281.0...router@0.282.0) (2026-02-18)
+
+### Bug Fixes
+
+* **router:** fix singleflight deduplication bugs and propagate response headers ([#2522](https://github.com/wundergraph/cosmo/issues/2522)) ([9fcf219](https://github.com/wundergraph/cosmo/commit/9fcf219246ba49acc748d9a9a42fc21ad96be909)) (@jensneuse)
+* **router:** lock response header propagation state ([#2518](https://github.com/wundergraph/cosmo/issues/2518)) ([b9508c1](https://github.com/wundergraph/cosmo/commit/b9508c1ad13ad9bf90ccf387f7ae2bc64149f111)) (@endigma)
+
+### Features
+
+* http status code not being correct for metrics ([#2516](https://github.com/wundergraph/cosmo/issues/2516)) ([0c98cd0](https://github.com/wundergraph/cosmo/commit/0c98cd05a304687fdad27e0052f062f377cecf1d)) (@SkArchon)
+* **router:** add relaxed nullability validation for field selection merging ([#2515](https://github.com/wundergraph/cosmo/issues/2515)) ([360bee4](https://github.com/wundergraph/cosmo/commit/360bee4f59fb269637f82e9bb0607a407545a4af)) (@jensneuse)
+
+# [0.281.0](https://github.com/wundergraph/cosmo/compare/router@0.280.1...router@0.281.0) (2026-02-16)
+
+### Bug Fixes
+
+* bump go tools to solve arena panic issue in loader ([#2506](https://github.com/wundergraph/cosmo/issues/2506)) ([e1b30c5](https://github.com/wundergraph/cosmo/commit/e1b30c53e8035254ad228886382f858646cb8f97)) (@jensneuse)
+
+### Features
+
+* add Redis support to plan generator configuration ([#2513](https://github.com/wundergraph/cosmo/issues/2513)) ([668c80a](https://github.com/wundergraph/cosmo/commit/668c80afdf3dfcd3e324debb6cba7f3eb8ba703a)) (@alepane21)
+
+## [0.280.1](https://github.com/wundergraph/cosmo/compare/router@0.280.0...router@0.280.1) (2026-02-13)
+
+### Bug Fixes
+
+* copy operation name instead of using a shared slice ([#2503](https://github.com/wundergraph/cosmo/issues/2503)) ([9743345](https://github.com/wundergraph/cosmo/commit/97433458fe3367257b40362cea74a51b9c0f1911)) (@alepane21)
+
+# [0.280.0](https://github.com/wundergraph/cosmo/compare/router@0.279.1...router@0.280.0) (2026-02-11)
+
+### Bug Fixes
+
+* requires is not ignored when all fields provided ([#2498](https://github.com/wundergraph/cosmo/issues/2498)) ([746b1e3](https://github.com/wundergraph/cosmo/commit/746b1e3e6981dc10a3139b9fe859070b295eb2ec)) (@devsergiy)
+* show posthog errors only on debug logs and don't treat them as important ([#2489](https://github.com/wundergraph/cosmo/issues/2489)) ([4b780fe](https://github.com/wundergraph/cosmo/commit/4b780feecf49153550b2453f5bfb0b889534876b)) (@alepane21)
+
+### Features
+
+* expose query operation timings ([#2491](https://github.com/wundergraph/cosmo/issues/2491)) ([010e8e2](https://github.com/wundergraph/cosmo/commit/010e8e2d0eb6927aa130b0e902cae688b3b6515e)) (@AlenaSviridenko)
+
+## [0.279.1](https://github.com/wundergraph/cosmo/compare/router@0.279.0...router@0.279.1) (2026-02-09)
+
+### Bug Fixes
+
+* cache warmer graph token validation cleanup ([#2496](https://github.com/wundergraph/cosmo/issues/2496)) ([8546ee1](https://github.com/wundergraph/cosmo/commit/8546ee12f767cbf5385ec3716b8f9559f1b081f3)) (@SkArchon)
+
+# [0.279.0](https://github.com/wundergraph/cosmo/compare/router@0.278.0...router@0.279.0) (2026-02-09)
+
+### Features
+
+* rewarm cache from planner cache on schema change ([#2445](https://github.com/wundergraph/cosmo/issues/2445)) ([23e2dcf](https://github.com/wundergraph/cosmo/commit/23e2dcfa0498bfe4cf690dc279eccefca3ad3c03)) (@SkArchon)
+
+# [0.278.0](https://github.com/wundergraph/cosmo/compare/router@0.277.0...router@0.278.0) (2026-02-09)
+
+### Bug Fixes
+
+* ensure router header expressions are set even on early return errors ([#2492](https://github.com/wundergraph/cosmo/issues/2492)) ([53a01d1](https://github.com/wundergraph/cosmo/commit/53a01d15374ccf819e8cc8b2f893ede8873dda27)) (@SkArchon)
+* update Apollo GraphQL client header names for consistency ([#2493](https://github.com/wundergraph/cosmo/issues/2493)) ([328875d](https://github.com/wundergraph/cosmo/commit/328875d5e8aa2c6402d4809c5550c996f745d9f0)) (@alepane21)
+
+### Features
+
+* improve memory management ([#2365](https://github.com/wundergraph/cosmo/issues/2365)) ([9c9d451](https://github.com/wundergraph/cosmo/commit/9c9d451c2b326a3cae1d9bde68348d6c999fe2f7)) (@jensneuse)
+
+# [0.277.0](https://github.com/wundergraph/cosmo/compare/router@0.276.0...router@0.277.0) (2026-02-03)
+
+### Bug Fixes
+
+* dont forward content-* headers from client and subgraphs ([#2481](https://github.com/wundergraph/cosmo/issues/2481)) ([810344a](https://github.com/wundergraph/cosmo/commit/810344aead4d657290827cae33958989b2a76f92)) (@StarpTech)
+
+### Features
+
+* client response expressions ([#2472](https://github.com/wundergraph/cosmo/issues/2472)) ([f585037](https://github.com/wundergraph/cosmo/commit/f5850379a47b19a6bbc388e29268612a89540354)) (@SkArchon)
+
+# [0.276.0](https://github.com/wundergraph/cosmo/compare/router@0.275.1...router@0.276.0) (2026-02-02)
+
+### Features
+
+* set operation name also with persistent queries ([#2480](https://github.com/wundergraph/cosmo/issues/2480)) ([f3166dc](https://github.com/wundergraph/cosmo/commit/f3166dc7a67a74bd94f770be07960477b9300be0)) (@alepane21)
+
+## [0.275.1](https://github.com/wundergraph/cosmo/compare/router@0.275.0...router@0.275.1) (2026-01-26)
+
+### Bug Fixes
+
+* improve field resolver handling for nested resolver calls ([#2464](https://github.com/wundergraph/cosmo/issues/2464)) ([7fed361](https://github.com/wundergraph/cosmo/commit/7fed361030aae7ca10f06f282c77d1acef77e685)) (@Noroth)
+* **router:** flush errors on sse streams ([#2377](https://github.com/wundergraph/cosmo/issues/2377)) ([916d3ac](https://github.com/wundergraph/cosmo/commit/916d3acb4b91e248f930cd49d170129ce589d5de)) (@dkorittki)
+
+# [0.275.0](https://github.com/wundergraph/cosmo/compare/router@0.274.1...router@0.275.0) (2026-01-20)
+
+### Bug Fixes
+
+* planner fixes for abstract selection rewriter, node selection rules ([#2457](https://github.com/wundergraph/cosmo/issues/2457)) ([c051f3a](https://github.com/wundergraph/cosmo/commit/c051f3a7b85198fd1bb2392c56793aa2c109c594)) (@devsergiy)
+
+### Features
+
+* **router:** add omit_tool_name_prefix config for MCP tool names ([#2441](https://github.com/wundergraph/cosmo/issues/2441)) ([65a3339](https://github.com/wundergraph/cosmo/commit/65a3339d2db49e6c0b93585eb7f81f467817a339)) (@shamashel)
+
+## [0.274.1](https://github.com/wundergraph/cosmo/compare/router@0.274.0...router@0.274.1) (2026-01-16)
+
+### Bug Fixes
+
+* **router:** return typename on Cosmo Streams mutations ([#2422](https://github.com/wundergraph/cosmo/issues/2422)) ([27ec7b7](https://github.com/wundergraph/cosmo/commit/27ec7b72224a8928302be9f46b504a876ec9605f)) (@dkorittki)
+
+# [0.274.0](https://github.com/wundergraph/cosmo/compare/router@0.273.3...router@0.274.0) (2026-01-12)
+
+### Bug Fixes
+
+* **infra:** ensure base images use target platform ([#2401](https://github.com/wundergraph/cosmo/issues/2401)) ([45d65c4](https://github.com/wundergraph/cosmo/commit/45d65c4c260e7888ecfc46fb46db0d73d33fc75e)) (@endigma)
+
+### Features
+
+* improve logging of authorization errors and allow use customization ([#2431](https://github.com/wundergraph/cosmo/issues/2431)) ([c8f945d](https://github.com/wundergraph/cosmo/commit/c8f945d54f7d028f0edee670fdf50003f463f96a)) (@alepane21)
+
 ## [0.273.3](https://github.com/wundergraph/cosmo/compare/router@0.273.2...router@0.273.3) (2025-12-22)
 
 ### Bug Fixes

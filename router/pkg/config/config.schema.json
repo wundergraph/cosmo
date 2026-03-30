@@ -18,7 +18,7 @@
       "properties": {
         "token": {
           "type": "string",
-          "description": "The token used to authenticate with other component from Cosmo. Can be ommitted if the router is started with a static execution config."
+          "description": "The token used to authenticate with other component from Cosmo. Can be omitted if the router is started with a static execution config."
         },
         "sign_key": {
           "type": "string",
@@ -181,7 +181,7 @@
         },
         "storage": {
           "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
-          "required": ["provider_id", "object_prefix"],
+          "required": ["provider_id"],
           "properties": {
             "provider_id": {
               "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
@@ -190,6 +190,69 @@
             "object_prefix": {
               "type": "string",
               "description": "The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. /<prefix>/<sha256>.json"
+            }
+          }
+        },
+        "manifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The configuration for the PQL manifest. When enabled, the router downloads the full persisted operations manifest from the CDN and serves operations from memory.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the PQL manifest feature.",
+              "default": false
+            },
+            "poll_interval": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The interval at which the router polls the CDN for manifest updates. The period is specified as a string with a number and a unit, e.g. 10s, 1m, 1h. Minimum is 10s.",
+              "default": "10s",
+              "duration": {
+                "minimum": "10s"
+              }
+            },
+            "poll_jitter": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum random jitter added to each poll interval. The period is specified as a string with a number and a unit, e.g. 1s, 5s, 10s. Minimum is 1s.",
+              "default": "5s",
+              "duration": {
+                "minimum": "1s"
+              }
+            },
+            "warmup": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Configuration for cache warmup of PQL manifest operations. When enabled, the router pre-processes all operations from the manifest on startup and after manifest updates.",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable cache warmup for PQL manifest operations.",
+                  "default": true
+                },
+                "workers": {
+                  "type": "integer",
+                  "description": "The number of concurrent workers used to warm up the cache.",
+                  "default": 4,
+                  "minimum": 1
+                },
+                "items_per_second": {
+                  "type": "integer",
+                  "description": "Rate limit for items processed per second. Set to 0 for unlimited throughput.",
+                  "default": 50,
+                  "minimum": 0
+                },
+                "timeout": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "description": "The maximum time allowed for the warmup to complete. The period is specified as a string with a number and a unit, e.g. 10s, 1m, 5m.",
+                  "default": "30s",
+                  "duration": {
+                    "minimum": "1s"
+                  }
+                }
+              }
             }
           }
         }
@@ -405,6 +468,78 @@
           },
           "then": {
             "required": ["cert_file", "key_file"]
+          }
+        },
+        "client": {
+          "type": "object",
+          "description": "The TLS configuration for outbound connections from the router to subgraphs. Enables mTLS by presenting a client certificate when connecting to subgraphs.",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "object",
+              "description": "TLS configuration applied to all subgraph connections.",
+              "additionalProperties": false,
+              "properties": {
+                "cert_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client certificate chain file. Used to authenticate the router to subgraphs. May include intermediate certificates."
+                },
+                "key_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client private key file."
+                },
+                "ca_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the CA certificate file. Used to verify subgraph server certificates. If not set, the system's root CAs are used."
+                },
+                "insecure_skip_ca_verification": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip verification of the subgraph server certificate. Only use for development or testing."
+                }
+              },
+              "dependencies": {
+                "cert_file": ["key_file"],
+                "key_file": ["cert_file"]
+              }
+            },
+            "subgraphs": {
+              "type": "object",
+              "description": "Per-subgraph TLS configuration overrides. Each key is a subgraph name. Fully overrides the 'all' config for that subgraph.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "cert_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client certificate chain file for this subgraph. May include intermediate certificates."
+                  },
+                  "key_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client private key file for this subgraph."
+                  },
+                  "ca_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the CA certificate file for verifying this subgraph's server certificate."
+                  },
+                  "insecure_skip_ca_verification": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip verification of this subgraph's server certificate. Only use for development or testing."
+                  }
+                },
+                "dependencies": {
+                  "cert_file": ["key_file"],
+                  "key_file": ["cert_file"]
+                }
+              }
+            }
           }
         }
       }
@@ -999,6 +1134,23 @@
                   }
                 }
               }
+            },
+            "sanitize_utf8": {
+              "type": "object",
+              "description": "Configuration for sanitizing invalid UTF-8 sequences in span attribute values.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the sanitization of invalid UTF-8 sequences in span attribute values. Invalid sequences are replaced with the Unicode replacement character (U+FFFD)."
+                },
+                "log_sanitizations": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Log a warning when invalid UTF-8 sequences are sanitized. The log includes the attribute key and original value."
+                }
+              }
             }
           }
         },
@@ -1103,6 +1255,23 @@
                     }
                   }
                 },
+                "cost_stats": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure cost statistics for OTLP metrics.",
+                  "properties": {
+                    "estimated_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of estimated cost stats. The default value is false."
+                    },
+                    "actual_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of actual cost stats. The default value is false."
+                    }
+                  }
+                },
                 "exporters": {
                   "type": "array",
                   "description": "The exporters to use to export the metrics. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
@@ -1158,6 +1327,35 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "log_exporter": {
+                  "type": "object",
+                  "description": "Log exporter. When enabled, logs all collected metrics via the router's logger at each export interval.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enables the log exporter. The default value is false."
+                    },
+                    "exclude_metrics": {
+                      "type": "array",
+                      "description": "List of regex patterns for metric names to exclude from log output. Cannot be used together with include_metrics.",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "include_metrics": {
+                      "type": "array",
+                      "description": "List of regex patterns for metric names to include in log output. Only matching metrics will be logged. Cannot be used together with exclude_metrics.",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "not": {
+                    "required": ["exclude_metrics", "include_metrics"]
+                  }
                 }
               }
             },
@@ -1210,6 +1408,23 @@
                       "type": "boolean",
                       "default": false,
                       "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
+                    }
+                  }
+                },
+                "cost_stats": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure cost statistics for Prometheus metrics.",
+                  "properties": {
+                    "estimated_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of estimated cost stats. The default value is false."
+                    },
+                    "actual_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of actual cost stats. The default value is false."
                     }
                   }
                 },
@@ -1327,8 +1542,8 @@
             "Content-Type",
             "Graphql-Client-Name",
             "Graphql-Client-Version",
-            "Apollo-Graphql-Client-Name",
-            "Apollo-Graphql-Client-Version",
+            "ApolloGraphql-Client-Name",
+            "ApolloGraphql-Client-Version",
             "x-wg-trace",
             "x-wg-disable-tracing",
             "x-wg-token",
@@ -1376,7 +1591,8 @@
       "type": "string",
       "description": "The URL of the control plane. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'.",
       "default": "https://cosmo-cp.wundergraph.com",
-      "format": "http-url"
+      "format": "uri",
+      "pattern": "^https?://"
     },
     "playground": {
       "type": "object",
@@ -1448,6 +1664,11 @@
       "type": "boolean",
       "description": "Enable the JSON log format. The JSON log format is used to log the logs in JSON format. The default value is true. If the value is false, the logs are logged a human friendly text format.",
       "default": true
+    },
+    "log_service_name": {
+      "type": "string",
+      "description": "The service name used in the 'service' field of log entries. The default value is '@wundergraph/router'.",
+      "default": "@wundergraph/router"
     },
     "shutdown_delay": {
       "type": "string",
@@ -1665,6 +1886,18 @@
           "items": {
             "type": "string"
           }
+        },
+        "router": {
+          "type": "object",
+          "properties": {
+            "response": {
+              "type": "array",
+              "description": "A list of header rules to apply to router responses.",
+              "items": {
+                "$ref": "#/$defs/router_response_header_rule"
+              }
+            }
+          }
         }
       }
     },
@@ -1755,6 +1988,15 @@
                   "header_key_id": {
                     "type": "string",
                     "description": "The KID header of the JWK token created using the secret"
+                  },
+                  "allowed_use": {
+                    "type": "array",
+                    "description": "The allowed value of the use parameter for the JWKs. If not specified, only keys with use set to 'sig' will be used. If your server provides no use, you can add an empty value to allow those keys.",
+                    "default": ["sig"],
+                    "items": {
+                      "type": "string",
+                      "enum": ["sig", "enc", ""]
+                    }
                   },
                   "algorithms": {
                     "type": "array",
@@ -2131,6 +2373,71 @@
           "type": "boolean",
           "default": false,
           "description": "Expose the full GraphQL schema through MCP. When enabled, AI models can request the complete schema of your API."
+        },
+        "omit_tool_name_prefix": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
+        }
+      }
+    },
+    "connect_rpc": {
+      "type": "object",
+      "description": "The configuration for the ConnectRPC server. ConnectRPC allows gRPC, Connect, and gRPC-Web clients to interact with your GraphQL APIs through protocol transcoding. Proto files define RPC services that map to GraphQL operations.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the ConnectRPC server. If the value is true, the ConnectRPC server will be started."
+        },
+        "server": {
+          "type": "object",
+          "description": "Server configuration for the ConnectRPC server.",
+          "additionalProperties": false,
+          "properties": {
+            "listen_addr": {
+              "type": "string",
+              "description": "The address on which the ConnectRPC server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+              "default": "localhost:5026",
+              "format": "hostname-port"
+            },
+            "base_url": {
+              "type": "string",
+              "description": "The base URL of the ConnectRPC server. This is used for service reflection and documentation. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
+              "format": "http-url"
+            }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "description": "Storage provider configuration for the ConnectRPC server. This specifies where proto files and GraphQL operations for all services are loaded from.",
+          "additionalProperties": false,
+          "properties": {
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider to use for loading proto files and GraphQL operations for all services. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section. This provider points to the root services directory, and the router will recursively discover all proto files and their associated operations within that directory structure."
+            }
+          }
+        },
+        "graphql_endpoint": {
+          "type": "string",
+          "description": "Custom URL to use for the router GraphQL endpoint in ConnectRPC. Use this when your router is behind a proxy. This URL is used to forward RPC requests as GraphQL operations.",
+          "format": "uri",
+          "pattern": "^https?://"
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["storage"],
+        "properties": {
+          "storage": {
+            "required": ["provider_id"]
+          }
         }
       }
     },
@@ -2204,6 +2511,11 @@
                         }
                       }
                     ]
+                  },
+                  "experiment_delete_durable_consumers_on_shutdown": {
+                    "type": "boolean",
+                    "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down normally. Defaults to false. NOTE: This option is experimental and may change in future versions.",
+                    "default": false
                   }
                 }
               }
@@ -2387,11 +2699,26 @@
                   "format": "file-path"
                 }
               }
+            },
+            "cdn": {
+              "type": "object",
+              "description": "The CDN source of the cache warmup items.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable or disable the CDN source for cache warmup.",
+                  "default": true
+                }
+              }
             }
           },
           "oneOf": [
             {
               "required": ["filesystem"]
+            },
+            {
+              "required": ["cdn"]
             }
           ]
         },
@@ -2412,6 +2739,11 @@
           "duration": {
             "minimum": "1s"
           }
+        },
+        "in_memory_fallback": {
+          "type": "boolean",
+          "description": "Enable in-memory fallback. When enabled, the router will reuse the cached query plans in memory and use it to rewarm the cache on schema changes and hot config reloads. The default value is true.",
+          "default": true
         }
       }
     },
@@ -2665,6 +2997,61 @@
             }
           }
         },
+        "cost_control": {
+          "type": "object",
+          "description": "Cost control based on @cost and @listSize directives.",
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": { "enabled": { "const": true } },
+                "required": ["enabled"]
+              },
+              "then": {
+                "required": ["estimated_list_size"]
+              }
+            },
+            {
+              "if": {
+                "properties": { "mode": { "const": "enforce" } },
+                "required": ["mode"]
+              },
+              "then": {
+                "properties": {
+                  "max_estimated_limit": { "minimum": 1 }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, the router calculates costs for every operation."
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["measure", "enforce"],
+              "default": "measure",
+              "description": "Controls cost control behavior: 'measure' calculates costs without rejecting operations; 'enforce' rejects operations exceeding the estimated cost limit."
+            },
+            "max_estimated_limit": {
+              "type": "integer",
+              "description": "Maximum allowed estimated cost for a query. Required to be positive when mode is 'enforce'.",
+              "default": 0,
+              "minimum": 0
+            },
+            "estimated_list_size": {
+              "type": "integer",
+              "description": "Default assumed size for list fields when no @listSize directive is specified. Required for estimated cost calculation.",
+              "minimum": 1
+            },
+            "expose_headers": {
+              "type": "boolean",
+              "description": "Enable costs response headers for estimated and actuals operation costs."
+            }
+          }
+        },
         "operation_name_length_limit": {
           "type": "integer",
           "description": "The maximum allowed length of the operation name, 0 allows any length.",
@@ -2813,6 +3200,21 @@
           "default": true,
           "description": "Enable the single flight. The single flight is used to deduplicate the requests to the same subgraphs."
         },
+        "force_enable_single_flight": {
+          "type": "boolean",
+          "default": false,
+          "description": "Force enable single flight. Single flight is used to deduplicate identical in-flight subgraph requests. This flag always enables single flight, except for mutations. By default, SingleFlight / Request Deduplication is disabled when PreOriginHandlers are configured. This is because PreOriginHandlers can modify request headers, which has influence on the request deduplication key. If you're sure that your PreOriginHandlers won't interfere with the request deduplication key, you can enable it with this flag. For example, if you have a PreOriginHandler that only logs request headers, you can enable this flag to ensure that subgraph requests are still deduplicated."
+        },
+        "enable_inbound_request_deduplication": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the inbound request deduplication. Inbound request deduplication hashes the normalized GraphQL operation, the variables, and the headers that will be forwarded to the subgraph to determine if the request is identical to an already in-flight request."
+        },
+        "force_enable_inbound_request_deduplication": {
+          "type": "boolean",
+          "default": false,
+          "description": "Force enable inbound request deduplication, even when PreOriginHandlers are configured."
+        },
         "enable_request_tracing": {
           "type": "boolean",
           "default": true,
@@ -2889,6 +3291,21 @@
           "default": 1024,
           "description": "The size of the execution plan cache."
         },
+        "slow_plan_cache_size": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 300,
+          "description": "The maximum number of entries in the slow plan cache."
+        },
+        "slow_plan_cache_threshold": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The minimum planning duration for a query plan to be stored in the slow plan cache.",
+          "default": "100ms",
+          "duration": {
+            "minimum": "0ns"
+          }
+        },
         "operation_hash_cache_size": {
           "type": "integer",
           "default": 2048,
@@ -2964,6 +3381,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enables validation of resolved input field set specified as an argument for \"requires\" directive. If this field set 'points' to a nullable fields marked as external, and if router resolves such a field set with null values with errors pointing to those values, then it will not provide such entities to the resolver of the field on which directive was specified."
+        },
+        "relax_subgraph_operation_field_selection_merging_nullability": {
+          "type": "boolean",
+          "default": false,
+          "description": "Relaxes nullability validation for field selection merging when enclosing types are non-overlapping concrete object types. When enabled, fields with differing nullability (e.g. String! vs String) in inline fragments on different union member types will not cause validation errors."
         }
       }
     },
@@ -3517,6 +3939,23 @@
         "negate_match": ["matching"]
       },
       "required": ["op", "algorithm"]
+    },
+    "router_response_header_rule": {
+      "type": "object",
+      "description": "The configuration for router response headers. This is used to set headers in response from the router to clients.",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the header to set.",
+          "examples": ["X-Custom-Header"]
+        },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate for the header value. The expression must return a string value."
+        }
+      },
+      "required": ["name", "expression"]
     },
     "set_header_rule": {
       "type": "object",

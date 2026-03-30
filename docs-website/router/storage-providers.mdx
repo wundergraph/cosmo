@@ -1,0 +1,65 @@
+---
+title: "Storage Providers"
+icon: cabinet-filing
+description: "To maintain control over your data and ensure high performance, utilize different storage providers to store router artifacts on Amazon S3, while still using our Cosmo Managed offering."
+---
+
+
+The router is a stateless component, allowing it to be scaled horizontally without requiring persistence. However, it needs to fetch artifacts such as the execution configuration and persisted operations from a storage source. By default, the router fetches these from the Cosmo CDN. You can configure custom storage providers to use your own infrastructure instead.
+
+For both mechanisms, different storage providers can be used:
+
+* **CDN**: The default provider used by Cosmo Cloud.
+
+* **Amazon S3**: An object storage protocol. We support any S3 compatible object-storage e.g. Minio and AWS.
+
+When using a custom storage provider, you are responsible for manually pushing those artifacts as part of your CI process.
+
+## Define a provider
+
+Before you can use a storage provider, you have to define it in the `storage_providers` section of your `config.yaml` file. Each provider is given an `id` that you reference from other configuration sections.
+
+<CodeGroup>
+  ```yaml config.yaml
+  version: 1
+  storage_providers:
+    s3:
+    - id: "s3"
+      endpoint: "localhost:10000"
+      bucket: "cosmo"
+      access_key: "key"
+      secret_key: "secret"
+      region: "us-east-1"
+      secure: false
+  ```
+</CodeGroup>
+
+<Info>
+  **secure** has to be set to `true` when you point to an S3 that uses **https\://**
+</Info>
+
+If you are using EC2 or EKS on AWS and have configured [`node IAM roles`](https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html) you don't need to provide an `access_key` or `secret_key` and the S3 client will handle this on your behalf.
+
+<CodeGroup>
+```yaml config.yaml
+version: 1
+storage_providers:
+  s3:
+  - id: "s3"
+    endpoint: "s3.amazonaws.com"
+    bucket: "cosmo"
+    region: "us-east-1"
+    secure: true
+```
+</CodeGroup>
+
+## Using storage providers
+
+Once a provider is defined, you reference it by `provider_id` in the configuration of each feature. The following features support custom storage providers:
+
+* [**Execution config**](/router/configuration#execution-config-options) — load the router execution configuration from S3 instead of the Cosmo CDN.
+* [**Persisted operations**](/router/persisted-queries/persisted-operations#using-a-custom-storage-provider) — load individual persisted operations or the PQL manifest from S3.
+
+## Best Practices
+
+* Create different S3 credentials for READ and WRITE to reduce the attack surface.

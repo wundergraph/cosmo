@@ -11,6 +11,11 @@ interface User {
   user_email: string;
   user_first_name?: string;
   user_last_name?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
 }
 
 interface ApolloMigrate {
@@ -34,7 +39,7 @@ export type EventType<T extends keyof EventMap> = {
 };
 
 export interface IPlatformWebhookService {
-  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]): void;
+  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]): Promise<void>;
 }
 
 export class PlatformWebhookService implements IPlatformWebhookService {
@@ -95,5 +100,6 @@ export class MockPlatformWebhookService implements IPlatformWebhookService {
 
   send<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {
     this.sentEvents.push({ eventName, eventPayload });
+    return Promise.resolve();
   }
 }

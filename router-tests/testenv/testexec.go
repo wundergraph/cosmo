@@ -20,8 +20,6 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/freeport"
 )
 
-const routerDir = "../router"
-
 var (
 	buildOnce sync.Once
 	routerBin string
@@ -82,15 +80,16 @@ func buildRouterBin(t *testing.T, ctx context.Context) {
 	buildOnce.Do(func() {
 		t.Log("Building router binary...")
 
+		rDir := filepath.Join(routerTestsDir, "..", "router")
 		cmd := exec.Command("make", "build-race")
-		cmd.Dir = routerDir
+		cmd.Dir = rDir
 		err := runCmdWithLogs(t, ctx, cmd, true, nil) // Run the build command
 		if err != nil {
 			t.Fatalf("failed to execute runCmdWithLogs: %v", err)
 		}
 
 		// Determine the binary path after successful build
-		binPath := filepath.Join(routerDir, "router") // Adjust if needed for Windows
+		binPath := filepath.Join(rDir, "router")
 		require.FileExists(t, binPath, "Router binary was not found after build")
 
 		routerBin = binPath // Store the path for reuse

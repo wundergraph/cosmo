@@ -4,6 +4,62 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.54.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.54.0...@wundergraph/composition@0.54.1) (2026-03-18)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+# [0.54.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.53.0...@wundergraph/composition@0.54.0) (2026-03-17)
+
+### Features
+
+* expose costs ([#2470](https://github.com/wundergraph/cosmo/issues/2470)) ([d43aa40](https://github.com/wundergraph/cosmo/commit/d43aa40f2429fbb212e5618cd5586774e1b6ae7e)) (@ysmolski)
+
+# [0.53.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.52.0...@wundergraph/composition@0.53.0) (2026-03-10)
+
+### Features
+
+* add composition options ([#2595](https://github.com/wundergraph/cosmo/issues/2595)) ([1cba9ab](https://github.com/wundergraph/cosmo/commit/1cba9ab997a64e8bea18a7f6f01507f2ec2dd82b)) (@Aenimus)
+
+# [0.52.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.51.2...@wundergraph/composition@0.52.0) (2026-03-05)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+## [0.51.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.51.1...@wundergraph/composition@0.51.2) (2026-02-28)
+
+### Bug Fixes
+
+* handle fully external, unresolvable entity keys ([#2568](https://github.com/wundergraph/cosmo/issues/2568)) ([3168ab0](https://github.com/wundergraph/cosmo/commit/3168ab04eba3ca2c8ba353a8e7e6419fd62ae1c7)) (@Aenimus)
+
+## [0.51.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.51.0...@wundergraph/composition@0.51.1) (2026-02-12)
+
+### Bug Fixes
+
+* do not re-evaluate internal graph nodes if all its descendants a… ([#2499](https://github.com/wundergraph/cosmo/issues/2499)) ([2fa2dfd](https://github.com/wundergraph/cosmo/commit/2fa2dfd35b78b0e84fa18dcb99590cdee5abec08)) (@Aenimus)
+
+# [0.51.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.50.0...@wundergraph/composition@0.51.0) (2026-02-09)
+
+### Features
+
+* update @graphql-tools/utils version to 11.0.0 ([#2495](https://github.com/wundergraph/cosmo/issues/2495)) ([526b1a4](https://github.com/wundergraph/cosmo/commit/526b1a498ae709b67ec37626bfc665babafd8aa8)) (@thisisnithin)
+
+# [0.50.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.49.2...@wundergraph/composition@0.50.0) (2026-01-20)
+
+### Features
+
+* add an explanation on how to deal when adding a value to a shared enum ([#2456](https://github.com/wundergraph/cosmo/issues/2456)) ([57dc1b9](https://github.com/wundergraph/cosmo/commit/57dc1b90e07d09a25f8887c46eb73622362ff752)) (@alepane21)
+
+## [0.49.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.49.1...@wundergraph/composition@0.49.2) (2026-01-16)
+
+### Bug Fixes
+
+* operation validation false positives ([#2460](https://github.com/wundergraph/cosmo/issues/2460)) ([057e762](https://github.com/wundergraph/cosmo/commit/057e7621c777b961854bd0472e73a5da0e9e5186)) (@Aenimus)
+
+## [0.49.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.49.0...@wundergraph/composition@0.49.1) (2026-01-09)
+
+**Note:** Version bump only for package @wundergraph/composition
+
 # [0.49.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.48.5...@wundergraph/composition@0.49.0) (2025-12-15)
 
 ### Features

@@ -10,7 +10,7 @@ import { GraphCompositionRepository } from '../../repositories/GraphCompositionR
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getCompositions(
@@ -71,17 +71,9 @@ export function getCompositions(
       };
     }
 
-    // check that the limit is less than the max option provided in the ui
-    if (req.limit > 50) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'Invalid limit',
-        },
-        compositions: [],
-        count: 0,
-      };
-    }
+    // default to 10 if no limit is provided
+    req.limit = clamp(req.limit || 10, 1, 50);
+    req.offset = clamp(req.offset || 0, 0, 500_000);
 
     const compositions = await graphCompositionRepository.getGraphCompositions({
       fedGraphTargetId: federatedGraph.targetId,
