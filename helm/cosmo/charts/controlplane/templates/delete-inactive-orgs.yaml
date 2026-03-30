@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: "{{ include "controlplane.fullname" . }}-delete-inactive-organizations"
+  name: "{{ include "controlplane.fullname" . }}-delete-inactive-orgs"
   labels:
     {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.deleteInactiveOrgs.additionalLabels "context" .) | nindent 4 }}
 spec:
@@ -16,7 +16,7 @@ spec:
       parallelism: 1
       template:
         metadata:
-          name: "{{ include "controlplane.fullname" . }}-delete-inactive-organizations"
+          name: "{{ include "controlplane.fullname" . }}-delete-inactive-orgs"
           labels:
             {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.deleteInactiveOrgs.additionalLabels "context" .) | nindent 12 }}
         spec:
@@ -26,7 +26,7 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           containers:
-            - name: delete-inactive-organizations
+            - name: delete-inactive-orgs
               securityContext:
                 {{- toYaml .Values.securityContext | nindent 16 }}
               image: "{{ include "controlplane.image" . }}"
