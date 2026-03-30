@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import { create } from '@bufbuild/protobuf';
-import { SubscriptionFieldConditionSchema, SubscriptionFilterConditionSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import {
+  SubscriptionFieldConditionSchema,
+  SubscriptionFilterConditionSchema,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { generateSubscriptionFilterCondition } from '../src/router-config/graphql-configuration';
 import { subscriptionFilterCondition } from './testdata/utils';
 

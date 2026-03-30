@@ -254,10 +254,7 @@ describe('JsonCheckSchemaOutputBuilder', () => {
     });
 
     it('addComposedSchemaBreakingChanges preserves existing entries when called multiple times', () => {
-      const second = create(
-        FederatedGraphSchemaChangeSchema,
-        { ...composedChange, federatedGraphName: 'other-fed' }
-      );
+      const second = create(FederatedGraphSchemaChangeSchema, { ...composedChange, federatedGraphName: 'other-fed' });
       const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addComposedSchemaBreakingChanges([composedChange]).addComposedSchemaBreakingChanges([second]);
       const result = b.build().composedSchemaBreakingChanges!;

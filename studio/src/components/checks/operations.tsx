@@ -475,14 +475,18 @@ export const CheckOperations = () => {
                                           graphName: graphContext?.graph?.name,
                                           namespace: graphContext?.graph?.namespace,
                                           operationHash: hash,
-                                          changes: impactingChanges.map((c) => create(OverrideChangeSchema, { changeType: c.changeType, path: c.path })),
+                                          changes: impactingChanges.map((c) =>
+                                            create(OverrideChangeSchema, { changeType: c.changeType, path: c.path }),
+                                          ),
                                         })
                                       : createOverrides({
                                           graphName: graphContext?.graph?.name,
                                           namespace: graphContext?.graph?.namespace,
                                           operationHash: hash,
                                           operationName: name,
-                                          changes: impactingChanges.map((c) => create(OverrideChangeSchema, { changeType: c.changeType, path: c.path })),
+                                          changes: impactingChanges.map((c) =>
+                                            create(OverrideChangeSchema, { changeType: c.changeType, path: c.path }),
+                                          ),
                                         });
                                   }}
                                   className="cursor-pointer flex-col items-start gap-1"

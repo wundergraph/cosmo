@@ -1,8 +1,16 @@
 import { describe, expect, test } from 'vitest';
 import { create } from '@bufbuild/protobuf';
 import { RequiredFieldConfiguration } from '@wundergraph/composition';
-import { FieldCoordinatesSchema, FieldSetConditionSchema, RequiredFieldSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import type { FieldCoordinates, FieldSetCondition, RequiredField } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import {
+  FieldCoordinatesSchema,
+  FieldSetConditionSchema,
+  RequiredFieldSchema,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type {
+  FieldCoordinates,
+  FieldSetCondition,
+  RequiredField,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { addRequiredFields } from '../src/router-config/graphql-configuration';
 
 describe('Required field set proto generation tests', () => {

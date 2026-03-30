@@ -20,10 +20,11 @@ function createMockTransport(response: any) {
   return createRouterTransport(({ service }) => {
     service(PlatformService, {
       checkSubgraphSchema: () => response as any,
-      isGitHubAppInstalled: () => ({
-        response: { code: EnumStatusCode.OK },
-        isInstalled: false,
-      }) as any,
+      isGitHubAppInstalled: () =>
+        ({
+          response: { code: EnumStatusCode.OK },
+          isInstalled: false,
+        }) as any,
     });
   });
 }

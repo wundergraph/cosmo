@@ -108,13 +108,17 @@ const Row = ({
   const client = useQueryClient();
 
   const invalidateCheckOperations = () => {
-    const key = createConnectQueryKey({ schema: getCheckOperations, input: {
-      checkId: router.query.checkId as string,
-      graphName: graphContext?.graph?.name,
-      namespace: graphContext?.graph?.namespace,
-      limit: limit > 200 ? 200 : limit,
-      offset: (pageNumber - 1) * limit,
-    }, cardinality: "finite" });
+    const key = createConnectQueryKey({
+      schema: getCheckOperations,
+      input: {
+        checkId: router.query.checkId as string,
+        graphName: graphContext?.graph?.name,
+        namespace: graphContext?.graph?.namespace,
+        limit: limit > 200 ? 200 : limit,
+        offset: (pageNumber - 1) * limit,
+      },
+      cardinality: 'finite',
+    });
     client.invalidateQueries({
       queryKey: key,
     });

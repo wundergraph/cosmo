@@ -20,7 +20,10 @@ import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useWorkspace } from '@/hooks/use-workspace';
 import Link from 'next/link';
 
-export type SubgraphCheckExtensionsConfig = Omit<ConfigureSubgraphCheckExtensionsRequest, 'namespace' | '$typeName' | '$unknown'>;
+export type SubgraphCheckExtensionsConfig = Omit<
+  ConfigureSubgraphCheckExtensionsRequest,
+  'namespace' | '$typeName' | '$unknown'
+>;
 
 const validationSchema = z.object({
   endpoint: z

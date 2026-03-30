@@ -1,5 +1,5 @@
 import { buildSchema, GraphQLSchema } from 'graphql';
-import { GRPCMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type { GRPCMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { GraphQLToMappingVisitor } from './sdl-to-mapping-visitor.js';
 import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
 import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
