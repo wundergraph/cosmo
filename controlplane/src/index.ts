@@ -35,6 +35,7 @@ const {
   KC_ADMIN_USER,
   WEBHOOK_URL,
   WEBHOOK_SECRET,
+  WEBHOOK_PROXY_URL,
   GITHUB_APP_WEBHOOK_SECRET,
   GITHUB_APP_CLIENT_ID,
   GITHUB_APP_CLIENT_SECRET,
@@ -114,6 +115,7 @@ const options: BuildConfig = {
   webhook: {
     url: WEBHOOK_URL,
     key: WEBHOOK_SECRET,
+    proxyUrl: WEBHOOK_PROXY_URL,
   },
   cdnBaseUrl: CDN_BASE_URL,
   admissionWebhook: {

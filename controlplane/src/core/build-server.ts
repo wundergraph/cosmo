@@ -95,6 +95,7 @@ export interface BuildConfig {
   webhook?: {
     url?: string;
     key?: string;
+    proxyUrl?: string;
   };
   githubApp?: {
     webhookSecret?: string;
@@ -351,7 +352,12 @@ export default async function build(opts: BuildConfig) {
         : (opts.s3Storage.useIndividualDeletes ?? false),
   });
 
-  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
+  const platformWebhooks = new PlatformWebhookService(
+    opts.webhook?.url,
+    opts.webhook?.key,
+    logger,
+    opts.webhook?.proxyUrl,
+  );
 
   const readmeQueue = new AIGraphReadmeQueue(logger, fastify.redisForQueue);
 
@@ -541,6 +547,7 @@ export default async function build(opts: BuildConfig) {
       },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
+      webhookProxyUrl: opts.webhook?.proxyUrl,
       cdnBaseUrl: opts.cdnBaseUrl,
     }),
     contextValues(req) {

@@ -47,6 +47,7 @@ export function updateMonograph(
         authContext.organizationId,
         opts.logger,
         opts.billingDefaultPlanId,
+        opts.webhookProxyUrl,
       );
 
       if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {

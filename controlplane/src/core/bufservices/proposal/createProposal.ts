@@ -444,6 +444,7 @@ export function createProposal(
         authContext.organizationId,
         opts.logger,
         opts.billingDefaultPlanId,
+        opts.webhookProxyUrl,
       ),
     });
 

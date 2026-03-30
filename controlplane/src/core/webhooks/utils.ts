@@ -1,6 +1,5 @@
 import { createHmac } from 'node:crypto';
-import { AxiosError, AxiosInstance } from 'axios';
-import pino from 'pino';
+import { AxiosInstance } from 'axios';
 
 export const makeWebhookRequest = <Data = any, TResponse = any>(
   axiosInstance: AxiosInstance,

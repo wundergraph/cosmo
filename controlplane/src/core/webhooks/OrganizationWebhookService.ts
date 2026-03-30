@@ -8,6 +8,7 @@ import pino from 'pino';
 import { v4 } from 'uuid';
 import * as z from 'zod';
 import { LintSeverity, VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
@@ -129,11 +130,23 @@ export class OrganizationWebhookService {
     private organizationId: string,
     logger: pino.Logger,
     defaultBillingPlanId?: string,
+    proxyUrl?: string,
   ) {
     this.logger = logger.child({ organizationId });
     this.defaultBillingPlanId = defaultBillingPlanId;
 
+    let agent: HttpsProxyAgent<string> | undefined;
+    if (proxyUrl) {
+      try {
+        agent = new HttpsProxyAgent(proxyUrl, {});
+      } catch (e) {
+        logger.error(e, 'Failed to create proxy agent');
+      }
+    }
+
     this.httpClient = axios.create({
+      httpsAgent: agent,
+      httpAgent: agent,
       timeout: 30_000,
       maxContentLength: 5 * 1024 * 1024, // ~5mb
     });

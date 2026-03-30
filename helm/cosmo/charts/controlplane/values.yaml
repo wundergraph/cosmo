@@ -176,6 +176,7 @@ configuration:
   clickhouseMigrationDsn: 'clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo'
   webhookUrl: ''
   webhookSecret: ''
+  webhookProxyUrl: ''
   githubAppClientId: ''
   githubAppClientSecret: ''
   githubAppId: ''
