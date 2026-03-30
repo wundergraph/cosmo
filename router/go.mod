@@ -5,7 +5,7 @@ go 1.25
 require (
 	connectrpc.com/connect v1.16.2
 	github.com/andybalholm/brotli v1.1.0 // indirect
-	github.com/buger/jsonparser v1.1.1
+	github.com/buger/jsonparser v1.1.2
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
 	github.com/dustin/go-humanize v1.0.1
