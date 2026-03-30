@@ -9,11 +9,12 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getGraphMetrics(opts: RouterOptions, req: GetGraphMetricsRequest, ctx: HandlerContext) {
+export function getGraphMetrics(opts: RouterOptions, req: GetGraphMetricsRequest, ctx: HandlerContext): Promise<PlainMessage<GetGraphMetricsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetGraphMetricsResponse>>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

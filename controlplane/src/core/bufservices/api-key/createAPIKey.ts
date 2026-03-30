@@ -9,11 +9,12 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function createAPIKey(opts: RouterOptions, req: CreateAPIKeyRequest, ctx: HandlerContext) {
+export function createAPIKey(opts: RouterOptions, req: CreateAPIKeyRequest, ctx: HandlerContext): Promise<PlainMessage<CreateAPIKeyResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<CreateAPIKeyResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

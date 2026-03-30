@@ -4,7 +4,7 @@ import {
   DeleteFederatedGraphRequest,
   DeleteFederatedGraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { FederatedGraphDTO } from '../../../types/index.js';
+import { PlainMessage, FederatedGraphDTO } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -13,10 +13,10 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function deleteFederatedGraph(opts: RouterOptions, req: DeleteFederatedGraphRequest, ctx: HandlerContext) {
+export function deleteFederatedGraph(opts: RouterOptions, req: DeleteFederatedGraphRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteFederatedGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<DeleteFederatedGraphResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

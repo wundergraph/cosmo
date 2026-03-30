@@ -9,11 +9,12 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidNamespaceName } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function createNamespace(opts: RouterOptions, req: CreateNamespaceRequest, ctx: HandlerContext) {
+export function createNamespace(opts: RouterOptions, req: CreateNamespaceRequest, ctx: HandlerContext): Promise<PlainMessage<CreateNamespaceResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<CreateNamespaceResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

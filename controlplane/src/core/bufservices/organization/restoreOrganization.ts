@@ -9,11 +9,12 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function restoreOrganization(opts: RouterOptions, req: RestoreOrganizationRequest, ctx: HandlerContext) {
+export function restoreOrganization(opts: RouterOptions, req: RestoreOrganizationRequest, ctx: HandlerContext): Promise<PlainMessage<RestoreOrganizationResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<RestoreOrganizationResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

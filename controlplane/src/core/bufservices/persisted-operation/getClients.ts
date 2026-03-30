@@ -5,11 +5,12 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getClients(opts: RouterOptions, req: GetClientsRequest, ctx: HandlerContext) {
+export function getClients(opts: RouterOptions, req: GetClientsRequest, ctx: HandlerContext): Promise<PlainMessage<GetClientsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetClientsResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

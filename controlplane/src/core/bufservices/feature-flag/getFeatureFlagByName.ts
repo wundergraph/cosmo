@@ -10,11 +10,12 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getFeatureFlagByName(opts: RouterOptions, req: GetFeatureFlagByNameRequest, ctx: HandlerContext) {
+export function getFeatureFlagByName(opts: RouterOptions, req: GetFeatureFlagByNameRequest, ctx: HandlerContext): Promise<PlainMessage<GetFeatureFlagByNameResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetFeatureFlagByNameResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);

@@ -9,11 +9,12 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getClientsFromAnalytics(opts: RouterOptions, req: GetClientsFromAnalyticsRequest, ctx: HandlerContext) {
+export function getClientsFromAnalytics(opts: RouterOptions, req: GetClientsFromAnalyticsRequest, ctx: HandlerContext): Promise<PlainMessage<GetClientsFromAnalyticsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetClientsFromAnalyticsResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

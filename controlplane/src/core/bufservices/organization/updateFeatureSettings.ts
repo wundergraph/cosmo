@@ -5,16 +5,16 @@ import {
   UpdateFeatureSettingsRequest,
   UpdateFeatureSettingsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { FeatureIds } from '../../../types/index.js';
+import { PlainMessage, FeatureIds } from '../../../types/index.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function updateFeatureSettings(opts: RouterOptions, req: UpdateFeatureSettingsRequest, ctx: HandlerContext) {
+export function updateFeatureSettings(opts: RouterOptions, req: UpdateFeatureSettingsRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateFeatureSettingsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<UpdateFeatureSettingsResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

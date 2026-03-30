@@ -10,11 +10,12 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function deleteRouterToken(opts: RouterOptions, req: DeleteRouterTokenRequest, ctx: HandlerContext) {
+export function deleteRouterToken(opts: RouterOptions, req: DeleteRouterTokenRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteRouterTokenResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<DeleteRouterTokenResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

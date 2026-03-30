@@ -5,7 +5,7 @@ import {
   MigrateFromApolloRequest,
   MigrateFromApolloResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, GraphApiKeyJwtPayload } from '../../../types/index.js';
+import { PlainMessage, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, GraphApiKeyJwtPayload } from '../../../types/index.js';
 import { audiences, signJwtHS256 } from '../../crypto/jwt.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -19,10 +19,10 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function migrateFromApollo(opts: RouterOptions, req: MigrateFromApolloRequest, ctx: HandlerContext) {
+export function migrateFromApollo(opts: RouterOptions, req: MigrateFromApolloRequest, ctx: HandlerContext): Promise<PlainMessage<MigrateFromApolloResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<MigrateFromApolloResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -5,7 +5,7 @@ import {
   DeleteFederatedSubgraphRequest,
   DeleteFederatedSubgraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { PlainMessage, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -18,10 +18,10 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function deleteFederatedSubgraph(opts: RouterOptions, req: DeleteFederatedSubgraphRequest, ctx: HandlerContext) {
+export function deleteFederatedSubgraph(opts: RouterOptions, req: DeleteFederatedSubgraphRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteFederatedSubgraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<DeleteFederatedSubgraphResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

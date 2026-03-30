@@ -13,15 +13,16 @@ import { clamp, enrichLogger, fromProposalOriginEnum, getLogger, handleError, va
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function getProposalsByFederatedGraph(
   opts: RouterOptions,
   req: GetProposalsByFederatedGraphRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<GetProposalsByFederatedGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetProposalsByFederatedGraphResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

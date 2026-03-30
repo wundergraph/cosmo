@@ -11,15 +11,16 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function createIgnoreOverridesForAllOperations(
   opts: RouterOptions,
   req: CreateIgnoreOverridesForAllOperationsRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<CreateIgnoreOverridesForAllOperationsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<CreateIgnoreOverridesForAllOperationsResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

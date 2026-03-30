@@ -7,15 +7,16 @@ import {
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function getOrganizationGroupMembers(
   opts: RouterOptions,
   req: GetOrganizationGroupMembersRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<GetOrganizationGroupMembersResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetOrganizationGroupMembersResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

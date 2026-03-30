@@ -8,11 +8,12 @@ import { OidcRepository } from '../../repositories/OidcRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, mergeUrls } from '../../util.js';
 import OidcProvider from '../../services/OidcProvider.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getOIDCProvider(opts: RouterOptions, req: GetOIDCProviderRequest, ctx: HandlerContext) {
+export function getOIDCProvider(opts: RouterOptions, req: GetOIDCProviderRequest, ctx: HandlerContext): Promise<PlainMessage<GetOIDCProviderResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetOIDCProviderResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

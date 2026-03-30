@@ -10,11 +10,12 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import OidcProvider from '../../services/OidcProvider.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function updateIDPMappers(opts: RouterOptions, req: UpdateIDPMappersRequest, ctx: HandlerContext) {
+export function updateIDPMappers(opts: RouterOptions, req: UpdateIDPMappersRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateIDPMappersResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<UpdateIDPMappersResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

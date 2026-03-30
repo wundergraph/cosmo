@@ -11,15 +11,16 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function getDashboardAnalyticsView(
   opts: RouterOptions,
   req: GetDashboardAnalyticsViewRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<GetDashboardAnalyticsViewResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetDashboardAnalyticsViewResponse>>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

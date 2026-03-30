@@ -14,7 +14,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate } from 'graphql';
-import { PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
+import { PlainMessage, PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { MAX_MANIFEST_OPERATIONS, OperationsRepository } from '../../repositories/OperationsRepository.js';
@@ -30,7 +30,7 @@ export function publishPersistedOperations(
   opts: RouterOptions,
   req: PublishPersistedOperationsRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<PublishPersistedOperationsResponse>> {
   /**
    * Receives a federated graph name and a list of persisted operation contents.
    * First, it validates that the graph exists and all the operations are valid,
@@ -40,7 +40,7 @@ export function publishPersistedOperations(
    */
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<PublishPersistedOperationsResponse>>(ctx, logger, async () => {
     req.namespace = req.namespace || DefaultNamespace;
 
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);

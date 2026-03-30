@@ -9,15 +9,15 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { OrganizationGroupDTO } from '../../../types/index.js';
+import { PlainMessage, OrganizationGroupDTO } from '../../../types/index.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import OidcProvider from '../../services/OidcProvider.js';
 
-export function deleteOrganizationGroup(opts: RouterOptions, req: DeleteOrganizationGroupRequest, ctx: HandlerContext) {
+export function deleteOrganizationGroup(opts: RouterOptions, req: DeleteOrganizationGroupRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteOrganizationGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<DeleteOrganizationGroupResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

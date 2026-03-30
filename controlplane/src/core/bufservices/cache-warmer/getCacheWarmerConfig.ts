@@ -10,11 +10,12 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
 import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getCacheWarmerConfig(opts: RouterOptions, req: GetCacheWarmerConfigRequest, ctx: HandlerContext) {
+export function getCacheWarmerConfig(opts: RouterOptions, req: GetCacheWarmerConfigRequest, ctx: HandlerContext): Promise<PlainMessage<GetCacheWarmerConfigResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetCacheWarmerConfigResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const organizationRepo = new OrganizationRepository(logger, opts.db);

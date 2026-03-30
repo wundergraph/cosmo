@@ -13,15 +13,16 @@ import { MetricsRepository } from '../../repositories/analytics/MetricsRepositor
 import { getDateRange } from '../../repositories/analytics/util.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { defaultRetentionLimitInDays } from '../../constants.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function checkPersistedOperationTraffic(
   opts: RouterOptions,
   req: CheckPersistedOperationTrafficRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<CheckPersistedOperationTrafficResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<CheckPersistedOperationTrafficResponse>>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

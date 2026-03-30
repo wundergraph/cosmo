@@ -8,11 +8,12 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function verifyAPIKeyGraphAccess(opts: RouterOptions, req: VerifyAPIKeyGraphAccessRequest, ctx: HandlerContext) {
+export function verifyAPIKeyGraphAccess(opts: RouterOptions, req: VerifyAPIKeyGraphAccessRequest, ctx: HandlerContext): Promise<PlainMessage<VerifyAPIKeyGraphAccessResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<VerifyAPIKeyGraphAccessResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

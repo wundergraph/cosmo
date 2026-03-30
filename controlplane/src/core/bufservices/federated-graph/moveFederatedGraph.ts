@@ -6,8 +6,7 @@ import {
   CompositionWarning,
   DeploymentError,
   MoveGraphRequest,
-  MoveGraphResponse,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+  MoveGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PlainMessage } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
@@ -18,10 +17,10 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function moveFederatedGraph(opts: RouterOptions, req: MoveGraphRequest, ctx: HandlerContext) {
+export function moveFederatedGraph(opts: RouterOptions, req: MoveGraphRequest, ctx: HandlerContext): Promise<PlainMessage<MoveGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<MoveGraphResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

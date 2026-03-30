@@ -8,11 +8,12 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getFeatureSubgraphs(opts: RouterOptions, req: GetFeatureSubgraphsRequest, ctx: HandlerContext) {
+export function getFeatureSubgraphs(opts: RouterOptions, req: GetFeatureSubgraphsRequest, ctx: HandlerContext): Promise<PlainMessage<GetFeatureSubgraphsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetFeatureSubgraphsResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

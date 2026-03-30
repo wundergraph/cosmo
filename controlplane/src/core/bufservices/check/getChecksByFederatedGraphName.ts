@@ -12,15 +12,16 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function getChecksByFederatedGraphName(
   opts: RouterOptions,
   req: GetChecksByFederatedGraphNameRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<GetChecksByFederatedGraphNameResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetChecksByFederatedGraphNameResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

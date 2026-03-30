@@ -10,15 +10,16 @@ import { SubgraphMetricsRepository } from '../../repositories/analytics/Subgraph
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function getSubgraphMetricsErrorRate(
   opts: RouterOptions,
   req: GetSubgraphMetricsErrorRateRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<GetSubgraphMetricsErrorRateResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetSubgraphMetricsErrorRateResponse>>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

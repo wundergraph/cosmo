@@ -12,11 +12,12 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function deleteNamespace(opts: RouterOptions, req: DeleteNamespaceRequest, ctx: HandlerContext) {
+export function deleteNamespace(opts: RouterOptions, req: DeleteNamespaceRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteNamespaceResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<DeleteNamespaceResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

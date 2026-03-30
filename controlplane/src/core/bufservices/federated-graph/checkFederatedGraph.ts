@@ -25,10 +25,10 @@ import {
 import { UnauthorizedError } from '../../errors/errors.js';
 import { maxRowLimitForChecks } from '../../constants.js';
 
-export function checkFederatedGraph(opts: RouterOptions, req: CheckFederatedGraphRequest, ctx: HandlerContext) {
+export function checkFederatedGraph(opts: RouterOptions, req: CheckFederatedGraphRequest, ctx: HandlerContext): Promise<PlainMessage<CheckFederatedGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<CheckFederatedGraphResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

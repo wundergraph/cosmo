@@ -4,7 +4,7 @@ import {
   ValidateAndFetchPluginDataRequest,
   ValidateAndFetchPluginDataResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { PluginApiKeyJwtPayload } from '../../../types/index.js';
+import { PlainMessage, PluginApiKeyJwtPayload } from '../../../types/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../../crypto/jwt.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -19,10 +19,10 @@ export function validateAndFetchPluginData(
   opts: RouterOptions,
   req: ValidateAndFetchPluginDataRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<ValidateAndFetchPluginDataResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<ValidateAndFetchPluginDataResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

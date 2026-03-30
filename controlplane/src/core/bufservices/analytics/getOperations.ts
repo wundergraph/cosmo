@@ -5,6 +5,7 @@ import {
   AnalyticsFilterSchema,
   AnalyticsViewFilterOperator,
   GetOperationsRequest,
+  GetOperationsResponse,
   GetOperationsResponse_OperationSchema,
   GetOperationsResponse_OperationType,
   OperationsFetchBasedOn,
@@ -24,11 +25,12 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getOperations(opts: RouterOptions, req: GetOperationsRequest, ctx: HandlerContext) {
+export function getOperations(opts: RouterOptions, req: GetOperationsRequest, ctx: HandlerContext): Promise<PlainMessage<GetOperationsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetOperationsResponse>>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

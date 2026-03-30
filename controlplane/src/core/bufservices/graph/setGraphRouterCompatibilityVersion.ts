@@ -5,7 +5,7 @@ import {
   SetGraphRouterCompatibilityVersionResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ROUTER_COMPATIBILITY_VERSIONS, SupportedRouterCompatibilityVersion } from '@wundergraph/composition';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { PlainMessage, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -19,10 +19,10 @@ export function setGraphRouterCompatibilityVersion(
   opts: RouterOptions,
   req: SetGraphRouterCompatibilityVersionRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<SetGraphRouterCompatibilityVersionResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<SetGraphRouterCompatibilityVersionResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

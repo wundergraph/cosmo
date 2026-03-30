@@ -10,15 +10,16 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { createBlobStoragePath } from './utils.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function deletePersistedOperation(
   opts: RouterOptions,
   req: DeletePersistedOperationRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<DeletePersistedOperationResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<DeletePersistedOperationResponse>>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

@@ -22,11 +22,12 @@ import {
   isValidGraphName,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function createMonograph(opts: RouterOptions, req: CreateMonographRequest, ctx: HandlerContext) {
+export function createMonograph(opts: RouterOptions, req: CreateMonographRequest, ctx: HandlerContext): Promise<PlainMessage<CreateMonographResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<CreateMonographResponse>>(ctx, logger, async () => {
     return await opts.db.transaction(async (tx) => {
       req.namespace = req.namespace || DefaultNamespace;
 

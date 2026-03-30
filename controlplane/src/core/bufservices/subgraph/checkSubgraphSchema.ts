@@ -6,7 +6,7 @@ import {
   CheckSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { PlainMessage, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -29,10 +29,10 @@ import {
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { maxRowLimitForChecks, defaultRetentionLimitInDays } from '../../constants.js';
 
-export function checkSubgraphSchema(opts: RouterOptions, req: CheckSubgraphSchemaRequest, ctx: HandlerContext) {
+export function checkSubgraphSchema(opts: RouterOptions, req: CheckSubgraphSchemaRequest, ctx: HandlerContext): Promise<PlainMessage<CheckSubgraphSchemaResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<CheckSubgraphSchemaResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

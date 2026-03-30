@@ -4,7 +4,7 @@ import {
   GetFeatureFlagsByFederatedGraphRequest,
   GetFeatureFlagsByFederatedGraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { FeatureFlagDTO } from '../../../types/index.js';
+import { PlainMessage, FeatureFlagDTO } from '../../../types/index.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
@@ -16,10 +16,10 @@ export function getFeatureFlagsByFederatedGraph(
   opts: RouterOptions,
   req: GetFeatureFlagsByFederatedGraphRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<GetFeatureFlagsByFederatedGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetFeatureFlagsByFederatedGraphResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);

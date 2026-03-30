@@ -11,11 +11,12 @@ import { OrganizationGroupRepository } from '../../repositories/OrganizationGrou
 import { OrganizationRole } from '../../../db/models.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function updateOrganizationGroup(opts: RouterOptions, req: UpdateOrganizationGroupRequest, ctx: HandlerContext) {
+export function updateOrganizationGroup(opts: RouterOptions, req: UpdateOrganizationGroupRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateOrganizationGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<UpdateOrganizationGroupResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

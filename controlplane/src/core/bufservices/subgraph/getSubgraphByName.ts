@@ -9,13 +9,13 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
-import { SubgraphDTO } from '../../../types/index.js';
+import { PlainMessage, SubgraphDTO } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getSubgraphByName(opts: RouterOptions, req: GetSubgraphByNameRequest, ctx: HandlerContext) {
+export function getSubgraphByName(opts: RouterOptions, req: GetSubgraphByNameRequest, ctx: HandlerContext): Promise<PlainMessage<GetSubgraphByNameResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetSubgraphByNameResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -13,16 +13,16 @@ import { UsageRepository } from '../../repositories/analytics/UsageRepository.js
 import type { RouterOptions } from '../../routes.js';
 import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import { Field } from '../../../types/index.js';
+import { PlainMessage, Field } from '../../../types/index.js';
 
 export function getOperationDeprecatedFields(
   opts: RouterOptions,
   req: GetOperationDeprecatedFieldsRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<GetOperationDeprecatedFieldsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetOperationDeprecatedFieldsResponse>>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

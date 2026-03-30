@@ -10,15 +10,16 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function acceptOrDeclineInvitation(
   opts: RouterOptions,
   req: AcceptOrDeclineInvitationRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<AcceptOrDeclineInvitationResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

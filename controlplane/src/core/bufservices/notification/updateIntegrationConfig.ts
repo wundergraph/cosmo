@@ -9,11 +9,12 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function updateIntegrationConfig(opts: RouterOptions, req: UpdateIntegrationConfigRequest, ctx: HandlerContext) {
+export function updateIntegrationConfig(opts: RouterOptions, req: UpdateIntegrationConfigRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateIntegrationConfigResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

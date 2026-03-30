@@ -8,11 +8,12 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function deleteAPIKey(opts: RouterOptions, req: DeleteAPIKeyRequest, ctx: HandlerContext) {
+export function deleteAPIKey(opts: RouterOptions, req: DeleteAPIKeyRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteAPIKeyResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<DeleteAPIKeyResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

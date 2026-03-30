@@ -10,11 +10,12 @@ import OidcProvider from '../../services/OidcProvider.js';
 import { enrichLogger, getLogger, handleError, isValidLocalhostOrSecureEndpoint } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function createOIDCProvider(opts: RouterOptions, req: CreateOIDCProviderRequest, ctx: HandlerContext) {
+export function createOIDCProvider(opts: RouterOptions, req: CreateOIDCProviderRequest, ctx: HandlerContext): Promise<PlainMessage<CreateOIDCProviderResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<CreateOIDCProviderResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

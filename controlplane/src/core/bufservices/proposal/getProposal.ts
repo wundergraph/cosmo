@@ -11,11 +11,12 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, fromProposalOriginEnum, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getProposal(opts: RouterOptions, req: GetProposalRequest, ctx: HandlerContext) {
+export function getProposal(opts: RouterOptions, req: GetProposalRequest, ctx: HandlerContext): Promise<PlainMessage<GetProposalResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetProposalResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

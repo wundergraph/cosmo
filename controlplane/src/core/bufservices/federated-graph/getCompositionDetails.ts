@@ -10,11 +10,12 @@ import { GraphCompositionRepository } from '../../repositories/GraphCompositionR
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getCompositionDetails(opts: RouterOptions, req: GetCompositionDetailsRequest, ctx: HandlerContext) {
+export function getCompositionDetails(opts: RouterOptions, req: GetCompositionDetailsRequest, ctx: HandlerContext): Promise<PlainMessage<GetCompositionDetailsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetCompositionDetailsResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

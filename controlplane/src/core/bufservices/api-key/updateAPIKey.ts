@@ -8,11 +8,12 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function updateAPIKey(opts: RouterOptions, req: UpdateAPIKeyRequest, ctx: HandlerContext) {
+export function updateAPIKey(opts: RouterOptions, req: UpdateAPIKeyRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateAPIKeyResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<UpdateAPIKeyResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -9,11 +9,12 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getProposalChecks(opts: RouterOptions, req: GetProposalChecksRequest, ctx: HandlerContext) {
+export function getProposalChecks(opts: RouterOptions, req: GetProposalChecksRequest, ctx: HandlerContext): Promise<PlainMessage<GetProposalChecksResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetProposalChecksResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

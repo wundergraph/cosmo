@@ -11,11 +11,12 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PlainMessage } from '../../../types/index.js';
 
-export function getCheckOperations(opts: RouterOptions, req: GetCheckOperationsRequest, ctx: HandlerContext) {
+export function getCheckOperations(opts: RouterOptions, req: GetCheckOperationsRequest, ctx: HandlerContext): Promise<PlainMessage<GetCheckOperationsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetCheckOperationsResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -10,15 +10,16 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { SubgraphCheckExtensionsRepository } from '../../repositories/SubgraphCheckExtensionsRepository.js';
+import { PlainMessage } from '../../../types/index.js';
 
 export function getSubgraphCheckExtensionsConfig(
   opts: RouterOptions,
   req: GetSubgraphCheckExtensionsConfigRequest,
   ctx: HandlerContext,
-) {
+): Promise<PlainMessage<GetSubgraphCheckExtensionsConfigResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError(ctx, logger, async () => {
+  return handleError<PlainMessage<GetSubgraphCheckExtensionsConfigResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
