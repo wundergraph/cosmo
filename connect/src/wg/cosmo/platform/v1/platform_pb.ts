@@ -25539,6 +25539,74 @@ export class CompleteOnboardingStep3Response_Onboarding extends Message<Complete
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.RestartOnboardingRequest
+ */
+export class RestartOnboardingRequest extends Message<RestartOnboardingRequest> {
+  constructor(data?: PartialMessage<RestartOnboardingRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RestartOnboardingRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RestartOnboardingRequest {
+    return new RestartOnboardingRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RestartOnboardingRequest {
+    return new RestartOnboardingRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RestartOnboardingRequest {
+    return new RestartOnboardingRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RestartOnboardingRequest | PlainMessage<RestartOnboardingRequest> | undefined, b: RestartOnboardingRequest | PlainMessage<RestartOnboardingRequest> | undefined): boolean {
+    return proto3.util.equals(RestartOnboardingRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RestartOnboardingResponse
+ */
+export class RestartOnboardingResponse extends Message<RestartOnboardingResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<RestartOnboardingResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RestartOnboardingResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RestartOnboardingResponse {
+    return new RestartOnboardingResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RestartOnboardingResponse {
+    return new RestartOnboardingResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RestartOnboardingResponse {
+    return new RestartOnboardingResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RestartOnboardingResponse | PlainMessage<RestartOnboardingResponse> | undefined, b: RestartOnboardingResponse | PlainMessage<RestartOnboardingResponse> | undefined): boolean {
+    return proto3.util.equals(RestartOnboardingResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.FinishOnboardingRequest
  */
 export class FinishOnboardingRequest extends Message<FinishOnboardingRequest> {

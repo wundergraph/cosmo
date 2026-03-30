@@ -580,6 +580,9 @@ const (
 	// PlatformServiceFinishOnboardingProcedure is the fully-qualified name of the PlatformService's
 	// FinishOnboarding RPC.
 	PlatformServiceFinishOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/FinishOnboarding"
+	// PlatformServiceRestartOnboardingProcedure is the fully-qualified name of the PlatformService's
+	// RestartOnboarding RPC.
+	PlatformServiceRestartOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/RestartOnboarding"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -767,6 +770,7 @@ var (
 	platformServiceCompleteOnboardingStep2MethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CompleteOnboardingStep2")
 	platformServiceCompleteOnboardingStep3MethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CompleteOnboardingStep3")
 	platformServiceFinishOnboardingMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("FinishOnboarding")
+	platformServiceRestartOnboardingMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("RestartOnboarding")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -1115,6 +1119,8 @@ type PlatformServiceClient interface {
 	CompleteOnboardingStep3(context.Context, *connect.Request[v1.CompleteOnboardingStep3Request]) (*connect.Response[v1.CompleteOnboardingStep3Response], error)
 	// FinishOnboarding marks onboarding wizard as finished (step 4 complete)
 	FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error)
+	// RestartOnboarding deletes the onboarding record so the user can start fresh
+	RestartOnboarding(context.Context, *connect.Request[v1.RestartOnboardingRequest]) (*connect.Response[v1.RestartOnboardingResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -2226,6 +2232,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceFinishOnboardingMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		restartOnboarding: connect.NewClient[v1.RestartOnboardingRequest, v1.RestartOnboardingResponse](
+			httpClient,
+			baseURL+PlatformServiceRestartOnboardingProcedure,
+			connect.WithSchema(platformServiceRestartOnboardingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2413,6 +2425,7 @@ type platformServiceClient struct {
 	completeOnboardingStep2               *connect.Client[v1.CompleteOnboardingStep2Request, v1.CompleteOnboardingStep2Response]
 	completeOnboardingStep3               *connect.Client[v1.CompleteOnboardingStep3Request, v1.CompleteOnboardingStep3Response]
 	finishOnboarding                      *connect.Client[v1.FinishOnboardingRequest, v1.FinishOnboardingResponse]
+	restartOnboarding                     *connect.Client[v1.RestartOnboardingRequest, v1.RestartOnboardingResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -3362,6 +3375,11 @@ func (c *platformServiceClient) FinishOnboarding(ctx context.Context, req *conne
 	return c.finishOnboarding.CallUnary(ctx, req)
 }
 
+// RestartOnboarding calls wg.cosmo.platform.v1.PlatformService.RestartOnboarding.
+func (c *platformServiceClient) RestartOnboarding(ctx context.Context, req *connect.Request[v1.RestartOnboardingRequest]) (*connect.Response[v1.RestartOnboardingResponse], error) {
+	return c.restartOnboarding.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3708,6 +3726,8 @@ type PlatformServiceHandler interface {
 	CompleteOnboardingStep3(context.Context, *connect.Request[v1.CompleteOnboardingStep3Request]) (*connect.Response[v1.CompleteOnboardingStep3Response], error)
 	// FinishOnboarding marks onboarding wizard as finished (step 4 complete)
 	FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error)
+	// RestartOnboarding deletes the onboarding record so the user can start fresh
+	RestartOnboarding(context.Context, *connect.Request[v1.RestartOnboardingRequest]) (*connect.Response[v1.RestartOnboardingResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4815,6 +4835,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceFinishOnboardingMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceRestartOnboardingHandler := connect.NewUnaryHandler(
+		PlatformServiceRestartOnboardingProcedure,
+		svc.RestartOnboarding,
+		connect.WithSchema(platformServiceRestartOnboardingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -5181,6 +5207,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceCompleteOnboardingStep3Handler.ServeHTTP(w, r)
 		case PlatformServiceFinishOnboardingProcedure:
 			platformServiceFinishOnboardingHandler.ServeHTTP(w, r)
+		case PlatformServiceRestartOnboardingProcedure:
+			platformServiceRestartOnboardingHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5916,4 +5944,8 @@ func (UnimplementedPlatformServiceHandler) CompleteOnboardingStep3(context.Conte
 
 func (UnimplementedPlatformServiceHandler) FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.FinishOnboarding is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) RestartOnboarding(context.Context, *connect.Request[v1.RestartOnboardingRequest]) (*connect.Response[v1.RestartOnboardingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RestartOnboarding is not implemented"))
 }

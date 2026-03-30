@@ -100,6 +100,14 @@ export class OnboardingRepository {
     return this.createOnboardingDTO(record);
   }
 
+  // TODO: also remove the federated graph created during onboarding once we implement its creation
+  public async deleteOnboarding({ userId, organizationId }: { userId: string; organizationId: string }): Promise<void> {
+    await this.db
+      .delete(onboarding)
+      .where(and(eq(onboarding.userId, userId), eq(onboarding.organizationId, organizationId)))
+      .execute();
+  }
+
   public async finishOnboarding({
     userId,
     organizationId,

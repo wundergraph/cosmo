@@ -3265,6 +3265,13 @@ message CompleteOnboardingStep3Response {
   Onboarding onboarding = 2;
 }
 
+message RestartOnboardingRequest {
+}
+
+message RestartOnboardingResponse {
+  Response response = 1;
+}
+
 message FinishOnboardingRequest {
 }
 
@@ -3691,4 +3698,6 @@ service PlatformService {
   rpc CompleteOnboardingStep3(CompleteOnboardingStep3Request) returns (CompleteOnboardingStep3Response) {}
   // FinishOnboarding marks onboarding wizard as finished (step 4 complete)
   rpc FinishOnboarding(FinishOnboardingRequest) returns (FinishOnboardingResponse) {}
+  // RestartOnboarding deletes the onboarding record so the user can start fresh
+  rpc RestartOnboarding(RestartOnboardingRequest) returns (RestartOnboardingResponse) {}
 }

@@ -1,9 +1,14 @@
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { formatDateTime } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
-import { useQuery } from '@connectrpc/connect-query';
+import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { Component2Icon, Cross1Icon, EnvelopeClosedIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import { getBillingPlans } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import {
+  getBillingPlans,
+  restartOnboarding,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { useToast } from '../ui/use-toast';
 import { addDays } from 'date-fns';
 import { useRouter } from 'next/router';
 import { Dispatch, SetStateAction, useMemo } from 'react';
@@ -75,16 +80,47 @@ export const StarBanner = ({
 };
 
 export const OnboardingBanner = ({ hasFinishedOnboarding }: { hasFinishedOnboarding: boolean }) => {
+  const router = useRouter();
+  const { toast } = useToast();
+  const { setOnboarding } = useOnboarding();
+  const { mutate, isPending } = useMutation(restartOnboarding);
+
+  const onRestart = () => {
+    mutate(
+      {},
+      {
+        onSuccess(data) {
+          if (data.response?.code !== EnumStatusCode.OK) {
+            toast({
+              description: data.response?.details ?? 'Failed to restart onboarding',
+              duration: 3000,
+            });
+            return;
+          }
+          setOnboarding(undefined);
+          router.push('/onboarding');
+        },
+        onError() {
+          toast({
+            description: 'Failed to restart onboarding. Please try again.',
+            duration: 3000,
+          });
+        },
+      },
+    );
+  };
+
   const content = hasFinishedOnboarding ? (
     <>
-      Feeling stuck? {/* TODO - handle resetting the onboarding */}
+      Feeling stuck?{' '}
       <Button
         variant="link"
         size="sm"
         className="h-auto p-0 text-xs text-black underline dark:text-white xl:text-sm"
-        onClick={() => undefined}
+        onClick={onRestart}
+        disabled={isPending}
       >
-        Take the tour again.
+        {isPending ? 'Restarting...' : 'Take the tour again.'}
       </Button>
     </>
   ) : (

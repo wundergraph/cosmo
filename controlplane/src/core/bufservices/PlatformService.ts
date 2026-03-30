@@ -183,6 +183,7 @@ import { completeOnboardingStep1 } from './onboarding/completeOnboardingStep1.js
 import { completeOnboardingStep2 } from './onboarding/completeOnboardingStep2.js';
 import { completeOnboardingStep3 } from './onboarding/completeOnboardingStep3.js';
 import { finishOnboarding } from './onboarding/finishOnboarding.js';
+import { restartOnboarding } from './onboarding/restartOnboarding.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -925,6 +926,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     finishOnboarding: (req, ctx) => {
       return finishOnboarding(opts, req, ctx);
+    },
+
+    restartOnboarding: (req, ctx) => {
+      return restartOnboarding(opts, req, ctx);
     },
   };
 }
