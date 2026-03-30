@@ -3265,6 +3265,29 @@ message CompleteOnboardingStep3Response {
   Onboarding onboarding = 2;
 }
 
+message FinishOnboardingRequest {
+}
+
+message FinishOnboardingResponse {
+  Response response = 1;
+  message Onboarding {
+    string id = 1;
+    string userId = 2;
+    string organizationId = 3;
+    string createdAt = 4;
+    string finishedAt = 5;
+    string updatedAt = 6;
+    string version = 7;
+    int32 step = 8;
+    bool slack = 9;
+    bool email = 10;
+    string federatedGraphId = 11;
+    int32 nonDemoFederatedGraphsCount = 12;
+  }
+
+  Onboarding onboarding = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3666,4 +3689,6 @@ service PlatformService {
   rpc CompleteOnboardingStep2(CompleteOnboardingStep2Request) returns (CompleteOnboardingStep2Response) {}
   // CompleteOnboardingStep3 advances onboarding wizard to step 3 (demo graph created)
   rpc CompleteOnboardingStep3(CompleteOnboardingStep3Request) returns (CompleteOnboardingStep3Response) {}
+  // FinishOnboarding marks onboarding wizard as finished (step 4 complete)
+  rpc FinishOnboarding(FinishOnboardingRequest) returns (FinishOnboardingResponse) {}
 }

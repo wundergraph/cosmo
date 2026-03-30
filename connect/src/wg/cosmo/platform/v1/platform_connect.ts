@@ -5,373 +5,14 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import {
-  AcceptOrDeclineInvitationRequest,
-  AcceptOrDeclineInvitationResponse,
-  AddReadmeRequest,
-  AddReadmeResponse,
-  CheckFederatedGraphRequest,
-  CheckFederatedGraphResponse,
-  CheckPersistedOperationTrafficRequest,
-  CheckPersistedOperationTrafficResponse,
-  CheckSubgraphSchemaRequest,
-  CheckSubgraphSchemaResponse,
-  CompleteOnboardingStep1Request,
-  CompleteOnboardingStep1Response,
-  CompleteOnboardingStep2Request,
-  CompleteOnboardingStep2Response,
-  CompleteOnboardingStep3Request,
-  CompleteOnboardingStep3Response,
-  ComputeCacheWarmerOperationsRequest,
-  ComputeCacheWarmerOperationsResponse,
-  ConfigureCacheWarmerRequest,
-  ConfigureCacheWarmerResponse,
-  ConfigureNamespaceGraphPruningConfigRequest,
-  ConfigureNamespaceGraphPruningConfigResponse,
-  ConfigureNamespaceLintConfigRequest,
-  ConfigureNamespaceLintConfigResponse,
-  ConfigureNamespaceProposalConfigRequest,
-  ConfigureNamespaceProposalConfigResponse,
-  ConfigureSubgraphCheckExtensionsRequest,
-  ConfigureSubgraphCheckExtensionsResponse,
-  CreateAPIKeyRequest,
-  CreateAPIKeyResponse,
-  CreateBillingPortalSessionRequest,
-  CreateBillingPortalSessionResponse,
-  CreateCheckoutSessionRequest,
-  CreateCheckoutSessionResponse,
-  CreateContractRequest,
-  CreateContractResponse,
-  CreateFeatureFlagRequest,
-  CreateFeatureFlagResponse,
-  CreateFederatedGraphRequest,
-  CreateFederatedGraphResponse,
-  CreateFederatedGraphTokenRequest,
-  CreateFederatedGraphTokenResponse,
-  CreateFederatedSubgraphRequest,
-  CreateFederatedSubgraphResponse,
-  CreateIgnoreOverridesForAllOperationsRequest,
-  CreateIgnoreOverridesForAllOperationsResponse,
-  CreateIntegrationRequest,
-  CreateIntegrationResponse,
-  CreateMonographRequest,
-  CreateMonographResponse,
-  CreateNamespaceRequest,
-  CreateNamespaceResponse,
-  CreateOIDCProviderRequest,
-  CreateOIDCProviderResponse,
-  CreateOperationIgnoreAllOverrideRequest,
-  CreateOperationIgnoreAllOverrideResponse,
-  CreateOperationOverridesRequest,
-  CreateOperationOverridesResponse,
-  CreateOrganizationGroupRequest,
-  CreateOrganizationGroupResponse,
-  CreateOrganizationRequest,
-  CreateOrganizationResponse,
-  CreateOrganizationWebhookConfigRequest,
-  CreateOrganizationWebhookConfigResponse,
-  CreatePlaygroundScriptRequest,
-  CreatePlaygroundScriptResponse,
-  CreateProposalRequest,
-  CreateProposalResponse,
-  DeleteAPIKeyRequest,
-  DeleteAPIKeyResponse,
-  DeleteCacheWarmerOperationRequest,
-  DeleteCacheWarmerOperationResponse,
-  DeleteFeatureFlagRequest,
-  DeleteFeatureFlagResponse,
-  DeleteFederatedGraphRequest,
-  DeleteFederatedGraphResponse,
-  DeleteFederatedSubgraphRequest,
-  DeleteFederatedSubgraphResponse,
-  DeleteIntegrationRequest,
-  DeleteIntegrationResponse,
-  DeleteMonographRequest,
-  DeleteMonographResponse,
-  DeleteNamespaceRequest,
-  DeleteNamespaceResponse,
-  DeleteOIDCProviderRequest,
-  DeleteOIDCProviderResponse,
-  DeleteOrganizationGroupRequest,
-  DeleteOrganizationGroupResponse,
-  DeleteOrganizationRequest,
-  DeleteOrganizationResponse,
-  DeleteOrganizationWebhookConfigRequest,
-  DeleteOrganizationWebhookConfigResponse,
-  DeletePersistedOperationRequest,
-  DeletePersistedOperationResponse,
-  DeletePlaygroundScriptRequest,
-  DeletePlaygroundScriptResponse,
-  DeleteRouterTokenRequest,
-  DeleteRouterTokenResponse,
-  DeleteUserRequest,
-  DeleteUserResponse,
-  EnableFeatureFlagRequest,
-  EnableFeatureFlagResponse,
-  EnableGraphPruningRequest,
-  EnableGraphPruningResponse,
-  EnableLintingForTheNamespaceRequest,
-  EnableLintingForTheNamespaceResponse,
-  EnableProposalsForNamespaceRequest,
-  EnableProposalsForNamespaceResponse,
-  FixSubgraphSchemaRequest,
-  FixSubgraphSchemaResponse,
-  ForceCheckSuccessRequest,
-  ForceCheckSuccessResponse,
-  GenerateRouterTokenRequest,
-  GenerateRouterTokenResponse,
-  GetAllOverridesRequest,
-  GetAllOverridesResponse,
-  GetAnalyticsViewRequest,
-  GetAnalyticsViewResponse,
-  GetAPIKeysRequest,
-  GetAPIKeysResponse,
-  GetAuditLogsRequest,
-  GetAuditLogsResponse,
-  GetBillingPlansRequest,
-  GetBillingPlansResponse,
-  GetCacheWarmerConfigRequest,
-  GetCacheWarmerConfigResponse,
-  GetCacheWarmerOperationsRequest,
-  GetCacheWarmerOperationsResponse,
-  GetChangelogBySchemaVersionRequest,
-  GetChangelogBySchemaVersionResponse,
-  GetCheckOperationsRequest,
-  GetCheckOperationsResponse,
-  GetChecksByFederatedGraphNameRequest,
-  GetChecksByFederatedGraphNameResponse,
-  GetCheckSummaryRequest,
-  GetCheckSummaryResponse,
-  GetClientsFromAnalyticsRequest,
-  GetClientsFromAnalyticsResponse,
-  GetClientsRequest,
-  GetClientsResponse,
-  GetCompositionDetailsRequest,
-  GetCompositionDetailsResponse,
-  GetCompositionsRequest,
-  GetCompositionsResponse,
-  GetDashboardAnalyticsViewRequest,
-  GetDashboardAnalyticsViewResponse,
-  GetFeatureFlagByNameRequest,
-  GetFeatureFlagByNameResponse,
-  GetFeatureFlagsByFederatedGraphRequest,
-  GetFeatureFlagsByFederatedGraphResponse,
-  GetFeatureFlagsRequest,
-  GetFeatureFlagsResponse,
-  GetFeatureSubgraphsByFeatureFlagRequest,
-  GetFeatureSubgraphsByFeatureFlagResponse,
-  GetFeatureSubgraphsRequest,
-  GetFeatureSubgraphsResponse,
-  GetFederatedGraphByIdRequest,
-  GetFederatedGraphByIdResponse,
-  GetFederatedGraphByNameRequest,
-  GetFederatedGraphByNameResponse,
-  GetFederatedGraphChangelogRequest,
-  GetFederatedGraphChangelogResponse,
-  GetFederatedGraphsBySubgraphLabelsRequest,
-  GetFederatedGraphsBySubgraphLabelsResponse,
-  GetFederatedGraphSDLByNameRequest,
-  GetFederatedGraphSDLByNameResponse,
-  GetFederatedGraphsRequest,
-  GetFederatedGraphsResponse,
-  GetFieldUsageRequest,
-  GetFieldUsageResponse,
-  GetGraphMetricsRequest,
-  GetGraphMetricsResponse,
-  GetInvitationsRequest,
-  GetInvitationsResponse,
-  GetLatestSubgraphSDLRequest,
-  GetLatestSubgraphSDLResponse,
-  GetMetricsErrorRateRequest,
-  GetMetricsErrorRateResponse,
-  GetNamespaceChecksConfigurationRequest,
-  GetNamespaceChecksConfigurationResponse,
-  GetNamespaceGraphPruningConfigRequest,
-  GetNamespaceGraphPruningConfigResponse,
-  GetNamespaceLintConfigRequest,
-  GetNamespaceLintConfigResponse,
-  GetNamespaceProposalConfigRequest,
-  GetNamespaceProposalConfigResponse,
-  GetNamespaceRequest,
-  GetNamespaceResponse,
-  GetNamespacesRequest,
-  GetNamespacesResponse,
-  GetOIDCProviderRequest,
-  GetOIDCProviderResponse,
-  GetOperationClientsRequest,
-  GetOperationClientsResponse,
-  GetOperationContentRequest,
-  GetOperationContentResponse,
-  GetOperationDeprecatedFieldsRequest,
-  GetOperationDeprecatedFieldsResponse,
-  GetOperationOverridesRequest,
-  GetOperationOverridesResponse,
-  GetOperationsRequest,
-  GetOperationsResponse,
-  GetOrganizationBySlugRequest,
-  GetOrganizationBySlugResponse,
-  GetOrganizationGroupMembersRequest,
-  GetOrganizationGroupMembersResponse,
-  GetOrganizationGroupsRequest,
-  GetOrganizationGroupsResponse,
-  GetOrganizationIntegrationsRequest,
-  GetOrganizationIntegrationsResponse,
-  GetOrganizationMembersRequest,
-  GetOrganizationMembersResponse,
-  GetOrganizationRequestsCountRequest,
-  GetOrganizationRequestsCountResponse,
-  GetOrganizationWebhookConfigsRequest,
-  GetOrganizationWebhookConfigsResponse,
-  GetOrganizationWebhookHistoryRequest,
-  GetOrganizationWebhookHistoryResponse,
-  GetOrganizationWebhookMetaRequest,
-  GetOrganizationWebhookMetaResponse,
-  GetPendingOrganizationMembersRequest,
-  GetPendingOrganizationMembersResponse,
-  GetPersistedOperationsRequest,
-  GetPersistedOperationsResponse,
-  GetPlaygroundScriptsRequest,
-  GetPlaygroundScriptsResponse,
-  GetProposalChecksRequest,
-  GetProposalChecksResponse,
-  GetProposalRequest,
-  GetProposalResponse,
-  GetProposalsByFederatedGraphRequest,
-  GetProposalsByFederatedGraphResponse,
-  GetProposedSchemaOfCheckedSubgraphRequest,
-  GetProposedSchemaOfCheckedSubgraphResponse,
-  GetRoutersRequest,
-  GetRoutersResponse,
-  GetRouterTokensRequest,
-  GetRouterTokensResponse,
-  GetSdlBySchemaVersionRequest,
-  GetSdlBySchemaVersionResponse,
-  GetSubgraphByIdRequest,
-  GetSubgraphByIdResponse,
-  GetSubgraphByNameRequest,
-  GetSubgraphByNameResponse,
-  GetSubgraphCheckExtensionsConfigRequest,
-  GetSubgraphCheckExtensionsConfigResponse,
-  GetSubgraphMembersRequest,
-  GetSubgraphMembersResponse,
-  GetSubgraphMetricsErrorRateRequest,
-  GetSubgraphMetricsErrorRateResponse,
-  GetSubgraphMetricsRequest,
-  GetSubgraphMetricsResponse,
-  GetSubgraphSDLFromLatestCompositionRequest,
-  GetSubgraphSDLFromLatestCompositionResponse,
-  GetSubgraphsRequest,
-  GetSubgraphsResponse,
-  GetTraceRequest,
-  GetTraceResponse,
-  GetUserAccessiblePermissionsRequest,
-  GetUserAccessiblePermissionsResponse,
-  GetUserAccessibleResourcesRequest,
-  GetUserAccessibleResourcesResponse,
-  GetWebhookDeliveryDetailsRequest,
-  GetWebhookDeliveryDetailsResponse,
-  GetWorkspaceRequest,
-  GetWorkspaceResponse,
-  InitializeCosmoUserRequest,
-  InitializeCosmoUserResponse,
-  InviteUserRequest,
-  InviteUserResponse,
-  IsGitHubAppInstalledRequest,
-  IsGitHubAppInstalledResponse,
-  IsMemberLimitReachedRequest,
-  IsMemberLimitReachedResponse,
-  LeaveOrganizationRequest,
-  LeaveOrganizationResponse,
-  LinkSubgraphRequest,
-  LinkSubgraphResponse,
-  ListOrganizationsRequest,
-  ListOrganizationsResponse,
-  ListRouterCompatibilityVersionsRequest,
-  ListRouterCompatibilityVersionsResponse,
-  MigrateFromApolloRequest,
-  MigrateFromApolloResponse,
-  MigrateMonographRequest,
-  MigrateMonographResponse,
-  MoveGraphRequest,
-  MoveGraphResponse,
-  PublishFederatedSubgraphRequest,
-  PublishFederatedSubgraphResponse,
-  PublishMonographRequest,
-  PublishMonographResponse,
-  PublishPersistedOperationsRequest,
-  PublishPersistedOperationsResponse,
-  PushCacheWarmerOperationRequest,
-  PushCacheWarmerOperationResponse,
-  RecomposeGraphRequest,
-  RecomposeGraphResponse,
-  RedeliverWebhookRequest,
-  RedeliverWebhookResponse,
-  RemoveInvitationRequest,
-  RemoveInvitationResponse,
-  RemoveOperationIgnoreAllOverrideRequest,
-  RemoveOperationIgnoreAllOverrideResponse,
-  RemoveOperationOverridesRequest,
-  RemoveOperationOverridesResponse,
-  RemoveOrganizationMemberRequest,
-  RemoveOrganizationMemberResponse,
-  RenameNamespaceRequest,
-  RenameNamespaceResponse,
-  RestoreOrganizationRequest,
-  RestoreOrganizationResponse,
-  SetGraphRouterCompatibilityVersionRequest,
-  SetGraphRouterCompatibilityVersionResponse,
-  ToggleChangeOverridesForAllOperationsRequest,
-  ToggleChangeOverridesForAllOperationsResponse,
-  UnlinkSubgraphRequest,
-  UnlinkSubgraphResponse,
-  UpdateAPIKeyRequest,
-  UpdateAPIKeyResponse,
-  UpdateContractRequest,
-  UpdateContractResponse,
-  UpdateFeatureFlagRequest,
-  UpdateFeatureFlagResponse,
-  UpdateFeatureSettingsRequest,
-  UpdateFeatureSettingsResponse,
-  UpdateFederatedGraphRequest,
-  UpdateFederatedGraphResponse,
-  UpdateIDPMappersRequest,
-  UpdateIDPMappersResponse,
-  UpdateIntegrationConfigRequest,
-  UpdateIntegrationConfigResponse,
-  UpdateMonographRequest,
-  UpdateMonographResponse,
-  UpdateNamespaceChecksConfigurationRequest,
-  UpdateNamespaceChecksConfigurationResponse,
-  UpdateOrganizationDetailsRequest,
-  UpdateOrganizationDetailsResponse,
-  UpdateOrganizationGroupRequest,
-  UpdateOrganizationGroupResponse,
-  UpdateOrganizationWebhookConfigRequest,
-  UpdateOrganizationWebhookConfigResponse,
-  UpdateOrgMemberGroupRequest,
-  UpdateOrgMemberGroupResponse,
-  UpdatePlaygroundScriptRequest,
-  UpdatePlaygroundScriptResponse,
-  UpdateProposalRequest,
-  UpdateProposalResponse,
-  UpdateSubgraphRequest,
-  UpdateSubgraphResponse,
-  UpgradePlanRequest,
-  UpgradePlanResponse,
-  ValidateAndFetchPluginDataRequest,
-  ValidateAndFetchPluginDataResponse,
-  VerifyAPIKeyGraphAccessRequest,
-  VerifyAPIKeyGraphAccessResponse,
-  WhoAmIRequest,
-  WhoAmIResponse,
-} from './platform_pb.js';
-import { MethodIdempotency, MethodKind } from '@bufbuild/protobuf';
+import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddReadmeRequest, AddReadmeResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckPersistedOperationTrafficRequest, CheckPersistedOperationTrafficResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CompleteOnboardingStep1Request, CompleteOnboardingStep1Response, CompleteOnboardingStep2Request, CompleteOnboardingStep2Response, CompleteOnboardingStep3Request, CompleteOnboardingStep3Response, ComputeCacheWarmerOperationsRequest, ComputeCacheWarmerOperationsResponse, ConfigureCacheWarmerRequest, ConfigureCacheWarmerResponse, ConfigureNamespaceGraphPruningConfigRequest, ConfigureNamespaceGraphPruningConfigResponse, ConfigureNamespaceLintConfigRequest, ConfigureNamespaceLintConfigResponse, ConfigureNamespaceProposalConfigRequest, ConfigureNamespaceProposalConfigResponse, ConfigureSubgraphCheckExtensionsRequest, ConfigureSubgraphCheckExtensionsResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateBillingPortalSessionRequest, CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateContractRequest, CreateContractResponse, CreateFeatureFlagRequest, CreateFeatureFlagResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIgnoreOverridesForAllOperationsRequest, CreateIgnoreOverridesForAllOperationsResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateMonographRequest, CreateMonographResponse, CreateNamespaceRequest, CreateNamespaceResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse, CreateOperationOverridesRequest, CreateOperationOverridesResponse, CreateOrganizationGroupRequest, CreateOrganizationGroupResponse, CreateOrganizationRequest, CreateOrganizationResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, CreatePlaygroundScriptRequest, CreatePlaygroundScriptResponse, CreateProposalRequest, CreateProposalResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteCacheWarmerOperationRequest, DeleteCacheWarmerOperationResponse, DeleteFeatureFlagRequest, DeleteFeatureFlagResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteMonographRequest, DeleteMonographResponse, DeleteNamespaceRequest, DeleteNamespaceResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationGroupRequest, DeleteOrganizationGroupResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeletePersistedOperationRequest, DeletePersistedOperationResponse, DeletePlaygroundScriptRequest, DeletePlaygroundScriptResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, DeleteUserRequest, DeleteUserResponse, EnableFeatureFlagRequest, EnableFeatureFlagResponse, EnableGraphPruningRequest, EnableGraphPruningResponse, EnableLintingForTheNamespaceRequest, EnableLintingForTheNamespaceResponse, EnableProposalsForNamespaceRequest, EnableProposalsForNamespaceResponse, FinishOnboardingRequest, FinishOnboardingResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GenerateRouterTokenRequest, GenerateRouterTokenResponse, GetAllOverridesRequest, GetAllOverridesResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetAuditLogsRequest, GetAuditLogsResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetCacheWarmerConfigRequest, GetCacheWarmerConfigResponse, GetCacheWarmerOperationsRequest, GetCacheWarmerOperationsResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsFromAnalyticsRequest, GetClientsFromAnalyticsResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFeatureFlagByNameRequest, GetFeatureFlagByNameResponse, GetFeatureFlagsByFederatedGraphRequest, GetFeatureFlagsByFederatedGraphResponse, GetFeatureFlagsRequest, GetFeatureFlagsResponse, GetFeatureSubgraphsByFeatureFlagRequest, GetFeatureSubgraphsByFeatureFlagResponse, GetFeatureSubgraphsRequest, GetFeatureSubgraphsResponse, GetFederatedGraphByIdRequest, GetFederatedGraphByIdResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphsBySubgraphLabelsRequest, GetFederatedGraphsBySubgraphLabelsResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestSubgraphSDLRequest, GetLatestSubgraphSDLResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetNamespaceChecksConfigurationRequest, GetNamespaceChecksConfigurationResponse, GetNamespaceGraphPruningConfigRequest, GetNamespaceGraphPruningConfigResponse, GetNamespaceLintConfigRequest, GetNamespaceLintConfigResponse, GetNamespaceProposalConfigRequest, GetNamespaceProposalConfigResponse, GetNamespaceRequest, GetNamespaceResponse, GetNamespacesRequest, GetNamespacesResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationClientsRequest, GetOperationClientsResponse, GetOperationContentRequest, GetOperationContentResponse, GetOperationDeprecatedFieldsRequest, GetOperationDeprecatedFieldsResponse, GetOperationOverridesRequest, GetOperationOverridesResponse, GetOperationsRequest, GetOperationsResponse, GetOrganizationBySlugRequest, GetOrganizationBySlugResponse, GetOrganizationGroupMembersRequest, GetOrganizationGroupMembersResponse, GetOrganizationGroupsRequest, GetOrganizationGroupsResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookHistoryRequest, GetOrganizationWebhookHistoryResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPendingOrganizationMembersRequest, GetPendingOrganizationMembersResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetPlaygroundScriptsRequest, GetPlaygroundScriptsResponse, GetProposalChecksRequest, GetProposalChecksResponse, GetProposalRequest, GetProposalResponse, GetProposalsByFederatedGraphRequest, GetProposalsByFederatedGraphResponse, GetProposedSchemaOfCheckedSubgraphRequest, GetProposedSchemaOfCheckedSubgraphResponse, GetRoutersRequest, GetRoutersResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByIdRequest, GetSubgraphByIdResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphCheckExtensionsConfigRequest, GetSubgraphCheckExtensionsConfigResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphMetricsErrorRateRequest, GetSubgraphMetricsErrorRateResponse, GetSubgraphMetricsRequest, GetSubgraphMetricsResponse, GetSubgraphSDLFromLatestCompositionRequest, GetSubgraphSDLFromLatestCompositionResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessiblePermissionsRequest, GetUserAccessiblePermissionsResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, GetWebhookDeliveryDetailsRequest, GetWebhookDeliveryDetailsResponse, GetWorkspaceRequest, GetWorkspaceResponse, InitializeCosmoUserRequest, InitializeCosmoUserResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, IsMemberLimitReachedRequest, IsMemberLimitReachedResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, LinkSubgraphRequest, LinkSubgraphResponse, ListOrganizationsRequest, ListOrganizationsResponse, ListRouterCompatibilityVersionsRequest, ListRouterCompatibilityVersionsResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, MigrateMonographRequest, MigrateMonographResponse, MoveGraphRequest, MoveGraphResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishMonographRequest, PublishMonographResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, PushCacheWarmerOperationRequest, PushCacheWarmerOperationResponse, RecomposeGraphRequest, RecomposeGraphResponse, RedeliverWebhookRequest, RedeliverWebhookResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse, RemoveOperationOverridesRequest, RemoveOperationOverridesResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RenameNamespaceRequest, RenameNamespaceResponse, RestoreOrganizationRequest, RestoreOrganizationResponse, SetGraphRouterCompatibilityVersionRequest, SetGraphRouterCompatibilityVersionResponse, ToggleChangeOverridesForAllOperationsRequest, ToggleChangeOverridesForAllOperationsResponse, UnlinkSubgraphRequest, UnlinkSubgraphResponse, UpdateAPIKeyRequest, UpdateAPIKeyResponse, UpdateContractRequest, UpdateContractResponse, UpdateFeatureFlagRequest, UpdateFeatureFlagResponse, UpdateFeatureSettingsRequest, UpdateFeatureSettingsResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIDPMappersRequest, UpdateIDPMappersResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateMonographRequest, UpdateMonographResponse, UpdateNamespaceChecksConfigurationRequest, UpdateNamespaceChecksConfigurationResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationGroupRequest, UpdateOrganizationGroupResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberGroupRequest, UpdateOrgMemberGroupResponse, UpdatePlaygroundScriptRequest, UpdatePlaygroundScriptResponse, UpdateProposalRequest, UpdateProposalResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, UpgradePlanRequest, UpgradePlanResponse, ValidateAndFetchPluginDataRequest, ValidateAndFetchPluginDataResponse, VerifyAPIKeyGraphAccessRequest, VerifyAPIKeyGraphAccessResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
  * @generated from service wg.cosmo.platform.v1.PlatformService
  */
 export const PlatformService = {
-  typeName: 'wg.cosmo.platform.v1.PlatformService',
+  typeName: "wg.cosmo.platform.v1.PlatformService",
   methods: {
     /**
      * PlaygroundScripts
@@ -379,7 +20,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript
      */
     createPlaygroundScript: {
-      name: 'CreatePlaygroundScript',
+      name: "CreatePlaygroundScript",
       I: CreatePlaygroundScriptRequest,
       O: CreatePlaygroundScriptResponse,
       kind: MethodKind.Unary,
@@ -388,7 +29,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeletePlaygroundScript
      */
     deletePlaygroundScript: {
-      name: 'DeletePlaygroundScript',
+      name: "DeletePlaygroundScript",
       I: DeletePlaygroundScriptRequest,
       O: DeletePlaygroundScriptResponse,
       kind: MethodKind.Unary,
@@ -397,7 +38,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundScript
      */
     updatePlaygroundScript: {
-      name: 'UpdatePlaygroundScript',
+      name: "UpdatePlaygroundScript",
       I: UpdatePlaygroundScriptRequest,
       O: UpdatePlaygroundScriptResponse,
       kind: MethodKind.Unary,
@@ -406,7 +47,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts
      */
     getPlaygroundScripts: {
-      name: 'GetPlaygroundScripts',
+      name: "GetPlaygroundScripts",
       I: GetPlaygroundScriptsRequest,
       O: GetPlaygroundScriptsResponse,
       kind: MethodKind.Unary,
@@ -417,7 +58,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateNamespace
      */
     createNamespace: {
-      name: 'CreateNamespace',
+      name: "CreateNamespace",
       I: CreateNamespaceRequest,
       O: CreateNamespaceResponse,
       kind: MethodKind.Unary,
@@ -426,7 +67,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteNamespace
      */
     deleteNamespace: {
-      name: 'DeleteNamespace',
+      name: "DeleteNamespace",
       I: DeleteNamespaceRequest,
       O: DeleteNamespaceResponse,
       kind: MethodKind.Unary,
@@ -435,7 +76,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.RenameNamespace
      */
     renameNamespace: {
-      name: 'RenameNamespace',
+      name: "RenameNamespace",
       I: RenameNamespaceRequest,
       O: RenameNamespaceResponse,
       kind: MethodKind.Unary,
@@ -444,7 +85,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaces
      */
     getNamespaces: {
-      name: 'GetNamespaces',
+      name: "GetNamespaces",
       I: GetNamespacesRequest,
       O: GetNamespacesResponse,
       kind: MethodKind.Unary,
@@ -453,7 +94,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespace
      */
     getNamespace: {
-      name: 'GetNamespace',
+      name: "GetNamespace",
       I: GetNamespaceRequest,
       O: GetNamespaceResponse,
       kind: MethodKind.Unary,
@@ -464,7 +105,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetWorkspace
      */
     getWorkspace: {
-      name: 'GetWorkspace',
+      name: "GetWorkspace",
       I: GetWorkspaceRequest,
       O: GetWorkspaceResponse,
       kind: MethodKind.Unary,
@@ -475,7 +116,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateContract
      */
     createContract: {
-      name: 'CreateContract',
+      name: "CreateContract",
       I: CreateContractRequest,
       O: CreateContractResponse,
       kind: MethodKind.Unary,
@@ -484,7 +125,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateContract
      */
     updateContract: {
-      name: 'UpdateContract',
+      name: "UpdateContract",
       I: UpdateContractRequest,
       O: UpdateContractResponse,
       kind: MethodKind.Unary,
@@ -493,7 +134,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.MoveFederatedGraph
      */
     moveFederatedGraph: {
-      name: 'MoveFederatedGraph',
+      name: "MoveFederatedGraph",
       I: MoveGraphRequest,
       O: MoveGraphResponse,
       kind: MethodKind.Unary,
@@ -502,7 +143,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.MoveSubgraph
      */
     moveSubgraph: {
-      name: 'MoveSubgraph',
+      name: "MoveSubgraph",
       I: MoveGraphRequest,
       O: MoveGraphResponse,
       kind: MethodKind.Unary,
@@ -511,7 +152,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.MoveMonograph
      */
     moveMonograph: {
-      name: 'MoveMonograph',
+      name: "MoveMonograph",
       I: MoveGraphRequest,
       O: MoveGraphResponse,
       kind: MethodKind.Unary,
@@ -522,7 +163,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateMonograph
      */
     createMonograph: {
-      name: 'CreateMonograph',
+      name: "CreateMonograph",
       I: CreateMonographRequest,
       O: CreateMonographResponse,
       kind: MethodKind.Unary,
@@ -533,7 +174,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.PublishMonograph
      */
     publishMonograph: {
-      name: 'PublishMonograph',
+      name: "PublishMonograph",
       I: PublishMonographRequest,
       O: PublishMonographResponse,
       kind: MethodKind.Unary,
@@ -544,7 +185,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteMonograph
      */
     deleteMonograph: {
-      name: 'DeleteMonograph',
+      name: "DeleteMonograph",
       I: DeleteMonographRequest,
       O: DeleteMonographResponse,
       kind: MethodKind.Unary,
@@ -555,7 +196,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateMonograph
      */
     updateMonograph: {
-      name: 'UpdateMonograph',
+      name: "UpdateMonograph",
       I: UpdateMonographRequest,
       O: UpdateMonographResponse,
       kind: MethodKind.Unary,
@@ -566,7 +207,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.MigrateMonograph
      */
     migrateMonograph: {
-      name: 'MigrateMonograph',
+      name: "MigrateMonograph",
       I: MigrateMonographRequest,
       O: MigrateMonographResponse,
       kind: MethodKind.Unary,
@@ -577,7 +218,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph
      */
     createFederatedSubgraph: {
-      name: 'CreateFederatedSubgraph',
+      name: "CreateFederatedSubgraph",
       I: CreateFederatedSubgraphRequest,
       O: CreateFederatedSubgraphResponse,
       kind: MethodKind.Unary,
@@ -588,7 +229,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph
      */
     publishFederatedSubgraph: {
-      name: 'PublishFederatedSubgraph',
+      name: "PublishFederatedSubgraph",
       I: PublishFederatedSubgraphRequest,
       O: PublishFederatedSubgraphResponse,
       kind: MethodKind.Unary,
@@ -599,7 +240,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph
      */
     createFederatedGraph: {
-      name: 'CreateFederatedGraph',
+      name: "CreateFederatedGraph",
       I: CreateFederatedGraphRequest,
       O: CreateFederatedGraphResponse,
       kind: MethodKind.Unary,
@@ -610,7 +251,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteFederatedGraph
      */
     deleteFederatedGraph: {
-      name: 'DeleteFederatedGraph',
+      name: "DeleteFederatedGraph",
       I: DeleteFederatedGraphRequest,
       O: DeleteFederatedGraphResponse,
       kind: MethodKind.Unary,
@@ -621,7 +262,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteFederatedSubgraph
      */
     deleteFederatedSubgraph: {
-      name: 'DeleteFederatedSubgraph',
+      name: "DeleteFederatedSubgraph",
       I: DeleteFederatedSubgraphRequest,
       O: DeleteFederatedSubgraphResponse,
       kind: MethodKind.Unary,
@@ -632,7 +273,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema
      */
     checkSubgraphSchema: {
-      name: 'CheckSubgraphSchema',
+      name: "CheckSubgraphSchema",
       I: CheckSubgraphSchemaRequest,
       O: CheckSubgraphSchemaResponse,
       kind: MethodKind.Unary,
@@ -641,7 +282,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph
      */
     getProposedSchemaOfCheckedSubgraph: {
-      name: 'GetProposedSchemaOfCheckedSubgraph',
+      name: "GetProposedSchemaOfCheckedSubgraph",
       I: GetProposedSchemaOfCheckedSubgraphRequest,
       O: GetProposedSchemaOfCheckedSubgraphResponse,
       kind: MethodKind.Unary,
@@ -650,7 +291,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema
      */
     fixSubgraphSchema: {
-      name: 'FixSubgraphSchema',
+      name: "FixSubgraphSchema",
       I: FixSubgraphSchemaRequest,
       O: FixSubgraphSchemaResponse,
       kind: MethodKind.Unary,
@@ -661,7 +302,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateFederatedGraph
      */
     updateFederatedGraph: {
-      name: 'UpdateFederatedGraph',
+      name: "UpdateFederatedGraph",
       I: UpdateFederatedGraphRequest,
       O: UpdateFederatedGraphResponse,
       kind: MethodKind.Unary,
@@ -672,7 +313,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateSubgraph
      */
     updateSubgraph: {
-      name: 'UpdateSubgraph',
+      name: "UpdateSubgraph",
       I: UpdateSubgraphRequest,
       O: UpdateSubgraphResponse,
       kind: MethodKind.Unary,
@@ -683,7 +324,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CheckFederatedGraph
      */
     checkFederatedGraph: {
-      name: 'CheckFederatedGraph',
+      name: "CheckFederatedGraph",
       I: CheckFederatedGraphRequest,
       O: CheckFederatedGraphResponse,
       kind: MethodKind.Unary,
@@ -694,7 +335,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.WhoAmI
      */
     whoAmI: {
-      name: 'WhoAmI',
+      name: "WhoAmI",
       I: WhoAmIRequest,
       O: WhoAmIResponse,
       kind: MethodKind.Unary,
@@ -705,7 +346,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GenerateRouterToken
      */
     generateRouterToken: {
-      name: 'GenerateRouterToken',
+      name: "GenerateRouterToken",
       I: GenerateRouterTokenRequest,
       O: GenerateRouterTokenResponse,
       kind: MethodKind.Unary,
@@ -716,7 +357,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetRouterTokens
      */
     getRouterTokens: {
-      name: 'GetRouterTokens',
+      name: "GetRouterTokens",
       I: GetRouterTokensRequest,
       O: GetRouterTokensResponse,
       kind: MethodKind.Unary,
@@ -727,7 +368,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteRouterToken
      */
     deleteRouterToken: {
-      name: 'DeleteRouterToken',
+      name: "DeleteRouterToken",
       I: DeleteRouterTokenRequest,
       O: DeleteRouterTokenResponse,
       kind: MethodKind.Unary,
@@ -738,7 +379,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.PublishPersistedOperations
      */
     publishPersistedOperations: {
-      name: 'PublishPersistedOperations',
+      name: "PublishPersistedOperations",
       I: PublishPersistedOperationsRequest,
       O: PublishPersistedOperationsResponse,
       kind: MethodKind.Unary,
@@ -749,7 +390,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic
      */
     checkPersistedOperationTraffic: {
-      name: 'CheckPersistedOperationTraffic',
+      name: "CheckPersistedOperationTraffic",
       I: CheckPersistedOperationTrafficRequest,
       O: CheckPersistedOperationTrafficResponse,
       kind: MethodKind.Unary,
@@ -760,7 +401,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation
      */
     deletePersistedOperation: {
-      name: 'DeletePersistedOperation',
+      name: "DeletePersistedOperation",
       I: DeletePersistedOperationRequest,
       O: DeletePersistedOperationResponse,
       kind: MethodKind.Unary,
@@ -771,7 +412,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetPersistedOperations
      */
     getPersistedOperations: {
-      name: 'GetPersistedOperations',
+      name: "GetPersistedOperations",
       I: GetPersistedOperationsRequest,
       O: GetPersistedOperationsResponse,
       kind: MethodKind.Unary,
@@ -782,7 +423,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAuditLogs
      */
     getAuditLogs: {
-      name: 'GetAuditLogs',
+      name: "GetAuditLogs",
       I: GetAuditLogsRequest,
       O: GetAuditLogsResponse,
       kind: MethodKind.Unary,
@@ -793,7 +434,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser
      */
     initializeCosmoUser: {
-      name: 'InitializeCosmoUser',
+      name: "InitializeCosmoUser",
       I: InitializeCosmoUserRequest,
       O: InitializeCosmoUserResponse,
       kind: MethodKind.Unary,
@@ -804,7 +445,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ListOrganizations
      */
     listOrganizations: {
-      name: 'ListOrganizations',
+      name: "ListOrganizations",
       I: ListOrganizationsRequest,
       O: ListOrganizationsResponse,
       kind: MethodKind.Unary,
@@ -815,7 +456,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphs
      */
     getFederatedGraphs: {
-      name: 'GetFederatedGraphs',
+      name: "GetFederatedGraphs",
       I: GetFederatedGraphsRequest,
       O: GetFederatedGraphsResponse,
       kind: MethodKind.Unary,
@@ -826,7 +467,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphsBySubgraphLabels
      */
     getFederatedGraphsBySubgraphLabels: {
-      name: 'GetFederatedGraphsBySubgraphLabels',
+      name: "GetFederatedGraphsBySubgraphLabels",
       I: GetFederatedGraphsBySubgraphLabelsRequest,
       O: GetFederatedGraphsBySubgraphLabelsResponse,
       kind: MethodKind.Unary,
@@ -837,7 +478,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphByName
      */
     getFederatedGraphByName: {
-      name: 'GetFederatedGraphByName',
+      name: "GetFederatedGraphByName",
       I: GetFederatedGraphByNameRequest,
       O: GetFederatedGraphByNameResponse,
       kind: MethodKind.Unary,
@@ -848,7 +489,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphSDLByName
      */
     getFederatedGraphSDLByName: {
-      name: 'GetFederatedGraphSDLByName',
+      name: "GetFederatedGraphSDLByName",
       I: GetFederatedGraphSDLByNameRequest,
       O: GetFederatedGraphSDLByNameResponse,
       kind: MethodKind.Unary,
@@ -859,7 +500,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphs
      */
     getSubgraphs: {
-      name: 'GetSubgraphs',
+      name: "GetSubgraphs",
       I: GetSubgraphsRequest,
       O: GetSubgraphsResponse,
       kind: MethodKind.Unary,
@@ -870,7 +511,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphByName
      */
     getSubgraphByName: {
-      name: 'GetSubgraphByName',
+      name: "GetSubgraphByName",
       I: GetSubgraphByNameRequest,
       O: GetSubgraphByNameResponse,
       kind: MethodKind.Unary,
@@ -881,7 +522,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphSDLFromLatestComposition
      */
     getSubgraphSDLFromLatestComposition: {
-      name: 'GetSubgraphSDLFromLatestComposition',
+      name: "GetSubgraphSDLFromLatestComposition",
       I: GetSubgraphSDLFromLatestCompositionRequest,
       O: GetSubgraphSDLFromLatestCompositionResponse,
       kind: MethodKind.Unary,
@@ -892,7 +533,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetLatestSubgraphSDL
      */
     getLatestSubgraphSDL: {
-      name: 'GetLatestSubgraphSDL',
+      name: "GetLatestSubgraphSDL",
       I: GetLatestSubgraphSDLRequest,
       O: GetLatestSubgraphSDLResponse,
       kind: MethodKind.Unary,
@@ -903,7 +544,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetChecksByFederatedGraphName
      */
     getChecksByFederatedGraphName: {
-      name: 'GetChecksByFederatedGraphName',
+      name: "GetChecksByFederatedGraphName",
       I: GetChecksByFederatedGraphNameRequest,
       O: GetChecksByFederatedGraphNameResponse,
       kind: MethodKind.Unary,
@@ -914,7 +555,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCheckSummary
      */
     getCheckSummary: {
-      name: 'GetCheckSummary',
+      name: "GetCheckSummary",
       I: GetCheckSummaryRequest,
       O: GetCheckSummaryResponse,
       kind: MethodKind.Unary,
@@ -925,7 +566,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCheckOperations
      */
     getCheckOperations: {
-      name: 'GetCheckOperations',
+      name: "GetCheckOperations",
       I: GetCheckOperationsRequest,
       O: GetCheckOperationsResponse,
       kind: MethodKind.Unary,
@@ -936,7 +577,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ForceCheckSuccess
      */
     forceCheckSuccess: {
-      name: 'ForceCheckSuccess',
+      name: "ForceCheckSuccess",
       I: ForceCheckSuccessRequest,
       O: ForceCheckSuccessResponse,
       kind: MethodKind.Unary,
@@ -947,7 +588,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOperationOverrides
      */
     createOperationOverrides: {
-      name: 'CreateOperationOverrides',
+      name: "CreateOperationOverrides",
       I: CreateOperationOverridesRequest,
       O: CreateOperationOverridesResponse,
       kind: MethodKind.Unary,
@@ -958,7 +599,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationOverrides
      */
     removeOperationOverrides: {
-      name: 'RemoveOperationOverrides',
+      name: "RemoveOperationOverrides",
       I: RemoveOperationOverridesRequest,
       O: RemoveOperationOverridesResponse,
       kind: MethodKind.Unary,
@@ -969,7 +610,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOperationIgnoreAllOverride
      */
     createOperationIgnoreAllOverride: {
-      name: 'CreateOperationIgnoreAllOverride',
+      name: "CreateOperationIgnoreAllOverride",
       I: CreateOperationIgnoreAllOverrideRequest,
       O: CreateOperationIgnoreAllOverrideResponse,
       kind: MethodKind.Unary,
@@ -980,7 +621,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationIgnoreAllOverride
      */
     removeOperationIgnoreAllOverride: {
-      name: 'RemoveOperationIgnoreAllOverride',
+      name: "RemoveOperationIgnoreAllOverride",
       I: RemoveOperationIgnoreAllOverrideRequest,
       O: RemoveOperationIgnoreAllOverrideResponse,
       kind: MethodKind.Unary,
@@ -991,7 +632,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationOverrides
      */
     getOperationOverrides: {
-      name: 'GetOperationOverrides',
+      name: "GetOperationOverrides",
       I: GetOperationOverridesRequest,
       O: GetOperationOverridesResponse,
       kind: MethodKind.Unary,
@@ -1002,7 +643,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAllOverrides
      */
     getAllOverrides: {
-      name: 'GetAllOverrides',
+      name: "GetAllOverrides",
       I: GetAllOverridesRequest,
       O: GetAllOverridesResponse,
       kind: MethodKind.Unary,
@@ -1013,7 +654,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ToggleChangeOverridesForAllOperations
      */
     toggleChangeOverridesForAllOperations: {
-      name: 'ToggleChangeOverridesForAllOperations',
+      name: "ToggleChangeOverridesForAllOperations",
       I: ToggleChangeOverridesForAllOperationsRequest,
       O: ToggleChangeOverridesForAllOperationsResponse,
       kind: MethodKind.Unary,
@@ -1024,7 +665,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateIgnoreOverridesForAllOperations
      */
     createIgnoreOverridesForAllOperations: {
-      name: 'CreateIgnoreOverridesForAllOperations',
+      name: "CreateIgnoreOverridesForAllOperations",
       I: CreateIgnoreOverridesForAllOperationsRequest,
       O: CreateIgnoreOverridesForAllOperationsResponse,
       kind: MethodKind.Unary,
@@ -1035,7 +676,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationContent
      */
     getOperationContent: {
-      name: 'GetOperationContent',
+      name: "GetOperationContent",
       I: GetOperationContentRequest,
       O: GetOperationContentResponse,
       kind: MethodKind.Unary,
@@ -1046,7 +687,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphChangelog
      */
     getFederatedGraphChangelog: {
-      name: 'GetFederatedGraphChangelog',
+      name: "GetFederatedGraphChangelog",
       I: GetFederatedGraphChangelogRequest,
       O: GetFederatedGraphChangelogResponse,
       kind: MethodKind.Unary,
@@ -1057,7 +698,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFederatedGraphToken
      */
     createFederatedGraphToken: {
-      name: 'CreateFederatedGraphToken',
+      name: "CreateFederatedGraphToken",
       I: CreateFederatedGraphTokenRequest,
       O: CreateFederatedGraphTokenResponse,
       kind: MethodKind.Unary,
@@ -1068,7 +709,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationBySlug
      */
     getOrganizationBySlug: {
-      name: 'GetOrganizationBySlug',
+      name: "GetOrganizationBySlug",
       I: GetOrganizationBySlugRequest,
       O: GetOrganizationBySlugResponse,
       kind: MethodKind.Unary,
@@ -1079,7 +720,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationMembers
      */
     getOrganizationMembers: {
-      name: 'GetOrganizationMembers',
+      name: "GetOrganizationMembers",
       I: GetOrganizationMembersRequest,
       O: GetOrganizationMembersResponse,
       kind: MethodKind.Unary,
@@ -1090,7 +731,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetPendingOrganizationMembers
      */
     getPendingOrganizationMembers: {
-      name: 'GetPendingOrganizationMembers',
+      name: "GetPendingOrganizationMembers",
       I: GetPendingOrganizationMembersRequest,
       O: GetPendingOrganizationMembersResponse,
       kind: MethodKind.Unary,
@@ -1101,7 +742,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.IsMemberLimitReached
      */
     isMemberLimitReached: {
-      name: 'IsMemberLimitReached',
+      name: "IsMemberLimitReached",
       I: IsMemberLimitReachedRequest,
       O: IsMemberLimitReachedResponse,
       kind: MethodKind.Unary,
@@ -1112,7 +753,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.InviteUser
      */
     inviteUser: {
-      name: 'InviteUser',
+      name: "InviteUser",
       I: InviteUserRequest,
       O: InviteUserResponse,
       kind: MethodKind.Unary,
@@ -1123,7 +764,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAPIKeys
      */
     getAPIKeys: {
-      name: 'GetAPIKeys',
+      name: "GetAPIKeys",
       I: GetAPIKeysRequest,
       O: GetAPIKeysResponse,
       kind: MethodKind.Unary,
@@ -1134,7 +775,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateAPIKey
      */
     createAPIKey: {
-      name: 'CreateAPIKey',
+      name: "CreateAPIKey",
       I: CreateAPIKeyRequest,
       O: CreateAPIKeyResponse,
       kind: MethodKind.Unary,
@@ -1145,7 +786,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateAPIKey
      */
     updateAPIKey: {
-      name: 'UpdateAPIKey',
+      name: "UpdateAPIKey",
       I: UpdateAPIKeyRequest,
       O: UpdateAPIKeyResponse,
       kind: MethodKind.Unary,
@@ -1156,7 +797,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteAPIKey
      */
     deleteAPIKey: {
-      name: 'DeleteAPIKey',
+      name: "DeleteAPIKey",
       I: DeleteAPIKeyRequest,
       O: DeleteAPIKeyResponse,
       kind: MethodKind.Unary,
@@ -1167,7 +808,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOrganizationMember
      */
     removeOrganizationMember: {
-      name: 'RemoveOrganizationMember',
+      name: "RemoveOrganizationMember",
       I: RemoveOrganizationMemberRequest,
       O: RemoveOrganizationMemberResponse,
       kind: MethodKind.Unary,
@@ -1178,7 +819,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveInvitation
      */
     removeInvitation: {
-      name: 'RemoveInvitation',
+      name: "RemoveInvitation",
       I: RemoveInvitationRequest,
       O: RemoveInvitationResponse,
       kind: MethodKind.Unary,
@@ -1189,7 +830,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.MigrateFromApollo
      */
     migrateFromApollo: {
-      name: 'MigrateFromApollo',
+      name: "MigrateFromApollo",
       I: MigrateFromApolloRequest,
       O: MigrateFromApolloResponse,
       kind: MethodKind.Unary,
@@ -1201,7 +842,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOrganizationGroup
      */
     createOrganizationGroup: {
-      name: 'CreateOrganizationGroup',
+      name: "CreateOrganizationGroup",
       I: CreateOrganizationGroupRequest,
       O: CreateOrganizationGroupResponse,
       kind: MethodKind.Unary,
@@ -1212,7 +853,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups
      */
     getOrganizationGroups: {
-      name: 'GetOrganizationGroups',
+      name: "GetOrganizationGroups",
       I: GetOrganizationGroupsRequest,
       O: GetOrganizationGroupsResponse,
       kind: MethodKind.Unary,
@@ -1223,7 +864,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers
      */
     getOrganizationGroupMembers: {
-      name: 'GetOrganizationGroupMembers',
+      name: "GetOrganizationGroupMembers",
       I: GetOrganizationGroupMembersRequest,
       O: GetOrganizationGroupMembersResponse,
       kind: MethodKind.Unary,
@@ -1234,7 +875,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroup
      */
     updateOrganizationGroup: {
-      name: 'UpdateOrganizationGroup',
+      name: "UpdateOrganizationGroup",
       I: UpdateOrganizationGroupRequest,
       O: UpdateOrganizationGroupResponse,
       kind: MethodKind.Unary,
@@ -1245,7 +886,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup
      */
     deleteOrganizationGroup: {
-      name: 'DeleteOrganizationGroup',
+      name: "DeleteOrganizationGroup",
       I: DeleteOrganizationGroupRequest,
       O: DeleteOrganizationGroupResponse,
       kind: MethodKind.Unary,
@@ -1256,7 +897,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOrganizationWebhookConfig
      */
     createOrganizationWebhookConfig: {
-      name: 'CreateOrganizationWebhookConfig',
+      name: "CreateOrganizationWebhookConfig",
       I: CreateOrganizationWebhookConfigRequest,
       O: CreateOrganizationWebhookConfigResponse,
       kind: MethodKind.Unary,
@@ -1267,7 +908,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookConfigs
      */
     getOrganizationWebhookConfigs: {
-      name: 'GetOrganizationWebhookConfigs',
+      name: "GetOrganizationWebhookConfigs",
       I: GetOrganizationWebhookConfigsRequest,
       O: GetOrganizationWebhookConfigsResponse,
       kind: MethodKind.Unary,
@@ -1278,7 +919,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookMeta
      */
     getOrganizationWebhookMeta: {
-      name: 'GetOrganizationWebhookMeta',
+      name: "GetOrganizationWebhookMeta",
       I: GetOrganizationWebhookMetaRequest,
       O: GetOrganizationWebhookMetaResponse,
       kind: MethodKind.Unary,
@@ -1289,7 +930,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationWebhookConfig
      */
     updateOrganizationWebhookConfig: {
-      name: 'UpdateOrganizationWebhookConfig',
+      name: "UpdateOrganizationWebhookConfig",
       I: UpdateOrganizationWebhookConfigRequest,
       O: UpdateOrganizationWebhookConfigResponse,
       kind: MethodKind.Unary,
@@ -1300,7 +941,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganizationWebhookConfig
      */
     deleteOrganizationWebhookConfig: {
-      name: 'DeleteOrganizationWebhookConfig',
+      name: "DeleteOrganizationWebhookConfig",
       I: DeleteOrganizationWebhookConfigRequest,
       O: DeleteOrganizationWebhookConfigResponse,
       kind: MethodKind.Unary,
@@ -1311,7 +952,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookHistory
      */
     getOrganizationWebhookHistory: {
-      name: 'GetOrganizationWebhookHistory',
+      name: "GetOrganizationWebhookHistory",
       I: GetOrganizationWebhookHistoryRequest,
       O: GetOrganizationWebhookHistoryResponse,
       kind: MethodKind.Unary,
@@ -1322,7 +963,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetWebhookDeliveryDetails
      */
     getWebhookDeliveryDetails: {
-      name: 'GetWebhookDeliveryDetails',
+      name: "GetWebhookDeliveryDetails",
       I: GetWebhookDeliveryDetailsRequest,
       O: GetWebhookDeliveryDetailsResponse,
       kind: MethodKind.Unary,
@@ -1333,7 +974,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.RedeliverWebhook
      */
     redeliverWebhook: {
-      name: 'RedeliverWebhook',
+      name: "RedeliverWebhook",
       I: RedeliverWebhookRequest,
       O: RedeliverWebhookResponse,
       kind: MethodKind.Unary,
@@ -1344,7 +985,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateIntegration
      */
     createIntegration: {
-      name: 'CreateIntegration',
+      name: "CreateIntegration",
       I: CreateIntegrationRequest,
       O: CreateIntegrationResponse,
       kind: MethodKind.Unary,
@@ -1355,7 +996,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationIntegrations
      */
     getOrganizationIntegrations: {
-      name: 'GetOrganizationIntegrations',
+      name: "GetOrganizationIntegrations",
       I: GetOrganizationIntegrationsRequest,
       O: GetOrganizationIntegrationsResponse,
       kind: MethodKind.Unary,
@@ -1366,7 +1007,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateIntegrationConfig
      */
     updateIntegrationConfig: {
-      name: 'UpdateIntegrationConfig',
+      name: "UpdateIntegrationConfig",
       I: UpdateIntegrationConfigRequest,
       O: UpdateIntegrationConfigResponse,
       kind: MethodKind.Unary,
@@ -1377,7 +1018,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteIntegration
      */
     deleteIntegration: {
-      name: 'DeleteIntegration',
+      name: "DeleteIntegration",
       I: DeleteIntegrationRequest,
       O: DeleteIntegrationResponse,
       kind: MethodKind.Unary,
@@ -1388,7 +1029,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteUser
      */
     deleteUser: {
-      name: 'DeleteUser',
+      name: "DeleteUser",
       I: DeleteUserRequest,
       O: DeleteUserResponse,
       kind: MethodKind.Unary,
@@ -1399,7 +1040,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganization
      */
     deleteOrganization: {
-      name: 'DeleteOrganization',
+      name: "DeleteOrganization",
       I: DeleteOrganizationRequest,
       O: DeleteOrganizationResponse,
       kind: MethodKind.Unary,
@@ -1410,7 +1051,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.RestoreOrganization
      */
     restoreOrganization: {
-      name: 'RestoreOrganization',
+      name: "RestoreOrganization",
       I: RestoreOrganizationRequest,
       O: RestoreOrganizationResponse,
       kind: MethodKind.Unary,
@@ -1421,7 +1062,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.LeaveOrganization
      */
     leaveOrganization: {
-      name: 'LeaveOrganization',
+      name: "LeaveOrganization",
       I: LeaveOrganizationRequest,
       O: LeaveOrganizationResponse,
       kind: MethodKind.Unary,
@@ -1432,7 +1073,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationDetails
      */
     updateOrganizationDetails: {
-      name: 'UpdateOrganizationDetails',
+      name: "UpdateOrganizationDetails",
       I: UpdateOrganizationDetailsRequest,
       O: UpdateOrganizationDetailsResponse,
       kind: MethodKind.Unary,
@@ -1443,7 +1084,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberGroup
      */
     updateOrgMemberGroup: {
-      name: 'UpdateOrgMemberGroup',
+      name: "UpdateOrgMemberGroup",
       I: UpdateOrgMemberGroupRequest,
       O: UpdateOrgMemberGroupResponse,
       kind: MethodKind.Unary,
@@ -1454,7 +1095,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.IsGitHubAppInstalled
      */
     isGitHubAppInstalled: {
-      name: 'IsGitHubAppInstalled',
+      name: "IsGitHubAppInstalled",
       I: IsGitHubAppInstalledRequest,
       O: IsGitHubAppInstalledResponse,
       kind: MethodKind.Unary,
@@ -1465,7 +1106,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOIDCProvider
      */
     createOIDCProvider: {
-      name: 'CreateOIDCProvider',
+      name: "CreateOIDCProvider",
       I: CreateOIDCProviderRequest,
       O: CreateOIDCProviderResponse,
       kind: MethodKind.Unary,
@@ -1476,7 +1117,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOIDCProvider
      */
     getOIDCProvider: {
-      name: 'GetOIDCProvider',
+      name: "GetOIDCProvider",
       I: GetOIDCProviderRequest,
       O: GetOIDCProviderResponse,
       kind: MethodKind.Unary,
@@ -1487,7 +1128,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOIDCProvider
      */
     deleteOIDCProvider: {
-      name: 'DeleteOIDCProvider',
+      name: "DeleteOIDCProvider",
       I: DeleteOIDCProviderRequest,
       O: DeleteOIDCProviderResponse,
       kind: MethodKind.Unary,
@@ -1498,7 +1139,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateIDPMappers
      */
     updateIDPMappers: {
-      name: 'UpdateIDPMappers',
+      name: "UpdateIDPMappers",
       I: UpdateIDPMappersRequest,
       O: UpdateIDPMappersResponse,
       kind: MethodKind.Unary,
@@ -1509,7 +1150,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetClients
      */
     getClients: {
-      name: 'GetClients',
+      name: "GetClients",
       I: GetClientsRequest,
       O: GetClientsResponse,
       kind: MethodKind.Unary,
@@ -1520,7 +1161,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetRouters
      */
     getRouters: {
-      name: 'GetRouters',
+      name: "GetRouters",
       I: GetRoutersRequest,
       O: GetRoutersResponse,
       kind: MethodKind.Unary,
@@ -1531,7 +1172,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetInvitations
      */
     getInvitations: {
-      name: 'GetInvitations',
+      name: "GetInvitations",
       I: GetInvitationsRequest,
       O: GetInvitationsResponse,
       kind: MethodKind.Unary,
@@ -1542,7 +1183,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.AcceptOrDeclineInvitation
      */
     acceptOrDeclineInvitation: {
-      name: 'AcceptOrDeclineInvitation',
+      name: "AcceptOrDeclineInvitation",
       I: AcceptOrDeclineInvitationRequest,
       O: AcceptOrDeclineInvitationResponse,
       kind: MethodKind.Unary,
@@ -1553,7 +1194,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCompositions
      */
     getCompositions: {
-      name: 'GetCompositions',
+      name: "GetCompositions",
       I: GetCompositionsRequest,
       O: GetCompositionsResponse,
       kind: MethodKind.Unary,
@@ -1564,7 +1205,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCompositionDetails
      */
     getCompositionDetails: {
-      name: 'GetCompositionDetails',
+      name: "GetCompositionDetails",
       I: GetCompositionDetailsRequest,
       O: GetCompositionDetailsResponse,
       kind: MethodKind.Unary,
@@ -1575,7 +1216,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSdlBySchemaVersion
      */
     getSdlBySchemaVersion: {
-      name: 'GetSdlBySchemaVersion',
+      name: "GetSdlBySchemaVersion",
       I: GetSdlBySchemaVersionRequest,
       O: GetSdlBySchemaVersionResponse,
       kind: MethodKind.Unary,
@@ -1586,7 +1227,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetChangelogBySchemaVersion
      */
     getChangelogBySchemaVersion: {
-      name: 'GetChangelogBySchemaVersion',
+      name: "GetChangelogBySchemaVersion",
       I: GetChangelogBySchemaVersionRequest,
       O: GetChangelogBySchemaVersionResponse,
       kind: MethodKind.Unary,
@@ -1597,7 +1238,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetUserAccessibleResources
      */
     getUserAccessibleResources: {
-      name: 'GetUserAccessibleResources',
+      name: "GetUserAccessibleResources",
       I: GetUserAccessibleResourcesRequest,
       O: GetUserAccessibleResourcesResponse,
       kind: MethodKind.Unary,
@@ -1608,7 +1249,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings
      */
     updateFeatureSettings: {
-      name: 'UpdateFeatureSettings',
+      name: "UpdateFeatureSettings",
       I: UpdateFeatureSettingsRequest,
       O: UpdateFeatureSettingsResponse,
       kind: MethodKind.Unary,
@@ -1619,7 +1260,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers
      */
     getSubgraphMembers: {
-      name: 'GetSubgraphMembers',
+      name: "GetSubgraphMembers",
       I: GetSubgraphMembersRequest,
       O: GetSubgraphMembersResponse,
       kind: MethodKind.Unary,
@@ -1630,7 +1271,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.AddReadme
      */
     addReadme: {
-      name: 'AddReadme',
+      name: "AddReadme",
       I: AddReadmeRequest,
       O: AddReadmeResponse,
       kind: MethodKind.Unary,
@@ -1641,7 +1282,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetUserAccessiblePermissions
      */
     getUserAccessiblePermissions: {
-      name: 'GetUserAccessiblePermissions',
+      name: "GetUserAccessiblePermissions",
       I: GetUserAccessiblePermissionsRequest,
       O: GetUserAccessiblePermissionsResponse,
       kind: MethodKind.Unary,
@@ -1652,7 +1293,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFeatureFlag
      */
     createFeatureFlag: {
-      name: 'CreateFeatureFlag',
+      name: "CreateFeatureFlag",
       I: CreateFeatureFlagRequest,
       O: CreateFeatureFlagResponse,
       kind: MethodKind.Unary,
@@ -1663,7 +1304,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteFeatureFlag
      */
     deleteFeatureFlag: {
-      name: 'DeleteFeatureFlag',
+      name: "DeleteFeatureFlag",
       I: DeleteFeatureFlagRequest,
       O: DeleteFeatureFlagResponse,
       kind: MethodKind.Unary,
@@ -1674,7 +1315,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateFeatureFlag
      */
     updateFeatureFlag: {
-      name: 'UpdateFeatureFlag',
+      name: "UpdateFeatureFlag",
       I: UpdateFeatureFlagRequest,
       O: UpdateFeatureFlagResponse,
       kind: MethodKind.Unary,
@@ -1685,7 +1326,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.EnableFeatureFlag
      */
     enableFeatureFlag: {
-      name: 'EnableFeatureFlag',
+      name: "EnableFeatureFlag",
       I: EnableFeatureFlagRequest,
       O: EnableFeatureFlagResponse,
       kind: MethodKind.Unary,
@@ -1696,7 +1337,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAnalyticsView
      */
     getAnalyticsView: {
-      name: 'GetAnalyticsView',
+      name: "GetAnalyticsView",
       I: GetAnalyticsViewRequest,
       O: GetAnalyticsViewResponse,
       kind: MethodKind.Unary,
@@ -1706,7 +1347,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetDashboardAnalyticsView
      */
     getDashboardAnalyticsView: {
-      name: 'GetDashboardAnalyticsView',
+      name: "GetDashboardAnalyticsView",
       I: GetDashboardAnalyticsViewRequest,
       O: GetDashboardAnalyticsViewResponse,
       kind: MethodKind.Unary,
@@ -1716,7 +1357,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetTrace
      */
     getTrace: {
-      name: 'GetTrace',
+      name: "GetTrace",
       I: GetTraceRequest,
       O: GetTraceResponse,
       kind: MethodKind.Unary,
@@ -1725,7 +1366,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetGraphMetrics
      */
     getGraphMetrics: {
-      name: 'GetGraphMetrics',
+      name: "GetGraphMetrics",
       I: GetGraphMetricsRequest,
       O: GetGraphMetricsResponse,
       kind: MethodKind.Unary,
@@ -1735,7 +1376,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetMetricsErrorRate
      */
     getMetricsErrorRate: {
-      name: 'GetMetricsErrorRate',
+      name: "GetMetricsErrorRate",
       I: GetMetricsErrorRateRequest,
       O: GetMetricsErrorRateResponse,
       kind: MethodKind.Unary,
@@ -1745,7 +1386,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphMetrics
      */
     getSubgraphMetrics: {
-      name: 'GetSubgraphMetrics',
+      name: "GetSubgraphMetrics",
       I: GetSubgraphMetricsRequest,
       O: GetSubgraphMetricsResponse,
       kind: MethodKind.Unary,
@@ -1755,7 +1396,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphMetricsErrorRate
      */
     getSubgraphMetricsErrorRate: {
-      name: 'GetSubgraphMetricsErrorRate',
+      name: "GetSubgraphMetricsErrorRate",
       I: GetSubgraphMetricsErrorRateRequest,
       O: GetSubgraphMetricsErrorRateResponse,
       kind: MethodKind.Unary,
@@ -1765,7 +1406,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFieldUsage
      */
     getFieldUsage: {
-      name: 'GetFieldUsage',
+      name: "GetFieldUsage",
       I: GetFieldUsageRequest,
       O: GetFieldUsageResponse,
       kind: MethodKind.Unary,
@@ -1775,7 +1416,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationRequestsCount
      */
     getOrganizationRequestsCount: {
-      name: 'GetOrganizationRequestsCount',
+      name: "GetOrganizationRequestsCount",
       I: GetOrganizationRequestsCountRequest,
       O: GetOrganizationRequestsCountResponse,
       kind: MethodKind.Unary,
@@ -1784,7 +1425,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOrganization
      */
     createOrganization: {
-      name: 'CreateOrganization',
+      name: "CreateOrganization",
       I: CreateOrganizationRequest,
       O: CreateOrganizationResponse,
       kind: MethodKind.Unary,
@@ -1795,7 +1436,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.EnableLintingForTheNamespace
      */
     enableLintingForTheNamespace: {
-      name: 'EnableLintingForTheNamespace',
+      name: "EnableLintingForTheNamespace",
       I: EnableLintingForTheNamespaceRequest,
       O: EnableLintingForTheNamespaceResponse,
       kind: MethodKind.Unary,
@@ -1806,7 +1447,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceLintConfig
      */
     configureNamespaceLintConfig: {
-      name: 'ConfigureNamespaceLintConfig',
+      name: "ConfigureNamespaceLintConfig",
       I: ConfigureNamespaceLintConfigRequest,
       O: ConfigureNamespaceLintConfigResponse,
       kind: MethodKind.Unary,
@@ -1817,7 +1458,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaceLintConfig
      */
     getNamespaceLintConfig: {
-      name: 'GetNamespaceLintConfig',
+      name: "GetNamespaceLintConfig",
       I: GetNamespaceLintConfigRequest,
       O: GetNamespaceLintConfigResponse,
       kind: MethodKind.Unary,
@@ -1828,7 +1469,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig
      */
     getNamespaceChecksConfig: {
-      name: 'GetNamespaceChecksConfig',
+      name: "GetNamespaceChecksConfig",
       I: GetNamespaceChecksConfigurationRequest,
       O: GetNamespaceChecksConfigurationResponse,
       kind: MethodKind.Unary,
@@ -1839,7 +1480,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig
      */
     updateNamespaceChecksConfig: {
-      name: 'UpdateNamespaceChecksConfig',
+      name: "UpdateNamespaceChecksConfig",
       I: UpdateNamespaceChecksConfigurationRequest,
       O: UpdateNamespaceChecksConfigurationResponse,
       kind: MethodKind.Unary,
@@ -1850,7 +1491,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.EnableGraphPruning
      */
     enableGraphPruning: {
-      name: 'EnableGraphPruning',
+      name: "EnableGraphPruning",
       I: EnableGraphPruningRequest,
       O: EnableGraphPruningResponse,
       kind: MethodKind.Unary,
@@ -1861,7 +1502,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceGraphPruningConfig
      */
     configureNamespaceGraphPruningConfig: {
-      name: 'ConfigureNamespaceGraphPruningConfig',
+      name: "ConfigureNamespaceGraphPruningConfig",
       I: ConfigureNamespaceGraphPruningConfigRequest,
       O: ConfigureNamespaceGraphPruningConfigResponse,
       kind: MethodKind.Unary,
@@ -1872,7 +1513,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaceGraphPruningConfig
      */
     getNamespaceGraphPruningConfig: {
-      name: 'GetNamespaceGraphPruningConfig',
+      name: "GetNamespaceGraphPruningConfig",
       I: GetNamespaceGraphPruningConfigRequest,
       O: GetNamespaceGraphPruningConfigResponse,
       kind: MethodKind.Unary,
@@ -1883,7 +1524,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureFlags
      */
     getFeatureFlags: {
-      name: 'GetFeatureFlags',
+      name: "GetFeatureFlags",
       I: GetFeatureFlagsRequest,
       O: GetFeatureFlagsResponse,
       kind: MethodKind.Unary,
@@ -1894,7 +1535,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureFlagByName
      */
     getFeatureFlagByName: {
-      name: 'GetFeatureFlagByName',
+      name: "GetFeatureFlagByName",
       I: GetFeatureFlagByNameRequest,
       O: GetFeatureFlagByNameResponse,
       kind: MethodKind.Unary,
@@ -1905,7 +1546,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFeatureFlag
      */
     getFeatureSubgraphsByFeatureFlag: {
-      name: 'GetFeatureSubgraphsByFeatureFlag',
+      name: "GetFeatureSubgraphsByFeatureFlag",
       I: GetFeatureSubgraphsByFeatureFlagRequest,
       O: GetFeatureSubgraphsByFeatureFlagResponse,
       kind: MethodKind.Unary,
@@ -1916,7 +1557,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphs
      */
     getFeatureSubgraphs: {
-      name: 'GetFeatureSubgraphs',
+      name: "GetFeatureSubgraphs",
       I: GetFeatureSubgraphsRequest,
       O: GetFeatureSubgraphsResponse,
       kind: MethodKind.Unary,
@@ -1927,7 +1568,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsByFederatedGraph
      */
     getFeatureFlagsByFederatedGraph: {
-      name: 'GetFeatureFlagsByFederatedGraph',
+      name: "GetFeatureFlagsByFederatedGraph",
       I: GetFeatureFlagsByFederatedGraphRequest,
       O: GetFeatureFlagsByFederatedGraphResponse,
       kind: MethodKind.Unary,
@@ -1938,7 +1579,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphById
      */
     getFederatedGraphById: {
-      name: 'GetFederatedGraphById',
+      name: "GetFederatedGraphById",
       I: GetFederatedGraphByIdRequest,
       O: GetFederatedGraphByIdResponse,
       kind: MethodKind.Unary,
@@ -1949,7 +1590,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphById
      */
     getSubgraphById: {
-      name: 'GetSubgraphById',
+      name: "GetSubgraphById",
       I: GetSubgraphByIdRequest,
       O: GetSubgraphByIdResponse,
       kind: MethodKind.Unary,
@@ -1960,7 +1601,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.PushCacheWarmerOperation
      */
     pushCacheWarmerOperation: {
-      name: 'PushCacheWarmerOperation',
+      name: "PushCacheWarmerOperation",
       I: PushCacheWarmerOperationRequest,
       O: PushCacheWarmerOperationResponse,
       kind: MethodKind.Unary,
@@ -1971,7 +1612,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCacheWarmerOperations
      */
     getCacheWarmerOperations: {
-      name: 'GetCacheWarmerOperations',
+      name: "GetCacheWarmerOperations",
       I: GetCacheWarmerOperationsRequest,
       O: GetCacheWarmerOperationsResponse,
       kind: MethodKind.Unary,
@@ -1982,7 +1623,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ComputeCacheWarmerOperations
      */
     computeCacheWarmerOperations: {
-      name: 'ComputeCacheWarmerOperations',
+      name: "ComputeCacheWarmerOperations",
       I: ComputeCacheWarmerOperationsRequest,
       O: ComputeCacheWarmerOperationsResponse,
       kind: MethodKind.Unary,
@@ -1993,7 +1634,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureCacheWarmer
      */
     configureCacheWarmer: {
-      name: 'ConfigureCacheWarmer',
+      name: "ConfigureCacheWarmer",
       I: ConfigureCacheWarmerRequest,
       O: ConfigureCacheWarmerResponse,
       kind: MethodKind.Unary,
@@ -2004,7 +1645,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCacheWarmerConfig
      */
     getCacheWarmerConfig: {
-      name: 'GetCacheWarmerConfig',
+      name: "GetCacheWarmerConfig",
       I: GetCacheWarmerConfigRequest,
       O: GetCacheWarmerConfigResponse,
       kind: MethodKind.Unary,
@@ -2015,7 +1656,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteCacheWarmerOperation
      */
     deleteCacheWarmerOperation: {
-      name: 'DeleteCacheWarmerOperation',
+      name: "DeleteCacheWarmerOperation",
       I: DeleteCacheWarmerOperationRequest,
       O: DeleteCacheWarmerOperationResponse,
       kind: MethodKind.Unary,
@@ -2024,7 +1665,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphCheckExtensionsConfig
      */
     getSubgraphCheckExtensionsConfig: {
-      name: 'GetSubgraphCheckExtensionsConfig',
+      name: "GetSubgraphCheckExtensionsConfig",
       I: GetSubgraphCheckExtensionsConfigRequest,
       O: GetSubgraphCheckExtensionsConfigResponse,
       kind: MethodKind.Unary,
@@ -2033,7 +1674,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions
      */
     configureSubgraphCheckExtensions: {
-      name: 'ConfigureSubgraphCheckExtensions',
+      name: "ConfigureSubgraphCheckExtensions",
       I: ConfigureSubgraphCheckExtensionsRequest,
       O: ConfigureSubgraphCheckExtensionsResponse,
       kind: MethodKind.Unary,
@@ -2047,7 +1688,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetBillingPlans
      */
     getBillingPlans: {
-      name: 'GetBillingPlans',
+      name: "GetBillingPlans",
       I: GetBillingPlansRequest,
       O: GetBillingPlansResponse,
       kind: MethodKind.Unary,
@@ -2058,7 +1699,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateCheckoutSession
      */
     createCheckoutSession: {
-      name: 'CreateCheckoutSession',
+      name: "CreateCheckoutSession",
       I: CreateCheckoutSessionRequest,
       O: CreateCheckoutSessionResponse,
       kind: MethodKind.Unary,
@@ -2069,7 +1710,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateBillingPortalSession
      */
     createBillingPortalSession: {
-      name: 'CreateBillingPortalSession',
+      name: "CreateBillingPortalSession",
       I: CreateBillingPortalSessionRequest,
       O: CreateBillingPortalSessionResponse,
       kind: MethodKind.Unary,
@@ -2080,7 +1721,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpgradePlan
      */
     upgradePlan: {
-      name: 'UpgradePlan',
+      name: "UpgradePlan",
       I: UpgradePlanRequest,
       O: UpgradePlanResponse,
       kind: MethodKind.Unary,
@@ -2091,7 +1732,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ListRouterCompatibilityVersions
      */
     listRouterCompatibilityVersions: {
-      name: 'ListRouterCompatibilityVersions',
+      name: "ListRouterCompatibilityVersions",
       I: ListRouterCompatibilityVersionsRequest,
       O: ListRouterCompatibilityVersionsResponse,
       kind: MethodKind.Unary,
@@ -2102,7 +1743,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion
      */
     setGraphRouterCompatibilityVersion: {
-      name: 'SetGraphRouterCompatibilityVersion',
+      name: "SetGraphRouterCompatibilityVersion",
       I: SetGraphRouterCompatibilityVersionRequest,
       O: SetGraphRouterCompatibilityVersionResponse,
       kind: MethodKind.Unary,
@@ -2114,7 +1755,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateProposal
      */
     createProposal: {
-      name: 'CreateProposal',
+      name: "CreateProposal",
       I: CreateProposalRequest,
       O: CreateProposalResponse,
       kind: MethodKind.Unary,
@@ -2125,7 +1766,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposal
      */
     getProposal: {
-      name: 'GetProposal',
+      name: "GetProposal",
       I: GetProposalRequest,
       O: GetProposalResponse,
       kind: MethodKind.Unary,
@@ -2136,7 +1777,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateProposal
      */
     updateProposal: {
-      name: 'UpdateProposal',
+      name: "UpdateProposal",
       I: UpdateProposalRequest,
       O: UpdateProposalResponse,
       kind: MethodKind.Unary,
@@ -2147,7 +1788,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace
      */
     enableProposalsForNamespace: {
-      name: 'EnableProposalsForNamespace',
+      name: "EnableProposalsForNamespace",
       I: EnableProposalsForNamespaceRequest,
       O: EnableProposalsForNamespaceResponse,
       kind: MethodKind.Unary,
@@ -2158,7 +1799,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig
      */
     configureNamespaceProposalConfig: {
-      name: 'ConfigureNamespaceProposalConfig',
+      name: "ConfigureNamespaceProposalConfig",
       I: ConfigureNamespaceProposalConfigRequest,
       O: ConfigureNamespaceProposalConfigResponse,
       kind: MethodKind.Unary,
@@ -2169,7 +1810,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig
      */
     getNamespaceProposalConfig: {
-      name: 'GetNamespaceProposalConfig',
+      name: "GetNamespaceProposalConfig",
       I: GetNamespaceProposalConfigRequest,
       O: GetNamespaceProposalConfigResponse,
       kind: MethodKind.Unary,
@@ -2180,7 +1821,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph
      */
     getProposalsByFederatedGraph: {
-      name: 'GetProposalsByFederatedGraph',
+      name: "GetProposalsByFederatedGraph",
       I: GetProposalsByFederatedGraphRequest,
       O: GetProposalsByFederatedGraphResponse,
       kind: MethodKind.Unary,
@@ -2191,7 +1832,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposalChecks
      */
     getProposalChecks: {
-      name: 'GetProposalChecks',
+      name: "GetProposalChecks",
       I: GetProposalChecksRequest,
       O: GetProposalChecksResponse,
       kind: MethodKind.Unary,
@@ -2202,7 +1843,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperations
      */
     getOperations: {
-      name: 'GetOperations',
+      name: "GetOperations",
       I: GetOperationsRequest,
       O: GetOperationsResponse,
       kind: MethodKind.Unary,
@@ -2213,7 +1854,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics
      */
     getClientsFromAnalytics: {
-      name: 'GetClientsFromAnalytics',
+      name: "GetClientsFromAnalytics",
       I: GetClientsFromAnalyticsRequest,
       O: GetClientsFromAnalyticsResponse,
       kind: MethodKind.Unary,
@@ -2224,7 +1865,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationClients
      */
     getOperationClients: {
-      name: 'GetOperationClients',
+      name: "GetOperationClients",
       I: GetOperationClientsRequest,
       O: GetOperationClientsResponse,
       kind: MethodKind.Unary,
@@ -2235,7 +1876,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationDeprecatedFields
      */
     getOperationDeprecatedFields: {
-      name: 'GetOperationDeprecatedFields',
+      name: "GetOperationDeprecatedFields",
       I: GetOperationDeprecatedFieldsRequest,
       O: GetOperationDeprecatedFieldsResponse,
       kind: MethodKind.Unary,
@@ -2246,7 +1887,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData
      */
     validateAndFetchPluginData: {
-      name: 'ValidateAndFetchPluginData',
+      name: "ValidateAndFetchPluginData",
       I: ValidateAndFetchPluginDataRequest,
       O: ValidateAndFetchPluginDataResponse,
       kind: MethodKind.Unary,
@@ -2257,7 +1898,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.LinkSubgraph
      */
     linkSubgraph: {
-      name: 'LinkSubgraph',
+      name: "LinkSubgraph",
       I: LinkSubgraphRequest,
       O: LinkSubgraphResponse,
       kind: MethodKind.Unary,
@@ -2268,7 +1909,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph
      */
     unlinkSubgraph: {
-      name: 'UnlinkSubgraph',
+      name: "UnlinkSubgraph",
       I: UnlinkSubgraphRequest,
       O: UnlinkSubgraphResponse,
       kind: MethodKind.Unary,
@@ -2279,7 +1920,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess
      */
     verifyAPIKeyGraphAccess: {
-      name: 'VerifyAPIKeyGraphAccess',
+      name: "VerifyAPIKeyGraphAccess",
       I: VerifyAPIKeyGraphAccessRequest,
       O: VerifyAPIKeyGraphAccessResponse,
       kind: MethodKind.Unary,
@@ -2290,7 +1931,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.RecomposeGraph
      */
     recomposeGraph: {
-      name: 'RecomposeGraph',
+      name: "RecomposeGraph",
       I: RecomposeGraphRequest,
       O: RecomposeGraphResponse,
       kind: MethodKind.Unary,
@@ -2301,7 +1942,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CompleteOnboardingStep1
      */
     completeOnboardingStep1: {
-      name: 'CompleteOnboardingStep1',
+      name: "CompleteOnboardingStep1",
       I: CompleteOnboardingStep1Request,
       O: CompleteOnboardingStep1Response,
       kind: MethodKind.Unary,
@@ -2312,7 +1953,7 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CompleteOnboardingStep2
      */
     completeOnboardingStep2: {
-      name: 'CompleteOnboardingStep2',
+      name: "CompleteOnboardingStep2",
       I: CompleteOnboardingStep2Request,
       O: CompleteOnboardingStep2Response,
       kind: MethodKind.Unary,
@@ -2323,10 +1964,22 @@ export const PlatformService = {
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.CompleteOnboardingStep3
      */
     completeOnboardingStep3: {
-      name: 'CompleteOnboardingStep3',
+      name: "CompleteOnboardingStep3",
       I: CompleteOnboardingStep3Request,
       O: CompleteOnboardingStep3Response,
       kind: MethodKind.Unary,
     },
-  },
+    /**
+     * FinishOnboarding marks onboarding wizard as finished (step 4 complete)
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.FinishOnboarding
+     */
+    finishOnboarding: {
+      name: "FinishOnboarding",
+      I: FinishOnboardingRequest,
+      O: FinishOnboardingResponse,
+      kind: MethodKind.Unary,
+    },
+  }
 } as const;
+

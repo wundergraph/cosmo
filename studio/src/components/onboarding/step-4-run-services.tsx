@@ -3,9 +3,12 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useFireworks } from '@/hooks/use-fireworks';
 import { CheckCircledIcon } from '@radix-ui/react-icons';
+import { useMutation } from '@connectrpc/connect-query';
+import { finishOnboarding } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/router';
-import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
 import { Onboarding } from './onboarding-provider';
 
 const METRICS_DELAY = 5000;
@@ -91,11 +94,14 @@ interface Step4RunServicesProps {
   onSubmitSuccess: Dispatch<SetStateAction<Onboarding | undefined>>;
 }
 
-export function Step4RunServices({ onDismiss }: Step4RunServicesProps) {
+export function Step4RunServices({ onDismiss, onSubmitSuccess }: Step4RunServicesProps) {
   const router = useRouter();
   const org = useCurrentOrganization();
   const [metricsReceived, setMetricsReceived] = useState(false);
+  const [mutationDone, setMutationDone] = useState(false);
   const [confettiDone, setConfettiDone] = useState(false);
+  const hasMutated = useRef(false);
+  const mutationResponse = useRef<Onboarding | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -105,20 +111,50 @@ export function Step4RunServices({ onDismiss }: Step4RunServicesProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  // trigger confetti after metrics received
-  useFireworks(metricsReceived);
+  const { mutate, isPending } = useMutation(finishOnboarding);
+
+  // auto-trigger mutation when metrics are received
+  useEffect(() => {
+    if (!metricsReceived || hasMutated.current) return;
+    hasMutated.current = true;
+
+    mutate(
+      {},
+      {
+        onSuccess(res) {
+          if (res.response?.code === EnumStatusCode.OK && res.onboarding) {
+            mutationResponse.current = {
+              ...res.onboarding,
+              createdAt: new Date(res.onboarding.createdAt),
+              finishedAt: res.onboarding.finishedAt ? new Date(res.onboarding.finishedAt) : null,
+              updatedAt: res.onboarding.updatedAt ? new Date(res.onboarding.updatedAt) : null,
+              federatedGraphId: res.onboarding.federatedGraphId || undefined,
+            };
+          }
+          setMutationDone(true);
+        },
+      },
+    );
+  }, [metricsReceived, mutate]);
+
+  // trigger confetti after mutation completes
+  useFireworks(mutationDone);
 
   // track confetti completion
   useEffect(() => {
-    if (!metricsReceived) return;
+    if (!mutationDone) return;
     const timer = setTimeout(() => setConfettiDone(true), CONFETTI_DURATION);
     return () => clearTimeout(timer);
-  }, [metricsReceived]);
+  }, [mutationDone]);
 
-  const navigateAway = () => {
+  const navigateAway = useCallback(() => {
+    if (!mutationDone) return;
+    if (mutationResponse.current) {
+      onSubmitSuccess(mutationResponse.current);
+    }
     onDismiss();
     router.push(`/${org?.slug}/graphs`);
-  };
+  }, [mutationDone, onDismiss, onSubmitSuccess, router, org?.slug]);
 
   return (
     <div className="space-y-8">
@@ -183,7 +219,7 @@ export function Step4RunServices({ onDismiss }: Step4RunServicesProps) {
       <MetricsAnimation received={metricsReceived} />
 
       <div className="flex items-center gap-2">
-        <Button type="button" variant="outline" onClick={navigateAway} disabled={!confettiDone}>
+        <Button type="button" variant="outline" onClick={navigateAway} disabled={isPending || !confettiDone}>
           Skip
         </Button>
         <Button type="button" onClick={navigateAway} disabled={!confettiDone}>

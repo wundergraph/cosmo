@@ -182,6 +182,7 @@ import { recomposeGraph } from './graph/recomposeGraph.js';
 import { completeOnboardingStep1 } from './onboarding/completeOnboardingStep1.js';
 import { completeOnboardingStep2 } from './onboarding/completeOnboardingStep2.js';
 import { completeOnboardingStep3 } from './onboarding/completeOnboardingStep3.js';
+import { finishOnboarding } from './onboarding/finishOnboarding.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -920,6 +921,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     completeOnboardingStep3: (req, ctx) => {
       return completeOnboardingStep3(opts, req, ctx);
+    },
+
+    finishOnboarding: (req, ctx) => {
+      return finishOnboarding(opts, req, ctx);
     },
   };
 }
