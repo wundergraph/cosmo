@@ -7,7 +7,7 @@ import {
   CompositionWarning,
   Subgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, PlainMessage } from '../../../types/index.js';
 import { composeGraphsInWorker } from '../../composition/composeGraphs.pool.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
@@ -137,7 +137,7 @@ export function checkFederatedGraph(opts: RouterOptions, req: CheckFederatedGrap
       composedSchemaBreakingChanges: 0,
     };
 
-    const compositionWarnings: any[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
     counts.compositionWarnings = compositionResult.warnings.length;
 
     const clampedWarnings = returnLimit ? compositionResult.warnings.slice(0, returnLimit) : compositionResult.warnings;
@@ -151,7 +151,7 @@ export function checkFederatedGraph(opts: RouterOptions, req: CheckFederatedGrap
     }
 
     if (!compositionResult.success) {
-      const compositionErrors: any[] = [];
+      const compositionErrors: PlainMessage<CompositionError>[] = [];
       counts.compositionErrors = compositionResult.errors.length;
 
       const clampedErrors = returnLimit ? compositionResult.errors.slice(0, returnLimit) : compositionResult.errors;

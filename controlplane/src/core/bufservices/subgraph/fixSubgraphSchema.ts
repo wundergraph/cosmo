@@ -5,7 +5,7 @@ import {
   FixSubgraphSchemaRequest,
   FixSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, PlainMessage } from '../../../types/index.js';
 import { Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
 import { OpenAIGraphql } from '../../openai-graphql/index.js';
@@ -179,7 +179,7 @@ export function fixSubgraphSchema(opts: RouterOptions, req: FixSubgraphSchemaReq
       },
     );
 
-    const compositionErrors: any[] = [];
+    const compositionErrors: PlainMessage<CompositionError>[] = [];
     for (const composition of result.compositions) {
       if (composition.errors.length > 0) {
         for (const error of composition.errors) {

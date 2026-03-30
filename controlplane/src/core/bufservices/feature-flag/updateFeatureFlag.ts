@@ -8,7 +8,7 @@ import {
   UpdateFeatureFlagRequest,
   UpdateFeatureFlagResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, FederatedGraphDTO } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, FederatedGraphDTO, PlainMessage } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -161,9 +161,9 @@ export function updateFeatureFlag(opts: RouterOptions, req: UpdateFeatureFlagReq
       featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
-    const compositionErrors: any[] = [];
-    const deploymentErrors: any[] = [];
-    const compositionWarnings: any[] = [];
+    const compositionErrors: PlainMessage<CompositionError>[] = [];
+    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);

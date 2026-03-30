@@ -6,7 +6,7 @@ import {
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { subHours } from 'date-fns';
-import { FederatedGraphDTO } from '../../../types/index.js';
+import { FederatedGraphDTO, PlainMessage } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { AnalyticsDashboardViewRepository } from '../../repositories/analytics/AnalyticsDashboardViewRepository.js';
@@ -48,7 +48,7 @@ export function getFederatedGraphs(opts: RouterOptions, req: GetFederatedGraphsR
       rbac: authContext.rbac,
     });
 
-    const requestSeriesList: Record<string, any[]> = {};
+    const requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
 
     const { dateRange } = parseTimeFilters({
       start: subHours(new Date(), 4).toString(),

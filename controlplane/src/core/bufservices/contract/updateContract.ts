@@ -8,7 +8,7 @@ import {
   UpdateContractRequest,
   UpdateContractResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, PlainMessage } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -152,9 +152,9 @@ export function updateContract(opts: RouterOptions, req: UpdateContractRequest, 
       },
     });
 
-    const compositionErrors: any[] = [];
-    const deploymentErrors: any[] = [];
-    const compositionWarnings: any[] = [];
+    const compositionErrors: PlainMessage<CompositionError>[] = [];
+    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     const composition = await fedGraphRepo.composeAndDeployGraphs({
       actorId: authContext.userId,

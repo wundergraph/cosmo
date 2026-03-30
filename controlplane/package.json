@@ -45,6 +45,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.996.0",
     "@bufbuild/buf": "^1.32.2",
+    "@bufbuild/protobuf": "^2.2.2",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-fastify": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
@@ -101,7 +102,6 @@
     "zod-to-json-schema": "^3.22.4"
   },
   "devDependencies": {
-    "@bufbuild/protobuf": "^2.2.2",
     "@bufbuild/protoc-gen-es": "^2.2.2",
     "@types/cookie": "^0.6.0",
     "@types/ejs": "^3.1.5",

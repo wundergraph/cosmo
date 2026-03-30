@@ -8,6 +8,7 @@ import {
   MoveGraphRequest,
   MoveGraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PlainMessage } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -122,9 +123,9 @@ export function moveFederatedGraph(opts: RouterOptions, req: MoveGraphRequest, c
         opts.chClient!,
       );
 
-      const allDeploymentErrors: any[] = [];
-      const allCompositionErrors: any[] = [];
-      const allCompositionWarnings: any[] = [];
+      const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
+      const allCompositionErrors: PlainMessage<CompositionError>[] = [];
+      const allCompositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
       allCompositionErrors.push(...compositionErrors);
       allDeploymentErrors.push(...deploymentErrors);

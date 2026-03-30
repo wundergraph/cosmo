@@ -9,7 +9,7 @@ import {
   UpdateFederatedGraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, PlainMessage } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
@@ -109,9 +109,9 @@ export function updateFederatedGraph(opts: RouterOptions, req: UpdateFederatedGr
       featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
-    const deploymentErrors: any[] = [];
-    let compositionErrors: any[] = [];
-    const compositionWarnings: any[] = [];
+    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
+    let compositionErrors: PlainMessage<CompositionError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     const result = await fedGraphRepo.update({
       admissionConfig: {

@@ -10,7 +10,7 @@ import {
   type Subgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
-import { FeatureFlagDTO } from '../../../types/index.js';
+import { FeatureFlagDTO, PlainMessage } from '../../../types/index.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
@@ -50,7 +50,7 @@ export function getFederatedGraphById(opts: RouterOptions, req: GetFederatedGrap
       throw new UnauthorizedError();
     }
 
-    let requestSeries: any[] = [];
+    let requestSeries: PlainMessage<RequestSeriesItem>[] = [];
     if (req.includeMetrics && opts.chClient) {
       const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
       requestSeries = await analyticsDashRepo.getWeeklyRequestSeries(federatedGraph.id, authContext.organizationId);
