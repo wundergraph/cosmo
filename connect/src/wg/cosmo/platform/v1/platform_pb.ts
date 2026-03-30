@@ -13892,6 +13892,16 @@ export class GetAllOverridesRequest extends Message<GetAllOverridesRequest> {
    */
   namespace = "";
 
+  /**
+   * @generated from field: int32 limit = 3;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 4;
+   */
+  offset = 0;
+
   constructor(data?: PartialMessage<GetAllOverridesRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -13902,6 +13912,8 @@ export class GetAllOverridesRequest extends Message<GetAllOverridesRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAllOverridesRequest {
@@ -13935,6 +13947,11 @@ export class GetAllOverridesResponse extends Message<GetAllOverridesResponse> {
    */
   overrides: GetAllOverridesResponse_Override[] = [];
 
+  /**
+   * @generated from field: int32 total_count = 3;
+   */
+  totalCount = 0;
+
   constructor(data?: PartialMessage<GetAllOverridesResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -13945,6 +13962,7 @@ export class GetAllOverridesResponse extends Message<GetAllOverridesResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "overrides", kind: "message", T: GetAllOverridesResponse_Override, repeated: true },
+    { no: 3, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAllOverridesResponse {

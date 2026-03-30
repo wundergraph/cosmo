@@ -1167,14 +1167,17 @@ These rules apply to requests being made from the Router to all Subgraphs.
 | Environment Variable                       | YAML                                       | Required                                      | Description                                                                                                                                                                                            | Default Value |
 | ------------------------------------------ | ------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
 |                                            | persisted_operations                       | <Icon icon="square" />                        | The configuration for the persisted operations.                                                                                                                                                        |               |
-| PERSISTED_OPERATIONS_DISABLED              | persisted_operations.disabled              | <Icon icon="square" />                        | Disable persisted operations.                                                                                                                                                                          | false         |
+| PERSISTED_OPERATIONS_DISABLED              | persisted_operations.disabled              | <Icon icon="square" />                        | Disable persisted operations. When set to true, the PQL manifest is also disabled.                                                                                                                     | false         |
 |                                            | persisted_operations.cache                 | <Icon icon="square" />                        | LRU cache for persisted operations.                                                                                                                                                                    |               |
 | PERSISTED_OPERATIONS_CACHE_SIZE            | persisted_operations.cache.size            | <Icon icon="square" />                        | The size of the cache in SI unit.                                                                                                                                                                      | "100MB"       |
 |                                            | persisted_operations.storage               | <Icon icon="square" />                        | The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations. |               |
 | PERSISTED_OPERATIONS_STORAGE_PROVIDER_ID   | persisted_operations.storage.provider_id   | <Icon icon="square-check" iconType="solid" /> | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                   |               |
-| PERSISTED_OPERATIONS_STORAGE_OBJECT_PREFIX | persisted_operations.storage.object_prefix | <Icon icon="square-check" iconType="solid" /> | The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. \$prefix/SHA256.json                                                               |               |
+| PERSISTED_OPERATIONS_STORAGE_OBJECT_PREFIX | persisted_operations.storage.object_prefix | <Icon icon="square" />                        | The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. \$prefix/SHA256.json                                                               |               |
 | PERSISTED_OPERATIONS_LOG_UNKNOWN           | persisted_operations.log_unknown           | <Icon icon="square" />                        | Log operations (sent with the operation body) which haven't yet been persisted. If the value is true, all operations not yet persisted are logged to the router logs.                                  | false         |
 | PERSISTED_OPERATIONS_SAFELIST_ENABLED      | persisted_operations.safelist.enabled      | <Icon icon="square" />                        | Only allows persisted operations (sent with operation body). If the value is true, all operations not explicitly added to the safelist are blocked.                                                    | false         |
+| PERSISTED_OPERATIONS_MANIFEST_ENABLED      | persisted_operations.manifest.enabled      | <Icon icon="square" />                        | Enable the PQL manifest. When enabled, the router loads all persisted operations from a single `manifest.json` file and serves them from memory. Uses the `storage` config above when a provider is set, otherwise fetches from the Cosmo CDN. Only S3 and CDN storage providers are supported. | false         |
+| PERSISTED_OPERATIONS_MANIFEST_POLL_INTERVAL| persisted_operations.manifest.poll_interval| <Icon icon="square" />                        | The interval at which the router polls the Cosmo CDN for manifest updates (only when no storage provider is configured). Minimum 10s.                                                                 | 10s           |
+| PERSISTED_OPERATIONS_MANIFEST_POLL_JITTER  | persisted_operations.manifest.poll_jitter  | <Icon icon="square" />                        | Random jitter added to each poll interval to avoid thundering herd. Minimum 1s.                                                                                                                        | 5s            |
 
 ## Automatic Persisted Queries
 
@@ -1218,26 +1221,53 @@ The configuration for the execution setup contains instructions for the router t
 
 ### Example YAML config:
 
-```yaml config.yaml
-version: "1"
+You can load the execution config from a [storage provider](/router/storage-providers) or from a local file:
 
-execution_config:
-  storage:
-    provider_id: s3
-    object_path: /prod
+<CodeGroup>
+  ```yaml Storage provider
+  version: "1"
+  execution_config:
+    storage:
+      provider_id: s3
+      object_path: "router.json"
+  ```
+
+  ```yaml Local file
+  version: "1"
+  execution_config:
+    file:
+      path: "./__schemas/config.json"
+      watch: true
+      watch_interval: "1s"
+  ```
+
+  ```yaml Fallback storage
+  version: "1"
+  execution_config:
+    storage:
+      provider_id: s3
+      object_path: "router.json"
+    fallback_storage:
+      enabled: true
+      provider_id: minio
+      object_path: "router.json"
+  ```
+</CodeGroup>
+
+When using a storage provider, the `object_path` field points to the file in your bucket that is updated after each schema deployment in your CI/CD pipeline:
+
+```bash
+# Publish your subgraph
+wgc subgraph publish my-subgraph --schema ./schema.graphqls
+# Download the latest execution config after successful composition
+wgc router fetch mygraph -o router.json
+# Upload the execution config to your S3 storage
+aws s3 cp router.json s3://cosmo/
 ```
 
-or
+The router will check for updates every 10 seconds (default) and hot-reload accordingly without impacting current user traffic.
 
-```yaml config.yaml
-version: "1"
-
-execution_config:
-  file:
-    path: "./__schemas/config.json"
-    watch: true
-    watch_interval: "1s"
-```
+You can configure a fallback storage for fetching the execution config in the event the router cannot reach the primary storage. You cannot use the same provider for both primary and fallback storage.
 
 ### Execution config options
 

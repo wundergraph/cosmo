@@ -1,0 +1,160 @@
+---
+title: "@requires"
+description: "Using the @requires federation directive with Cosmo Connect to resolve entity fields that depend on data from other subgraphs."
+sidebarTitle: "@requires"
+icon: "link"
+---
+
+## Introduction
+
+The [`@requires`](/federation/directives/requires) federation directive declares that a field's resolver depends on values from fields resolved by another subgraph. Cosmo Connect supports `@requires` for gRPC-backed entities, enabling you to implement computed fields that span multiple subgraphs with full type safety and automatic batching.
+
+If you're not familiar with how `@requires` works in federation generally, read the [**@requires directive**](/federation/directives/requires) documentation first.
+
+## How @requires Works in Cosmo Connect
+
+When a field on a gRPC entity is annotated with `@requires`, Cosmo Connect generates a **dedicated RPC method** for that field, separate from the entity's regular lookup. This mirrors the approach used for [field resolvers](/router/gRPC/field-resolvers), where each resolution concern gets its own type-safe RPC.
+
+Take the following schema as an example:
+
+```graphql
+type Storage @key(fields: "id") {
+  id: ID!
+  tags: [String!]! @external
+  tagSummary: String! @requires(fields: "tags")
+}
+```
+
+`tags` is resolved by another subgraph and marked `@external`. The `tagSummary` field is resolved by this subgraph, but only after `tags` has been fetched from the other subgraph.
+
+### Generated RPC
+
+Cosmo Connect generates a dedicated method for the requiring field alongside the entity's regular lookup:
+
+```protobuf
+service StorageService {
+  rpc LookupStorageById(LookupStorageByIdRequest) returns (LookupStorageByIdResponse) {}
+  rpc RequireStorageTagSummaryById(RequireStorageTagSummaryByIdRequest) returns (RequireStorageTagSummaryByIdResponse) {}
+}
+```
+
+The naming convention follows `Require{TypeName}{FieldName}By{KeyFieldName}`.
+
+## Request and Response Structure
+
+The generated protobuf messages carry everything the resolver needs: the entity key (so you can identify which entity you're computing for) and the resolved values of the required external fields.
+
+### Request
+
+```protobuf
+message RequireStorageTagSummaryByIdRequest {
+  // context provides all entities that need tagSummary resolved in this batch.
+  repeated RequireStorageTagSummaryByIdContext context = 1;
+}
+
+message RequireStorageTagSummaryByIdContext {
+  // key is inferred from the parent entity's @key directive.
+  LookupStorageByIdRequestKey key = 1;
+  // fields carries the resolved values of the @external fields listed in @requires.
+  RequireStorageTagSummaryByIdFields fields = 2;
+}
+
+message RequireStorageTagSummaryByIdFields {
+  repeated string tags = 1;
+}
+```
+
+The `key` is passed through automatically from the parent entity's `@key` directive, giving you a stable identifier to use in your business logic. The `fields` message contains the already-resolved values of the `@external` fields you declared in `@requires`. In this example, `fields.tags` will already be populated with the tag list fetched from the subgraph that resolves them before your RPC is called.
+
+### Response
+
+```protobuf
+message RequireStorageTagSummaryByIdResponse {
+  repeated RequireStorageTagSummaryByIdResult result = 1;
+}
+
+message RequireStorageTagSummaryByIdResult {
+  string tag_summary = 1;
+}
+```
+
+The response is a repeated list of results, one per context element in the request.
+
+## Batching
+
+`@requires` RPCs are **batched by default**. When multiple entities need their requiring field resolved in a single GraphQL operation, Cosmo Connect aggregates all of them, fetches the `@external` field values from the subgraph that resolves them for all entities at once, and issues a single RPC call to your service with all context elements in one request.
+
+This eliminates the N+1 query problem: no matter how many `Storage` entities are returned in a list, there is always exactly one `RequireStorageTagSummaryById` call per operation.
+
+## Response Ordering
+
+<Warning>
+Results must be returned in the **exact same order** as the context elements in the request. Cosmo Connect uses positional mapping to associate each result with its corresponding entity. Returning results out of order will cause incorrect data to be merged into the GraphQL response.
+</Warning>
+
+Always iterate over `req.context` in order and append one result per element, even for entities where the field resolves to a zero value or nil:
+
+```go
+func (s *StorageService) RequireStorageTagSummaryById(
+  _ context.Context,
+  req *storagev1.RequireStorageTagSummaryByIdRequest,
+) (*storagev1.RequireStorageTagSummaryByIdResponse, error) {
+  results := make([]*storagev1.RequireStorageTagSummaryByIdResult, 0, len(req.GetContext()))
+
+  for _, ctx := range req.GetContext() {
+    tags := ctx.GetFields().GetTags()
+    summary := strings.Join(tags, ", ")
+
+    results = append(results, &storagev1.RequireStorageTagSummaryByIdResult{
+      TagSummary: summary,
+    })
+  }
+
+  return &storagev1.RequireStorageTagSummaryByIdResponse{
+    Result: results,
+  }, nil
+}
+```
+
+If you need to skip resolution for a particular entity (for example, it has no tags), you must still append an empty result to maintain the correct position:
+
+```go
+// Correct: preserves positional mapping
+results = append(results, &storagev1.RequireStorageTagSummaryByIdResult{})
+
+// Incorrect: breaks positional mapping by skipping the entry
+continue
+```
+
+## Runtime Execution Flow
+
+<Steps>
+  <Step title="Entity lookup">
+    The router resolves the entity via its regular lookup RPC (e.g., `LookupStorageById`), fetching its locally-resolved fields.
+  </Step>
+  <Step title="External field fetch">
+    The router fetches the `@external` fields (`tags`) from the subgraph that resolves them.
+  </Step>
+  <Step title="Require RPC call">
+    With both the entity keys and external field values in hand, the router issues the batched `RequireStorageTagSummaryById` RPC to your service.
+  </Step>
+  <Step title="Response merge">
+    Results are merged back into the GraphQL response in the correct positional order.
+  </Step>
+</Steps>
+
+## Limitations
+
+<Warning>
+Two limitations currently apply to `@requires` in Cosmo Connect. Both are actively being worked on and will be lifted in a future release.
+
+**Abstract types** — `@requires` on fields of interface or union types is not yet supported.
+
+**Field arguments** — A field cannot currently be both a requiring field (`@requires`) and a field resolver (`@connect__fieldResolver`) at the same time. Support for requiring fields with arguments is planned.
+</Warning>
+
+## See Also
+
+- [**@requires directive**](/federation/directives/requires) — Federation concept documentation
+- [**@external directive**](/federation/directives/external) — Marking fields as resolved by another subgraph
+- [**GraphQL Support**](/router/gRPC/graphql-support) — Supported features and limitations overview
