@@ -645,9 +645,9 @@ type RateLimitSimpleStrategy struct {
 
 type RateLimitOverride struct {
 	Matching string        `yaml:"matching"`
-	Rate       int           `yaml:"rate"`
-	Burst      int           `yaml:"burst"`
-	Period     time.Duration `yaml:"period"`
+	Rate     int           `yaml:"rate"`
+	Burst    int           `yaml:"burst"`
+	Period   time.Duration `yaml:"period"`
 }
 
 type CDNConfiguration struct {
