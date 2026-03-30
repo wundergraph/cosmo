@@ -49,15 +49,7 @@ class S3BlobStorage implements BlobStorage {
     }
   }
 
-  async headObject({
-    context,
-    key,
-    schemaVersionId,
-  }: {
-    context: Context;
-    key: string;
-    schemaVersionId: string;
-  }): Promise<boolean> {
+  async headObject({ context, key, version }: { context: Context; key: string; version: string }): Promise<boolean> {
     const command = new HeadObjectCommand({
       Bucket: this.bucketName,
       Key: key,
@@ -72,7 +64,7 @@ class S3BlobStorage implements BlobStorage {
       } else if (resp.$metadata.httpStatusCode !== 200) {
         throw new Error(`Failed to fetch the metadata of the object.`);
       }
-      if (resp.Metadata && resp.Metadata.version === schemaVersionId) {
+      if (resp.Metadata && resp.Metadata.version === version) {
         return false;
       }
       return true;

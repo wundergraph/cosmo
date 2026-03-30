@@ -84,7 +84,7 @@ There are a few things to note from this command:
 
 * The first argument is the federated graph name to push the operations to. This is the federated graph we created while following , named `federation`.
 
-* After the federated subgraph name, we must also indicate a client name. Persisted operations in Cosmo are always associated with a given client. If needed, Cosmo will automatically register the given client name the first time it sees it. During operation execution, the client name is obtained from the `graphql-client-name` HTTP header.
+* After the federated graph name, we must also indicate a client name. Persisted operations in Cosmo are always associated with a given client. If needed, Cosmo will automatically register the given client name the first time it sees it. During operation execution, the client name is obtained from the `graphql-client-name` HTTP header. When the router runs in [manifest mode](/router/persisted-queries/persisted-operations#pql-manifest), the client name is used only to structure operations in Studio.
 
 * Finally, we specify one or more files that contain GraphQL operations. Here we're using a plain `.graphql` file, but other formats are also supported, including:
 
@@ -116,8 +116,26 @@ curl 'http://127.0.0.1:3002/graphql' \
 
 This will return the same data as executing the operation by returning its contents.
 
+## Using the PQL Manifest
+
+Instead of having the router fetch each persisted operation individually from the CDN on each request, you can enable the **PQL manifest**. In this mode, the router loads all persisted operations from a single `manifest.json` file at startup and serves them.
+
+Add the following to your router configuration:
+
+```yaml
+persisted_operations:
+  manifest:
+    enabled: true
+```
+
+The manifest is automatically kept in sync with the Cosmo CDN whenever you push or delete operations. The router polls for updates and hot-reloads without a restart.
+
+You can also load the manifest from a custom [storage provider](/router/storage-providers) (e.g. S3-compatible storage) instead of the Cosmo CDN. For details, see [PQL Manifest](/router/persisted-queries/persisted-operations#pql-manifest).
+
 ## Further information
 
-* Check the router documentation for [Persisted Operations](/router/persisted-queries/persisted-operations).
+* [Persisted Operations](/router/persisted-queries/persisted-operations) — full reference including manifest formats, manifest mode, custom storage providers, and security options.
 
-* Check the documentation for [Push](/cli/operations/push) command.
+* [Push command](/cli/operations/push) — CLI reference for `wgc operations push`.
+
+* [Storage Providers](/router/storage-providers) — configure S3 or other storage backends for router artifacts.
