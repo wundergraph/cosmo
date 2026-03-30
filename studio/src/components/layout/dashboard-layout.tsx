@@ -38,6 +38,7 @@ import { useWorkspace } from '@/hooks/use-workspace';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { Link } from '../ui/link';
 import { Button } from '../ui/button';
+import { Onboarding } from '../onboarding/onboarding-provider';
 
 export const StarBanner = ({
   isDisabled,
@@ -177,18 +178,57 @@ export const OrganizationBanner = () => {
   );
 };
 
+/**
+ * Ensures that only one banner is rendered at time.
+ */
+const ConditionalBanner = ({
+  onboarding,
+  onboardingDismissed,
+  starBannerDisabled,
+  disableStarBanner,
+  pathname,
+}: {
+  onboarding?: Onboarding;
+  onboardingDismissed: boolean;
+  starBannerDisabled: boolean;
+  disableStarBanner: Dispatch<SetStateAction<string>>;
+  pathname: string;
+}) => {
+  const onboardingInProgress = onboarding && onboarding.nonDemoFederatedGraphsCount === 0;
+  const interactedWithOnboardingAtStep1 = !onboarding && onboardingDismissed;
+  const onboardingIsNotApplicable =
+    (!onboarding && !onboardingDismissed) || (onboarding && onboarding.nonDemoFederatedGraphsCount > 0);
+  const pathIsNotOnboarding = pathname !== '/onboarding';
+
+  if (onboardingIsNotApplicable && pathIsNotOnboarding) {
+    return <StarBanner isDisabled={starBannerDisabled} setDisableStarBanner={disableStarBanner} />;
+  }
+
+  if (interactedWithOnboardingAtStep1 && pathIsNotOnboarding) {
+    return <OnboardingBanner hasFinishedOnboarding={false} />;
+  }
+
+  if (onboardingInProgress && pathIsNotOnboarding) {
+    return <OnboardingBanner hasFinishedOnboarding={Boolean(onboarding?.finishedAt)} />;
+  }
+};
+
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const user = useUser();
   const organizationSlug = router.query.organizationSlug as string;
   const checkUserAccess = useCheckUserAccess();
   const [isStarBannerDisabled, setDisableStarBanner] = useStarBannerDisabled();
-  const { onboarding } = useOnboarding();
+  const { onboarding, dismissed } = useOnboarding();
   const { namespace } = useWorkspace();
 
   const isAdmin = checkUserAccess({ rolesToBe: ['organization-admin'] });
-  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
-  const isApiKeyManager = checkUserAccess({ rolesToBe: ['organization-apikey-manager'] });
+  const isAdminOrDeveloper = checkUserAccess({
+    rolesToBe: ['organization-admin', 'organization-developer'],
+  });
+  const isApiKeyManager = checkUserAccess({
+    rolesToBe: ['organization-apikey-manager'],
+  });
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
   const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
 
@@ -355,10 +395,13 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      {onboarding && onboarding.nonDemoFederatedGraphsCount === 0 && router.pathname !== '/onboarding' && (
-        <OnboardingBanner hasFinishedOnboarding={Boolean(onboarding.finishedAt)} />
-      )}
-      {!onboarding && <StarBanner isDisabled={isStarBannerDisabled} setDisableStarBanner={setDisableStarBanner} />}
+      <ConditionalBanner
+        onboarding={onboarding}
+        onboardingDismissed={dismissed}
+        starBannerDisabled={isStarBannerDisabled}
+        disableStarBanner={setDisableStarBanner}
+        pathname={router.pathname}
+      />
       <OrganizationBanner />
       <div
         className={cn(
