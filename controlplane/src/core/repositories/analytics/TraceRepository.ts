@@ -5,12 +5,7 @@ import { timestampToNanoseconds } from './util.js';
 export class TraceRepository {
   constructor(private client: ClickHouseClient) {}
 
-  public async getTrace(
-    traceID: string,
-    spanID: string,
-    organizationID: string,
-    federatedGraphId: string,
-  ) {
+  public async getTrace(traceID: string, spanID: string, organizationID: string, federatedGraphId: string) {
     const columns = `
         Timestamp as timestamp,
         TraceId as traceId,

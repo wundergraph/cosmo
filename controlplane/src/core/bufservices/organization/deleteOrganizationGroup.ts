@@ -14,11 +14,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UnauthorizedError } from '../../errors/errors.js';
 import OidcProvider from '../../services/OidcProvider.js';
 
-export function deleteOrganizationGroup(
-  opts: RouterOptions,
-  req: DeleteOrganizationGroupRequest,
-  ctx: HandlerContext,
-) {
+export function deleteOrganizationGroup(opts: RouterOptions, req: DeleteOrganizationGroupRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

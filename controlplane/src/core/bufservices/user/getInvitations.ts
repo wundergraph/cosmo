@@ -5,11 +5,7 @@ import { OrganizationInvitationRepository } from '../../repositories/Organizatio
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getInvitations(
-  opts: RouterOptions,
-  req: GetInvitationsRequest,
-  ctx: HandlerContext,
-) {
+export function getInvitations(opts: RouterOptions, req: GetInvitationsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

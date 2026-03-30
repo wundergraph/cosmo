@@ -5,11 +5,7 @@ import { ApiKeyRepository } from '../../repositories/ApiKeyRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getAPIKeys(
-  opts: RouterOptions,
-  req: GetAPIKeysRequest,
-  ctx: HandlerContext,
-) {
+export function getAPIKeys(opts: RouterOptions, req: GetAPIKeysRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

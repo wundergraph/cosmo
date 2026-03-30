@@ -11,11 +11,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function updateFeatureSettings(
-  opts: RouterOptions,
-  req: UpdateFeatureSettingsRequest,
-  ctx: HandlerContext,
-) {
+export function updateFeatureSettings(opts: RouterOptions, req: UpdateFeatureSettingsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

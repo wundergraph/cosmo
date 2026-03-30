@@ -9,11 +9,7 @@ import { OrganizationGroupRepository } from '../../repositories/OrganizationGrou
 import { UnauthorizedError } from '../../errors/errors.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 
-export function updateAPIKey(
-  opts: RouterOptions,
-  req: UpdateAPIKeyRequest,
-  ctx: HandlerContext,
-) {
+export function updateAPIKey(opts: RouterOptions, req: UpdateAPIKeyRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

@@ -8,11 +8,7 @@ import { UsageRepository } from '../../repositories/analytics/UsageRepository.js
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getFieldUsage(
-  opts: RouterOptions,
-  req: GetFieldUsageRequest,
-  ctx: HandlerContext,
-) {
+export function getFieldUsage(opts: RouterOptions, req: GetFieldUsageRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

@@ -10,11 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 
-export function getClientsFromAnalytics(
-  opts: RouterOptions,
-  req: GetClientsFromAnalyticsRequest,
-  ctx: HandlerContext,
-) {
+export function getClientsFromAnalytics(opts: RouterOptions, req: GetClientsFromAnalyticsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

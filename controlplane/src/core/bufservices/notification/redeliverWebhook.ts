@@ -10,11 +10,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { RedeliverWebhookService } from '../../webhooks/RedeliverWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function redeliverWebhook(
-  opts: RouterOptions,
-  req: RedeliverWebhookRequest,
-  ctx: HandlerContext,
-) {
+export function redeliverWebhook(opts: RouterOptions, req: RedeliverWebhookRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

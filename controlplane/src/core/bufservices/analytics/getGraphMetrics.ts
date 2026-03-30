@@ -10,11 +10,7 @@ import { MetricsRepository } from '../../repositories/analytics/MetricsRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 
-export function getGraphMetrics(
-  opts: RouterOptions,
-  req: GetGraphMetricsRequest,
-  ctx: HandlerContext,
-) {
+export function getGraphMetrics(opts: RouterOptions, req: GetGraphMetricsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

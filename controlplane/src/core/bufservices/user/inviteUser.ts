@@ -7,11 +7,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { UserInviteService } from '../../services/UserInviteService.js';
 
-export function inviteUser(
-  opts: RouterOptions,
-  req: InviteUserRequest,
-  ctx: HandlerContext,
-) {
+export function inviteUser(opts: RouterOptions, req: InviteUserRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

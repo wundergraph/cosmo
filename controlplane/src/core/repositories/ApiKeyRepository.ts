@@ -146,7 +146,7 @@ export class ApiKeyRepository {
 
     return keys.map(
       ({ groupId, groupName, ...key }) =>
-        (({
+        ({
           id: key.id,
           name: key.name,
           createdAt: key.createdAt.toISOString(),
@@ -155,8 +155,8 @@ export class ApiKeyRepository {
           external: key.external,
           group: groupId ? { id: groupId, name: groupName } : undefined,
           createdBy: key.createdBy,
-          creatorUserID: key.creatorUserID
-        }) as APIKeyDTO),
+          creatorUserID: key.creatorUserID,
+        }) as APIKeyDTO,
     );
   }
 

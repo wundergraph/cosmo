@@ -331,11 +331,7 @@ export class OperationsRepository {
       .returning();
   }
 
-  public removeOperationOverrides(data: {
-    operationHash: string;
-    namespaceId: string;
-    changes: OverrideChange[];
-  }) {
+  public removeOperationOverrides(data: { operationHash: string; namespaceId: string; changes: OverrideChange[] }) {
     return this.db.transaction(async (tx) => {
       const affectedRows = [];
       for (const change of data.changes) {

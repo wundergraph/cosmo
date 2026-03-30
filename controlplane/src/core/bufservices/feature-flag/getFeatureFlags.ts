@@ -9,11 +9,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getFeatureFlags(
-  opts: RouterOptions,
-  req: GetFeatureFlagsRequest,
-  ctx: HandlerContext,
-) {
+export function getFeatureFlags(opts: RouterOptions, req: GetFeatureFlagsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

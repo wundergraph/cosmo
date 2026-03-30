@@ -13,11 +13,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
-export function moveSubgraph(
-  opts: RouterOptions,
-  req: MoveGraphRequest,
-  ctx: HandlerContext,
-) {
+export function moveSubgraph(opts: RouterOptions, req: MoveGraphRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

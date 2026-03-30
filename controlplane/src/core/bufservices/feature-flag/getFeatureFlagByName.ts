@@ -11,11 +11,7 @@ import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getFeatureFlagByName(
-  opts: RouterOptions,
-  req: GetFeatureFlagByNameRequest,
-  ctx: HandlerContext,
-) {
+export function getFeatureFlagByName(opts: RouterOptions, req: GetFeatureFlagByNameRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

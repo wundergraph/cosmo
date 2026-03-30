@@ -10,11 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 
-export function getProposalChecks(
-  opts: RouterOptions,
-  req: GetProposalChecksRequest,
-  ctx: HandlerContext,
-) {
+export function getProposalChecks(opts: RouterOptions, req: GetProposalChecksRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

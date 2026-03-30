@@ -13,11 +13,7 @@ import { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function deleteNamespace(
-  opts: RouterOptions,
-  req: DeleteNamespaceRequest,
-  ctx: HandlerContext,
-) {
+export function deleteNamespace(opts: RouterOptions, req: DeleteNamespaceRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

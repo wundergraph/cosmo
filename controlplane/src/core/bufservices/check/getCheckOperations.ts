@@ -12,11 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getCheckOperations(
-  opts: RouterOptions,
-  req: GetCheckOperationsRequest,
-  ctx: HandlerContext,
-) {
+export function getCheckOperations(opts: RouterOptions, req: GetCheckOperationsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

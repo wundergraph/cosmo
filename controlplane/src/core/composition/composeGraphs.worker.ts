@@ -19,7 +19,14 @@ import {
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
 import { buildRouterConfig, SubgraphKind } from '@wundergraph/cosmo-shared';
-import { GRPCMappingSchema, ImageReferenceSchema, RouterConfigSchema, type GRPCMapping, type ImageReference, type RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import {
+  GRPCMappingSchema,
+  ImageReferenceSchema,
+  RouterConfigSchema,
+  type GRPCMapping,
+  type ImageReference,
+  type RouterConfig,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { parse } from 'graphql';
 import type { FederationResult, FederationResultWithContracts } from '@wundergraph/composition';
 import type { RouterSubgraph } from '@wundergraph/cosmo-shared';

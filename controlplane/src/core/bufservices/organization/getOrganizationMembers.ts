@@ -8,11 +8,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getOrganizationMembers(
-  opts: RouterOptions,
-  req: GetOrganizationMembersRequest,
-  ctx: HandlerContext,
-) {
+export function getOrganizationMembers(opts: RouterOptions, req: GetOrganizationMembersRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

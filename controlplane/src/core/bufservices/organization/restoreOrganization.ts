@@ -10,11 +10,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function restoreOrganization(
-  opts: RouterOptions,
-  req: RestoreOrganizationRequest,
-  ctx: HandlerContext,
-) {
+export function restoreOrganization(opts: RouterOptions, req: RestoreOrganizationRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

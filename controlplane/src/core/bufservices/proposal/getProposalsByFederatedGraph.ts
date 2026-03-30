@@ -123,27 +123,26 @@ export function getProposalsByFederatedGraph(
       response: {
         code: EnumStatusCode.OK,
       },
-      proposals: proposalsWithChecks.map(
-        (proposal) =>
-          create(ProposalSchema, {
-            id: proposal.proposal.id,
-            name: proposal.proposal.name,
-            createdAt: proposal.proposal.createdAt,
-            createdByEmail: proposal.proposal.createdByEmail || '',
-            state: proposal.proposal.state,
-            federatedGraphId: proposal.proposal.federatedGraphId,
-            federatedGraphName: req.federatedGraphName,
-            subgraphs: proposal.proposalSubgraphs.map((subgraph) => ({
-              name: subgraph.subgraphName,
-              schemaSDL: subgraph.schemaSDL,
-              isDeleted: subgraph.isDeleted,
-              isNew: subgraph.isNew,
-              labels: subgraph.labels || [],
-            })),
-            latestCheckSuccess: proposal.latestCheckSuccess,
-            latestCheckId: proposal.latestCheckId,
-            origin: fromProposalOriginEnum(proposal.proposal.origin),
-          }),
+      proposals: proposalsWithChecks.map((proposal) =>
+        create(ProposalSchema, {
+          id: proposal.proposal.id,
+          name: proposal.proposal.name,
+          createdAt: proposal.proposal.createdAt,
+          createdByEmail: proposal.proposal.createdByEmail || '',
+          state: proposal.proposal.state,
+          federatedGraphId: proposal.proposal.federatedGraphId,
+          federatedGraphName: req.federatedGraphName,
+          subgraphs: proposal.proposalSubgraphs.map((subgraph) => ({
+            name: subgraph.subgraphName,
+            schemaSDL: subgraph.schemaSDL,
+            isDeleted: subgraph.isDeleted,
+            isNew: subgraph.isNew,
+            labels: subgraph.labels || [],
+          })),
+          latestCheckSuccess: proposal.latestCheckSuccess,
+          latestCheckId: proposal.latestCheckId,
+          origin: fromProposalOriginEnum(proposal.proposal.origin),
+        }),
       ),
       isProposalsEnabled: true,
     };

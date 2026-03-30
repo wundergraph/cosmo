@@ -11,11 +11,7 @@ import Slack from '../../services/Slack.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function createIntegration(
-  opts: RouterOptions,
-  req: CreateIntegrationRequest,
-  ctx: HandlerContext,
-) {
+export function createIntegration(opts: RouterOptions, req: CreateIntegrationRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

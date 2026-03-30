@@ -19,11 +19,7 @@ import { enrichLogger, getLogger, handleError, isValidLabels } from '../../util.
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function createFeatureFlag(
-  opts: RouterOptions,
-  req: CreateFeatureFlagRequest,
-  ctx: HandlerContext,
-) {
+export function createFeatureFlag(opts: RouterOptions, req: CreateFeatureFlagRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

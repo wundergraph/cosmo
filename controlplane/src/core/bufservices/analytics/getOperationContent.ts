@@ -10,11 +10,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 
 // Get operation content by hash
 // TODO: Specify daterange to improve clickhouse performance
-export function getOperationContent(
-  opts: RouterOptions,
-  req: GetOperationContentRequest,
-  ctx: HandlerContext,
-) {
+export function getOperationContent(opts: RouterOptions, req: GetOperationContentRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

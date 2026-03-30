@@ -17,10 +17,7 @@ import {
 export class AnalyticsDashboardViewRepository {
   constructor(private client: ClickHouseClient) {}
 
-  public async getWeeklyRequestSeries(
-    federatedGraphId: string,
-    organizationId: string,
-  ) {
+  public async getWeeklyRequestSeries(federatedGraphId: string, organizationId: string) {
     const query = `
     SELECT toDate(timestamp) as timestamp, totalRequests, erroredRequests
       FROM (
@@ -58,11 +55,7 @@ export class AnalyticsDashboardViewRepository {
     return [];
   }
 
-  public async getRequestSeries(
-    federatedGraphId: string,
-    organizationId: string,
-    filter: TimeFilters,
-  ) {
+  public async getRequestSeries(federatedGraphId: string, organizationId: string, filter: TimeFilters) {
     if (filter?.dateRange && filter.dateRange.start > filter.dateRange.end) {
       const tmp = filter.dateRange.start;
       filter.dateRange.start = filter.dateRange.end;

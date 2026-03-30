@@ -26,11 +26,7 @@ import { enrichLogger, getLogger, handleError, toProposalOriginEnum } from '../.
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
-export function createProposal(
-  opts: RouterOptions,
-  req: CreateProposalRequest,
-  ctx: HandlerContext,
-) {
+export function createProposal(opts: RouterOptions, req: CreateProposalRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {
@@ -425,15 +421,14 @@ export function createProposal(
       proposalRepo,
       trafficInspector,
       composer,
-      subgraphs: proposalSubgraphs.map(
-        (subgraph) =>
-          create(ProposalSubgraphSchema, {
-            name: subgraph.subgraphName,
-            schemaSDL: subgraph.schemaSDL,
-            labels: subgraph.labels,
-            isDeleted: subgraph.isDeleted,
-            isNew: subgraph.isNew,
-          }),
+      subgraphs: proposalSubgraphs.map((subgraph) =>
+        create(ProposalSubgraphSchema, {
+          name: subgraph.subgraphName,
+          schemaSDL: subgraph.schemaSDL,
+          labels: subgraph.labels,
+          isDeleted: subgraph.isDeleted,
+          isNew: subgraph.isNew,
+        }),
       ),
       namespace,
       logger,

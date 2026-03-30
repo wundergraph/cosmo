@@ -1,6 +1,10 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { create } from '@bufbuild/protobuf';
-import { GraphPruningConfigSchema, GraphPruningIssueSchema, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  GraphPruningConfigSchema,
+  GraphPruningIssueSchema,
+  LintSeverity,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { pino } from 'pino';
 import { Mock, afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -253,11 +257,11 @@ describe('Graph Pruning Tests', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: initSchema,
-    }) as any;
+    })) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -414,11 +418,11 @@ describe('Graph Pruning Tests', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: initSchema,
-    }) as any;
+    })) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
     const response = await client.enableGraphPruning({

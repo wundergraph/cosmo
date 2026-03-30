@@ -15,11 +15,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function publishMonograph(
-  opts: RouterOptions,
-  req: PublishMonographRequest,
-  ctx: HandlerContext,
-) {
+export function publishMonograph(opts: RouterOptions, req: PublishMonographRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

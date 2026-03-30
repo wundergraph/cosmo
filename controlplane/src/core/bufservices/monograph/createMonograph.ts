@@ -23,11 +23,7 @@ import {
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function createMonograph(
-  opts: RouterOptions,
-  req: CreateMonographRequest,
-  ctx: HandlerContext,
-) {
+export function createMonograph(opts: RouterOptions, req: CreateMonographRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

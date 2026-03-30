@@ -11,11 +11,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { SubgraphDTO } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getSubgraphById(
-  opts: RouterOptions,
-  req: GetSubgraphByIdRequest,
-  ctx: HandlerContext,
-) {
+export function getSubgraphById(opts: RouterOptions, req: GetSubgraphByIdRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

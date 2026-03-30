@@ -18,11 +18,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 
-export function getWorkspace(
-  opts: RouterOptions,
-  req: GetWorkspaceRequest,
-  ctx: HandlerContext,
-) {
+export function getWorkspace(opts: RouterOptions, req: GetWorkspaceRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

@@ -20,11 +20,7 @@ import { enrichLogger, getLogger, handleError, isValidGraphName, isValidLabelMat
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function createFederatedGraph(
-  opts: RouterOptions,
-  req: CreateFederatedGraphRequest,
-  ctx: HandlerContext,
-) {
+export function createFederatedGraph(opts: RouterOptions, req: CreateFederatedGraphRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

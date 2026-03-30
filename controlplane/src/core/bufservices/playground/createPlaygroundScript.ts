@@ -9,11 +9,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function createPlaygroundScript(
-  opts: RouterOptions,
-  req: CreatePlaygroundScriptRequest,
-  ctx: HandlerContext,
-) {
+export function createPlaygroundScript(opts: RouterOptions, req: CreatePlaygroundScriptRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

@@ -8,11 +8,7 @@ import type { RouterOptions } from '../../routes.js';
 import { getLogger, handleError } from '../../util.js';
 import AuthUtils from '../../auth-utils.js';
 
-export function initializeCosmoUser(
-  opts: RouterOptions,
-  req: InitializeCosmoUserRequest,
-  ctx: HandlerContext,
-) {
+export function initializeCosmoUser(opts: RouterOptions, req: InitializeCosmoUserRequest, ctx: HandlerContext) {
   const logger = getLogger(ctx, opts.logger);
   return handleError(ctx, logger, async () => {
     const userInfo = await opts.authenticator.getUserInfo(req.token);

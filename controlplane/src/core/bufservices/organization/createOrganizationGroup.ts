@@ -12,11 +12,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function createOrganizationGroup(
-  opts: RouterOptions,
-  req: CreateOrganizationGroupRequest,
-  ctx: HandlerContext,
-) {
+export function createOrganizationGroup(opts: RouterOptions, req: CreateOrganizationGroupRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

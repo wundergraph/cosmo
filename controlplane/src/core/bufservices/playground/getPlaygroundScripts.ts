@@ -8,11 +8,7 @@ import { PlaygroundScriptsRepository } from '../../repositories/PlaygroundScript
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getPlaygroundScripts(
-  opts: RouterOptions,
-  req: GetPlaygroundScriptsRequest,
-  ctx: HandlerContext,
-) {
+export function getPlaygroundScripts(opts: RouterOptions, req: GetPlaygroundScriptsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

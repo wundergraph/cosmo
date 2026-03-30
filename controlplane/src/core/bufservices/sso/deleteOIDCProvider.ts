@@ -11,11 +11,7 @@ import OidcProvider from '../../services/OidcProvider.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function deleteOIDCProvider(
-  opts: RouterOptions,
-  req: DeleteOIDCProviderRequest,
-  ctx: HandlerContext,
-) {
+export function deleteOIDCProvider(opts: RouterOptions, req: DeleteOIDCProviderRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

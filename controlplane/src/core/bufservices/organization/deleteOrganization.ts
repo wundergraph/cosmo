@@ -13,11 +13,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { delayForManualOrgDeletionInDays } from '../../constants.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function deleteOrganization(
-  opts: RouterOptions,
-  req: DeleteOrganizationRequest,
-  ctx: HandlerContext,
-) {
+export function deleteOrganization(opts: RouterOptions, req: DeleteOrganizationRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

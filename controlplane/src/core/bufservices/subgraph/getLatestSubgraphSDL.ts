@@ -10,11 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getLatestSubgraphSDL(
-  opts: RouterOptions,
-  req: GetLatestSubgraphSDLRequest,
-  ctx: HandlerContext,
-) {
+export function getLatestSubgraphSDL(opts: RouterOptions, req: GetLatestSubgraphSDLRequest, ctx: HandlerContext) {
   req.namespace = req.namespace || DefaultNamespace;
 
   let logger = getLogger(ctx, opts.logger);

@@ -5,11 +5,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getNamespaces(
-  opts: RouterOptions,
-  req: GetNamespacesRequest,
-  ctx: HandlerContext,
-) {
+export function getNamespaces(opts: RouterOptions, req: GetNamespacesRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

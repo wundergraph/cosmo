@@ -11,11 +11,7 @@ import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getAuditLogs(
-  opts: RouterOptions,
-  req: GetAuditLogsRequest,
-  ctx: HandlerContext,
-) {
+export function getAuditLogs(opts: RouterOptions, req: GetAuditLogsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

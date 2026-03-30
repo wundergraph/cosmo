@@ -9,11 +9,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getFeatureSubgraphs(
-  opts: RouterOptions,
-  req: GetFeatureSubgraphsRequest,
-  ctx: HandlerContext,
-) {
+export function getFeatureSubgraphs(opts: RouterOptions, req: GetFeatureSubgraphsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

@@ -9,11 +9,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, mergeUrls } from '../../util.js';
 import OidcProvider from '../../services/OidcProvider.js';
 
-export function getOIDCProvider(
-  opts: RouterOptions,
-  req: GetOIDCProviderRequest,
-  ctx: HandlerContext,
-) {
+export function getOIDCProvider(opts: RouterOptions, req: GetOIDCProviderRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

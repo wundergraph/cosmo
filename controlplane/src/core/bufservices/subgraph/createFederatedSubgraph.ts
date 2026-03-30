@@ -27,11 +27,7 @@ import { PluginRepository } from '../../repositories/PluginRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DBSubgraphType } from '../../../db/models.js';
 
-export function createFederatedSubgraph(
-  opts: RouterOptions,
-  req: CreateFederatedSubgraphRequest,
-  ctx: HandlerContext,
-) {
+export function createFederatedSubgraph(opts: RouterOptions, req: CreateFederatedSubgraphRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

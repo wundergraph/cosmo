@@ -22,11 +22,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isCheckSuccessful } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getCheckSummary(
-  opts: RouterOptions,
-  req: GetCheckSummaryRequest,
-  ctx: HandlerContext,
-) {
+export function getCheckSummary(opts: RouterOptions, req: GetCheckSummaryRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

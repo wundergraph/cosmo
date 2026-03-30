@@ -7,11 +7,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getSubgraphs(
-  opts: RouterOptions,
-  req: GetSubgraphsRequest,
-  ctx: HandlerContext,
-) {
+export function getSubgraphs(opts: RouterOptions, req: GetSubgraphsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

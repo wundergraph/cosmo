@@ -1,4 +1,3 @@
-import { PlainMessage } from '../../types/index.js';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   Integration,
@@ -10,6 +9,16 @@ import { addDays } from 'date-fns';
 import { and, asc, count, desc, eq, gt, inArray, like, lt, not, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import {
+  PlainMessage,
+  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+  Feature,
+  FeatureIds,
+  OrganizationDTO,
+  OrganizationGroupDTO,
+  OrganizationMemberDTO,
+  WebhooksConfigDTO,
+} from '../../types/index.js';
 import { NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -25,15 +34,6 @@ import {
   slackSchemaUpdateEventConfigs,
   users,
 } from '../../db/schema.js';
-import {
-  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-  Feature,
-  FeatureIds,
-  OrganizationDTO,
-  OrganizationGroupDTO,
-  OrganizationMemberDTO,
-  WebhooksConfigDTO,
-} from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';

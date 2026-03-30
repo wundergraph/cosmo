@@ -28,11 +28,7 @@ import { Composer } from '../../composition/composer.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { hubUserAgent } from '../../constants.js';
 
-export function updateProposal(
-  opts: RouterOptions,
-  req: UpdateProposalRequest,
-  ctx: HandlerContext,
-) {
+export function updateProposal(opts: RouterOptions, req: UpdateProposalRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {
@@ -493,15 +489,14 @@ export function updateProposal(
         proposalRepo,
         trafficInspector,
         composer,
-        subgraphs: proposalSubgraphs.map(
-          (subgraph) =>
-            create(ProposalSubgraphSchema, {
-              name: subgraph.subgraphName,
-              schemaSDL: subgraph.schemaSDL,
-              labels: subgraph.labels,
-              isDeleted: subgraph.isDeleted,
-              isNew: subgraph.isNew,
-            }),
+        subgraphs: proposalSubgraphs.map((subgraph) =>
+          create(ProposalSubgraphSchema, {
+            name: subgraph.subgraphName,
+            schemaSDL: subgraph.schemaSDL,
+            labels: subgraph.labels,
+            isDeleted: subgraph.isDeleted,
+            isNew: subgraph.isNew,
+          }),
         ),
         namespace,
         logger,

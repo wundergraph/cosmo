@@ -11,11 +11,7 @@ import { enrichLogger, getLogger, handleError, isValidLocalhostOrSecureEndpoint 
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
-export function createOIDCProvider(
-  opts: RouterOptions,
-  req: CreateOIDCProviderRequest,
-  ctx: HandlerContext,
-) {
+export function createOIDCProvider(opts: RouterOptions, req: CreateOIDCProviderRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

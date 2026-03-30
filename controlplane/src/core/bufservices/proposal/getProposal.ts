@@ -1,18 +1,18 @@
 import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { GetProposalRequest, GetProposalResponse, ProposalSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  GetProposalRequest,
+  GetProposalResponse,
+  ProposalSchema,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, fromProposalOriginEnum, getLogger, handleError } from '../../util.js';
 
-export function getProposal(
-  opts: RouterOptions,
-  req: GetProposalRequest,
-  ctx: HandlerContext,
-) {
+export function getProposal(opts: RouterOptions, req: GetProposalRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

@@ -11,11 +11,7 @@ import { OrganizationRepository } from '../../../core/repositories/OrganizationR
 import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function configureCacheWarmer(
-  opts: RouterOptions,
-  req: ConfigureCacheWarmerRequest,
-  ctx: HandlerContext,
-) {
+export function configureCacheWarmer(opts: RouterOptions, req: ConfigureCacheWarmerRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

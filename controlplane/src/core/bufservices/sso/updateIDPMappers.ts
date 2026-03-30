@@ -11,11 +11,7 @@ import OidcProvider from '../../services/OidcProvider.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
-export function updateIDPMappers(
-  opts: RouterOptions,
-  req: UpdateIDPMappersRequest,
-  ctx: HandlerContext,
-) {
+export function updateIDPMappers(opts: RouterOptions, req: UpdateIDPMappersRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

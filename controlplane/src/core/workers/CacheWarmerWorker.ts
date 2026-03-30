@@ -101,7 +101,10 @@ class CacheWarmerWorker implements IWorker {
         maxOperationsCount: 100,
       });
 
-      const cacheWarmerOperationsBytes = Buffer.from(toJsonString(CacheWarmerOperationsSchema, cacheWarmerOperations), 'utf8');
+      const cacheWarmerOperationsBytes = Buffer.from(
+        toJsonString(CacheWarmerOperationsSchema, cacheWarmerOperations),
+        'utf8',
+      );
       const path = `${organizationId}/${federatedGraphId}/cache_warmup/operations.json`;
 
       await this.input.blobStorage.putObject<S3RouterConfigMetadata>({

@@ -9,11 +9,7 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 
-export function deleteAPIKey(
-  opts: RouterOptions,
-  req: DeleteAPIKeyRequest,
-  ctx: HandlerContext,
-) {
+export function deleteAPIKey(opts: RouterOptions, req: DeleteAPIKeyRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

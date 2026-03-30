@@ -10,11 +10,7 @@ import { OrganizationGroupRepository } from '../../repositories/OrganizationGrou
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import OidcProvider from '../../services/OidcProvider.js';
 
-export function getOrganizationGroups(
-  opts: RouterOptions,
-  req: GetOrganizationGroupsRequest,
-  ctx: HandlerContext,
-) {
+export function getOrganizationGroups(opts: RouterOptions, req: GetOrganizationGroupsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

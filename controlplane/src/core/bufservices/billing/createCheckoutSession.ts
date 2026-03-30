@@ -10,11 +10,7 @@ import { BillingService } from '../../services/BillingService.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function createCheckoutSession(
-  opts: RouterOptions,
-  req: CreateCheckoutSessionRequest,
-  ctx: HandlerContext,
-) {
+export function createCheckoutSession(opts: RouterOptions, req: CreateCheckoutSessionRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

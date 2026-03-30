@@ -13,11 +13,7 @@ import { AuthContext, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, FederatedGrap
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { maxRowLimitForChecks } from '../../constants.js';
 
-export function recomposeGraph(
-  opts: RouterOptions,
-  req: RecomposeGraphRequest,
-  ctx: HandlerContext,
-) {
+export function recomposeGraph(opts: RouterOptions, req: RecomposeGraphRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

@@ -13,11 +13,7 @@ import { OrganizationGroupRepository } from '../../repositories/OrganizationGrou
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationGroupDTO } from '../../../types/index.js';
 
-export function updateOrgMemberGroup(
-  opts: RouterOptions,
-  req: UpdateOrgMemberGroupRequest,
-  ctx: HandlerContext,
-) {
+export function updateOrgMemberGroup(opts: RouterOptions, req: UpdateOrgMemberGroupRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

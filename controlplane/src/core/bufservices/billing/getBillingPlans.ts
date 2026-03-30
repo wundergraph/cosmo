@@ -9,11 +9,7 @@ import { BillingRepository } from '../../repositories/BillingRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { handleError } from '../../util.js';
 
-export function getBillingPlans(
-  opts: RouterOptions,
-  req: GetBillingPlansRequest,
-  ctx: HandlerContext,
-) {
+export function getBillingPlans(opts: RouterOptions, req: GetBillingPlansRequest, ctx: HandlerContext) {
   const logger = ctx.values.get<FastifyBaseLogger>({ id: Symbol('logger'), defaultValue: opts.logger });
 
   return handleError(ctx, logger, async () => {

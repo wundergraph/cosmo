@@ -262,7 +262,7 @@ export class SchemaCheckRepository {
       values.push(
         ...operations.map(
           (op) =>
-            (({
+            ({
               schemaCheckChangeActionId,
               name: op.name,
               type: op.type,
@@ -270,8 +270,8 @@ export class SchemaCheckRepository {
               firstSeenAt: op.firstSeenAt,
               lastSeenAt: op.lastSeenAt,
               federatedGraphId,
-              isSafeOverride: op.isSafeOverride
-            }) as NewSchemaChangeOperationUsage),
+              isSafeOverride: op.isSafeOverride,
+            }) as NewSchemaChangeOperationUsage,
         ),
       );
     }
@@ -1074,57 +1074,51 @@ export class SchemaCheckRepository {
       }
 
       breakingChanges.push(
-        ...schemaChanges.breakingChanges.map(
-          (c) =>
-            create(SchemaChangeSchema, {
-              ...c,
-              subgraphName,
-            }),
+        ...schemaChanges.breakingChanges.map((c) =>
+          create(SchemaChangeSchema, {
+            ...c,
+            subgraphName,
+          }),
         ),
       );
       nonBreakingChanges.push(
-        ...schemaChanges.nonBreakingChanges.map(
-          (c) =>
-            create(SchemaChangeSchema, {
-              ...c,
-              subgraphName,
-            }),
+        ...schemaChanges.nonBreakingChanges.map((c) =>
+          create(SchemaChangeSchema, {
+            ...c,
+            subgraphName,
+          }),
         ),
       );
       lintErrors.push(
-        ...lintIssues.errors.map(
-          (e) =>
-            create(LintIssueSchema, {
-              ...e,
-              subgraphName,
-            }),
+        ...lintIssues.errors.map((e) =>
+          create(LintIssueSchema, {
+            ...e,
+            subgraphName,
+          }),
         ),
       );
       lintWarnings.push(
-        ...lintIssues.warnings.map(
-          (w) =>
-            create(LintIssueSchema, {
-              ...w,
-              subgraphName,
-            }),
+        ...lintIssues.warnings.map((w) =>
+          create(LintIssueSchema, {
+            ...w,
+            subgraphName,
+          }),
         ),
       );
       graphPruneErrors.push(
-        ...graphPruningIssues.errors.map(
-          (e) =>
-            create(GraphPruningIssueSchema, {
-              ...e,
-              subgraphName,
-            }),
+        ...graphPruningIssues.errors.map((e) =>
+          create(GraphPruningIssueSchema, {
+            ...e,
+            subgraphName,
+          }),
         ),
       );
       graphPruneWarnings.push(
-        ...graphPruningIssues.warnings.map(
-          (w) =>
-            create(GraphPruningIssueSchema, {
-              ...w,
-              subgraphName,
-            }),
+        ...graphPruningIssues.warnings.map((w) =>
+          create(GraphPruningIssueSchema, {
+            ...w,
+            subgraphName,
+          }),
         ),
       );
 

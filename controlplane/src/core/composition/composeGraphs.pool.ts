@@ -7,9 +7,9 @@
  * `.js` worker in production.
  */
 import { existsSync } from 'node:fs';
-import { fromJson } from '@bufbuild/protobuf';
 import { fileURLToPath } from 'node:url';
 import { availableParallelism } from 'node:os';
+import { fromJson } from '@bufbuild/protobuf';
 import { Warning } from '@wundergraph/composition';
 import { RouterConfigSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import type { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';

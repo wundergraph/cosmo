@@ -10,11 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidNamespaceName } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function createNamespace(
-  opts: RouterOptions,
-  req: CreateNamespaceRequest,
-  ctx: HandlerContext,
-) {
+export function createNamespace(opts: RouterOptions, req: CreateNamespaceRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

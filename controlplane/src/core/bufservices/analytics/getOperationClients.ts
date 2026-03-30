@@ -11,11 +11,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { isoDateRangeToTimestamps, getDateRange } from '../../repositories/analytics/util.js';
 
-export function getOperationClients(
-  opts: RouterOptions,
-  req: GetOperationClientsRequest,
-  ctx: HandlerContext,
-) {
+export function getOperationClients(opts: RouterOptions, req: GetOperationClientsRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

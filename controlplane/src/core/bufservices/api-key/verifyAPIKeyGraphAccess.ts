@@ -9,11 +9,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 
-export function verifyAPIKeyGraphAccess(
-  opts: RouterOptions,
-  req: VerifyAPIKeyGraphAccessRequest,
-  ctx: HandlerContext,
-) {
+export function verifyAPIKeyGraphAccess(opts: RouterOptions, req: VerifyAPIKeyGraphAccessRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

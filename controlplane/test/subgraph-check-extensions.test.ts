@@ -71,11 +71,11 @@ async function setupTestGraphs(postSpy: ReturnType<typeof vi.spyOn>) {
 
   expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-  resp = await client.publishFederatedSubgraph({
+  resp = (await client.publishFederatedSubgraph({
     name: subgraph1Name,
     namespace: 'default',
     schema: subgraph1Schema,
-  }) as any;
+  })) as any;
 
   expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -89,11 +89,11 @@ async function setupTestGraphs(postSpy: ReturnType<typeof vi.spyOn>) {
 
   expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-  resp = await client.publishFederatedSubgraph({
+  resp = (await client.publishFederatedSubgraph({
     name: subgraph2Name,
     namespace: 'default',
     schema: subgraph2Schema,
-  }) as any;
+  })) as any;
 
   expect(resp.response?.code).toBe(EnumStatusCode.OK);
 

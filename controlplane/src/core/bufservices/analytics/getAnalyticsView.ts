@@ -12,11 +12,7 @@ import { AnalyticsRequestViewRepository } from '../../repositories/analytics/Ana
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 
-export function getAnalyticsView(
-  opts: RouterOptions,
-  req: GetAnalyticsViewRequest,
-  ctx: HandlerContext,
-) {
+export function getAnalyticsView(opts: RouterOptions, req: GetAnalyticsViewRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

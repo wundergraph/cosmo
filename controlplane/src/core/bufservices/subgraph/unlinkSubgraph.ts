@@ -8,11 +8,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function unlinkSubgraph(
-  opts: RouterOptions,
-  req: UnlinkSubgraphRequest,
-  ctx: HandlerContext,
-) {
+export function unlinkSubgraph(opts: RouterOptions, req: UnlinkSubgraphRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

@@ -21,11 +21,7 @@ import {
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function updateMonograph(
-  opts: RouterOptions,
-  req: UpdateMonographRequest,
-  ctx: HandlerContext,
-) {
+export function updateMonograph(opts: RouterOptions, req: UpdateMonographRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

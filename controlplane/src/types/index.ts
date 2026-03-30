@@ -10,17 +10,19 @@ import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
  * This is the V2 equivalent of protobuf-es V1's PlainMessage<T>.
  * It recursively strips metadata from nested message types as well.
  */
-export type PlainMessage<T> = T extends Message<any>
-  ? { [P in keyof T as P extends ('$typeName' | '$unknown') ? never : P]: PlainField<T[P]> }
-  : { [P in keyof T as P extends ('$typeName' | '$unknown') ? never : P]: PlainField<T[P]> };
+export type PlainMessage<T> =
+  T extends Message<any>
+    ? { [P in keyof T as P extends '$typeName' | '$unknown' ? never : P]: PlainField<T[P]> }
+    : { [P in keyof T as P extends '$typeName' | '$unknown' ? never : P]: PlainField<T[P]> };
 
-type PlainField<F> = F extends Message<any>
-  ? PlainMessage<F>
-  : F extends Array<infer U>
-    ? U extends Message<any>
-      ? PlainMessage<U>[]
-      : F
-    : F;
+type PlainField<F> =
+  F extends Message<any>
+    ? PlainMessage<F>
+    : F extends Array<infer U>
+      ? U extends Message<any>
+        ? PlainMessage<U>[]
+        : F
+      : F;
 
 export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
 

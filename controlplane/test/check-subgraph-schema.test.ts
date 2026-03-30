@@ -71,11 +71,11 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: 'type Query { hello: String! }',
-    }) as any;
+    })) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -123,11 +123,11 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: 'type Query { hello: String! }',
-    }) as any;
+    })) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -180,11 +180,11 @@ describe('CheckSubgraphSchema', (ctx) => {
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-      resp = await client.publishFederatedSubgraph({
+      resp = (await client.publishFederatedSubgraph({
         name: subgraphName,
         namespace: 'default',
         schema: 'type Query { hello: String! }',
-      }) as any;
+      })) as any;
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -264,11 +264,11 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: 'type Query { hello: String! }',
-    }) as any;
+    })) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -311,11 +311,11 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: DEFAULT_NAMESPACE,
       schema: 'type Query { hello: String! }',
-    }) as any;
+    })) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -364,11 +364,11 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: DEFAULT_NAMESPACE,
       schema: 'type Query { hello: String! }',
-    }) as any;
+    })) as any;
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -708,11 +708,11 @@ type Department {
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraph1Name,
       namespace: 'default',
       schema: subgraph1Schema,
-    }) as any;
+    })) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     // Create and publish second subgraph
@@ -724,11 +724,11 @@ type Department {
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraph2Name,
       namespace: 'default',
       schema: subgraph2Schema,
-    }) as any;
+    })) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     // Now run another check with delete option set to true
@@ -804,11 +804,11 @@ type Category {
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraph1Name,
       namespace: 'default',
       schema: subgraph1Schema,
-    }) as any;
+    })) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     // Create and publish second subgraph
@@ -820,11 +820,11 @@ type Category {
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
+    resp = (await client.publishFederatedSubgraph({
       name: subgraph2Name,
       namespace: 'default',
       schema: subgraph2Schema,
-    }) as any;
+    })) as any;
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
     let checkResp = await client.checkSubgraphSchema({
@@ -1779,11 +1779,11 @@ type Category {
       });
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-      resp = await client.publishFederatedSubgraph({
+      resp = (await client.publishFederatedSubgraph({
         name: subgraphName,
         namespace: 'default',
         schema: initialSchema,
-      }) as any;
+      })) as any;
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
       // Run schema check with only description changes
@@ -1847,11 +1847,11 @@ type Category {
       });
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-      resp = await client.publishFederatedSubgraph({
+      resp = (await client.publishFederatedSubgraph({
         name: subgraphAName,
         namespace: 'default',
         schema: subgraphASchema,
-      }) as any;
+      })) as any;
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
       // Create subgraph B (but don't publish yet)
@@ -2044,11 +2044,11 @@ type Category {
       });
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-      resp = await client.publishFederatedSubgraph({
+      resp = (await client.publishFederatedSubgraph({
         name: subgraphName,
         namespace: 'default',
         schema: initialSchema,
-      }) as any;
+      })) as any;
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
       // Run schema check with field removal

@@ -12,11 +12,7 @@ import { OrganizationRole } from '../../../db/models.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function updateOrganizationGroup(
-  opts: RouterOptions,
-  req: UpdateOrganizationGroupRequest,
-  ctx: HandlerContext,
-) {
+export function updateOrganizationGroup(opts: RouterOptions, req: UpdateOrganizationGroupRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {

@@ -15,11 +15,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { organizationSchema } from '../../constants.js';
 
-export function createOrganization(
-  opts: RouterOptions,
-  req: CreateOrganizationRequest,
-  ctx: HandlerContext,
-) {
+export function createOrganization(opts: RouterOptions, req: CreateOrganizationRequest, ctx: HandlerContext) {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError(ctx, logger, async () => {
