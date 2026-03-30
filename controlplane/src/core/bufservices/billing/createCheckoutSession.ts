@@ -14,10 +14,10 @@ export function createCheckoutSession(
   opts: RouterOptions,
   req: CreateCheckoutSessionRequest,
   ctx: HandlerContext,
-): Promise<CreateCheckoutSessionResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateCheckoutSessionResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

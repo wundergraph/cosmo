@@ -13,10 +13,10 @@ export function getWebhookDeliveryDetails(
   opts: RouterOptions,
   req: GetWebhookDeliveryDetailsRequest,
   ctx: HandlerContext,
-): Promise<GetWebhookDeliveryDetailsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetWebhookDeliveryDetailsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

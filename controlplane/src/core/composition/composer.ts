@@ -1,5 +1,5 @@
 import type { UUID } from 'node:crypto';
-import { create } from '@bufbuild/protobuf';
+import { create, toJsonString } from '@bufbuild/protobuf';
 import {
   CompositionOptions,
   FieldConfiguration,
@@ -218,7 +218,7 @@ export class Composer {
   }): Promise<{
     errors: ComposeDeploymentError[];
   }> {
-    const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
+    const routerConfigJsonStringBytes = Buffer.from(toJsonString(RouterConfigSchema, routerConfig), 'utf8');
     const errors: ComposeDeploymentError[] = [];
 
     let versionPath = '';

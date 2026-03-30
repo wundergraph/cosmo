@@ -14,10 +14,10 @@ export function getGraphMetrics(
   opts: RouterOptions,
   req: GetGraphMetricsRequest,
   ctx: HandlerContext,
-): Promise<GetGraphMetricsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetGraphMetricsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

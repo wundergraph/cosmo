@@ -15,10 +15,10 @@ export function createIntegration(
   opts: RouterOptions,
   req: CreateIntegrationRequest,
   ctx: HandlerContext,
-): Promise<CreateIntegrationResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateIntegrationResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

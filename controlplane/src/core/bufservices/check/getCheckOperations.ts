@@ -16,10 +16,10 @@ export function getCheckOperations(
   opts: RouterOptions,
   req: GetCheckOperationsRequest,
   ctx: HandlerContext,
-): Promise<GetCheckOperationsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetCheckOperationsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

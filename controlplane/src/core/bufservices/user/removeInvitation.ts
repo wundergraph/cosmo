@@ -16,10 +16,10 @@ export function removeInvitation(
   opts: RouterOptions,
   req: RemoveInvitationRequest,
   ctx: HandlerContext,
-): Promise<RemoveInvitationResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<RemoveInvitationResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

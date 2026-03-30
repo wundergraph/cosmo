@@ -11,10 +11,10 @@ export function deleteUser(
   opts: RouterOptions,
   req: DeleteUserRequest,
   ctx: HandlerContext,
-): Promise<DeleteUserResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<DeleteUserResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

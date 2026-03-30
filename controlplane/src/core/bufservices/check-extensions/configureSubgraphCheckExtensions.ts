@@ -15,10 +15,10 @@ export function configureSubgraphCheckExtensions(
   opts: RouterOptions,
   req: ConfigureSubgraphCheckExtensionsRequest,
   ctx: HandlerContext,
-): Promise<ConfigureSubgraphCheckExtensionsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<ConfigureSubgraphCheckExtensionsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

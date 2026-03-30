@@ -13,10 +13,10 @@ export function getOrganizationWebhookHistory(
   opts: RouterOptions,
   req: GetOrganizationWebhookHistoryRequest,
   ctx: HandlerContext,
-): Promise<GetOrganizationWebhookHistoryResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetOrganizationWebhookHistoryResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);

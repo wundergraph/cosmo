@@ -13,10 +13,10 @@ export function updatePlaygroundScript(
   opts: RouterOptions,
   req: UpdatePlaygroundScriptRequest,
   ctx: HandlerContext,
-): Promise<UpdatePlaygroundScriptResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<UpdatePlaygroundScriptResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -12,9 +12,9 @@ export function initializeCosmoUser(
   opts: RouterOptions,
   req: InitializeCosmoUserRequest,
   ctx: HandlerContext,
-): Promise<InitializeCosmoUserResponse> {
+) {
   const logger = getLogger(ctx, opts.logger);
-  return handleError<InitializeCosmoUserResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const userInfo = await opts.authenticator.getUserInfo(req.token);
     if (!userInfo) {
       return {

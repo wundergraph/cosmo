@@ -14,10 +14,10 @@ export function createAPIKey(
   opts: RouterOptions,
   req: CreateAPIKeyRequest,
   ctx: HandlerContext,
-): Promise<CreateAPIKeyResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateAPIKeyResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

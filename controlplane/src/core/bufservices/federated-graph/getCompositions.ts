@@ -16,10 +16,10 @@ export function getCompositions(
   opts: RouterOptions,
   req: GetCompositionsRequest,
   ctx: HandlerContext,
-): Promise<GetCompositionsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetCompositionsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

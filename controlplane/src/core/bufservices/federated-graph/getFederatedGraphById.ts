@@ -7,13 +7,7 @@ import {
   GetFederatedGraphByIdResponse,
   RequestSeriesItem,
   SubgraphSchema,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-
-import type {
-  GetFederatedGraphByIdRequest,
-  GetFederatedGraphByIdResponse,
-  RequestSeriesItem,
-  Subgraph,
+  type Subgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { FeatureFlagDTO } from '../../../types/index.js';
@@ -29,10 +23,10 @@ export function getFederatedGraphById(
   opts: RouterOptions,
   req: GetFederatedGraphByIdRequest,
   ctx: HandlerContext,
-): Promise<GetFederatedGraphByIdResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetFederatedGraphByIdResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -60,7 +54,7 @@ export function getFederatedGraphById(
       throw new UnauthorizedError();
     }
 
-    let requestSeries: RequestSeriesItem[] = [];
+    let requestSeries: any[] = [];
     if (req.includeMetrics && opts.chClient) {
       const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
       requestSeries = await analyticsDashRepo.getWeeklyRequestSeries(federatedGraph.id, authContext.organizationId);

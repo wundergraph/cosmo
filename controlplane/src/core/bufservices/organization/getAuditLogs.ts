@@ -15,10 +15,10 @@ export function getAuditLogs(
   opts: RouterOptions,
   req: GetAuditLogsRequest,
   ctx: HandlerContext,
-): Promise<GetAuditLogsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetAuditLogsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -70,7 +70,7 @@ export function getAuditLogs(
       endDate: dateRange.end,
     });
 
-    const logs: AuditLog[] = auditLogs.map((log) => ({
+    const logs = auditLogs.map((log) => ({
       actorDisplayName: log.actorDisplayName ?? '',
       actorType: log.actorType ?? '',
       apiKeyName: log.apiKeyName ?? '',

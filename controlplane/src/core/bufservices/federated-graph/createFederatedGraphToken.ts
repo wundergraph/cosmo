@@ -17,10 +17,10 @@ export function createFederatedGraphToken(
   opts: RouterOptions,
   req: CreateFederatedGraphTokenRequest,
   ctx: HandlerContext,
-): Promise<CreateFederatedGraphTokenResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateFederatedGraphTokenResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -29,10 +29,10 @@ export function checkFederatedGraph(
   opts: RouterOptions,
   req: CheckFederatedGraphRequest,
   ctx: HandlerContext,
-): Promise<CheckFederatedGraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CheckFederatedGraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -85,7 +85,7 @@ export function checkFederatedGraph(
 
     const subgraphsUsedForComposition = subgraphs.filter((s) => !!s.schemaSDL);
 
-    const subgraphsDetails: Subgraph[] = subgraphsUsedForComposition.map((s) => ({
+    const subgraphsDetails = subgraphsUsedForComposition.map((s) => ({
       id: s.id,
       name: s.name,
       routingURL: s.routingUrl,
@@ -141,7 +141,7 @@ export function checkFederatedGraph(
       composedSchemaBreakingChanges: 0,
     };
 
-    const compositionWarnings: CompositionWarning[] = [];
+    const compositionWarnings: any[] = [];
     counts.compositionWarnings = compositionResult.warnings.length;
 
     const clampedWarnings = returnLimit ? compositionResult.warnings.slice(0, returnLimit) : compositionResult.warnings;
@@ -155,7 +155,7 @@ export function checkFederatedGraph(
     }
 
     if (!compositionResult.success) {
-      const compositionErrors: CompositionError[] = [];
+      const compositionErrors: any[] = [];
       counts.compositionErrors = compositionResult.errors.length;
 
       const clampedErrors = returnLimit ? compositionResult.errors.slice(0, returnLimit) : compositionResult.errors;

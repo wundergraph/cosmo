@@ -14,10 +14,10 @@ export function getProposalChecks(
   opts: RouterOptions,
   req: GetProposalChecksRequest,
   ctx: HandlerContext,
-): Promise<GetProposalChecksResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetProposalChecksResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

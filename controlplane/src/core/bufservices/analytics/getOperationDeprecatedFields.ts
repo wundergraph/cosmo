@@ -19,10 +19,10 @@ export function getOperationDeprecatedFields(
   opts: RouterOptions,
   req: GetOperationDeprecatedFieldsRequest,
   ctx: HandlerContext,
-): Promise<GetOperationDeprecatedFieldsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetOperationDeprecatedFieldsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

@@ -13,10 +13,10 @@ export function getBillingPlans(
   opts: RouterOptions,
   req: GetBillingPlansRequest,
   ctx: HandlerContext,
-): Promise<GetBillingPlansResponse> {
+) {
   const logger = ctx.values.get<FastifyBaseLogger>({ id: Symbol('logger'), defaultValue: opts.logger });
 
-  return handleError<GetBillingPlansResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const billingRepo = new BillingRepository(opts.db);
 
     return {

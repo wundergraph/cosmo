@@ -11,10 +11,10 @@ export function inviteUser(
   opts: RouterOptions,
   req: InviteUserRequest,
   ctx: HandlerContext,
-): Promise<InviteUserResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<InviteUserResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

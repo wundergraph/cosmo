@@ -18,10 +18,10 @@ export function deleteOrganizationGroup(
   opts: RouterOptions,
   req: DeleteOrganizationGroupRequest,
   ctx: HandlerContext,
-): Promise<DeleteOrganizationGroupResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<DeleteOrganizationGroupResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

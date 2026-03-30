@@ -27,10 +27,10 @@ export function createMonograph(
   opts: RouterOptions,
   req: CreateMonographRequest,
   ctx: HandlerContext,
-): Promise<CreateMonographResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateMonographResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     return await opts.db.transaction(async (tx) => {
       req.namespace = req.namespace || DefaultNamespace;
 

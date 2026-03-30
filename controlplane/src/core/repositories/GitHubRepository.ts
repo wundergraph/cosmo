@@ -60,7 +60,7 @@ export class GitHubRepository {
     namespace: string;
     schemaCheckID: string;
     gitInfo: GitInfo;
-    compositionErrors: CompositionError[];
+    compositionErrors: any[];
     breakingChangesCount: number;
     hasClientTraffic: boolean;
     subgraphName: string;

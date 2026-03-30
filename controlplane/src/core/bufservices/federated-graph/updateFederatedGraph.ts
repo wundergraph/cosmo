@@ -23,10 +23,10 @@ export function updateFederatedGraph(
   opts: RouterOptions,
   req: UpdateFederatedGraphRequest,
   ctx: HandlerContext,
-): Promise<UpdateFederatedGraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<UpdateFederatedGraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -113,9 +113,9 @@ export function updateFederatedGraph(
       featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
-    const deploymentErrors: DeploymentError[] = [];
-    let compositionErrors: CompositionError[] = [];
-    const compositionWarnings: CompositionWarning[] = [];
+    const deploymentErrors: any[] = [];
+    let compositionErrors: any[] = [];
+    const compositionWarnings: any[] = [];
 
     const result = await fedGraphRepo.update({
       admissionConfig: {

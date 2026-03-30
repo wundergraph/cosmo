@@ -16,10 +16,10 @@ export function computeCacheWarmerOperations(
   opts: RouterOptions,
   req: ComputeCacheWarmerOperationsRequest,
   ctx: HandlerContext,
-): Promise<ComputeCacheWarmerOperationsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<ComputeCacheWarmerOperationsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

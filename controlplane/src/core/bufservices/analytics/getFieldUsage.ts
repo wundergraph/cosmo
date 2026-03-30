@@ -12,10 +12,10 @@ export function getFieldUsage(
   opts: RouterOptions,
   req: GetFieldUsageRequest,
   ctx: HandlerContext,
-): Promise<GetFieldUsageResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetFieldUsageResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

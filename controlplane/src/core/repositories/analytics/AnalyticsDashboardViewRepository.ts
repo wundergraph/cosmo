@@ -20,7 +20,7 @@ export class AnalyticsDashboardViewRepository {
   public async getWeeklyRequestSeries(
     federatedGraphId: string,
     organizationId: string,
-  ): Promise<RequestSeriesItem[]> {
+  ) {
     const query = `
     SELECT toDate(timestamp) as timestamp, totalRequests, erroredRequests
       FROM (
@@ -62,7 +62,7 @@ export class AnalyticsDashboardViewRepository {
     federatedGraphId: string,
     organizationId: string,
     filter: TimeFilters,
-  ): Promise<RequestSeriesItem[]> {
+  ) {
     if (filter?.dateRange && filter.dateRange.start > filter.dateRange.end) {
       const tmp = filter.dateRange.start;
       filter.dateRange.start = filter.dateRange.end;
@@ -200,7 +200,7 @@ export class AnalyticsDashboardViewRepository {
     organizationId: string,
     dateRange: DateRange<number>,
     rangeInHours: number,
-  ): Promise<FederatedGraphMetrics> {
+  ) {
     const [requestRates] = await Promise.all([
       this.getFederatedGraphRates(federatedGraphId, organizationId, dateRange, rangeInHours),
     ]);
@@ -320,8 +320,8 @@ export class AnalyticsDashboardViewRepository {
     dateRange: DateRange<number>,
     subgraphs: SubgraphDTO[],
     rangeInHours: number,
-  ): Promise<SubgraphMetrics[]> {
-    const metrics: SubgraphMetrics[] = [];
+  ) {
+    const metrics: any[] = [];
 
     if (subgraphs.length === 0) {
       return metrics;
@@ -335,7 +335,7 @@ export class AnalyticsDashboardViewRepository {
     for (const subgraph of subgraphs) {
       const rate = requestRates.find((r) => r.subgraphID === subgraph.id);
       const lat = latency.find((l) => l.subgraphID === subgraph.id);
-      const metric: SubgraphMetrics = {
+      const metric: any = {
         subgraphID: subgraph.id,
         requestRate: 0,
         errorRate: 0,

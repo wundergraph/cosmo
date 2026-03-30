@@ -13,10 +13,10 @@ export function enableLintingForTheNamespace(
   opts: RouterOptions,
   req: EnableLintingForTheNamespaceRequest,
   ctx: HandlerContext,
-): Promise<EnableLintingForTheNamespaceResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<EnableLintingForTheNamespaceResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -16,10 +16,10 @@ export function getFeatureFlagsByFederatedGraph(
   opts: RouterOptions,
   req: GetFeatureFlagsByFederatedGraphRequest,
   ctx: HandlerContext,
-): Promise<GetFeatureFlagsByFederatedGraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetFeatureFlagsByFederatedGraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);

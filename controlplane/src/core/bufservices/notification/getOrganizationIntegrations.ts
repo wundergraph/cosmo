@@ -13,10 +13,10 @@ export function getOrganizationIntegrations(
   opts: RouterOptions,
   req: GetOrganizationIntegrationsRequest,
   ctx: HandlerContext,
-): Promise<GetOrganizationIntegrationsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetOrganizationIntegrationsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

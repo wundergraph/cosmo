@@ -13,10 +13,10 @@ export function createPlaygroundScript(
   opts: RouterOptions,
   req: CreatePlaygroundScriptRequest,
   ctx: HandlerContext,
-): Promise<CreatePlaygroundScriptResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreatePlaygroundScriptResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -179,7 +179,7 @@ export class OrganizationWebhookService {
     });
 
     for (const config of orgConfigs) {
-      let meta: EventMeta['meta'];
+      let meta: any;
 
       switch (eventName) {
         case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED: {

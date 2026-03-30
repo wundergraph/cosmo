@@ -9,10 +9,10 @@ export function getTrace(
   opts: RouterOptions,
   req: GetTraceRequest,
   ctx: HandlerContext,
-): Promise<GetTraceResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetTraceResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

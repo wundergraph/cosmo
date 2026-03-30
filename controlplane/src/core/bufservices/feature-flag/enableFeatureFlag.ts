@@ -23,10 +23,10 @@ export function enableFeatureFlag(
   opts: RouterOptions,
   req: EnableFeatureFlagRequest,
   ctx: HandlerContext,
-): Promise<EnableFeatureFlagResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<EnableFeatureFlagResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -110,9 +110,9 @@ export function enableFeatureFlag(
       featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
-    const compositionErrors: CompositionError[] = [];
-    const deploymentErrors: DeploymentError[] = [];
-    const compositionWarnings: CompositionWarning[] = [];
+    const compositionErrors: any[] = [];
+    const deploymentErrors: any[] = [];
+    const compositionWarnings: any[] = [];
 
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);

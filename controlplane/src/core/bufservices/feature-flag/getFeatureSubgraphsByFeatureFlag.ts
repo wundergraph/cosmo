@@ -14,10 +14,10 @@ export function getFeatureSubgraphsByFeatureFlag(
   opts: RouterOptions,
   req: GetFeatureSubgraphsByFeatureFlagRequest,
   ctx: HandlerContext,
-): Promise<GetFeatureSubgraphsByFeatureFlagResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetFeatureSubgraphsByFeatureFlagResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);

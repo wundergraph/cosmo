@@ -14,12 +14,12 @@ export function getLatestSubgraphSDL(
   opts: RouterOptions,
   req: GetLatestSubgraphSDLRequest,
   ctx: HandlerContext,
-): Promise<GetLatestSubgraphSDLResponse> {
+) {
   req.namespace = req.namespace || DefaultNamespace;
 
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetLatestSubgraphSDLResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

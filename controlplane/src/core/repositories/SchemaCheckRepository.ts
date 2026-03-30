@@ -11,17 +11,9 @@ import {
   ProposalSubgraph,
   SchemaChangeSchema,
   VCSContext,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-
-import type {
-  CompositionError,
-  CompositionWarning,
-  GraphPruningIssue,
-  LintIssue,
-  LintSeverity,
-  ProposalSubgraph,
-  SchemaChange,
-  VCSContext,
+  type GraphPruningIssue,
+  type LintIssue,
+  type SchemaChange,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
@@ -47,6 +39,7 @@ import {
   NamespaceDTO,
   SchemaGraphPruningIssues,
   SchemaLintIssues,
+  PlainMessage,
 } from '../../types/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { CheckSubgraph, Composer } from '../composition/composer.js';
@@ -756,8 +749,8 @@ export class SchemaCheckRepository {
     const graphPruneWarnings: GraphPruningIssue[] = [];
     const graphPruneErrors: GraphPruningIssue[] = [];
     const inspectedOperations: InspectorOperationResult[] = [];
-    const compositionErrors: CompositionError[] = [];
-    const compositionWarnings: CompositionWarning[] = [];
+    const compositionErrors: PlainMessage<CompositionError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     type ExtendedCheckSubgraph = CheckSubgraph & {
       lintIssues: SchemaLintIssues;

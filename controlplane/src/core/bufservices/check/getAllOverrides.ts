@@ -14,10 +14,10 @@ export function getAllOverrides(
   opts: RouterOptions,
   req: GetAllOverridesRequest,
   ctx: HandlerContext,
-): Promise<GetAllOverridesResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetAllOverridesResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

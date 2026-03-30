@@ -14,10 +14,10 @@ export function redeliverWebhook(
   opts: RouterOptions,
   req: RedeliverWebhookRequest,
   ctx: HandlerContext,
-): Promise<RedeliverWebhookResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<RedeliverWebhookResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

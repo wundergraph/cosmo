@@ -1,7 +1,7 @@
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  CreateNamespaceRequest,
+  DeleteNamespaceRequest,
   DeleteNamespaceResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -15,12 +15,12 @@ import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteNamespace(
   opts: RouterOptions,
-  req: CreateNamespaceRequest,
+  req: DeleteNamespaceRequest,
   ctx: HandlerContext,
-): Promise<DeleteNamespaceResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<DeleteNamespaceResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

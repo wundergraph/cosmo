@@ -15,10 +15,10 @@ export function getOperationClients(
   opts: RouterOptions,
   req: GetOperationClientsRequest,
   ctx: HandlerContext,
-): Promise<GetOperationClientsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetOperationClientsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

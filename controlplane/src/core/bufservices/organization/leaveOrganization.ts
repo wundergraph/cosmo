@@ -13,10 +13,10 @@ export function leaveOrganization(
   opts: RouterOptions,
   req: LeaveOrganizationRequest,
   ctx: HandlerContext,
-): Promise<LeaveOrganizationResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<LeaveOrganizationResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -15,7 +15,7 @@ export class UsageRepository {
     whereSql: string,
     timeFilters: TimeFilters,
     params: Record<string, string | number | boolean>,
-  ): Promise<RequestSeriesItem[]> {
+  ) {
     const { dateRange, granule } = timeFilters;
     flipDateRangeValuesIfNeeded(dateRange);
 
@@ -60,7 +60,7 @@ export class UsageRepository {
     whereSql: string,
     timeFilters: TimeFilters,
     params: Record<string, string | number | boolean>,
-  ): Promise<ClientWithOperations[]> {
+  ) {
     const {
       dateRange: { start, end },
     } = timeFilters;

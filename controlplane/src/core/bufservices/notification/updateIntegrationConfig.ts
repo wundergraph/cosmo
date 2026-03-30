@@ -14,10 +14,10 @@ export function updateIntegrationConfig(
   opts: RouterOptions,
   req: UpdateIntegrationConfigRequest,
   ctx: HandlerContext,
-): Promise<UpdateIntegrationConfigResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<UpdateIntegrationConfigResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

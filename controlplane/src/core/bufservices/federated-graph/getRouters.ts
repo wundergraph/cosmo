@@ -14,10 +14,10 @@ export function getRouters(
   opts: RouterOptions,
   req: GetRoutersRequest,
   ctx: HandlerContext,
-): Promise<GetRoutersResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetRoutersResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -51,7 +51,7 @@ export function getRouters(
       throw new UnauthorizedError();
     }
 
-    const routers: Router[] = [];
+    const routers: any[] = [];
 
     const routerRepo = new RouterMetricsRepository(opts.chClient);
     const routersDTOs = await routerRepo.getActiveRouters({

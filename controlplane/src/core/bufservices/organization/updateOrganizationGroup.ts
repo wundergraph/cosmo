@@ -16,10 +16,10 @@ export function updateOrganizationGroup(
   opts: RouterOptions,
   req: UpdateOrganizationGroupRequest,
   ctx: HandlerContext,
-): Promise<UpdateOrganizationGroupResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<UpdateOrganizationGroupResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

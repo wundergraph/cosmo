@@ -14,7 +14,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
     selfRegister: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
-      return handleError<SelfRegisterResponse>(ctx, logger, async () => {
+      return handleError(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
@@ -49,7 +49,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           organizationID: authContext.organizationId,
         });
 
-        const registrationInfo: RegistrationInfo = {
+        const registrationInfo: any = {
           accountLimits: {
             traceSamplingRate: (features['trace-sampling-rate'] as number) ?? 0.1,
           },

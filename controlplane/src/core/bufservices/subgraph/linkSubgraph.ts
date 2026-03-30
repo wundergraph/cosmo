@@ -12,10 +12,10 @@ export function linkSubgraph(
   opts: RouterOptions,
   req: LinkSubgraphRequest,
   ctx: HandlerContext,
-): Promise<LinkSubgraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<LinkSubgraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -12,10 +12,10 @@ export function unlinkSubgraph(
   opts: RouterOptions,
   req: UnlinkSubgraphRequest,
   ctx: HandlerContext,
-): Promise<UnlinkSubgraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<UnlinkSubgraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

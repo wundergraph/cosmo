@@ -16,10 +16,10 @@ export function createOrganizationGroup(
   opts: RouterOptions,
   req: CreateOrganizationGroupRequest,
   ctx: HandlerContext,
-): Promise<CreateOrganizationGroupResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateOrganizationGroupResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

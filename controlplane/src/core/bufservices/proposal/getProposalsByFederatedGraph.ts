@@ -18,10 +18,10 @@ export function getProposalsByFederatedGraph(
   opts: RouterOptions,
   req: GetProposalsByFederatedGraphRequest,
   ctx: HandlerContext,
-): Promise<GetProposalsByFederatedGraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetProposalsByFederatedGraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

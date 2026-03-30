@@ -12,10 +12,10 @@ export function upgradePlan(
   opts: RouterOptions,
   req: UpgradePlanRequest,
   ctx: HandlerContext,
-): Promise<UpgradePlanResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<UpgradePlanResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

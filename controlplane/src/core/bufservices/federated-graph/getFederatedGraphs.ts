@@ -18,10 +18,10 @@ export function getFederatedGraphs(
   opts: RouterOptions,
   req: GetFederatedGraphsRequest,
   ctx: HandlerContext,
-): Promise<GetFederatedGraphsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetFederatedGraphsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -52,7 +52,7 @@ export function getFederatedGraphs(
       rbac: authContext.rbac,
     });
 
-    const requestSeriesList: Record<string, RequestSeriesItem[]> = {};
+    const requestSeriesList: Record<string, any[]> = {};
 
     const { dateRange } = parseTimeFilters({
       start: subHours(new Date(), 4).toString(),

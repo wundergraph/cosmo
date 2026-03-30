@@ -15,10 +15,10 @@ export function updateFeatureSettings(
   opts: RouterOptions,
   req: UpdateFeatureSettingsRequest,
   ctx: HandlerContext,
-): Promise<UpdateFeatureSettingsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<UpdateFeatureSettingsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

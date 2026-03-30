@@ -14,10 +14,10 @@ export function getMetricsErrorRate(
   opts: RouterOptions,
   req: GetMetricsErrorRateRequest,
   ctx: HandlerContext,
-): Promise<GetMetricsErrorRateResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetMetricsErrorRateResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

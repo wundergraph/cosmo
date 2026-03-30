@@ -21,10 +21,10 @@ export function moveFederatedGraph(
   opts: RouterOptions,
   req: MoveGraphRequest,
   ctx: HandlerContext,
-): Promise<MoveGraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<MoveGraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -126,9 +126,9 @@ export function moveFederatedGraph(
         opts.chClient!,
       );
 
-      const allDeploymentErrors: DeploymentError[] = [];
-      const allCompositionErrors: CompositionError[] = [];
-      const allCompositionWarnings: CompositionWarning[] = [];
+      const allDeploymentErrors: any[] = [];
+      const allCompositionErrors: any[] = [];
+      const allCompositionWarnings: any[] = [];
 
       allCompositionErrors.push(...compositionErrors);
       allDeploymentErrors.push(...deploymentErrors);

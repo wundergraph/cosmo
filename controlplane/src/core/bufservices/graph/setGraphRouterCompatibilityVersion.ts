@@ -19,10 +19,10 @@ export function setGraphRouterCompatibilityVersion(
   opts: RouterOptions,
   req: SetGraphRouterCompatibilityVersionRequest,
   ctx: HandlerContext,
-): Promise<SetGraphRouterCompatibilityVersionResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<SetGraphRouterCompatibilityVersionResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

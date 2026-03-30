@@ -14,10 +14,10 @@ export function deleteOrganizationWebhookConfig(
   opts: RouterOptions,
   req: DeleteOrganizationWebhookConfigRequest,
   ctx: HandlerContext,
-): Promise<DeleteOrganizationWebhookConfigResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<DeleteOrganizationWebhookConfigResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

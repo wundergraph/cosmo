@@ -17,10 +17,10 @@ export function getChecksByFederatedGraphName(
   opts: RouterOptions,
   req: GetChecksByFederatedGraphNameRequest,
   ctx: HandlerContext,
-): Promise<GetChecksByFederatedGraphNameResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetChecksByFederatedGraphNameResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

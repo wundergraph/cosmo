@@ -105,7 +105,7 @@ export function deserializeComposedGraphArtifact(
   };
 }
 
-export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: ReturnType<RouterConfig['toJson']>) {
+export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: any) {
   if (!routerExecutionConfigJson) {
     return;
   }

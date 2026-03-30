@@ -14,10 +14,10 @@ export function getUserAccessiblePermissions(
   opts: RouterOptions,
   req: GetUserAccessiblePermissionsRequest,
   ctx: HandlerContext,
-): Promise<GetUserAccessiblePermissionsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetUserAccessiblePermissionsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const organizationRepository = new OrganizationRepository(logger, opts.db);

@@ -10,7 +10,7 @@ export class TraceRepository {
     spanID: string,
     organizationID: string,
     federatedGraphId: string,
-  ): Promise<Span[]> {
+  ) {
     const columns = `
         Timestamp as timestamp,
         TraceId as traceId,

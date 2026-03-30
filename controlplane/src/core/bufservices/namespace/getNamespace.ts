@@ -15,10 +15,10 @@ export function getNamespace(
   opts: RouterOptions,
   req: GetNamespaceRequest,
   ctx: HandlerContext,
-): Promise<GetNamespaceResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetNamespaceResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -11,17 +11,8 @@ import {
   GetOperationsResponse_OperationType,
   OperationsFetchBasedOn,
   SortDirection,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-
-import type {
-  AnalyticsFilter,
-  AnalyticsViewFilterOperator,
-  GetOperationsRequest,
-  GetOperationsResponse,
-  GetOperationsResponse_Operation,
-  GetOperationsResponse_OperationType,
-  OperationsFetchBasedOn,
-  SortDirection,
+  type AnalyticsFilter,
+  type GetOperationsResponse_Operation,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { buildASTSchema } from '@wundergraph/composition';
@@ -41,10 +32,10 @@ export function getOperations(
   opts: RouterOptions,
   req: GetOperationsRequest,
   ctx: HandlerContext,
-): Promise<GetOperationsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetOperationsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

@@ -13,10 +13,10 @@ export function getProposedSchemaOfCheckedSubgraph(
   opts: RouterOptions,
   req: GetProposedSchemaOfCheckedSubgraphRequest,
   ctx: HandlerContext,
-): Promise<GetProposedSchemaOfCheckedSubgraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetProposedSchemaOfCheckedSubgraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

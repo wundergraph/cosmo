@@ -13,10 +13,10 @@ export function getFeatureSubgraphs(
   opts: RouterOptions,
   req: GetFeatureSubgraphsRequest,
   ctx: HandlerContext,
-): Promise<GetFeatureSubgraphsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetFeatureSubgraphsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

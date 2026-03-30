@@ -12,10 +12,10 @@ export function getOrganizationBySlug(
   opts: RouterOptions,
   req: GetOrganizationBySlugRequest,
   ctx: HandlerContext,
-): Promise<GetOrganizationBySlugResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetOrganizationBySlugResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

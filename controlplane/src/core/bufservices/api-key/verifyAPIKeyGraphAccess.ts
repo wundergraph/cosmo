@@ -13,10 +13,10 @@ export function verifyAPIKeyGraphAccess(
   opts: RouterOptions,
   req: VerifyAPIKeyGraphAccessRequest,
   ctx: HandlerContext,
-): Promise<VerifyAPIKeyGraphAccessResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<VerifyAPIKeyGraphAccessResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

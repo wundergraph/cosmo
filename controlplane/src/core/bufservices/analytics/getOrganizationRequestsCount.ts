@@ -13,10 +13,10 @@ export function getOrganizationRequestsCount(
   opts: RouterOptions,
   req: GetOrganizationRequestsCountRequest,
   ctx: HandlerContext,
-): Promise<GetOrganizationRequestsCountResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetOrganizationRequestsCountResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

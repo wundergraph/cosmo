@@ -17,10 +17,10 @@ export function deletePersistedOperation(
   opts: RouterOptions,
   req: DeletePersistedOperationRequest,
   ctx: HandlerContext,
-): Promise<DeletePersistedOperationResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<DeletePersistedOperationResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

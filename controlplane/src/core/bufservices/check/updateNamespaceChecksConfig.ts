@@ -15,10 +15,10 @@ export function updateNamespaceChecksConfig(
   opts: RouterOptions,
   req: UpdateNamespaceChecksConfigurationRequest,
   ctx: HandlerContext,
-): Promise<UpdateNamespaceChecksConfigurationResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<UpdateNamespaceChecksConfigurationResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -19,10 +19,10 @@ export function publishMonograph(
   opts: RouterOptions,
   req: PublishMonographRequest,
   ctx: HandlerContext,
-): Promise<PublishMonographResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PublishMonographResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

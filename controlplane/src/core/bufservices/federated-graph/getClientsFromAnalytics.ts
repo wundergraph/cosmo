@@ -14,10 +14,10 @@ export function getClientsFromAnalytics(
   opts: RouterOptions,
   req: GetClientsFromAnalyticsRequest,
   ctx: HandlerContext,
-): Promise<GetClientsFromAnalyticsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetClientsFromAnalyticsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

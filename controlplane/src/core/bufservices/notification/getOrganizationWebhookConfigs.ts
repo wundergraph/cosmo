@@ -13,10 +13,10 @@ export function getOrganizationWebhookConfigs(
   opts: RouterOptions,
   req: GetOrganizationWebhookConfigsRequest,
   ctx: HandlerContext,
-): Promise<GetOrganizationWebhookConfigsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetOrganizationWebhookConfigsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

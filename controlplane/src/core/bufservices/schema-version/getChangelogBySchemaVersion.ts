@@ -13,10 +13,10 @@ export function getChangelogBySchemaVersion(
   opts: RouterOptions,
   req: GetChangelogBySchemaVersionRequest,
   ctx: HandlerContext,
-): Promise<GetChangelogBySchemaVersionResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetChangelogBySchemaVersionResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

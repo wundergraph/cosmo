@@ -41,10 +41,10 @@ export function publishFederatedSubgraph(
   opts: RouterOptions,
   req: PublishFederatedSubgraphRequest,
   ctx: HandlerContext,
-): Promise<PublishFederatedSubgraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PublishFederatedSubgraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

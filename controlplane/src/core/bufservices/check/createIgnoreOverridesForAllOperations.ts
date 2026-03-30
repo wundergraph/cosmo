@@ -16,10 +16,10 @@ export function createIgnoreOverridesForAllOperations(
   opts: RouterOptions,
   req: CreateIgnoreOverridesForAllOperationsRequest,
   ctx: HandlerContext,
-): Promise<CreateIgnoreOverridesForAllOperationsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateIgnoreOverridesForAllOperationsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

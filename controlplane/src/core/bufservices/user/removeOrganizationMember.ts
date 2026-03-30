@@ -15,10 +15,10 @@ export function removeOrganizationMember(
   opts: RouterOptions,
   req: RemoveOrganizationMemberRequest,
   ctx: HandlerContext,
-): Promise<RemoveOrganizationMemberResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<RemoveOrganizationMemberResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

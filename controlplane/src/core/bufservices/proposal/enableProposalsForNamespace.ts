@@ -17,10 +17,10 @@ export function enableProposalsForNamespace(
   opts: RouterOptions,
   req: EnableProposalsForNamespaceRequest,
   ctx: HandlerContext,
-): Promise<EnableProposalsForNamespaceResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<EnableProposalsForNamespaceResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -18,10 +18,10 @@ export function checkPersistedOperationTraffic(
   opts: RouterOptions,
   req: CheckPersistedOperationTrafficRequest,
   ctx: HandlerContext,
-): Promise<CheckPersistedOperationTrafficResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CheckPersistedOperationTrafficResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

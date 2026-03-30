@@ -31,10 +31,10 @@ export function createFederatedSubgraph(
   opts: RouterOptions,
   req: CreateFederatedSubgraphRequest,
   ctx: HandlerContext,
-): Promise<CreateFederatedSubgraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateFederatedSubgraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -14,10 +14,10 @@ export function createNamespace(
   opts: RouterOptions,
   req: CreateNamespaceRequest,
   ctx: HandlerContext,
-): Promise<CreateNamespaceResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateNamespaceResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

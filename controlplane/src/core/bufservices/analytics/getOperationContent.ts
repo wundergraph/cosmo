@@ -14,10 +14,10 @@ export function getOperationContent(
   opts: RouterOptions,
   req: GetOperationContentRequest,
   ctx: HandlerContext,
-): Promise<GetOperationContentResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetOperationContentResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

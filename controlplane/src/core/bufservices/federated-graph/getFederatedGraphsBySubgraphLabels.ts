@@ -15,12 +15,12 @@ export function getFederatedGraphsBySubgraphLabels(
   opts: RouterOptions,
   req: GetFederatedGraphsBySubgraphLabelsRequest,
   ctx: HandlerContext,
-): Promise<GetFederatedGraphsBySubgraphLabelsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
   req.namespace = req.namespace || DefaultNamespace;
 
-  return handleError<GetFederatedGraphsBySubgraphLabelsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -15,9 +15,9 @@ export function getFederatedGraphSDLByName(
   opts: RouterOptions,
   req: GetFederatedGraphSDLByNameRequest,
   ctx: HandlerContext,
-): Promise<GetFederatedGraphSDLByNameResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
-  return handleError<GetFederatedGraphSDLByNameResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

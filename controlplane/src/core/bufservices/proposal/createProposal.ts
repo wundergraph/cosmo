@@ -30,10 +30,10 @@ export function createProposal(
   opts: RouterOptions,
   req: CreateProposalRequest,
   ctx: HandlerContext,
-): Promise<CreateProposalResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateProposalResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

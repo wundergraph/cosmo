@@ -23,10 +23,10 @@ export function updateContract(
   opts: RouterOptions,
   req: UpdateContractRequest,
   ctx: HandlerContext,
-): Promise<UpdateContractResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<UpdateContractResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     req.namespace = req.namespace || DefaultNamespace;
 
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -156,9 +156,9 @@ export function updateContract(
       },
     });
 
-    const compositionErrors: CompositionError[] = [];
-    const deploymentErrors: DeploymentError[] = [];
-    const compositionWarnings: CompositionWarning[] = [];
+    const compositionErrors: any[] = [];
+    const deploymentErrors: any[] = [];
+    const compositionWarnings: any[] = [];
 
     const composition = await fedGraphRepo.composeAndDeployGraphs({
       actorId: authContext.userId,

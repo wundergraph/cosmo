@@ -10,10 +10,10 @@ export function getClients(
   opts: RouterOptions,
   req: GetClientsRequest,
   ctx: HandlerContext,
-): Promise<GetClientsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetClientsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

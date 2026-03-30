@@ -17,10 +17,10 @@ export function recomposeGraph(
   opts: RouterOptions,
   req: RecomposeGraphRequest,
   ctx: HandlerContext,
-): Promise<RecomposeGraphResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<RecomposeGraphResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -7,7 +7,7 @@ import {
   PersistedQuerySchema,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
-import { create } from '@bufbuild/protobuf';
+import { create, toJsonString } from '@bufbuild/protobuf';
 
 import type {
   CacheWarmerOperations,
@@ -511,7 +511,7 @@ export class CacheWarmerRepository {
       maxOperationsCount: cacheWarmerConfig?.maxOperationsCount || 100,
     });
 
-    const cacheWarmerOperationsBytes = Buffer.from(cacheWarmerOperations.toJsonString(), 'utf8');
+    const cacheWarmerOperationsBytes = Buffer.from(toJsonString(CacheWarmerOperationsSchema, cacheWarmerOperations), 'utf8');
     const path = `${organizationId}/${federatedGraphId}/cache_warmup/operations.json`;
     try {
       await blobStorage.putObject<S3RouterConfigMetadata>({

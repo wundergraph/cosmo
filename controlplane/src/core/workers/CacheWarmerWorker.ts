@@ -1,6 +1,8 @@
+import { toJsonString } from '@bufbuild/protobuf';
 import { ConnectionOptions, Job, JobsOptions, Queue, Worker } from 'bullmq';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
+import { CacheWarmerOperationsSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import * as schema from '../../db/schema.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
@@ -99,7 +101,7 @@ class CacheWarmerWorker implements IWorker {
         maxOperationsCount: 100,
       });
 
-      const cacheWarmerOperationsBytes = Buffer.from(cacheWarmerOperations.toJsonString(), 'utf8');
+      const cacheWarmerOperationsBytes = Buffer.from(toJsonString(CacheWarmerOperationsSchema, cacheWarmerOperations), 'utf8');
       const path = `${organizationId}/${federatedGraphId}/cache_warmup/operations.json`;
 
       await this.input.blobStorage.putObject<S3RouterConfigMetadata>({

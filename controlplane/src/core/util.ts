@@ -32,7 +32,7 @@ const pluginVersionRegex = /^v\d+$/;
  * If the error is a public error, it is returned as a response message.
  * Otherwise, the error is rethrown so that it can be handled by the connect framework.
  */
-export async function handleError<T extends ResponseMessage>(
+export async function handleError<T>(
   ctx: HandlerContext,
   defaultLogger: FastifyBaseLogger,
   fn: () => Promise<T> | T,

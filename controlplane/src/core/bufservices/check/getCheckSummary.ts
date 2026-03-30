@@ -7,13 +7,7 @@ import {
   GetCheckSummaryResponse,
   GetCheckSummaryResponse_AffectedGraphSchema,
   LintSeverity,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-
-import type {
-  GetCheckSummaryRequest,
-  GetCheckSummaryResponse,
-  GetCheckSummaryResponse_AffectedGraph,
-  LintSeverity,
+  type GetCheckSummaryResponse_AffectedGraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -32,10 +26,10 @@ export function getCheckSummary(
   opts: RouterOptions,
   req: GetCheckSummaryRequest,
   ctx: HandlerContext,
-): Promise<GetCheckSummaryResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetCheckSummaryResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

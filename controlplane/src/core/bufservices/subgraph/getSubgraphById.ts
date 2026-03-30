@@ -15,10 +15,10 @@ export function getSubgraphById(
   opts: RouterOptions,
   req: GetSubgraphByIdRequest,
   ctx: HandlerContext,
-): Promise<GetSubgraphByIdResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetSubgraphByIdResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

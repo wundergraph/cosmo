@@ -16,10 +16,10 @@ export function getAnalyticsView(
   opts: RouterOptions,
   req: GetAnalyticsViewRequest,
   ctx: HandlerContext,
-): Promise<GetAnalyticsViewResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetAnalyticsViewResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

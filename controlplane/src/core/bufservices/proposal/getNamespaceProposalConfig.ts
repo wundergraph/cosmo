@@ -16,10 +16,10 @@ export function getNamespaceProposalConfig(
   opts: RouterOptions,
   req: GetNamespaceProposalConfigRequest,
   ctx: HandlerContext,
-): Promise<GetNamespaceProposalConfigResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetNamespaceProposalConfigResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const organizationRepo = new OrganizationRepository(logger, opts.db);

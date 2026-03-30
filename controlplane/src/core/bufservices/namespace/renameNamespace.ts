@@ -13,10 +13,10 @@ export function renameNamespace(
   opts: RouterOptions,
   req: RenameNamespaceRequest,
   ctx: HandlerContext,
-): Promise<RenameNamespaceResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<RenameNamespaceResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

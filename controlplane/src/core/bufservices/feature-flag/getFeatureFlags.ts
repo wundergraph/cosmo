@@ -13,10 +13,10 @@ export function getFeatureFlags(
   opts: RouterOptions,
   req: GetFeatureFlagsRequest,
   ctx: HandlerContext,
-): Promise<GetFeatureFlagsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetFeatureFlagsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);

@@ -17,10 +17,10 @@ export function getNamespaceGraphPruningConfig(
   opts: RouterOptions,
   req: GetNamespaceGraphPruningConfigRequest,
   ctx: HandlerContext,
-): Promise<GetNamespaceGraphPruningConfigResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetNamespaceGraphPruningConfigResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

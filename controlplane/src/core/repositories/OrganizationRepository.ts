@@ -1,4 +1,4 @@
-import { PartialMessage } from '@bufbuild/protobuf';
+import { PlainMessage } from '../../types/index.js';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   Integration,
@@ -761,7 +761,7 @@ export class OrganizationRepository {
         ),
       );
 
-    const meta: PartialMessage<EventMeta>[] = [];
+    const meta: any[] = [];
 
     const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
     const federatedGraphIds = [];
@@ -1165,7 +1165,7 @@ export class OrganizationRepository {
           return undefined;
         }
 
-        const config: PartialMessage<IntegrationConfig> = {
+        const config: any = {
           type: IntegrationType.SLACK,
           config: {
             case: 'slackIntegrationConfig',
@@ -1221,7 +1221,7 @@ export class OrganizationRepository {
             continue;
           }
 
-          const config: PartialMessage<IntegrationConfig> = {
+          const config: any = {
             type: IntegrationType.SLACK,
             config: {
               case: 'slackIntegrationConfig',
@@ -1564,7 +1564,7 @@ export class OrganizationRepository {
     limit?: number;
     startDate: string;
     endDate: string;
-  }): Promise<{ deliveries: WebhookDelivery[]; totalCount: number }> {
+  }): Promise<{ deliveries: any[]; totalCount: number }> {
     const conditions = and(
       eq(schema.webhookDeliveries.organizationId, input.organizationID),
       gt(schema.webhookDeliveries.createdAt, new Date(input.startDate)),

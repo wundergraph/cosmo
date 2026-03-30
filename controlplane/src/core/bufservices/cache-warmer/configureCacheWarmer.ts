@@ -15,10 +15,10 @@ export function configureCacheWarmer(
   opts: RouterOptions,
   req: ConfigureCacheWarmerRequest,
   ctx: HandlerContext,
-): Promise<ConfigureCacheWarmerResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<ConfigureCacheWarmerResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const organizationRepo = new OrganizationRepository(logger, opts.db);

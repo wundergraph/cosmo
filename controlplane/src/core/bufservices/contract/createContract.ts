@@ -22,10 +22,10 @@ export function createContract(
   opts: RouterOptions,
   req: CreateContractRequest,
   ctx: HandlerContext,
-): Promise<CreateContractResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateContractResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     req.namespace = req.namespace || DefaultNamespace;
 
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -189,9 +189,9 @@ export function createContract(
         targetNamespaceDisplayName: contractGraph.namespace,
       });
 
-      const compositionErrors: CompositionError[] = [];
-      const deploymentErrors: DeploymentError[] = [];
-      const compositionWarnings: CompositionWarning[] = [];
+      const compositionErrors: any[] = [];
+      const deploymentErrors: any[] = [];
+      const compositionWarnings: any[] = [];
 
       const composition = await fedGraphRepo.composeAndDeployGraphs({
         actorId: authContext.userId,

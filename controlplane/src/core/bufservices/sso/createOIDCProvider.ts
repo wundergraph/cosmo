@@ -15,10 +15,10 @@ export function createOIDCProvider(
   opts: RouterOptions,
   req: CreateOIDCProviderRequest,
   ctx: HandlerContext,
-): Promise<CreateOIDCProviderResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<CreateOIDCProviderResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

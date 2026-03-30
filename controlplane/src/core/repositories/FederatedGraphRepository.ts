@@ -52,6 +52,7 @@ import {
   GraphApiKeyDTO,
   Label,
   RouterRequestKeysDTO,
+  PlainMessage,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import {
@@ -204,9 +205,9 @@ export class FederatedGraphRepository {
     unsetLabelMatchers?: boolean;
   }): Promise<
     | {
-        compositionErrors: CompositionError[];
-        deploymentErrors: DeploymentError[];
-        compositionWarnings: CompositionWarning[];
+        compositionErrors: PlainMessage<CompositionError>[];
+        deploymentErrors: PlainMessage<DeploymentError>[];
+        compositionWarnings: PlainMessage<CompositionWarning>[];
       }
     | undefined
   > {
@@ -362,9 +363,9 @@ export class FederatedGraphRepository {
     chClient: ClickHouseClient,
     compositionOptions?: CompositionOptions,
   ): Promise<{
-    compositionErrors: CompositionError[];
-    deploymentErrors: DeploymentError[];
-    compositionWarnings: CompositionWarning[];
+    compositionErrors: PlainMessage<CompositionError>[];
+    deploymentErrors: PlainMessage<DeploymentError>[];
+    compositionWarnings: PlainMessage<CompositionWarning>[];
   }> {
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
@@ -1529,9 +1530,9 @@ export class FederatedGraphRepository {
         chClient,
       );
 
-      const allDeploymentErrors: DeploymentError[] = [];
-      const allCompositionErrors: CompositionError[] = [];
-      const allCompositionWarnings: CompositionWarning[] = [];
+      const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
+      const allCompositionErrors: PlainMessage<CompositionError>[] = [];
+      const allCompositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
       parentLoop: for (const federatedGraph of federatedGraphs) {
         // Get published subgraphs for recomposition of the federated graph

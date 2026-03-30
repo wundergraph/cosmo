@@ -15,10 +15,10 @@ export function getSubgraphMetrics(
   opts: RouterOptions,
   req: GetSubgraphMetricsRequest,
   ctx: HandlerContext,
-): Promise<GetSubgraphMetricsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetSubgraphMetricsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

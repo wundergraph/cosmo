@@ -23,10 +23,10 @@ export function deleteFeatureFlag(
   opts: RouterOptions,
   req: DeleteFeatureFlagRequest,
   ctx: HandlerContext,
-): Promise<DeleteFeatureFlagResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<DeleteFeatureFlagResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -109,9 +109,9 @@ export function deleteFeatureFlag(
       featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
-    const compositionErrors: CompositionError[] = [];
-    const deploymentErrors: DeploymentError[] = [];
-    const compositionWarnings: CompositionWarning[] = [];
+    const compositionErrors: any[] = [];
+    const deploymentErrors: any[] = [];
+    const compositionWarnings: any[] = [];
 
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);

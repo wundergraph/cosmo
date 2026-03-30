@@ -17,10 +17,10 @@ export function toggleChangeOverridesForAllOperations(
   opts: RouterOptions,
   req: ToggleChangeOverridesForAllOperationsRequest,
   ctx: HandlerContext,
-): Promise<ToggleChangeOverridesForAllOperationsResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<ToggleChangeOverridesForAllOperationsResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -78,7 +78,7 @@ export function toggleChangeOverridesForAllOperations(
             namespaceId: graph.namespaceId,
             operationHash: affectedOperation.hash,
             operationName: affectedOperation.name,
-            changes: impactingChanges,
+            changes: impactingChanges as any,
             actorId: authContext.userId,
           });
           affectedRows.push(...res);
@@ -86,7 +86,7 @@ export function toggleChangeOverridesForAllOperations(
           const res = await operationsRepo.removeOperationOverrides({
             operationHash: affectedOperation.hash,
             namespaceId: graph.namespaceId,
-            changes: impactingChanges,
+            changes: impactingChanges as any,
           });
           affectedRows.push(...res);
         }

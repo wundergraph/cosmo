@@ -8,14 +8,8 @@ import {
   WorkspaceNamespaceSchema,
   WorkspaceFederatedGraphSchema,
   type WorkspaceSubgraph,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-
-import type {
-  GetWorkspaceRequest,
-  GetWorkspaceResponse,
-  WorkspaceNamespace,
-  WorkspaceFederatedGraph,
-  WorkspaceSubgraph,
+  type WorkspaceNamespace,
+  type WorkspaceFederatedGraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -28,10 +22,10 @@ export function getWorkspace(
   opts: RouterOptions,
   req: GetWorkspaceRequest,
   ctx: HandlerContext,
-): Promise<GetWorkspaceResponse> {
+) {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<GetWorkspaceResponse>(ctx, logger, async () => {
+  return handleError(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -53,7 +47,7 @@ export function getWorkspace(
           id: ns.id,
           name: ns.name,
           graphs: [],
-        } satisfies WorkspaceNamespace),
+        } as any),
       )
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
@@ -103,10 +97,10 @@ export function getWorkspace(
                     id: subgraph.id,
                     targetId: subgraph.targetId,
                     name: subgraph.name,
-                  }) satisfies WorkspaceSubgraph,
+                  }) as any,
               )
               .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })),
-          } satisfies WorkspaceFederatedGraph),
+          } as any),
         );
       }),
     );
