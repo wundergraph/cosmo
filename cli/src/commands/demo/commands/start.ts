@@ -1,5 +1,9 @@
 import pc from 'picocolors';
-import { Command } from 'commander';
+import ora from 'ora';
+
+import { Command, program } from 'commander';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import type { WhoAmIResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders, config } from '../../../core/config.js';
 import { waitForKeyPress, rainbow } from '../../../utils.js';
@@ -11,20 +15,6 @@ type UserInfo = {
 
 function clearScreen() {
   process.stdout.write('\u001Bc');
-}
-
-function waitForEnter(message = 'Press ENTER to continue...'): Promise<void> {
-  return new Promise((resolve) => {
-    process.stdout.write(pc.dim(message));
-    process.stdin.setRawMode(true);
-    process.stdin.resume();
-    process.stdin.once('data', (data) => {
-      process.stdin.setRawMode(false);
-      process.stdin.pause();
-      process.stdout.write('\n');
-      resolve();
-    });
-  });
 }
 
 function printLogo() {
@@ -44,9 +34,11 @@ function printHello() {
   console.log('This command will guide you through the inital setup to create your first federated graph.');
 }
 
-function printUserInfo(userInfo: UserInfo) {
-  console.log('Email:', pc.bold(userInfo.userEmail));
-  console.log('Organization:', pc.bold(userInfo.organizationName));
+async function printAccountDisclaimer() {
+  await waitForKeyPress(
+    { Enter: undefined },
+    `It is recommended you run this command along the onboarding wizard at ${config.baseURL}/onboarding with the same account.\nPress ENTER to continue…`,
+  );
 }
 
 async function checkExistingOnboarding(client: BaseCommandOptions['client']) {
@@ -167,7 +159,9 @@ async function getUserInfo(client: BaseCommandOptions['client']) {
     program.error(error.message);
   }
 
-  spinner.succeed('OK');
+  spinner.succeed(
+    `You are signed in as ${pc.bold(userInfo.userEmail)} in organization ${pc.bold(userInfo.organizationName)}.`,
+  );
 
   return userInfo;
 }
@@ -179,7 +173,11 @@ export default (opts: BaseCommandOptions) => {
   command.action(async () => {
     clearScreen();
     printHello();
-    await waitForEnter();
+
+    const userInfo = await getUserInfo(opts.client);
+    await printAccountDisclaimer();
+
+    await handleStep1(opts, userInfo);
   });
 
   return command;
