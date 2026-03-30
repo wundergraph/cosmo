@@ -180,6 +180,7 @@ import { initializeCosmoUser } from './user/initializeCosmoUser.js';
 import { listOrganizations } from './organization/listOrganizations.js';
 import { recomposeGraph } from './graph/recomposeGraph.js';
 import { completeOnboardingStep1 } from './onboarding/completeOnboardingStep1.js';
+import { completeOnboardingStep2 } from './onboarding/completeOnboardingStep2.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -910,6 +911,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     completeOnboardingStep1: (req, ctx) => {
       return completeOnboardingStep1(opts, req, ctx);
+    },
+
+    completeOnboardingStep2: (req, ctx) => {
+      return completeOnboardingStep2(opts, req, ctx);
     },
   };
 }

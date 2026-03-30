@@ -3219,6 +3219,28 @@ message CompleteOnboardingStep1Response {
   Onboarding onboarding = 2;
 }
 
+message CompleteOnboardingStep2Request {}
+
+message CompleteOnboardingStep2Response {
+  Response response = 1;
+  message Onboarding {
+    string id = 1;
+    string userId = 2;
+    string organizationId = 3;
+    string createdAt = 4;
+    string finishedAt = 5;
+    string updatedAt = 6;
+    string version = 7;
+    int32 step = 8;
+    bool slack = 9;
+    bool email = 10;
+    string federatedGraphId = 11;
+    int32 nonDemoFederatedGraphsCount = 12;
+  }
+
+  Onboarding onboarding = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3616,4 +3638,6 @@ service PlatformService {
   rpc RecomposeGraph(RecomposeGraphRequest) returns (RecomposeGraphResponse) {}
   // CompleteOnboardingStep1 saves onboarding wizard step 1 (org name, member invites, notification channels)
   rpc CompleteOnboardingStep1(CompleteOnboardingStep1Request) returns (CompleteOnboardingStep1Response) {}
+  // CompleteOnboardingStep2 advances onboarding wizard to step 2 (federation concepts acknowledged)
+  rpc CompleteOnboardingStep2(CompleteOnboardingStep2Request) returns (CompleteOnboardingStep2Response) {}
 }

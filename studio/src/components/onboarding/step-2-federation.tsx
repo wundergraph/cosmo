@@ -1,10 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/components/ui/use-toast';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { useMutation } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { completeOnboardingStep2 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { CubeIcon, GlobeIcon, InfoCircledIcon, LayersIcon, MixerHorizontalIcon } from '@radix-ui/react-icons';
 import { docsBaseURL } from '@/lib/constants';
 import { useRouter } from 'next/router';
-import type { ComponentType } from 'react';
+import type { ComponentType, Dispatch, SetStateAction } from 'react';
+import { Onboarding } from './onboarding-provider';
 
 function ConceptCard({
   icon: Icon,
@@ -65,11 +70,42 @@ function UnifiedSchemaCard() {
 
 interface Step2FederationProps {
   onDismiss: () => void;
+  onSubmitSuccess: Dispatch<SetStateAction<Onboarding | undefined>>;
 }
 
-export function Step2Federation({ onDismiss }: Step2FederationProps) {
+export function Step2Federation({ onDismiss, onSubmitSuccess }: Step2FederationProps) {
   const router = useRouter();
   const org = useCurrentOrganization();
+  const { toast } = useToast();
+
+  const { mutate, isPending } = useMutation(completeOnboardingStep2);
+
+  const onContinue = () => {
+    mutate(
+      {},
+      {
+        onSuccess(res) {
+          if (res.response?.code === EnumStatusCode.OK && res.onboarding) {
+            onSubmitSuccess({
+              ...res.onboarding,
+              createdAt: new Date(res.onboarding.createdAt),
+              finishedAt: res.onboarding.finishedAt ? new Date(res.onboarding.finishedAt) : null,
+              updatedAt: res.onboarding.updatedAt ? new Date(res.onboarding.updatedAt) : null,
+              federatedGraphId: res.onboarding.federatedGraphId || undefined,
+            });
+          } else if (res.response?.details) {
+            toast({ description: res.response.details, duration: 3000 });
+          }
+        },
+        onError() {
+          toast({
+            description: 'Could not complete onboarding. Please try again.',
+            duration: 3000,
+          });
+        },
+      },
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -115,7 +151,9 @@ export function Step2Federation({ onDismiss }: Step2FederationProps) {
         >
           Skip
         </Button>
-        <Button type="button">Continue</Button>
+        <Button type="button" onClick={onContinue} disabled={isPending}>
+          Continue
+        </Button>
       </div>
     </div>
   );
