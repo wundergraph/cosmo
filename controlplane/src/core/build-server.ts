@@ -53,14 +53,7 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
-import {
-  QueueInactiveOrganizationsDeletionQueue,
-  createQueueInactiveOrganizationsDeletionWorker,
-} from './workers/QueueInactiveOrganizationsDeletionWorker.js';
-import {
-  createNotifyOrganizationDeletionQueuedWorker,
-  NotifyOrganizationDeletionQueuedQueue,
-} from './workers/NotifyOrganizationDeletionQueuedWorker.js';
+import { createNotifyOrganizationDeletionQueuedWorker } from './workers/NotifyOrganizationDeletionQueuedWorker.js';
 import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composition/composeGraphs.pool.js';
 
 export interface BuildConfig {
@@ -431,10 +424,6 @@ export default async function build(opts: BuildConfig) {
     }),
   );
 
-  const notifyOrganizationDeletionQueuedQueue = new NotifyOrganizationDeletionQueuedQueue(
-    logger,
-    fastify.redisForQueue,
-  );
   bullWorkers.push(
     createNotifyOrganizationDeletionQueuedWorker({
       redisConnection: fastify.redisForWorker,
@@ -443,24 +432,6 @@ export default async function build(opts: BuildConfig) {
       mailer: mailerClient,
     }),
   );
-
-  const queueInactiveOrganizationsDeletionQueue = new QueueInactiveOrganizationsDeletionQueue(
-    logger,
-    fastify.redisForQueue,
-  );
-  bullWorkers.push(
-    createQueueInactiveOrganizationsDeletionWorker({
-      redisConnection: fastify.redisForWorker,
-      db: fastify.db,
-      realm: opts.keycloak.realm,
-      keycloak: keycloakClient,
-      deleteOrganizationQueue,
-      notifyOrganizationDeletionQueuedQueue,
-      logger,
-    }),
-  );
-
-  await queueInactiveOrganizationsDeletionQueue.scheduleJob();
 
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
