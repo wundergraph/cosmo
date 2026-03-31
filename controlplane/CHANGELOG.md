@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.212.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.211.0...controlplane@0.212.0) (2026-03-31)
+
+### Bug Fixes
+
+* pin axios to 1.13.5 across all packages ([#2713](https://github.com/wundergraph/cosmo/issues/2713)) ([9be9143](https://github.com/wundergraph/cosmo/commit/9be91435cbb595626347479c28551bd5d6a11d6f)) (@thisisnithin)
+
+### Features
+
+* introduce proxy for webhook requests ([#2671](https://github.com/wundergraph/cosmo/issues/2671)) ([dc4388d](https://github.com/wundergraph/cosmo/commit/dc4388d100a421e0ab6eed390a8d5f80d5b15112)) (@wilsonrivera)
+
 # [0.211.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.210.0...controlplane@0.211.0) (2026-03-27)
 
 ### Features

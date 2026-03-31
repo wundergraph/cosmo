@@ -72,6 +72,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
@@ -107,6 +108,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), fmt.Sprintf("%s:localhost", key))
@@ -146,6 +148,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), fmt.Sprintf("%s:foo", key))
@@ -211,6 +214,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), fmt.Sprintf("%s:localhost", key))
@@ -249,6 +253,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), fmt.Sprintf("%s:localhorst", key))
@@ -270,6 +275,7 @@ func TestRateLimit(t *testing.T) {
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
+
 		authenticators := []authentication.Authenticator{authenticator}
 
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
@@ -319,6 +325,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
@@ -374,6 +381,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
@@ -408,6 +416,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
@@ -442,6 +451,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
@@ -479,6 +489,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
@@ -517,6 +528,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
@@ -553,6 +565,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
@@ -599,6 +612,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
@@ -645,6 +659,7 @@ func TestRateLimit(t *testing.T) {
 		t.Parallel()
 
 		key := uuid.New().String()
+
 		t.Cleanup(func() {
 			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
 			del := client.Del(context.Background(), key)
@@ -684,8 +699,120 @@ func TestRateLimit(t *testing.T) {
 			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded"}],"data":null}`, res.Body)
 		})
 	})
-	t.Run("Cluster Mode", func(t *testing.T) {
+	t.Run("enabled - override applies higher limit for matching key", func(t *testing.T) {
+		t.Parallel()
 
+		key := uuid.New().String()
+
+		t.Cleanup(func() {
+			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
+			del := client.Del(context.Background(), fmt.Sprintf("%s:premium-user", key))
+			require.NoError(t, del.Err())
+			del = client.Del(context.Background(), fmt.Sprintf("%s:regular-user", key))
+			require.NoError(t, del.Err())
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithRateLimitConfig(&config.RateLimitConfiguration{
+					Enabled:  true,
+					Strategy: "simple",
+					SimpleStrategy: config.RateLimitSimpleStrategy{
+						Rate:                    1,
+						Burst:                   1,
+						Period:                  time.Second * 2,
+						RejectExceedingRequests: false,
+						Overrides: []config.RateLimitOverride{
+							{
+								Matching: "^premium-.*",
+								Rate:     4,
+								Burst:    4,
+								Period:   time.Second * 2,
+							},
+						},
+					},
+					Storage: config.RedisConfiguration{
+						URLs:      []string{"redis://localhost:6379"},
+						KeyPrefix: key,
+					},
+					Debug:               true,
+					KeySuffixExpression: "request.header.Get('X-Client-ID')",
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Regular user: default limit of 1, second request is rate limited
+			res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			}, map[string]string{
+				"X-Client-ID": "regular-user",
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"remaining":0`)
+			require.NotContains(t, res.Body, `"errors"`)
+
+			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			}, map[string]string{
+				"X-Client-ID": "regular-user",
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"errors"`)
+
+			// Premium user: override limit of 4, still has remaining after first request
+			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			}, map[string]string{
+				"X-Client-ID": "premium-user",
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"remaining":3`)
+			require.NotContains(t, res.Body, `"errors"`)
+
+			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			}, map[string]string{
+				"X-Client-ID": "premium-user",
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"remaining":2`)
+			require.NotContains(t, res.Body, `"errors"`)
+
+			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			}, map[string]string{
+				"X-Client-ID": "premium-user",
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"remaining":1`)
+			require.NotContains(t, res.Body, `"errors"`)
+
+			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			}, map[string]string{
+				"X-Client-ID": "premium-user",
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"remaining":0`)
+			require.NotContains(t, res.Body, `"errors"`)
+
+			// Premium user: fifth request exceeds override limit
+			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			}, map[string]string{
+				"X-Client-ID": "premium-user",
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `"errors"`)
+		})
+	})
+	t.Run("Cluster Mode", func(t *testing.T) {
 		if _, set := os.LookupEnv("SKIP_REDIS_CLUSTER_TESTS"); set {
 			t.Skip("skipping redis cluster tests")
 		}
@@ -719,7 +846,9 @@ func TestRateLimit(t *testing.T) {
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
 					t.Parallel()
+
 					key := uuid.New().String()
+
 					t.Cleanup(func() {
 						client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 						del := client.Del(context.Background(), key)
@@ -757,9 +886,11 @@ func TestRateLimit(t *testing.T) {
 
 			t.Run("should fail with bad auth", func(t *testing.T) {
 				t.Parallel()
-				clusterUrlSlice = []string{"redis://cosmo1:test1@localhost:7001", "redis://cosmo:test@localhost:7003", "redis://cosmo2:test2@localhost:7002"}
+
+				clusterUrlSlice := []string{"redis://cosmo1:test1@localhost:7001", "redis://cosmo:test@localhost:7003", "redis://cosmo2:test2@localhost:7002"}
 
 				key := uuid.New().String()
+
 				t.Cleanup(func() {
 					client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 					del := client.Del(context.Background(), key)
@@ -793,6 +924,7 @@ func TestRateLimit(t *testing.T) {
 			t.Parallel()
 
 			key := uuid.New().String()
+
 			t.Cleanup(func() {
 				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 				del := client.Del(context.Background(), key)
@@ -829,6 +961,7 @@ func TestRateLimit(t *testing.T) {
 			t.Parallel()
 
 			key := uuid.New().String()
+
 			t.Cleanup(func() {
 				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 				del := client.Del(context.Background(), fmt.Sprintf("%s:localhost", key))
@@ -869,6 +1002,7 @@ func TestRateLimit(t *testing.T) {
 			t.Parallel()
 
 			key := uuid.New().String()
+
 			t.Cleanup(func() {
 				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 				del := client.Del(context.Background(), key)

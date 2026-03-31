@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.10.0...@wundergraph/playground@0.10.1) (2026-03-31)
+
+### Bug Fixes
+
+* pin axios to 1.13.5 across all packages ([#2713](https://github.com/wundergraph/cosmo/issues/2713)) ([9be9143](https://github.com/wundergraph/cosmo/commit/9be91435cbb595626347479c28551bd5d6a11d6f)) (@thisisnithin)
+
 # [0.10.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.9.6...@wundergraph/playground@0.10.0) (2026-03-05)
 
 ### Features
