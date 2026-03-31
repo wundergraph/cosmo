@@ -42,7 +42,7 @@ export default (opts: BaseCommandOptions) => {
             pc.bold(pc.white('NAMESPACE')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
-          colWidths: [30, 120],
+          colWidths: [30, 30, 120],
         });
 
         console.log(
@@ -105,7 +105,7 @@ export default (opts: BaseCommandOptions) => {
           pc.bold(pc.white('NAMESPACE')),
           pc.bold(pc.white('WARNING_MESSAGE')),
         ],
-        colWidths: [30, 30, 30, 120],
+        colWidths: [30, 30, 120],
       });
 
       console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));
