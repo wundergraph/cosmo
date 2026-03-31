@@ -57,6 +57,7 @@ export class AdmissionWebhookController {
     this.httpClient = axios.create({
       httpAgent,
       httpsAgent,
+      proxy: false,
       timeout: 30_000,
       baseURL: this.graphAdmissionWebhookURL,
     });

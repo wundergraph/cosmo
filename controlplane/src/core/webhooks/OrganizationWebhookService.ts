@@ -150,6 +150,7 @@ export class OrganizationWebhookService {
     this.httpClient = axios.create({
       httpAgent,
       httpsAgent,
+      proxy: false,
       timeout: 30_000,
       maxContentLength: 5 * 1024 * 1024, // ~5mb
     });
