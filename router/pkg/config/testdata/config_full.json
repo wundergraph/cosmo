@@ -222,7 +222,8 @@
         "GetOperationInfo": null,
         "GetSchema": null
       },
-      "ScopeChallengeIncludeTokenScopes": false
+      "ScopeChallengeIncludeTokenScopes": false,
+      "MaxScopeCombinations": 0
     },
     "ResourceDocumentation": ""
   },
