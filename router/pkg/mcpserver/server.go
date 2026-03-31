@@ -443,7 +443,6 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 	// The getServer function returns our MCP server instance for each request
 	streamableHTTPHandler := mcp.NewStreamableHTTPHandler(
 		func(req *http.Request) *mcp.Server {
-			// Add request headers to context for tool handlers
 			return s.server
 		},
 		nil, // Use default options
@@ -458,7 +457,12 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 		mux.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
 	}
 
-	mcpHandler := http.Handler(streamableHTTPHandler)
+	// Inject request headers into context so tool handlers can forward them
+	// to the GraphQL engine via headersFromContext.
+	mcpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = r.WithContext(requestHeadersFromRequest(r.Context(), r))
+		streamableHTTPHandler.ServeHTTP(w, r)
+	})
 	if s.authMiddleware != nil {
 		mux.Handle("/mcp", middleware(s.authMiddleware.HTTPMiddleware(mcpHandler)))
 	} else {
