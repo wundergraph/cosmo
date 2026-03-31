@@ -292,6 +292,10 @@ func TestValidateExposedMetrics(t *testing.T) {
 				Value: PointerOf("0.0.1"),
 			},
 			{
+				Name:  PointerOf("otel_scope_schema_url"),
+				Value: PointerOf(""),
+			},
+			{
 				Name:  PointerOf("rpc_grpc_status_code"),
 				Value: PointerOf("0"),
 			},
@@ -417,6 +421,10 @@ func TestValidateExposedAttributesWithoutClaims(t *testing.T) {
 			{
 				Name:  PointerOf("rpc_grpc_status_code"),
 				Value: PointerOf("3"),
+			},
+			{
+				Name:  PointerOf("otel_scope_schema_url"),
+				Value: PointerOf(""),
 			},
 			{
 				Name:  PointerOf("rpc_method"),
