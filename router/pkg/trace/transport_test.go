@@ -3,14 +3,14 @@ package trace
 import (
 	"bytes"
 	"context"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -38,9 +38,14 @@ func TestTransport(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithSyncer(exporter),
+			sdktrace.WithSpanProcessor(&semconvProcessor{}),
+		)
+
 		tr := NewTransport(http.DefaultTransport, []otelhttp.Option{
 			otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))),
-			otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+			otelhttp.WithTracerProvider(&FilteringTracerProvider{TracerProvider: tp}),
 		})
 
 		c := http.Client{Transport: tr}
@@ -91,9 +96,14 @@ func TestTransport(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithSyncer(exporter),
+			sdktrace.WithSpanProcessor(&semconvProcessor{}),
+		)
+
 		tr := NewTransport(http.DefaultTransport, []otelhttp.Option{
 			otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))),
-			otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+			otelhttp.WithTracerProvider(&FilteringTracerProvider{TracerProvider: tp}),
 		})
 
 		c := http.Client{Transport: tr}
@@ -116,7 +126,7 @@ func TestTransport(t *testing.T) {
 		assert.Equal(t, "HTTP GET", sn[0].Name())
 		assert.Equal(t, trace.SpanKindClient, sn[0].SpanKind())
 		assert.Equal(t, sdktrace.Status{Code: codes.Error}, sn[0].Status())
-		assert.Len(t, sn[0].Attributes(), 8)
+		assert.Len(t, sn[0].Attributes(), 9)
 
 		assert.Contains(t, sn[0].Attributes(), semconv.HTTPMethodKey.String("GET"))
 		assert.Contains(t, sn[0].Attributes(), semconv.HTTPFlavorKey.String("1.1"))

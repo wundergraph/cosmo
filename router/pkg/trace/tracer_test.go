@@ -289,8 +289,14 @@ func TestInjectValidTraceContext(t *testing.T) {
 			}),
 		},
 		{
-			name:        "unsupported trace flag bits dropped",
-			traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+			// otel SDK v1.42.0 masks trace flags with FlagsSampled|FlagsRandom (0x03)
+			// instead of just FlagsSampled (0x01), so 0xff becomes "03".
+			// See: go.opentelemetry.io/otel@v1.42.0/propagation/trace_context.go:50
+			//
+			// "Preserve only the spec-defined flags: sampled (0x01) and random (0x02)."
+			//	flags := sc.TraceFlags() & (trace.FlagsSampled | trace.FlagsRandom)
+			name:        "extra trace flag bits preserved",
+			traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-03",
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
