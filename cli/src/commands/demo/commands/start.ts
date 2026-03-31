@@ -97,6 +97,7 @@ async function createFederatedGraph(
       namespace: options.namespace,
       routingUrl: routingUrl.toString(),
       labelMatchers: [options.labelMatcher],
+      isDemo: true,
     },
     {
       headers: getBaseHeaders(),

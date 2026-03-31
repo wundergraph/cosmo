@@ -1516,6 +1516,11 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
    */
   disableResolvabilityValidation?: boolean;
 
+  /**
+   * @generated from field: optional bool is_demo = 9;
+   */
+  isDemo?: boolean;
+
   constructor(data?: PartialMessage<CreateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1532,6 +1537,7 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
     { no: 6, name: 'admissionWebhookURL', kind: 'scalar', T: 9 /* ScalarType.STRING */ },
     { no: 7, name: 'admissionWebhookSecret', kind: 'scalar', T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: 'disable_resolvability_validation', kind: 'scalar', T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 9, name: 'is_demo', kind: 'scalar', T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphRequest {

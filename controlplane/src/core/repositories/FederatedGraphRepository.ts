@@ -39,6 +39,7 @@ import {
   graphApiTokens,
   graphCompositions,
   graphRequestKeys,
+  onboarding,
   schemaVersion,
   schemaVersionChangeAction,
   targetLabelMatchers,
@@ -103,6 +104,7 @@ export class FederatedGraphRepository {
     supportsFederation?: boolean;
     admissionWebhookURL?: string;
     admissionWebhookSecret?: string;
+    isDemo?: boolean;
   }): Promise<FederatedGraphDTO> {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
@@ -162,6 +164,17 @@ export class FederatedGraphRepository {
               federatedGraphId: insertedGraph[0].id,
             })),
           )
+          .execute();
+      }
+
+      if (data.isDemo) {
+        await tx
+          .update(onboarding)
+          .set({
+            federatedGraphId: insertedGraph[0].id,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(onboarding.userId, data.createdBy), eq(onboarding.organizationId, this.organizationId)))
           .execute();
       }
 

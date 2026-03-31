@@ -155,6 +155,7 @@ message CreateFederatedGraphRequest {
   string admissionWebhookURL = 6;
   optional string admissionWebhookSecret = 7;
   optional bool disable_resolvability_validation = 8;
+  optional bool is_demo = 9;
 }
 
 message CreateFederatedSubgraphRequest {

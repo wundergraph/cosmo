@@ -159,6 +159,7 @@ export function createFederatedGraph(
       namespaceId: namespace.id,
       admissionWebhookURL: req.admissionWebhookURL,
       admissionWebhookSecret: req.admissionWebhookSecret,
+      isDemo: req.isDemo,
     });
 
     if (!federatedGraph) {
