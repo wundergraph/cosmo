@@ -2,7 +2,11 @@ import pc from 'picocolors';
 import ora from 'ora';
 
 import { Command, program } from 'commander';
-import type { WhoAmIResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
+import type {
+  /* eslint-disable-next-line camelcase */
+  GetOnboardingResponse_Onboarding,
+  WhoAmIResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders, config } from '../../../core/config.js';
@@ -12,6 +16,11 @@ type UserInfo = {
   userEmail: WhoAmIResponse['userEmail'];
   organizationName: WhoAmIResponse['organizationName'];
 };
+
+const demoGraphName = 'demo' as const;
+const demoNamespace = 'default' as const;
+const demoLabelMatcher = `graph=demo` as const;
+const demoRouterPort = 3002 as const;
 
 function clearScreen() {
   process.stdout.write('\u001Bc');
@@ -44,6 +53,147 @@ async function printAccountDisclaimer() {
 function resetLayout() {
   clearScreen();
   printLogo();
+}
+
+/* eslint-disable-next-line camelcase */
+async function fetchFederatedGraph(client: BaseCommandOptions['client'], id: GetOnboardingResponse_Onboarding['id']) {
+  const { response, graph } = await client.platform.getFederatedGraphById(
+    {
+      id,
+    },
+    {
+      headers: getBaseHeaders(),
+    },
+  );
+
+  switch (response?.code) {
+    case EnumStatusCode.OK: {
+      return { graph, error: null };
+    }
+    default: {
+      return {
+        graph: null,
+        error: new Error(response?.details ?? 'An unknown error occured'),
+      };
+    }
+  }
+}
+
+async function createFederatedGraph(
+  client: BaseCommandOptions['client'],
+  options: {
+    name: string;
+    namespace: string;
+    port: number;
+    labelMatcher: string;
+  },
+) {
+  const routingUrl = new URL('http://localhost');
+  routingUrl.port = String(options.port);
+
+  const { response, deploymentErrors, compositionErrors } = await client.platform.createFederatedGraph(
+    {
+      name: options.name,
+      namespace: options.namespace,
+      routingUrl: routingUrl.toString(),
+      labelMatchers: [options.labelMatcher],
+    },
+    {
+      headers: getBaseHeaders(),
+    },
+  );
+
+  switch (response?.code) {
+    case EnumStatusCode.OK: {
+      return { error: null };
+    }
+    default: {
+      if (deploymentErrors.length > 0 || compositionErrors.length > 0) {
+        return {
+          error: new Error(
+            `Failed to create federated graph ${options.name}. Reason: ${deploymentErrors.length} deployment errors, ${compositionErrors.length} composition errors.\n${response?.details}`,
+          ),
+        };
+      }
+
+      return {
+        error: new Error(response?.details ?? 'An unknown error occured'),
+      };
+    }
+  }
+}
+
+async function handleCreateFederatedGraphResponse(
+  client: BaseCommandOptions['client'],
+  /* eslint-disable-next-line camelcase */
+  onboarding: GetOnboardingResponse_Onboarding,
+) {
+  function retryFn() {
+    resetLayout();
+    return handleCreateFederatedGraphResponse(client, onboarding);
+  }
+
+  if (onboarding.federatedGraphId) {
+    const spinner = ora().start();
+    const federatedGraphResponse = await fetchFederatedGraph(client, onboarding.federatedGraphId);
+
+    if (federatedGraphResponse.error) {
+      spinner.fail(`Failed to retrieve graph information ${federatedGraphResponse.error}`);
+      await waitForKeyPress(
+        {
+          r: retryFn,
+          R: retryFn,
+        },
+        'Hit [r] to refresh. CTRL+C to quit',
+      );
+      return;
+    }
+
+    spinner.succeed(`Federated graph ${pc.bold(federatedGraphResponse.graph?.name)} was already created.`);
+
+    return {
+      status: 'federated-graph-exists',
+    } as const;
+  } else {
+    const spinner = ora().start();
+    const createGraphResponse = await createFederatedGraph(client, {
+      name: demoGraphName,
+      namespace: demoNamespace,
+      port: demoRouterPort,
+      labelMatcher: demoLabelMatcher,
+    });
+
+    if (createGraphResponse.error) {
+      spinner.fail(createGraphResponse.error.message);
+
+      await waitForKeyPress(
+        {
+          r: retryFn,
+          R: retryFn,
+        },
+        'Hit [r] to refresh. CTRL+C to quit',
+      );
+      return;
+    }
+
+    spinner.succeed(`Federated graph succesfully created.`);
+
+    return {
+      status: 'federated-graph-created',
+    } as const;
+  }
+}
+
+async function handleStep2(
+  opts: BaseCommandOptions,
+  onboardingCheck: {
+    status: 'ok' | 'step-too-soon';
+    /* eslint-disable-next-line camelcase */
+    onboarding: GetOnboardingResponse_Onboarding;
+  },
+) {
+  resetLayout();
+  return await handleCreateFederatedGraphResponse(opts.client, onboardingCheck.onboarding);
 }
 
 async function checkExistingOnboarding(client: BaseCommandOptions['client']) {
@@ -154,13 +304,7 @@ async function handleGetOnboardingResponse(client: BaseCommandOptions['client'],
 
 async function handleStep1(opts: BaseCommandOptions, userInfo: UserInfo) {
   resetLayout();
-  const check = await handleGetOnboardingResponse(opts.client, userInfo);
-
-  if (!check) {
-    return;
-  }
-
-  console.debug('TBD - to implement');
+  return await handleGetOnboardingResponse(opts.client, userInfo);
 }
 
 async function fetchUserInfo(client: BaseCommandOptions['client']) {
@@ -217,7 +361,13 @@ export default (opts: BaseCommandOptions) => {
     const userInfo = await getUserInfo(opts.client);
     await printAccountDisclaimer();
 
-    await handleStep1(opts, userInfo);
+    const onboardingCheck = await handleStep1(opts, userInfo);
+
+    if (!onboardingCheck) {
+      return;
+    }
+
+    await handleStep2(opts, onboardingCheck);
   });
 
   return command;
