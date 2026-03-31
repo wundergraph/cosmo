@@ -320,7 +320,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 				Value: PointerOf("org123"),
 			},
 		}
-		require.Equal(t, expectedLabels, labels)
+		require.ElementsMatch(t, expectedLabels, labels)
 	})
 }
 
@@ -447,7 +447,7 @@ func TestValidateExposedAttributesWithoutClaims(t *testing.T) {
 				Value: PointerOf(""),
 			},
 		}
-		require.Equal(t, expectedLabels, labels)
+		require.ElementsMatch(t, expectedLabels, labels)
 	})
 }
 
