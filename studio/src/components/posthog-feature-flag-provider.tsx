@@ -35,7 +35,7 @@ const initialState: PostHogFeatureFlagState = {
   onboarding: { enabled: false },
 };
 
-const PostHogFeatureFlagContext = createContext<PostHogFeatureFlagState>(initialState);
+export const PostHogFeatureFlagContext = createContext<PostHogFeatureFlagState>(initialState);
 
 export const usePostHogFeatureFlags = () => useContext(PostHogFeatureFlagContext);
 
