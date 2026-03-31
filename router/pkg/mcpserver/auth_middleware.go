@@ -283,7 +283,13 @@ func (m *MCPAuthMiddleware) checkExecuteGraphQLScopes(tokenScopes []string, toke
 		return nil
 	}
 
-	combinedScopes := extractor.ComputeCombinedScopes(fieldReqs)
+	combinedScopes, err := extractor.ComputeCombinedScopes(fieldReqs)
+	if err != nil {
+		// Scope combination limit exceeded — fail closed. The query touches too many
+		// @requiresScopes fields, producing a pathological number of combinations.
+		// Return a sentinel challenge so the caller sends 403.
+		return []string{"insufficient_scope"}
+	}
 	if len(combinedScopes) == 0 {
 		return nil
 	}

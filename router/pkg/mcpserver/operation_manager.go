@@ -88,12 +88,19 @@ func (om *OperationsManager) GetOperation(name string) *schemaloader.Operation {
 
 // ComputeToolScopes runs the scope extractor against all loaded operations,
 // populating each operation's RequiredScopes from @requiresScopes directives.
-func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration) {
+// Returns an error if any operation exceeds the scope combination limit, which
+// indicates a pathological @requiresScopes configuration that should be simplified.
+func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration) error {
 	extractor := NewScopeExtractor(fieldConfigs, om.schemaDoc)
 	for i := range om.operations {
 		fieldReqs := extractor.ExtractScopesForOperation(&om.operations[i].Document)
-		om.operations[i].RequiredScopes = extractor.ComputeCombinedScopes(fieldReqs)
+		combinedScopes, err := extractor.ComputeCombinedScopes(fieldReqs)
+		if err != nil {
+			return fmt.Errorf("tool %q: %w", om.operations[i].Name, err)
+		}
+		om.operations[i].RequiredScopes = combinedScopes
 	}
+	return nil
 }
 
 // GetSchema returns the schema document used by the operations manager

@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -452,8 +453,32 @@ func TestComputeCombinedScopes(t *testing.T) {
 			schemaDoc := parseTestSchema(t)
 
 			extractor := NewScopeExtractor(testFieldConfigs(), &schemaDoc)
-			got := extractor.ComputeCombinedScopes(tt.fieldReqs)
+			got, err := extractor.ComputeCombinedScopes(tt.fieldReqs)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestComputeCombinedScopes_ExceedsLimit(t *testing.T) {
+	t.Parallel()
+
+	schemaDoc := parseTestSchema(t)
+	extractor := NewScopeExtractor(testFieldConfigs(), &schemaDoc)
+
+	// Build field requirements that will exceed MaxScopeCombinations (2048).
+	// 12 fields × 2 OR-groups each = 2^12 = 4096 combinations > 2048.
+	fieldReqs := make([]FieldScopeRequirement, 12)
+	for i := range fieldReqs {
+		fieldReqs[i] = FieldScopeRequirement{
+			TypeName:  "Query",
+			FieldName: fmt.Sprintf("field_%d", i),
+			OrScopes:  [][]string{{"scope_a"}, {"scope_b"}},
+		}
+	}
+
+	got, err := extractor.ComputeCombinedScopes(fieldReqs)
+	assert.Error(t, err)
+	assert.Nil(t, got)
+	assert.Contains(t, err.Error(), "scope combination limit")
 }

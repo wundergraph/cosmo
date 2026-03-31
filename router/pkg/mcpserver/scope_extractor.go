@@ -1,12 +1,22 @@
 package mcpserver
 
 import (
+	"fmt"
+
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvisitor"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
+
+// MaxScopeCombinations is the hard cap on the number of OR-group combinations
+// produced by the Cartesian product across scoped fields. This prevents
+// pathological scope configurations (e.g., many fields each with multiple
+// OR-groups in arbitrary execute_graphql operations) from consuming unbounded
+// CPU/memory. 2048 provides generous headroom for enterprise RBAC while
+// blocking exponential blowup.
+const MaxScopeCombinations = 2048
 
 // FieldScopeRequirement represents the scope requirement for a single field.
 // OrScopes is a list of AND-groups — satisfy any one group to access the field.
@@ -71,11 +81,11 @@ func (e *ScopeExtractor) ExtractScopesForOperation(operation *ast.Document) []Fi
 
 // ComputeCombinedScopes computes the Cartesian product of OR-groups across fields,
 // deduplicating scopes within each combined AND-group.
-// The product is unbounded at runtime because the composition layer already enforces
-// MAX_OR_SCOPES = 16 per field, capping the scope groups that reach the router config.
-func (e *ScopeExtractor) ComputeCombinedScopes(fieldReqs []FieldScopeRequirement) [][]string {
+// Returns an error if the number of combinations exceeds MaxScopeCombinations,
+// which prevents pathological scope configurations from consuming unbounded resources.
+func (e *ScopeExtractor) ComputeCombinedScopes(fieldReqs []FieldScopeRequirement) ([][]string, error) {
 	if len(fieldReqs) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	// Start with the first field's OR-groups
@@ -83,10 +93,15 @@ func (e *ScopeExtractor) ComputeCombinedScopes(fieldReqs []FieldScopeRequirement
 
 	// Iteratively cross-product with each subsequent field's OR-groups
 	for i := 1; i < len(fieldReqs); i++ {
-		result = crossProduct(result, fieldReqs[i].OrScopes)
+		product, err := crossProduct(result, fieldReqs[i].OrScopes)
+		if err != nil {
+			return nil, fmt.Errorf("scope combination limit (%d) exceeded at field %s.%s: %w",
+				MaxScopeCombinations, fieldReqs[i].TypeName, fieldReqs[i].FieldName, err)
+		}
+		result = product
 	}
 
-	return result
+	return result, nil
 }
 
 // scopeFieldVisitor collects scoped field coordinates during AST walking.
@@ -128,15 +143,20 @@ func (v *scopeFieldVisitor) EnterField(ref int) {
 
 // crossProduct computes the Cartesian product of two sets of OR-groups,
 // merging AND-scopes within each combination and deduplicating.
-func crossProduct(a, b [][]string) [][]string {
-	result := make([][]string, 0, len(a)*len(b))
+// Returns an error if the resulting number of combinations would exceed MaxScopeCombinations.
+func crossProduct(a, b [][]string) ([][]string, error) {
+	total := len(a) * len(b)
+	if total > MaxScopeCombinations {
+		return nil, fmt.Errorf("cross product would produce %d combinations", total)
+	}
+	result := make([][]string, 0, total)
 	for _, groupA := range a {
 		for _, groupB := range b {
 			merged := mergeAndDedup(groupA, groupB)
 			result = append(result, merged)
 		}
 	}
-	return result
+	return result, nil
 }
 
 // mergeAndDedup merges two AND-groups into one, preserving order and removing duplicates.
