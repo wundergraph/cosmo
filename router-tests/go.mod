@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/router-tests
 
-go 1.25
+go 1.25.0
 
 require (
 	connectrpc.com/connect v1.19.1
