@@ -1,0 +1,43 @@
+---
+title: "API Keys"
+description: "This page enables the management of API tokens for automation purposes, such as CI/CD or local CLI usage."
+icon: circle-info
+sidebarTitle: Overview
+---
+
+The API keys are used to authorize the user to perform actions using [wgc](/cli/intro) (Wundergraph Cosmo CLI Command). On the overview, we display all keys across the organization. Only members of role Admin and Developer have the ability to create new keys.
+<Frame>
+  <img
+    src="/images/studio/api-keys-management-page.png"
+    alt="Cosmo Studio API keys management page showing an organization API key list with options to create new keys."
+    title="API keys management page"
+  />
+</Frame>
+
+### How to create an API Token
+
+* Click on the New API Key button.
+
+* Give the API key a name, select the expiry, the group and then click on "Generate API key".
+
+<Frame>
+  <img
+    src="/images/studio/api-key-creation-dialog.png"
+    alt="Create API key dialog with fields for name, expiry, and group selection."
+    title="API key creation dialog"
+  />
+</Frame>
+
+* Once the API key is generated, it will be displayed for the user to copy it.
+
+<Info>
+  The API Key will be displayed only once. Please copy the API key and store it securely.
+</Info>
+
+<Frame>
+  <img
+    src="/images/studio/api-key-generation-and-copy-prompt.png"
+    alt="API key generated prompt showing a one-time view of the new key with copy and confirmation options."
+    title="API key generation and copy prompt"
+  />
+</Frame>

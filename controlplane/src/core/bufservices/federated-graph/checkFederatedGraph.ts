@@ -8,10 +8,11 @@ import {
   CompositionWarning,
   Subgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { parse } from 'graphql';
-import { composeSubgraphs } from '../../composition/composition.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { composeGraphsInWorker } from '../../composition/composeGraphs.pool.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
@@ -21,7 +22,6 @@ import {
   getLogger,
   handleError,
   isValidLabelMatchers,
-  newCompositionOptions,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { maxRowLimitForChecks } from '../../constants.js';
@@ -39,6 +39,7 @@ export function checkFederatedGraph(
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     req.namespace = req.namespace || DefaultNamespace;
 
@@ -101,16 +102,30 @@ export function checkFederatedGraph(
       type: convertToSubgraphType(s.type),
     }));
 
-    const result = composeSubgraphs(
-      subgraphsUsedForComposition.map((s) => ({
-        id: s.id,
-        name: s.name,
-        url: s.routingUrl,
-        definitions: parse(s.schemaSDL),
-      })),
-      federatedGraph.routerCompatibilityVersion,
-      newCompositionOptions(req.disableResolvabilityValidation),
-    );
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
+
+    const { results } = await composeGraphsInWorker({
+      federatedGraph,
+      subgraphsToCompose: [
+        {
+          subgraphs: subgraphsUsedForComposition,
+          isFeatureFlagComposition: false,
+          featureFlagName: '',
+          featureFlagId: '',
+        },
+      ],
+      tagOptionsByContractName: [],
+      compositionOptions: {
+        disableResolvabilityValidation: req.disableResolvabilityValidation,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+      },
+      skipRouterConfig: true,
+    });
+
+    const compositionResult = results[0].base;
 
     // If req.limit is not provided, we return all rows
     const returnLimit = req.limit === undefined ? null : clamp(req.limit, 1, maxRowLimitForChecks);
@@ -124,12 +139,13 @@ export function checkFederatedGraph(
       nonBreakingChanges: 0,
       graphPruneErrors: 0,
       graphPruneWarnings: 0,
+      composedSchemaBreakingChanges: 0,
     };
 
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
-    counts.compositionWarnings = result.warnings.length;
+    counts.compositionWarnings = compositionResult.warnings.length;
 
-    const clampedWarnings = returnLimit ? result.warnings.slice(0, returnLimit) : result.warnings;
+    const clampedWarnings = returnLimit ? compositionResult.warnings.slice(0, returnLimit) : compositionResult.warnings;
     for (const warning of clampedWarnings) {
       compositionWarnings.push({
         message: warning.message,
@@ -139,14 +155,14 @@ export function checkFederatedGraph(
       });
     }
 
-    if (!result.success) {
+    if (!compositionResult.success) {
       const compositionErrors: PlainMessage<CompositionError>[] = [];
-      counts.compositionErrors = result.errors.length;
+      counts.compositionErrors = compositionResult.errors.length;
 
-      const clampedErrors = returnLimit ? result.errors.slice(0, returnLimit) : result.errors;
+      const clampedErrors = returnLimit ? compositionResult.errors.slice(0, returnLimit) : compositionResult.errors;
       for (const error of clampedErrors) {
         compositionErrors.push({
-          message: error.message,
+          message: error,
           federatedGraphName: req.name,
           namespace: federatedGraph.namespace,
           featureFlag: '',

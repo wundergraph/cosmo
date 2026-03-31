@@ -31,6 +31,9 @@ spec:
       labels:
         {{- include "router.selectorLabels" . | nindent 8 }}
         {{- include "router.additionalPodLabels" . | nindent 8 }}
+        {{- range $key, $value := .Values.commonLabels }}
+        {{ $key }}: {{ quote $value }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

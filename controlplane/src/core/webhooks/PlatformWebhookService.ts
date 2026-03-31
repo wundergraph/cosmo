@@ -3,6 +3,7 @@ import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications
 import pino from 'pino';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { webhookAxiosRetryCond } from '../util.js';
 import { makeWebhookRequest } from './utils.js';
 
@@ -48,12 +49,23 @@ export class PlatformWebhookService implements IPlatformWebhookService {
   private logger: pino.Logger;
   private httpClient: AxiosInstance;
 
-  constructor(webhookURL = '', webhookKey = '', logger: pino.Logger) {
+  constructor(webhookURL = '', webhookKey = '', logger: pino.Logger, proxyUrl?: string) {
     this.url = webhookURL;
     this.key = webhookKey;
     this.logger = logger;
 
+    let agent: HttpsProxyAgent<string> | undefined;
+    if (proxyUrl) {
+      try {
+        agent = new HttpsProxyAgent(proxyUrl);
+      } catch (e) {
+        logger.error(e, 'Could not create proxy agent');
+      }
+    }
+
     this.httpClient = axios.create({
+      httpAgent: agent,
+      httpsAgent: agent,
       timeout: 10_000,
     });
     axiosRetry(this.httpClient, {

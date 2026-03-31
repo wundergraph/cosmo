@@ -1,0 +1,102 @@
+---
+title: "Consume REST / OpenAPI"
+description: "Interact with your API using standard HTTP/JSON requests, suitable for standard clients like cURL, Postman, or browsers." 
+icon: "arrow-right-arrow-left"
+---
+
+This page demonstrates how your platform enables API consumers to interact with the API using standard HTTP tooling and OpenAPI specifications. 
+
+Platform teams can adapt the examples on this page when creating consumer-facing documentation to ensure a consistent and supported API consumption experience.
+
+Every GraphQL operation defined in your contract is automatically exposed as a standard HTTP endpoint supporting JSON encoding. 
+This allows any HTTP client to interact with your API without needing specific gRPC or GraphQL knowledge.
+
+## OpenAPI Specification
+
+If your platform team has generated an OpenAPI specification (e.g. `service.openapi.yaml`) as part of the build process, you can import it into tools like Swagger UI, Redoc, or Postman to explore the API interactively and see the exact request and response contracts.
+
+To learn how to generate the OpenAPI specification file, see [Generate & Distribute SDKs](/connect-rpc/produce-generate-distribute-sdks).
+
+## HTTP POST requests
+
+The standard method for calling any RPC method (both Queries and Mutations) is via an HTTP POST request with a JSON body.
+
+### Required Headers
+
+When making a `POST` request, you must include the following headers to indicate you are using the Connect protocol with JSON:
+
+- `Content-Type: application/json`
+
+- `Connect-Protocol-Version: 1`
+
+### Endpoint URL Structure
+
+The URL structure follows the pattern: `http(s)://<host>:<port>/<package>.<Service>/<Method>`
+
+For example: `http://localhost:5026/employees.v1.HrService/GetEmployeeById`
+
+### Examples
+
+#### Query with Arguments (POST)
+
+Retrieve an employee by ID. The arguments are passed as a JSON object in the request body.
+
+```bash
+curl -X POST http://localhost:5026/employees.v1.HrService/GetEmployeeById \
+  -H "Content-Type: application/json" \
+  -H "Connect-Protocol-Version: 1" \
+  -d '{"id": 1}'
+```
+
+#### Mutation (POST)
+
+Mutations — operations that modify data and have side effects — must use HTTP POST.
+
+```bash
+curl -X POST http://localhost:5026/employees.v1.HrService/UpdateEmployeeMood \
+  -H "Content-Type: application/json" \
+  -H "Connect-Protocol-Version: 1" \
+  -d '{"id": 1, "mood": "MOOD_HAPPY"}'
+```
+
+## HTTP GET Requests (Caching)
+
+GraphQL Query operations are marked as idempotent (`NO_SIDE_EFFECTS`) in the generated protocol buffers. This enables them to be called via HTTP GET requests.
+
+Using GET is highly recommended for read-only operations because it allows responses to be cached by standard CDNs and browser caches, significantly improving performance.
+
+### Constructing the GET request
+
+Since GET requests do not have a body, arguments must be passed via query parameters. The request requires three specific parameters:
+
+- `connect=v1`: Specifies the protocol version.
+- `encoding=json`: Specifies the format of the message data.
+- `message={...}`: A URL-encoded JSON object containing the arguments.
+
+These parameters are required by the Connect protocol when using HTTP GET with JSON encoding.
+
+### Examples (GET)
+
+#### Query without arguments (GET)
+
+Retrieve all employees. The message is an empty JSON object `{}`.
+
+```bash
+curl --get \
+  --data-urlencode 'encoding=json' \
+  --data-urlencode 'message={}' \
+  --data-urlencode 'connect=v1' \
+  http://localhost:5026/employees.v1.HrService/GetEmployees
+```
+
+#### Query with arguments (GET)
+
+Retrieve an employee by ID. The message contains the arguments `{"id": 1}`.
+
+```bash
+curl --get \
+  --data-urlencode 'encoding=json' \
+  --data-urlencode 'message={"id": 1}' \
+  --data-urlencode 'connect=v1' \
+  http://localhost:5026/employees.v1.HrService/GetEmployeeById
+```

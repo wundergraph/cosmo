@@ -24,6 +24,7 @@ introspection:
   enabled: true
   secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
+log_service_name: 'my-custom-router'
 shutdown_delay: 15s
 grace_period: 20s
 poll_interval: 10s
@@ -166,6 +167,9 @@ telemetry:
       connection_stats: true
       engine_stats:
         subscriptions: true
+      cost_stats:
+        estimated_enabled: false
+        actual_enabled: false
       exclude_metric_labels: []
       exclude_metrics: []
       # If no exporters are defined, the default one is used
@@ -176,6 +180,11 @@ telemetry:
           path: '/v1/metrics'
           endpoint: https://my-otel-collector.example.com
           # headers: {Authorization: Bearer <my-token>}
+      log_exporter:
+        enabled: true
+        exclude_metrics:
+          - "process\\."
+          - "server\\.uptime"
 
     # Expose OpenTelemetry metrics for scraping
     prometheus:
@@ -186,6 +195,9 @@ telemetry:
       connection_stats: true
       engine_stats:
         subscriptions: true
+      cost_stats:
+        estimated_enabled: false
+        actual_enabled: false
       exclude_metrics: []
       exclude_metric_labels: []
       exclude_scope_info: true
@@ -193,7 +205,6 @@ telemetry:
       schema_usage:
         enabled: true
         include_operation_sha: true
-        sample_rate: 1.0  # Supports any rate: 1.0, 0.8, 0.5, 0.1, 0.01, etc.
 
 cache_control_policy:
   enabled: true
@@ -467,6 +478,12 @@ security:
       enabled: true
       limit: 4
       ignore_persisted_operations: true
+  cost_control:
+    enabled: true
+    mode: enforce
+    max_estimated_limit: 1000
+    estimated_list_size: 10
+    expose_headers: false
   operation_name_length_limit: 2000
 persisted_operations:
   safelist:
@@ -477,6 +494,10 @@ persisted_operations:
   storage:
     provider_id: s3
     object_prefix: '5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo'
+  manifest:
+    enabled: true
+    poll_interval: 30s
+    poll_jitter: 10s
 
 automatic_persisted_queries:
   enabled: true

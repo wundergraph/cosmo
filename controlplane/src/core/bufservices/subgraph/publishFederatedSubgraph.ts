@@ -8,6 +8,8 @@ import {
   SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
+import { maxRowLimitForChecks } from '../../constants.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -20,6 +22,7 @@ import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPrun
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
+  clamp,
   convertToSubgraphType,
   enrichLogger,
   formatSubgraphType,
@@ -32,7 +35,6 @@ import {
   isValidGrpcNamingScheme,
   isValidLabels,
   isValidPluginVersion,
-  newCompositionOptions,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -52,6 +54,7 @@ export function publishFederatedSubgraph(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const auditLogRepo = new AuditLogRepository(opts.db);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
@@ -68,6 +71,11 @@ export function publishFederatedSubgraph(
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
+
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
 
     const subgraphSchemaSDL = req.schema;
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -98,7 +106,12 @@ export function publishFederatedSubgraph(
        * If no federated graphs have yet been created, the subgraph will be validated against the latest router
        * compatibility version.
        */
-      // Here we check if the schema is valid as a subgraph SDL
+      /* Here we check if the schema is valid as a subgraph SDL
+       * `buildSchema` only calls normalization in isolation.
+       * The `disableResolvabilityChecks` flag is only used in the federation step.
+       * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+       * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+       */
       const result = buildSchema(subgraphSchemaSDL, true, routerCompatibilityVersion);
       if (!result.success) {
         return {
@@ -438,7 +451,7 @@ export function publishFederatedSubgraph(
           organizationId: authContext.organizationId,
           featureId: 'plugins',
         });
-        const limit = feature?.limit === -1 ? 0 : feature?.limit ?? 0;
+        const limit = feature?.limit === -1 ? 0 : (feature?.limit ?? 0);
         if (count >= limit) {
           return {
             response: {
@@ -588,7 +601,10 @@ export function publishFederatedSubgraph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
-        newCompositionOptions(req.disableResolvabilityValidation),
+        {
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        },
       );
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published
@@ -726,15 +742,29 @@ export function publishFederatedSubgraph(
       }
     }
 
+    // If req.limit is not provided, use maxRowLimitForChecks as default
+    const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
+
+    const boundedCompositionErrors = compositionErrors.slice(0, boundedLimit);
+    const boundedCompositionWarnings = compositionWarnings.slice(0, boundedLimit);
+    const boundedDeploymentErrors = deploymentErrors.slice(0, boundedLimit);
+
+    const counts = {
+      compositionErrors: compositionErrors.length,
+      compositionWarnings: compositionWarnings.length,
+      deploymentErrors: deploymentErrors.length,
+    };
+
     if (compositionErrors.length > 0) {
       return {
         response: {
           code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
         },
-        compositionErrors,
-        compositionWarnings,
+        compositionErrors: boundedCompositionErrors,
+        compositionWarnings: boundedCompositionWarnings,
         deploymentErrors: [],
         proposalMatchMessage,
+        counts,
       };
     }
 
@@ -744,9 +774,10 @@ export function publishFederatedSubgraph(
           code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
         },
         compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
+        deploymentErrors: boundedDeploymentErrors,
+        compositionWarnings: boundedCompositionWarnings,
         proposalMatchMessage,
+        counts,
       };
     }
 
@@ -757,8 +788,9 @@ export function publishFederatedSubgraph(
       compositionErrors: [],
       deploymentErrors: [],
       hasChanged: subgraphChanged,
-      compositionWarnings,
+      compositionWarnings: boundedCompositionWarnings,
       proposalMatchMessage,
+      counts,
     };
   });
 }

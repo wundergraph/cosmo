@@ -37,6 +37,7 @@ describe('Subgraph', (ctx) => {
 
   test('Should be able to create a subgraph and publish the schema', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -57,12 +58,11 @@ describe('Subgraph', (ctx) => {
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('Should create a subgraph when subgraph did not exist before on publish', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
     const pandasSchema = new TextDecoder().decode(pandasSchemaBuffer);
@@ -97,12 +97,11 @@ describe('Subgraph', (ctx) => {
     expect(graph.graph?.compositionErrors).toBe('');
     expect(graph.subgraphs.length).toBe(1);
     expect(graph.subgraphs[0].name).toBe('pandas');
-
-    await server.close();
   });
 
   test('Should be able to create a subgraph with a readme', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -127,12 +126,11 @@ describe('Subgraph', (ctx) => {
     expect(subgraph.graph?.readme).toBe(readme);
     expect(subgraph.graph?.routingURL).toBe('http://localhost:8080');
     expect(subgraph.graph?.labels).toEqual([label]);
-
-    await server.close();
   });
 
   test('Should be able to create a subgraph with a readme and update it later.', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -166,7 +164,5 @@ describe('Subgraph', (ctx) => {
     expect(subgraph.graph?.readme).toBe(updatedReadme);
     expect(subgraph.graph?.routingURL).toBe('http://localhost:8080');
     expect(subgraph.graph?.labels).toEqual([label]);
-
-    await server.close();
   });
 });

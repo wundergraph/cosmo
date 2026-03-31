@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/protographic",
-  "version": "0.16.2",
+  "version": "0.19.2",
   "module": "src/index.ts",
   "type": "module",
   "main": "dist/src/index.js",
@@ -25,9 +25,9 @@
     "test:update": "vitest run -u",
     "build": "tsc",
     "bench": "vitest bench --run",
-    "format": "prettier --write src tests",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src"
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
+    "format": "prettier -w ."
   },
   "devDependencies": {
     "@types/lodash-es": "4.17.12",

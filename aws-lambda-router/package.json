@@ -1,6 +1,6 @@
 {
   "name": "aws-lambda-router",
-  "version": "0.39.2",
+  "version": "0.40.1",
   "private": true,
   "description": "Placeholder package to simplify versioning and releasing with lerna.",
   "keywords": [
@@ -11,6 +11,9 @@
     "aws-lambda",
     "serverless"
   ],
+  "scripts": {
+    "format": "go fmt ./..."
+  },
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"

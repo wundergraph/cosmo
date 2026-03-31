@@ -44,11 +44,20 @@
         "EngineStats": {
           "Subscriptions": false
         },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false
+        },
         "CircuitBreaker": false,
         "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "Exporters": null
+        "Exporters": null,
+        "LogExporter": {
+          "Enabled": false,
+          "ExcludeMetrics": null,
+          "IncludeMetrics": null
+        }
       },
       "Prometheus": {
         "Enabled": true,
@@ -59,6 +68,10 @@
         "Streams": false,
         "EngineStats": {
           "Subscriptions": false
+        },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false
         },
         "CircuitBreaker": false,
         "ExcludeMetrics": null,
@@ -272,6 +285,7 @@
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
+  "LogServiceName": "@wundergraph/router",
   "ShutdownDelay": 60000000000,
   "GracePeriod": 30000000000,
   "PollInterval": 10000000000,
@@ -376,6 +390,7 @@
     },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
+    "CostControl": null,
     "DepthLimit": null,
     "ParserLimits": {
       "ApproximateDepthLimit": 200,
@@ -419,6 +434,8 @@
     "WebSocketClientPingTimeout": 30000000000,
     "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
+    "SlowPlanCacheSize": 300,
+    "SlowPlanCacheThreshold": 100000000,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
@@ -525,6 +542,17 @@
     "Storage": {
       "ProviderID": "",
       "ObjectPrefix": ""
+    },
+    "Manifest": {
+      "Enabled": false,
+      "PollInterval": 10000000000,
+      "PollJitter": 5000000000,
+      "Warmup": {
+        "Enabled": true,
+        "Workers": 4,
+        "ItemsPerSecond": 50,
+        "Timeout": 30000000000
+      }
     }
   },
   "AutomaticPersistedQueries": {

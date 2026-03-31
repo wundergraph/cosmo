@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/cosmo-shared",
-  "version": "0.43.6",
+  "version": "0.45.2",
   "description": "Shared code between WunderGraph Cosmo packages",
   "main": "./dist/index.js",
   "type": "module",
@@ -19,7 +19,8 @@
     "test": "pnpm lint && vitest run",
     "test:update": "vitest run -u",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
+    "format": "prettier -w -c .",
     "generate-subgraph-configs": "tsx test/testdata/subgraphConfigGenerator.ts"
   },
   "keywords": [

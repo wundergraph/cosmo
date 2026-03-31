@@ -1,0 +1,216 @@
+---
+title: "Deploy Your First Router Plugin"
+description: "Learn how to use gRPC plugins with Cosmo Cloud & Cosmo Router"
+icon: plug
+---
+
+import GoTutorial from '/snippets/go-tutorial.mdx';
+import TsTutorial from '/snippets/ts-tutorial.mdx';
+
+<Tip>
+This tutorial is part of [Cosmo Connect](/connect/overview) and focuses on deploying a [Router Plugin](/router/gRPC/plugins).
+</Tip>
+
+## Prerequisites
+
+- [Cosmo CLI](/cli/intro) (minimum version: [0.98.0](https://github.com/wundergraph/cosmo/releases/tag/wgc%400.98.0)) installed and configured
+- [Cosmo Router](/router/intro) (minimum version: [0.242.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.242.0)) installed and configured to use Cosmo Cloud
+
+If you're new to Cosmo, you should start with the [Cosmo Cloud Onboarding](/getting-started/cosmo-cloud-onboarding) guide. This tutorial assumes you've created a federated graph and deployed and configured router(s) for it.
+
+## Overview
+
+gRPC plugins are a powerful new way to write and deploy subgraphs without the need for a GraphQL server. You can use plugins to wrap legacy APIs, mock future subgraphs or fully implement new features. Plugins are written in Go or TypeScript and can be deployed and run automatically by the Cosmo Router.
+
+For this tutorial, we'll create a gRPC plugin called `starwars` that wraps a small portion of the REST API from [SWAPI](https://swapi.info/). SWAPI is a free and open-source public API that provides information about Star Wars characters, planets, and more. For the tutorial, it functions as a stand-in for your own API or external datasource (an SQL database, Stripe, etc.).
+
+gRPC plugins support all the same features as [gRPC services](/router/gRPC/grpc-services), but you don't have to create separate deployments, handle networking, or manage inter-service authentication.
+
+Here's a short version of the steps for reference:
+
+<Steps>
+  <Step title="Initialize a new plugin">
+    Create a new gRPC plugin using `wgc router plugin init <name>` and define your GraphQL schema.
+    
+    [→ Jump to initialization](#initialize-plugin)
+  </Step>
+  <Step title="Design your schema">
+    Define your GraphQL schema that will be used to integrate your plugin into your federated graph.
+    
+    [→ Jump to schema design](#design-your-schema)
+  </Step>
+  <Step title="Generate & Implement">
+    Generate Protobuf code with `wgc router plugin generate` and implement your resolvers in Go.
+    
+    [→ Jump to implementation](#generate-and-implement)
+  </Step>
+  <Step title="Publish & Deploy">
+    Publish your plugin to Cosmo with `wgc router plugin publish` and test via GraphQL queries.
+    
+    [→ Jump to deployment](#publish-and-deploy)
+  </Step>
+</Steps>
+
+---
+
+## Setting up the CLI
+
+Before we start, we should make sure that your version of our CLI `wgc` is up to date and you're logged in.
+
+Check your version with:
+```bash
+wgc --version
+```
+
+<Warning>This needs to be `>=0.90.1` for the tutorial to work correctly.</Warning>
+
+Log in with:
+```bash
+wgc auth login
+```
+
+After logging in, verify your session and ensure you’re in the correct organization by running:
+```bash
+wgc auth whoami
+```
+
+## Building Plugins
+
+First off, let's get familiar with some terminology we use to describe different parts of the platform:
+
+- **Cosmo Cloud**: Our cloud-hosted platform for publishing and monitoring your subgraphs
+- **Supergraph**: The unified graph containing the composition of all your subgraphs
+- **Subgraph**: A small part of a supergraph, usually serving a small service contract. For example, "billing"
+- **gRPC Subgraph**: A subgraph built with our new gRPC-based tooling that can be run standalone or as a gRPC plugin
+- **gRPC Plugin**: A way to run subgraphs created with gRPC alongside the router directly in your infrastructure, no extra deployment required
+
+Now that we have that sorted, let's move onto the good stuff.
+
+###  Initialize Plugin
+
+You can create a gRPC plugin using our CLI tool, `wgc` (Replace `preferredLang` with either `go` for Go, and `ts` for TypeScript):
+
+```bash
+wgc router plugin init starwars --language <preferredLang>
+```
+
+You should now have a directory containing a single plugin, `starwars`. We'll go over what each file does soon.
+
+<CodeGroup>
+```text go
+starwars
+├── Dockerfile
+├── generated
+│   ├── mapping.json
+│   ├── service.proto
+│   └── service.proto.lock.json
+├── go.mod
+├── Makefile
+├── README.md
+└── src
+    ├── main.go
+    ├── main_test.go
+    └── schema.graphql
+```
+```text TypeScript
+starwars
+├── Dockerfile
+├── generated
+│   ├── mapping.json
+│   ├── service.proto
+│   └── service.proto.lock.json
+├── package.json
+├── tsconfig.json
+├── Makefile
+├── README.md
+├── patches
+└── src
+	  ├── plugin.ts
+	  ├── plugin.test.ts
+	  ├── plugin-server.ts
+	  └── schema.graphql
+```
+</CodeGroup>
+
+### Design your schema
+
+The first thing we need to do is take a look at the GraphQL schema in `starwars/src/schema.graphql`. It doesn't contain our schema yet, so we'll start by defining our new service in GraphQL terms.
+
+When you open this file, it will have some placeholder schema inside. You can safely remove all of the content and replace it with the following:
+
+```graphql src/schema.graphql
+type Person {
+  """
+  The name of this person
+  """
+  name: String!
+
+  """
+  The height of the person in centimeters
+  """
+  height: String!
+
+  """
+  The mass of the person in kilograms
+  """
+  mass: String!
+
+  """
+  The hair color of this person. Will be "unknown" if not known or "n/a" if the person does not have hair
+  """
+  hair_color: String!
+
+  """
+  The skin color of this person
+  """
+  skin_color: String!
+
+  """
+  The eye color of this person. Will be "unknown" if not known or "n/a" if the person does not have an eye
+  """
+  eye_color: String!
+
+  """
+  The birth year of the person, using BBY or ABY (Before/After Battle of Yavin)
+  """
+  birth_year: String!
+
+  """
+  The gender of this person. Either "Male", "Female" or "unknown", "n/a" if no gender
+  """
+  gender: String!
+}
+
+type Query {
+  """
+  get all the people
+  """
+  people: [Person!]!
+}
+```
+
+For this example, we won't utilize the entire SWAPI for this tutorial, only the `people` resource and its endpoints.
+
+This schema has a single type, "Person", and a query to get all the people or a specific person by ID.
+
+### Generate and Implement
+
+Now we can use `wgc` again to generate the Protobuf representation of our subgraph and boilerplate code to implement it in Golang.
+
+```bash
+wgc router plugin generate ./starwars
+```
+
+You'll now see a few new files in the `generated` folder.
+
+Pick the appropriate tab based on the language you wish to follow the tutorial in.
+
+<Tabs>
+  <Tab title="Go">
+    <GoTutorial/>
+  </Tab>
+  <Tab title="TypeScript (With Bun)">
+    <TsTutorial/>
+  </Tab>
+</Tabs>
+

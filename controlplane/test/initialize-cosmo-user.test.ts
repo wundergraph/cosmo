@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
@@ -23,36 +23,36 @@ describe('initializeCosmoUser', () => {
 
   test.each(['', '     '])('should return `Bad Request` when token is empty or whitespace', async (token: string) => {
     const { client, server } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     const response = await client.initializeCosmoUser({ token });
     expect(response.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
-
-    await server.close();
   });
 
-  test('that an invalid token returns `Bad Request`', async () => {
+  test('that an invalid token returns `Bad Request`', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const response = await client.initializeCosmoUser({ token: 'not.avalid.token' });
     expect(response.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
-
-    await server.close();
   });
 
-  test('that a request with an invalid access token is rejected', async () => {
+  test('that a request with an invalid access token is rejected', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const initializeCosmoUserResponse = await client.initializeCosmoUser({
       // The token was obtained from jwt.io
-      token: 'eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.jYW04zLDHfR1v7xdrW3lCGZrMIsVe0vWCfVkN2DRns2c3MN-mcp_-RE6TN9umSBYoNV-mnb31wFf8iun3fB6aDS6m_OXAiURVEKrPFNGlR38JSHUtsFzqTOj-wFrJZN4RwvZnNGSMvK3wzzUriZqmiNLsG8lktlEn6KA4kYVaM61_NpmPHWAjGExWv7cjHYupcjMSmR8uMTwN5UuAwgW6FRstCJEfoxwb0WKiyoaSlDuIiHZJ0cyGhhEmmAPiCwtPAwGeaL1yZMcp0p82cpTQ5Qb-7CtRov3N4DcOHgWYk6LomPR5j5cCkePAz87duqyzSMpCB0mCOuE3CU2VMtGeQ',
+      token:
+        'eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.jYW04zLDHfR1v7xdrW3lCGZrMIsVe0vWCfVkN2DRns2c3MN-mcp_-RE6TN9umSBYoNV-mnb31wFf8iun3fB6aDS6m_OXAiURVEKrPFNGlR38JSHUtsFzqTOj-wFrJZN4RwvZnNGSMvK3wzzUriZqmiNLsG8lktlEn6KA4kYVaM61_NpmPHWAjGExWv7cjHYupcjMSmR8uMTwN5UuAwgW6FRstCJEfoxwb0WKiyoaSlDuIiHZJ0cyGhhEmmAPiCwtPAwGeaL1yZMcp0p82cpTQ5Qb-7CtRov3N4DcOHgWYk6LomPR5j5cCkePAz87duqyzSMpCB0mCOuE3CU2VMtGeQ',
     });
     expect(initializeCosmoUserResponse?.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
-
-    await server.close();
   });
 
-  test('that a user that already exists in Cosmo is not modified', async () => {
+  test('that a user that already exists in Cosmo is not modified', async (testContext) => {
     const { client, server, keycloakClient, users, realm } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const signIn = createSignInFn({ keycloakBaseUrl: keycloakClient.client.baseUrl, realm });
 
     const userRepo = new UserRepository(server.log, server.db);
@@ -72,12 +72,12 @@ describe('initializeCosmoUser', () => {
     // Initialize the user in the database by accessing the RPC
     const initializeCosmoUserResponse = await client.initializeCosmoUser({ token });
     expect(initializeCosmoUserResponse?.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('that a user that does not exists in Cosmo is initialized correctly', async () => {
+  test('that a user that does not exists in Cosmo is initialized correctly', async (testContext) => {
     const { client, server, keycloakClient, realm } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const signIn = createSignInFn({ keycloakBaseUrl: keycloakClient.client.baseUrl, realm });
 
     const userEmail = randomUUID() + '@wg.com';
@@ -93,11 +93,13 @@ describe('initializeCosmoUser', () => {
       firstName: 'Fake',
       lastName: 'User',
       realm,
-      credentials: [{
-        type: 'password',
-        value: 'wunder@123',
-        temporary: false,
-      }],
+      credentials: [
+        {
+          type: 'password',
+          value: 'wunder@123',
+          temporary: false,
+        },
+      ],
     });
 
     // Ensure that the user does not exist in the database
@@ -122,37 +124,32 @@ describe('initializeCosmoUser', () => {
     const keycloakGroups = await keycloakClient.getKeycloakUserGroups({ realm, userID: keycloakUserId });
     expect(keycloakGroups.length).toBe(1);
     expect(keycloakGroups[0].path).toBe(`/${orgMemberships[0].slug}/admin`);
-
-    await server.close();
   });
 });
 
 type AuthResponse = {
   access_token: string;
-}
+};
 
-function createSignInFn({ keycloakBaseUrl, realm }: { keycloakBaseUrl: string, realm: string }) {
+function createSignInFn({ keycloakBaseUrl, realm }: { keycloakBaseUrl: string; realm: string }) {
   return async (username: string, password: string): Promise<AuthResponse> => {
-    const response = await fetch(
-      `${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/token`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'password',
-          client_id: 'admin-cli',
-          username,
-          password,
-          scope: 'openid',
-        }),
-      }
-    );
+    const response = await fetch(`${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'password',
+        client_id: 'admin-cli',
+        username,
+        password,
+        scope: 'openid',
+      }),
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to authenticate user: ${response.statusText}`);
     }
 
-    const respObj = await response.json() as AuthResponse;
+    const respObj = (await response.json()) as AuthResponse;
     if (!respObj.access_token) {
       throw new Error('No ID token returned from Keycloak');
     }

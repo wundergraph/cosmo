@@ -79,13 +79,14 @@ describe('Schema updated webhook tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('should include correct composedSchemaVersionId and send PROPOSAL_STATE_UPDATED webhook when publishing subgraph', async () => {
+  test('should include correct composedSchemaVersionId and send PROPOSAL_STATE_UPDATED webhook when publishing subgraph', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup: Create two separate federated graphs with different subgraphs
     const fedGraph1Name = genID('fedGraph1');
@@ -141,13 +142,7 @@ describe('Schema updated webhook tests', () => {
       DEFAULT_SUBGRAPH_URL_TWO,
     );
 
-    await createFederatedGraph(
-      client,
-      fedGraph2Name,
-      DEFAULT_NAMESPACE,
-      [joinLabel(label2)],
-      'http://localhost:3003',
-    );
+    await createFederatedGraph(client, fedGraph2Name, DEFAULT_NAMESPACE, [joinLabel(label2)], 'http://localhost:3003');
 
     // Get federated graph IDs
     const fedGraph1Res = await client.getFederatedGraphByName({
@@ -422,17 +417,16 @@ describe('Schema updated webhook tests', () => {
     );
     expect(proposal2StateWebhooks.length).toBe(1);
     expect(proposal2StateWebhooks[0].payload.payload.proposal.state).toBe('PUBLISHED');
-
-    await server.close();
   });
 
-  test('should include correct composedSchemaVersionId and send PROPOSAL_STATE_UPDATED webhook when deleting subgraph', async () => {
+  test('should include correct composedSchemaVersionId and send PROPOSAL_STATE_UPDATED webhook when deleting subgraph', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup: Create two federated graphs, each with two subgraphs (we'll delete one from each)
     const fedGraph1Name = genID('fedGraph1');
@@ -530,13 +524,7 @@ describe('Schema updated webhook tests', () => {
       'http://localhost:4004',
     );
 
-    await createFederatedGraph(
-      client,
-      fedGraph2Name,
-      DEFAULT_NAMESPACE,
-      [joinLabel(label2)],
-      'http://localhost:3003',
-    );
+    await createFederatedGraph(client, fedGraph2Name, DEFAULT_NAMESPACE, [joinLabel(label2)], 'http://localhost:3003');
 
     // Get federated graph IDs
     const fedGraph1Res = await client.getFederatedGraphByName({
@@ -764,7 +752,5 @@ describe('Schema updated webhook tests', () => {
     );
     expect(proposal2StateWebhooks.length).toBe(1);
     expect(proposal2StateWebhooks[0].payload.payload.proposal.state).toBe('PUBLISHED');
-
-    await server.close();
   });
 });

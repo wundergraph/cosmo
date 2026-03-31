@@ -1,21 +1,21 @@
 import {
   incompatibleParentTypeMergeError,
   INPUT_OBJECT,
-  InputObjectDefinitionData,
+  type InputObjectDefinitionData,
   invalidSubgraphNamesError,
   KEY,
   noBaseDefinitionForExtensionError,
   noQueryRootTypeError,
   OBJECT,
-  ObjectDefinitionData,
+  type ObjectDefinitionData,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
-  ScalarDefinitionData,
+  type ScalarDefinitionData,
   SHAREABLE,
   stringToNamedTypeNode,
-  Subgraph,
-  SubgraphName,
+  type Subgraph,
+  type SubgraphName,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
 import {

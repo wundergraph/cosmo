@@ -71,6 +71,20 @@ poll_interval: "${TEST_POLL_INTERVAL}"
 	require.Equal(t, time.Second*20, cfg.Config.PollInterval)
 }
 
+func TestLoadLogServiceNameFromEnv(t *testing.T) {
+	t.Setenv("LOG_SERVICE_NAME", "my-custom-service")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+	cfg, err := LoadConfig([]string{f})
+
+	require.NoError(t, err)
+
+	require.Equal(t, "my-custom-service", cfg.Config.LogServiceName)
+}
+
 func TestLoadWatchCfgFromEnvars(t *testing.T) {
 	t.Setenv("WATCH_CONFIG_ENABLED", "true")
 	t.Setenv("WATCH_CONFIG_INTERVAL", "30s")
@@ -202,6 +216,63 @@ telemetry:
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 1)
 	require.Equal(t, RegExArray{regexp.MustCompile("^go_.*"), regexp.MustCompile("^process_.*")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
 	require.Equal(t, RegExArray{regexp.MustCompile("^instance")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels)
+}
+
+func TestLogExporterIncludeExcludeMetricsMutuallyExclusive(t *testing.T) {
+	t.Parallel()
+
+	t.Run("only exclude_metrics is valid", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: '1'
+
+telemetry:
+  metrics:
+    otlp:
+      log_exporter:
+        enabled: true
+        exclude_metrics: ["^runtime_.*"]
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("only include_metrics is valid", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: '1'
+
+telemetry:
+  metrics:
+    otlp:
+      log_exporter:
+        enabled: true
+        include_metrics: ["^router_http_.*"]
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("both include_metrics and exclude_metrics is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: '1'
+
+telemetry:
+  metrics:
+    otlp:
+      log_exporter:
+        enabled: true
+        exclude_metrics: ["^runtime_.*"]
+        include_metrics: ["^router_http_.*"]
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "log_exporter")
+	})
 }
 
 func TestLogLevels(t *testing.T) {
@@ -434,7 +505,7 @@ persisted_operations:
 	require.NoError(t, err, &js)
 }
 
-func TestInvalidPersistedOperations(t *testing.T) {
+func TestPersistedOperationsStorageWithoutObjectPrefix(t *testing.T) {
 	t.Parallel()
 
 	f := createTempFileFromFixture(t, `
@@ -454,12 +525,9 @@ persisted_operations:
     size: 100MB
   storage:
     provider_id: s3
-    # Missing object_prefix
 `)
 	_, err := LoadConfig([]string{f})
-	var js *jsonschema.ValidationError
-	require.ErrorAs(t, err, &js)
-	require.Equal(t, "at '/persisted_operations/storage': missing property 'object_prefix'", js.Causes[0].Error())
+	require.NoError(t, err)
 }
 
 func TestValidExecutionConfig(t *testing.T) {
@@ -928,6 +996,15 @@ func TestConfigMerging(t *testing.T) {
 				Storage: PersistedOperationsStorageConfig{
 					ProviderID:   "s3",
 					ObjectPrefix: "ee",
+				},
+				Manifest: PQLManifestConfig{
+					PollInterval: 10 * time.Second,
+					PollJitter:   5 * time.Second,
+					Warmup: PQLManifestWarmupConfig{
+						Enabled: true,
+						Workers: 4,
+						Timeout: 30 * time.Second,
+					},
 				},
 			},
 			AutomaticPersistedQueries: AutomaticPersistedQueriesConfig{
@@ -1607,5 +1684,261 @@ access_logs:
 			require.NoError(t, err, "Pattern '%s' should be valid but was rejected", tc.pattern)
 			require.Equal(t, tc.mode, c.Config.AccessLogs.Output.File.Mode, "Pattern '%s' should parse to mode %o but got %o", tc.pattern, tc.mode, c.Config.AccessLogs.Output.File.Mode)
 		}
+	})
+}
+
+func TestCostControlConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid config with estimated_list_size when enabled", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("estimated_list_size is required when enabled", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/security/cost_control'")
+		require.ErrorContains(t, err, "missing property 'estimated_list_size'")
+	})
+
+	t.Run("estimated_list_size not required when disabled", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: false
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("estimated_list_size must be positive", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 0
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/security/cost_control/estimated_list_size'")
+		require.ErrorContains(t, err, "minimum")
+	})
+
+	t.Run("valid mode values are accepted", func(t *testing.T) {
+		t.Parallel()
+
+		for _, mode := range []string{"measure", "enforce"} {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+    mode: `+mode+`
+`)
+			_, err := LoadConfig([]string{f})
+			require.NoError(t, err, "mode %q should be valid", mode)
+		}
+	})
+
+	t.Run("invalid mode is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+    mode: invalid
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/security/cost_control/mode'")
+		require.ErrorContains(t, err, "value must be one of")
+	})
+
+	t.Run("max_estimated_limit must be positive when mode is enforce", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+    mode: enforce
+    max_estimated_limit: 0
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/security/cost_control/max_estimated_limit'")
+		require.ErrorContains(t, err, "minimum")
+	})
+
+	t.Run("max_estimated_limit zero is allowed when mode is measure", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+    mode: measure
+    max_estimated_limit: 0
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("valid enforce config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+    mode: enforce
+    max_estimated_limit: 100
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+}
+
+func TestPQLManifestConfig(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.False(t, cfg.Config.PersistedOperationsConfig.Manifest.Enabled)
+		require.Equal(t, 10*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollInterval)
+		require.Equal(t, 5*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollJitter)
+	})
+
+	t.Run("yaml config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+persisted_operations:
+  manifest:
+    enabled: true
+    poll_interval: 60s
+    poll_jitter: 15s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.True(t, cfg.Config.PersistedOperationsConfig.Manifest.Enabled)
+		require.Equal(t, 60*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollInterval)
+		require.Equal(t, 15*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollJitter)
+	})
+
+	t.Run("env variables", func(t *testing.T) {
+		t.Setenv("PERSISTED_OPERATIONS_MANIFEST_ENABLED", "true")
+		t.Setenv("PERSISTED_OPERATIONS_MANIFEST_POLL_INTERVAL", "45s")
+		t.Setenv("PERSISTED_OPERATIONS_MANIFEST_POLL_JITTER", "8s")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.True(t, cfg.Config.PersistedOperationsConfig.Manifest.Enabled)
+		require.Equal(t, 45*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollInterval)
+		require.Equal(t, 8*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollJitter)
+	})
+
+	t.Run("poll_interval below minimum rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+persisted_operations:
+  manifest:
+    enabled: true
+    poll_interval: 5s
+`)
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, []string{"persisted_operations", "manifest", "poll_interval"}, js.Causes[0].InstanceLocation)
+		require.Equal(t, "at '/persisted_operations/manifest/poll_interval': duration must be greater or equal than 10s", js.Causes[0].Error())
+	})
+
+	t.Run("poll_jitter below minimum rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+persisted_operations:
+  manifest:
+    enabled: true
+    poll_jitter: 500ms
+`)
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, []string{"persisted_operations", "manifest", "poll_jitter"}, js.Causes[0].InstanceLocation)
+		require.Equal(t, "at '/persisted_operations/manifest/poll_jitter': duration must be greater or equal than 1s", js.Causes[0].Error())
 	})
 }

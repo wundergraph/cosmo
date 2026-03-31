@@ -1,6 +1,6 @@
 {
   "name": "cdn",
-  "version": "0.16.2",
+  "version": "0.18.0",
   "private": true,
   "author": {
     "name": "WunderGraph Maintainers",
@@ -19,7 +19,7 @@
     "build": "rm -rf dist && tsc",
     "start": "tsx src/index.ts",
     "lint": "eslint --cache && prettier -c src",
-    "format:fix": "prettier --write -c src",
+    "format": "prettier -w -c .",
     "postversion": "name=$(jq -r .name package.json); version=$(jq -r .version package.json); gh workflow run image-release.yml -F name=$name -F workingDirectory=cdn-server -F tag=$version -F dockerContext=."
   },
   "dependencies": {

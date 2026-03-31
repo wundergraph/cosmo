@@ -66,6 +66,8 @@ message PublishFederatedSubgraphRequest {
   optional bool disable_resolvability_validation = 12;
   optional SubgraphType type = 13;
   optional ProtoInput proto = 14;
+  // Optional limit for the number of errors/warnings returned
+  optional int32 limit = 15;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -75,6 +77,13 @@ message PublishFederatedSubgraphResponse {
   optional bool hasChanged = 4;
   repeated CompositionWarning compositionWarnings = 5;
   optional string proposalMatchMessage = 6;
+  optional SubgraphPublishStats counts = 7;
+}
+
+message SubgraphPublishStats {
+  int32 compositionErrors = 1;
+  int32 compositionWarnings = 2;
+  int32 deploymentErrors = 3;
 }
 
 message GitInfo {
@@ -199,6 +208,15 @@ message SchemaChange{
   optional string subgraphName = 6;
 }
 
+message FederatedGraphSchemaChange {
+  string message = 1;
+  string changeType = 2;
+  optional string path = 3;
+  bool isBreaking = 4;
+  string federatedGraphName = 5;
+  optional bool hasOverride = 6;
+}
+
 message CompositionError {
   string message = 1;
   string federatedGraphName = 2;
@@ -286,6 +304,8 @@ message CheckSubgraphSchemaResponse {
   optional bool isCheckExtensionSkipped = 17;
   optional string checkExtensionErrorMessage = 18;
   optional SchemaCheckCounts counts = 19;
+  // Breaking changes detected in the composed federated graph schema (not subgraph level)
+  repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 20;
 }
 
 message SchemaCheckCounts{
@@ -297,6 +317,7 @@ message SchemaCheckCounts{
   int32 compositionWarnings = 6;
   int32 graphPruneErrors = 7;
   int32 graphPruneWarnings = 8;
+  int32 composedSchemaBreakingChanges = 9;
 }
 
 message FixSubgraphSchemaResponse {
@@ -617,6 +638,7 @@ message GetCheckSummaryResponse {
   optional string proposalName = 13;
   repeated ProposalSchemaMatch proposalMatches = 14;
   bool isProposalsEnabled = 15;
+  repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 16;
 }
 
 message GetCheckOperationsRequest {
@@ -1779,6 +1801,8 @@ message GetOperationOverridesResponse {
 message GetAllOverridesRequest {
   string graph_name = 1;
   string namespace = 2;
+  int32 limit = 3;
+  int32 offset = 4;
 }
 
 message GetAllOverridesResponse {
@@ -1792,6 +1816,7 @@ message GetAllOverridesResponse {
 
   Response response = 1;
   repeated Override overrides = 2;
+  int32 total_count = 3;
 }
 
 message IsGitHubAppInstalledRequest {
@@ -2868,6 +2893,7 @@ message CreateProposalResponse {
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 19;
   optional bool hasLinkedSchemaChecks = 20;
+  repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 21;
 }
 
 message GetProposalRequest {
@@ -2947,6 +2973,7 @@ message UpdateProposalResponse {
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 16;
   optional bool hasLinkedSchemaChecks = 17;
+  repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 18;
 }
 
 message EnableProposalsForNamespaceRequest {
@@ -3147,6 +3174,22 @@ message ListOrganizationsResponse {
 
    Response response = 1;
    repeated OrganizationMembership organizations = 2;
+}
+
+message RecomposeGraphRequest {
+  string name = 1;
+  string namespace = 2;
+  bool is_monograph = 3;
+  optional int32 limit = 4;
+  optional bool disable_resolvability_validation = 5;
+}
+
+message RecomposeGraphResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
+  optional SubgraphPublishStats errorCounts = 5;
 }
 
 service PlatformService {
@@ -3542,4 +3585,6 @@ service PlatformService {
   rpc UnlinkSubgraph(UnlinkSubgraphRequest) returns (UnlinkSubgraphResponse) {}
   // VerifyAPIKeyGraphAccess checks if the token or the jwt has organization admin or developer  and checks if the token has permissions to write to the graph
   rpc VerifyAPIKeyGraphAccess(VerifyAPIKeyGraphAccessRequest) returns (VerifyAPIKeyGraphAccessResponse) {}
+  // RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
+  rpc RecomposeGraph(RecomposeGraphRequest) returns (RecomposeGraphResponse) {}
 }
