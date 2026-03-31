@@ -3695,13 +3695,15 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
 			require.Len(t, sn[0].Attributes(), 7)
-			require.Contains(t, sn[0].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[0].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[0].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[0].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[0].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[0].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[0].Attributes(), otel.WgOperationProtocol.String("http"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[0].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+			)
 
 			// Pre-Handler Operation Parse
 
@@ -3713,28 +3715,34 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			rs := attribute.NewSet(sn[1].Resource().Attributes()...)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[1].Attributes(), 8)
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[1].Attributes(), otel.WgOperationOriginalContent.String("query { employees { id } }"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[1].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationOriginalContent.String("query { employees { id } }"),
+			)
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
@@ -3746,32 +3754,38 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[2].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[2].Attributes(), 13)
 
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[2].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[2].Attributes(), otel.WgNormalizationCacheHit.Bool(false))
-			require.Contains(t, sn[2].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[2].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationNormalizedContent.String("{employees {id}}"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[2].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgNormalizationCacheHit.Bool(false),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationNormalizedContent.String("{employees {id}}"),
+			)
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
@@ -3783,40 +3797,37 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[3].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[3].Attributes(), 11)
-
-			require.Equal(t, "Operation - Validate", sn[3].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
-
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[3].Attributes(), otel.WgFederatedGraphID.String("graph"))
-
-			require.Contains(t, sn[3].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
-
-			require.Contains(t, sn[3].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationType.String("query"))
-
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
+			asssertAttributesEqual(t, attribute.NewSet(sn[3].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgClientName.String("unknown"),
+				otel.WgValidationCacheHit.Bool(false),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationHash.String("1163600561566987607"),
+			)
 
 			// Span Resource attributes
 
@@ -3824,32 +3835,38 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[4].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[4].Attributes(), 12)
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[4].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[4].Attributes(), otel.WgEngineRequestTracingEnabled.Bool(false))
-			require.Contains(t, sn[4].Attributes(), otel.WgEnginePlanCacheHit.Bool(false))
-			require.Contains(t, sn[4].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[4].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[4].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgEngineRequestTracingEnabled.Bool(false),
+				otel.WgEnginePlanCacheHit.Bool(false),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("1163600561566987607"),
+			)
 
 			// Engine Transport
 			require.Equal(t, "query unnamed", sn[5].Name())
@@ -3862,44 +3879,53 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[5].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			sa := attribute.NewSet(sn[5].Attributes()...)
 
 			require.Len(t, sn[5].Attributes(), 21)
-			require.True(t, sa.HasValue(semconv.HTTPURLKey))
-			require.True(t, sa.HasValue(semconv.NetPeerPortKey))
 
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[5].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[5].Attributes(), otel.WgComponentName.String("engine-transport"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[5].Attributes(), semconv.NetPeerName("127.0.0.1"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPRequestContentLength(28))
-			require.Contains(t, sn[5].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[5].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[5].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[5].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[5].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[5].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphID.String("0"))
-			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPStatusCode(200))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPResponseContentLength(117))
+			assertHasAttributes(t, sa,
+				semconv.HTTPURLKey,
+				semconv.NetPeerPortKey,
+			)
+
+			asssertAttributesEqual(t, sa,
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgComponentName.String("engine-transport"),
+				semconv.HTTPMethod("POST"),
+				semconv.HTTPFlavorKey.String("1.1"),
+				semconv.NetPeerName("127.0.0.1"),
+				semconv.HTTPRequestContentLength(28),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("1163600561566987607"),
+				otel.WgSubgraphID.String("0"),
+				otel.WgSubgraphName.String("employees"),
+				semconv.HTTPStatusCode(200),
+				semconv.HTTPResponseContentLength(117),
+			)
 
 			// Engine Loader Hooks
 			require.Equal(t, "Engine - Fetch", sn[6].Name())
@@ -3912,35 +3938,42 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[6].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
-			require.Len(t, sn[6].Attributes(), 14)
+			rs = attribute.NewSet(sn[6].Attributes()...)
 
-			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphID.String("0"))
-			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[6].Attributes(), semconv.HTTPStatusCode(200))
-			require.Contains(t, sn[6].Attributes(), otel.WgComponentName.String("engine-loader"))
-			require.Contains(t, sn[6].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[6].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[6].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Len(t, sn[6].Attributes(), 14)
+			asssertAttributesEqual(t, rs,
+				otel.WgSubgraphID.String("0"),
+				otel.WgSubgraphName.String("employees"),
+				semconv.HTTPStatusCode(200),
+				otel.WgComponentName.String("engine-loader"),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("1163600561566987607"),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+			)
 
 			// GraphQL handler
 			require.Equal(t, "Operation - Execute", sn[7].Name())
@@ -3953,33 +3986,41 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[7].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[7].Attributes(), 12)
-			require.Contains(t, sn[7].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[7].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[7].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[7].Attributes(), otel.WgAcquireResolverWaitTimeMs.Int64(0))
-			require.Contains(t, sn[7].Attributes(), otel.WgResolverDeduplicatedRequest.Bool(false))
+			rs = attribute.NewSet(sn[7].Attributes()...)
+
+			asssertAttributesEqual(t, rs,
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("1163600561566987607"),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgAcquireResolverWaitTimeMs.Int64(0),
+				otel.WgResolverDeduplicatedRequest.Bool(false),
+			)
 
 			// Root Server middleware
 			require.Equal(t, "query unnamed", sn[8].Name())
@@ -3992,48 +4033,56 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[8].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			sa = attribute.NewSet(sn[8].Attributes()...)
 
 			require.Len(t, sn[8].Attributes(), 25)
-			require.True(t, sa.HasValue(semconv.NetHostPortKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
-			require.True(t, sa.HasValue(otel.WgRouterConfigVersion))
-			require.True(t, sa.HasValue(otel.WgFederatedGraphID))
-			require.True(t, sa.HasValue("http.user_agent"))
-			require.True(t, sa.HasValue("http.host"))
-			require.True(t, sa.HasValue("http.read_bytes"))
-			require.True(t, sa.HasValue("http.wrote_bytes"))
 
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPScheme("http"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[8].Attributes(), semconv.NetHostName("localhost"))
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[8].Attributes(), otel.WgComponentName.String("router-server"))
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterRootSpan.Bool(true))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPTarget("/graphql"))
-			require.Contains(t, sn[8].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[8].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
+			assertHasAttributes(t, sa,
+				semconv.NetHostPortKey,
+				semconv.NetSockPeerAddrKey,
+				semconv.NetSockPeerPortKey,
+				otel.WgRouterConfigVersion,
+				otel.WgFederatedGraphID,
+				"http.user_agent",
+				"http.host",
+				"http.read_bytes",
+				"http.wrote_bytes",
+			)
 
+			asssertAttributesEqual(t, sa,
+				semconv.HTTPMethod("POST"),
+				semconv.HTTPScheme("http"),
+				semconv.HTTPFlavorKey.String("1.1"),
+				semconv.NetHostName("localhost"),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgComponentName.String("router-server"),
+				otel.WgRouterRootSpan.Bool(true),
+				semconv.HTTPTarget("/graphql"),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgOperationHash.String("1163600561566987607"),
+				semconv.HTTPStatusCode(200),
+			)
 			/**
 			* Metrics
 			 */
@@ -4334,16 +4383,20 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			rs = attribute.NewSet(rm.Resource.Attributes()...)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
@@ -4422,7 +4475,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			set := attribute.NewSet(sn[0].Attributes()...)
 
-			assertHasAttributes(t, set,
+			asssertAttributesEqual(t, set,
 				otel.WgRouterVersion.String("dev"),
 				otel.WgRouterClusterName.String(""),
 				otel.WgFederatedGraphID.String("graph"),
@@ -4431,14 +4484,6 @@ func TestFlakyTelemetry(t *testing.T) {
 				otel.WgClientVersion.String("missing"),
 				otel.WgOperationProtocol.String("http"),
 			)
-
-			// require.Contains(t, sn[0].Attributes(), otel.WgRouterVersion.String("dev"))
-			// require.Contains(t, sn[0].Attributes(), otel.WgRouterClusterName.String(""))
-			// require.Contains(t, sn[0].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			// require.Contains(t, sn[0].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			// require.Contains(t, sn[0].Attributes(), otel.WgClientName.String("unknown"))
-			// require.Contains(t, sn[0].Attributes(), otel.WgClientVersion.String("missing"))
-			// require.Contains(t, sn[0].Attributes(), otel.WgOperationProtocol.String("http"))
 
 			// Pre-Handler Operation Parse
 
@@ -4450,28 +4495,35 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			rs := attribute.NewSet(sn[1].Resource().Attributes()...)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[1].Attributes(), 8)
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[1].Attributes(), otel.WgOperationOriginalContent.String("{ employee(id:1) { id details { forename surname } } }"))
+			rs = attribute.NewSet(sn[1].Attributes()...)
+			asssertAttributesEqual(t, rs,
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationOriginalContent.String("{ employee(id:1) { id details { forename surname } } }"),
+			)
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
@@ -4483,32 +4535,38 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[2].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[2].Attributes(), 13)
 
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[2].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[2].Attributes(), otel.WgNormalizationCacheHit.Bool(false))
-			require.Contains(t, sn[2].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[2].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationNormalizedContent.String("query($a: Int!){employee(id: $a){id details {forename surname}}}"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[2].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgNormalizationCacheHit.Bool(false),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationNormalizedContent.String("query($a: Int!){employee(id: $a){id details {forename surname}}}"),
+			)
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
@@ -4520,40 +4578,38 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[3].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[3].Attributes(), 11)
 
-			require.Equal(t, "Operation - Validate", sn[3].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
-
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[3].Attributes(), otel.WgFederatedGraphID.String("graph"))
-
-			require.Contains(t, sn[3].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
-
-			require.Contains(t, sn[3].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationType.String("query"))
-
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
-			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
+			asssertAttributesEqual(t, attribute.NewSet(sn[3].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgClientName.String("unknown"),
+				otel.WgValidationCacheHit.Bool(false),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationHash.String("14671468813149144966"),
+			)
 
 			// Span Resource attributes
 
@@ -4561,32 +4617,38 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[4].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[4].Attributes(), 12)
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[4].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[4].Attributes(), otel.WgEngineRequestTracingEnabled.Bool(false))
-			require.Contains(t, sn[4].Attributes(), otel.WgEnginePlanCacheHit.Bool(false))
-			require.Contains(t, sn[4].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[4].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[4].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgEngineRequestTracingEnabled.Bool(false),
+				otel.WgEnginePlanCacheHit.Bool(false),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("14671468813149144966"),
+			)
 
 			// Engine Transport
 			require.Equal(t, "query unnamed", sn[5].Name())
@@ -4599,16 +4661,20 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[5].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
@@ -4619,7 +4685,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, sa.HasValue(semconv.HTTPURLKey))
 			require.True(t, sa.HasValue(semconv.NetPeerPortKey))
 
-			assertHasAttributes(t, sa,
+			asssertAttributesEqual(t, sa,
 				otel.WgRouterVersion.String("dev"),
 				otel.WgRouterClusterName.String(""),
 				otel.WgFederatedGraphID.String("graph"),
@@ -4652,35 +4718,40 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[6].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[6].Attributes(), 14)
-
-			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphID.String("0"))
-			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[6].Attributes(), semconv.HTTPStatusCode(200))
-			require.Contains(t, sn[6].Attributes(), otel.WgComponentName.String("engine-loader"))
-			require.Contains(t, sn[6].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[6].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[6].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			asssertAttributesEqual(t, attribute.NewSet(sn[6].Attributes()...),
+				otel.WgSubgraphID.String("0"),
+				otel.WgSubgraphName.String("employees"),
+				semconv.HTTPStatusCode(200),
+				otel.WgComponentName.String("engine-loader"),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("14671468813149144966"),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+			)
 
 			// GraphQL handler
 			require.Equal(t, "Operation - Execute", sn[7].Name())
@@ -4697,28 +4768,31 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[7].Attributes(), 12)
-			require.Contains(t, sn[7].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[7].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
-
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[7].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[7].Attributes(), otel.WgAcquireResolverWaitTimeMs.Int64(0))
+			asssertAttributesEqual(t, attribute.NewSet(sn[7].Attributes()...),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("14671468813149144966"),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgAcquireResolverWaitTimeMs.Int64(0),
+			)
 
 			// Root Server middleware
 			require.Equal(t, "query unnamed", sn[8].Name())
@@ -4735,43 +4809,50 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			sa = attribute.NewSet(sn[8].Attributes()...)
 
 			require.Len(t, sn[8].Attributes(), 25)
-			require.True(t, sa.HasValue(semconv.NetHostPortKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
-			require.True(t, sa.HasValue(otel.WgRouterConfigVersion))
-			require.True(t, sa.HasValue(otel.WgFederatedGraphID))
-			require.True(t, sa.HasValue("http.user_agent"))
-			require.True(t, sa.HasValue("http.host"))
-			require.True(t, sa.HasValue("http.read_bytes"))
-			require.True(t, sa.HasValue("http.wrote_bytes"))
 
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPScheme("http"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[8].Attributes(), semconv.NetHostName("localhost"))
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[8].Attributes(), otel.WgComponentName.String("router-server"))
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterRootSpan.Bool(true))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPTarget("/graphql"))
-			require.Contains(t, sn[8].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[8].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
+			assertHasAttributes(t, sa,
+				semconv.NetHostPortKey,
+				semconv.NetSockPeerAddrKey,
+				semconv.NetSockPeerPortKey,
+				otel.WgRouterConfigVersion,
+				otel.WgFederatedGraphID,
+				"http.user_agent",
+				"http.host",
+				"http.read_bytes",
+				"http.wrote_bytes",
+			)
+
+			asssertAttributesEqual(t, sa,
+				semconv.HTTPMethod("POST"),
+				semconv.HTTPScheme("http"),
+				semconv.HTTPFlavorKey.String("1.1"),
+				semconv.NetHostName("localhost"),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgComponentName.String("router-server"),
+				otel.WgRouterRootSpan.Bool(true),
+				semconv.HTTPTarget("/graphql"),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgOperationHash.String("14671468813149144966"),
+				semconv.HTTPStatusCode(200),
+			)
 
 			/**
 			* Metrics
@@ -4786,7 +4867,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -4830,12 +4911,14 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, "Load Persisted Operation", sn[1].Name())
 			require.Equal(t, trace.SpanKindClient, sn[1].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[1].Attributes(), semconv.HTTPMethod(http.MethodGet))
-			require.Contains(t, sn[1].Attributes(), semconv.HTTPStatusCode(200))
+			asssertAttributesEqual(t, attribute.NewSet(sn[1].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				semconv.HTTPMethod(http.MethodGet),
+				semconv.HTTPStatusCode(200),
+			)
 
 			// Ensure the persisted operation span is a child of the root span
 			require.Equal(t, sn[1].Parent().SpanID(), sn[9].SpanContext().SpanID())
@@ -4890,13 +4973,15 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
 			require.Len(t, sn[0].Attributes(), 7)
-			require.Contains(t, sn[0].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[0].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[0].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[0].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[0].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[0].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[0].Attributes(), otel.WgOperationProtocol.String("http"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[0].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+			)
 
 			// Pre-Handler Operation Parse
 
@@ -4912,7 +4997,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.NotEmpty(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
 			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -4922,14 +5007,16 @@ func TestFlakyTelemetry(t *testing.T) {
 			// Span attributes
 
 			require.Len(t, sn[1].Attributes(), 8)
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[1].Attributes(), otel.WgOperationOriginalContent.String("query { employees { id } }"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[1].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationOriginalContent.String("query { employees { id } }"),
+			)
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
@@ -4945,7 +5032,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.NotEmpty(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
 			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -4956,17 +5043,19 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[2].Attributes(), 13)
 
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[2].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[2].Attributes(), otel.WgNormalizationCacheHit.Bool(false))
-			require.Contains(t, sn[2].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[2].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[2].Attributes(), otel.WgOperationNormalizedContent.String("{employees {id}}"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[2].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgNormalizationCacheHit.Bool(false),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationNormalizedContent.String("{employees {id}}"),
+			)
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
@@ -4982,7 +5071,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.NotEmpty(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
 			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -4992,26 +5081,19 @@ func TestFlakyTelemetry(t *testing.T) {
 			// Span attributes
 
 			require.Len(t, sn[3].Attributes(), 11)
-
-			require.Equal(t, "Operation - Validate", sn[3].Name())
-			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
-			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
-
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[3].Attributes(), otel.WgFederatedGraphID.String("graph"))
-
-			require.Contains(t, sn[3].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
-
-			require.Contains(t, sn[3].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationType.String("query"))
-
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
+			asssertAttributesEqual(t, attribute.NewSet(sn[3].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgClientName.String("unknown"),
+				otel.WgValidationCacheHit.Bool(false),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationHash.String("1163600561566987607"),
+			)
 
 			// Span Resource attributes
 
@@ -5023,7 +5105,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.NotEmpty(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
 			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -5033,18 +5115,20 @@ func TestFlakyTelemetry(t *testing.T) {
 			// Span attributes
 
 			require.Len(t, sn[4].Attributes(), 12)
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[4].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[4].Attributes(), otel.WgEngineRequestTracingEnabled.Bool(false))
-			require.Contains(t, sn[4].Attributes(), otel.WgEnginePlanCacheHit.Bool(false))
-			require.Contains(t, sn[4].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[4].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[4].Attributes()...),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgEngineRequestTracingEnabled.Bool(false),
+				otel.WgEnginePlanCacheHit.Bool(false),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("1163600561566987607"),
+			)
 
 			// Engine Transport
 			require.Equal(t, "query unnamed", sn[5].Name())
@@ -5061,7 +5145,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.NotEmpty(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
 			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -5076,25 +5160,27 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, sa.HasValue(semconv.HTTPURLKey))
 			require.True(t, sa.HasValue(semconv.NetPeerPortKey))
 
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[5].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[5].Attributes(), otel.WgComponentName.String("engine-transport"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[5].Attributes(), semconv.NetPeerName("127.0.0.1"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPRequestContentLength(28))
-			require.Contains(t, sn[5].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[5].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[5].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[5].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[5].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[5].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphID.String("0"))
-			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPStatusCode(200))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPResponseContentLength(117))
+			asssertAttributesEqual(t, sa,
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgComponentName.String("engine-transport"),
+				semconv.HTTPMethod("POST"),
+				semconv.HTTPFlavorKey.String("1.1"),
+				semconv.NetPeerName("127.0.0.1"),
+				semconv.HTTPRequestContentLength(28),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("1163600561566987607"),
+				otel.WgSubgraphID.String("0"),
+				otel.WgSubgraphName.String("employees"),
+				semconv.HTTPStatusCode(200),
+				semconv.HTTPResponseContentLength(117),
+			)
 
 			// Engine Loader Hooks
 			require.Equal(t, "Engine - Fetch", sn[6].Name())
@@ -5107,35 +5193,40 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[6].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[6].Attributes(), 14)
-
-			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphID.String("0"))
-			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[6].Attributes(), semconv.HTTPStatusCode(200))
-			require.Contains(t, sn[6].Attributes(), otel.WgComponentName.String("engine-loader"))
-			require.Contains(t, sn[6].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[6].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[6].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			asssertAttributesEqual(t, attribute.NewSet(sn[6].Attributes()...),
+				otel.WgSubgraphID.String("0"),
+				otel.WgSubgraphName.String("employees"),
+				semconv.HTTPStatusCode(200),
+				otel.WgComponentName.String("engine-loader"),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("1163600561566987607"),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+			)
 
 			// GraphQL handler
 			require.Equal(t, "Operation - Execute", sn[7].Name())
@@ -5148,32 +5239,37 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[7].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			// Span attributes
 
 			require.Len(t, sn[7].Attributes(), 12)
-			require.Contains(t, sn[7].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[7].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[7].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-			require.Contains(t, sn[7].Attributes(), otel.WgAcquireResolverWaitTimeMs.Int64(0))
+			asssertAttributesEqual(t, attribute.NewSet(sn[7].Attributes()...),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationHash.String("1163600561566987607"),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgAcquireResolverWaitTimeMs.Int64(0),
+			)
 
 			// Root Server middleware
 			require.Equal(t, "query unnamed", sn[8].Name())
@@ -5186,47 +5282,56 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, sn[8].Resource().Attributes(), 9)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			sa = attribute.NewSet(sn[8].Attributes()...)
 
 			require.Len(t, sn[8].Attributes(), 25)
-			require.True(t, sa.HasValue(semconv.NetHostPortKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
-			require.True(t, sa.HasValue(otel.WgRouterConfigVersion))
-			require.True(t, sa.HasValue(otel.WgFederatedGraphID))
-			require.True(t, sa.HasValue("http.user_agent"))
-			require.True(t, sa.HasValue("http.host"))
-			require.True(t, sa.HasValue("http.read_bytes"))
-			require.True(t, sa.HasValue("http.wrote_bytes"))
 
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPScheme("http"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[8].Attributes(), semconv.NetHostName("localhost"))
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterVersion.String("dev"))
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterClusterName.String(""))
-			require.Contains(t, sn[8].Attributes(), otel.WgComponentName.String("router-server"))
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterRootSpan.Bool(true))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPTarget("/graphql"))
-			require.Contains(t, sn[8].Attributes(), otel.WgClientName.String("unknown"))
-			require.Contains(t, sn[8].Attributes(), otel.WgClientVersion.String("missing"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationName.String(""))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
+			assertHasAttributes(t, sa,
+				semconv.NetHostPortKey,
+				semconv.NetSockPeerAddrKey,
+				semconv.NetSockPeerPortKey,
+				otel.WgRouterConfigVersion,
+				otel.WgFederatedGraphID,
+				"http.user_agent",
+				"http.host",
+				"http.read_bytes",
+				"http.wrote_bytes",
+			)
+
+			asssertAttributesEqual(t, sa,
+				semconv.HTTPMethod("POST"),
+				semconv.HTTPScheme("http"),
+				semconv.HTTPFlavorKey.String("1.1"),
+				semconv.NetHostName("localhost"),
+				otel.WgRouterVersion.String("dev"),
+				otel.WgRouterClusterName.String(""),
+				otel.WgComponentName.String("router-server"),
+				otel.WgRouterRootSpan.Bool(true),
+				semconv.HTTPTarget("/graphql"),
+				otel.WgClientName.String("unknown"),
+				otel.WgClientVersion.String("missing"),
+				otel.WgOperationProtocol.String("http"),
+				otel.WgOperationName.String(""),
+				otel.WgOperationType.String("query"),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgOperationHash.String("1163600561566987607"),
+				semconv.HTTPStatusCode(200),
+			)
 
 			/**
 			* Metrics
@@ -5497,16 +5602,20 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			rs = attribute.NewSet(rm.Resource.Attributes()...)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
@@ -5852,16 +5961,20 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			rs := attribute.NewSet(rm.Resource.Attributes()...)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
@@ -6194,16 +6307,20 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			rs := attribute.NewSet(rm.Resource.Attributes()...)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
@@ -6626,17 +6743,21 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			rs := attribute.NewSet(rm.Resource.Attributes()...)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("custom.resource", "value"))
-			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("custom.resource", "value"),
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
@@ -7055,17 +7176,21 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			rs := attribute.NewSet(rm.Resource.Attributes()...)
 
-			require.True(t, rs.HasValue("host.name"))
-			require.True(t, rs.HasValue("os.type"))
-			require.True(t, rs.HasValue("process.pid"))
+			assertHasAttributes(t, rs,
+				"host.name",
+				"os.type",
+				"process.pid",
+			)
 
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("custom.resource", "value"))
-			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
+			asssertAttributesEqual(t, rs,
+				attribute.String("custom.resource", "value"),
+				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("service.instance.id", "test-instance"),
+				attribute.String("telemetry.sdk.name", "opentelemetry"),
+				attribute.String("telemetry.sdk.language", "go"),
+				attribute.String("service.version", "dev"),
+				attribute.String("service.name", "cosmo-router"),
+			)
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
@@ -7112,45 +7237,60 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Equal(t, "Operation - Parse", sn[1].Name())
 			require.Len(t, sn[1].Attributes(), 9)
-			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
-			require.Contains(t, sn[1].Attributes(), otel.WgFeatureFlag.String("myff"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[1].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+				otel.WgFeatureFlag.String("myff"),
+			)
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Len(t, sn[2].Attributes(), 14)
-			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
-			require.Contains(t, sn[2].Attributes(), otel.WgFeatureFlag.String("myff"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[2].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+				otel.WgFeatureFlag.String("myff"),
+			)
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Len(t, sn[3].Attributes(), 12)
-			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
-			require.Contains(t, sn[3].Attributes(), otel.WgFeatureFlag.String("myff"))
-			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
+			asssertAttributesEqual(t, attribute.NewSet(sn[3].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+				otel.WgFeatureFlag.String("myff"),
+				otel.WgValidationCacheHit.Bool(false),
+			)
 
 			require.Equal(t, "Operation - Plan", sn[4].Name())
 			require.Len(t, sn[4].Attributes(), 13)
-			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
-			require.Contains(t, sn[4].Attributes(), otel.WgFeatureFlag.String("myff"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[4].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+				otel.WgFeatureFlag.String("myff"),
+			)
 
 			require.Equal(t, "query unnamed", sn[5].Name())
 			require.Len(t, sn[5].Attributes(), 22)
-			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
-			require.Contains(t, sn[5].Attributes(), otel.WgFeatureFlag.String("myff"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[5].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+				otel.WgFeatureFlag.String("myff"),
+			)
 
 			require.Equal(t, "Engine - Fetch", sn[6].Name())
 			require.Len(t, sn[6].Attributes(), 15)
-			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
-			require.Contains(t, sn[6].Attributes(), otel.WgFeatureFlag.String("myff"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[6].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+				otel.WgFeatureFlag.String("myff"),
+			)
 
 			require.Equal(t, "Operation - Execute", sn[7].Name())
 			require.Len(t, sn[7].Attributes(), 13)
-			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
-			require.Contains(t, sn[7].Attributes(), otel.WgFeatureFlag.String("myff"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[7].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+				otel.WgFeatureFlag.String("myff"),
+			)
 
 			require.Equal(t, "query unnamed", sn[8].Name())
 			require.Len(t, sn[8].Attributes(), 26)
-
-			require.Contains(t, sn[8].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
-			require.Contains(t, sn[8].Attributes(), otel.WgFeatureFlag.String("myff"))
+			asssertAttributesEqual(t, attribute.NewSet(sn[8].Attributes()...),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+				otel.WgFeatureFlag.String("myff"),
+			)
 
 			/**
 			* Metrics
