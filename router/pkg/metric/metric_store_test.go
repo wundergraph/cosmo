@@ -15,6 +15,7 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 )
 
@@ -239,6 +240,82 @@ func TestPrometheusMeterProviderCardinalityLimit(t *testing.T) {
 		count := gatherMetricCount(t, registry, "test_counter_total")
 		require.Equal(t, DefaultCardinalityLimit, count)
 	})
+}
+
+// TestOtlpScopeBasedMetricDrop verifies that metrics from the otelhttp scope
+// are dropped by the view in NewOtlpMeterProvider, while metrics from other scopes pass through.
+func TestOtlpScopeBasedMetricDrop(t *testing.T) {
+	t.Parallel()
+
+	reader := metric.NewManualReader()
+	cfg := testOtlpConfig(reader, 0)
+
+	mp, err := NewOtlpMeterProvider(context.Background(), zap.NewNop(), cfg, "test-instance")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, mp.Shutdown(context.Background())) })
+
+	// Emit a metric from the otelhttp scope (should be dropped)
+	blocked, err := mp.Meter(otelhttp.ScopeName).Int64Counter("http.server.request.duration")
+	require.NoError(t, err)
+	blocked.Add(context.Background(), 1)
+
+	// Emit a metric with the same name from an allowed scope (should pass through)
+	allowed, err := mp.Meter("cosmo.router").Int64Counter("http.server.request.duration")
+	require.NoError(t, err)
+	allowed.Add(context.Background(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(context.Background(), &rm))
+
+	// Only the allowed scope's metric should be present
+	var found bool
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name == "http.server.request.duration" {
+				require.Equal(t, "cosmo.router", sm.Scope.Name, "metric should only come from the allowed scope")
+				found = true
+			}
+		}
+	}
+	require.True(t, found, "expected metric from allowed scope")
+}
+
+// TestPrometheusScopeBasedMetricDrop verifies that metrics from the otelhttp scope
+// are dropped by the view in NewPrometheusMeterProvider.
+func TestPrometheusScopeBasedMetricDrop(t *testing.T) {
+	t.Parallel()
+
+	cfg := testPrometheusConfig(0)
+
+	mp, registry, err := NewPrometheusMeterProvider(context.Background(), cfg, "test-instance")
+	require.NoError(t, err)
+	require.NotNil(t, registry)
+	t.Cleanup(func() { require.NoError(t, mp.Shutdown(context.Background())) })
+
+	// Emit a metric from the otelhttp scope (should be dropped)
+	blocked, err := mp.Meter(otelhttp.ScopeName).Int64Counter("test.blocked.counter")
+	require.NoError(t, err)
+	blocked.Add(context.Background(), 1)
+
+	// Emit a metric from an allowed scope (should pass through)
+	allowed, err := mp.Meter("cosmo.router").Int64Counter("test.allowed.counter")
+	require.NoError(t, err)
+	allowed.Add(context.Background(), 1)
+
+	mf, err := registry.Gather()
+	require.NoError(t, err)
+
+	var foundAllowed, foundBlocked bool
+	for _, f := range mf {
+		if f.GetName() == "test_allowed_counter_total" {
+			foundAllowed = true
+		}
+		if f.GetName() == "test_blocked_counter_total" {
+			foundBlocked = true
+		}
+	}
+	require.True(t, foundAllowed, "metric from allowed scope should be present")
+	require.False(t, foundBlocked, "metric from otelhttp scope should be dropped")
 }
 
 // --- helpers ---

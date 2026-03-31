@@ -392,6 +392,7 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
 
 		// We currently don't want to expose the otelhttp scope metrics.
+		// TODO: Once we want to expose the otelhttp scope metrics, we need to .
 		if i.Scope.Name == otelhttp.ScopeName {
 			s.Aggregation = sdkmetric.AggregationDrop{}
 			return s, true
@@ -464,6 +465,7 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
 
 		// We currently don't want to expose the otelhttp scope metrics.
+		// TODO: Once we want to expose the otelhttp scope metrics, we need to remove this.
 		if i.Scope.Name == otelhttp.ScopeName {
 			s.Aggregation = sdkmetric.AggregationDrop{}
 			return s, true
