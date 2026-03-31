@@ -161,7 +161,7 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 	tempDir := t.TempDir()
 	writeOperationFiles(t, tempDir, map[string]string{
 		"GetOperationInfo.graphql": getOperationInfoOp,
-		"ListEmployees.graphql":   listEmployeesOp,
+		"ListEmployees.graphql":    listEmployeesOp,
 	})
 
 	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
