@@ -20,7 +20,7 @@ func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
 
 	schema := parseTestSchema(t)
 	fieldConfigs := testFieldConfigs()
-	extractor := NewScopeExtractor(fieldConfigs, &schema)
+	extractor := NewScopeExtractor(fieldConfigs, &schema, 0)
 
 	validDecoder := &mockTokenDecoder{
 		decodeFunc: func(token string) (authentication.Claims, error) {

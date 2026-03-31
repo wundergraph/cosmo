@@ -90,8 +90,8 @@ func (om *OperationsManager) GetOperation(name string) *schemaloader.Operation {
 // populating each operation's RequiredScopes from @requiresScopes directives.
 // Returns an error if any operation exceeds the scope combination limit, which
 // indicates a pathological @requiresScopes configuration that should be simplified.
-func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration) error {
-	extractor := NewScopeExtractor(fieldConfigs, om.schemaDoc)
+func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration, maxScopeCombinations int) error {
+	extractor := NewScopeExtractor(fieldConfigs, om.schemaDoc, maxScopeCombinations)
 	for i := range om.operations {
 		fieldReqs := extractor.ExtractScopesForOperation(&om.operations[i].Document)
 		combinedScopes, err := extractor.ComputeCombinedScopes(fieldReqs)

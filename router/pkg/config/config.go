@@ -1112,22 +1112,22 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPConfiguration struct {
-	Enabled                   bool                  `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	Server                    MCPServer             `yaml:"server,omitempty"`
-	Storage                   MCPStorageConfig      `yaml:"storage,omitempty"`
-	Session                   MCPSessionConfig      `yaml:"session,omitempty"`
-	GraphName                 string                `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
-	ExcludeMutations          bool                  `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
-	EnableArbitraryOperations bool                  `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
-	ExposeSchema              bool                  `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
-	RouterURL                 string                `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer        `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
+	Session                   MCPSessionConfig `yaml:"session,omitempty"`
+	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
-	OmitToolNamePrefix        bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
-	OAuth                     MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
+	OmitToolNamePrefix bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	OAuth              MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
 	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
 	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
-	ResourceDocumentation     string                `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
+	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
 }
 
 type MCPOAuthConfiguration struct {
@@ -1142,6 +1142,10 @@ type MCPOAuthConfiguration struct {
 	// When true, the token's existing scopes are unioned with the required scopes.
 	// This is a workaround for MCP client SDKs that replace rather than accumulate scopes.
 	ScopeChallengeIncludeTokenScopes bool `yaml:"scope_challenge_include_token_scopes" envDefault:"false" env:"SCOPE_CHALLENGE_INCLUDE_TOKEN_SCOPES"`
+	// MaxScopeCombinations sets the upper limit on the number of OR-group combinations
+	// produced when computing the Cartesian product of @requiresScopes across fields.
+	// Defaults to 2048 if not set. Increase for complex RBAC configurations.
+	MaxScopeCombinations int `yaml:"max_scope_combinations" envDefault:"0" env:"MAX_SCOPE_COMBINATIONS"`
 }
 
 // MCPOAuthScopesConfiguration defines which scopes are required for different MCP operations.

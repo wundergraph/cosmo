@@ -526,10 +526,14 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 	// Compute per-tool scope requirements from @requiresScopes directives
 	var scopeExtractor *ScopeExtractor
 	if len(fieldConfigs) > 0 {
-		if err := s.operationsManager.ComputeToolScopes(fieldConfigs); err != nil {
+		maxScopeCombinations := 0
+		if s.oauthConfig != nil {
+			maxScopeCombinations = s.oauthConfig.MaxScopeCombinations
+		}
+		if err := s.operationsManager.ComputeToolScopes(fieldConfigs, maxScopeCombinations); err != nil {
 			return fmt.Errorf("failed to compute tool scopes: %w", err)
 		}
-		scopeExtractor = NewScopeExtractor(fieldConfigs, schema)
+		scopeExtractor = NewScopeExtractor(fieldConfigs, schema, maxScopeCombinations)
 	}
 
 	if s.authMiddleware != nil {

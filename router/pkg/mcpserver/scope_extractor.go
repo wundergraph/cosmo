@@ -10,13 +10,11 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
-// MaxScopeCombinations is the hard cap on the number of OR-group combinations
-// produced by the Cartesian product across scoped fields. This prevents
-// pathological scope configurations (e.g., many fields each with multiple
-// OR-groups in arbitrary execute_graphql operations) from consuming unbounded
-// CPU/memory. 2048 provides generous headroom for enterprise RBAC while
-// blocking exponential blowup.
-const MaxScopeCombinations = 2048
+// DefaultMaxScopeCombinations is the default cap on the number of OR-group
+// combinations produced by the Cartesian product across scoped fields.
+// This can be overridden via the mcp.oauth.scopes.max_scope_combinations
+// config option for enterprises with complex RBAC configurations.
+const DefaultMaxScopeCombinations = 2048
 
 // FieldScopeRequirement represents the scope requirement for a single field.
 // OrScopes is a list of AND-groups — satisfy any one group to access the field.
@@ -31,12 +29,17 @@ type FieldScopeRequirement struct {
 // from FieldConfigurations.
 type ScopeExtractor struct {
 	// scopeIndex maps "TypeName.FieldName" to OR-of-AND scope groups for O(1) lookup.
-	scopeIndex map[string][][]string
-	schemaDoc  *ast.Document
+	scopeIndex           map[string][][]string
+	schemaDoc            *ast.Document
+	maxScopeCombinations int
 }
 
-// NewScopeExtractor creates a new ScopeExtractor.
-func NewScopeExtractor(fieldConfigs []*nodev1.FieldConfiguration, schemaDoc *ast.Document) *ScopeExtractor {
+// NewScopeExtractor creates a new ScopeExtractor. If maxScopeCombinations is 0,
+// DefaultMaxScopeCombinations is used.
+func NewScopeExtractor(fieldConfigs []*nodev1.FieldConfiguration, schemaDoc *ast.Document, maxScopeCombinations int) *ScopeExtractor {
+	if maxScopeCombinations <= 0 {
+		maxScopeCombinations = DefaultMaxScopeCombinations
+	}
 	index := make(map[string][][]string)
 	for _, fc := range fieldConfigs {
 		authConfig := fc.GetAuthorizationConfiguration()
@@ -54,8 +57,9 @@ func NewScopeExtractor(fieldConfigs []*nodev1.FieldConfiguration, schemaDoc *ast
 		index[fc.GetTypeName()+"."+fc.GetFieldName()] = groups
 	}
 	return &ScopeExtractor{
-		scopeIndex: index,
-		schemaDoc:  schemaDoc,
+		scopeIndex:           index,
+		schemaDoc:            schemaDoc,
+		maxScopeCombinations: maxScopeCombinations,
 	}
 }
 
@@ -93,10 +97,10 @@ func (e *ScopeExtractor) ComputeCombinedScopes(fieldReqs []FieldScopeRequirement
 
 	// Iteratively cross-product with each subsequent field's OR-groups
 	for i := 1; i < len(fieldReqs); i++ {
-		product, err := crossProduct(result, fieldReqs[i].OrScopes)
+		product, err := crossProduct(result, fieldReqs[i].OrScopes, e.maxScopeCombinations)
 		if err != nil {
 			return nil, fmt.Errorf("scope combination limit (%d) exceeded at field %s.%s: %w",
-				MaxScopeCombinations, fieldReqs[i].TypeName, fieldReqs[i].FieldName, err)
+				e.maxScopeCombinations, fieldReqs[i].TypeName, fieldReqs[i].FieldName, err)
 		}
 		result = product
 	}
@@ -143,10 +147,10 @@ func (v *scopeFieldVisitor) EnterField(ref int) {
 
 // crossProduct computes the Cartesian product of two sets of OR-groups,
 // merging AND-scopes within each combination and deduplicating.
-// Returns an error if the resulting number of combinations would exceed MaxScopeCombinations.
-func crossProduct(a, b [][]string) ([][]string, error) {
+// Returns an error if the resulting number of combinations would exceed the limit.
+func crossProduct(a, b [][]string, maxCombinations int) ([][]string, error) {
 	total := len(a) * len(b)
-	if total > MaxScopeCombinations {
+	if total > maxCombinations {
 		return nil, fmt.Errorf("cross product would produce %d combinations", total)
 	}
 	result := make([][]string, 0, total)
