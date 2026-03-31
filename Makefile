@@ -2,8 +2,8 @@ all: dev-setup
 
 setup-build-tools:
 	go install github.com/bufbuild/buf/cmd/buf@v1.32.2
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
-	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.16.2
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.19.1
 	go install gotest.tools/gotestsum@v1.13.0
 
 setup-dev-tools: setup-build-tools
