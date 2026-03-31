@@ -87,10 +87,16 @@ func NewMCPAuthClient(endpoint string, initialToken string) *MCPAuthClient {
 	}
 }
 
-// Connect establishes the MCP connection and initializes the session
+// Connect establishes the MCP connection and initializes the session.
+// Returns *AuthError if the server responds with 401/403, surfacing the
+// parsed WWW-Authenticate header so callers can assert OAuth discovery
+// and scope challenge behavior per the MCP authorization spec.
 func (c *MCPAuthClient) Connect(ctx context.Context) error {
 	session, err := c.client.Connect(ctx, c.transport, nil)
 	if err != nil {
+		if authErr := c.checkAuthError(); authErr != nil {
+			return authErr
+		}
 		return fmt.Errorf("failed to connect: %w", err)
 	}
 	c.session = session
