@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -217,19 +215,6 @@ func NewStore(otlpOpts MetricOpts, promOpts MetricOpts, opts ...Option) (Store, 
 	h.promRequestMetrics = promMetrics
 
 	return h, nil
-}
-
-// setCardinalityLimit sets the cardinality limit for open telemetry.
-// This feature is experimental in otel-go and may be exposed in a different way in the future.
-// In order to avoid creating a large number of metric streams, we set a hard limit that can be collected for a single instrument.
-func setCardinalityLimit(limit int) error {
-	if limit <= 0 {
-		// We set the default limit if the limit is not set or invalid.
-		// A limit of 0 would disable the cardinality limit.
-		limit = DefaultCardinalityLimit
-	}
-
-	return os.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", strconv.Itoa(limit))
 }
 
 func (h *Metrics) MeasureInFlight(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) func() {
