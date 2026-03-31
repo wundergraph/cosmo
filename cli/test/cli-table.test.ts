@@ -19,7 +19,7 @@ describe('CLITable', () => {
     expect(spy).toHaveBeenCalledWith('my-graph', 30 - DEFAULT_OVERHEAD);
     expect(spy).toHaveBeenCalledWith('some error message', 120 - DEFAULT_OVERHEAD);
 
-    spy.mockRestore();
+
   });
 
   test('push skips wrapText for non-string cells and null widths', () => {
@@ -34,7 +34,7 @@ describe('CLITable', () => {
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledWith('wrapped', 30 - DEFAULT_OVERHEAD);
 
-    spy.mockRestore();
+
   });
 
   test('does not deadlock on large text (#2619)', () => {
