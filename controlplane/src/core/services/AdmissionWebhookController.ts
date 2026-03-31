@@ -5,6 +5,7 @@ import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { FastifyBaseLogger } from 'fastify';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import * as schema from '../../db/schema.js';
 import { WebhookDeliveryInfo } from '../../db/models.js';
 import { webhookAxiosRetryCond } from '../util.js';
@@ -39,8 +40,20 @@ export class AdmissionWebhookController {
     private logger: FastifyBaseLogger,
     private graphAdmissionWebhookURL?: string,
     private graphAdmissionWebhookSecret?: string,
+    proxyUrl?: string,
   ) {
+    let agent: HttpsProxyAgent<string> | undefined;
+    if (proxyUrl) {
+      try {
+        agent = new HttpsProxyAgent(proxyUrl, {});
+      } catch (e) {
+        logger.error(e, 'Failed to create proxy agent');
+      }
+    }
+
     this.httpClient = axios.create({
+      httpsAgent: agent,
+      httpAgent: agent,
       timeout: 30_000,
       baseURL: this.graphAdmissionWebhookURL,
     });
