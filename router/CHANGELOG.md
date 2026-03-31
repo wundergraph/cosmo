@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.299.0](https://github.com/wundergraph/cosmo/compare/router@0.298.0...router@0.299.0) (2026-03-31)
+
+### Bug Fixes
+
+* jsonparser upgrade ([#2709](https://github.com/wundergraph/cosmo/issues/2709)) ([f2860f8](https://github.com/wundergraph/cosmo/commit/f2860f8dce5488da3f47f53068f0e3ad522280d0)) (@SkArchon)
+
+### Features
+
+* **router:** support per-key rate-limit overrides with regex pattern matching ([#2683](https://github.com/wundergraph/cosmo/issues/2683)) ([8529b07](https://github.com/wundergraph/cosmo/commit/8529b0758d910c6297421f032331a5829a604142)) (@endigma)
+
 # [0.298.0](https://github.com/wundergraph/cosmo/compare/router@0.297.0...router@0.298.0) (2026-03-29)
 
 ### Features
