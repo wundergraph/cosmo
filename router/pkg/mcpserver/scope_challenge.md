@@ -10,7 +10,7 @@ The `@requiresScopes` directive uses **OR-of-AND** semantics — there may be mu
 
 Scopes are represented as `[][]string` — a list of AND-groups where satisfying **any one** group grants access:
 
-```
+```text
 [["a", "b"], ["c", "d"]]  →  (a AND b) OR (c AND d)
 ```
 
@@ -19,6 +19,7 @@ When an operation touches multiple scoped fields, their requirements are combine
 ## Algorithm: `BestScopeChallenge`
 
 **Input:**
+
 - `tokenScopes` — scopes the client's JWT currently has
 - `combinedOrScopes` — the tool's OR-of-AND requirements
 
@@ -39,32 +40,32 @@ OAuth authorization requests specify the full set of scopes desired. The client 
 
 ### Simple OR (single-scope groups)
 
-```
+```text
 Required: [["read:fact"], ["read:all"]]
 ```
 
-| Token scopes | Missing per group | Best group | Challenge |
-|---|---|---|---|
-| `["read:fact"]` | 0, 1 | satisfied | `nil` |
-| `["read:all"]` | 1, 0 | satisfied | `nil` |
-| `[]` | 1, 1 | first (tie) | `["read:fact"]` |
-| `["other"]` | 1, 1 | first (tie) | `["read:fact"]` |
+| Token scopes    | Missing per group | Best group  | Challenge       |
+| --------------- | ----------------- | ----------- | --------------- |
+| `["read:fact"]` | 0, 1              | satisfied   | `nil`           |
+| `["read:all"]`  | 1, 0              | satisfied   | `nil`           |
+| `[]`            | 1, 1              | first (tie) | `["read:fact"]` |
+| `["other"]`     | 1, 1              | first (tie) | `["read:fact"]` |
 
 ### AND group with shortcut
 
-```
+```text
 Required: [["read:employee", "read:private"], ["read:all"]]
 ```
 
-| Token scopes | Missing per group | Best group | Challenge |
-|---|---|---|---|
-| `["read:employee", "read:private"]` | 0, 1 | satisfied | `nil` |
-| `["read:employee"]` | 1, 1 | first (tie) | `["read:employee", "read:private"]` |
-| `[]` | 2, 1 | group 2 | `["read:all"]` |
+| Token scopes                        | Missing per group | Best group  | Challenge                           |
+| ----------------------------------- | ----------------- | ----------- | ----------------------------------- |
+| `["read:employee", "read:private"]` | 0, 1              | satisfied   | `nil`                               |
+| `["read:employee"]`                 | 1, 1              | first (tie) | `["read:employee", "read:private"]` |
+| `[]`                                | 2, 1              | group 2     | `["read:all"]`                      |
 
 ### Cross-subgraph aggregation
 
-```
+```text
 Required: [
   ["read:fact", "read:employee", "read:private"],
   ["read:fact", "read:all"],
@@ -73,11 +74,11 @@ Required: [
 ]
 ```
 
-| Token scopes | Missing per group | Best group | Challenge |
-|---|---|---|---|
-| `["read:all"]` | 2, 1, 2, 0 | satisfied | `nil` |
-| `["read:fact"]` | 2, 1, 2, 1 | group 2 (tie→first) | `["read:fact", "read:all"]` |
-| `[]` | 3, 2, 3, 1 | group 4 | `["read:all"]` |
+| Token scopes    | Missing per group | Best group          | Challenge                   |
+| --------------- | ----------------- | ------------------- | --------------------------- |
+| `["read:all"]`  | 2, 1, 2, 0        | satisfied           | `nil`                       |
+| `["read:fact"]` | 2, 1, 2, 1        | group 2 (tie→first) | `["read:fact", "read:all"]` |
+| `[]`            | 3, 2, 3, 1        | group 4             | `["read:all"]`              |
 
 ## `BestScopeChallengeWithExisting`
 
