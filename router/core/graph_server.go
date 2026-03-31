@@ -1591,6 +1591,7 @@ func (s *graphServer) buildGraphMux(
 			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
 			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
 			ExprManager:         exprManager,
+			Overrides:           s.rateLimit.SimpleStrategy.Overrides,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
