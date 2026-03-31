@@ -11,7 +11,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getCacheWarmerOperations(
   opts: RouterOptions,

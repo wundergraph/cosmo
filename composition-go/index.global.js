@@ -25,7 +25,12 @@ if (typeof globalThis.TextDecoder === 'undefined') {
             for (let i = 0; i < arr.length; i++) {
                 str += String.fromCharCode(arr[i]);
             }
-            return decodeURIComponent(escape(str));
+            try {
+                return decodeURIComponent(escape(str));
+            } catch (e) {
+                // Replace invalid UTF-8 sequences with U+FFFD (replacement character)
+                return str.replace(/[\x80-\xff]/g, '\uFFFD');
+            }
         }
     };
 }

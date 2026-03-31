@@ -17,7 +17,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getWorkspace(opts: RouterOptions, req: GetWorkspaceRequest, ctx: HandlerContext): Promise<PlainMessage<GetWorkspaceResponse>> {
   let logger = getLogger(ctx, opts.logger);

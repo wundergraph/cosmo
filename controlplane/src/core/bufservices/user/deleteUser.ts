@@ -6,7 +6,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function deleteUser(opts: RouterOptions, req: DeleteUserRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteUserResponse>> {
   let logger = getLogger(ctx, opts.logger);

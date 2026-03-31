@@ -4,7 +4,7 @@ import { GetTraceRequest, GetTraceResponse } from '@wundergraph/cosmo-connect/di
 import { TraceRepository } from '../../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getTrace(opts: RouterOptions, req: GetTraceRequest, ctx: HandlerContext): Promise<PlainMessage<GetTraceResponse>> {
   let logger = getLogger(ctx, opts.logger);

@@ -21,7 +21,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isCheckSuccessful } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getCheckSummary(opts: RouterOptions, req: GetCheckSummaryRequest, ctx: HandlerContext): Promise<PlainMessage<GetCheckSummaryResponse>> {
   let logger = getLogger(ctx, opts.logger);

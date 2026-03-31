@@ -7,7 +7,7 @@ import {
 import { PlaygroundScriptsRepository } from '../../repositories/PlaygroundScriptsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getPlaygroundScripts(opts: RouterOptions, req: GetPlaygroundScriptsRequest, ctx: HandlerContext): Promise<PlainMessage<GetPlaygroundScriptsResponse>> {
   let logger = getLogger(ctx, opts.logger);

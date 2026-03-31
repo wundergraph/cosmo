@@ -10,7 +10,7 @@ import { SubgraphMetricsRepository } from '../../repositories/analytics/Subgraph
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getSubgraphMetricsErrorRate(
   opts: RouterOptions,

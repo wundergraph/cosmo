@@ -12,7 +12,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function enableProposalsForNamespace(
   opts: RouterOptions,

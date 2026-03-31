@@ -11,7 +11,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getDashboardAnalyticsView(
   opts: RouterOptions,

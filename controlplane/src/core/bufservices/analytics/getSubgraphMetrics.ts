@@ -10,7 +10,7 @@ import { SubgraphMetricsRepository } from '../../repositories/analytics/Subgraph
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getSubgraphMetrics(opts: RouterOptions, req: GetSubgraphMetricsRequest, ctx: HandlerContext): Promise<PlainMessage<GetSubgraphMetricsResponse>> {
   let logger = getLogger(ctx, opts.logger);

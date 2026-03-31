@@ -9,7 +9,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getMetricsErrorRate(opts: RouterOptions, req: GetMetricsErrorRateRequest, ctx: HandlerContext): Promise<PlainMessage<GetMetricsErrorRateResponse>> {
   let logger = getLogger(ctx, opts.logger);

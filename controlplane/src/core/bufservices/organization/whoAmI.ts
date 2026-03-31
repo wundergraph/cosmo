@@ -4,7 +4,7 @@ import { WhoAmIRequest, WhoAmIResponse } from '@wundergraph/cosmo-connect/dist/p
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function whoAmI(opts: RouterOptions, req: WhoAmIRequest, ctx: HandlerContext): Promise<PlainMessage<WhoAmIResponse>> {
   let logger = getLogger(ctx, opts.logger);

@@ -13,7 +13,7 @@ import { clamp, enrichLogger, fromProposalOriginEnum, getLogger, handleError, va
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getProposalsByFederatedGraph(
   opts: RouterOptions,

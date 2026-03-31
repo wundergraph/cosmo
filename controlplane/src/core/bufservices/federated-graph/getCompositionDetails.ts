@@ -10,7 +10,7 @@ import { GraphCompositionRepository } from '../../repositories/GraphCompositionR
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getCompositionDetails(opts: RouterOptions, req: GetCompositionDetailsRequest, ctx: HandlerContext): Promise<PlainMessage<GetCompositionDetailsResponse>> {
   let logger = getLogger(ctx, opts.logger);

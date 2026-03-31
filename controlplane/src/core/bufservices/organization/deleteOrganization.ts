@@ -12,7 +12,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { delayForManualOrgDeletionInDays } from '../../constants.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function deleteOrganization(opts: RouterOptions, req: DeleteOrganizationRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteOrganizationResponse>> {
   let logger = getLogger(ctx, opts.logger);

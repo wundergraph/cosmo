@@ -8,7 +8,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function leaveOrganization(opts: RouterOptions, req: LeaveOrganizationRequest, ctx: HandlerContext): Promise<PlainMessage<LeaveOrganizationResponse>> {
   let logger = getLogger(ctx, opts.logger);

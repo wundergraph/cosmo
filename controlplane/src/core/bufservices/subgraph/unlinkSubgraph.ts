@@ -7,7 +7,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function unlinkSubgraph(opts: RouterOptions, req: UnlinkSubgraphRequest, ctx: HandlerContext): Promise<PlainMessage<UnlinkSubgraphResponse>> {
   let logger = getLogger(ctx, opts.logger);

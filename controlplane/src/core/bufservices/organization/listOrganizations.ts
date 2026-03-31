@@ -7,7 +7,7 @@ import {
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function listOrganizations(opts: RouterOptions, _: ListOrganizationsRequest, ctx: HandlerContext): Promise<PlainMessage<ListOrganizationsResponse>> {
   let logger = getLogger(ctx, opts.logger);

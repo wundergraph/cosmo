@@ -7,7 +7,7 @@ import {
 import type { RouterOptions } from '../../routes.js';
 import { getLogger, handleError } from '../../util.js';
 import AuthUtils from '../../auth-utils.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function initializeCosmoUser(opts: RouterOptions, req: InitializeCosmoUserRequest, ctx: HandlerContext): Promise<PlainMessage<InitializeCosmoUserResponse>> {
   const logger = getLogger(ctx, opts.logger);

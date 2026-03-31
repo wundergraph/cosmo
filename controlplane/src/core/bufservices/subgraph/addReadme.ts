@@ -5,7 +5,7 @@ import { TargetRepository } from '../../repositories/TargetRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function addReadme(opts: RouterOptions, req: AddReadmeRequest, ctx: HandlerContext): Promise<PlainMessage<AddReadmeResponse>> {
   let logger = getLogger(ctx, opts.logger);

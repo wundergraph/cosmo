@@ -22,7 +22,7 @@ import {
   isValidGraphName,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function createMonograph(opts: RouterOptions, req: CreateMonographRequest, ctx: HandlerContext): Promise<PlainMessage<CreateMonographResponse>> {
   let logger = getLogger(ctx, opts.logger);

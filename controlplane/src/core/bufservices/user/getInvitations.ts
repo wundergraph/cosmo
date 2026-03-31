@@ -4,7 +4,7 @@ import { GetInvitationsRequest, GetInvitationsResponse } from '@wundergraph/cosm
 import { OrganizationInvitationRepository } from '../../repositories/OrganizationInvitationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getInvitations(opts: RouterOptions, req: GetInvitationsRequest, ctx: HandlerContext): Promise<PlainMessage<GetInvitationsResponse>> {
   let logger = getLogger(ctx, opts.logger);

@@ -26,7 +26,7 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { PluginRepository } from '../../repositories/PluginRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DBSubgraphType } from '../../../db/models.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function createFederatedSubgraph(opts: RouterOptions, req: CreateFederatedSubgraphRequest, ctx: HandlerContext): Promise<PlainMessage<CreateFederatedSubgraphResponse>> {
   let logger = getLogger(ctx, opts.logger);

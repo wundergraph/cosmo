@@ -9,7 +9,7 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, normalizePagination } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getAllOverrides(opts: RouterOptions, req: GetAllOverridesRequest, ctx: HandlerContext): Promise<PlainMessage<GetAllOverridesResponse>> {
   let logger = getLogger(ctx, opts.logger);

@@ -8,7 +8,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { BillingRepository } from '../../repositories/BillingRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getBillingPlans(opts: RouterOptions, req: GetBillingPlansRequest, ctx: HandlerContext): Promise<PlainMessage<GetBillingPlansResponse>> {
   const logger = ctx.values.get<FastifyBaseLogger>({ id: Symbol('logger'), defaultValue: opts.logger });

@@ -14,7 +14,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function publishMonograph(opts: RouterOptions, req: PublishMonographRequest, ctx: HandlerContext): Promise<PlainMessage<PublishMonographResponse>> {
   let logger = getLogger(ctx, opts.logger);

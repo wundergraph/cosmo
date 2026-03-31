@@ -13,7 +13,7 @@ import { MetricsRepository } from '../../repositories/analytics/MetricsRepositor
 import { getDateRange } from '../../repositories/analytics/util.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { defaultRetentionLimitInDays } from '../../constants.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function checkPersistedOperationTraffic(
   opts: RouterOptions,

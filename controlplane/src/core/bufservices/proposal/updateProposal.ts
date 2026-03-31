@@ -27,7 +27,7 @@ import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficIn
 import { Composer } from '../../composition/composer.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { hubUserAgent } from '../../constants.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function updateProposal(opts: RouterOptions, req: UpdateProposalRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateProposalResponse>> {
   let logger = getLogger(ctx, opts.logger);

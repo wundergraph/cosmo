@@ -11,7 +11,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { AnalyticsRequestViewRepository } from '../../repositories/analytics/AnalyticsRequestViewRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getAnalyticsView(opts: RouterOptions, req: GetAnalyticsViewRequest, ctx: HandlerContext): Promise<PlainMessage<GetAnalyticsViewResponse>> {
   let logger = getLogger(ctx, opts.logger);

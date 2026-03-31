@@ -9,7 +9,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getRouterTokens(opts: RouterOptions, req: GetRouterTokensRequest, ctx: HandlerContext): Promise<PlainMessage<GetRouterTokensResponse>> {
   let logger = getLogger(ctx, opts.logger);

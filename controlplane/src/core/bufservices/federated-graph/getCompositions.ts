@@ -11,7 +11,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getCompositions(opts: RouterOptions, req: GetCompositionsRequest, ctx: HandlerContext): Promise<PlainMessage<GetCompositionsResponse>> {
   let logger = getLogger(ctx, opts.logger);

@@ -25,7 +25,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getOperations(opts: RouterOptions, req: GetOperationsRequest, ctx: HandlerContext): Promise<PlainMessage<GetOperationsResponse>> {
   let logger = getLogger(ctx, opts.logger);

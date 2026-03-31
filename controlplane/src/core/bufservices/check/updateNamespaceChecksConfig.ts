@@ -9,7 +9,7 @@ import { enrichLogger, getLogger, handleError, clamp } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { defaultRetentionLimitInDays } from '../../constants.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function updateNamespaceChecksConfig(
   opts: RouterOptions,

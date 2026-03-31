@@ -4,7 +4,7 @@ import { GetAPIKeysRequest, GetAPIKeysResponse } from '@wundergraph/cosmo-connec
 import { ApiKeyRepository } from '../../repositories/ApiKeyRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getAPIKeys(opts: RouterOptions, req: GetAPIKeysRequest, ctx: HandlerContext): Promise<PlainMessage<GetAPIKeysResponse>> {
   let logger = getLogger(ctx, opts.logger);

@@ -8,7 +8,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
-import { PlainMessage } from '../../../types/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getFeatureSubgraphs(opts: RouterOptions, req: GetFeatureSubgraphsRequest, ctx: HandlerContext): Promise<PlainMessage<GetFeatureSubgraphsResponse>> {
   let logger = getLogger(ctx, opts.logger);
