@@ -20,7 +20,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-
 type kafkaSubscriptionArgs struct {
 	dataValue []byte
 	errValue  error
