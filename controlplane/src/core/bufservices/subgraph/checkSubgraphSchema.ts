@@ -123,6 +123,7 @@ export function checkSubgraphSchema(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     let linkedSubgraph:
