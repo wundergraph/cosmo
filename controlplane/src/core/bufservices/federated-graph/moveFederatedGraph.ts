@@ -41,6 +41,7 @@ export function moveFederatedGraph(
         authContext.organizationId,
         opts.logger,
         opts.billingDefaultPlanId,
+        opts.webhookProxyUrl,
       );
       const auditLogRepo = new AuditLogRepository(tx);
       const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
