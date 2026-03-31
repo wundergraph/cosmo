@@ -167,7 +167,7 @@ export const envVariables = z
      */
     S3_FAILOVER_STORAGE_URL: z.string().optional(),
     S3_FAILOVER_ENDPOINT: z.string().optional(),
-    S3_FAILOVER_REGION: z.string().optional(),
+    S3_FAILOVER_REGION: z.string().default('auto'),
     S3_FAILOVER_ACCESS_KEY_ID: z.string().optional(),
     S3_FAILOVER_SECRET_ACCESS_KEY: z.string().optional(),
     S3_FAILOVER_FORCE_PATH_STYLE: z

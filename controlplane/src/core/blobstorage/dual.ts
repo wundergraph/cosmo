@@ -23,11 +23,7 @@ export class DualBlobStorage implements BlobStorage {
   }
 
   async getObject(data: { key: string; abortSignal?: AbortSignal }): Promise<BlobObject> {
-    try {
-      return await this.primary.getObject(data);
-    } catch {
-      return await this.secondary.getObject(data);
-    }
+    return await Promise.any([this.primary.getObject(data), this.secondary.getObject(data)]);
   }
 
   async removeDirectory(data: { key: string; abortSignal?: AbortSignal }): Promise<number> {
