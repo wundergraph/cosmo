@@ -429,7 +429,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, connectionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, connectionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			subscriptionMetrics := metricdata.Metrics{
 				Name:        "router.engine.subscriptions",
@@ -446,7 +446,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, subscriptionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.subscriptions"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, subscriptionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.subscriptions"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			triggerMetrics := metricdata.Metrics{
 				Name:        "router.engine.triggers",
@@ -463,7 +463,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, triggerMetrics, *testutils.GetMetricByName(engineScope, "router.engine.triggers"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, triggerMetrics, *testutils.GetMetricByName(engineScope, "router.engine.triggers"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			messagesSentMetrics := metricdata.Metrics{
 				Name:        "router.engine.messages.sent",
@@ -479,7 +479,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, messagesSentMetrics, *testutils.GetMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, messagesSentMetrics, *testutils.GetMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 }
@@ -650,7 +650,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -801,7 +801,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -904,7 +904,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -954,7 +954,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -1150,7 +1150,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -1301,7 +1301,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -1404,7 +1404,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -1454,7 +1454,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -1614,7 +1614,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -1765,7 +1765,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -1868,7 +1868,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -1918,7 +1918,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -2080,7 +2080,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, requestStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -2231,7 +2231,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -2334,7 +2334,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -2384,7 +2384,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -2672,7 +2672,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, requestStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -2975,7 +2975,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -3181,7 +3181,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -3277,7 +3277,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	})
 }
@@ -3341,7 +3341,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			processCpuUsageMetric := metricdata.Metrics{
 				Name:        "process.cpu.usage",
@@ -3362,7 +3362,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processCpuUsageMetric, *testutils.GetMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, processCpuUsageMetric, *testutils.GetMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			metricServerUptime := testutils.GetMetricByName(runtimeScope, "server.uptime")
 			require.NotNil(t, metricServerUptime)
@@ -3387,7 +3387,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, serverUptimeMetric, *metricServerUptime, metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, serverUptimeMetric, *metricServerUptime, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapAllocMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_alloc",
@@ -3410,7 +3410,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapAllocMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_alloc"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapAllocMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_alloc"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapIdleMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_idle",
@@ -3433,7 +3433,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapIdleMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_idle"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapIdleMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_idle"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapInUseMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_inuse",
@@ -3456,7 +3456,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapInUseMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_inuse"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapInUseMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_inuse"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapObjectsMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_objects",
@@ -3479,7 +3479,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapObjectsMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapObjectsMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapReleasedMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_released",
@@ -3502,7 +3502,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapReleasedMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_released"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapReleasedMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_released"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapSysMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_sys",
@@ -3525,7 +3525,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapSysMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_sys"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapSysMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_sys"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemLiveObjectsMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.live_objects",
@@ -3548,7 +3548,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemLiveObjectsMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.live_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemLiveObjectsMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.live_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoGcCountMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.gc.count",
@@ -3571,7 +3571,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGcCountMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGcCountMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoGoRoutinesCountMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.goroutines.count",
@@ -3594,7 +3594,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGoRoutinesCountMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.goroutines.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGoRoutinesCountMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.goroutines.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoInfoMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.info",
@@ -3618,7 +3618,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoInfoMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.info"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoInfoMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.info"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoGcPauseTotalMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.gc.pause_total",
@@ -3641,7 +3641,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseTotalMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause_total"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseTotalMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause_total"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoGcPauseMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.gc.pause",
@@ -3655,7 +3655,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 }
@@ -11831,7 +11831,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						},
 					}
 
-					metricdatatest.AssertEqual(t, connectionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
+					metricdatatest.AssertEqual(t, connectionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 				})
 			})
 
@@ -12084,7 +12084,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					}
 
 					metrics := *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats")
-					metricdatatest.AssertEqual(t, requestStatsMetrics, metrics, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+					metricdatatest.AssertEqual(t, requestStatsMetrics, metrics, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 				})
 			})
 		}

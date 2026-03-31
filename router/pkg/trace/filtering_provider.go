@@ -64,16 +64,24 @@ func (t *filteringTracer) Start(ctx context.Context, name string, opts ...oteltr
 			}
 		}
 
-		// Rebuild options: keep all non-attribute options, add filtered attributes.
-		rebuilt := make([]oteltrace.SpanStartOption, 0, len(opts)+1)
-		for _, opt := range opts {
-			// Skip WithAttributes options — we'll add our filtered version.
-			if _, isAttr := opt.(oteltrace.SpanStartEventOption); isAttr {
-				continue
-			}
-			rebuilt = append(rebuilt, opt)
+		// Rebuild from the normalized config so we preserve other start options
+		// such as explicit timestamps.
+		rebuilt := make([]oteltrace.SpanStartOption, 0, 5)
+		if ts := cfg.Timestamp(); !ts.IsZero() {
+			rebuilt = append(rebuilt, oteltrace.WithTimestamp(ts))
 		}
-		rebuilt = append(rebuilt, oteltrace.WithAttributes(filtered...))
+		if kind := cfg.SpanKind(); kind != oteltrace.SpanKindInternal {
+			rebuilt = append(rebuilt, oteltrace.WithSpanKind(kind))
+		}
+		if cfg.NewRoot() {
+			rebuilt = append(rebuilt, oteltrace.WithNewRoot())
+		}
+		if links := cfg.Links(); len(links) > 0 {
+			rebuilt = append(rebuilt, oteltrace.WithLinks(links...))
+		}
+		if len(filtered) > 0 {
+			rebuilt = append(rebuilt, oteltrace.WithAttributes(filtered...))
+		}
 		opts = rebuilt
 	}
 
