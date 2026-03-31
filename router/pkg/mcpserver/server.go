@@ -445,7 +445,9 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 		func(req *http.Request) *mcp.Server {
 			return s.server
 		},
-		nil, // Use default options
+		&mcp.StreamableHTTPOptions{
+			Stateless: s.stateless,
+		},
 	)
 
 	middleware := cors.New(s.corsConfig)
