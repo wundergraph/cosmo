@@ -4350,15 +4350,15 @@ func TestFlakyTelemetry(t *testing.T) {
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			// make a second request and assert that we're now hitting the validation cache
 
@@ -5513,15 +5513,15 @@ func TestFlakyTelemetry(t *testing.T) {
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, rm.ScopeMetrics[0].Metrics[6], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, rm.ScopeMetrics[0].Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			// make a second request and assert that we're now hitting the validation cache
 
@@ -5870,13 +5870,13 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 		})
 	})
@@ -6210,15 +6210,15 @@ func TestFlakyTelemetry(t *testing.T) {
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -7468,13 +7468,13 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -10327,7 +10327,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -11125,16 +11125,26 @@ func TestFlakyTelemetry(t *testing.T) {
 					require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
 					require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
-					atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
-					val, ok := atts.Value(attribute.Key(key))
-					require.True(t, ok)
-					require.Equal(t, expectedValue, val.AsString())
+					// Find the subgraph-level datapoint (the one with the custom attribute).
+					// There are two datapoints: one from operation-level metrics and one from
+					// subgraph-level metrics. Their order is non-deterministic.
+					dataPoints := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints
+					var foundSubgraphDP bool
+					for _, dp := range dataPoints {
+						val, ok := dp.Attributes.Value(attribute.Key(key))
+						if ok {
+							foundSubgraphDP = true
+							require.Equal(t, expectedValue, val.AsString())
+							break
+						}
+					}
+					require.True(t, foundSubgraphDP, "expected a datapoint with %s attribute", key)
 
 					subgraphNonMetric := scopeMetric.Metrics[5]
 					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
 					require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
-					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
-					_, ok = atts.Value(attribute.Key(key))
+					atts := subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+					_, ok := atts.Value(attribute.Key(key))
 					require.False(t, ok)
 				})
 			})
@@ -11183,18 +11193,27 @@ func TestFlakyTelemetry(t *testing.T) {
 					require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
 					require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
-					data2 := httpRequestsMetric.Data.(metricdata.Sum[int64])
-					atts := data2.DataPoints[0].Attributes
-					val, ok := atts.Value(attribute.Key(key))
-					require.True(t, ok)
-					require.Equal(t, expectedValue, val.AsString())
+					// Find the subgraph-level datapoint (the one with the custom attribute).
+					// There are two datapoints: one from operation-level metrics and one from
+					// subgraph-level metrics. Their order is non-deterministic.
+					dataPoints := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints
+					var foundSubgraphDP bool
+					for _, dp := range dataPoints {
+						val, ok := dp.Attributes.Value(attribute.Key(key))
+						if ok {
+							foundSubgraphDP = true
+							require.Equal(t, expectedValue, val.AsString())
+							break
+						}
+					}
+					require.True(t, foundSubgraphDP, "expected a datapoint with %s attribute", key)
 
 					subgraphNonMetric := scopeMetric.Metrics[5]
 					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
 					require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
-					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
-					_, ok = atts.Value(attribute.Key(key))
-					require.False(t, ok)
+					planningAtts := subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+					_, hasKey := planningAtts.Value(attribute.Key(key))
+					require.False(t, hasKey)
 				})
 			})
 		})
@@ -11254,18 +11273,28 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
 				require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
-				atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
-				val, ok := atts.Value("custom.subgraph")
-				require.True(t, ok)
-				floatValue, err := strconv.ParseFloat(val.AsString(), 64)
-				require.NoError(t, err)
-				require.Greater(t, floatValue, 0.0)
+				// Find the subgraph-level datapoint (the one with custom.subgraph attribute).
+				// There are two datapoints: one from operation-level metrics and one from
+				// subgraph-level metrics. Their order is non-deterministic.
+				dataPoints := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints
+				var foundSubgraphDP bool
+				for _, dp := range dataPoints {
+					val, ok := dp.Attributes.Value("custom.subgraph")
+					if ok {
+						foundSubgraphDP = true
+						floatValue, err := strconv.ParseFloat(val.AsString(), 64)
+						require.NoError(t, err)
+						require.Greater(t, floatValue, 0.0)
+						break
+					}
+				}
+				require.True(t, foundSubgraphDP, "expected a datapoint with custom.subgraph attribute")
 
 				subgraphNonMetric := scopeMetric.Metrics[5]
 				require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
 				require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
-				atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
-				_, ok = atts.Value("custom.subgraph")
+				atts := subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+				_, ok := atts.Value("custom.subgraph")
 				require.False(t, ok)
 			})
 		})

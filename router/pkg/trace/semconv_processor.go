@@ -29,8 +29,9 @@ var semconvCommonMapping = map[attribute.Key]attribute.Key{
 	"network.protocol.version":  "http.flavor",
 	"network.peer.address":      "net.sock.peer.addr",
 	"network.peer.port":         "net.sock.peer.port",
-	"client.address":            "http.client_ip",
 	"user_agent.original":       "http.user_agent",
+	"http.request.body.size":    "http.read_bytes",
+	"http.response.body.size":   "http.wrote_bytes",
 }
 
 // Client span mappings (e.g. otelhttp transport to subgraphs).
