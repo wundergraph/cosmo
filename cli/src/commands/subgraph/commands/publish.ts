@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
@@ -12,6 +11,7 @@ import {
   splitLabel,
 } from '@wundergraph/cosmo-shared';
 import { SubgraphPublishStats, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { CLITable } from '../../../cli-table.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { printTruncationWarning, validateSubscriptionProtocols } from '../../../utils.js';
@@ -160,7 +160,7 @@ export default (opts: BaseCommandOptions) => {
           console.log(pc.yellow(resp.proposalMatchMessage));
         }
 
-        const compositionErrorsTable = new Table({
+        const compositionErrorsTable = new CLITable({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
@@ -168,7 +168,6 @@ export default (opts: BaseCommandOptions) => {
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
           colWidths: [30, 30, 30, 120],
-          wordWrap: true,
         });
 
         console.log(
@@ -209,14 +208,13 @@ export default (opts: BaseCommandOptions) => {
           "Subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
         );
 
-        const deploymentErrorsTable = new Table({
+        const deploymentErrorsTable = new CLITable({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
           colWidths: [30, 30, 120],
-          wordWrap: true,
         });
 
         for (const deploymentError of resp.deploymentErrors) {
@@ -258,7 +256,7 @@ export default (opts: BaseCommandOptions) => {
     const displayedWarnings = options.suppressWarnings ? 0 : resp.compositionWarnings.length;
 
     if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
-      const compositionWarningsTable = new Table({
+      const compositionWarningsTable = new CLITable({
         head: [
           pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
           pc.bold(pc.white('NAMESPACE')),
@@ -266,7 +264,6 @@ export default (opts: BaseCommandOptions) => {
           pc.bold(pc.white('WARNING_MESSAGE')),
         ],
         colWidths: [30, 30, 30, 120],
-        wordWrap: true,
       });
 
       console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));

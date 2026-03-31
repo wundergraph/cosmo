@@ -1,7 +1,7 @@
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import Table from 'cli-table3';
+import { CLITable } from '../../../../../cli-table.js';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
 
@@ -33,10 +33,8 @@ export default (opts: BaseCommandOptions) => {
       return;
     }
 
-    const tokensTable = new Table({
+    const tokensTable = new CLITable({
       head: [pc.bold(pc.white('NAME')), pc.bold(pc.white('AUTHOR')), pc.bold(pc.white('CREATED_AT'))],
-      wordWrap: true,
-      wrapOnWordBoundary: false,
     });
 
     for (const token of resp.tokens) {

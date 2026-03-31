@@ -1,7 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 // eslint-disable-next-line import/named
 import { Ora } from 'ora';
-import Table from 'cli-table3';
 import pc from 'picocolors';
 import {
   CompositionError,
@@ -9,6 +8,7 @@ import {
   DeploymentError,
   SubgraphPublishStats,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { CLITable } from './cli-table.js';
 import { SubgraphCommandJsonOutput } from './core/types/types.js';
 import { printTruncationWarning } from './utils.js';
 
@@ -84,7 +84,7 @@ export function handleCompositionResult({
       } else {
         spinner.fail(subgraphCompositionBaseErrorMessage);
 
-        const compositionErrorsTable = new Table({
+        const compositionErrorsTable = new CLITable({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
@@ -92,7 +92,6 @@ export function handleCompositionResult({
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
           colWidths: [30, 30, 30, 120],
-          wordWrap: true,
         });
 
         console.log(pc.yellow(subgraphCompositionDetailedErrorMessage));
@@ -137,14 +136,13 @@ export function handleCompositionResult({
       } else {
         spinner.warn(deploymentErrorMessage);
 
-        const deploymentErrorsTable = new Table({
+        const deploymentErrorsTable = new CLITable({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
           colWidths: [30, 30, 120],
-          wordWrap: true,
         });
 
         for (const deploymentError of deploymentErrors) {
@@ -201,7 +199,7 @@ export function handleCompositionResult({
   const displayedWarnings = suppressWarnings ? 0 : compositionWarnings.length;
 
   if (!shouldOutputJson && !suppressWarnings && compositionWarnings.length > 0) {
-    const compositionWarningsTable = new Table({
+    const compositionWarningsTable = new CLITable({
       head: [
         pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
         pc.bold(pc.white('NAMESPACE')),
@@ -209,7 +207,6 @@ export function handleCompositionResult({
         pc.bold(pc.white('WARNING_MESSAGE')),
       ],
       colWidths: [30, 30, 30, 120],
-      wordWrap: true,
     });
 
     console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));

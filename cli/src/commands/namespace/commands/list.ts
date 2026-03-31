@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
-import Table from 'cli-table3';
+import { CLITable } from '../../../cli-table.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
@@ -50,7 +50,7 @@ export default (opts: BaseCommandOptions) => {
       return;
     }
 
-    const namespaceTable = new Table({
+    const namespaceTable = new CLITable({
       head: [pc.bold(pc.white('ID')), pc.bold(pc.white('NAME'))],
       colAligns: ['left', 'left'],
       colWidths: [40, 40],

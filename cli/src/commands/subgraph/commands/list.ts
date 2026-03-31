@@ -1,10 +1,10 @@
 import { writeFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { join, resolve } from 'pathe';
+import { CLITable } from '../../../cli-table.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
@@ -68,7 +68,7 @@ export default (opts: BaseCommandOptions) => {
       return;
     }
 
-    const graphsTable = new Table({
+    const graphsTable = new CLITable({
       head: [
         pc.bold(pc.white('NAME')),
         pc.bold(pc.white('NAMESPACE')),
@@ -77,7 +77,6 @@ export default (opts: BaseCommandOptions) => {
         pc.bold(pc.white('UPDATED_AT')),
       ],
       colWidths: [15, 20, 30, 60, 30],
-      wordWrap: true,
     });
 
     for (const graph of resp.graphs) {

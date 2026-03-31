@@ -3,10 +3,10 @@ import type {
   CheckSubgraphSchemaResponse,
   CheckOperationUsageStats,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import Table from 'cli-table3';
 import { program } from 'commander';
 import logSymbols from 'log-symbols';
 import pc from 'picocolors';
+import { CLITable } from './cli-table.js';
 import { config } from './core/config.js';
 import { JsonCheckSchemaOutputBuilder } from './json-check-schema-output-builder.js';
 
@@ -113,9 +113,8 @@ const handleSchemaChanges = (
   }
 
   console.log('\nDetected the following subgraph schema changes:');
-  const changesTable = new Table({
+  const changesTable = new CLITable({
     head: [pc.bold(pc.white('CHANGE')), pc.bold(pc.white('TYPE')), pc.bold(pc.white('DESCRIPTION'))],
-    wordWrap: true,
   });
   for (const change of response.breakingChanges) {
     changesTable.push([`${logSymbols.error} ${pc.red('BREAKING')}`, change.changeType, change.message]);
@@ -137,14 +136,13 @@ const handleComposedSchemaBreakingChanges = (
     return;
   }
 
-  const composedSchemaChangesTable = new Table({
+  const composedSchemaChangesTable = new CLITable({
     head: [
       pc.bold(pc.white('CHANGE')),
       pc.bold(pc.white('TYPE')),
       pc.bold(pc.white('FEDERATED_GRAPH')),
       pc.bold(pc.white('DESCRIPTION')),
     ],
-    wordWrap: true,
   });
 
   for (const change of response.composedSchemaBreakingChanges) {
@@ -173,10 +171,9 @@ const handleCompositionErrors = (
   jsonBuilder.addCompositionErrors(response.compositionErrors);
 
   if (!shouldOutputJson) {
-    const compositionErrorsTable = new Table({
+    const compositionErrorsTable = new CLITable({
       head: [pc.bold(pc.white('GRAPH_NAME')), pc.bold(pc.white('NAMESPACE')), pc.bold(pc.white('ERROR_MESSAGE'))],
       colWidths: [30, 30, 120],
-      wordWrap: true,
     });
     for (const error of response.compositionErrors) {
       compositionErrorsTable.push([error.federatedGraphName, error.namespace, error.message]);
@@ -194,10 +191,9 @@ const handleCompositionWarnings = (
   jsonBuilder.addCompositionWarnings(response.compositionWarnings);
 
   if (!shouldOutputJson) {
-    const compositionWarningsTable = new Table({
+    const compositionWarningsTable = new CLITable({
       head: [pc.bold(pc.white('GRAPH_NAME')), pc.bold(pc.white('NAMESPACE')), pc.bold(pc.white('WARNING_MESSAGE'))],
       colWidths: [30, 30, 120],
-      wordWrap: true,
     });
     for (const warning of response.compositionWarnings) {
       compositionWarningsTable.push([warning.federatedGraphName, warning.namespace, warning.message]);
@@ -216,10 +212,9 @@ const handleLintIssues = (
   jsonBuilder.addLintWarnings(response.lintWarnings);
 
   if (!shouldOutputJson) {
-    const lintIssuesTable = new Table({
+    const lintIssuesTable = new CLITable({
       head: [pc.bold(pc.white('LINT_RULE')), pc.bold(pc.white('ERROR_MESSAGE')), pc.bold(pc.white('LINE NUMBER'))],
       colAligns: ['left', 'left', 'center'],
-      wordWrap: true,
     });
     for (const error of response.lintErrors) {
       lintIssuesTable.push([
@@ -249,7 +244,7 @@ const handleGraphPruneIssues = (
   jsonBuilder.addGraphPruneWarnings(response.graphPruneWarnings);
 
   if (!shouldOutputJson) {
-    const graphPruningIssuesTable = new Table({
+    const graphPruningIssuesTable = new CLITable({
       head: [
         pc.bold(pc.white('RULE')),
         pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
@@ -258,7 +253,6 @@ const handleGraphPruneIssues = (
         pc.bold(pc.white('LINE NUMBER')),
       ],
       colAligns: ['left', 'left', 'left', 'left', 'center'],
-      wordWrap: true,
     });
     for (const error of response.graphPruneErrors) {
       graphPruningIssuesTable.push([
