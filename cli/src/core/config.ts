@@ -36,9 +36,13 @@ export const config = {
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
   pluginRegistryURL: process.env.PLUGIN_REGISTRY_URL || 'cosmo-registry.wundergraph.com',
+  demoLabelMatcher: 'graph=demo' as const,
+  demoGraphName: 'demo' as const,
+  demoNamespace: 'default' as const,
   demoOnboardingRepositoryName: 'wundergraph/cosmo-onboarding' as const,
   demoOnboardingRepositoryBranch: 'main' as const,
   dockerBuilderName: 'cosmo-builder' as const,
+  demoRouterPort: 3002 as const,
 };
 
 export const getBaseHeaders = (): HeadersInit => {
