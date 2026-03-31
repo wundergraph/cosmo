@@ -97,6 +97,7 @@ export const envVariables = z
      */
     WEBHOOK_URL: z.string().optional(),
     WEBHOOK_SECRET: z.string().optional(),
+    WEBHOOK_PROXY_URL: z.string().url().optional(),
     /**
      * GitHub Integration
      */

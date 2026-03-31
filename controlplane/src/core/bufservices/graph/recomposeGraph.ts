@@ -30,6 +30,7 @@ export function recomposeGraph(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
