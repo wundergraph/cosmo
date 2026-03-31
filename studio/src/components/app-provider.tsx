@@ -186,7 +186,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
-        router.pathname !== '/account/invitations'
+        router.pathname !== '/account/invitations' &&
+        !router.pathname.startsWith('/onboarding')
       ) {
         const url = new URL(window.location.origin + router.basePath + router.asPath);
         const params = new URLSearchParams(url.search);
