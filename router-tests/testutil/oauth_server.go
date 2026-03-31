@@ -365,12 +365,12 @@ func (s *OAuthTestServer) handleRegister(w http.ResponseWriter, r *http.Request)
 	s.mu.Unlock()
 
 	resp := map[string]any{
-		"client_id":                    clientID,
-		"client_secret":               clientSecret,
-		"client_name":                 req.ClientName,
-		"grant_types":                 req.GrantTypes,
-		"redirect_uris":               req.RedirectURIs,
-		"token_endpoint_auth_method":  req.TokenEndpointAuthMethod,
+		"client_id":                  clientID,
+		"client_secret":              clientSecret,
+		"client_name":                req.ClientName,
+		"grant_types":                req.GrantTypes,
+		"redirect_uris":              req.RedirectURIs,
+		"token_endpoint_auth_method": req.TokenEndpointAuthMethod,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

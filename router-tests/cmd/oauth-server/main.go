@@ -361,7 +361,7 @@ func (h *oauthHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"client_id":                   id,
+		"client_id":                  id,
 		"client_secret":              secret,
 		"client_name":                req.ClientName,
 		"grant_types":                req.GrantTypes,
