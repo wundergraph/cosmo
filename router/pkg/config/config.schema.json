@@ -2211,6 +2211,38 @@
               "type": "boolean",
               "default": false,
               "description": "Hide the rate limit stats from the response extension. If the value is true, the rate limit stats are not included in the response extension."
+            },
+            "overrides": {
+              "type": "array",
+              "description": "Per-key rate limit overrides. Each entry defines a regex pattern matched against the resolved rate-limit key. The first matching override wins; unmatched keys use the global defaults.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "matching": {
+                    "type": "string",
+                    "description": "A regex pattern matched against the resolved rate-limit key."
+                  },
+                  "rate": {
+                    "type": "integer",
+                    "description": "The override rate for matching keys.",
+                    "minimum": 1
+                  },
+                  "burst": {
+                    "type": "integer",
+                    "description": "The override burst for matching keys.",
+                    "minimum": 1
+                  },
+                  "period": {
+                    "type": "string",
+                    "description": "The override period for matching keys.",
+                    "duration": {
+                      "minimum": "1s"
+                    }
+                  }
+                },
+                "required": ["matching", "rate", "burst", "period"]
+              }
             }
           },
           "required": ["rate", "burst", "period"]
