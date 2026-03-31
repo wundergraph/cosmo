@@ -1103,6 +1103,51 @@ input UserInput {
 				assert.Empty(t, capturedSubgraphRequest.Header.Get("Alt-Svc"))
 				assert.Empty(t, capturedSubgraphRequest.Header.Get("Proxy-Connection"))
 			})
+
+			// Breaking change from SDK migration (mark3labs/mcp-go -> modelcontextprotocol/go-sdk):
+			// The old SDK accepted non-standard Content-Type params (e.g., "application/json; foo=bar")
+			// and silently stripped them. The new SDK's StreamableHTTPHandler rejects them with 415
+			// Unsupported Media Type at the transport level before our code runs.
+			//
+			// This is the correct behavior per the MCP spec which requires "application/json".
+			// No legitimate MCP client sends custom content-type params.
+			t.Run("Non-standard Content-Type params are rejected by the SDK", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCP: config.MCPConfiguration{
+						Enabled: true,
+						Session: config.MCPSessionConfig{
+							Stateless: true,
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					mcpAddr := xEnv.GetMCPServerAddr()
+
+					mcpRequest := map[string]interface{}{
+						"jsonrpc": "2.0",
+						"id":      1,
+						"method":  "tools/call",
+						"params": map[string]interface{}{
+							"name":      "execute_operation_my_employees",
+							"arguments": map[string]interface{}{},
+						},
+					}
+
+					requestBody, err := json.Marshal(mcpRequest)
+					require.NoError(t, err)
+
+					req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+					require.NoError(t, err)
+					req.Header.Set("Content-Type", "application/json; foo=bar")
+					req.Header.Set("Accept", "application/json, text/event-stream")
+
+					resp, err := xEnv.RouterClient.Do(req)
+					require.NoError(t, err)
+					defer resp.Body.Close() //nolint:errcheck
+
+					assert.Equal(t, http.StatusUnsupportedMediaType, resp.StatusCode,
+						"New SDK rejects non-standard Content-Type params with 415")
+				})
+			})
 		})
 	})
 }
