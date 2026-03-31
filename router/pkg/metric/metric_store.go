@@ -198,19 +198,15 @@ func NewStore(otlpOpts MetricOpts, promOpts MetricOpts, opts ...Option) (Store, 
 		opt(h)
 	}
 
-	if err := setCardinalityLimit(h.cardinalityLimit); err != nil {
-		h.logger.Warn("Failed to set cardinality limit", zap.Error(err))
-	}
-
 	h.baseAttributesOpt = otelmetric.WithAttributes(h.baseAttributes...)
 
 	// Create OTLP metrics exported to OTEL
-	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.routerBaseAttributes, otlpOpts)
+	otlpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.routerBaseAttributes, otlpOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	h.otlpRequestMetrics = oltpMetrics
+	h.otlpRequestMetrics = otlpMetrics
 
 	// Create prometheus metrics exported to Prometheus scrape endpoint
 	promMetrics, err := NewPromMetricStore(h.logger, h.promMeterProvider, h.routerBaseAttributes, promOpts)

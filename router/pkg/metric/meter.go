@@ -203,7 +203,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 
 	var exporter sdkmetric.Exporter
 	switch exp.Exporter {
-	case otelconfig.ExporterOLTPHTTP:
+	case otelconfig.ExporterOTLPHTTP:
 		opts := []otlpmetrichttp.Option{
 			// Includes host and port
 			otlpmetrichttp.WithEndpoint(u.Host),
@@ -226,7 +226,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			context.Background(),
 			opts...,
 		)
-	case otelconfig.ExporterOLTPGRPC:
+	case otelconfig.ExporterOTLPGRPC:
 		opts := []otlpmetricgrpc.Option{
 			// Includes host and port
 			otlpmetricgrpc.WithEndpoint(u.Host),
@@ -426,6 +426,14 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 		sdkmetric.WithResource(r),
 	)
 
+	// When the cardinality limit is explicitly set to 0 or negative, the OTEL SDK will not apply a limit.
+	limit := c.CardinalityLimit
+	if limit <= 0 {
+		limit = DefaultCardinalityLimit
+	}
+
+	opts = append(opts, sdkmetric.WithCardinalityLimit(limit))
+
 	return opts, nil
 }
 
@@ -482,12 +490,18 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 		return s, true
 	}
 
-	// Info: There can be only a single view per instrument. A view with less restriction might override a view.
+	// When the cardinality limit is explicitly set to 0 or negative, the OTEL SDK will not apply a limit.
+	limit := c.CardinalityLimit
+	if limit <= 0 {
+		limit = DefaultCardinalityLimit
+	}
 
+	// Info: There can be only a single view per instrument. A view with less restriction might override a view.
 	return []sdkmetric.Option{
 		// Record information about this application in a Resource.
 		sdkmetric.WithResource(r),
 		sdkmetric.WithView(view),
+		sdkmetric.WithCardinalityLimit(limit),
 	}, nil
 }
 
