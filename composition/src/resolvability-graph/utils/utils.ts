@@ -200,7 +200,7 @@ export function generateSelectionSetSegments(
     pathNodes.splice(limit, truncatedNumber);
   }
   for (let i = 0; i < pathNodes.length; i++) {
-    if (shouldTruncate && i === limit + 1) {
+    if (shouldTruncate && i === limit) {
       outputStart += LITERAL_SPACE.repeat(i + 1) + `... # and ${truncatedNumber} truncated nodes\n`;
     }
     outputStart += LITERAL_SPACE.repeat(i + 1) + pathNodes[i] + ` {\n`;
