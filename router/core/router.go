@@ -1127,131 +1127,39 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	return nil
 }
 
-// providerRegistry holds deduplicated storage provider configs indexed by ID.
-type providerRegistry struct {
-	S3         map[string]config.S3StorageProvider
-	CDN        map[string]config.CDNStorageProvider
-	Redis      map[string]config.RedisStorageProvider
-	FileSystem map[string]config.FileSystemStorageProvider
-}
-
-func newProviderRegistry(providers config.StorageProviders) (*providerRegistry, error) {
-	reg := &providerRegistry{
-		S3:         make(map[string]config.S3StorageProvider, len(providers.S3)),
-		CDN:        make(map[string]config.CDNStorageProvider, len(providers.CDN)),
-		Redis:      make(map[string]config.RedisStorageProvider, len(providers.Redis)),
-		FileSystem: make(map[string]config.FileSystemStorageProvider, len(providers.FileSystem)),
-	}
-
-	for _, p := range providers.S3 {
-		if _, ok := reg.S3[p.ID]; ok {
-			return nil, fmt.Errorf("duplicate s3 storage provider with id '%s'", p.ID)
-		}
-		reg.S3[p.ID] = p
-	}
-	for _, p := range providers.CDN {
-		if _, ok := reg.CDN[p.ID]; ok {
-			return nil, fmt.Errorf("duplicate cdn storage provider with id '%s'", p.ID)
-		}
-		reg.CDN[p.ID] = p
-	}
-	for _, p := range providers.Redis {
-		if _, ok := reg.Redis[p.ID]; ok {
-			return nil, fmt.Errorf("duplicate Redis storage provider with id '%s'", p.ID)
-		}
-		reg.Redis[p.ID] = p
-	}
-	for _, p := range providers.FileSystem {
-		if _, ok := reg.FileSystem[p.ID]; ok {
-			return nil, fmt.Errorf("duplicate file system storage provider with id '%s'", p.ID)
-		}
-		reg.FileSystem[p.ID] = p
-	}
-
-	return reg, nil
-}
-
-// buildPersistedOperationsStorageClient creates the storage client for persisted operations
-// based on the configured provider ID. Returns (nil, nil) when no provider is configured
-// and no graph token is available.
-func (r *Router) buildPersistedOperationsStorageClient(reg *providerRegistry) (persistedoperation.StorageClient, error) {
-	providerID := r.persistedOperationsConfig.Storage.ProviderID
-
-	if provider, ok := reg.CDN[providerID]; ok {
-		if r.graphApiToken == "" {
-			return nil, errors.New("graph token is required to fetch persisted operations from CDN")
-		}
-		c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
-			Logger: r.logger,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create CDN client: %w", err)
-		}
-		r.logger.Info("Use CDN as storage provider for persisted operations",
-			zap.String("provider_id", provider.ID),
-		)
-		return c, nil
-	}
-
-	if provider, ok := reg.S3[providerID]; ok {
-		c, err := s3.NewClient(provider.Endpoint, &s3.Options{
-			AccessKeyID:      provider.AccessKey,
-			SecretAccessKey:  provider.SecretKey,
-			Region:           provider.Region,
-			UseSSL:           provider.Secure,
-			BucketName:       provider.Bucket,
-			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
-			TraceProvider:    r.tracerProvider,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create S3 client: %w", err)
-		}
-		r.logger.Info("Use S3 as storage provider for persisted operations",
-			zap.String("provider_id", provider.ID),
-		)
-		return c, nil
-	}
-
-	if provider, ok := reg.FileSystem[providerID]; ok {
-		c, err := fs.NewClient(provider.Path, &fs.Options{
-			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create filesystem client: %w", err)
-		}
-		r.logger.Info("Use file system as storage provider for persisted operations",
-			zap.String("provider_id", provider.ID),
-		)
-		return c, nil
-	}
-
-	// No matching provider found — if a provider ID was set, it's a misconfiguration.
-	if providerID != "" {
-		return nil, fmt.Errorf("unknown storage provider id '%s' for persisted operations", providerID)
-	}
-
-	// No provider configured — fall back to Cosmo CDN if a graph token is available.
-	if r.graphApiToken != "" {
-		c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
-			Logger: r.logger,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create CDN client: %w", err)
-		}
-		r.logger.Debug("Default to Cosmo CDN as persisted operations provider",
-			zap.String("url", r.cdnConfig.URL),
-		)
-		return c, nil
-	}
-
-	return nil, nil
-}
-
 // buildClients initializes the storage clients for persisted operations and router config.
 func (r *Router) buildClients(ctx context.Context) error {
-	reg, err := newProviderRegistry(r.storageProviders)
-	if err != nil {
-		return err
+	s3Providers := map[string]config.S3StorageProvider{}
+	cdnProviders := map[string]config.CDNStorageProvider{}
+	redisProviders := map[string]config.RedisStorageProvider{}
+	fileSystemProviders := map[string]config.FileSystemStorageProvider{}
+
+	for _, provider := range r.storageProviders.S3 {
+		if _, ok := s3Providers[provider.ID]; ok {
+			return fmt.Errorf("duplicate s3 storage provider with id '%s'", provider.ID)
+		}
+		s3Providers[provider.ID] = provider
+	}
+
+	for _, provider := range r.storageProviders.CDN {
+		if _, ok := cdnProviders[provider.ID]; ok {
+			return fmt.Errorf("duplicate cdn storage provider with id '%s'", provider.ID)
+		}
+		cdnProviders[provider.ID] = provider
+	}
+
+	for _, provider := range r.storageProviders.Redis {
+		if _, ok := redisProviders[provider.ID]; ok {
+			return fmt.Errorf("duplicate Redis storage provider with id '%s'", provider.ID)
+		}
+		redisProviders[provider.ID] = provider
+	}
+
+	for _, provider := range r.storageProviders.FileSystem {
+		if _, ok := fileSystemProviders[provider.ID]; ok {
+			return fmt.Errorf("duplicate file system storage provider with id '%s'", provider.ID)
+		}
+		fileSystemProviders[provider.ID] = provider
 	}
 
 	// Create the storage client for persisted operations based on the configured provider.
@@ -1260,15 +1168,74 @@ func (r *Router) buildClients(ctx context.Context) error {
 	var pClient persistedoperation.StorageClient
 
 	if !r.persistedOperationsConfig.Disabled {
-		var err error
-		pClient, err = r.buildPersistedOperationsStorageClient(reg)
-		if err != nil {
-			return err
+		if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+			if r.graphApiToken == "" {
+				return errors.New("graph token is required to fetch persisted operations from CDN")
+			}
+
+			c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
+				Logger: r.logger,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create CDN client: %w", err)
+			}
+			pClient = c
+
+			r.logger.Info("Use CDN as storage provider for persisted operations",
+				zap.String("provider_id", provider.ID),
+			)
+		} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+
+			c, err := s3.NewClient(provider.Endpoint, &s3.Options{
+				AccessKeyID:      provider.AccessKey,
+				SecretAccessKey:  provider.SecretKey,
+				Region:           provider.Region,
+				UseSSL:           provider.Secure,
+				BucketName:       provider.Bucket,
+				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+				TraceProvider:    r.tracerProvider,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create S3 client: %w", err)
+			}
+			pClient = c
+
+			r.logger.Info("Use S3 as storage provider for persisted operations",
+				zap.String("provider_id", provider.ID),
+			)
+		} else if provider, ok := fileSystemProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+			c, err := fs.NewClient(provider.Path, &fs.Options{
+				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create filesystem client: %w", err)
+			}
+			pClient = c
+
+			r.logger.Info("Use file system as storage provider for persisted operations",
+				zap.String("provider_id", provider.ID),
+			)
+		} else if r.graphApiToken != "" {
+			if r.persistedOperationsConfig.Storage.ProviderID != "" {
+				return fmt.Errorf("unknown storage provider id '%s' for persisted operations", r.persistedOperationsConfig.Storage.ProviderID)
+			}
+
+			c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
+				Logger: r.logger,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create CDN client: %w", err)
+			}
+			pClient = c
+
+			r.logger.Debug("Default to Cosmo CDN as persisted operations provider",
+				zap.String("url", r.cdnConfig.URL),
+			)
 		}
 	}
 
 	var kvClient apq.KVClient
-	if provider, ok := reg.Redis[r.automaticPersistedQueriesConfig.Storage.ProviderID]; ok {
+	if provider, ok := redisProviders[r.automaticPersistedQueriesConfig.Storage.ProviderID]; ok {
 		c, err := apq.NewRedisClient(&apq.RedisOptions{
 			Logger:        r.logger,
 			StorageConfig: &provider,
@@ -1303,11 +1270,15 @@ func (r *Router) buildClients(ctx context.Context) error {
 
 		storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
 
-		if _, ok := reg.FileSystem[storageProviderID]; ok {
+		if _, ok := fileSystemProviders[storageProviderID]; ok {
 			return fmt.Errorf("filesystem storage provider %q is not supported for PQL manifest; use S3 or CDN instead", storageProviderID)
 		}
 
 		if storageProviderID != "" {
+			if pClient == nil {
+				return fmt.Errorf("storage provider %q is configured for PQL manifest but no matching provider was found in storage_providers", storageProviderID)
+			}
+
 			// An explicit storage provider is configured — read the manifest once at startup.
 			objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
 			objectPath := manifestFileName
@@ -1381,7 +1352,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 		r.persistedOperationClient = c
 	}
 
-	configPoller, err := InitializeConfigPoller(r, reg)
+	configPoller, err := InitializeConfigPoller(r, cdnProviders, s3Providers)
 	if err != nil {
 		return err
 	}

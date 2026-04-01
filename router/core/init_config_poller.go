@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
@@ -12,9 +13,9 @@ import (
 	"go.uber.org/zap"
 )
 
-func getConfigClient(r *Router, reg *providerRegistry, providerID string, isFallbackClient bool) (client *routerconfig.Client, err error) {
+func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvider, s3Providers map[string]config.S3StorageProvider, providerID string, isFallbackClient bool) (client *routerconfig.Client, err error) {
 	// CDN Providers
-	if provider, ok := reg.CDN[providerID]; ok {
+	if provider, ok := cdnProviders[providerID]; ok {
 		if r.graphApiToken == "" {
 			return nil, errors.New(
 				"graph token is required to fetch execution config from CDN. " +
@@ -49,7 +50,7 @@ func getConfigClient(r *Router, reg *providerRegistry, providerID string, isFall
 	}
 
 	// S3 Providers
-	if provider, ok := reg.S3[providerID]; ok {
+	if provider, ok := s3Providers[providerID]; ok {
 		clientOptions := &configs3Provider.ClientOptions{
 			AccessKeyID:     provider.AccessKey,
 			SecretAccessKey: provider.SecretKey,
@@ -120,12 +121,12 @@ func getConfigClient(r *Router, reg *providerRegistry, providerID string, isFall
 }
 
 // InitializeConfigPoller creates a poller to fetch execution config. It is only initialized when a config poller is configured and the router is not started with a static config
-func InitializeConfigPoller(r *Router, reg *providerRegistry) (*configpoller.ConfigPoller, error) {
+func InitializeConfigPoller(r *Router, cdnProviders map[string]config.CDNStorageProvider, s3Providers map[string]config.S3StorageProvider) (*configpoller.ConfigPoller, error) {
 	if r.staticExecutionConfig != nil || r.routerConfigPollerConfig == nil || r.configPoller != nil {
 		return nil, nil
 	}
 
-	primaryClient, err := getConfigClient(r, reg, r.routerConfigPollerConfig.Storage.ProviderID, false)
+	primaryClient, err := getConfigClient(r, cdnProviders, s3Providers, r.routerConfigPollerConfig.Storage.ProviderID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +141,7 @@ func InitializeConfigPoller(r *Router, reg *providerRegistry) (*configpoller.Con
 			return nil, errors.New("cannot use the same storage as both primary and fallback provider for execution config")
 		}
 
-		fallbackClient, err = getConfigClient(r, reg, r.routerConfigPollerConfig.FallbackStorage.ProviderID, true)
+		fallbackClient, err = getConfigClient(r, cdnProviders, s3Providers, r.routerConfigPollerConfig.FallbackStorage.ProviderID, true)
 		if err != nil {
 			return nil, err
 		}
