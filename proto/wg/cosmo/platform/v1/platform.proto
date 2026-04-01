@@ -3215,6 +3215,26 @@ message RecomposeGraphResponse {
   optional SubgraphPublishStats errorCounts = 5;
 }
 
+message GetOnboardingRequest {}
+
+message GetOnboardingResponse {
+  Response response = 1;
+  optional string finishedAt = 3;
+  int32 federatedGraphsCount = 4;
+  bool enabled = 5;
+}
+
+message CreateOnboardingRequest {
+  bool slack = 1;
+  bool email = 2;
+}
+
+message CreateOnboardingResponse {
+  Response response = 1;
+  optional string finishedAt = 2;
+  int32 federatedGraphsCount = 3;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3614,4 +3634,8 @@ service PlatformService {
   rpc VerifyAPIKeyGraphAccess(VerifyAPIKeyGraphAccessRequest) returns (VerifyAPIKeyGraphAccessResponse) {}
   // RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
   rpc RecomposeGraph(RecomposeGraphRequest) returns (RecomposeGraphResponse) {}
+
+  // Onboarding
+  rpc GetOnboarding(GetOnboardingRequest) returns (GetOnboardingResponse) {}
+  rpc CreateOnboarding(CreateOnboardingRequest) returns (CreateOnboardingResponse) {}
 }

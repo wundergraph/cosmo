@@ -574,6 +574,12 @@ const (
 	// PlatformServiceRecomposeGraphProcedure is the fully-qualified name of the PlatformService's
 	// RecomposeGraph RPC.
 	PlatformServiceRecomposeGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/RecomposeGraph"
+	// PlatformServiceGetOnboardingProcedure is the fully-qualified name of the PlatformService's
+	// GetOnboarding RPC.
+	PlatformServiceGetOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOnboarding"
+	// PlatformServiceCreateOnboardingProcedure is the fully-qualified name of the PlatformService's
+	// CreateOnboarding RPC.
+	PlatformServiceCreateOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateOnboarding"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -759,6 +765,8 @@ var (
 	platformServiceUnlinkSubgraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
 	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
 	platformServiceRecomposeGraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
+	platformServiceGetOnboardingMethodDescriptor                                      = platformServiceServiceDescriptor.Methods().ByName("GetOnboarding")
+	platformServiceCreateOnboardingMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("CreateOnboarding")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -1103,6 +1111,9 @@ type PlatformServiceClient interface {
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
 	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
+	// Onboarding
+	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
+	CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -2202,6 +2213,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getOnboarding: connect.NewClient[v1.GetOnboardingRequest, v1.GetOnboardingResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOnboardingProcedure,
+			connect.WithSchema(platformServiceGetOnboardingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		createOnboarding: connect.NewClient[v1.CreateOnboardingRequest, v1.CreateOnboardingResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateOnboardingProcedure,
+			connect.WithSchema(platformServiceCreateOnboardingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2387,6 +2410,8 @@ type platformServiceClient struct {
 	unlinkSubgraph                                     *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
 	verifyAPIKeyGraphAccess                            *connect.Client[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse]
 	recomposeGraph                                     *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
+	getOnboarding                                      *connect.Client[v1.GetOnboardingRequest, v1.GetOnboardingResponse]
+	createOnboarding                                   *connect.Client[v1.CreateOnboardingRequest, v1.CreateOnboardingResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -3328,6 +3353,16 @@ func (c *platformServiceClient) RecomposeGraph(ctx context.Context, req *connect
 	return c.recomposeGraph.CallUnary(ctx, req)
 }
 
+// GetOnboarding calls wg.cosmo.platform.v1.PlatformService.GetOnboarding.
+func (c *platformServiceClient) GetOnboarding(ctx context.Context, req *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error) {
+	return c.getOnboarding.CallUnary(ctx, req)
+}
+
+// CreateOnboarding calls wg.cosmo.platform.v1.PlatformService.CreateOnboarding.
+func (c *platformServiceClient) CreateOnboarding(ctx context.Context, req *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error) {
+	return c.createOnboarding.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3670,6 +3705,9 @@ type PlatformServiceHandler interface {
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
 	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
+	// Onboarding
+	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
+	CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4765,6 +4803,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetOnboardingHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOnboardingProcedure,
+		svc.GetOnboarding,
+		connect.WithSchema(platformServiceGetOnboardingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCreateOnboardingHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateOnboardingProcedure,
+		svc.CreateOnboarding,
+		connect.WithSchema(platformServiceCreateOnboardingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -5127,6 +5177,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceVerifyAPIKeyGraphAccessHandler.ServeHTTP(w, r)
 		case PlatformServiceRecomposeGraphProcedure:
 			platformServiceRecomposeGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOnboardingProcedure:
+			platformServiceGetOnboardingHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateOnboardingProcedure:
+			platformServiceCreateOnboardingHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5854,4 +5908,12 @@ func (UnimplementedPlatformServiceHandler) VerifyAPIKeyGraphAccess(context.Conte
 
 func (UnimplementedPlatformServiceHandler) RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RecomposeGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOnboarding is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateOnboarding is not implemented"))
 }
