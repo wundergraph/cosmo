@@ -38,7 +38,7 @@ describe('Field resolvability error tests', () => {
     );
   });
 
-  test('that when a custom number of selections is provided, truncation happens correctly', () => {
+  test('that a custom selection limit is respected successfully', () => {
     const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
     const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, 1);
     const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
@@ -48,7 +48,7 @@ describe('Field resolvability error tests', () => {
 
     expect(pathNodes.length).toBe(2);
     expect(render).toBe(` query {
-  ... # and 30 truncated nodes
+  ... # and 30 truncated selections
   ee {
    id <--
   }
@@ -133,7 +133,84 @@ describe('Field resolvability error tests', () => {
 `);
   });
 
-  test('that when the limit is greater than the number of selections no truncation occurs', () => {
+  test('that all selections are rendered when limit is zero', () => {
+    const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
+    const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, 0);
+    const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
+      isLeaf: true,
+      name: 'id',
+    } as GraphFieldData);
+
+    expect(pathNodes.length).toBe(32);
+    expect(render).toBe(` query {
+  query {
+   a {
+    b {
+     c {
+      d {
+       e {
+        f {
+         g {
+          h {
+           i {
+            j {
+             k {
+              l {
+               m {
+                n {
+                 o {
+                  p {
+                   q {
+                    r {
+                     s {
+                      t {
+                       u {
+                        w {
+                         x {
+                          y {
+                           z {
+                            aa {
+                             bb {
+                              cc {
+                               dd {
+                                ee {
+                                 id <--
+                                }
+                               }
+                              }
+                             }
+                            }
+                           }
+                          }
+                         }
+                        }
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+`);
+  });
+
+  test('that when the limit is greater than the number of selection, no truncation occurs', () => {
     const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
     const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, 50);
     const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
