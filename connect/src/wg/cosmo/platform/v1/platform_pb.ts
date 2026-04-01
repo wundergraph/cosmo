@@ -24977,3 +24977,193 @@ export class RecomposeGraphResponse extends Message<RecomposeGraphResponse> {
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOnboardingRequest
+ */
+export class GetOnboardingRequest extends Message<GetOnboardingRequest> {
+  constructor(data?: PartialMessage<GetOnboardingRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOnboardingRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOnboardingRequest {
+    return new GetOnboardingRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOnboardingRequest {
+    return new GetOnboardingRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOnboardingRequest {
+    return new GetOnboardingRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOnboardingRequest | PlainMessage<GetOnboardingRequest> | undefined, b: GetOnboardingRequest | PlainMessage<GetOnboardingRequest> | undefined): boolean {
+    return proto3.util.equals(GetOnboardingRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOnboardingResponse
+ */
+export class GetOnboardingResponse extends Message<GetOnboardingResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: optional string finishedAt = 3;
+   */
+  finishedAt?: string;
+
+  /**
+   * @generated from field: int32 federatedGraphsCount = 4;
+   */
+  federatedGraphsCount = 0;
+
+  /**
+   * @generated from field: bool enabled = 5;
+   */
+  enabled = false;
+
+  constructor(data?: PartialMessage<GetOnboardingResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOnboardingResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 3, name: "finishedAt", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "federatedGraphsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOnboardingResponse {
+    return new GetOnboardingResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOnboardingResponse {
+    return new GetOnboardingResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOnboardingResponse {
+    return new GetOnboardingResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOnboardingResponse | PlainMessage<GetOnboardingResponse> | undefined, b: GetOnboardingResponse | PlainMessage<GetOnboardingResponse> | undefined): boolean {
+    return proto3.util.equals(GetOnboardingResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateOnboardingRequest
+ */
+export class CreateOnboardingRequest extends Message<CreateOnboardingRequest> {
+  /**
+   * @generated from field: string organizationName = 1;
+   */
+  organizationName = "";
+
+  /**
+   * @generated from field: repeated string invititationEmails = 2;
+   */
+  invititationEmails: string[] = [];
+
+  /**
+   * @generated from field: bool slack = 3;
+   */
+  slack = false;
+
+  /**
+   * @generated from field: bool email = 4;
+   */
+  email = false;
+
+  constructor(data?: PartialMessage<CreateOnboardingRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOnboardingRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organizationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "invititationEmails", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "slack", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "email", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOnboardingRequest {
+    return new CreateOnboardingRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOnboardingRequest {
+    return new CreateOnboardingRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOnboardingRequest {
+    return new CreateOnboardingRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateOnboardingRequest | PlainMessage<CreateOnboardingRequest> | undefined, b: CreateOnboardingRequest | PlainMessage<CreateOnboardingRequest> | undefined): boolean {
+    return proto3.util.equals(CreateOnboardingRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateOnboardingResponse
+ */
+export class CreateOnboardingResponse extends Message<CreateOnboardingResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: optional string finishedAt = 2;
+   */
+  finishedAt?: string;
+
+  /**
+   * @generated from field: int32 federatedGraphsCount = 3;
+   */
+  federatedGraphsCount = 0;
+
+  constructor(data?: PartialMessage<CreateOnboardingResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOnboardingResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "finishedAt", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "federatedGraphsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOnboardingResponse {
+    return new CreateOnboardingResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOnboardingResponse {
+    return new CreateOnboardingResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOnboardingResponse {
+    return new CreateOnboardingResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateOnboardingResponse | PlainMessage<CreateOnboardingResponse> | undefined, b: CreateOnboardingResponse | PlainMessage<CreateOnboardingResponse> | undefined): boolean {
+    return proto3.util.equals(CreateOnboardingResponse, a, b);
+  }
+}
+

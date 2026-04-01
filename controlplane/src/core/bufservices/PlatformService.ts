@@ -81,6 +81,8 @@ import { migrateMonograph } from './monograph/migrateMonograph.js';
 import { moveMonograph } from './monograph/moveMonograph.js';
 import { publishMonograph } from './monograph/publishMonograph.js';
 import { updateMonograph } from './monograph/updateMonograph.js';
+import { createOnboarding } from './onboarding/createOnboarding.js';
+import { getOnboarding } from './onboarding/getOnboarding.js';
 import { createNamespace } from './namespace/createNamespace.js';
 import { deleteNamespace } from './namespace/deleteNamespace.js';
 import { getNamespace } from './namespace/getNamespace.js';
@@ -905,6 +907,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     recomposeGraph: (req, ctx) => {
       return recomposeGraph(opts, req, ctx);
+    },
+
+    getOnboarding: (req, ctx) => {
+      return getOnboarding(opts, req, ctx);
+    },
+
+    createOnboarding: (req, ctx) => {
+      return createOnboarding(opts, req, ctx);
     },
   };
 }
