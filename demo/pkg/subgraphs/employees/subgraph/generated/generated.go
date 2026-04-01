@@ -1477,7 +1477,7 @@ type WorkSetup @shareable {
 input FindEmployeeCriteria @oneOf {
   id: Int
   department: Department @cost(weight: 17)
-  title: String @cost(weight: -3)
+  title: String @cost(weight: -3) # totally made-up example for testing
 }`, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
 	directive @authenticated on FIELD_DEFINITION | OBJECT | INTERFACE | SCALAR | ENUM
