@@ -15,7 +15,7 @@ export const OnboardingNavigation = ({
   onSkip: () => void;
 }) => {
   return (
-    <div className="flex w-full justify-between">
+    <div className="mt-auto flex w-full justify-between pt-8">
       <div className="flex items-center gap-1">
         <Button asChild variant="outline" onClick={onSkip}>
           <Link href="/">Skip</Link>
