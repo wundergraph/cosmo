@@ -38,7 +38,7 @@ describe('Field resolvability error tests', () => {
     );
   });
 
-  test('that when a custom number of node is provided truncation happens correctly', () => {
+  test('that when a custom number of selections is provided, truncation happens correctly', () => {
     const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
     const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, 1);
     const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
@@ -56,7 +56,7 @@ describe('Field resolvability error tests', () => {
 `);
   });
 
-  test('that all nodes are rendered when limit is negative', () => {
+  test('that all selections are rendered when limit is negative', () => {
     const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
     const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, -1);
     const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
@@ -133,7 +133,7 @@ describe('Field resolvability error tests', () => {
 `);
   });
 
-  test('that when the limit is greater than the number of nodes no truncation occurs', () => {
+  test('that when the limit is greater than the number of selections no truncation occurs', () => {
     const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
     const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, 50);
     const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
