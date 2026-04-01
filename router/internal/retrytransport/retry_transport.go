@@ -148,16 +148,9 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		// drain the previous response before retrying
 		rt.drainBody(resp, requestLogger)
 
-		// Restore the request body for the retry. The body was consumed by the
-		// previous attempt (otelhttp v0.67.0 clones the request per RoundTrip,
-		// but the clone's body derives from the original which is at EOF).
-		if req.GetBody != nil {
-			newBody, bodyErr := req.GetBody()
-			if bodyErr != nil {
-				requestLogger.Error("Failed to restore request body for retry", zap.Error(bodyErr))
-				return resp, bodyErr
-			}
-			req.Body = newBody
+		if err := cloneRequestBody(req); err != nil {
+			requestLogger.Error("Failed to restore request body for retry", zap.Error(err))
+			return resp, err
 		}
 
 		// Retry the request
@@ -191,6 +184,27 @@ func (rt *RetryHTTPTransport) drainBody(resp *http.Response, logger *zap.Logger)
 	if err != nil {
 		logger.Error("Failed draining when discarding the body", zap.Error(err))
 	}
+}
+
+// cloneRequestBody restores the request body for the retry. The body was consumed by the
+// previous attempt (otelhttp v0.67.0 clones the request per RoundTrip,
+// but the clone's body derives from the original which is at EOF).
+func cloneRequestBody(req *http.Request) error {
+	if req.Body == nil || req.Body == http.NoBody {
+		return nil
+	}
+
+	if req.GetBody == nil {
+		return nil
+	}
+
+	clonedBody, err := req.GetBody()
+	if err != nil {
+		return err
+	}
+
+	req.Body = clonedBody
+	return nil
 }
 
 func isResponseOK(resp *http.Response) bool {
