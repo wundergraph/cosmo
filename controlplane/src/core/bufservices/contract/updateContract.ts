@@ -156,6 +156,7 @@ export function updateContract(
         disableResolvabilityValidation: req.disableResolvabilityValidation,
         ignoreExternalKeys,
       },
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
@@ -187,6 +188,7 @@ export function updateContract(
           },
         },
       ],
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     compositionErrors.push(...composition.compositionErrors);

@@ -187,6 +187,7 @@ export function updateFeatureFlag(
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
         federatedGraphs: allFederatedGraphsToCompose,
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       compositionErrors.push(...composition.compositionErrors);
