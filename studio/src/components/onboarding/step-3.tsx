@@ -1,17 +1,20 @@
 import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useMutation } from '@connectrpc/connect-query';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { OnboardingNavigation } from './onboarding-navigation';
+import { useMutation } from '@connectrpc/connect-query';
 import { finishOnboarding } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { useToast } from '../ui/use-toast';
-import { Link } from '../ui/link';
-import { Button } from '../ui/button';
+import { useRouter } from 'next/router';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
 export const Step3 = () => {
   const router = useRouter();
   const { toast } = useToast();
   const { setStep, setSkipped, setOnboarding } = useOnboarding();
+
+  useEffect(() => {
+    setStep(3);
+  }, [setStep]);
 
   const { mutate, isPending } = useMutation(finishOnboarding, {
     onSuccess: (d) => {
@@ -40,32 +43,18 @@ export const Step3 = () => {
     },
   });
 
-  useEffect(() => {
-    setStep(3);
-  }, [setStep]);
-
   return (
     <div className="flex flex-col items-center gap-4 text-center">
-      <h2 className="text-2xl font-semibold tracking-tight">Step 3</h2>
-      <div className="flex w-full justify-between">
-        <Button asChild variant="secondary" onClick={setSkipped}>
-          <Link href="/">Skip</Link>
-        </Button>
-        <div className="flex">
-          <Button className="mr-2" asChild>
-            <Link href="/onboarding/2">Back</Link>
-          </Button>
-          <Button
-            onClick={() => {
-              mutate({});
-            }}
-            isLoading={isPending}
-            disabled={isPending}
-          >
-            Finish
-          </Button>
-        </div>
-      </div>
+      <h2 className="text-2xl font-semibold tracking-tight">Step 4</h2>
+      <OnboardingNavigation
+        onSkip={setSkipped}
+        backHref="/onboarding/3"
+        forward={{
+          onClick: () => mutate({}),
+          isLoading: isPending,
+        }}
+        forwardLabel="Finish"
+      />
     </div>
   );
 };

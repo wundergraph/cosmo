@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
-import { Link } from '../ui/link';
-import { Button } from '../ui/button';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { OnboardingNavigation } from './onboarding-navigation';
 import { useMutation } from '@connectrpc/connect-query';
 import { createOnboarding } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useRouter } from 'next/router';
@@ -44,29 +43,19 @@ export const Step1 = () => {
   return (
     <div className="flex flex-col items-center gap-4 text-center">
       <h2 className="text-2xl font-semibold tracking-tight">Step 1</h2>
-      <div className="flex w-full justify-between">
-        <Button asChild variant="secondary" onClick={setSkipped}>
-          <Link href="/">Skip</Link>
-        </Button>
-        <div className="flex">
-          <Button className="mr-2" asChild disabled>
-            <Link href="#">Back</Link>
-          </Button>
-          <Button
-            onClick={() => {
-              // TODO: replace with real values in form
-              mutate({
-                slack: true,
-                email: false,
-              });
-            }}
-            isLoading={isPending}
-            disabled={isPending}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <OnboardingNavigation
+        onSkip={setSkipped}
+        forward={{
+          onClick: () => {
+            // TODO: replace with real values in form
+            mutate({
+              slack: true,
+              email: false,
+            });
+          },
+          isLoading: isPending,
+        }}
+      />
     </div>
   );
 };
