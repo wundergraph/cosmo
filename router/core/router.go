@@ -1275,25 +1275,30 @@ func (r *Router) buildClients(ctx context.Context) error {
 		}
 
 		if storageProviderID != "" {
-			// An explicit storage provider is configured — read the manifest once at startup.
+			// An explicit storage provider is configured — fetch the manifest at startup and poll for updates.
 			objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
 			objectPath := manifestFileName
 			if objectPrefix != "" {
 				objectPath = path.Join(objectPrefix, manifestFileName)
 			}
 
-			manifest, err := pClient.ReadManifest(ctx, objectPath)
-			if err != nil {
-				return fmt.Errorf("failed to fetch PQL manifest from storage provider %q: %w",
+			storageFetcher := pqlmanifest.NewStorageFetcher(pClient.ReadManifest, objectPath, r.logger)
+
+			pqlStore = pqlmanifest.NewStore(r.logger)
+			poller := pqlmanifest.NewPoller(
+				storageFetcher,
+				pqlStore,
+				r.persistedOperationsConfig.Manifest.PollInterval,
+				r.persistedOperationsConfig.Manifest.PollJitter,
+				r.logger,
+			)
+
+			if err := poller.FetchInitial(ctx); err != nil {
+				return fmt.Errorf("failed to fetch initial PQL manifest from storage provider %q: %w",
 					storageProviderID, err)
 			}
 
-			pqlStore = pqlmanifest.NewStore(r.logger)
-			pqlStore.Load(manifest)
-			r.logger.Info("Loaded PQL manifest from storage provider",
-				zap.String("provider_id", storageProviderID),
-				zap.Int("operations", pqlStore.OperationCount()),
-			)
+			r.pqlPoller = poller
 		} else {
 			// No storage provider configured — fetch manifest from Cosmo CDN and poll for updates.
 			if r.graphApiToken == "" {

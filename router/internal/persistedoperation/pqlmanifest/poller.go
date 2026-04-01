@@ -8,15 +8,21 @@ import (
 	"go.uber.org/zap"
 )
 
+// ManifestFetcher abstracts how the manifest is retrieved so the Poller
+// can work with any storage backend (CDN, S3, etc.).
+type ManifestFetcher interface {
+	Fetch(ctx context.Context, currentRevision string) (*Manifest, bool, error)
+}
+
 type Poller struct {
-	fetcher      *Fetcher
+	fetcher      ManifestFetcher
 	pollInterval time.Duration
 	pollJitter   time.Duration
 	logger       *zap.Logger
 	store        *Store
 }
 
-func NewPoller(fetcher *Fetcher, store *Store, pollInterval, pollJitter time.Duration, logger *zap.Logger) *Poller {
+func NewPoller(fetcher ManifestFetcher, store *Store, pollInterval, pollJitter time.Duration, logger *zap.Logger) *Poller {
 	if pollJitter <= 0 {
 		pollJitter = 5 * time.Second
 	}
