@@ -14,9 +14,9 @@ export const OnboardingLayout = ({ children, title }: { children?: React.ReactNo
         {title && <h1 className="text-lg font-semibold tracking-tight">{title}</h1>}
         <Stepper steps={ONBOARDING_STEPS} currentStep={(currentStep ?? 1) - 1} className="ml-auto" />
       </header>
-      <main className="w-full flex-1 px-6 pt-24">
+      <main className="w-full flex-1 px-6 pt-12">
         <Card className="mx-auto w-full max-w-2xl">
-          <CardContent className="p-6">{children}</CardContent>
+          <CardContent className="flex min-h-160 flex-col p-6">{children}</CardContent>
         </Card>
       </main>
     </div>

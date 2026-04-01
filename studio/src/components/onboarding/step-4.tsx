@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { OnboardingContainer } from './onboarding-container';
 import { OnboardingNavigation } from './onboarding-navigation';
 import { useMutation } from '@connectrpc/connect-query';
 import { finishOnboarding } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
@@ -43,7 +44,7 @@ export const Step4 = () => {
   });
 
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
+    <OnboardingContainer>
       <h2 className="text-2xl font-semibold tracking-tight">Step 4</h2>
       <OnboardingNavigation
         onSkip={setSkipped}
@@ -54,6 +55,6 @@ export const Step4 = () => {
         }}
         forwardLabel="Finish"
       />
-    </div>
+    </OnboardingContainer>
   );
 };
