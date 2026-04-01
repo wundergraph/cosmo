@@ -117,8 +117,27 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	if h.propagateHeaders {
 		wh := h.writer.Header()
 		for k, v := range h.headerPropagation.header {
-			for _, el := range v {
-				wh.Add(k, el)
+			if http.CanonicalHeaderKey(k) == "Vary" {
+				existing := wh.Values("Vary")
+				existingSet := make(map[string]struct{}, len(existing))
+				for _, e := range existing {
+					for _, part := range strings.Split(e, ",") {
+						existingSet[http.CanonicalHeaderKey(strings.TrimSpace(part))] = struct{}{}
+					}
+				}
+				for _, el := range v {
+					for _, part := range strings.Split(el, ",") {
+						trimmed := strings.TrimSpace(part)
+						if _, found := existingSet[http.CanonicalHeaderKey(trimmed)]; !found {
+							wh.Add("Vary", trimmed)
+							existingSet[http.CanonicalHeaderKey(trimmed)] = struct{}{}
+						}
+					}
+				}
+			} else {
+				for _, el := range v {
+					wh.Add(k, el)
+				}
 			}
 		}
 		h.propagateHeaders = false
