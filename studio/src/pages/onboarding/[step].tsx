@@ -13,18 +13,34 @@ const OnboardingStep: NextPageWithLayout = () => {
   switch (step) {
     case '0':
     case '1':
-      return <Step1 />;
+      return (
+        <OnboardingLayout title="Information about you">
+          <Step1 />
+        </OnboardingLayout>
+      );
     case '2':
-      return <Step2 />;
+      return (
+        <OnboardingLayout title="What is GraphQL Federation?">
+          <Step2 />
+        </OnboardingLayout>
+      );
     case '3':
-      return <Step3 />;
+      return (
+        <OnboardingLayout title="Create your first graph">
+          <Step3 />
+        </OnboardingLayout>
+      );
     case '4':
-      return <Step4 />;
+      return (
+        <OnboardingLayout title="Run your services">
+          <Step4 />
+        </OnboardingLayout>
+      );
     default:
       return null;
   }
 };
 
-OnboardingStep.getLayout = (page) => <OnboardingLayout>{page}</OnboardingLayout>;
+OnboardingStep.getLayout = (page) => page;
 
 export default OnboardingStep;
