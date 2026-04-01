@@ -464,20 +464,13 @@ export class FeatureFlagRepository {
         eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, subgraphsToFederatedGraph.subgraphId),
       )
       .innerJoin(namespaces, eq(namespaces.id, targets.namespaceId))
-      .where(
-        and(
-          ...conditions,
-          eq(subgraphsToFederatedGraph.federatedGraphId, federatedGraphId),
-        ),
-      )
+      .where(and(...conditions, eq(subgraphsToFederatedGraph.federatedGraphId, federatedGraphId)))
       .orderBy(asc(targets.createdAt));
 
     // Get total count
     const countResult = await this.db
       .select({ count: count() })
-      .from(
-        baseQuery.as('feature_subgraphs_by_fed_graph'),
-      )
+      .from(baseQuery.as('feature_subgraphs_by_fed_graph'))
       .execute();
 
     const totalCount = countResult[0]?.count ?? 0;

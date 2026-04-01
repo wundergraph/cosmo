@@ -1064,9 +1064,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
         validateHeaders(requestHeaders);
 
         if (type === 'featureFlag') {
-          const featureFlag = (compositionFlagsData?.featureFlags ?? []).find(
-            (f) => f.id === loadSchemaGraphId,
-          );
+          const featureFlag = (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId);
           if (featureFlag) {
             requestHeaders['X-Feature-Flag'] = featureFlag.name;
           }

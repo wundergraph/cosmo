@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
@@ -11,8 +13,6 @@ import {
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
 } from '../test-util.js';
-import fs from 'node:fs';
-import { join } from 'node:path';
 
 let dbname = '';
 
