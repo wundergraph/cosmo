@@ -1174,7 +1174,7 @@ Example:
 
         const rpcMethods = visitor.getRPCMethods();
         const messageDefinitions = visitor.getMessageDefinitions();
-        this.usesWrapperTypes = this.usesWrapperTypes || visitor.usesWrapperTypes
+        this.usesWrapperTypes = this.usesWrapperTypes || visitor.usesWrapperTypes;
 
         result.rpcMethods.push(...rpcMethods.map((m) => renderRPCMethod(this.includeComments, m).join('\n')));
         result.methodNames.push(...rpcMethods.map((m) => m.name));
