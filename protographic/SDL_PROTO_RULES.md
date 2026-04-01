@@ -396,6 +396,34 @@ message RequireStorageItemInfoByIdFields {
 - All type messages (`StorageItem`, `PalletItem`, `ContainerItem`) are **nested inside** the `Fields` message. This scoping ensures they don't collide with the root-level messages of the same name, which contain all fields of the type — while the nested versions contain only the subset selected in `@requires`
 - The same pattern applies to union types (union member types instead of implementing types)
 
+#### Required Fields with Arguments
+
+When a `@requires` field has arguments it is treated the same as a usual `@requires` field but its proto request message contains an extra field `field_args`.  
+It contains values of the fields arguments as given by the query.
+
+```graphql
+type User @key(fields: "id") {
+  id: ID!
+  post(slug: String!, maxResults: Int!): Post! @requires(fields: "name")
+}
+```
+
+Maps to:
+
+```protobuf
+rpc RequireUserPostById(RequireUserPostByIdRequest) returns (RequireUserPostByIdResponse) {}
+
+message RequireUserPostByIdRequest {
+  repeated RequireUserPostByIdContext context = 1;
+  RequireUserPostByIdArgs field_args = 2;  // Added when field has arguments
+}
+
+message RequireUserPostByIdArgs {
+  string slug = 1;
+  int32 max_results = 2;
+}
+```
+
 ## Field Resolvers
 
 Field resolvers allow you to define custom resolution logic for specific fields within a GraphQL type. Using the `@connect__fieldResolver` directive, you can specify which fields should be resolved through dedicated RPC methods, enabling lazy loading, computed fields, or integration with external data sources.
