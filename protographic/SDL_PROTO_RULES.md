@@ -398,8 +398,7 @@ message RequireStorageItemInfoByIdFields {
 
 #### Required Fields with Arguments
 
-When a `@requires` field has arguments it is treated the same as a usual `@requires` field but its proto request message contains an extra field `field_args`.  
-It contains values of the fields arguments as given by the query.
+When a field annotated with @requires defines arguments, it is handled the same as other @requires-annotated fields. However, the generated proto request message includes an additional field, field_args, which contains the argument values provided in the query.
 
 ```graphql
 type User @key(fields: "id") {
