@@ -1275,10 +1275,6 @@ func (r *Router) buildClients(ctx context.Context) error {
 		}
 
 		if storageProviderID != "" {
-			if pClient == nil {
-				return fmt.Errorf("storage provider %q is configured for PQL manifest but no matching provider was found in storage_providers", storageProviderID)
-			}
-
 			// An explicit storage provider is configured — read the manifest once at startup.
 			objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
 			objectPath := manifestFileName
