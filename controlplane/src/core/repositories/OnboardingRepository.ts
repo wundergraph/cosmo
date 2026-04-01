@@ -12,7 +12,6 @@ export class OnboardingRepository {
     const values = {
       userId,
       organizationId: this.organizationId,
-      step: 0,
       slack,
       email,
     };
@@ -28,6 +27,16 @@ export class OnboardingRepository {
           finishedAt: null,
         },
       })
+      .returning();
+
+    return result[0];
+  }
+
+  public async finish(userId: string) {
+    const result = await this.db
+      .update(schema.onboarding)
+      .set({ finishedAt: new Date() })
+      .where(and(eq(schema.onboarding.organizationId, this.organizationId), eq(schema.onboarding.userId, userId)))
       .returning();
 
     return result[0];

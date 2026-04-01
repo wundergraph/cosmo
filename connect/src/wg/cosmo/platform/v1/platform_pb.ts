@@ -25167,3 +25167,83 @@ export class CreateOnboardingResponse extends Message<CreateOnboardingResponse> 
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.FinishOnboardingRequest
+ */
+export class FinishOnboardingRequest extends Message<FinishOnboardingRequest> {
+  constructor(data?: PartialMessage<FinishOnboardingRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.FinishOnboardingRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FinishOnboardingRequest {
+    return new FinishOnboardingRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FinishOnboardingRequest {
+    return new FinishOnboardingRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FinishOnboardingRequest {
+    return new FinishOnboardingRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FinishOnboardingRequest | PlainMessage<FinishOnboardingRequest> | undefined, b: FinishOnboardingRequest | PlainMessage<FinishOnboardingRequest> | undefined): boolean {
+    return proto3.util.equals(FinishOnboardingRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.FinishOnboardingResponse
+ */
+export class FinishOnboardingResponse extends Message<FinishOnboardingResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: int32 federatedGraphsCount = 2;
+   */
+  federatedGraphsCount = 0;
+
+  /**
+   * @generated from field: string finishedAt = 3;
+   */
+  finishedAt = "";
+
+  constructor(data?: PartialMessage<FinishOnboardingResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.FinishOnboardingResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "federatedGraphsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "finishedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FinishOnboardingResponse {
+    return new FinishOnboardingResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FinishOnboardingResponse {
+    return new FinishOnboardingResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FinishOnboardingResponse {
+    return new FinishOnboardingResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FinishOnboardingResponse | PlainMessage<FinishOnboardingResponse> | undefined, b: FinishOnboardingResponse | PlainMessage<FinishOnboardingResponse> | undefined): boolean {
+    return proto3.util.equals(FinishOnboardingResponse, a, b);
+  }
+}
+

@@ -574,6 +574,9 @@ const (
 	// PlatformServiceCreateOnboardingProcedure is the fully-qualified name of the PlatformService's
 	// CreateOnboarding RPC.
 	PlatformServiceCreateOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateOnboarding"
+	// PlatformServiceFinishOnboardingProcedure is the fully-qualified name of the PlatformService's
+	// FinishOnboarding RPC.
+	PlatformServiceFinishOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/FinishOnboarding"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -759,6 +762,7 @@ var (
 	platformServiceRecomposeGraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
 	platformServiceGetOnboardingMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetOnboarding")
 	platformServiceCreateOnboardingMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("CreateOnboarding")
+	platformServiceFinishOnboardingMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("FinishOnboarding")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -1102,6 +1106,7 @@ type PlatformServiceClient interface {
 	// Onboarding
 	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
 	CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error)
+	FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -2201,6 +2206,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceCreateOnboardingMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		finishOnboarding: connect.NewClient[v1.FinishOnboardingRequest, v1.FinishOnboardingResponse](
+			httpClient,
+			baseURL+PlatformServiceFinishOnboardingProcedure,
+			connect.WithSchema(platformServiceFinishOnboardingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2386,6 +2397,7 @@ type platformServiceClient struct {
 	recomposeGraph                        *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
 	getOnboarding                         *connect.Client[v1.GetOnboardingRequest, v1.GetOnboardingResponse]
 	createOnboarding                      *connect.Client[v1.CreateOnboardingRequest, v1.CreateOnboardingResponse]
+	finishOnboarding                      *connect.Client[v1.FinishOnboardingRequest, v1.FinishOnboardingResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -3325,6 +3337,11 @@ func (c *platformServiceClient) CreateOnboarding(ctx context.Context, req *conne
 	return c.createOnboarding.CallUnary(ctx, req)
 }
 
+// FinishOnboarding calls wg.cosmo.platform.v1.PlatformService.FinishOnboarding.
+func (c *platformServiceClient) FinishOnboarding(ctx context.Context, req *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error) {
+	return c.finishOnboarding.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3666,6 +3683,7 @@ type PlatformServiceHandler interface {
 	// Onboarding
 	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
 	CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error)
+	FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4761,6 +4779,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceCreateOnboardingMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceFinishOnboardingHandler := connect.NewUnaryHandler(
+		PlatformServiceFinishOnboardingProcedure,
+		svc.FinishOnboarding,
+		connect.WithSchema(platformServiceFinishOnboardingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -5123,6 +5147,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetOnboardingHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateOnboardingProcedure:
 			platformServiceCreateOnboardingHandler.ServeHTTP(w, r)
+		case PlatformServiceFinishOnboardingProcedure:
+			platformServiceFinishOnboardingHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5850,4 +5876,8 @@ func (UnimplementedPlatformServiceHandler) GetOnboarding(context.Context, *conne
 
 func (UnimplementedPlatformServiceHandler) CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateOnboarding is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.FinishOnboarding is not implemented"))
 }
