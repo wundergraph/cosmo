@@ -293,7 +293,7 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
-		t.Run("input object field cost weight", func(t *testing.T) {
+		t.Run("input object field cost weight on department", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
@@ -318,7 +318,7 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
-		t.Run("input object field cost weight", func(t *testing.T) {
+		t.Run("input object field cost weight on title", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
@@ -336,10 +336,10 @@ func TestOperationCost(t *testing.T) {
 				})
 				require.Contains(t, res.Body, `"data":`)
 
-				// 10 * 1 + 3
-				require.Equal(t, "13", res.Response.Header.Get(core.CostEstimatedHeader))
-				// 1 * 1 + 3
-				require.Equal(t, "4", res.Response.Header.Get(core.CostActualHeader))
+				// 10 * 1 - 3
+				require.Equal(t, "7", res.Response.Header.Get(core.CostEstimatedHeader))
+				// 1 * 1 - 3
+				require.Equal(t, "0", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
@@ -940,8 +940,8 @@ func TestOperationCost(t *testing.T) {
 				})
 				require.Contains(t, resTitle1.Body, `"data":`)
 				require.Equal(t, "HIT", resTitle1.Response.Header.Get(core.ExecutionPlanCacheHeader))
-				require.Equal(t, "13", resTitle1.Response.Header.Get(core.CostEstimatedHeader))
-				require.Equal(t, "4", resTitle1.Response.Header.Get(core.CostActualHeader))
+				require.Equal(t, "7", resTitle1.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "0", resTitle1.Response.Header.Get(core.CostActualHeader))
 
 				// 3rd request – cache HIT, same input field as 1st, different value
 				resDept2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -950,7 +950,7 @@ func TestOperationCost(t *testing.T) {
 				require.Contains(t, resDept2.Body, `"data":`)
 				require.Equal(t, "HIT", resDept2.Response.Header.Get(core.ExecutionPlanCacheHeader))
 				require.Equal(t, "27", resDept2.Response.Header.Get(core.CostEstimatedHeader))
-				require.Equal(t, "4", resTitle1.Response.Header.Get(core.CostActualHeader))
+				require.Equal(t, "20", resDept2.Response.Header.Get(core.CostActualHeader))
 
 				// 4th request – cache HIT, same input field as 2nd, different value
 				resTitle2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -958,8 +958,8 @@ func TestOperationCost(t *testing.T) {
 				})
 				require.Contains(t, resTitle2.Body, `"data":`)
 				require.Equal(t, "HIT", resTitle2.Response.Header.Get(core.ExecutionPlanCacheHeader))
-				require.Equal(t, "13", resTitle2.Response.Header.Get(core.CostEstimatedHeader))
-				require.Equal(t, "4", resTitle1.Response.Header.Get(core.CostActualHeader))
+				require.Equal(t, "7", resTitle2.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "0", resTitle2.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 	})

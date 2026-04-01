@@ -278,5 +278,5 @@ type WorkSetup @shareable {
 input FindEmployeeCriteria @oneOf {
   id: Int
   department: Department @cost(weight: 17)
-  title: String @cost(weight: 3)
+  title: String @cost(weight: -3)
 }
