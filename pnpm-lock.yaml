@@ -562,6 +562,9 @@ importers:
       graphql:
         specifier: 16.9.0
         version: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
+      http-proxy-agent:
+        specifier: 8.0.0
+        version: 8.0.0
       https-proxy-agent:
         specifier: 8.0.0
         version: 8.0.0
@@ -10590,6 +10593,10 @@ packages:
 
   http-proxy-agent@7.0.2:
     resolution: {integrity: sha512-T1gkAiYYDWYx3V5Bmyu7HcfcvL7mUrTWiM6yOfa3PIphViJ/gFPbvidQ+veqSOHci/PxBcDabeUNCzpOODJZig==}
+    engines: {node: '>= 14'}
+
+  http-proxy-agent@8.0.0:
+    resolution: {integrity: sha512-7pose0uGgrCJeH2Qh4JcNhWZp3u/oNrWjNYDK4ydOLxOpTw8V8ogHFAmkz0VWq96JBFj4umVJpvmQi287rSYLg==}
     engines: {node: '>= 14'}
 
   https-proxy-agent@5.0.1:
@@ -25968,6 +25975,13 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.4
+      debug: 4.4.1
+    transitivePeerDependencies:
+      - supports-color
+
+  http-proxy-agent@8.0.0:
+    dependencies:
+      agent-base: 8.0.0
       debug: 4.4.1
     transitivePeerDependencies:
       - supports-color
