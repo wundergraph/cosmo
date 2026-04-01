@@ -87,6 +87,27 @@ describe('Onboarding', () => {
       expect(resp.enabled).toBe(true);
       expect(resp.finishedAt).toBeFalsy();
     });
+
+    test('returns finishedAt after onboarding is finished', async (testContext) => {
+      const {
+        authenticator,
+        client,
+        server,
+        users: { adminAliceCompanyA },
+      } = await SetupTest({ dbname, enableMultiUsers: true });
+      testContext.onTestFinished(() => server.close());
+
+      authenticator.changeUserWithSuppliedContext(adminAliceCompanyA);
+
+      await client.createOnboarding({ slack: true, email: false });
+      await client.finishOnboarding({});
+
+      const resp = await client.getOnboarding({});
+
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(resp.enabled).toBe(true);
+      expect(resp.finishedAt).toBeTruthy();
+    });
   });
 
   describe('createOnboarding', () => {
@@ -158,6 +179,84 @@ describe('Onboarding', () => {
       const resp = await client.createOnboarding({ slack: false, email: true });
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    });
+
+    test('resets finishedAt when updating after finish', async (testContext) => {
+      const {
+        authenticator,
+        client,
+        server,
+        users: { adminAliceCompanyA },
+      } = await SetupTest({ dbname, enableMultiUsers: true });
+      testContext.onTestFinished(() => server.close());
+
+      authenticator.changeUserWithSuppliedContext(adminAliceCompanyA);
+
+      await client.createOnboarding({ slack: true, email: true });
+      await client.finishOnboarding({});
+
+      // Update after finishing should reset finishedAt
+      await client.createOnboarding({ slack: false, email: false });
+
+      const resp = await client.getOnboarding({});
+
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(resp.finishedAt).toBeFalsy();
+    });
+  });
+
+  describe('finishOnboarding', () => {
+    test('succeeds after createOnboarding', async (testContext) => {
+      const {
+        authenticator,
+        client,
+        server,
+        users: { adminAliceCompanyA },
+      } = await SetupTest({ dbname, enableMultiUsers: true });
+      testContext.onTestFinished(() => server.close());
+
+      authenticator.changeUserWithSuppliedContext(adminAliceCompanyA);
+
+      await client.createOnboarding({ slack: true, email: true });
+
+      const resp = await client.finishOnboarding({});
+
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(resp.finishedAt).toBeTruthy();
+      expect(resp.federatedGraphsCount).toBe(0);
+    });
+
+    test('returns ERR_NOT_FOUND when no onboarding record exists', async (testContext) => {
+      const {
+        authenticator,
+        client,
+        server,
+        users: { adminAliceCompanyA },
+      } = await SetupTest({ dbname, enableMultiUsers: true });
+      testContext.onTestFinished(() => server.close());
+
+      authenticator.changeUserWithSuppliedContext(adminAliceCompanyA);
+
+      const resp = await client.finishOnboarding({});
+
+      expect(resp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+      expect(resp.response?.details).toBe('Onboarding not found');
+    });
+
+    test('returns ERR_NOT_FOUND for non-creator without record', async (testContext) => {
+      const {
+        authenticator,
+        client,
+        server,
+        users: { devJoeCompanyA },
+      } = await SetupTest({ dbname, enableMultiUsers: true });
+      testContext.onTestFinished(() => server.close());
+
+      authenticator.changeUserWithSuppliedContext(devJoeCompanyA);
+
+      const resp = await client.finishOnboarding({});
+
+      expect(resp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     });
   });
 });

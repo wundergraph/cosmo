@@ -3235,6 +3235,14 @@ message CreateOnboardingResponse {
   int32 federatedGraphsCount = 3;
 }
 
+message FinishOnboardingRequest {}
+
+message FinishOnboardingResponse {
+  Response response = 1;
+  int32 federatedGraphsCount = 2;
+  string finishedAt = 3;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3638,4 +3646,5 @@ service PlatformService {
   // Onboarding
   rpc GetOnboarding(GetOnboardingRequest) returns (GetOnboardingResponse) {}
   rpc CreateOnboarding(CreateOnboardingRequest) returns (CreateOnboardingResponse) {}
+  rpc FinishOnboarding(FinishOnboardingRequest) returns (FinishOnboardingResponse) {}
 }

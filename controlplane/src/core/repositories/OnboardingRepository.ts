@@ -32,6 +32,16 @@ export class OnboardingRepository {
     return result[0];
   }
 
+  public async finish(userId: string) {
+    const result = await this.db
+      .update(schema.onboarding)
+      .set({ finishedAt: new Date() })
+      .where(and(eq(schema.onboarding.organizationId, this.organizationId), eq(schema.onboarding.userId, userId)))
+      .returning();
+
+    return result[0];
+  }
+
   public async getByUserId(userId: string) {
     const result = await this.db.query.onboarding.findFirst({
       where: and(eq(schema.onboarding.organizationId, this.organizationId), eq(schema.onboarding.userId, userId)),
