@@ -48,6 +48,7 @@ type filteringTracer struct {
 // This is a workaround because SpanProcessor.OnStart receives a ReadWriteSpan but SetAttributes only appends — it cannot remove attributes already set via WithAttributes during Start.
 // The OTEL SDK does not provide a way to remove attributes from a span after it has been created.
 // This is temporary solution to ensure that our metrics are backward compatible for now.
+//
 // TODO: Remove this once we want to ingest the new attributes.
 func (t *filteringTracer) Start(ctx context.Context, name string, opts ...oteltrace.SpanStartOption) (context.Context, oteltrace.Span) {
 	// Extract the SpanConfig to inspect attributes set via WithAttributes.
@@ -66,6 +67,9 @@ func (t *filteringTracer) Start(ctx context.Context, name string, opts ...oteltr
 
 		// Rebuild from the normalized config so we preserve other start options
 		// such as explicit timestamps.
+		// We need to do this because the options are abstracted as interfaces and the concrete types are
+		// package private in the OTEL SDK. Therefore we cannot access the attributes directly or perform a
+		// type switch and assume that `SpanStartEventOption` is always `attributeOption`.
 		rebuilt := make([]oteltrace.SpanStartOption, 0, 5)
 		if ts := cfg.Timestamp(); !ts.IsZero() {
 			rebuilt = append(rebuilt, oteltrace.WithTimestamp(ts))
@@ -86,6 +90,7 @@ func (t *filteringTracer) Start(ctx context.Context, name string, opts ...oteltr
 	}
 
 	ctx, span := t.Tracer.Start(ctx, name, opts...)
+	// We need to wrap the span in a filtering span to filter the attributes before setting them on the span.
 	return ctx, &filteringSpan{Span: span}
 }
 
@@ -93,6 +98,10 @@ type filteringSpan struct {
 	oteltrace.Span
 }
 
+// SetAttributes filters the attributes before setting them on the span.
+// The name SetAttributes is a bit misleading here because the underlying logic
+// actually appends the attributes to the span based on limits. There is no way to override them so we
+// need to make sure we filter out attributes that are not allowed for now.
 func (s *filteringSpan) SetAttributes(kv ...attribute.KeyValue) {
 	n := 0
 	for i := range kv {

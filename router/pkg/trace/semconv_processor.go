@@ -46,20 +46,18 @@ var semconvServerMapping = map[attribute.Key]attribute.Key{
 	"server.port":    "net.host.port",
 }
 
-// ForceFlush implements [trace.SpanProcessor].
-func (s *semconvProcessor) ForceFlush(ctx context.Context) error { return nil }
-
-// OnStart implements [trace.SpanProcessor].
-func (*semconvProcessor) OnStart(parent context.Context, s trace.ReadWriteSpan) {}
-
-// Shutdown implements [trace.SpanProcessor].
-func (s *semconvProcessor) Shutdown(ctx context.Context) error { return nil }
-
-// OnEnd implements [trace.SpanProcessor].
+// OnEnd renames the attributes of the span to the old equivalents.
+// We currently do this because we want to be backward compatible with the old metrics.
+// We will handle this in multiple steps for the migration.
+//
+// 1. Rewrite the metrics to use the old names and discard the new ones.
+// 2. Emit both the old and new names for the same attribute.
+// 3. Remove this span processor to only emit the new attributes.
 func (*semconvProcessor) OnEnd(s trace.ReadOnlySpan) {
 	kind := s.SpanKind()
 	attributes := s.Attributes()
 
+	// First iteration: rename the attributes to the old equivalents.
 	for i := range attributes {
 		if mappedKey, ok := semconvCommonMapping[attributes[i].Key]; ok {
 			attributes[i].Key = mappedKey
@@ -78,3 +76,12 @@ func (*semconvProcessor) OnEnd(s trace.ReadOnlySpan) {
 		}
 	}
 }
+
+// ForceFlush does nothing.
+func (s *semconvProcessor) ForceFlush(ctx context.Context) error { return nil }
+
+// OnStart does nothing.
+func (*semconvProcessor) OnStart(parent context.Context, s trace.ReadWriteSpan) {}
+
+// Shutdown does nothing.
+func (s *semconvProcessor) Shutdown(ctx context.Context) error { return nil }
