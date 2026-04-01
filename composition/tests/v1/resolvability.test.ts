@@ -3699,91 +3699,91 @@ const subgraphCA: Subgraph = {
       query: AQuery
     }
     
-    type AQuery @shareable {
+    type AQuery {
       a: A
     }
     
-    type A @shareable {
+    type A {
       b: B
     }
     
-    type B @shareable {
+    type B {
       c: C
     }
     
-    type C @shareable {
+    type C {
       d: D
     }
     
-    type D @shareable {
+    type D {
       e: E
     }
     
-    type E @shareable {
+    type E {
       f: F
     }
     
-    type F @shareable {
+    type F {
       g: G
     }
     
-    type G @shareable {
+    type G {
       h: H
     }
     
-    type H @shareable {
+    type H {
       i: I
     }
     
-    type I @shareable {
+    type I {
       j: J
     }
     
-    type J @shareable {
+    type J {
       k: K
     }
     
-    type K @shareable {
+    type K {
       l: L
     }
     
-    type L @shareable {
+    type L {
       m: M
     }
     
-    type M @shareable {
+    type M {
       n: N
     }
     
-    type N @shareable {
+    type N {
       o: O
     }
     
-    type O @shareable {
+    type O {
       p: P
     }
     
-    type P @shareable {
+    type P {
       q: Q
     }
     
-    type Q @shareable {
+    type Q {
       r: R
     }
     
-    type R @shareable {
+    type R {
       s: S
     }
     
-    type S @shareable {
+    type S {
       t: T
     }
     
-    type T @shareable {
+    type T {
       u: U
     }
     
-    type U @shareable {
+    type U {
       w: W
     }
     

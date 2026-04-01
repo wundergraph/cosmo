@@ -19,6 +19,7 @@ import {
 } from './types/params';
 import { type SelectionSetSegments } from './types/types';
 import { LITERAL_SPACE, QUOTATION_JOIN } from '../constants/string-constants';
+import { MAX_RESOLVABILITY_PATH_SIZE } from '../constants/number-constants';
 
 export type UnresolvableFieldData = {
   externalSubgraphNames: Set<SubgraphName>;
@@ -184,35 +185,27 @@ export function generateSharedResolvabilityErrorReasons({
   return reasons;
 }
 
-export function generateSelectionSetSegments(fieldPath: string, nodesToDisplay: number = 10): SelectionSetSegments {
+export function generateSelectionSetSegments(
+  fieldPath: string,
+  limit = MAX_RESOLVABILITY_PATH_SIZE,
+): SelectionSetSegments {
   // Regex is to split on singular periods and not fragments (... on TypeName)
-  let pathNodes = fieldPath.split(/(?<=\w)\./);
+  const pathNodes = fieldPath.split(/(?<=\w)\./);
   let outputStart = '';
   let outputEnd = '';
-  if (nodesToDisplay > 0 && pathNodes.length > nodesToDisplay * 2 + 1) {
-    let i = 0;
-    for (const node of pathNodes.slice(0, nodesToDisplay)) {
-      outputStart += LITERAL_SPACE.repeat(i + 1) + node + ` {\n`;
-      outputEnd = LITERAL_SPACE.repeat(i + 1) + `}\n` + outputEnd;
-      i++;
-    }
-
-    outputStart += LITERAL_SPACE.repeat(i + 1) + '...\n';
-    outputEnd = LITERAL_SPACE.repeat(i + 1) + '...\n' + outputEnd;
-    for (const node of pathNodes.slice(-nodesToDisplay)) {
-      outputStart += LITERAL_SPACE.repeat(i + 2) + node + ` {\n`;
-      outputEnd = LITERAL_SPACE.repeat(i + 2) + `}\n` + outputEnd;
-      i++;
-    }
-
-    pathNodes = [...pathNodes.slice(0, nodesToDisplay), ...pathNodes.slice(-nodesToDisplay)];
-  } else {
-    for (let i = 0; i < pathNodes.length; i++) {
-      outputStart += LITERAL_SPACE.repeat(i + 1) + pathNodes[i] + ` {\n`;
-      outputEnd = LITERAL_SPACE.repeat(i + 1) + `}\n` + outputEnd;
-    }
+  let shouldTruncate = false;
+  const truncatedNumber = pathNodes.length - limit * 2;
+  if (limit > 0 && pathNodes.length > limit * 2) {
+    shouldTruncate = true;
+    pathNodes.splice(limit, truncatedNumber);
   }
-
+  for (let i = 0; i < pathNodes.length; i++) {
+    if (shouldTruncate && i === limit + 1) {
+      outputStart += LITERAL_SPACE.repeat(i + 1) + `... # and ${truncatedNumber} truncated nodes\n`;
+    }
+    outputStart += LITERAL_SPACE.repeat(i + 1) + pathNodes[i] + ` {\n`;
+    outputEnd = LITERAL_SPACE.repeat(i + 1) + `}\n` + outputEnd;
+  }
   return {
     outputEnd,
     outputStart,
