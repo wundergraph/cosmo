@@ -410,6 +410,8 @@
                 "icon": "sign-post",
                 "pages": [
                   "federation/federation-directives-index",
+                  "federation/directives/deprecated",
+                  "federation/directives/specifiedby",
                   "federation/directives/key",
                   "federation/directives/external",
                   "federation/directives/provides",
@@ -417,8 +419,10 @@
                   "federation/directives/shareable",
                   "federation/directives/authenticated",
                   "federation/directives/requiresscopes",
+                  "federation/directives/connect__fieldresolver",
                   "federation/directives/openfed__subscriptionfilter",
-                  "federation/directives/openfed__configuredescription"
+                  "federation/directives/openfed__configuredescription",
+                  "federation/directives/openfed__requirefetchreasons"
                 ]
               },
               {
