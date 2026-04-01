@@ -1947,6 +1947,11 @@ For mor information on how to use the expression language, please refer to the [
 | RATE_LIMIT_SIMPLE_PERIOD                             | period                             | <Icon icon="square-check" iconType="solid" /> | The rate limiting period, e.g. "10s", "1m", etc...                                                                                            | 1s            |
 | RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS          | reject_exceeding_requests          | <Icon icon="square" />                        | Reject the complete request if a sub-request exceeds the rate limit. If set to false, partial responses are possible.                         | false         |
 | RATE_LIMIT_SIMPLE_HIDE_STATS_FROM_RESPONSE_EXTENSION | hide_stats_from_response_extension | <Icon icon="square" />                        | Hide the rate limit stats from the response extension. If the value is true, the rate limit stats are not included in the response extension. | false         |
+|                                                      | overrides                          | <Icon icon="square" />                        | List of per-key rate limit overrides. The first matching override wins; unmatched keys use the global defaults. See [example below](#rate-limiting-example-yaml-configuration). |               |
+|                                                      | overrides.matching            | <Icon icon="square-check" iconType="solid" /> | Go regex pattern matched against the suffix portion of the rate-limit key (the result of `key_suffix_expression`), not the full prefixed Redis key.                                                                                                                  |               |
+|                                                      | overrides.rate                   | <Icon icon="square-check" iconType="solid" /> | Allowed request rate for matching keys.                                                                                                                                        |               |
+|                                                      | overrides.burst                  | <Icon icon="square-check" iconType="solid" /> | Allowed burst rate for matching keys.                                                                                                                                          |               |
+|                                                      | overrides.period                 | <Icon icon="square-check" iconType="solid" /> | Rate limiting period for matching keys, e.g. "10s", "1m".                                                                                                                     |               |
 
 ### Rate Limit Error Extension Code
 
@@ -1968,13 +1973,18 @@ rate_limit:
         reject_exceeding_requests: false
         reject_status_code: 200
         hide_stats_from_response_extension: false
+        overrides:
+            - matching: "^premium-.*"
+              rate: 100
+              burst: 200
+              period: 1s
     storage:
         cluster_enabled: false
         urls:
          - "redis://localhost:6379"
         key_prefix: "cosmo_rate_limit"
     debug: false
-    key_suffix_expression: ""
+    key_suffix_expression: "request.header.Get('X-Api-Key')"
     error_extension_code:
         enabled: true
         code: "RATE_LIMIT_EXCEEDED"
