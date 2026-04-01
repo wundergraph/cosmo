@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import Router from 'next/router';
 import { useOnboarding } from './use-onboarding';
 import { useQuery } from '@connectrpc/connect-query';
@@ -10,57 +10,57 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
  * the conditions based on feature flag and onboarding metadata
  */
 export const useOnboardingNavigation = () => {
-  const { enabled, onboarding, setOnboarding } = useOnboarding();
-  const { data, isError, isPending, error } = useQuery(getOnboarding);
-  const [initialLoadSuccess, setInitialLoadSuccess] = useState(false);
+  const { enabled, setOnboarding, skipped, currentStep } = useOnboarding();
+  const { data, isError, isPending } = useQuery(getOnboarding);
+  const initialRedirect = useRef<boolean>(false);
+
+  const initialLoadSuccess = useMemo(() => {
+    if (isPending) return null;
+    if (isError || data?.response?.code !== EnumStatusCode.OK) return false;
+    return true;
+  }, [isPending, isError, data]);
 
   useEffect(
-    function initialOnboardingFetch() {
-      if (isPending) {
+    function syncOnboardingMetadata() {
+      if (initialLoadSuccess !== true || !data) {
         return;
       }
 
-      if (isError || data?.response?.code !== EnumStatusCode.OK) {
-        setInitialLoadSuccess(false);
-        return;
-      }
-
-      setInitialLoadSuccess(true);
       setOnboarding({
-        step: Number(data.step ?? 0),
         finishedAt: data.finishedAt ? new Date(data.finishedAt) : undefined,
         federatedGraphsCount: data.federatedGraphsCount,
       });
     },
-    [data, isError, isPending, setOnboarding, error],
+    [initialLoadSuccess, data, setOnboarding],
   );
 
   useEffect(
     function handleNavigationToOnboarding() {
-      // Redirect user back if onboarding metadata failed
-      if (!initialLoadSuccess && Router.pathname.startsWith('/onboarding')) {
-        Router.replace('/');
-        return;
-      }
-
+      // Wait for the onboarding metadata query to resolve
       // Do not initiate redirect if we fail to fetch onboarding metadata. Fail silently in background.
-      if (!initialLoadSuccess) {
+      if (initialLoadSuccess === null || !initialLoadSuccess) {
         return;
       }
 
-      // Do not initiate redirect if the user is not eligible for onboarding
-      if (!onboarding && !enabled) {
+      // If user has dissmissed/skipped the onboarding but, do not redirect
+      if (skipped) {
         return;
       }
 
-      // Do not initiate redirect if user has already finished the onboarding
-      if (onboarding?.finishedAt) {
+      // If user has already finished the onboarding, don't redirect
+      if (data?.finishedAt) {
         return;
       }
 
-      const path = onboarding ? `/onboarding/${onboarding.step}` : '/onboarding';
+      // skip redirecting on subsequent re-runs of this functions
+      if (initialRedirect.current) {
+        return;
+      }
+
+      const path = currentStep ? `/onboarding/${currentStep}` : `/onboarding/1`;
+      initialRedirect.current = true;
       Router.replace(path);
     },
-    [onboarding, enabled, initialLoadSuccess],
+    [data, enabled, initialLoadSuccess, skipped, currentStep],
   );
 };
