@@ -53,6 +53,7 @@ import { TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getClients,
+  getFeatureFlagsInLatestCompositionByFederatedGraph,
   getFederatedGraphSDLByName,
   getSubgraphSDLFromLatestComposition,
   publishPersistedOperations,
@@ -615,7 +616,19 @@ const ConfigSelect = () => {
 
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
-  const featureFlags = graphContext?.featureFlagsInLatestValidComposition;
+  const namespace = router.query.namespace as string;
+
+  const { data: compositionFlagsData } = useQuery(
+    getFeatureFlagsInLatestCompositionByFederatedGraph,
+    {
+      federatedGraphName: graphContext?.graph?.name,
+      namespace,
+    },
+    {
+      enabled: !!graphContext?.graph?.name,
+    },
+  );
+  const featureFlags = compositionFlagsData?.featureFlags ?? [];
 
   const selected = (router.query.load as string) || graphContext?.graph?.id || '';
   const type = (router.query.type as string) || 'graph';
@@ -729,12 +742,23 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
   const type = (router.query.type as string) || 'graph';
 
+  const { data: compositionFlagsData } = useQuery(
+    getFeatureFlagsInLatestCompositionByFederatedGraph,
+    {
+      federatedGraphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    },
+    {
+      enabled: !!graphContext?.graph?.name,
+    },
+  );
+
   const { data, isLoading: isLoadingGraphSchema } = useQuery(getFederatedGraphSDLByName, {
     name: graphContext?.graph?.name,
     namespace: graphContext?.graph?.namespace,
     featureFlagName:
       type === 'featureFlag'
-        ? graphContext?.featureFlagsInLatestValidComposition.find((f) => f.id === loadSchemaGraphId)?.name
+        ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
         : undefined,
   });
 
@@ -985,7 +1009,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
           args[1] as RequestInit,
           graphContext?.graph?.id || '',
           type === 'featureFlag'
-            ? graphContext?.featureFlagsInLatestValidComposition.find((f) => f.id === loadSchemaGraphId)?.name
+            ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
             : undefined,
         ),
     });
@@ -994,7 +1018,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     subscriptionUrl,
     graphContext?.graphRequestToken,
     graphContext?.graph?.id,
-    graphContext?.featureFlagsInLatestValidComposition,
+    compositionFlagsData?.featureFlags,
     schema,
     clientValidationEnabled,
     type,
@@ -1040,7 +1064,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
         validateHeaders(requestHeaders);
 
         if (type === 'featureFlag') {
-          const featureFlag = graphContext?.featureFlagsInLatestValidComposition.find(
+          const featureFlag = (compositionFlagsData?.featureFlags ?? []).find(
             (f) => f.id === loadSchemaGraphId,
           );
           if (featureFlag) {
@@ -1074,7 +1098,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   }, [
     debouncedQuery,
     debouncedHeaders,
-    graphContext?.featureFlagsInLatestValidComposition,
+    compositionFlagsData?.featureFlags,
     graphContext?.graphRequestToken,
     graphContext?.graph?.id,
     loadSchemaGraphId,

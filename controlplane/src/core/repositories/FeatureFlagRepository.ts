@@ -248,7 +248,7 @@ export class FeatureFlagRepository {
    * @private
    */
   private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
-    if (!rbac || rbac.isOrganizationAdminOrDeveloper) {
+    if (!rbac || rbac.isOrganizationAdminOrDeveloper || rbac.isOrganizationViewer) {
       return true;
     }
 
@@ -396,12 +396,132 @@ export class FeatureFlagRepository {
     return featureSubgraphTargets[0].count;
   }
 
+  // Returns paginated feature subgraphs for a federated graph (DB-level pagination)
+  public async getFeatureSubgraphsByFederatedGraph({
+    federatedGraphId,
+    namespaceId,
+    fedGraphLabelMatchers,
+    limit,
+    offset,
+    query,
+  }: {
+    federatedGraphId: string;
+    namespaceId: string;
+    fedGraphLabelMatchers: string[];
+    limit: number;
+    offset: number;
+    query?: string;
+  }): Promise<{ featureSubgraphs: FeatureSubgraphDTO[]; totalCount: number }> {
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+
+    // Get feature flag IDs that match the federated graph's label matchers
+    const matchedFlags = await this.getMatchedFeatureFlags({
+      namespaceId,
+      fedGraphLabelMatchers,
+      excludeDisabled: false,
+    });
+
+    if (matchedFlags.length === 0) {
+      return { featureSubgraphs: [], totalCount: 0 };
+    }
+
+    const matchedFlagIds = matchedFlags.map((f) => f.id);
+
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(targets.organizationId, this.organizationId),
+      eq(targets.type, 'subgraph'),
+      eq(subgraphs.isFeatureSubgraph, true),
+      eq(targets.namespaceId, namespaceId),
+    ];
+
+    if (query) {
+      conditions.push(like(targets.name, `%${query}%`));
+    }
+
+    const baseQuery = this.db
+      .selectDistinct({
+        id: subgraphs.id,
+        name: targets.name,
+        targetId: subgraphs.targetId,
+        baseSubgraphId: featureSubgraphsToBaseSubgraphs.baseSubgraphId,
+        schemaVersionId: subgraphs.schemaVersionId,
+        createdAt: targets.createdAt,
+      })
+      .from(subgraphs)
+      .innerJoin(targets, eq(subgraphs.targetId, targets.id))
+      .innerJoin(featureSubgraphsToBaseSubgraphs, eq(subgraphs.id, featureSubgraphsToBaseSubgraphs.featureSubgraphId))
+      // Ensure the feature subgraph is part of a matched feature flag
+      .innerJoin(
+        featureFlagToFeatureSubgraphs,
+        and(
+          eq(subgraphs.id, featureFlagToFeatureSubgraphs.featureSubgraphId),
+          inArray(featureFlagToFeatureSubgraphs.featureFlagId, matchedFlagIds),
+        ),
+      )
+      // Ensure the base subgraph is part of the federated graph
+      .innerJoin(
+        subgraphsToFederatedGraph,
+        eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, subgraphsToFederatedGraph.subgraphId),
+      )
+      .innerJoin(namespaces, eq(namespaces.id, targets.namespaceId))
+      .where(
+        and(
+          ...conditions,
+          eq(subgraphsToFederatedGraph.federatedGraphId, federatedGraphId),
+        ),
+      )
+      .orderBy(asc(targets.createdAt));
+
+    // Get total count
+    const countResult = await this.db
+      .select({ count: count() })
+      .from(
+        baseQuery.as('feature_subgraphs_by_fed_graph'),
+      )
+      .execute();
+
+    const totalCount = countResult[0]?.count ?? 0;
+
+    // Apply pagination
+    if (limit > 0) {
+      baseQuery.limit(limit);
+    }
+    if (offset > 0) {
+      baseQuery.offset(offset);
+    }
+
+    const featureSubgraphTargets = await baseQuery.execute();
+
+    const featureSubgraphs: FeatureSubgraphDTO[] = [];
+    for (const f of featureSubgraphTargets) {
+      const fs = await subgraphRepo.byTargetId(f.targetId);
+      if (!fs) {
+        continue;
+      }
+
+      const baseSubgraph = await subgraphRepo.byId(f.baseSubgraphId);
+      if (!baseSubgraph) {
+        continue;
+      }
+
+      featureSubgraphs.push({
+        ...fs,
+        baseSubgraphId: f.baseSubgraphId,
+        baseSubgraphName: baseSubgraph.name,
+      });
+    }
+
+    return { featureSubgraphs, totalCount };
+  }
+
   private async getFeatureFlag({
     conditions,
     namespaceId,
+    includeSubgraphs = true,
   }: {
     conditions: SQL<unknown>[];
     namespaceId: string;
+    includeSubgraphs?: boolean;
   }): Promise<FeatureFlagDTO | undefined> {
     const resp = await this.db
       .select({
@@ -431,10 +551,12 @@ export class FeatureFlagRepository {
       createdBy = user?.email || '';
     }
 
-    const featureSubgraphs = await this.getFeatureSubgraphsByFeatureFlagId({
-      namespaceId,
-      featureFlagId: resp[0].id,
-    });
+    const featureSubgraphs = includeSubgraphs
+      ? await this.getFeatureSubgraphsByFeatureFlagId({
+          namespaceId,
+          featureFlagId: resp[0].id,
+        })
+      : [];
 
     return {
       ...resp[0],
@@ -450,12 +572,15 @@ export class FeatureFlagRepository {
   public getFeatureFlagById({
     featureFlagId,
     namespaceId,
+    includeSubgraphs,
   }: {
     featureFlagId: string;
     namespaceId: string;
+    includeSubgraphs?: boolean;
   }): Promise<FeatureFlagDTO | undefined> {
     return this.getFeatureFlag({
       namespaceId,
+      includeSubgraphs,
       conditions: [
         eq(featureFlags.organizationId, this.organizationId),
         eq(featureFlags.id, featureFlagId),
@@ -1090,7 +1215,7 @@ export class FeatureFlagRepository {
         featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
       })
       .from(federatedGraphsToFeatureFlagSchemaVersions)
-      .where(and(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId)))
+      .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId))
       .execute();
 
     if (ffSchemaVersions.length === 0) {
