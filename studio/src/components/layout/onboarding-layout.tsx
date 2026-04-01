@@ -4,8 +4,8 @@ export interface OnboardingLayoutProps {
 
 export const OnboardingLayout = ({ children }: OnboardingLayoutProps) => {
   return (
-    <div className="mx-auto min-h-screen w-full bg-background font-sans antialiased">
-      <main className="flex-1">{children}</main>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background font-sans antialiased">
+      <main className="w-full max-w-lg px-4">{children}</main>
     </div>
   );
 };
