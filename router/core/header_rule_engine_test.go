@@ -1,7 +1,9 @@
 package core
 
 import (
+	"context"
 	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
@@ -11,6 +13,7 @@ import (
 
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 func TestCreateMostRestrictivePolicy(t *testing.T) {
@@ -382,5 +385,109 @@ func TestNewHeaderPropagation(t *testing.T) {
 		var hp *HeaderPropagation
 		assert.False(t, hp.HasRequestRules())
 		assert.False(t, hp.HasResponseRules())
+	})
+}
+
+func TestHeaderPropagationWriterDeduplicatesVary(t *testing.T) {
+	t.Parallel()
+
+	t.Run("does not duplicate Vary Accept-Encoding when already set by gzhttp", func(t *testing.T) {
+		t.Parallel()
+		rec := httptest.NewRecorder()
+		rec.Header().Set("Vary", "Accept-Encoding")
+
+		resolveCtx := resolve.NewContext(context.Background())
+		resolveCtx = WithResponseHeaderPropagation(resolveCtx)
+		propagation := getResponseHeaderPropagation(resolveCtx.Context())
+		propagation.header.Set("Vary", "Accept-Encoding")
+
+		w := HeaderPropagationWriter(rec, resolveCtx, false)
+		_, err := w.Write([]byte(`{"data":{}}`))
+		require.NoError(t, err)
+
+		varyValues := rec.Header().Values("Vary")
+		assert.Equal(t, []string{"Accept-Encoding"}, varyValues)
+	})
+
+	t.Run("adds new Vary values that are not already present", func(t *testing.T) {
+		t.Parallel()
+		rec := httptest.NewRecorder()
+		rec.Header().Set("Vary", "Accept-Encoding")
+
+		resolveCtx := resolve.NewContext(context.Background())
+		resolveCtx = WithResponseHeaderPropagation(resolveCtx)
+		propagation := getResponseHeaderPropagation(resolveCtx.Context())
+		propagation.header.Set("Vary", "Origin")
+
+		w := HeaderPropagationWriter(rec, resolveCtx, false)
+		_, err := w.Write([]byte(`{"data":{}}`))
+		require.NoError(t, err)
+
+		varyValues := rec.Header().Values("Vary")
+		assert.Contains(t, varyValues, "Accept-Encoding")
+		assert.Contains(t, varyValues, "Origin")
+		assert.Len(t, varyValues, 2)
+	})
+
+	t.Run("handles comma-separated Vary values from subgraph", func(t *testing.T) {
+		t.Parallel()
+		rec := httptest.NewRecorder()
+		rec.Header().Set("Vary", "Accept-Encoding")
+
+		resolveCtx := resolve.NewContext(context.Background())
+		resolveCtx = WithResponseHeaderPropagation(resolveCtx)
+		propagation := getResponseHeaderPropagation(resolveCtx.Context())
+		propagation.header.Set("Vary", "Accept-Encoding, Origin")
+
+		w := HeaderPropagationWriter(rec, resolveCtx, false)
+		_, err := w.Write([]byte(`{"data":{}}`))
+		require.NoError(t, err)
+
+		varyValues := rec.Header().Values("Vary")
+		found := make(map[string]bool)
+		for _, v := range varyValues {
+			found[http.CanonicalHeaderKey(v)] = true
+		}
+		assert.True(t, found["Accept-Encoding"])
+		assert.True(t, found["Origin"])
+		assert.False(t, found["Accept-Encoding"] && len(varyValues) > 2)
+	})
+
+	t.Run("case-insensitive deduplication of Vary values", func(t *testing.T) {
+		t.Parallel()
+		rec := httptest.NewRecorder()
+		rec.Header().Set("Vary", "accept-encoding")
+
+		resolveCtx := resolve.NewContext(context.Background())
+		resolveCtx = WithResponseHeaderPropagation(resolveCtx)
+		propagation := getResponseHeaderPropagation(resolveCtx.Context())
+		propagation.header.Set("Vary", "Accept-Encoding")
+
+		w := HeaderPropagationWriter(rec, resolveCtx, false)
+		_, err := w.Write([]byte(`{"data":{}}`))
+		require.NoError(t, err)
+
+		varyValues := rec.Header().Values("Vary")
+		assert.Len(t, varyValues, 1)
+	})
+
+	t.Run("non-Vary headers are still added normally", func(t *testing.T) {
+		t.Parallel()
+		rec := httptest.NewRecorder()
+
+		resolveCtx := resolve.NewContext(context.Background())
+		resolveCtx = WithResponseHeaderPropagation(resolveCtx)
+		propagation := getResponseHeaderPropagation(resolveCtx.Context())
+		propagation.header.Set("X-Custom", "value1")
+		propagation.header.Add("X-Custom", "value2")
+
+		w := HeaderPropagationWriter(rec, resolveCtx, false)
+		_, err := w.Write([]byte(`{"data":{}}`))
+		require.NoError(t, err)
+
+		customValues := rec.Header().Values("X-Custom")
+		assert.Len(t, customValues, 2)
+		assert.Contains(t, customValues, "value1")
+		assert.Contains(t, customValues, "value2")
 	})
 }
