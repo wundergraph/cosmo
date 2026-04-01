@@ -182,6 +182,9 @@ func (f *FakeAuthenticator) Claims() authentication.Claims {
 	return f.claims
 }
 
+func (f *FakeAuthenticator) SetScopesClaim(scopeClaim string) {
+}
+
 func (f *FakeAuthenticator) SetScopes(scopes []string) {
 	//TODO implement me
 	panic("implement me")

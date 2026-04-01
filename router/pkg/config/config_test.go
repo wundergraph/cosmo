@@ -1410,6 +1410,41 @@ authentication:
 		require.NoError(t, err)
 	})
 
+	t.Run("verify scope claim can be configured", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    scope_claim: "scp"
+    jwks:
+      - url: "http://url/valid.json"
+
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "scp", cfg.Config.Authentication.JWT.ScopeClaim)
+	})
+
+	t.Run("verify scope claim defaults to scope", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - url: "http://url/valid.json"
+
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "scope", cfg.Config.Authentication.JWT.ScopeClaim)
+	})
+
 	t.Run("verify both secret and url are not allowed together", func(t *testing.T) {
 		t.Parallel()
 

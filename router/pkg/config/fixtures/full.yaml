@@ -321,6 +321,7 @@ authentication:
       - url: 'https://example.com/.well-known/jwks3.json'
     header_name: Authorization
     header_value_prefix: Bearer
+    scope_claim: customscp
     header_sources:
       - type: header
         name: X-Authorization
