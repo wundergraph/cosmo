@@ -195,12 +195,12 @@ export function generateSelectionSetSegments(
   let outputEnd = '';
   let shouldTruncate = false;
   const truncatedNumber = pathNodes.length - limit * 2;
-  if (limit > 0 && pathNodes.length > limit * 2) {
+  if (limit > 0 && pathNodes.length > limit * 2 + 1) {
     shouldTruncate = true;
-    pathNodes.splice(limit, truncatedNumber);
+    pathNodes.splice(limit + 1, truncatedNumber - 1);
   }
   for (let i = 0; i < pathNodes.length; i++) {
-    if (shouldTruncate && i === limit) {
+    if (shouldTruncate && i === limit + 1) {
       outputStart += LITERAL_SPACE.repeat(i + 1) + `... # and ${truncatedNumber} truncated selections\n`;
     }
     outputStart += LITERAL_SPACE.repeat(i + 1) + pathNodes[i] + ` {\n`;

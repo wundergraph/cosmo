@@ -39,18 +39,20 @@ describe('Field resolvability error tests', () => {
   });
 
   test('that a custom selection limit is respected successfully', () => {
-    const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
+    const fieldPath = 'query.rootField.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
     const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, 1);
     const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
       isLeaf: true,
       name: 'id',
     } as GraphFieldData);
 
-    expect(pathNodes.length).toBe(2);
+    expect(pathNodes.length).toBe(3);
     expect(render).toBe(` query {
-  ... # and 30 truncated selections
-  ee {
-   id <--
+  rootField {
+   ... # and 30 truncated selections
+   ee {
+    id <--
+   }
   }
  }
 `);
