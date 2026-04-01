@@ -30,6 +30,7 @@ describe('Field resolvability error tests', () => {
     };
     const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(errors).toHaveLength(1);
+    expect(errors[0].message.split('\n').length).toBe(31);
     expect(errors[0]).toStrictEqual(
       unresolvablePathError(
         unresolvableFieldData,
@@ -52,6 +53,41 @@ describe('Field resolvability error tests', () => {
    ... # and 30 truncated selections
    ee {
     id <--
+   }
+  }
+ }
+`);
+  });
+
+  test('that a custom selection limit is not truncated when it matches the number of selections', () => {
+    const fieldPath = 'query.rootField.a.b.c.d.e.f.g.h.i';
+    const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, 5);
+    const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
+      isLeaf: true,
+      name: 'id',
+    } as GraphFieldData);
+
+    expect(pathNodes.length).toBe(11);
+    expect(render).toBe(` query {
+  rootField {
+   a {
+    b {
+     c {
+      d {
+       e {
+        f {
+         g {
+          h {
+           i {
+            id <--
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
    }
   }
  }

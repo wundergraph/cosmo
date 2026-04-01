@@ -187,7 +187,7 @@ export function generateSharedResolvabilityErrorReasons({
 
 export function generateSelectionSetSegments(
   fieldPath: string,
-  limit = MAX_RESOLVABILITY_PATH_SIZE,
+  limit: number = MAX_RESOLVABILITY_PATH_SIZE,
 ): SelectionSetSegments {
   // Regex is to split on singular periods and not fragments (... on TypeName)
   const pathNodes = fieldPath.split(/(?<=\w)\./);

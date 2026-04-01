@@ -1,1 +1,1 @@
-export const MAX_RESOLVABILITY_PATH_SIZE = 5;
+export const MAX_RESOLVABILITY_PATH_SIZE: number = 5;
