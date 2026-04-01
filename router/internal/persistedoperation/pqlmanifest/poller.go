@@ -50,10 +50,6 @@ func (p *Poller) FetchInitial(ctx context.Context) error {
 
 	if changed && manifest != nil {
 		p.store.Load(manifest)
-		p.logger.Info("Loaded initial PQL manifest",
-			zap.String("revision", manifest.Revision),
-			zap.Int("operation_count", len(manifest.Operations)),
-		)
 	}
 
 	return nil
@@ -86,6 +82,10 @@ func (p *Poller) Poll(ctx context.Context) {
 				zap.String("revision", manifest.Revision),
 				zap.String("previous_revision", currentRevision),
 				zap.Int("operation_count", len(manifest.Operations)),
+			)
+		} else {
+			p.logger.Debug("PQL manifest unchanged, skipping update",
+				zap.String("previous_revision", currentRevision),
 			)
 		}
 	}
