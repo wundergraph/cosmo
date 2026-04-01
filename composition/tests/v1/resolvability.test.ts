@@ -80,6 +80,29 @@ describe('Field resolvability tests', () => {
     );
   });
 
+  test('that the error message for deeply nested unresolvable fields is truncate', () => {
+    const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w';
+    const rootFieldData = newRootFieldData(QUERY, 'query', new Set<string>(['subgraph-ca']));
+    const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'name',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'name',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>(['subgraph-cb']),
+      typeName: 'W',
+    };
+    const { errors } = federateSubgraphsFailure([subgraphCA, subgraphCB], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      unresolvablePathError(
+        unresolvableFieldData,
+        generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData }),
+      ),
+    );
+  });
+
   test('that unresolvable fields return an error #1', () => {
     const fieldPath = 'query.friend';
     const rootFieldData = newRootFieldData(QUERY, 'friend', new Set<string>(['subgraph-d']));
@@ -3664,6 +3687,118 @@ const jaab: Subgraph = {
     
     type Query {
       entities: [Entity!]!
+    }
+  `),
+};
+
+const subgraphCA: Subgraph = {
+  name: 'subgraph-ca',
+  url: '',
+  definitions: parse(`
+    type Query {
+      query: AQuery
+    }
+    
+    type AQuery @shareable {
+      a: A
+    }
+    
+    type A @shareable {
+      b: B
+    }
+    
+    type B @shareable {
+      c: C
+    }
+    
+    type C @shareable {
+      d: D
+    }
+    
+    type D @shareable {
+      e: E
+    }
+    
+    type E @shareable {
+      f: F
+    }
+    
+    type F @shareable {
+      g: G
+    }
+    
+    type G @shareable {
+      h: H
+    }
+    
+    type H @shareable {
+      i: I
+    }
+    
+    type I @shareable {
+      j: J
+    }
+    
+    type J @shareable {
+      k: K
+    }
+    
+    type K @shareable {
+      l: L
+    }
+    
+    type L @shareable {
+      m: M
+    }
+    
+    type M @shareable {
+      n: N
+    }
+    
+    type N @shareable {
+      o: O
+    }
+    
+    type O @shareable {
+      p: P
+    }
+    
+    type P @shareable {
+      q: Q
+    }
+    
+    type Q @shareable {
+      r: R
+    }
+    
+    type R @shareable {
+      s: S
+    }
+    
+    type S @shareable {
+      t: T
+    }
+    
+    type T @shareable {
+      u: U
+    }
+    
+    type U @shareable {
+      w: W
+    }
+    
+    type W {
+      age: Int
+    }
+  `),
+};
+
+const subgraphCB: Subgraph = {
+  name: 'subgraph-cb',
+  url: '',
+  definitions: parse(`
+    type W {
+      name: String
     }
   `),
 };

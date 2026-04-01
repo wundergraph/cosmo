@@ -184,15 +184,35 @@ export function generateSharedResolvabilityErrorReasons({
   return reasons;
 }
 
-export function generateSelectionSetSegments(fieldPath: string): SelectionSetSegments {
+export function generateSelectionSetSegments(fieldPath: string, nodesToDisplay: number = 10): SelectionSetSegments {
   // Regex is to split on singular periods and not fragments (... on TypeName)
-  const pathNodes = fieldPath.split(/(?<=\w)\./);
+  let pathNodes = fieldPath.split(/(?<=\w)\./);
   let outputStart = '';
   let outputEnd = '';
-  for (let i = 0; i < pathNodes.length; i++) {
-    outputStart += LITERAL_SPACE.repeat(i + 1) + pathNodes[i] + ` {\n`;
-    outputEnd = LITERAL_SPACE.repeat(i + 1) + `}\n` + outputEnd;
+  if (nodesToDisplay > 0 && pathNodes.length > nodesToDisplay * 2 + 1) {
+    let i = 0;
+    for (const node of pathNodes.slice(0, nodesToDisplay)) {
+      outputStart += LITERAL_SPACE.repeat(i + 1) + node + ` {\n`;
+      outputEnd = LITERAL_SPACE.repeat(i + 1) + `}\n` + outputEnd;
+      i++;
+    }
+
+    outputStart += LITERAL_SPACE.repeat(i + 1) + '...\n';
+    outputEnd = LITERAL_SPACE.repeat(i + 1) + '...\n' + outputEnd;
+    for (const node of pathNodes.slice(-nodesToDisplay)) {
+      outputStart += LITERAL_SPACE.repeat(i + 2) + node + ` {\n`;
+      outputEnd = LITERAL_SPACE.repeat(i + 2) + `}\n` + outputEnd;
+      i++;
+    }
+
+    pathNodes = [...pathNodes.slice(0, nodesToDisplay), ...pathNodes.slice(-nodesToDisplay)];
+  } else {
+    for (let i = 0; i < pathNodes.length; i++) {
+      outputStart += LITERAL_SPACE.repeat(i + 1) + pathNodes[i] + ` {\n`;
+      outputEnd = LITERAL_SPACE.repeat(i + 1) + `}\n` + outputEnd;
+    }
   }
+
   return {
     outputEnd,
     outputStart,
