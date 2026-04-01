@@ -12,16 +12,28 @@ const OnboardingStep: NextPageWithLayout = () => {
   switch (step) {
     case '0':
     case '1':
-      return <Step1 />;
+      return (
+        <OnboardingLayout title="Get started with WunderGraph">
+          <Step1 />
+        </OnboardingLayout>
+      );
     case '2':
-      return <Step2 />;
+      return (
+        <OnboardingLayout title="Create your first graph">
+          <Step2 />
+        </OnboardingLayout>
+      );
     case '3':
-      return <Step3 />;
+      return (
+        <OnboardingLayout title="Run your services">
+          <Step3 />
+        </OnboardingLayout>
+      )
     default:
       return null;
   }
 };
 
-OnboardingStep.getLayout = (page) => <OnboardingLayout>{page}</OnboardingLayout>;
+OnboardingStep.getLayout = (page) => page;
 
 export default OnboardingStep;
