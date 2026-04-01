@@ -9,7 +9,7 @@ declare global {
   }
 }
 
-type SetValue<T> = Dispatch<SetStateAction<T>>;
+export type SetValue<T> = Dispatch<SetStateAction<T>>;
 
 export function useSessionStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
   // Get from session storage then
