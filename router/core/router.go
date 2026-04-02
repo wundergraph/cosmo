@@ -762,7 +762,8 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
-	r.httpServer = newServer(&httpServerOptions{
+	var err error
+	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
 		tlsConfig:          r.tlsConfig,
@@ -774,6 +775,9 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		readinessCheckPath: r.readinessCheckPath,
 		healthCheckPath:    r.healthCheckPath,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create server: %w", err)
+	}
 
 	r.configureUsageTracking(ctx)
 
@@ -1376,7 +1380,8 @@ func (r *Router) Start(ctx context.Context) error {
 
 	r.trackRouterConfigUsage()
 
-	r.httpServer = newServer(&httpServerOptions{
+	var err error
+	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
 		tlsConfig:          r.tlsConfig,
@@ -1388,6 +1393,9 @@ func (r *Router) Start(ctx context.Context) error {
 		readinessCheckPath: r.readinessCheckPath,
 		healthCheckPath:    r.healthCheckPath,
 	})
+	if err != nil {
+		return fmt.Errorf("failed to create server: %w", err)
+	}
 
 	if r.reloadPersistentState == nil {
 		// This is only applicable for tests since we do not call here via the supervisor
