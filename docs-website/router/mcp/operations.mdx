@@ -1,0 +1,181 @@
+---
+title: 'Operations'
+description: 'How to create, describe, and organize GraphQL operations that the MCP server exposes as tools for AI models.'
+icon: 'file-code'
+---
+
+The MCP server exposes your GraphQL operations as tools that AI models can discover and execute. Each `.graphql` file in your operations directory becomes a tool with a name, description, and input schema.
+
+## Creating Operations
+
+Create a directory for your operations (as specified in your [storage provider configuration](/router/mcp/configuration#storage-providers)) and add `.graphql` or `.gql` files containing GraphQL operations.
+
+Each file should contain a **single operation**. Named operations are recommended, but if an operation is unnamed, the filename (without extension) is used as the operation name.
+
+Use triple-quoted description strings (following the September 2025 GraphQL spec) to provide descriptions for AI models:
+
+```graphql
+"""
+Returns a list of all users in the system with their basic information.
+This is a read-only operation that doesn't modify any data.
+"""
+query GetUsers {
+  users {
+    id
+    name
+    email
+  }
+}
+```
+
+The description becomes the tool's description, which is the primary way AI models understand what an operation does. If no description is provided, a default description is generated from the operation name and type.
+
+<Info>
+  Only triple-quoted description strings (`"""..."""`) are supported. Standard GraphQL comments (`# comment`) are not
+  extracted as tool descriptions.
+</Info>
+
+### Validation
+
+Operations are validated against your GraphQL schema at load time. Invalid operations are logged as errors and skipped — they will not appear as MCP tools. Subscription operations are not supported and are also skipped.
+
+## Mutation Operations
+
+Mutations follow the same pattern. The MCP server automatically adds a warning that the operation has side effects:
+
+```graphql
+"""
+Creates a new user in the system.
+Required inputs: name and email
+"""
+mutation CreateUser($name: String!, $email: String!) {
+  createUser(input: { name: $name, email: $email }) {
+    id
+    name
+    email
+  }
+}
+```
+
+<Warning>
+  To prevent AI models from making unintended changes, consider setting `exclude_mutations: true` in your configuration
+  until you've validated your mutation operations thoroughly.
+</Warning>
+
+## Directory Structure
+
+Here's an example of how your project directory should be structured:
+
+```
+my-router-project/
+├── config.yaml                 # Router configuration file
+├── operations/                 # Operations directory (as configured in storage provider)
+│   ├── getUsers.graphql        # Query operation
+│   ├── createUser.graphql      # Mutation operation
+│   ├── getUserById.graphql     # Query with parameters
+│   └── billing/                # Subdirectory for grouping
+│       ├── getInvoices.graphql
+│       └── getPayments.graphql
+└── ...
+```
+
+Key points:
+
+- The path in your `storage_providers.file_system.path` should point to the operations directory
+- All `.graphql` and `.gql` files in this directory **and subdirectories** will be loaded
+- Each file should contain a single GraphQL operation
+- Duplicate operation names across files are rejected (the second file is skipped with an error log)
+
+## Tool Naming
+
+The MCP server converts each operation into a corresponding tool:
+
+| Operation Name | Tool Name                          |
+| -------------- | ---------------------------------- |
+| `GetUsers`     | `execute_operation_get_users`      |
+| `CreateUser`   | `execute_operation_create_user`    |
+| `GetUserById`  | `execute_operation_get_user_by_id` |
+
+Operations are converted to `snake_case` for tool naming consistency.
+
+### Tool Schema
+
+The tool's input schema is automatically generated from your GraphQL operation's variables, ensuring type safety. AI models use this schema to understand what parameters are required and their types.
+
+### Omitting the Tool Name Prefix
+
+By default, all operation tools include the `execute_operation_` prefix. You can enable `omit_tool_name_prefix` to generate shorter tool names:
+
+```yaml
+mcp:
+  enabled: true
+  omit_tool_name_prefix: true
+```
+
+| Operation Name | Default                         | With `omit_tool_name_prefix` |
+| -------------- | ------------------------------- | ---------------------------- |
+| `GetUsers`     | `execute_operation_get_users`   | `get_users`                  |
+| `CreateUser`   | `execute_operation_create_user` | `create_user`                |
+
+<Warning>
+  Enabling this option changes all tool names and may break existing integrations that rely on the `execute_operation_`
+  prefix. Only enable this for new deployments or when you can update all dependent systems.
+</Warning>
+
+<Info>
+  Operations with names that would collide with any already-registered tool (including built-in tools like `get_schema`,
+  `execute_graphql`, `get_operation_info`, or a previously registered operation) are **skipped** and logged as errors.
+  Rename the operation to avoid the conflict.
+</Info>
+
+## Best Practices
+
+### Write Effective Descriptions
+
+Descriptions are the most important part of your operations for AI consumption. A good description tells the AI model:
+
+- **What** data the operation provides or changes
+- **When** to use this operation (and when not to)
+- **What** is excluded or restricted (especially for security-sensitive data)
+
+```graphql
+"""
+Retrieves recent transaction history for a customer account.
+Returns only non-sensitive transaction details suitable for AI assistant responses.
+Excludes: account numbers, routing information, precise location data, and full merchant details.
+Use this to answer customer questions about recent purchases and payment status.
+"""
+query GetTransactionHistory($accountId: ID!, $last: Int!) {
+  account(id: $accountId) {
+    transactions(last: $last) {
+      id
+      date
+      merchantNameMasked
+      category
+      amount
+      status
+    }
+  }
+}
+```
+
+### Design for AI Consumption
+
+<Steps>
+  <Step title="Use meaningful names">
+    Give operations clear, action-oriented names that describe what they do: `GetActiveUsers`, `SearchProducts`,
+    `CreateSupportTicket`.
+  </Step>
+  <Step title="Use explicit types">
+    Define all input variables with explicit types to ensure proper validation and help AI models understand required
+    inputs.
+  </Step>
+  <Step title="Create focused operations">
+    Design operations specifically for AI model consumption rather than exposing generic operations. An operation that
+    returns exactly what the AI needs is better than one that returns everything.
+  </Step>
+  <Step title="Add safety checks for mutations">
+    For mutation operations, add checks and validations in your backend to prevent misuse. Consider requiring
+    confirmation parameters for destructive operations.
+  </Step>
+</Steps>
