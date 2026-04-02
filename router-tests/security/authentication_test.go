@@ -606,6 +606,57 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
 		})
 	})
+	t.Run("scopes required valid token from configured custom scope claim", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(
+			testutils.NewContextWithCancel(t),
+			zap.NewNop(),
+			[]authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+		)
+		require.NoError(t, err)
+
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
+			Name:         testutils.JwksName,
+			TokenDecoder: tokenDecoder,
+		})
+		require.NoError(t, err)
+
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           []authentication.Authenticator{authenticator},
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+			ScopeClaim:               "scp",
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scp": "read:employee read:private",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, testutils.JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
+		})
+	})
 	t.Run("scopes required valid token AND scopes present with alias", func(t *testing.T) {
 		t.Parallel()
 

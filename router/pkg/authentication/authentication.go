@@ -9,6 +9,8 @@ import (
 
 type Claims map[string]any
 
+const DefaultScopeClaim = "scope"
+
 // Provider is an interface that represents entities that might provide
 // authentication information. If no authentication information is available,
 // the AuthenticationHeaders method should return nil.
@@ -31,6 +33,8 @@ type Authentication interface {
 	// Claims returns the claims of the authenticated request, as returned by
 	// the Authenticator.
 	Claims() Claims
+	// SetScopesClaim sets the claim key used by Scopes and SetScopes.
+	SetScopesClaim(scopeClaim string)
 	// SetScopes sets the scopes of the authenticated request. It will replace the scopes already parsed from the claims.
 	// If users desire to append the scopes, they can first run `Scopes` to get the current scopes, and then append the new scopes
 	SetScopes(scopes []string)
@@ -42,6 +46,7 @@ type Authentication interface {
 type authentication struct {
 	authenticator string
 	claims        Claims
+	scopeClaim    string
 }
 
 func (a *authentication) Authenticator() string {
@@ -55,6 +60,13 @@ func (a *authentication) Claims() Claims {
 	return a.claims
 }
 
+func (a *authentication) SetScopesClaim(scopeClaim string) {
+	if a == nil {
+		return
+	}
+	a.scopeClaim = scopeClaim
+}
+
 func (a *authentication) SetScopes(scopes []string) {
 	if a == nil {
 		return
@@ -63,18 +75,25 @@ func (a *authentication) SetScopes(scopes []string) {
 		a.claims = make(Claims)
 	}
 	// per https://datatracker.ietf.org/doc/html/rfc8693#section-2.1-4.8, scopes should be space separated
-	a.claims["scope"] = strings.Join(scopes, " ")
+	a.claims[a.scopeClaimKey()] = strings.Join(scopes, " ")
 }
 
 func (a *authentication) Scopes() []string {
 	if a == nil {
 		return nil
 	}
-	scopes, ok := a.claims["scope"].(string)
+	scopes, ok := a.claims[a.scopeClaimKey()].(string)
 	if !ok {
 		return nil
 	}
 	return strings.Split(scopes, " ")
+}
+
+func (a *authentication) scopeClaimKey() string {
+	if a == nil || len(a.scopeClaim) == 0 {
+		return DefaultScopeClaim
+	}
+	return a.scopeClaim
 }
 
 var errUnacceptableAud = errors.New("audience match not found")
@@ -105,6 +124,7 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 		return &authentication{
 			authenticator: auth.Name(),
 			claims:        claims,
+			scopeClaim:    DefaultScopeClaim,
 		}, nil
 	}
 	// If no authentication failed error will be nil here,
@@ -113,5 +133,7 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 }
 
 func NewEmptyAuthentication() Authentication {
-	return &authentication{}
+	return &authentication{
+		scopeClaim: DefaultScopeClaim,
+	}
 }

@@ -1567,6 +1567,7 @@ In addition to the above JWKS configuration flavours, you can define a list of a
 
 | YAML                | Required               | Description                                                                                                                   | Default Value |
 | ------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| scope_claim         | <Icon icon="square" /> | The JWT claim used to read scopes for authorization. Use this when your identity provider stores scopes in a claim other than `scope`. | scope         |
 | header_name         | <Icon icon="square" /> | The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.       | Authorization |
 | header_value_prefix | <Icon icon="square" /> | The prefix of the header value. The prefix is used to extract the token from the header value. The default value is 'Bearer'. | Bearer        |
 
@@ -1602,6 +1603,7 @@ authentication:
           interval: 30s
           burst: 2
     header_name: Authorization # This is the default value
+    scope_claim: scope # This is the default value
     header_value_prefix: Bearer # This is the default value
     header_sources:
       - type: header
