@@ -1299,7 +1299,7 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 		return nil, nil
 	}
 
-	const manifestFileName = "manifest.json"
+	manifestFileName := r.persistedOperationsConfig.Manifest.FileName
 
 	storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
 

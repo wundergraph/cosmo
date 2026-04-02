@@ -9,9 +9,9 @@ version: "1"
 
 persisted_operations:
   storage:
-    # Path prefix inside the S3 bucket where the manifest.json file is stored.
-    # The router resolves the manifest at: <object_prefix>/manifest.json
-    # Example: with the prefix below, the full object key is:
+    # Path prefix inside the S3 bucket where the manifest file is stored.
+    # The router resolves the manifest at: <object_prefix>/<file_name>
+    # Example: with the prefix below and default file_name, the full object key is:
     #   operations/manifest.json
     object_prefix: "operations"
     # Must match the `id` of an entry in `storage_providers.s3`.
@@ -19,6 +19,10 @@ persisted_operations:
 
   manifest:
     enabled: true
+    # Name of the manifest file inside <object_prefix>/ (default: manifest.json).
+    # Use a .gz or .zst extension to enable transparent decompression,
+    # e.g. manifest.json.gz or manifest.json.zst.
+    file_name: manifest.json
     # How often to poll S3 for manifest updates (default: 10s)
     poll_interval: 10s
     # Random jitter added to the poll interval (default: 5s)
@@ -47,9 +51,9 @@ storage_providers:
 ## Behavior
 
 - The manifest is loaded at startup and **polled periodically** for updates. The router uses `If-Modified-Since` conditional requests to avoid downloading an unchanged manifest, and compares the `revision` field to detect content changes.
-- The manifest is **authoritative** -- when enabled, individual per-request operation fetches from S3 are disabled. If an operation hash is not in the manifest, the request is rejected immediately.
+- The manifest is **authoritative** for hash-only lookups against S3/CDN storage -- when enabled, individual per-request operation fetches from S3 are disabled. If an operation hash is not in the manifest, the request is rejected immediately. Exceptions: if **APQ** (Automatic Persisted Queries) is enabled, unmatched hashes are delegated to the APQ layer instead of being rejected; if `log_unknown` is enabled and the request includes a full query body, the unknown operation is logged and execution continues (hash-only requests without a body are still rejected).
 - When warmup is enabled, new or changed operations are planned in the background after each manifest update, so that the first request for each operation is served from the plan cache.
-- **Compression is supported**: if the object path ends with `.gz` or `.zst`, the manifest is decompressed transparently (gzip or Zstandard).
+- **Compression is supported**: if `manifest.file_name` ends with `.gz` or `.zst` (e.g. `manifest.json.gz`), the router decompresses the content transparently (gzip or Zstandard).
 - **Filesystem providers are not supported** for the manifest. Only S3 and CDN providers can be used.
 
 ## Manifest Schema
