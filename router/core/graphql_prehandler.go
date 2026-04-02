@@ -915,6 +915,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		operationHash = requestContext.operation.HashString()
 	}
 
+	requestContext.expressionContext.Request.Operation.NormalizedHash = strconv.FormatUint(requestContext.operation.internalHash, 10)
+
 	if !h.disableVariablesRemapping && len(uploadsMapping) > 0 {
 		// after variables remapping we need to update the file uploads path because variables relative path has changed
 		// but files still references the old uploads locations
@@ -962,6 +964,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
+	requestContext.expressionContext.Request.Operation.VariablesHash = strconv.FormatUint(requestContext.operation.variablesHash, 10)
 	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)

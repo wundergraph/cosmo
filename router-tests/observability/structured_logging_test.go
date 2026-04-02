@@ -4200,6 +4200,156 @@ func TestAccessLogs(t *testing.T) {
 				},
 			)
 		})
+
+		t.Run("validate normalizedHash and variablesHash differ with skip/include variations", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "sha256_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.sha256Hash",
+							},
+						},
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.hash",
+							},
+						},
+						{
+							Key: "normalized_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.normalizedHash",
+							},
+						},
+						{
+							Key: "variables_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.variablesHash",
+							},
+						},
+						{
+							Key: "plan_cache_hit",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.planCacheHit",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					query := `query Employee( $id: Int! = 4 $withAligators: Boolean! $withCats: Boolean! $skipDogs:Boolean! $skipMouses:Boolean! ) { employee(id: $id) { details { pets { name __typename ...AlligatorFields @include(if: $withAligators) ...CatFields @include(if: $withCats) ...DogFields @skip(if: $skipDogs) ...MouseFields @skip(if: $skipMouses) ...PonyFields @include(if: false) } } } } fragment AlligatorFields on Alligator { __typename class dangerous gender name } fragment CatFields on Cat { __typename class gender name type } fragment DogFields on Dog { __typename breed class gender name } fragment MouseFields on Mouse { __typename class gender name } fragment PonyFields on Pony { __typename class gender name }`
+
+					// First request: skipMouses=true, id=4
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         query,
+						Variables:     []byte(`{"id": 4,"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
+					})
+
+					// Second request: skipMouses=false (same query body, different skip/include variable)
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         query,
+						Variables:     []byte(`{"id": 4,"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": false}`),
+					})
+
+					// Third request: same as first (should be plan cache hit)
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         query,
+						Variables:     []byte(`{"id": 4,"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
+					})
+
+					// Fourth request: different id (changes variablesHash but not normalizedHash)
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         query,
+						Variables:     []byte(`{"id": 3,"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
+					})
+
+					requestLogs := xEnv.Observer().FilterMessage("/graphql").All()
+					require.Len(t, requestLogs, 4)
+
+					ctx1 := requestLogs[0].ContextMap()
+					ctx2 := requestLogs[1].ContextMap()
+					ctx3 := requestLogs[2].ContextMap()
+					ctx4 := requestLogs[3].ContextMap()
+
+					// All four requests use the same query body, so sha256Hash must be identical
+					sha256First, ok := ctx1["sha256_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, sha256First)
+					sha256Second, ok := ctx2["sha256_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, sha256First, sha256Second, "sha256Hash should be the same for identical query bodies")
+					sha256Third, ok := ctx3["sha256_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, sha256First, sha256Third, "sha256Hash should be the same for identical query bodies")
+					sha256Fourth, ok := ctx4["sha256_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, sha256First, sha256Fourth, "sha256Hash should be the same for identical query bodies")
+
+					// hash (analytics hash of normalized operation) differs with skip/include
+					// because normalization produces different operations for different skip/include values
+					hash1, ok := ctx1["operation_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, hash1)
+					hash2, ok := ctx2["operation_hash"].(string)
+					require.True(t, ok)
+					require.NotEqual(t, hash1, hash2, "hash should differ when skip/include variables change")
+					hash3, ok := ctx3["operation_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, hash1, hash3, "hash should be the same for identical skip/include values")
+					// hash should be the same for request 1 and 4 (same skip/include, different id)
+					hash4, ok := ctx4["operation_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, hash1, hash4, "hash should be the same when only non-skip/include variables change")
+
+					// normalizedHash should differ between request 1 and 2 (different skip/include values)
+					normalizedHash1, ok := ctx1["normalized_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, normalizedHash1)
+					normalizedHash2, ok := ctx2["normalized_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, normalizedHash2)
+					require.NotEqual(t, normalizedHash1, normalizedHash2, "normalizedHash should differ when skip/include variables change")
+
+					// normalizedHash should be the same for request 1 and 3 (same skip/include values)
+					normalizedHash3, ok := ctx3["normalized_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, normalizedHash1, normalizedHash3, "normalizedHash should be the same for identical skip/include values")
+
+					// normalizedHash should be the same for request 1 and 4 (same skip/include, different id)
+					normalizedHash4, ok := ctx4["normalized_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, normalizedHash1, normalizedHash4, "normalizedHash should be the same when only non-skip/include variables change")
+
+					// variablesHash should differ between request 1 and 4 (different id value)
+					variablesHash1, ok := ctx1["variables_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, variablesHash1)
+					variablesHash4, ok := ctx4["variables_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, variablesHash4)
+					require.NotEqual(t, variablesHash1, variablesHash4, "variablesHash should differ when variable values change")
+
+					// variablesHash should be the same for request 1 and 3 (same variable values)
+					variablesHash3, ok := ctx3["variables_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, variablesHash1, variablesHash3, "variablesHash should be the same for identical variable values")
+
+					// Third request should be a plan cache hit (same normalizedHash as first)
+					planCacheHit3, ok := ctx3["plan_cache_hit"].(bool)
+					require.True(t, ok)
+					require.True(t, planCacheHit3, "third request should be a plan cache hit")
+				})
+		})
 	})
 }
 

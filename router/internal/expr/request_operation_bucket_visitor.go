@@ -88,7 +88,7 @@ func (v *RequestOperationBucketVisitor) Visit(baseNode *ast.Node) {
 			v.setBucketIfHigher(BucketPersistedID)
 		case "normalizationTime":
 			v.setBucketIfHigher(BucketNormalizationTime)
-		case "hash":
+		case "hash", "normalizedHash", "variablesHash":
 			v.setBucketIfHigher(BucketHash)
 		case "validationTime":
 			v.setBucketIfHigher(BucketValidationTime)

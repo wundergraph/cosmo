@@ -152,6 +152,34 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 			description:    "Hash with bracket notation should use hash bucket",
 		},
 
+		// BucketHash - request.operation.normalizedHash
+		{
+			name:           "operation normalizedHash",
+			expression:     `request.operation.normalizedHash == "12345"`,
+			expectedBucket: BucketHash,
+			description:    "Internal hash access should use hash bucket",
+		},
+		{
+			name:           "normalizedHash with bracket notation",
+			expression:     `request["operation"]["normalizedHash"]`,
+			expectedBucket: BucketHash,
+			description:    "Internal hash with bracket notation should use hash bucket",
+		},
+
+		// BucketHash - request.operation.variablesHash
+		{
+			name:           "operation variablesHash",
+			expression:     `request.operation.variablesHash == "67890"`,
+			expectedBucket: BucketHash,
+			description:    "Variables hash access should use hash bucket",
+		},
+		{
+			name:           "variablesHash with bracket notation",
+			expression:     `request["operation"]["variablesHash"]`,
+			expectedBucket: BucketHash,
+			description:    "Variables hash with bracket notation should use hash bucket",
+		},
+
 		// BucketValidationTime - request.operation.validationTime
 		{
 			name:           "validationTime",
