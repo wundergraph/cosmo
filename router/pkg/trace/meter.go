@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.uber.org/zap"
 
 	_ "google.golang.org/grpc/encoding/gzip" // Required for gzip support over grpc
@@ -43,7 +43,7 @@ func createExporter(log *zap.Logger, exp *ExporterConfig) (sdktrace.SpanExporter
 	var exporter sdktrace.SpanExporter
 	// Just support OTLP and gRPC for now. Jaeger has native OTLP support.
 	switch exp.Exporter {
-	case otelconfig.ExporterOLTPHTTP:
+	case otelconfig.ExporterOTLPHTTP:
 		opts := []otlptracehttp.Option{
 			// Includes host and port
 			otlptracehttp.WithEndpoint(u.Host),
@@ -64,7 +64,7 @@ func createExporter(log *zap.Logger, exp *ExporterConfig) (sdktrace.SpanExporter
 			context.Background(),
 			opts...,
 		)
-	case otelconfig.ExporterOLTPGRPC:
+	case otelconfig.ExporterOTLPGRPC:
 		opts := []otlptracegrpc.Option{
 			// Includes host and port
 			otlptracegrpc.WithEndpoint(u.Host),
@@ -146,6 +146,12 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		)
 	}
 
+	// Rename new semconv attribute keys (v1.40.0) back to old names (v1.17–v1.21)
+	// so downstream systems that query by old names continue to work.
+	// Must be registered before attribute transformers (e.g. IP redaction)
+	// because those match on old key names.
+	opts = append(opts, sdktrace.WithSpanProcessor(&semconvProcessor{}))
+
 	// Build list of attribute transformers based on config
 	var transformers []attributeprocessor.AttributeTransformer
 
@@ -183,9 +189,9 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 					continue
 				}
 
-				// Default to OLTP HTTP
+				// Default to OTLP HTTP
 				if exp.Exporter == "" {
-					exp.Exporter = otelconfig.ExporterOLTPHTTP
+					exp.Exporter = otelconfig.ExporterOTLPHTTP
 				}
 
 				exporter, err := createExporter(config.Logger, exp)

@@ -38,12 +38,6 @@ const (
 	NodeServiceSelfRegisterProcedure = "/wg.cosmo.node.v1.NodeService/SelfRegister"
 )
 
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	nodeServiceServiceDescriptor            = v1.File_wg_cosmo_node_v1_node_proto.Services().ByName("NodeService")
-	nodeServiceSelfRegisterMethodDescriptor = nodeServiceServiceDescriptor.Methods().ByName("SelfRegister")
-)
-
 // NodeServiceClient is a client for the wg.cosmo.node.v1.NodeService service.
 type NodeServiceClient interface {
 	SelfRegister(context.Context, *connect.Request[v1.SelfRegisterRequest]) (*connect.Response[v1.SelfRegisterResponse], error)
@@ -58,11 +52,12 @@ type NodeServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewNodeServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) NodeServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
+	nodeServiceMethods := v1.File_wg_cosmo_node_v1_node_proto.Services().ByName("NodeService").Methods()
 	return &nodeServiceClient{
 		selfRegister: connect.NewClient[v1.SelfRegisterRequest, v1.SelfRegisterResponse](
 			httpClient,
 			baseURL+NodeServiceSelfRegisterProcedure,
-			connect.WithSchema(nodeServiceSelfRegisterMethodDescriptor),
+			connect.WithSchema(nodeServiceMethods.ByName("SelfRegister")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -89,10 +84,11 @@ type NodeServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewNodeServiceHandler(svc NodeServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	nodeServiceMethods := v1.File_wg_cosmo_node_v1_node_proto.Services().ByName("NodeService").Methods()
 	nodeServiceSelfRegisterHandler := connect.NewUnaryHandler(
 		NodeServiceSelfRegisterProcedure,
 		svc.SelfRegister,
-		connect.WithSchema(nodeServiceSelfRegisterMethodDescriptor),
+		connect.WithSchema(nodeServiceMethods.ByName("SelfRegister")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/wg.cosmo.node.v1.NodeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

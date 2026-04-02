@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 
@@ -202,7 +203,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 
 	var exporter sdkmetric.Exporter
 	switch exp.Exporter {
-	case otelconfig.ExporterOLTPHTTP:
+	case otelconfig.ExporterOTLPHTTP:
 		opts := []otlpmetrichttp.Option{
 			// Includes host and port
 			otlpmetrichttp.WithEndpoint(u.Host),
@@ -225,7 +226,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			context.Background(),
 			opts...,
 		)
-	case otelconfig.ExporterOLTPGRPC:
+	case otelconfig.ExporterOTLPGRPC:
 		opts := []otlpmetricgrpc.Option{
 			// Includes host and port
 			otlpmetricgrpc.WithEndpoint(u.Host),
@@ -390,6 +391,13 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 		// In a custom View function, we need to explicitly copy the name, description, and unit.
 		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
 
+		// We currently don't want to expose the otelhttp scope metrics.
+		// TODO: Once we want to expose the otelhttp scope metrics, we need to .
+		if i.Scope.Name == otelhttp.ScopeName {
+			s.Aggregation = sdkmetric.AggregationDrop{}
+			return s, true
+		}
+
 		// Filter out metrics that match the excludeMetrics regexes
 		for _, re := range c.Prometheus.ExcludeMetrics {
 			promName := SanitizeName(i.Name)
@@ -419,6 +427,14 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 		sdkmetric.WithResource(r),
 	)
 
+	// When the cardinality limit is explicitly set to 0 or negative, the OTEL SDK will not apply a limit.
+	limit := c.CardinalityLimit
+	if limit <= 0 {
+		limit = DefaultCardinalityLimit
+	}
+
+	opts = append(opts, sdkmetric.WithCardinalityLimit(limit))
+
 	return opts, nil
 }
 
@@ -447,6 +463,14 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 	var view sdkmetric.View = func(i sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 		// In a custom View function, we need to explicitly copy the name, description, and unit.
 		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
+
+		// We currently don't want to expose the otelhttp scope metrics.
+		// TODO: Once we want to expose the otelhttp scope metrics, we need to remove this.
+		if i.Scope.Name == otelhttp.ScopeName {
+			s.Aggregation = sdkmetric.AggregationDrop{}
+			return s, true
+		}
+
 		// Filter out metrics that match the excludeMetrics regexes
 		for _, re := range c.OpenTelemetry.ExcludeMetrics {
 			if re.MatchString(i.Name) {
@@ -468,12 +492,18 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 		return s, true
 	}
 
-	// Info: There can be only a single view per instrument. A view with less restriction might override a view.
+	// When the cardinality limit is explicitly set to 0 or negative, the OTEL SDK will not apply a limit.
+	limit := c.CardinalityLimit
+	if limit <= 0 {
+		limit = DefaultCardinalityLimit
+	}
 
+	// Info: There can be only a single view per instrument. A view with less restriction might override a view.
 	return []sdkmetric.Option{
 		// Record information about this application in a Resource.
 		sdkmetric.WithResource(r),
 		sdkmetric.WithView(view),
+		sdkmetric.WithCardinalityLimit(limit),
 	}, nil
 }
 
