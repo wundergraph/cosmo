@@ -58,7 +58,7 @@ storage_providers:
 
 ## Manifest Schema
 
-The manifest file (`manifest.json`) is a JSON document with the following structure:
+The manifest file (configured via `manifest.file_name`, default `manifest.json`) is a JSON document with the following structure:
 
 ```json
 {
@@ -77,7 +77,7 @@ The manifest file (`manifest.json`) is a JSON document with the following struct
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `version` | `int` | Yes | Must be `1`. The router rejects manifests with any other version. |
-| `revision` | `string` | Yes | An opaque revision identifier. Used to detect changes during polling. In CDN mode it doubles as an ETag. Can be any non-empty string (e.g. a git SHA, timestamp, or UUID). **You must change this value whenever you update the operations**, otherwise the router will not pick up the changes. |
+| `revision` | `string` | Yes | An opaque revision identifier. Used to detect changes during polling. In CDN mode it doubles as an ETag. It can be any non-empty string (e.g. a git SHA, timestamp, or UUID). **You must change this value whenever you update the operations**, otherwise the router will not pick up the changes. |
 | `generatedAt` | `string` | No | ISO 8601 timestamp of when the manifest was generated. Informational only; not used by the router. |
 | `operations` | `map<string, string>` | Yes | A map of SHA256 hashes to GraphQL operation bodies. Keys are the SHA256 hash of the operation text. Values are the full GraphQL operation string. The field must be present (can be an empty `{}`). |
 
