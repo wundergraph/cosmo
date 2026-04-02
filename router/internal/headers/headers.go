@@ -26,6 +26,7 @@ var SkippedHeaders = map[string]struct{}{
 	"Accept-Encoding":  {},
 	"Accept-Charset":   {},
 	"Accept":           {},
+	"Vary":             {},
 
 	// Web Socket negotiation headers. We must never propagate the client headers to the upstream.
 	"Sec-Websocket-Extensions": {},
