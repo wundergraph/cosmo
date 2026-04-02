@@ -8,21 +8,15 @@ import (
 	"go.uber.org/zap"
 )
 
-// ManifestFetcher abstracts how the manifest is retrieved so the Poller
-// can work with any storage backend (CDN, S3, etc.).
-type ManifestFetcher interface {
-	Fetch(ctx context.Context, currentRevision string) (*Manifest, bool, error)
-}
-
 type Poller struct {
-	fetcher      ManifestFetcher
+	fetcher      *Fetcher
 	pollInterval time.Duration
 	pollJitter   time.Duration
 	logger       *zap.Logger
 	store        *Store
 }
 
-func NewPoller(fetcher ManifestFetcher, store *Store, pollInterval, pollJitter time.Duration, logger *zap.Logger) *Poller {
+func NewPoller(fetcher *Fetcher, store *Store, pollInterval, pollJitter time.Duration, logger *zap.Logger) *Poller {
 	if pollJitter <= 0 {
 		pollJitter = 5 * time.Second
 	}
@@ -50,6 +44,10 @@ func (p *Poller) FetchInitial(ctx context.Context) error {
 
 	if changed && manifest != nil {
 		p.store.Load(manifest)
+		p.logger.Info("Loaded initial PQL manifest",
+			zap.String("revision", manifest.Revision),
+			zap.Int("operation_count", len(manifest.Operations)),
+		)
 	}
 
 	return nil
@@ -82,10 +80,6 @@ func (p *Poller) Poll(ctx context.Context) {
 				zap.String("revision", manifest.Revision),
 				zap.String("previous_revision", currentRevision),
 				zap.Int("operation_count", len(manifest.Operations)),
-			)
-		} else {
-			p.logger.Debug("PQL manifest unchanged, skipping update",
-				zap.String("previous_revision", currentRevision),
 			)
 		}
 	}

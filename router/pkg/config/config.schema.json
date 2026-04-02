@@ -203,11 +203,6 @@
               "description": "Enable the PQL manifest feature.",
               "default": false
             },
-            "file_name": {
-              "type": "string",
-              "description": "The manifest file name. Use a .gz or .zst extension to enable transparent decompression (e.g. manifest.json.gz or manifest.json.zst).",
-              "default": "manifest.json"
-            },
             "poll_interval": {
               "type": "string",
               "format": "go-duration",

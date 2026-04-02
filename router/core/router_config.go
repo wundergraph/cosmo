@@ -92,7 +92,6 @@ type Config struct {
 	apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
 	storageProviders                config.StorageProviders
-	providerRegistry                *ProviderRegistry
 	demoMode                        bool
 	eventsConfig                    config.EventsConfiguration
 	prometheusServer                *http.Server
