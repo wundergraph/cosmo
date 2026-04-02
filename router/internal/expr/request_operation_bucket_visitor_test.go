@@ -152,18 +152,18 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 			description:    "Hash with bracket notation should use hash bucket",
 		},
 
-		// BucketHash - request.operation.normalizedHash
+		// BucketNormalizedHash - request.operation.normalizedHash
 		{
 			name:           "operation normalizedHash",
 			expression:     `request.operation.normalizedHash == "12345"`,
-			expectedBucket: BucketHash,
-			description:    "Internal hash access should use hash bucket",
+			expectedBucket: BucketNormalizedHash,
+			description:    "Normalized hash access should use normalized hash bucket",
 		},
 		{
 			name:           "normalizedHash with bracket notation",
 			expression:     `request["operation"]["normalizedHash"]`,
-			expectedBucket: BucketHash,
-			description:    "Internal hash with bracket notation should use hash bucket",
+			expectedBucket: BucketNormalizedHash,
+			description:    "Normalized hash with bracket notation should use normalized hash bucket",
 		},
 
 		// BucketHash - request.operation.variablesHash
@@ -363,6 +363,8 @@ func bucketName(bucket AttributeBucket) string {
 		return "BucketNormalizationTime"
 	case BucketHash:
 		return "BucketHash"
+	case BucketNormalizedHash:
+		return "BucketNormalizedHash"
 	case BucketValidationTime:
 		return "BucketValidationTime"
 	case BucketPlanningTime:
@@ -388,7 +390,8 @@ func TestBucketPriority(t *testing.T) {
 	assert.True(t, BucketNameOrType < BucketPersistedID, "NameOrType should be lower priority than PersistedID")
 	assert.True(t, BucketPersistedID < BucketNormalizationTime, "PersistedID should be lower priority than NormalizationTime")
 	assert.True(t, BucketNormalizationTime < BucketHash, "NormalizationTime should be lower priority than Hash")
-	assert.True(t, BucketHash < BucketValidationTime, "Hash should be lower priority than ValidationTime")
+	assert.True(t, BucketHash < BucketNormalizedHash, "Hash should be lower priority than NormalizedHash")
+	assert.True(t, BucketNormalizedHash < BucketValidationTime, "NormalizedHash should be lower priority than ValidationTime")
 	assert.True(t, BucketValidationTime < BucketPlanningTime, "ValidationTime should be lower priority than PlanningTime")
 	assert.True(t, BucketPlanningTime < BucketSubgraph, "PlanningTime should be lower priority than Subgraph")
 }

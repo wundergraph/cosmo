@@ -915,8 +915,6 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		operationHash = requestContext.operation.HashString()
 	}
 
-	requestContext.expressionContext.Request.Operation.NormalizedHash = strconv.FormatUint(requestContext.operation.internalHash, 10)
-
 	if !h.disableVariablesRemapping && len(uploadsMapping) > 0 {
 		// after variables remapping we need to update the file uploads path because variables relative path has changed
 		// but files still references the old uploads locations
@@ -980,6 +978,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	requestContext.expressionContext.Request.Operation.Hash = operationHash
 	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketHash)
+
+	requestContext.expressionContext.Request.Operation.NormalizedHash = strconv.FormatUint(requestContext.operation.internalHash, 10)
+	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizedHash)
 
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 		httpOperation.traceTimings.EndNormalize()
