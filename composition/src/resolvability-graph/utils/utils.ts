@@ -196,7 +196,7 @@ export function generateSelectionSetSegments(
   let shouldTruncate = false;
   const truncatedNumber = pathNodes.length - limit * 2;
   if (limit > 0 && pathNodes.length > limit * 2 + 1) {
-    // +1 so we always include the operation type as the first selection
+    // +1 so we always include the root field as the first selection
     shouldTruncate = true;
     pathNodes.splice(limit + 1, truncatedNumber - 1);
   }
