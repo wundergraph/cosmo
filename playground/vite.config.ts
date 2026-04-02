@@ -28,11 +28,12 @@ export default ({ mode }) => {
       emptyOutDir: true,
       rollupOptions: !singleFileOutput
         ? {
-            external: ['react', 'react-dom'],
+            external: ['react', 'react-dom', 'react/jsx-runtime'],
             output: {
               globals: {
                 react: 'React',
                 'react-dom': 'ReactDOM',
+                'react/jsx-runtime': 'react/jsx-runtime',
               },
             },
           }
@@ -43,6 +44,7 @@ export default ({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
+      dedupe: ['react', 'react-dom'],
     },
   });
 };
