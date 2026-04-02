@@ -441,12 +441,18 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 
 	// Create MCP streamable HTTP handler
 	// The getServer function returns our MCP server instance for each request
+	// Disable the SDK's built-in cross-origin protection (Sec-Fetch-Site check)
+	// because the router already applies its own CORS middleware around the handler.
+	cop := http.NewCrossOriginProtection()
+	cop.AddInsecureBypassPattern("/{path...}")
+
 	streamableHTTPHandler := mcp.NewStreamableHTTPHandler(
 		func(req *http.Request) *mcp.Server {
 			return s.server
 		},
 		&mcp.StreamableHTTPOptions{
-			Stateless: s.stateless,
+			Stateless:             s.stateless,
+			CrossOriginProtection: cop,
 		},
 	)
 
