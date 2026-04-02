@@ -38,6 +38,8 @@ export function createOnboarding(
           details: 'Only the organization creator can create onboarding.',
         },
         federatedGraphsCount: 0,
+        slack: false,
+        email: false,
       };
     }
 
@@ -54,6 +56,8 @@ export function createOnboarding(
           details: validatedName.error.errors[0]?.message || 'Invalid organization name',
         },
         federatedGraphsCount: 0,
+        slack: false,
+        email: false,
       };
     }
 
@@ -138,6 +142,8 @@ export function createOnboarding(
       },
       finishedAt: onboarding.finishedAt?.toISOString(),
       federatedGraphsCount,
+      slack: onboarding.slack,
+      email: onboarding.email,
     };
   });
 }
