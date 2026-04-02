@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.300.1](https://github.com/wundergraph/cosmo/compare/router@0.300.0...router@0.300.1) (2026-04-02)
+
+### Bug Fixes
+
+* **docs:** enhance PQL manifest documentation for clarity and detail ([#2734](https://github.com/wundergraph/cosmo/issues/2734)) ([8522d4e](https://github.com/wundergraph/cosmo/commit/8522d4e4b106173b6a87b09a7dc820900995dfcc)) (@StarpTech)
+
 # [0.300.0](https://github.com/wundergraph/cosmo/compare/router@0.299.0...router@0.300.0) (2026-04-02)
 
 ### Bug Fixes
