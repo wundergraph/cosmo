@@ -37,7 +37,12 @@ import {
   type PersistedDirectivesData,
   type SchemaData,
 } from './types';
-import { type MutableDefinitionNode, type MutableFieldNode, type MutableInputValueNode } from './ast';
+import {
+  type MutableDefinitionNode,
+  type MutableDirectiveDefinitionNode,
+  type MutableFieldNode,
+  type MutableInputValueNode,
+} from './ast';
 import { type ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
 import {
   incompatibleInputValueDefaultValuesError,
@@ -439,7 +444,10 @@ function getRouterPersistedDirectiveNodes<T extends NodeData>(
   return persistedDirectiveNodes;
 }
 
-export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T): ConstDirectiveNode[] {
+export function getClientPersistedDirectiveNodes<T extends NodeData>(
+  nodeData: T,
+  composedDirectiveNames?: ReadonlySet<string>,
+): ConstDirectiveNode[] {
   const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
   if (nodeData.persistedDirectivesData.isDeprecated) {
     persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.persistedDirectivesData.deprecatedReason));
@@ -449,6 +457,11 @@ export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T
       persistedDirectiveNodes.push(
         generateSemanticNonNullDirective(getFirstEntry(nodeData.nullLevelsBySubgraphName) ?? new Set<number>([0])),
       );
+      continue;
+    }
+    if (composedDirectiveNames?.has(directiveName)) {
+      // Composed directives may be repeatable; all validated nodes are safe to emit.
+      persistedDirectiveNodes.push(...directiveNodes);
       continue;
     }
     // Only include @deprecated, @oneOf, and @semanticNonNull in the client schema.
@@ -463,8 +476,11 @@ export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T
   return persistedDirectiveNodes;
 }
 
-export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): MutableFieldNode {
-  const directives = getClientPersistedDirectiveNodes(fieldData);
+export function getClientSchemaFieldNodeByFieldData(
+  fieldData: FieldData,
+  composedDirectiveNames?: ReadonlySet<string>,
+): MutableFieldNode {
+  const directives = getClientPersistedDirectiveNodes(fieldData, composedDirectiveNames);
   const argumentNodes: MutableInputValueNode[] = [];
   for (const inputValueData of fieldData.argumentDataByName.values()) {
     if (isNodeDataInaccessible(inputValueData)) {
@@ -472,7 +488,7 @@ export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): Mutab
     }
     argumentNodes.push({
       ...inputValueData.node,
-      directives: getClientPersistedDirectiveNodes(inputValueData),
+      directives: getClientPersistedDirectiveNodes(inputValueData, composedDirectiveNames),
     });
   }
   return {
@@ -540,24 +556,35 @@ function addValidatedArgumentNodes(
   return true;
 }
 
+export function buildValidPersistedDirectiveDefinitionNode(
+  data: PersistedDirectiveDefinitionData,
+  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
+  errors: Error[],
+): MutableDirectiveDefinitionNode | undefined {
+  const argumentNodes: MutableInputValueNode[] = [];
+  if (!addValidatedArgumentNodes(argumentNodes, data, persistedDirectiveDefinitionByDirectiveName, errors)) {
+    return undefined;
+  }
+  return {
+    arguments: argumentNodes,
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: setToNameNodeArray(data.locations ?? data.executableLocations),
+    name: stringToNameNode(data.name),
+    repeatable: data.repeatable,
+    description: data.description,
+  };
+}
+
 export function addValidPersistedDirectiveDefinitionNodeByData(
   definitions: (MutableDefinitionNode | DefinitionNode)[],
   data: PersistedDirectiveDefinitionData,
   persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
   errors: Error[],
 ) {
-  const argumentNodes: MutableInputValueNode[] = [];
-  if (!addValidatedArgumentNodes(argumentNodes, data, persistedDirectiveDefinitionByDirectiveName, errors)) {
-    return;
+  const node = buildValidPersistedDirectiveDefinitionNode(data, persistedDirectiveDefinitionByDirectiveName, errors);
+  if (node) {
+    definitions.push(node);
   }
-  definitions.push({
-    arguments: argumentNodes,
-    kind: Kind.DIRECTIVE_DEFINITION,
-    locations: setToNameNodeArray(data.executableLocations),
-    name: stringToNameNode(data.name),
-    repeatable: data.repeatable,
-    description: data.description,
-  });
 }
 
 type InvalidFieldNames = {

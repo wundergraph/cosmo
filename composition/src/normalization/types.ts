@@ -28,6 +28,7 @@ export type NormalizationFailure = {
 
 export type NormalizationSuccess = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
+  composedDirectiveDefinitionDataByDirectiveName: Map<DirectiveName, PersistedDirectiveDefinitionData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
   configurationDataByTypeName: Map<TypeName, ConfigurationData>;

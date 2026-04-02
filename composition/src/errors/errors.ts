@@ -56,6 +56,43 @@ import {
   type TypeName,
 } from '../types/types';
 
+// @composeDirective(name: "myDirective") — missing @ prefix
+export function composeDirectiveNameMissingAtPrefixError(name: string): Error {
+  return new Error(
+    `The name argument of "@composeDirective" must start with "@", but received "${name}".`
+  );
+}
+
+// @composeDirective(name: "@unknownDirective") — directive not defined
+export function undefinedComposeDirectiveNameError(name: string): Error {
+  return new Error(
+    `The directive "@${name}" declared in "@composeDirective" is not defined in this subgraph.`
+  );
+}
+
+// @composeDirective(name: "@key") — built-in federation directive
+export function composeDirectiveBuiltInError(name: string): Error {
+  return new Error(
+    `The directive "@${name}" is a built-in federation directive and cannot be used with "@composeDirective".`
+  );
+}
+
+// @composeDirective — two subgraphs define the directive with disjoint location sets
+export function composeDirectiveNoMutualLocationsError(name: string, subgraphNames: Set<string>): Error {
+  return new Error(
+    `The composed directive "@${name}" has no mutually supported locations across subgraphs: [${[...subgraphNames].join(', ')}].` +
+      ` All subgraphs that define a composed directive must share at least one location.`,
+  );
+}
+
+// @composeDirective with conflicting repeatable declarations across subgraphs
+export function composeDirectiveRepeatableConflictError(name: string, subgraphNames: Set<string>): Error {
+  return new Error(
+    `The composed directive "@${name}" has conflicting "repeatable" declarations across subgraphs: [${[...subgraphNames].join(', ')}].` +
+      ` All subgraphs that define a composed directive must agree on whether it is repeatable.`,
+  );
+}
+
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
 export function multipleNamedTypeDefinitionError(
