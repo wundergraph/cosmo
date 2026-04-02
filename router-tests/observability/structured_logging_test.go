@@ -4350,6 +4350,70 @@ func TestAccessLogs(t *testing.T) {
 					require.True(t, planCacheHit3, "third request should be a plan cache hit")
 				})
 		})
+
+		t.Run("validate hash differs but normalizedHash matches for queries with different variable names", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.hash",
+							},
+						},
+						{
+							Key: "normalized_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.normalizedHash",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					// Two queries with different variable names but identical structure.
+					// hash is computed before variable remapping, so different variable names produce different hashes.
+					// normalizedHash is computed after variable remapping ($myId/$eid both become $0), so they match.
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"EmployeeA"`),
+						Query:         `query EmployeeA($myId: Int!) { employee(id: $myId) { id } }`,
+						Variables:     []byte(`{"myId": 4}`),
+					})
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"EmployeeB"`),
+						Query:         `query EmployeeB($eid: Int!) { employee(id: $eid) { id } }`,
+						Variables:     []byte(`{"eid": 4}`),
+					})
+
+					requestLogs := xEnv.Observer().FilterMessage("/graphql").All()
+					require.Len(t, requestLogs, 2)
+
+					ctxA := requestLogs[0].ContextMap()
+					ctxB := requestLogs[1].ContextMap()
+
+					// hash should differ (pre-remapping: different variable names $myId vs $eid)
+					hashA, ok := ctxA["operation_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, hashA)
+					hashB, ok := ctxB["operation_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, hashB)
+					require.NotEqual(t, hashA, hashB, "hash should differ because variable names differ before remapping")
+
+					// normalizedHash should match (post-remapping: both $myId and $eid become $0)
+					normalizedHashA, ok := ctxA["normalized_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, normalizedHashA)
+					normalizedHashB, ok := ctxB["normalized_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, normalizedHashB)
+					require.Equal(t, normalizedHashA, normalizedHashB, "normalizedHash should match because variable names are remapped to canonical names")
+				})
+		})
 	})
 }
 
