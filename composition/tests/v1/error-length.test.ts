@@ -15,9 +15,9 @@ import {
 import { federateSubgraphsFailure } from '../utils/utils';
 
 describe('Field resolvability error tests', () => {
+  const fieldPath = 'query.rootField.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
   test('that the error message for deeply nested unresolvable fields is truncated', () => {
-    const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w';
-    const rootFieldData = newRootFieldData(QUERY, 'query', new Set<string>(['subgraph-a']));
+    const rootFieldData = newRootFieldData(QUERY, 'rootField', new Set<string>(['subgraph-a']));
     const unresolvableFieldData: UnresolvableFieldData = {
       externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
@@ -26,7 +26,7 @@ describe('Field resolvability error tests', () => {
         name: 'name',
       } as GraphFieldData),
       subgraphNames: new Set<string>(['subgraph-b']),
-      typeName: 'W',
+      typeName: 'EE',
     };
     const { errors } = federateSubgraphsFailure([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(errors).toHaveLength(1);
@@ -40,7 +40,6 @@ describe('Field resolvability error tests', () => {
   });
 
   test('that a custom selection limit is respected successfully', () => {
-    const fieldPath = 'query.rootField.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
     const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, 1);
     const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
       isLeaf: true,
@@ -95,7 +94,6 @@ describe('Field resolvability error tests', () => {
   });
 
   test('that all selections are rendered when limit is negative', () => {
-    const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
     const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, -1);
     const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
       isLeaf: true,
@@ -104,7 +102,7 @@ describe('Field resolvability error tests', () => {
 
     expect(pathNodes.length).toBe(32);
     expect(render).toBe(` query {
-  query {
+  rootField {
    a {
     b {
      c {
@@ -172,7 +170,6 @@ describe('Field resolvability error tests', () => {
   });
 
   test('that all selections are rendered when limit is zero', () => {
-    const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
     const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, 0);
     const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
       isLeaf: true,
@@ -181,7 +178,7 @@ describe('Field resolvability error tests', () => {
 
     expect(pathNodes.length).toBe(32);
     expect(render).toBe(` query {
-  query {
+  rootField {
    a {
     b {
      c {
@@ -249,7 +246,6 @@ describe('Field resolvability error tests', () => {
   });
 
   test('that when the limit is greater than the number of selection, no truncation occurs', () => {
-    const fieldPath = 'query.query.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.w.x.y.z.aa.bb.cc.dd.ee';
     const { outputStart, outputEnd, pathNodes } = generateSelectionSetSegments(fieldPath, 50);
     const render = renderSelectionSet({ outputStart, outputEnd, pathNodes }, {
       isLeaf: true,
@@ -258,7 +254,7 @@ describe('Field resolvability error tests', () => {
 
     expect(pathNodes.length).toBe(32);
     expect(render).toBe(` query {
-  query {
+  rootField {
    a {
     b {
      c {
@@ -331,7 +327,7 @@ const subgraphA: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      query: AQuery
+      rootField: AQuery
     }
     
     type AQuery {
@@ -423,6 +419,38 @@ const subgraphA: Subgraph = {
     }
     
     type W {
+      x: X
+    }
+    
+    type X {
+      y: Y
+    }
+    
+    type Y {
+      z: Z
+    }
+    
+    type Z {
+      aa: AA
+    }
+    
+    type AA {
+      bb: BB
+    }
+    
+    type BB {
+      cc: CC
+    }
+    
+    type CC {
+      dd: DD
+    }
+    
+    type DD {
+      ee: EE
+    }
+    
+    type EE {
       age: Int
     }
   `),
@@ -432,7 +460,7 @@ const subgraphB: Subgraph = {
   name: 'subgraph-b',
   url: '',
   definitions: parse(`
-    type W {
+    type EE {
       name: String
     }
   `),
