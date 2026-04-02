@@ -118,7 +118,7 @@ Operations are currently deleted one at a time from the UI.
 
 ## PQL Manifest
 
-By default, the router fetches persisted operations individually from the Cosmo CDN on each request. When the **PQL manifest** is enabled, the router instead loads all persisted operations from a single `manifest.json` file at startup and serves them entirely from memory — eliminating per-request network overhead.
+By default, the router fetches persisted operations individually from the Cosmo CDN on each request. When the **PQL manifest** is enabled, the router instead loads all persisted operations from a single manifest file at startup and serves them entirely from memory, eliminating per-request network overhead.
 
 ```yaml
 persisted_operations:

@@ -990,6 +990,7 @@ type PQLManifestWarmupConfig struct {
 
 type PQLManifestConfig struct {
 	Enabled      bool                    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	FileName     string                  `yaml:"file_name" envDefault:"manifest.json" env:"FILE_NAME"`
 	PollInterval time.Duration           `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
 	PollJitter   time.Duration           `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER"`
 	Warmup       PQLManifestWarmupConfig `yaml:"warmup" envPrefix:"WARMUP_"`

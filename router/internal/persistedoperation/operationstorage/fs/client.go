@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 )
 
 type client struct {
@@ -68,10 +67,6 @@ func (c client) persistedOperation(clientName string, sha256Hash string) ([]byte
 	}
 
 	return []byte(po.Body), nil
-}
-
-func (c client) ReadManifest(_ context.Context, _ string) (*pqlmanifest.Manifest, error) {
-	return nil, fmt.Errorf("filesystem storage provider does not support reading manifests; use S3 or CDN instead")
 }
 
 func (c client) Close() {}

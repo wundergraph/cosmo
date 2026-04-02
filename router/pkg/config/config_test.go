@@ -998,6 +998,7 @@ func TestConfigMerging(t *testing.T) {
 					ObjectPrefix: "ee",
 				},
 				Manifest: PQLManifestConfig{
+					FileName:     "manifest.json",
 					PollInterval: 10 * time.Second,
 					PollJitter:   5 * time.Second,
 					Warmup: PQLManifestWarmupConfig{
