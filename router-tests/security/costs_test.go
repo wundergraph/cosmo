@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"net/http"
 	"strconv"
 	"testing"
 
@@ -320,6 +321,113 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "3", res.Response.Header.Get(core.CostEstimatedHeader))
 
 				require.Equal(t, "3", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+	})
+
+	t.Run("requireOneSlicingArgument validation", func(t *testing.T) {
+		t.Parallel()
+
+		// All tests use measure mode (less restrictive) to prove validation runs regardless of mode.
+		measureCostControl := func(securityConfiguration *config.SecurityConfiguration) {
+			securityConfiguration.CostControl = &config.CostControl{
+				Enabled: true,
+				Mode:    config.CostControlModeMeasure,
+			}
+		}
+
+		t.Run("exactly one slicing argument provided - valid", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: measureCostControl,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ slicedThings(first: 5) { a } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors"`)
+			})
+		})
+
+		t.Run("no slicing argument provided - error", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: measureCostControl,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ slicedThings { a } }`,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"errors"`)
+				require.Contains(t, res.Body, `requires exactly one slicing argument, but none was provided`)
+				require.NotContains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("multiple slicing arguments provided - error", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: measureCostControl,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ slicedThings(first: 5, last: 3) { a } }`,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"errors"`)
+				require.Contains(t, res.Body, `requires exactly one slicing argument, but 2 were provided`)
+				require.NotContains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("null variable for slicing argument - error", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: measureCostControl,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:     `query($f: Int) { slicedThings(first: $f) { a } }`,
+					Variables: []byte(`{"f": null}`),
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"errors"`)
+				require.Contains(t, res.Body, `requires exactly one slicing argument, but none was provided`)
+				require.NotContains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("requireOneSlicingArgument disabled - no validation", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+					var dsID string
+					for _, sg := range routerConfig.Subgraphs {
+						if sg.Name == "products" {
+							dsID = sg.Id
+							break
+						}
+					}
+					for _, ds := range routerConfig.EngineConfig.DatasourceConfigurations {
+						if ds.Id != dsID || ds.CostConfiguration == nil {
+							continue
+						}
+						for _, ls := range ds.CostConfiguration.ListSizes {
+							if ls.TypeName == "Query" && ls.FieldName == "slicedThings" {
+								disabled := false
+								ls.RequireOneSlicingArgument = &disabled
+							}
+						}
+					}
+				},
+				ModifySecurityConfiguration: measureCostControl,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ slicedThings { a } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors"`)
 			})
 		})
 	})
