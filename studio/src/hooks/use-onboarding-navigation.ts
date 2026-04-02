@@ -29,6 +29,8 @@ export const useOnboardingNavigation = () => {
       setOnboarding({
         finishedAt: data.finishedAt ? new Date(data.finishedAt) : undefined,
         federatedGraphsCount: data.federatedGraphsCount,
+        slack: data.slack,
+        email: data.email,
       });
     },
     [initialLoadSuccess, data, setOnboarding],

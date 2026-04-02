@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { Link } from '../ui/link';
-import { Button } from '../ui/button';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { OnboardingContainer } from './onboarding-container';
+import { OnboardingNavigation } from './onboarding-navigation';
 import { useMutation } from '@connectrpc/connect-query';
 import { finishOnboarding } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useToast } from '../ui/use-toast';
@@ -44,27 +44,17 @@ export const Step4 = () => {
   });
 
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
+    <OnboardingContainer>
       <h2 className="text-2xl font-semibold tracking-tight">Step 4</h2>
-      <div className="flex w-full justify-between">
-        <Button asChild variant="secondary" onClick={setSkipped}>
-          <Link href="/">Skip</Link>
-        </Button>
-        <div className="flex">
-          <Button className="mr-2" asChild>
-            <Link href="/onboarding/3">Back</Link>
-          </Button>
-          <Button
-            onClick={() => {
-              mutate({});
-            }}
-            isLoading={isPending}
-            disabled={isPending}
-          >
-            Finish
-          </Button>
-        </div>
-      </div>
-    </div>
+      <OnboardingNavigation
+        onSkip={setSkipped}
+        backHref="/onboarding/3"
+        forward={{
+          onClick: () => mutate({}),
+          isLoading: isPending,
+        }}
+        forwardLabel="Finish"
+      />
+    </OnboardingContainer>
   );
 };

@@ -60,6 +60,7 @@ import { useRouter } from 'next/router';
 import { Dispatch, SetStateAction, useContext, useEffect, useState } from 'react';
 import { FaMagic } from 'react-icons/fa';
 import { z } from 'zod';
+import { organizationNameSchema } from '@/lib/schemas';
 import { DeleteOrganization } from '@/components/settings/delete-organization';
 import { RestoreOrganization } from '@/components/settings/restore-organization';
 
@@ -70,12 +71,7 @@ const OrganizationDetails = () => {
   const sessionQueryClient = useContext(SessionClientContext);
 
   const schema = z.object({
-    organizationName: z
-      .string()
-      .min(1, {
-        message: 'Organization name must be a minimum of 1 character',
-      })
-      .max(24, { message: 'Organization name must be maximum 24 characters' }),
+    organizationName: organizationNameSchema,
     organizationSlug: z
       .string()
       .toLowerCase()
