@@ -45,7 +45,7 @@ func newSelfRegisterForTest(t *testing.T, handler nodev1connect.NodeServiceHandl
 	return sr
 }
 
-func TestSelfRegister_Register_TimesOutWhenResponseExceeds15Seconds(t *testing.T) {
+func TestSelfRegister_Register_TimesOut(t *testing.T) {
 	delay := 1 * time.Second
 	handler := &testNodeServiceHandler{
 		delay: delay,
