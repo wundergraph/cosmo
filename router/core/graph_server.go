@@ -105,7 +105,6 @@ type (
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
 		headerPropagation       *HeaderPropagation
-		shutdownStarted         chan struct{}
 	}
 )
 
@@ -196,7 +195,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		},
 		storageProviders:  &r.storageProviders,
 		headerPropagation: r.headerPropagation,
-		shutdownStarted:   make(chan struct{}),
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -324,6 +322,29 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
+	}
+
+	// Register a single composed manifest re-warm callback for all muxes (base + feature flags).
+	// On config reload, the new graphServer replaces the old callback — correct by design.
+	if s.persistedOperationClient != nil {
+		if pqlStore := s.persistedOperationClient.PQLStore(); pqlStore != nil && pqlStore.IsLoaded() {
+			s.graphMuxListLock.Lock()
+			rewarmFns := make([]func(), 0, len(s.graphMuxList))
+			for _, m := range s.graphMuxList {
+				if m.manifestRewarmFn != nil {
+					rewarmFns = append(rewarmFns, m.manifestRewarmFn)
+				}
+			}
+			s.graphMuxListLock.Unlock()
+
+			if len(rewarmFns) > 0 {
+				pqlStore.SetOnUpdate(func() {
+					for _, fn := range rewarmFns {
+						fn()
+					}
+				})
+			}
+		}
 	}
 
 	wrapper, err := gzhttp.NewWrapper(
@@ -557,6 +578,8 @@ type graphMux struct {
 	remapVariablesCache         *ristretto.Cache[uint64, RemapVariablesCacheEntry]
 	validationCache             *ristretto.Cache[uint64, bool]
 	operationHashCache          *ristretto.Cache[uint64, string]
+
+	manifestRewarmFn func() // called by Store worker on manifest update; nil if warmup disabled
 
 	accessLogsFileLogger      *logging.BufferedLogger
 	metricStore               rmetric.Store
@@ -1530,11 +1553,9 @@ func (s *graphServer) buildGraphMux(
 				s.logger.Error("Failed to warmup PQL manifest operations", zap.Error(err))
 			}
 
-			// Re-warm when the manifest is updated by the poller.
-			// Each mux registers its own listener on the shared store, so all muxes
-			// (base + feature flags) get re-warmed independently with their own coalescing.
-			// The listener is removed when shutdownStarted is closed at the start of Shutdown.
-			pqlStore.AddListener(s.shutdownStarted, func() {
+			// Store the rewarm function so the caller can compose a single callback
+			// for all muxes (base + feature flags) after they're all built.
+			gm.manifestRewarmFn = func() {
 				rewarmConfig := &CacheWarmupConfig{
 					Log:            s.logger,
 					Processor:      manifestProcessor,
@@ -1548,7 +1569,7 @@ func (s *graphServer) buildGraphMux(
 				if rewarmErr := WarmupCaches(ctx, rewarmConfig); rewarmErr != nil {
 					s.logger.Error("Failed to re-warm PQL manifest operations after update", zap.Error(rewarmErr))
 				}
-			})
+			}
 		}
 	}
 
@@ -1932,10 +1953,6 @@ func (s *graphServer) wait(ctx context.Context) error {
 // After all requests are done, it will shut down the metric store and runtime metrics.
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
 func (s *graphServer) Shutdown(ctx context.Context) error {
-	// Stop manifest warmup listeners immediately — the old execution config
-	// is being replaced, so any new warmup work would be wasted.
-	close(s.shutdownStarted)
-
 	// Cancel the context after the graceful shutdown is done
 	// to clean up resources like websocket connections, pools, etc.
 	defer s.cancelFunc()

@@ -235,10 +235,8 @@ func TestStorageFetcherPollingLifecycle(t *testing.T) {
 	poller := NewPoller(storageFetcher, store, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
 
 	// Track store update callbacks.
-	done := make(chan struct{})
-	defer close(done)
 	var updateCallbackCount atomic.Int32
-	store.AddListener(done, func() {
+	store.SetOnUpdate(func() {
 		updateCallbackCount.Add(1)
 	})
 

@@ -1,7 +1,6 @@
 package pqlmanifest
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -106,13 +105,12 @@ func TestStore(t *testing.T) {
 		require.Equal(t, ops, result)
 	})
 
-	t.Run("AddListener callback is invoked on Load", func(t *testing.T) {
+	t.Run("SetOnUpdate callback is invoked on Load", func(t *testing.T) {
 		store := NewStore(zap.NewNop())
-		done := make(chan struct{})
-		defer close(done)
+		defer store.Close()
 
 		var called atomic.Bool
-		store.AddListener(done, func() {
+		store.SetOnUpdate(func() {
 			called.Store(true)
 		})
 
@@ -123,60 +121,22 @@ func TestStore(t *testing.T) {
 		}, time.Second, 10*time.Millisecond)
 	})
 
-	t.Run("no listeners does not panic", func(t *testing.T) {
+	t.Run("no callback does not panic", func(t *testing.T) {
 		store := NewStore(zap.NewNop())
+		defer store.Close()
 		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "query { a }"}})
 	})
 
-	t.Run("each listener runs its callback sequentially", func(t *testing.T) {
-		store := NewStore(zap.NewNop())
-		done := make(chan struct{})
-		defer close(done)
-
-		var concurrent atomic.Int32
-		var maxConcurrent atomic.Int32
-		var totalCalls atomic.Int32
-
-		store.AddListener(done, func() {
-			c := concurrent.Add(1)
-			for {
-				old := maxConcurrent.Load()
-				if c <= old || maxConcurrent.CompareAndSwap(old, c) {
-					break
-				}
-			}
-			time.Sleep(10 * time.Millisecond)
-			totalCalls.Add(1)
-			concurrent.Add(-1)
-		})
-
-		for i := 0; i < 5; i++ {
-			store.Load(&Manifest{
-				Version:    1,
-				Revision:   fmt.Sprintf("rev-%d", i),
-				Operations: map[string]string{"a": "q"},
-			})
-		}
-
-		require.Eventually(t, func() bool {
-			return totalCalls.Load() >= 1
-		}, 2*time.Second, 10*time.Millisecond)
-
-		time.Sleep(50 * time.Millisecond)
-		require.Equal(t, int32(1), maxConcurrent.Load(), "callbacks must run sequentially, never concurrently")
-	})
-
-	t.Run("rapid loads coalesce signals when listener is busy", func(t *testing.T) {
+	t.Run("rapid loads coalesce signals when worker is busy", func(t *testing.T) {
 		core, logs := observer.New(zap.DebugLevel)
 		store := NewStore(zap.New(core))
-		done := make(chan struct{})
-		defer close(done)
+		defer store.Close()
 
 		processing := make(chan struct{})
 		proceed := make(chan struct{})
 		var totalCalls atomic.Int32
 
-		store.AddListener(done, func() {
+		store.SetOnUpdate(func() {
 			totalCalls.Add(1)
 			processing <- struct{}{}
 			<-proceed
@@ -202,10 +162,10 @@ func TestStore(t *testing.T) {
 
 	t.Run("manifest is updated even when signal is dropped", func(t *testing.T) {
 		store := NewStore(zap.NewNop())
-		done := make(chan struct{})
+		defer store.Close()
 
 		block := make(chan struct{})
-		store.AddListener(done, func() {
+		store.SetOnUpdate(func() {
 			<-block
 		})
 
@@ -224,101 +184,34 @@ func TestStore(t *testing.T) {
 		require.False(t, found)
 
 		close(block)
-		close(done)
 	})
 
-	t.Run("multiple listeners fire independently", func(t *testing.T) {
+	t.Run("SetOnUpdate replaces previous callback", func(t *testing.T) {
 		store := NewStore(zap.NewNop())
-		done := make(chan struct{})
-		defer close(done)
+		defer store.Close()
 
 		var calls1 atomic.Int32
 		var calls2 atomic.Int32
 
-		store.AddListener(done, func() { calls1.Add(1) })
-		store.AddListener(done, func() { calls2.Add(1) })
-
-		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
-
-		require.Eventually(t, func() bool {
-			return calls1.Load() >= 1 && calls2.Load() >= 1
-		}, time.Second, 10*time.Millisecond)
-	})
-
-	t.Run("closing done channel stops listener", func(t *testing.T) {
-		store := NewStore(zap.NewNop())
-		done := make(chan struct{})
-
-		var calls atomic.Int32
-		store.AddListener(done, func() {
-			calls.Add(1)
-		})
+		store.SetOnUpdate(func() { calls1.Add(1) })
 
 		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
 		require.Eventually(t, func() bool {
-			return calls.Load() >= 1
+			return calls1.Load() >= 1
 		}, time.Second, 10*time.Millisecond)
 
-		countBefore := calls.Load()
-		close(done)
-
-		// Allow goroutine to exit
-		time.Sleep(50 * time.Millisecond)
-
-		store.Load(&Manifest{Version: 1, Revision: "rev-2", Operations: map[string]string{"a": "q"}})
-		time.Sleep(50 * time.Millisecond)
-		require.Equal(t, countBefore, calls.Load(), "listener should not fire after done is closed")
-	})
-
-	t.Run("closing done does not affect other listeners", func(t *testing.T) {
-		store := NewStore(zap.NewNop())
-		done1 := make(chan struct{})
-		done2 := make(chan struct{})
-		defer close(done2)
-
-		var calls1 atomic.Int32
-		var calls2 atomic.Int32
-
-		store.AddListener(done1, func() { calls1.Add(1) })
-		store.AddListener(done2, func() { calls2.Add(1) })
-
-		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
-		require.Eventually(t, func() bool {
-			return calls1.Load() >= 1 && calls2.Load() >= 1
-		}, time.Second, 10*time.Millisecond)
-
-		// Stop first listener only
-		close(done1)
-		time.Sleep(50 * time.Millisecond)
+		// Replace callback
+		store.SetOnUpdate(func() { calls2.Add(1) })
 
 		calls1Before := calls1.Load()
-		calls2Before := calls2.Load()
 
 		store.Load(&Manifest{Version: 1, Revision: "rev-2", Operations: map[string]string{"a": "q"}})
 		require.Eventually(t, func() bool {
-			return calls2.Load() > calls2Before
+			return calls2.Load() >= 1
 		}, time.Second, 10*time.Millisecond)
 
-		time.Sleep(50 * time.Millisecond)
-		require.Equal(t, calls1Before, calls1.Load(), "stopped listener should not fire")
-	})
-
-	t.Run("done channel prevents work after signal received", func(t *testing.T) {
-		store := NewStore(zap.NewNop())
-		done := make(chan struct{})
-
-		var calls atomic.Int32
-		store.AddListener(done, func() {
-			calls.Add(1)
-		})
-
-		// Close done before any Load — listener should never fire
-		close(done)
-		time.Sleep(50 * time.Millisecond)
-
-		store.Load(&Manifest{Version: 1, Revision: "rev-1", Operations: map[string]string{"a": "q"}})
-		time.Sleep(50 * time.Millisecond)
-		require.Equal(t, int32(0), calls.Load(), "listener should not fire when done is already closed")
+		// Old callback should not have been called again
+		require.Equal(t, calls1Before, calls1.Load())
 	})
 }
 
