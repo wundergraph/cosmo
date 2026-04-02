@@ -43,14 +43,16 @@ export const organizationSlugSchema = z
   })
   .refine((value) => !['login', 'signup', 'create', 'account'].includes(value), 'This slug is a reserved keyword.');
 
+export const organizationNameSchema = z
+  .string()
+  .trim()
+  .min(3, {
+    message: 'Invalid name. It must be of 3-32 characters in length.',
+  })
+  .max(32, { message: 'Invalid name. It must be of 3-32 characters in length.' });
+
 export const organizationSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(3, {
-      message: 'Invalid name. It must be of 3-32 characters in length.',
-    })
-    .max(32, { message: 'Invalid name. It must be of 3-32 characters in length.' }),
+  name: organizationNameSchema,
   slug: organizationSlugSchema,
 });
 

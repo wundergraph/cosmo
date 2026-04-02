@@ -108,6 +108,16 @@ export class OrganizationRepository {
       .execute();
   }
 
+  public async updateOrganizationName(input: { id: string; name: string }) {
+    await this.db
+      .update(organizations)
+      .set({
+        name: input.name,
+      })
+      .where(eq(organizations.id, input.id))
+      .execute();
+  }
+
   public async bySlug(slug: string): Promise<Omit<OrganizationDTO, 'rbac'> | null> {
     const org = await this.db
       .select({
