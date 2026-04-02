@@ -17,48 +17,72 @@ type Manifest struct {
 	Operations  map[string]string `json:"operations"` // sha256 hash -> operation body
 }
 
+type listener struct {
+	done <-chan struct{}
+	fn   func()
+}
+
 type Store struct {
 	manifest  atomic.Pointer[Manifest]
 	updateCh  chan struct{}
-	onUpdate  atomic.Value // stores func()
-	startOnce sync.Once
+	mu        sync.Mutex
+	listeners []*listener
 	logger    *zap.Logger
 }
 
 func NewStore(logger *zap.Logger) *Store {
-	return &Store{
+	s := &Store{
 		logger:   logger,
 		updateCh: make(chan struct{}, 1),
 	}
+	go s.run()
+	return s
 }
 
-// SetOnUpdate registers a callback that is invoked after the manifest is updated via Load.
-// The callback runs on a dedicated worker goroutine that processes signals sequentially.
-// If an update arrives while the callback is still running, it is coalesced into a single
-// pending signal — at most one signal is buffered, so rapid updates don't queue up.
-// Safe to call multiple times (e.g. on config reload): the callback is swapped atomically.
-func (s *Store) SetOnUpdate(fn func()) {
-	s.onUpdate.Store(fn)
-	s.startOnce.Do(func() {
-		go func() {
-			for range s.updateCh {
-				if f, ok := s.onUpdate.Load().(func()); ok && f != nil {
-					f()
-				}
+// run is the single worker goroutine that processes manifest update signals
+// and calls all registered listeners sequentially.
+func (s *Store) run() {
+	for range s.updateCh {
+		s.mu.Lock()
+		// Prune dead listeners and snapshot the alive ones.
+		alive := s.listeners[:0]
+		for _, l := range s.listeners {
+			select {
+			case <-l.done:
+			default:
+				alive = append(alive, l)
 			}
-		}()
-	})
+		}
+		s.listeners = alive
+		snapshot := make([]*listener, len(alive))
+		copy(snapshot, alive)
+		s.mu.Unlock()
+
+		for _, l := range snapshot {
+			select {
+			case <-l.done:
+				continue
+			default:
+				l.fn()
+			}
+		}
+	}
 }
 
-// Load swaps the manifest atomically and signals the update worker if a callback is registered.
-// If the worker is busy processing a previous update, the signal is dropped (coalesced)
-// so back-to-back manifest updates don't queue unbounded work.
+// AddListener registers a callback that is invoked after the manifest is updated via Load.
+// Callbacks are called sequentially by a single worker goroutine, providing natural
+// backpressure — at most one warmup runs at a time across all listeners.
+// The listener is automatically removed when done is closed.
+func (s *Store) AddListener(done <-chan struct{}, fn func()) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.listeners = append(s.listeners, &listener{done: done, fn: fn})
+}
+
+// Load swaps the manifest atomically and signals the worker goroutine.
+// If the worker is busy, the signal is coalesced (dropped).
 func (s *Store) Load(manifest *Manifest) {
 	s.manifest.Store(manifest)
-
-	if s.onUpdate.Load() == nil {
-		return
-	}
 
 	select {
 	case s.updateCh <- struct{}{}:
@@ -67,7 +91,7 @@ func (s *Store) Load(manifest *Manifest) {
 	}
 }
 
-// Close stops the update worker goroutine.
+// Close stops the worker goroutine.
 func (s *Store) Close() {
 	close(s.updateCh)
 }

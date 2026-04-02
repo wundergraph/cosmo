@@ -105,6 +105,7 @@ type (
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
 		headerPropagation       *HeaderPropagation
+		shutdownStarted         chan struct{}
 	}
 )
 
@@ -195,6 +196,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		},
 		storageProviders:  &r.storageProviders,
 		headerPropagation: r.headerPropagation,
+		shutdownStarted:   make(chan struct{}),
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -1529,9 +1531,10 @@ func (s *graphServer) buildGraphMux(
 			}
 
 			// Re-warm when the manifest is updated by the poller.
-			// The store handles coalescing — if a re-warm is already running or pending,
-			// new signals are dropped. The worker always reads the latest manifest.
-			pqlStore.SetOnUpdate(func() {
+			// Each mux registers its own listener on the shared store, so all muxes
+			// (base + feature flags) get re-warmed independently with their own coalescing.
+			// The listener is removed when shutdownStarted is closed at the start of Shutdown.
+			pqlStore.AddListener(s.shutdownStarted, func() {
 				rewarmConfig := &CacheWarmupConfig{
 					Log:            s.logger,
 					Processor:      manifestProcessor,
@@ -1929,6 +1932,10 @@ func (s *graphServer) wait(ctx context.Context) error {
 // After all requests are done, it will shut down the metric store and runtime metrics.
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
 func (s *graphServer) Shutdown(ctx context.Context) error {
+	// Stop manifest warmup listeners immediately — the old execution config
+	// is being replaced, so any new warmup work would be wasted.
+	close(s.shutdownStarted)
+
 	// Cancel the context after the graceful shutdown is done
 	// to clean up resources like websocket connections, pools, etc.
 	defer s.cancelFunc()
@@ -1983,6 +1990,7 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	}
 
 	// Shutdown all graphs muxes to release resources
+	// Each mux removes its own manifest listener during shutdown.
 	// e.g. planner cache
 	s.graphMuxListLock.Lock()
 	defer s.graphMuxListLock.Unlock()
