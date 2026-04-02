@@ -4,6 +4,46 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.213.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.212.0...controlplane@0.213.0) (2026-04-01)
+
+### Features
+
+* pass `proxy url` to `admission webhook` ([#2718](https://github.com/wundergraph/cosmo/issues/2718)) ([bcb4ed3](https://github.com/wundergraph/cosmo/commit/bcb4ed34ed78bfa5fad072a7ebf62ed648d7d872)) (@wilsonrivera)
+
+# [0.212.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.211.0...controlplane@0.212.0) (2026-03-31)
+
+### Bug Fixes
+
+* pin axios to 1.13.5 across all packages ([#2713](https://github.com/wundergraph/cosmo/issues/2713)) ([9be9143](https://github.com/wundergraph/cosmo/commit/9be91435cbb595626347479c28551bd5d6a11d6f)) (@thisisnithin)
+
+### Features
+
+* introduce proxy for webhook requests ([#2671](https://github.com/wundergraph/cosmo/issues/2671)) ([dc4388d](https://github.com/wundergraph/cosmo/commit/dc4388d100a421e0ab6eed390a8d5f80d5b15112)) (@wilsonrivera)
+
+# [0.211.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.210.0...controlplane@0.211.0) (2026-03-27)
+
+### Features
+
+* add PQL manifest support for persisted operations ([#2635](https://github.com/wundergraph/cosmo/issues/2635)) ([38a648c](https://github.com/wundergraph/cosmo/commit/38a648cff927b45d5ee5323bf303f83198c64411)) (@StarpTech)
+
+# [0.210.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.209.1...controlplane@0.210.0) (2026-03-27)
+
+### Features
+
+* add server-side pagination to operation overrides with limit and offset parameters ([#2695](https://github.com/wundergraph/cosmo/issues/2695)) ([41bb6b9](https://github.com/wundergraph/cosmo/commit/41bb6b9bd149ac9a1eb153ebbeb1c0baf0196351)) (@JivusAyrus)
+
+## [0.209.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.209.0...controlplane@0.209.1) (2026-03-24)
+
+### Bug Fixes
+
+* handle arrayJoin of empty arrays in clickhouse queries ([#2682](https://github.com/wundergraph/cosmo/issues/2682)) ([733c14b](https://github.com/wundergraph/cosmo/commit/733c14b4710ed093f9ccee19836054f7e92647a4)) (@JivusAyrus)
+
+# [0.209.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.208.0...controlplane@0.209.0) (2026-03-23)
+
+### Features
+
+* improve efficiency of operation check by parallelizing processing of changes ([#2676](https://github.com/wundergraph/cosmo/issues/2676)) ([1ca1fd0](https://github.com/wundergraph/cosmo/commit/1ca1fd0d41292f784e9f05610674ddf08b611021)) (@JivusAyrus)
+
 # [0.208.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.207.0...controlplane@0.208.0) (2026-03-18)
 
 ### Features

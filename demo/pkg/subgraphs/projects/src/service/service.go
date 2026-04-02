@@ -605,6 +605,176 @@ func (p *ProjectsService) RequireEmployeeTaggedProjectSummaryById(_ context.Cont
 	return &service.RequireEmployeeTaggedProjectSummaryByIdResponse{Result: result}, nil
 }
 
+// RequireEmployeeWorkItemInfoById implements projects.ProjectsServiceServer.
+// Pattern 1: Flat abstract — interface. Extracts primaryWorkItem interface from fields.
+func (p *ProjectsService) RequireEmployeeWorkItemInfoById(_ context.Context, req *service.RequireEmployeeWorkItemInfoByIdRequest) (*service.RequireEmployeeWorkItemInfoByIdResponse, error) {
+	results := make([]*service.RequireEmployeeWorkItemInfoByIdResult, 0, len(req.GetContext()))
+
+	for _, ctx := range req.GetContext() {
+		item := ctx.GetFields().GetPrimaryWorkItem()
+
+		var summary string
+		switch v := item.GetInstance().(type) {
+		case *service.RequireEmployeeWorkItemInfoByIdFields_EmployeeWorkItem_TechnicalWorkItem:
+			summary = fmt.Sprintf("Technical: %s (count: %d)", v.TechnicalWorkItem.GetName(), v.TechnicalWorkItem.GetCodeCount())
+		case *service.RequireEmployeeWorkItemInfoByIdFields_EmployeeWorkItem_ManagementWorkItem:
+			summary = fmt.Sprintf("Management: %s (size: %s)", v.ManagementWorkItem.GetName(), v.ManagementWorkItem.GetTeamSize())
+		default:
+			summary = "Unknown work item"
+		}
+
+		results = append(results, &service.RequireEmployeeWorkItemInfoByIdResult{
+			WorkItemInfo: summary,
+		})
+	}
+
+	return &service.RequireEmployeeWorkItemInfoByIdResponse{Result: results}, nil
+}
+
+// RequireEmployeeReviewReportById implements projects.ProjectsServiceServer.
+// Pattern 2: Flat abstract — union. Extracts lastWorkReview union from fields.
+func (p *ProjectsService) RequireEmployeeReviewReportById(_ context.Context, req *service.RequireEmployeeReviewReportByIdRequest) (*service.RequireEmployeeReviewReportByIdResponse, error) {
+	results := make([]*service.RequireEmployeeReviewReportByIdResult, 0, len(req.GetContext()))
+
+	for _, ctx := range req.GetContext() {
+		review := ctx.GetFields().GetLastWorkReview()
+
+		var report string
+		switch v := review.GetValue().(type) {
+		case *service.RequireEmployeeReviewReportByIdFields_WorkReviewResult_WorkApproval:
+			report = fmt.Sprintf("Approved: %s at %s", v.WorkApproval.GetComment(), v.WorkApproval.GetApprovedAt())
+		case *service.RequireEmployeeReviewReportByIdFields_WorkReviewResult_WorkRejection:
+			report = fmt.Sprintf("Rejected: %s (code: %s)", v.WorkRejection.GetReason(), v.WorkRejection.GetRejectionCode())
+		default:
+			report = "Unknown review"
+		}
+
+		results = append(results, &service.RequireEmployeeReviewReportByIdResult{
+			ReviewReport: report,
+		})
+	}
+
+	return &service.RequireEmployeeReviewReportByIdResponse{Result: results}, nil
+}
+
+// RequireEmployeeWorkSetupSummaryById implements projects.ProjectsServiceServer.
+// Pattern 3: Concrete wrapping abstract. Extracts workSetup with nested abstract primaryItem.
+func (p *ProjectsService) RequireEmployeeWorkSetupSummaryById(_ context.Context, req *service.RequireEmployeeWorkSetupSummaryByIdRequest) (*service.RequireEmployeeWorkSetupSummaryByIdResponse, error) {
+	results := make([]*service.RequireEmployeeWorkSetupSummaryByIdResult, 0, len(req.GetContext()))
+
+	for _, ctx := range req.GetContext() {
+		setup := ctx.GetFields().GetWorkSetup()
+
+		itemSummary := "Unknown work item"
+		if item := setup.GetPrimaryItem(); item != nil {
+			switch v := item.GetInstance().(type) {
+			case *service.RequireEmployeeWorkSetupSummaryByIdFields_WorkSetup_EmployeeWorkItem_TechnicalWorkItem:
+				itemSummary = fmt.Sprintf("Technical: %s (count: %d)", v.TechnicalWorkItem.GetName(), v.TechnicalWorkItem.GetCodeCount())
+			case *service.RequireEmployeeWorkSetupSummaryByIdFields_WorkSetup_EmployeeWorkItem_ManagementWorkItem:
+				itemSummary = fmt.Sprintf("Management: %s (size: %s)", v.ManagementWorkItem.GetName(), v.ManagementWorkItem.GetTeamSize())
+			}
+		}
+
+		summary := fmt.Sprintf("[%s] %s", setup.GetPriority(), itemSummary)
+		results = append(results, &service.RequireEmployeeWorkSetupSummaryByIdResult{
+			WorkSetupSummary: summary,
+		})
+	}
+
+	return &service.RequireEmployeeWorkSetupSummaryByIdResponse{Result: results}, nil
+}
+
+// RequireEmployeeWorkItemHandlerInfoById implements projects.ProjectsServiceServer.
+// Pattern 4: Concrete message inside fragment. Extracts handler name from within interface fragments.
+func (p *ProjectsService) RequireEmployeeWorkItemHandlerInfoById(_ context.Context, req *service.RequireEmployeeWorkItemHandlerInfoByIdRequest) (*service.RequireEmployeeWorkItemHandlerInfoByIdResponse, error) {
+	results := make([]*service.RequireEmployeeWorkItemHandlerInfoByIdResult, 0, len(req.GetContext()))
+
+	for _, ctx := range req.GetContext() {
+		item := ctx.GetFields().GetPrimaryWorkItem()
+
+		var info string
+		switch v := item.GetInstance().(type) {
+		case *service.RequireEmployeeWorkItemHandlerInfoByIdFields_EmployeeWorkItem_TechnicalWorkItem:
+			info = fmt.Sprintf("TechnicalHandler: %s", v.TechnicalWorkItem.GetHandler().GetName())
+		case *service.RequireEmployeeWorkItemHandlerInfoByIdFields_EmployeeWorkItem_ManagementWorkItem:
+			info = fmt.Sprintf("ManagementHandler: %s", v.ManagementWorkItem.GetHandler().GetName())
+		default:
+			info = "Unknown handler"
+		}
+
+		results = append(results, &service.RequireEmployeeWorkItemHandlerInfoByIdResult{
+			WorkItemHandlerInfo: info,
+		})
+	}
+
+	return &service.RequireEmployeeWorkItemHandlerInfoByIdResponse{Result: results}, nil
+}
+
+// RequireEmployeeWorkItemSpecsInfoById implements projects.ProjectsServiceServer.
+// Pattern 5: Deep concrete nesting inside fragment (specs → metrics).
+func (p *ProjectsService) RequireEmployeeWorkItemSpecsInfoById(_ context.Context, req *service.RequireEmployeeWorkItemSpecsInfoByIdRequest) (*service.RequireEmployeeWorkItemSpecsInfoByIdResponse, error) {
+	results := make([]*service.RequireEmployeeWorkItemSpecsInfoByIdResult, 0, len(req.GetContext()))
+
+	for _, ctx := range req.GetContext() {
+		item := ctx.GetFields().GetPrimaryWorkItem()
+
+		var info string
+		switch v := item.GetInstance().(type) {
+		case *service.RequireEmployeeWorkItemSpecsInfoByIdFields_EmployeeWorkItem_TechnicalWorkItem:
+			specs := v.TechnicalWorkItem.GetSpecs()
+			metrics := specs.GetMetrics()
+			info = fmt.Sprintf("TechnicalSpecs: %s (%.1fx%.1f)", specs.GetName(), metrics.GetScore(), metrics.GetEfficiency())
+		case *service.RequireEmployeeWorkItemSpecsInfoByIdFields_EmployeeWorkItem_ManagementWorkItem:
+			specs := v.ManagementWorkItem.GetSpecs()
+			metrics := specs.GetMetrics()
+			info = fmt.Sprintf("ManagementSpecs: %s (%.1fx%.1f)", specs.GetName(), metrics.GetScore(), metrics.GetEfficiency())
+		default:
+			info = "Unknown specs"
+		}
+
+		results = append(results, &service.RequireEmployeeWorkItemSpecsInfoByIdResult{
+			WorkItemSpecsInfo: info,
+		})
+	}
+
+	return &service.RequireEmployeeWorkItemSpecsInfoByIdResponse{Result: results}, nil
+}
+
+// RequireEmployeeDeepWorkItemInfoById implements projects.ProjectsServiceServer.
+// Pattern 6: Nested abstract through concrete intermediary (handler → assignedItem).
+func (p *ProjectsService) RequireEmployeeDeepWorkItemInfoById(_ context.Context, req *service.RequireEmployeeDeepWorkItemInfoByIdRequest) (*service.RequireEmployeeDeepWorkItemInfoByIdResponse, error) {
+	results := make([]*service.RequireEmployeeDeepWorkItemInfoByIdResult, 0, len(req.GetContext()))
+
+	for _, ctx := range req.GetContext() {
+		item := ctx.GetFields().GetPrimaryWorkItem()
+
+		var info string
+		switch v := item.GetInstance().(type) {
+		case *service.RequireEmployeeDeepWorkItemInfoByIdFields_EmployeeWorkItem_TechnicalWorkItem:
+			handler := v.TechnicalWorkItem.GetHandler()
+			assignedItem := handler.GetAssignedItem()
+			switch av := assignedItem.GetInstance().(type) {
+			case *service.RequireEmployeeDeepWorkItemInfoByIdFields_TechnicalWorkItem_WorkItemHandler_EmployeeWorkItem_ManagementWorkItem:
+				info = fmt.Sprintf("TechnicalHandler->Management: %s (size: %s)", av.ManagementWorkItem.GetName(), av.ManagementWorkItem.GetTeamSize())
+			case *service.RequireEmployeeDeepWorkItemInfoByIdFields_TechnicalWorkItem_WorkItemHandler_EmployeeWorkItem_TechnicalWorkItem:
+				info = fmt.Sprintf("TechnicalHandler->Technical: %s (count: %d)", av.TechnicalWorkItem.GetName(), av.TechnicalWorkItem.GetCodeCount())
+			default:
+				info = "TechnicalHandler->Unknown"
+			}
+		case *service.RequireEmployeeDeepWorkItemInfoByIdFields_EmployeeWorkItem_ManagementWorkItem:
+			info = fmt.Sprintf("ManagementHandler: %s", v.ManagementWorkItem.GetHandler().GetName())
+		default:
+			info = "Unknown deep item"
+		}
+
+		results = append(results, &service.RequireEmployeeDeepWorkItemInfoByIdResult{
+			DeepWorkItemInfo: info,
+		})
+	}
+
+	return &service.RequireEmployeeDeepWorkItemInfoByIdResponse{Result: results}, nil
+}
+
 // LookupProjectById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupProjectById(ctx context.Context, req *service.LookupProjectByIdRequest) (*service.LookupProjectByIdResponse, error) {
 	logger := hclog.FromContext(ctx)

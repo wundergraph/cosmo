@@ -44,6 +44,7 @@ export function fixSubgraphSchema(
       contractRepo,
       graphCompositionRepo,
       opts.chClient,
+      opts.webhookProxyUrl,
     );
 
     req.namespace = req.namespace || DefaultNamespace;
