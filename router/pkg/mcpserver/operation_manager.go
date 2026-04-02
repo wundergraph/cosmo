@@ -3,9 +3,12 @@ package mcpserver
 import (
 	"fmt"
 
-	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"go.uber.org/zap"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
 
 // OperationsManager handles the loading and preparation of GraphQL operations
@@ -79,6 +82,23 @@ func (om *OperationsManager) GetOperation(name string) *schemaloader.Operation {
 			}
 			return &om.operations[i]
 		}
+	}
+	return nil
+}
+
+// ComputeToolScopes runs the scope extractor against all loaded operations,
+// populating each operation's RequiredScopes from @requiresScopes directives.
+// Returns an error if any operation exceeds the scope combination limit, which
+// indicates a pathological @requiresScopes configuration that should be simplified.
+func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration, maxScopeCombinations int) error {
+	extractor := NewScopeExtractor(fieldConfigs, om.schemaDoc, maxScopeCombinations)
+	for i := range om.operations {
+		fieldReqs := extractor.ExtractScopesForOperation(&om.operations[i].Document)
+		combinedScopes, err := extractor.ComputeCombinedScopes(fieldReqs)
+		if err != nil {
+			return fmt.Errorf("tool %q: %w", om.operations[i].Name, err)
+		}
+		om.operations[i].RequiredScopes = combinedScopes
 	}
 	return nil
 }

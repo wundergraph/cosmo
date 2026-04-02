@@ -62,7 +62,7 @@ func (sc *SchemaCompiler) ValidateInput(data []byte, compiledSchema *jsonschema.
 		return nil
 	}
 
-	var v interface{}
+	var v any
 	if err := json.Unmarshal(data, &v); err != nil {
 		return fmt.Errorf("failed to parse JSON input: %w", err)
 	}
