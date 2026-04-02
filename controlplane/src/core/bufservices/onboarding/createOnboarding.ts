@@ -32,10 +32,10 @@ export function createOnboarding(
           details: 'Only the organization creator can create onboarding.',
         },
         federatedGraphsCount: 0,
+        slack: false,
+        email: false,
       };
     }
-
-    // TODO: handle invitation flow + organization renaming
 
     const onboardingRepo = new OnboardingRepository(opts.db, authContext.organizationId);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
@@ -55,6 +55,8 @@ export function createOnboarding(
       },
       finishedAt: onboarding.finishedAt?.toISOString(),
       federatedGraphsCount,
+      slack: onboarding.slack,
+      email: onboarding.email,
     };
   });
 }

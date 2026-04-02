@@ -24,12 +24,14 @@ describe('Onboarding', () => {
       } = await SetupTest({ dbname, enableMultiUsers: true });
       testContext.onTestFinished(() => server.close());
 
-      authenticator.changeUserWithSuppliedContext(devJoeCompanyA);
+      authenticator.changeUserWithSuppliedContext(devJoeCompanyA!);
 
       const resp = await client.getOnboarding({});
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
       expect(resp.enabled).toBe(false);
+      expect(resp.slack).toBe(false);
+      expect(resp.email).toBe(false);
     });
 
     test('returns enabled=false for admin who is not the creator', async (testContext) => {
@@ -41,7 +43,7 @@ describe('Onboarding', () => {
       } = await SetupTest({ dbname, enableMultiUsers: true });
       testContext.onTestFinished(() => server.close());
 
-      authenticator.changeUserWithSuppliedContext(adminBobCompanyA);
+      authenticator.changeUserWithSuppliedContext(adminBobCompanyA!);
 
       const resp = await client.getOnboarding({});
 
@@ -64,6 +66,8 @@ describe('Onboarding', () => {
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
       expect(resp.enabled).toBe(true);
+      expect(resp.slack).toBe(false);
+      expect(resp.email).toBe(false);
       expect(resp.finishedAt).toBeFalsy();
       expect(resp.federatedGraphsCount).toBe(0);
     });
@@ -85,6 +89,8 @@ describe('Onboarding', () => {
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
       expect(resp.enabled).toBe(true);
+      expect(resp.slack).toBe(true);
+      expect(resp.email).toBe(true);
       expect(resp.finishedAt).toBeFalsy();
     });
 
@@ -125,6 +131,8 @@ describe('Onboarding', () => {
       const resp = await client.createOnboarding({ slack: true, email: false });
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(resp.slack).toBe(true);
+      expect(resp.email).toBe(false);
       expect(resp.federatedGraphsCount).toBe(0);
       expect(resp.finishedAt).toBeFalsy();
     });
@@ -138,7 +146,7 @@ describe('Onboarding', () => {
       } = await SetupTest({ dbname, enableMultiUsers: true });
       testContext.onTestFinished(() => server.close());
 
-      authenticator.changeUserWithSuppliedContext(adminBobCompanyA);
+      authenticator.changeUserWithSuppliedContext(adminBobCompanyA!);
 
       const resp = await client.createOnboarding({ slack: true, email: true });
 
@@ -155,7 +163,7 @@ describe('Onboarding', () => {
       } = await SetupTest({ dbname, enableMultiUsers: true });
       testContext.onTestFinished(() => server.close());
 
-      authenticator.changeUserWithSuppliedContext(devJoeCompanyA);
+      authenticator.changeUserWithSuppliedContext(devJoeCompanyA!);
 
       const resp = await client.createOnboarding({ slack: false, email: true });
 
@@ -179,6 +187,8 @@ describe('Onboarding', () => {
       const resp = await client.createOnboarding({ slack: false, email: true });
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(resp.slack).toBe(false);
+      expect(resp.email).toBe(true);
     });
 
     test('resets finishedAt when updating after finish', async (testContext) => {
@@ -202,6 +212,8 @@ describe('Onboarding', () => {
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
       expect(resp.finishedAt).toBeFalsy();
+      expect(resp.slack).toBe(false);
+      expect(resp.email).toBe(false);
     });
   });
 
@@ -252,7 +264,7 @@ describe('Onboarding', () => {
       } = await SetupTest({ dbname, enableMultiUsers: true });
       testContext.onTestFinished(() => server.close());
 
-      authenticator.changeUserWithSuppliedContext(devJoeCompanyA);
+      authenticator.changeUserWithSuppliedContext(devJoeCompanyA!);
 
       const resp = await client.finishOnboarding({});
 
