@@ -1,9 +1,9 @@
-import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import logSymbols from 'log-symbols';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
+import { CLITable } from '../../../../cli-table.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';
 import { limitMaxValue } from '../../../../constants.js';
@@ -50,19 +50,17 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    const compositionErrorsTable = new Table({
+    const compositionErrorsTable = new CLITable({
       head: [pc.bold(pc.white('ERROR_MESSAGE'))],
       colWidths: [120],
-      wordWrap: true,
     });
 
-    const compositionWarningsTable = new Table({
+    const compositionWarningsTable = new CLITable({
       head: [pc.bold(pc.white('WARNING_MESSAGE'))],
       colWidths: [120],
-      wordWrap: true,
     });
 
-    const matchedSubgraphsTable = new Table({
+    const matchedSubgraphsTable = new CLITable({
       head: [
         pc.bold(pc.white('NAME')),
         pc.bold(pc.white('NAMESPACE')),
@@ -70,7 +68,6 @@ export default (opts: BaseCommandOptions) => {
         pc.bold(pc.white('LABELS')),
       ],
       colWidths: [30, 30, 40, 50],
-      wordWrap: true,
     });
 
     switch (resp.response?.code) {

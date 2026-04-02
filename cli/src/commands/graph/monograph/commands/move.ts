@@ -1,6 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import CliTable3 from 'cli-table3';
-import { Command, program } from 'commander';
+import { Command } from 'commander';
 import pc from 'picocolors';
 import ora from 'ora';
 import { getBaseHeaders } from '../../../../core/config.js';

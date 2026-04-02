@@ -2,9 +2,9 @@ import { writeFile } from 'node:fs/promises';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import Table from 'cli-table3';
 import logSymbols from 'log-symbols';
 import { resolve } from 'pathe';
+import { CLITable } from '../../../../cli-table.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';
 
@@ -92,7 +92,7 @@ export default (opts: BaseCommandOptions) => {
       return;
     }
 
-    const graphsTable = new Table({
+    const graphsTable = new CLITable({
       head: [
         pc.bold(pc.white('NAME')),
         pc.bold(pc.white('NAMESPACE')),
@@ -104,7 +104,6 @@ export default (opts: BaseCommandOptions) => {
       ],
       colAligns: ['left', 'left', 'left', 'left', 'center', 'left', 'center'],
       colWidths: [25, 25, 40, 70, 15, 30, 15],
-      wordWrap: true,
     });
 
     for (const graph of filteredGraphs) {
