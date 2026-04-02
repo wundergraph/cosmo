@@ -384,3 +384,11 @@ func TestNewHeaderPropagation(t *testing.T) {
 		assert.False(t, hp.HasResponseRules())
 	})
 }
+
+func TestIsIgnoredHeader_Vary(t *testing.T) {
+	t.Parallel()
+
+	assert.True(t, isIgnoredHeader("Vary"))
+	assert.True(t, isIgnoredHeader("vary"))
+	assert.False(t, isIgnoredHeader("X-Custom-Header"))
+}
