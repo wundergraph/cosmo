@@ -3199,6 +3199,8 @@ message GetOnboardingResponse {
   optional string finishedAt = 3;
   int32 federatedGraphsCount = 4;
   bool enabled = 5;
+  bool slack = 6;
+  bool email = 7;
 }
 
 message CreateOnboardingRequest {
@@ -3212,6 +3214,8 @@ message CreateOnboardingResponse {
   Response response = 1;
   optional string finishedAt = 2;
   int32 federatedGraphsCount = 3;
+  bool slack = 4;
+  bool email = 5;
 }
 
 message FinishOnboardingRequest {}
