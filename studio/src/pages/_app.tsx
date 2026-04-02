@@ -8,6 +8,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppPropsWithLayout } from '@/lib/page';
 import '@graphiql/plugin-explorer/dist/style.css';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
+import { PostHogFeatureFlagProvider } from '@/components/posthog-feature-flag-provider';
 import 'graphiql/graphiql.css';
 import App, { AppContext, AppInitialProps } from 'next/app';
 import 'react-date-range/dist/styles.css'; // main css file
@@ -22,6 +23,7 @@ import posthog from 'posthog-js';
 import { PostHogProvider } from 'posthog-js/react';
 import { withErrorBoundary } from '@sentry/nextjs';
 import { Footer } from '@/components/layout/footer';
+import { OnboardingProvider } from '@/components/onboarding/onboarding-provider';
 
 const queryClient = new QueryClient();
 
@@ -38,6 +40,8 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   }, []);
 
   useEffect(() => {
+    if (posthog.__loaded) return;
+
     posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
       api_host: '/ingest',
       loaded: (ph) => {
@@ -69,12 +73,16 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
       <PostHogProvider client={posthog}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <QueryClientProvider client={queryClient}>
-            <AppProvider>
-              <TooltipProvider>
-                <Toaster />
-                {getLayout(<Component {...pageProps} />)}
-              </TooltipProvider>
-            </AppProvider>
+            <PostHogFeatureFlagProvider>
+              <OnboardingProvider>
+                <AppProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    {getLayout(<Component {...pageProps} />)}
+                  </TooltipProvider>
+                </AppProvider>
+              </OnboardingProvider>
+            </PostHogFeatureFlagProvider>
           </QueryClientProvider>
         </ThemeProvider>
       </PostHogProvider>
