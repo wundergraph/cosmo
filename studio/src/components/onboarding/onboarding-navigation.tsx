@@ -10,7 +10,7 @@ export const OnboardingNavigation = ({
   onSkip,
 }: {
   backHref?: string;
-  forward: { href: string } | { onClick: () => void; isLoading?: boolean };
+  forward: { href: string } | { onClick: () => void; isLoading?: boolean; disabled?: boolean };
   forwardLabel?: string;
   onSkip: () => void;
 }) => {
@@ -59,7 +59,7 @@ export const OnboardingNavigation = ({
             className="group"
             onClick={forward.onClick}
             isLoading={forward.isLoading}
-            disabled={forward.isLoading}
+            disabled={forward.isLoading || forward.disabled}
           >
             {forwardLabel}
             <ArrowRightIcon className="ml-2 transition-transform group-hover:translate-x-1" />

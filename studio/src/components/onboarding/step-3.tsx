@@ -31,6 +31,8 @@ export const Step3 = () => {
         ...prev,
         finishedAt: new Date(d.finishedAt),
         federatedGraphsCount: d.federatedGraphsCount,
+        slack: Boolean(prev?.slack),
+        email: Boolean(prev?.email),
       }));
 
       setStep(undefined);
