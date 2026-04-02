@@ -50,6 +50,13 @@ const {
   S3_SECRET_ACCESS_KEY,
   S3_FORCE_PATH_STYLE,
   S3_USE_INDIVIDUAL_DELETES,
+  S3_FAILOVER_STORAGE_URL,
+  S3_FAILOVER_ENDPOINT,
+  S3_FAILOVER_REGION,
+  S3_FAILOVER_ACCESS_KEY_ID,
+  S3_FAILOVER_SECRET_ACCESS_KEY,
+  S3_FAILOVER_FORCE_PATH_STYLE,
+  S3_FAILOVER_USE_INDIVIDUAL_DELETES,
   SMTP_ENABLED,
   SMTP_HOST,
   SMTP_PORT,
@@ -142,6 +149,17 @@ const options: BuildConfig = {
     forcePathStyle: S3_FORCE_PATH_STYLE,
     useIndividualDeletes: S3_USE_INDIVIDUAL_DELETES,
   },
+  s3StorageFailover: S3_FAILOVER_STORAGE_URL
+    ? {
+        url: S3_FAILOVER_STORAGE_URL,
+        region: S3_FAILOVER_REGION,
+        endpoint: S3_FAILOVER_ENDPOINT,
+        username: S3_FAILOVER_ACCESS_KEY_ID,
+        password: S3_FAILOVER_SECRET_ACCESS_KEY,
+        forcePathStyle: S3_FAILOVER_FORCE_PATH_STYLE,
+        useIndividualDeletes: S3_FAILOVER_USE_INDIVIDUAL_DELETES,
+      }
+    : undefined,
   mailer: {
     smtpEnabled: SMTP_ENABLED,
     smtpHost: SMTP_HOST,
