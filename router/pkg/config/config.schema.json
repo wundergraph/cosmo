@@ -206,7 +206,7 @@
             "file_name": {
               "type": "string",
               "minLength": 1,
-              "description": "The manifest file name. Use a .gz or .zst extension to enable transparent decompression (e.g. manifest.json.gz or manifest.json.zst).",
+              "description": "The manifest file name. Only used when a custom storage provider is configured; ignored in CDN mode. Use a .gz or .zst extension (e.g. manifest.json.gz) to enable transparent decompression.",
               "default": "manifest.json"
             },
             "poll_interval": {
