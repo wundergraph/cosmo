@@ -14,7 +14,13 @@ import {
   createTestRBACEvaluator,
   createTestGroup,
 } from '../src/core/test-util.js';
-import { SetupTest } from './test-util.js';
+import {
+  SetupTest,
+  createFeatureFlag,
+  deleteFeatureFlag,
+  featureFlagIntegrationTestSetUp,
+  toggleFeatureFlag,
+} from './test-util.js';
 
 let dbname = '';
 
@@ -26,6 +32,35 @@ vi.mock('../src/core/clickhouse/index.js', () => {
 
   return { ClickHouseClient };
 });
+
+// Reads the PQL manifest from blob storage
+const readManifest = async (blobStorage: Awaited<ReturnType<typeof SetupTest>>['blobStorage']) => {
+  const manifestKey = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'));
+  if (!manifestKey) {
+    throw new Error('Manifest not found in blob storage');
+  }
+  const blob = await blobStorage.getObject({ key: manifestKey });
+  return JSON.parse(await new Response(blob.stream).text());
+};
+
+// Sets up a federated graph with a feature flag subgraph and an enabled feature flag.
+// Returns the graph name and FF name for use in tests.
+const setupFederatedGraphWithFeatureFlag = async (client: Client) => {
+  const labels = [{ key: 'team', value: genID('label') }];
+  const fedGraphName = genID('fedGraph');
+
+  await featureFlagIntegrationTestSetUp(
+    client,
+    [{ name: 'users', hasFeatureSubgraph: true }],
+    fedGraphName,
+    labels,
+  );
+
+  const featureFlagName = genID('flag');
+  await createFeatureFlag(client, featureFlagName, labels, ['users-feature'], 'default', true);
+
+  return { fedGraphName, featureFlagName };
+};
 
 const setupFederatedGraph = async (fedGraphName: string, client: Client) => {
   const subgraph1Name = genID('subgraph1');
@@ -341,6 +376,58 @@ describe('Persisted operations', (ctx) => {
       });
       expect(deleteFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
       expect(blobStorage.keys().length).toBe(0);
+    });
+  });
+
+  // Base schema: User { id, name, email, isPremium }
+  // Feature subgraph adds: User { username, basket }, Mutation { addProductToUserBasket }
+  describe('feature flag schema validation', () => {
+    test('Should accept operation valid only on a feature flag schema', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      // "username" only exists on the FF schema
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('op'), contents: `query { users { id username } }` }],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    });
+
+    test('Should accept operation valid on base schema even with feature flags', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('op'), contents: `query { users { id name } }` }],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    });
+
+    test('Should reject operation invalid on all schemas', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('op'), contents: `query { users { id nonExistentField } }` }],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.ERR);
+      expect(resp.response?.details).toContain('not valid on any schema');
+      expect(resp.response?.details).toContain('nonExistentField');
     });
   });
 
@@ -725,6 +812,106 @@ describe('Persisted operations', (ctx) => {
 
       // Same operations should produce the same revision
       expect(manifest2.revision).toBe(manifest1.revision);
+    });
+
+    test('Should exclude FF-only operation from manifest when FF is disabled', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName, featureFlagName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [
+          { id: genID('base-op'), contents: `query { users { id name } }` },
+          { id: genID('ff-op'), contents: `query { users { id username } }` },
+        ],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+      let manifest = await readManifest(blobStorage);
+      expect(Object.keys(manifest.operations).length).toBe(2);
+
+      await toggleFeatureFlag(client, featureFlagName, false);
+
+      manifest = await readManifest(blobStorage);
+      expect(Object.keys(manifest.operations).length).toBe(1);
+      const remainingOp = Object.values(manifest.operations)[0] as string;
+      expect(remainingOp).toContain('name');
+      expect(remainingOp).not.toContain('username');
+    });
+
+    test('Should restore FF-only operation in manifest when FF is re-enabled', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName, featureFlagName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [
+          { id: genID('base-op'), contents: `query { users { id name } }` },
+          { id: genID('ff-op'), contents: `query { users { id username } }` },
+        ],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+      await toggleFeatureFlag(client, featureFlagName, false);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(1);
+
+      await toggleFeatureFlag(client, featureFlagName, true);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(2);
+    });
+
+    test('Should exclude FF-only operation from manifest when FF is deleted', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName, featureFlagName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [
+          { id: genID('base-op'), contents: `query { users { id name } }` },
+          { id: genID('ff-op'), contents: `query { users { id username } }` },
+        ],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(2);
+
+      await deleteFeatureFlag(client, featureFlagName);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(1);
+    });
+
+    test('Should keep base-valid operations in manifest regardless of FF state', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName, featureFlagName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [
+          { id: genID('op1'), contents: `query { users { id } }` },
+          { id: genID('op2'), contents: `query { users { id name } }` },
+        ],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(2);
+
+      await toggleFeatureFlag(client, featureFlagName, false);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(2);
+
+      await deleteFeatureFlag(client, featureFlagName);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(2);
     });
 
     test('Should reject publish when operation limit would be exceeded', async (testContext) => {

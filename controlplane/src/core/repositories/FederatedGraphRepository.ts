@@ -34,6 +34,7 @@ import { uid } from 'uid/secure';
 import { CompositionOptions, Warning } from '@wundergraph/composition';
 import * as schema from '../../db/schema.js';
 import {
+  featureFlags,
   federatedGraphs,
   federatedGraphsToFeatureFlagSchemaVersions,
   graphApiTokens,
@@ -57,8 +58,8 @@ import {
 import { BlobStorage } from '../blobstorage/index.js';
 import {
   BaseCompositionData,
-  CompositionSubgraphRecord,
   Composer,
+  CompositionSubgraphRecord,
   ContractBaseCompositionData,
   routerConfigToFeatureFlagExecutionConfig,
   RouterConfigUploadError,
@@ -953,6 +954,37 @@ export class FederatedGraphRepository {
       clientSchema: latestValidVersion[0].clientSchema,
       schemaVersionId: latestValidVersion[0].schemaVersionId,
     };
+  }
+
+  // Returns the schema SDL for all enabled feature flag compositions linked to a base schema version.
+  // Used during persisted operation publishing to validate operations against FF schemas.
+  // Only enabled FFs are included because disabled FFs are removed from the router execution config,
+  // so the router has no mux to serve operations that are only valid on a disabled FF's schema.
+  public async getFeatureFlagSchemaVersions(data: { baseSchemaVersionId: string }) {
+    return await this.db
+      .select({
+        schemaSDL: schemaVersion.schemaSDL,
+        featureFlagName: featureFlags.name,
+        featureFlagId: featureFlags.id,
+      })
+      .from(federatedGraphsToFeatureFlagSchemaVersions)
+      .innerJoin(
+        schemaVersion,
+        eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
+      )
+      .innerJoin(graphCompositions, eq(graphCompositions.schemaVersionId, schemaVersion.id))
+      // innerJoin: exclude compositions for deleted FFs (featureFlagId set to NULL on deletion)
+      .innerJoin(featureFlags, eq(featureFlags.id, federatedGraphsToFeatureFlagSchemaVersions.featureFlagId))
+      .where(
+        and(
+          eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, data.baseSchemaVersionId),
+          eq(schemaVersion.organizationId, this.organizationId),
+          eq(graphCompositions.isComposable, true),
+          eq(graphCompositions.isFeatureFlagComposition, true),
+          eq(featureFlags.isEnabled, true),
+        ),
+      )
+      .execute();
   }
 
   public async getSchemaVersionById(data: { schemaVersionId: string }) {

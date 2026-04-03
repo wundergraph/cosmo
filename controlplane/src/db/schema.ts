@@ -179,6 +179,9 @@ export const federatedGraphPersistedOperations = pgTable(
     updatedById: uuid('updated_by_id').references(() => users.id, {
       onDelete: 'set null',
     }),
+    // Whether this operation is valid on the base federated graph schema.
+    // Operations only valid on feature flag schemas have this set to false.
+    validOnBaseGraph: boolean('valid_on_base_graph').notNull().default(true),
   },
   (t) => ({
     uniqueFederatedGraphClientIdOperationId: unique('federated_graph_operation_id').on(
@@ -189,6 +192,28 @@ export const federatedGraphPersistedOperations = pgTable(
     createdByIdIndex: index('fgpo_created_by_id_idx').on(t.createdById),
     updatedByIdIndex: index('fgpo_updated_by_id_idx').on(t.updatedById),
     clientIdIndex: index('fgpo_client_id_idx').on(t.clientId),
+  }),
+);
+
+// Tracks which feature flags each persisted operation is valid on.
+// Used to filter the manifest: an operation is included if validOnBaseGraph=true
+// OR it is linked to at least one enabled feature flag via this table.
+export const persistedOperationToFeatureFlags = pgTable(
+  'persisted_operation_to_feature_flags', // po2ff
+  {
+    persistedOperationId: uuid('persisted_operation_id')
+      .notNull()
+      .references(() => federatedGraphPersistedOperations.id, {
+        onDelete: 'cascade',
+      }),
+    featureFlagId: uuid('feature_flag_id')
+      .notNull()
+      .references(() => featureFlags.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.persistedOperationId, t.featureFlagId] }),
   }),
 );
 
@@ -203,6 +228,7 @@ export const federatedGraphPersistedOperationsRelations = relations(
       fields: [federatedGraphPersistedOperations.updatedById],
       references: [users.id],
     }),
+    featureFlags: many(persistedOperationToFeatureFlags),
   }),
 );
 

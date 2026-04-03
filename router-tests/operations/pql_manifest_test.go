@@ -161,6 +161,98 @@ func TestPQLManifest(t *testing.T) {
 		})
 	})
 
+	t.Run("manifest operation valid only on feature flag schema succeeds on FF mux and fails on base", func(t *testing.T) {
+		t.Parallel()
+
+		// productCount exists on the "myff" FF schema (products_fg subgraph) but NOT on the base schema.
+		// The controlplane accepts this operation during upload because it validates against all FF
+		// compositions. At runtime, the manifest is shared across all muxes, so the operation resolves
+		// on both — but per-mux schema validation is the safety net that rejects it on the base mux.
+		universalHash := "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
+		universalQuery := "query Employees {\n  employees {\n    id\n    }\n}"
+		ffOnlyHash := "aa00000000000000000000000000000000000000000000000000000000000001"
+		ffOnlyQuery := "query EmployeesWithProductCount { employees { id productCount } }"
+
+		manifest, _ := json.Marshal(map[string]interface{}{
+			"version":     1,
+			"revision":    "rev-ff-test",
+			"generatedAt": "2024-01-01T00:00:00Z",
+			"operations": map[string]string{
+				universalHash: universalQuery,
+				ffOnlyHash:    ffOnlyQuery,
+			},
+		})
+
+		cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasSuffix(r.URL.Path, "/operations/manifest.json") {
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("ETag", `"rev-ff-test"`)
+				_, _ = w.Write(manifest)
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer cdnServer.Close()
+
+		testenv.Run(t, &testenv.Config{
+			CdnSever: cdnServer,
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Manifest: config.PQLManifestConfig{
+						Enabled:      true,
+						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// 1. Universal operation works on both muxes
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + universalHash + `"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, expectedEmployeesBody, res.Body)
+
+			ffHeader := make(http.Header)
+			ffHeader.Add("graphql-client-name", "my-client")
+			ffHeader.Add("X-Feature-Flag", "myff")
+
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + universalHash + `"}}`),
+				Header:        ffHeader,
+			})
+			require.NoError(t, err)
+			require.Equal(t, "myff", res.Response.Header.Get("X-Feature-Flag"))
+			require.Equal(t, expectedEmployeesBody, res.Body)
+
+			// 2. FF-only operation succeeds on the feature flag mux
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"EmployeesWithProductCount"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + ffOnlyHash + `"}}`),
+				Header:        ffHeader,
+			})
+			require.NoError(t, err)
+			require.Equal(t, "myff", res.Response.Header.Get("X-Feature-Flag"))
+			require.Contains(t, res.Body, `"productCount"`)
+			require.Contains(t, res.Body, `"data"`)
+
+			// 3. FF-only operation fails validation on the base mux
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"EmployeesWithProductCount"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + ffOnlyHash + `"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Contains(t, res.Body, `Cannot query field \"productCount\" on type \"Employee\"`)
+		})
+	})
+
 	t.Run("no CDN requests for individual operations", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{

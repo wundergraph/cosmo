@@ -583,6 +583,8 @@ export interface UpdatedPersistedOperation {
   filePath: string;
   contents: string;
   operationNames: string[];
+  validOnBaseGraph?: boolean;
+  validOnFeatureFlagIds?: string[];
 }
 
 export interface GraphCompositionDTO {
