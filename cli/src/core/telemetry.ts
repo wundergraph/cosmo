@@ -30,6 +30,11 @@ type PostHogFetchResponse = {
   json: () => Promise<any>;
 };
 
+type TelemetryIdentity = {
+  userEmail?: string;
+  organizationSlug: string;
+};
+
 const buildPostHogOkResponse = () => ({
   status: 200,
   text: () => Promise.resolve(''),
@@ -116,19 +121,12 @@ export const initTelemetry = () => {
  * Generate a consistent distinct ID
  * Uses the platform API to get the organization slug if available
  */
-const getIdentity = async (): Promise<string> => {
+const getIdentity = async (): Promise<TelemetryIdentity> => {
   try {
-    // First try to get the identity from the config file
-    const loginDetails = getLoginDetails();
-    if (loginDetails?.organizationSlug) {
-      return loginDetails.organizationSlug;
-    }
-
-    // If not found, the user might be using an API key.
-    // Call the whoAmI API to get organization information
-
     if (!apiClient) {
-      return 'anonymous';
+      return {
+        organizationSlug: 'anonymous',
+      };
     }
 
     const resp = await apiClient.platform.whoAmI(
@@ -139,13 +137,20 @@ const getIdentity = async (): Promise<string> => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      return resp.organizationSlug;
+      return {
+        organizationSlug: resp.organizationSlug,
+        userEmail: resp.userEmail || undefined,
+      };
     }
-
-    return 'anonymous';
-  } catch {
-    return 'anonymous';
+  } catch (err) {
+    // skip catch, returning anonymous identity if any error occurs (e.g. network issues, not logged in, etc.)
+    if (process.env.DEBUG) {
+      console.debug('Failed to get identity for telemetry, using anonymous.', err);
+    }
   }
+  return {
+    organizationSlug: 'anonymous',
+  };
 };
 
 /**
@@ -161,7 +166,10 @@ export const capture = async (eventName: string, properties: Record<string, any>
     const metadata = getMetadata();
 
     client.capture({
-      distinctId: identity,
+      distinctId: identity.userEmail ?? identity.organizationSlug,
+      groups: {
+        orgslug: identity.organizationSlug,
+      },
       event: eventName,
       properties: {
         ...metadata,
