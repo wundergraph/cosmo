@@ -57,7 +57,7 @@ const identify = ({
     posthog.alias(email);
     // to be sure we also reset the session so that if alias fail, we abandon the old session and start a new one
     // with the right data
-    posthog.reset()
+    posthog.reset();
   } else if (distinctId === email) {
     // This session has been already identified, nothing to do!
     return;
