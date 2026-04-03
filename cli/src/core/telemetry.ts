@@ -139,7 +139,7 @@ const getIdentity = async (): Promise<TelemetryIdentity> => {
     if (resp.response?.code === EnumStatusCode.OK) {
       return {
         organizationSlug: resp.organizationSlug,
-        userEmail: resp.userEmail,
+        userEmail: resp.userEmail || undefined,
       };
     }
   } catch (err) {
