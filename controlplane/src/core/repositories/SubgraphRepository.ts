@@ -972,7 +972,7 @@ export class SubgraphRepository {
         schema.schemaVersion,
         eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id),
       )
-      [data.published ? 'innerJoin' : 'leftJoin'](
+      .leftJoin(
         schema.protobufSchemaVersions,
         and(
           inArray(schema.subgraphs.type, ['grpc_plugin', 'grpc_service']),
