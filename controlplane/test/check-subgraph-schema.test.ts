@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { addSeconds, formatISO, subDays } from 'date-fns';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, onTestFinished, test, vi } from 'vitest';
 import {
   invalidOverrideTargetSubgraphNameWarning,
   noBaseDefinitionForExtensionError,
@@ -57,6 +57,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     'subgraph-checker',
   ])('%s should be able to create a subgraph, publish the schema and then check with new schema', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+    onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -104,12 +105,11 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_REMOVED);
     expect(checkResp.nonBreakingChanges.length).not.toBe(0);
     expect(checkResp.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_ADDED);
-
-    await server.close();
   });
 
-  test('Should allow legacy fallback when checking graph', async (role) => {
+  test('Should allow legacy fallback when checking graph', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -157,14 +157,13 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_REMOVED);
     expect(checkResp.nonBreakingChanges.length).not.toBe(0);
     expect(checkResp.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_ADDED);
-
-    await server.close();
   });
 
   test.each(['subgraph-admin', 'subgraph-publisher', 'subgraph-checker'])(
     '%s should be able to check with new schema on allowed namespaces',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+      onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph1');
       const label = genUniqueLabel();
@@ -238,8 +237,6 @@ describe('CheckSubgraphSchema', (ctx) => {
         schema: Uint8Array.from(Buffer.from('type Query { name: String! }')),
       });
       expect(checkResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     },
   );
 
@@ -253,6 +250,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     'subgraph-viewer',
   ])('%s should not be able to create a subgraph, publish the schema and then check with new schema', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+    onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -286,12 +284,11 @@ describe('CheckSubgraphSchema', (ctx) => {
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test('Should be able to create a federated graph,subgraph, publish the schema and then check the new schema for composition errors', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
@@ -340,11 +337,11 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
     expect(checkSummary.affectedGraphs).toHaveLength(1);
     expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
-    await server.close();
   });
 
   test('Should be able to create a federated graph,subgraph, publish the schema and then check the new schema for composition warning', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
@@ -395,12 +392,11 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
     expect(checkSummary.affectedGraphs).toHaveLength(1);
     expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
-
-    await server.close();
   });
 
   test('Should be able to create a federated graph,subgraph and then perform the check operation on the subgragh with valid schema ', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
@@ -441,12 +437,11 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
     expect(checkSummary.affectedGraphs).toHaveLength(1);
     expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
-
-    await server.close();
   });
 
   test('Should retrieve checks performed against unpublished subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
@@ -486,12 +481,11 @@ describe('CheckSubgraphSchema', (ctx) => {
     });
     expect(checksResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checksResp.checks?.length).toBe(1);
-
-    await server.close();
   });
 
-  test('Should retrieve checked operations', async () => {
+  test('Should retrieve checked operations', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -574,12 +568,11 @@ type Employee {
     });
     expect(checkOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkOperationsResp.operations.length).toBe(2);
-
-    await server.close();
   });
 
-  test('Should have zero checked operations if traffic is skipped', async () => {
+  test('Should have zero checked operations if traffic is skipped', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -664,12 +657,11 @@ type Employee {
     });
     expect(checkOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkOperationsResp.operations.length).toBe(0);
-
-    await server.close();
   });
 
-  test('Should test check with delete option', async () => {
+  test('Should test check with delete option', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraph1Name = genID('subgraph1');
@@ -758,11 +750,11 @@ type Department {
     expect(checkSummary.check?.checkedSubgraphs).toHaveLength(1);
     expect(checkSummary.check?.checkedSubgraphs[0].isDeleted).toBe(true);
     expect(checkSummary.check?.checkedSubgraphs[0].subgraphName).toBe(subgraph1Name);
-    await server.close();
   });
 
-  test('Should run check against a new subgraph that doesnt exist by passing labels to the check', async () => {
+  test('Should run check against a new subgraph that doesnt exist by passing labels to the check', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraph1Name = genID('subgraph1');
@@ -856,12 +848,11 @@ type Category {
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkResp.checkedFederatedGraphs).toHaveLength(0);
     expect(checkResp.nonBreakingChanges.length).toBeGreaterThan(0);
-
-    await server.close();
   });
 
-  test('Should check non-existent subgraph with specific labels and match only the corresponding federated graph', async () => {
+  test('Should check non-existent subgraph with specific labels and match only the corresponding federated graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     // Generate unique IDs and labels for test entities
     const fedGraph1Name = genID('fedGraph1');
@@ -938,13 +929,11 @@ type Category {
     // Verify that only fedGraph1 is included in the check
     expect(checkResp.checkedFederatedGraphs).toHaveLength(1);
     expect(checkResp.checkedFederatedGraphs[0].name).toBe(fedGraph1Name);
-
-    // Cleanup
-    await server.close();
   });
 
-  test('Should handle composition when one of the subgraphs has an empty schema', async () => {
+  test('Should handle composition when one of the subgraphs has an empty schema', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const emptySubgraphName = genID('empty-subgraph');
     const validSubgraphName = genID('valid-subgraph');
@@ -1003,12 +992,11 @@ type Category {
     expect(checkValidResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkValidResp.compositionErrors.length).toBe(0);
     expect(checkValidResp.breakingChanges.length).toBe(1);
-
-    await server.close();
   });
 
-  test('Should handle check with non-existent subgraph and invalid label', async () => {
+  test('Should handle check with non-existent subgraph and invalid label', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     // Generate unique IDs and labels
     const fedGraphName = genID('fedGraph');
@@ -1088,13 +1076,11 @@ type Category {
     });
 
     expect(checkWithInvalidLabelResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_LABELS);
-
-    // Cleanup
-    await server.close();
   });
 
-  test('Should handle check against non existent subgraph with invalid subgraph name', async () => {
+  test('Should handle check against non existent subgraph with invalid subgraph name', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     // Generate unique IDs and labels
     const fedGraphName = genID('fedGraph');
@@ -1137,13 +1123,11 @@ type Category {
 
     // Verify the check response for invalid subgraph name
     expect(checkWithInvalidNameResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
-
-    // Cleanup
-    await server.close();
   });
 
-  test('Should test that the labels are ignored when the check is against an existing subgraph', async () => {
+  test('Should test that the labels are ignored when the check is against an existing subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     // Generate unique IDs and labels
     const fedGraph1Name = genID('fedGraph1');
@@ -1220,14 +1204,12 @@ type Category {
     expect(checkExistingSubgraphWithDifferentLabelsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkExistingSubgraphWithDifferentLabelsResp.checkedFederatedGraphs).toHaveLength(1);
     expect(checkExistingSubgraphWithDifferentLabelsResp.checkedFederatedGraphs[0].name).toBe(fedGraph1Name);
-
-    // Cleanup
-    await server.close();
   });
 
   describe('Schema check with limit parameter', () => {
-    test('Should return all results when no limit is provided', async () => {
+    test('Should return all results when no limit is provided', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph1');
       const label = genUniqueLabel();
@@ -1265,12 +1247,11 @@ type Category {
       expect(checkResp.nonBreakingChanges.length).toBe(5);
       expect(checkResp.counts?.breakingChanges).toBe(5);
       expect(checkResp.counts?.nonBreakingChanges).toBe(5);
-
-      await server.close();
     });
 
-    test('Should limit breaking and non-breaking changes combined when limit is provided', async () => {
+    test('Should limit breaking and non-breaking changes combined when limit is provided', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph1');
       const label = genUniqueLabel();
@@ -1307,12 +1288,11 @@ type Category {
       // Counts should still reflect the full count
       expect(checkResp.counts?.breakingChanges).toBe(5);
       expect(checkResp.counts?.nonBreakingChanges).toBe(5);
-
-      await server.close();
     });
 
-    test('Should respect limit of 1 for combined arrays', async () => {
+    test('Should respect limit of 1 for combined arrays', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph1');
       const label = genUniqueLabel();
@@ -1346,12 +1326,11 @@ type Category {
       // Counts should still be correct
       expect(checkResp.counts?.breakingChanges).toBe(2);
       expect(checkResp.counts?.nonBreakingChanges).toBe(2);
-
-      await server.close();
     });
 
-    test('Should limit composition errors separately from other arrays', async () => {
+    test('Should limit composition errors separately from other arrays', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const federatedGraphName = genID('fedGraph');
       const subgraphName = genID('subgraph1');
@@ -1394,12 +1373,11 @@ type Category {
       expect(checkResp.compositionErrors.length).toBe(1);
       // But counts should reflect the actual total
       expect(checkResp.counts?.compositionErrors).toBe(2);
-
-      await server.close();
     });
 
-    test('Should clamp limit to maximum allowed value', async () => {
+    test('Should clamp limit to maximum allowed value', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph1');
       const label = genUniqueLabel();
@@ -1429,12 +1407,11 @@ type Category {
       // Should still work, limit will be clamped to 100,000
       expect(checkResp.breakingChanges.length).toBe(1);
       expect(checkResp.nonBreakingChanges.length).toBe(1);
-
-      await server.close();
     });
 
-    test('Should clamp limit of 0 to minimum of 1', async () => {
+    test('Should clamp limit of 0 to minimum of 1', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph1');
       const label = genUniqueLabel();
@@ -1467,12 +1444,11 @@ type Category {
       // Counts should still reflect the actual totals
       expect(checkResp.counts?.breakingChanges).toBe(1);
       expect(checkResp.counts?.nonBreakingChanges).toBe(1);
-
-      await server.close();
     });
 
-    test('Should return counts object even when there are no changes', async () => {
+    test('Should return counts object even when there are no changes', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph1');
       const label = genUniqueLabel();
@@ -1510,14 +1486,13 @@ type Category {
       expect(checkResp.counts?.lintWarnings).toBe(0);
       expect(checkResp.counts?.graphPruneErrors).toBe(0);
       expect(checkResp.counts?.graphPruneWarnings).toBe(0);
-
-      await server.close();
     });
   });
 
   describe('Federated graph schema breaking changes', () => {
-    test('Should detect breaking change when subgraph B makes federated field nullable that was required from subgraph A', async () => {
+    test('Should detect breaking change when subgraph B makes federated field nullable that was required from subgraph A', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -1632,12 +1607,11 @@ type Category {
       expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
       expect(checkSummary.composedSchemaBreakingChanges[0].path).toBe('User.name');
       expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-      await server.close();
     });
 
-    test('Should detect breaking change when published subgraph B adds nullable field that conflicts with required field from subgraph A', async () => {
+    test('Should detect breaking change when published subgraph B adds nullable field that conflicts with required field from subgraph A', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -1748,12 +1722,11 @@ type Category {
       expect(fieldNullabilityChange.federatedGraphName).toBe(fedGraphName);
       expect(fieldNullabilityChange.path).toBe('User.name');
       expect(fieldNullabilityChange.isBreaking).toBe(true);
-
-      await server.close();
     });
 
-    test('Should not perform federated diff when subgraph changes do not involve field changes', async () => {
+    test('Should not perform federated diff when subgraph changes do not involve field changes', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphName = genID('subgraph');
@@ -1824,12 +1797,11 @@ type Category {
       // No breaking changes at any level since we only changed descriptions
       expect(checkResp.breakingChanges.length).toBe(0);
       expect(checkResp.composedSchemaBreakingChanges.length).toBe(0);
-
-      await server.close();
     });
 
-    test('Should not produce false positives when adding non-conflicting fields', async () => {
+    test('Should not produce false positives when adding non-conflicting fields', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -1903,12 +1875,11 @@ type Category {
       // No breaking changes since we're only adding new non-conflicting fields
       expect(checkResp.breakingChanges.length).toBe(0);
       expect(checkResp.composedSchemaBreakingChanges.length).toBe(0);
-
-      await server.close();
     });
 
-    test('Should detect breaking changes across multiple federated graphs', async () => {
+    test('Should detect breaking changes across multiple federated graphs', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName1 = genID('fedGraph1');
       const fedGraphName2 = genID('fedGraph2');
@@ -2020,12 +1991,11 @@ type Category {
       expect(checkSummary2.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName2);
       expect(checkSummary2.composedSchemaBreakingChanges[0].path).toBe('User.name');
       expect(checkSummary2.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-      await server.close();
     });
 
-    test('Should not duplicate field removal in federated schema changes when already reported at subgraph level', async () => {
+    test('Should not duplicate field removal in federated schema changes when already reported at subgraph level', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphName = genID('subgraph');
@@ -2093,12 +2063,11 @@ type Category {
       expect(checkResp.breakingChanges.length).toBe(1);
       // Field removal is already reported at subgraph level, so it should not be duplicated at federated level
       expect(checkResp.composedSchemaBreakingChanges.length).toBe(0);
-
-      await server.close();
     });
 
-    test('Should check federated graph schema changes against traffic and report hasClientTraffic', async () => {
+    test('Should check federated graph schema changes against traffic and report hasClientTraffic', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -2217,12 +2186,11 @@ type Category {
       expect(checkSummary.affectedGraphs[0].isCheckSuccessful).toBe(false);
       expect(checkSummary.affectedGraphs[0].isBreaking).toBe(true);
       expect(checkSummary.affectedGraphs[0].hasClientTraffic).toBe(true);
-
-      await server.close();
     });
 
-    test('Should skip traffic check for federated graph schema changes when skipTrafficCheck is true', async () => {
+    test('Should skip traffic check for federated graph schema changes when skipTrafficCheck is true', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -2309,12 +2277,11 @@ type Category {
 
       // But operation usage should be zero since traffic check was skipped
       expect(checkResp.operationUsageStats?.totalOperations).toBe(0);
-
-      await server.close();
     });
 
-    test('Should detect breaking change when subgraph B changes Query field return type from Object to Union', async () => {
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Union', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -2430,12 +2397,11 @@ type Category {
       expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
       expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
       expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-      await server.close();
     });
 
-    test('Should detect breaking change when subgraph B changes Query field return type from Object to Union 2', async () => {
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Union 2', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -2551,12 +2517,11 @@ type Category {
       expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
       expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
       expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-      await server.close();
     });
 
-    test('Should detect breaking change when subgraph B changes Query field return type from Object to Union 3', async () => {
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Union 3', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -2672,12 +2637,11 @@ type Category {
       expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
       expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
       expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-      await server.close();
     });
 
-    test('Should detect breaking change when subgraph B changes Query field return type from Object to Interface', async () => {
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Interface', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -2795,12 +2759,11 @@ type Category {
       expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
       expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
       expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-      await server.close();
     });
 
-    test('Should detect breaking change when subgraph B changes Query field return type from Object to Interface 2', async () => {
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Interface 2', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -2918,12 +2881,11 @@ type Category {
       expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
       expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
       expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-      await server.close();
     });
 
-    test('Should detect breaking change when subgraph B changes Query field return type from Object to Interface 3', async () => {
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Interface 3', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -3041,12 +3003,11 @@ type Category {
       expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
       expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
       expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-      await server.close();
     });
 
-    test('Should detect breaking change when subgraph adds a new type with nullable field that conflicts with required field in federated schema', async () => {
+    test('Should detect breaking change when subgraph adds a new type with nullable field that conflicts with required field in federated schema', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const subgraphAName = genID('subgraphA');
@@ -3156,14 +3117,13 @@ type Category {
       expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
       expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('User.name');
       expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-      await server.close();
     });
   });
 
   describe('Schema check with linked subgraphs', () => {
-    test('Should perform schema check on both source and target linked subgraphs', async () => {
+    test('Should perform schema check on both source and target linked subgraphs', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       // Create target namespace (source will use default)
       const targetNamespace = 'prod';
@@ -3271,12 +3231,11 @@ type Category {
       expect(checkResp.operationUsageStats?.totalOperations).toBe(1);
       expect(checkResp.isLinkedTrafficCheckFailed).toBe(true);
       expect(checkResp.isLinkedPruningCheckFailed).toBe(false);
-
-      await server.close();
     });
 
-    test('Should handle linked subgraph with no traffic', async () => {
+    test('Should handle linked subgraph with no traffic', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       // Create target namespace
       const targetNamespace = 'prod';
@@ -3352,12 +3311,11 @@ type Category {
       expect(checkResp.breakingChanges.length).toBeGreaterThan(0);
       expect(checkResp.isLinkedTrafficCheckFailed).toBe(false); // No traffic, so no failure
       expect(checkResp.isLinkedPruningCheckFailed).toBe(false);
-
-      await server.close();
     });
 
-    test('Should skip traffic check for both source and linked subgraphs when skipTrafficCheck is true', async () => {
+    test('Should skip traffic check for both source and linked subgraphs when skipTrafficCheck is true', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       // Create target namespace
       const targetNamespace = 'prod';
@@ -3452,12 +3410,11 @@ type Category {
       expect(checkResp.clientTrafficCheckSkipped).toBe(true);
       expect(checkResp.isLinkedTrafficCheckFailed).toBe(false);
       expect(checkResp.operationUsageStats?.totalOperations).toBe(0);
-
-      await server.close();
     });
 
-    test('Should handle linked subgraph deletion check', async () => {
+    test('Should handle linked subgraph deletion check', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       // Create target namespace
       const targetNamespace = 'prod';
@@ -3702,8 +3659,6 @@ type Category {
       expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
       expect(checkResp.breakingChanges.length).toBeGreaterThan(0); // Deletion causes breaking changes
       expect(checkResp.isLinkedTrafficCheckFailed).toBe(true);
-
-      await server.close();
     });
   });
 });

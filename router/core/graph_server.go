@@ -22,7 +22,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -55,8 +54,11 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
 const (
@@ -545,6 +547,7 @@ type graphMux struct {
 	mux *chi.Mux
 
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
+	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache          *ristretto.Cache[uint64, NormalizationCacheEntry]
 	complexityCalculationCache  *ristretto.Cache[uint64, ComplexityCacheEntry]
@@ -581,6 +584,14 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			NumCounters:        srv.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
 			IgnoreInternalCost: true,
 			BufferItems:        64,
+		}
+		if srv.cacheWarmup != nil && srv.cacheWarmup.Enabled && srv.cacheWarmup.InMemoryFallback {
+			planCacheConfig.OnEvict = func(item *ristretto.Item[*planWithMetaData]) {
+				// This could be called before planFallbackCache is set, but it's not a problem
+				// because there is a nil guard inside, as well as items should not really be evicted
+				// on startup
+				s.planFallbackCache.Set(item.Key, item.Value, item.Value.planningDuration)
+			}
 		}
 		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
 		if err != nil {
@@ -714,6 +725,32 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 	return computeSha256, nil
 }
 
+// waitForCaches blocks until all pending ristretto async writes have been applied.
+// This ensures that items stored during one warmup pass are visible to the next pass.
+func (s *graphMux) waitForCaches() {
+	if s.planCache != nil {
+		s.planCache.Wait()
+	}
+	if s.persistedOperationCache != nil {
+		s.persistedOperationCache.Wait()
+	}
+	if s.normalizationCache != nil {
+		s.normalizationCache.Wait()
+	}
+	if s.variablesNormalizationCache != nil {
+		s.variablesNormalizationCache.Wait()
+	}
+	if s.remapVariablesCache != nil {
+		s.remapVariablesCache.Wait()
+	}
+	if s.validationCache != nil {
+		s.validationCache.Wait()
+	}
+	if s.operationHashCache != nil {
+		s.operationHashCache.Wait()
+	}
+}
+
 // configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
 func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []attribute.KeyValue) error {
 	if srv.metricConfig.OpenTelemetry.GraphqlCache {
@@ -787,6 +824,7 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
 	s.planCache.Close()
+	s.planFallbackCache.Close()
 	s.persistedOperationCache.Close()
 	s.normalizationCache.Close()
 	s.variablesNormalizationCache.Close()
@@ -906,9 +944,11 @@ func (s *graphServer) buildGraphMux(
 		// but in this case we use the same metric store
 		otlpOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.OpenTelemetry.Enabled,
+			CostStats:            s.metricConfig.OpenTelemetry.CostStats,
 		}
 		promOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.Prometheus.Enabled,
+			CostStats:            s.metricConfig.Prometheus.CostStats,
 		}
 
 		m, err := rmetric.NewStore(otlpOpts, promOpts,
@@ -1230,6 +1270,7 @@ func (s *graphServer) buildGraphMux(
 		Events:                   s.eventsConfig,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
 		StreamMetricStore:        gm.streamMetricStore,
+		CostControl:              s.securityConfiguration.CostControl,
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
@@ -1334,9 +1375,21 @@ func (s *graphServer) buildGraphMux(
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
+		CostControl:                                            s.securityConfiguration.CostControl,
 	})
 
-	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled())
+	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {
+		var err error
+		gm.planFallbackCache, err = slowplancache.New[*planWithMetaData](
+			int(s.engineExecutionConfiguration.SlowPlanCacheSize),
+			s.engineExecutionConfiguration.SlowPlanCacheThreshold,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create plan fallback cache: %w", err)
+		}
+	}
+
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, gm.planFallbackCache, s.planningDurationOverride)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1375,7 +1428,7 @@ func (s *graphServer) buildGraphMux(
 						otel.WgFeatureFlag.String(opts.FeatureFlagName),
 						otel.WgOperationHash.String(item.OperationHash),
 						otel.WgOperationType.String(item.OperationType),
-						otel.WgEnginePlanCacheHit.Bool(false),
+						otel.WgEnginePlanCacheHit.Bool(item.PlanCacheHit),
 					}, baseMetricAttributes...)...,
 				),
 			)
@@ -1392,10 +1445,10 @@ func (s *graphServer) buildGraphMux(
 		//   - Using static execution config (not Cosmo): s.selfRegister == nil
 		//   - OR CDN cache warmer is explictly disabled
 		case s.cacheWarmup.InMemoryFallback && (s.selfRegister == nil || !s.cacheWarmup.Source.CdnSource.Enabled):
-			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
+			// We first utilize the existing cache (if it was already set, i.e., not on the first start) to create a list of queries
 			// and then reset the plan cache to the new plan cache for this start afterwards.
 			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
-			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planFallbackCache)
 		case s.cacheWarmup.Source.CdnSource.Enabled:
 			if s.graphApiToken == "" {
 				return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
@@ -1405,7 +1458,7 @@ func (s *graphServer) buildGraphMux(
 			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
 			if s.cacheWarmup.InMemoryFallback {
 				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
-				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planFallbackCache)
 			}
 			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
@@ -1420,6 +1473,79 @@ func (s *graphServer) buildGraphMux(
 		if err != nil {
 			// We don't want to fail the server if the cache warmup fails
 			s.logger.Error("Failed to warmup caches. It will retry after server restart or graph execution config update", zap.Error(err))
+		}
+	}
+
+	// Flush all ristretto async writes so that items cached during the warmup pass above
+	// are visible to the manifest warmup below. This ensures overlapping operations hit
+	// the plan cache instead of being planned again.
+	gm.waitForCaches()
+
+	// Prewarm all persisted operations from the PQL manifest so that the first request is served from cache.
+	// This runs sequentially after the cache warmup above — the plan cache handles dedup naturally.
+	manifestWarmup := s.persistedOperationsConfig.Manifest.Warmup
+	if manifestWarmup.Enabled && s.persistedOperationClient != nil {
+		if pqlStore := s.persistedOperationClient.PQLStore(); pqlStore != nil && pqlStore.IsLoaded() {
+			manifestProcessor := NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
+				OperationProcessor:        operationProcessor,
+				OperationPlanner:          operationPlanner,
+				ComplexityLimits:          s.securityConfiguration.ComplexityLimits,
+				RouterSchema:              executor.RouterSchema,
+				TrackSchemaUsage:          s.graphqlMetricsConfig.Enabled,
+				DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
+			})
+
+			manifestAfterOperation := func(item *CacheWarmupOperationPlanResult) {
+				gm.metricStore.MeasureOperationPlanningTime(ctx,
+					item.PlanningTime,
+					nil,
+					otelmetric.WithAttributes(
+						append([]attribute.KeyValue{
+							otel.WgOperationName.String(item.OperationName),
+							otel.WgClientName.String(item.ClientName),
+							otel.WgClientVersion.String(item.ClientVersion),
+							otel.WgFeatureFlag.String(opts.FeatureFlagName),
+							otel.WgOperationHash.String(item.OperationHash),
+							otel.WgOperationType.String(item.OperationType),
+							otel.WgEnginePlanCacheHit.Bool(item.PlanCacheHit),
+						}, baseMetricAttributes...)...,
+					),
+				)
+			}
+
+			manifestWarmupConfig := &CacheWarmupConfig{
+				Log:            s.logger,
+				Processor:      manifestProcessor,
+				Workers:        manifestWarmup.Workers,
+				ItemsPerSecond: manifestWarmup.ItemsPerSecond,
+				Timeout:        manifestWarmup.Timeout,
+				Source:         NewManifestWarmupSource(pqlStore),
+				AfterOperation: manifestAfterOperation,
+			}
+
+			err = WarmupCaches(ctx, manifestWarmupConfig)
+			if err != nil {
+				s.logger.Error("Failed to warmup PQL manifest operations", zap.Error(err))
+			}
+
+			// Re-warm when the manifest is updated by the poller.
+			// The store handles coalescing — if a re-warm is already running or pending,
+			// new signals are dropped. The worker always reads the latest manifest.
+			pqlStore.SetOnUpdate(func() {
+				rewarmConfig := &CacheWarmupConfig{
+					Log:            s.logger,
+					Processor:      manifestProcessor,
+					Workers:        manifestWarmup.Workers,
+					ItemsPerSecond: manifestWarmup.ItemsPerSecond,
+					Timeout:        manifestWarmup.Timeout,
+					Source:         NewManifestWarmupSource(pqlStore),
+					AfterOperation: manifestAfterOperation,
+				}
+
+				if rewarmErr := WarmupCaches(ctx, rewarmConfig); rewarmErr != nil {
+					s.logger.Error("Failed to re-warm PQL manifest operations after update", zap.Error(rewarmErr))
+				}
+			})
 		}
 	}
 
@@ -1448,6 +1574,7 @@ func (s *graphServer) buildGraphMux(
 		Log:                             s.logger,
 		EnableCacheResponseHeaders:      s.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders,
 		EnableResponseHeaderPropagation: s.headerRules != nil,
+		EnableCostResponseHeaders:       s.securityConfiguration.CostControl != nil && s.securityConfiguration.CostControl.ExposeHeaders,
 		EngineStats:                     s.engineStats,
 		TracerProvider:                  s.tracerProvider,
 		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),
@@ -1464,6 +1591,7 @@ func (s *graphServer) buildGraphMux(
 			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
 			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
 			ExprManager:         exprManager,
+			Overrides:           s.rateLimit.SimpleStrategy.Overrides,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create rate limiter: %w", err)

@@ -3,6 +3,7 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import FetchMonographCommand from '../common/fetch-schema.js';
 import GetMonographChangelog from '../common/changelog.js';
 import GetMonographVersion from '../common/version/index.js';
+import RecomposeMonographCommand from '../common/recompose.js';
 import { checkAuth } from '../../auth/utils.js';
 import CreateMonographCommand from './commands/create.js';
 import PublishMonographCommand from './commands/publish.js';
@@ -29,6 +30,7 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(FetchMonographCommand({ ...opts, isMonograph: true }));
   command.addCommand(GetMonographChangelog({ ...opts, isMonograph: true }));
   command.addCommand(GetMonographVersion({ ...opts, isMonograph: true }));
+  command.addCommand(RecomposeMonographCommand({ ...opts, isMonograph: true }));
 
   command.hook('preAction', async () => {
     await checkAuth();

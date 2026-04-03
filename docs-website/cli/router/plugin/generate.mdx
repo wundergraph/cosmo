@@ -1,0 +1,96 @@
+---
+title: "Generate"
+description: "Generate proto and gRPC code for a router plugin"
+icon: "code"
+---
+
+# wgc router plugin generate
+
+The `generate` command creates Protocol Buffers definitions, mapping files, and gRPC code based on your GraphQL schema. This command is useful when you want to generate the necessary code without compiling binaries.
+
+## Usage
+
+```bash
+wgc router plugin generate [directory] [options]
+```
+
+## Arguments
+
+| Argument    | Description             | Default                 |
+| ----------- | ----------------------- | ----------------------- |
+| `directory` | Directory of the plugin | `.` (current directory) |
+
+## Options
+
+| Option                       | Description                                                          | Default                               |
+| ---------------------------- | -------------------------------------------------------------------- | ------------------------------------- |
+| `--go-module-path <path>`    | Go module path to use for the plugin                                 | `github.com/wundergraph/cosmo/plugin` |
+| `--skip-tools-installation`  | Skip tool installation                                               | `false`                               |
+| `--force-tools-installation` | Force tools installation regardless of version check or confirmation | `false`                               |
+
+## Description
+
+This command performs the code generation steps of the plugin build process:
+
+1. **Detect Plugin Language For Generation**: The language of the plugin is detected based on the presence of a go.mod file for Go, if it does not exist we check for a `package.json` file for TyppeScript, if none of these condition match the command fails
+2. **Generate Proto and Mapping Files**: Processes your GraphQL schema to generate Protocol Buffers definitions and mapping files
+3. **Generate gRPC Code**: Uses the generated Proto files to create Go code for the gRPC service
+4. **Install Language Specific Dependencies**: Installs all required dependencies for your plugin
+
+The `generate` command is equivalent to running [`build`](./build) with the `--generate-only` flag. Use this when you're iterating on your GraphQL schema and need to regenerate the code without compiling binaries.
+
+## Required Tools
+
+The generate command will automatically check for and install the necessary toolchain when required tools can't be found in the right version on your system. You can control this behavior with the `--skip-tools-installation` and `--force-tools-installation` flags.
+
+You can also install the dependencies manually and use an IDE with Go / TS support. The following table shows the current versions and download links for the required tools:
+
+| Tool                      | Version                    | Installation Link                                                          |
+| ------------------------- | -------------------------- | -------------------------------------------------------------------------- |
+| Go                        | >=1.22.0 (Last 2 versions) | [Releases](https://go.dev/doc/install)                                     |
+| Protocol Buffers (protoc) | ^29.3                      | [Releases](https://protobuf.dev/installation/)                             |
+| protoc-gen-go             | ^1.34.2                    | [GitHub Releases](https://github.com/protocolbuffers/protobuf-go/releases) |
+| protoc-gen-go-grpc        | ^1.5.1                     | [GitHub Releases](https://github.com/grpc/grpc-go/releases)                |
+| bun                       | ^1.0.35                    | [GitHub Releases](https://github.com/oven-sh/bun/releases)                 |
+
+<Note>
+  When building TypeScript plugins, the protoc TS/JS equivalents of the above are obtained via the `.bin` folder in your plugins `node_modules`, these versions can be customized by the `package.json` of the TS plugin.
+</Note>
+
+## Examples
+
+### Generate code for the current directory
+
+```bash
+wgc router plugin generate
+```
+
+### Generate code for a specific plugin directory
+
+```bash
+wgc router plugin generate ./my-plugin
+```
+
+### Generate with a custom Go module path
+
+```bash
+wgc router plugin generate --go-module-path github.com/myorg/my-plugin ./my-plugin
+```
+
+### Skip tool installation (useful in CI environments)
+
+```bash
+wgc router plugin generate --skip-tools-installation ./my-plugin
+```
+
+## Output
+
+The generate process creates the following outputs:
+
+- **Proto files**: Protocol Buffers definitions in the `generated/` directory
+- **Mapping files**: Schema mapping files that connect your GraphQL schema to the gRPC service
+- **Generated code**: gRPC client and server code in the language of the plugin in the `generated/` directory
+- **Language specific dependencies**: All required dependencies will be installed in your plugin
+
+After generating, you can continue development with your IDE or run [`build`](./build) to compile the plugin into binaries.
+

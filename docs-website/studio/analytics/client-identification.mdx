@@ -1,0 +1,22 @@
+---
+title: "Client Identification"
+description: "Enrich your clients with the proper client name and version to distingush them in the analytics."
+icon: user-group
+---
+
+In order to properly identify different clients on the platform, you must provide the Client Name and Version in the form headers with every request. We support two different variants.
+
+This variant is vendor neutral and highly **recommended**.
+
+```bash
+"GraphQL-Client-Name": "name",
+"GraphQL-Client-Version": "0.0.1"
+```
+
+We also support the Apollo variant for migration reasons and overall better ecosystem support.
+
+```bash
+"ApolloGraphQL-Client-Name": "name",
+"ApolloGraphQL-Client-Version": "0.0.1"
+```
+

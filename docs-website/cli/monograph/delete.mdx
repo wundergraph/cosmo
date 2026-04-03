@@ -1,0 +1,50 @@
+---
+title: "Delete"
+description: "Deletes a monograph on the control plane."
+icon: trash
+---
+
+## Usage
+
+```bash
+npx wgc monograph delete <name> [-f, --force]
+```
+
+<Note>
+  **Delete** is an irreversible action. It will delete the monograph and the single connected subgraph, including versions, schema checks, etc.
+</Note>
+
+## Description
+
+The `npx wgc monograph delete` command allows you to delete a monograph on the Cosmo platform's control plane. Deleting a monograph will remove its configuration and associated resources. Use this command with caution, as the action cannot be undone.
+
+## Parameters
+
+* `<name>`: The name of the monograph you want to delete. Replace `<name>` with the name of the monograph you wish to remove.
+
+## Options
+
+`-n, --namespace` : The namespace of the monograph (Default: "default").
+
+`-f, --force` : An optional flag that allows you to force delete the monograph without being prompted for confirmation. Use this option if you want to delete the monograph without additional prompts.
+
+## Examples
+
+```bash
+npx wgc monograph delete production
+```
+
+Delete the monograph named "production".
+
+```bash
+npx wgc monograph delete production -f
+```
+
+Force delete the monograph named "production" without confirmation.
+
+## Notes
+
+* The `npx wgc monograph delete` command interacts with the Cosmo platform's control plane to delete the specified monograph. Ensure that you have the necessary permissions to perform this operation.
+
+* When using the `--force` option, the command will not prompt for confirmation, so exercise caution to prevent accidental deletions.
+

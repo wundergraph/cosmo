@@ -1131,7 +1131,12 @@ Example:
       const fields = type.getFields();
 
       for (const field of Object.values(fields)) {
-        if (field.args.length === 0) {
+        if (field.args.length === 0 && !this.findDirective(field, CONNECT_FIELD_RESOLVER)) {
+          continue;
+        }
+
+        // Skip fields with @requires directive, they are managed by the required fields visitor
+        if (field.args.length > 0 && this.findDirective(field, REQUIRES_DIRECTIVE_NAME)) {
           continue;
         }
 
@@ -1169,6 +1174,7 @@ Example:
 
         const rpcMethods = visitor.getRPCMethods();
         const messageDefinitions = visitor.getMessageDefinitions();
+        this.usesWrapperTypes = this.usesWrapperTypes || visitor.usesWrapperTypes;
 
         result.rpcMethods.push(...rpcMethods.map((m) => renderRPCMethod(this.includeComments, m).join('\n')));
         result.methodNames.push(...rpcMethods.map((m) => m.name));
@@ -1195,7 +1201,7 @@ Example:
     parent: GraphQLObjectType,
     field: GraphQLField<any, any>,
   ): { context: string; error: string | undefined } {
-    const resolvedDirective = this.findResolverDirective(field);
+    const resolvedDirective = this.findDirective(field, CONNECT_FIELD_RESOLVER);
     if (resolvedDirective) {
       const valueNode = resolvedDirective.arguments?.find((arg) => arg.name.value === CONTEXT)?.value;
       const context = !valueNode || valueNode.kind !== Kind.STRING ? '' : valueNode.value.trim();
@@ -1246,13 +1252,8 @@ Example:
     return type;
   }
 
-  private findResolverDirective(field: GraphQLField<any, any>): DirectiveNode | undefined {
-    const directives = field.astNode?.directives;
-    if (!directives) {
-      return undefined;
-    }
-
-    return directives.find((d) => d.name.value === CONNECT_FIELD_RESOLVER);
+  private findDirective(field: GraphQLField<any, any>, directive: string): DirectiveNode | undefined {
+    return field.astNode?.directives?.find((d) => d.name.value === directive);
   }
 
   /**
@@ -1293,21 +1294,28 @@ Example:
       throw new Error(`Invalid field context for resolver. ${error}`);
     }
 
+    const hasArgs = field.args.length > 0;
     const argsMessageName = typeFieldArgsName(methodName);
     const contextMessageName = typeFieldContextName(methodName);
 
-    // Build the arguments message
+    // Build the arguments message (only when field has arguments)
     let fieldNumber = 0;
-    messageLines.push(
-      ...this.buildMessage({
-        messageName: argsMessageName,
-        fields: field.args.map((arg) => ({
-          fieldName: graphqlFieldToProtoField(arg.name),
-          typeName: this.getProtoTypeFromGraphQL(arg.type).typeName,
-          fieldNumber: ++fieldNumber,
-        })),
-      }),
-    );
+    if (hasArgs) {
+      messageLines.push(
+        ...this.buildMessage({
+          messageName: argsMessageName,
+          fields: field.args.map((arg) => {
+            const protoType = this.getProtoTypeFromGraphQL(arg.type);
+            return {
+              fieldName: graphqlFieldToProtoField(arg.name),
+              typeName: protoType.typeName,
+              isRepeated: protoType.isRepeated,
+              fieldNumber: ++fieldNumber,
+            };
+          }),
+        }),
+      );
+    }
 
     // filter the fields in the parent type that are in the context
     const searchFields = context.split(/[\s,]+/).filter((field) => field.length > 0);
@@ -1341,13 +1349,15 @@ Example:
       description: `${CONTEXT} provides the resolver context for the field ${field.name} of type ${parent.name}.`,
     });
 
-    // add the args message to the key message
-    keyMessageFields.push({
-      fieldName: FIELD_ARGS,
-      typeName: argsMessageName,
-      fieldNumber: ++fieldNumber,
-      description: `${FIELD_ARGS} provides the arguments for the resolver field ${field.name} of type ${parent.name}.`,
-    });
+    // add the args message to the key message (only when field has arguments)
+    if (hasArgs) {
+      keyMessageFields.push({
+        fieldName: FIELD_ARGS,
+        typeName: argsMessageName,
+        fieldNumber: ++fieldNumber,
+        description: `${FIELD_ARGS} provides the arguments for the resolver field ${field.name} of type ${parent.name}.`,
+      });
+    }
 
     // build the actual request message
     messageLines.push(
@@ -1357,7 +1367,9 @@ Example:
       }),
     );
 
-    this.processedTypes.add(argsMessageName);
+    if (hasArgs) {
+      this.processedTypes.add(argsMessageName);
+    }
     this.processedTypes.add(requestName);
 
     return messageLines;
@@ -1531,9 +1543,9 @@ Example:
     }
 
     const allFields = Object.values(type.getFields());
-    // Filter out fields that have arguments as those are handled in separate resolver rpcs
+    // Filter out fields that have arguments or @connect__fieldResolver as those are handled in separate resolver rpcs
     const validFields = allFields
-      .filter((field) => field.args.length === 0)
+      .filter((field) => field.args.length === 0 && !this.findDirective(field, CONNECT_FIELD_RESOLVER))
       .filter(
         (field) =>
           !field.astNode?.directives?.some(

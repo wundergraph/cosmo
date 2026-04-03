@@ -39,6 +39,7 @@ export function updateFederatedGraph(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     req.namespace = req.namespace || DefaultNamespace;
@@ -138,6 +139,7 @@ export function updateFederatedGraph(
       targetId: federatedGraph.targetId,
       unsetLabelMatchers: req.unsetLabelMatchers,
       updatedBy: authContext.userId,
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     if (result?.deploymentErrors) {

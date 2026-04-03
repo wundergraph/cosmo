@@ -36,7 +36,8 @@ import {
   SchemaLintIssues,
 } from '../../types/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
-import { CheckSubgraph, ComposedFederatedGraph, Composer } from '../composition/composer.js';
+import { CheckSubgraph, Composer } from '../composition/composer.js';
+import { DeserializedComposedGraph } from '../composition/composeGraphs.pool.js';
 import { buildSchema } from '../composition/composition.js';
 import { getDiffBetweenGraphs, SchemaDiff } from '../composition/schemaCheck.js';
 import {
@@ -531,7 +532,7 @@ export class SchemaCheckRepository {
     return 0;
   }
 
-  public createSchemaCheckCompositions(data: { schemaCheckID: string; compositions: ComposedFederatedGraph[] }) {
+  public createSchemaCheckCompositions(data: { schemaCheckID: string; compositions: DeserializedComposedGraph[] }) {
     if (data.compositions.length === 0) {
       return;
     }
@@ -712,6 +713,7 @@ export class SchemaCheckRepository {
     chClient,
     skipProposalMatchCheck,
     webhookService,
+    webhookProxyUrl,
   }: {
     actorId: string;
     blobStorage: BlobStorage;
@@ -734,6 +736,7 @@ export class SchemaCheckRepository {
     chClient?: ClickHouseClient;
     skipProposalMatchCheck: boolean;
     webhookService: OrganizationWebhookService;
+    webhookProxyUrl?: string;
   }) {
     const breakingChanges: SchemaChange[] = [];
     const nonBreakingChanges: SchemaChange[] = [];
@@ -1450,6 +1453,7 @@ export class SchemaCheckRepository {
           ignoreExternalKeys,
         },
         webhookService,
+        webhookProxyUrl,
       });
 
       await this.addLinkedSchemaCheck({
@@ -1583,6 +1587,8 @@ export class SchemaCheckRepository {
           hasGraphPruningErrors: !!check.hasGraphPruningErrors,
           clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
           hasProposalMatchError: check.proposalMatch === 'error',
+          checkExtensionDeliveryId: check.checkExtensionDeliveryId || undefined,
+          checkExtensionErrorMessage: check.checkExtensionErrorMessage || undefined,
         }),
         clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
         graphPruningCheckSkipped: !!check.graphPruningSkipped,

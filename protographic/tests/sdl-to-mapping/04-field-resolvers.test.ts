@@ -112,6 +112,86 @@ describe('SDL to Mapping Field Resolvers', () => {
       }
     `);
   });
+  it('should correctly handle field resolvers without arguments', () => {
+    const sdl = `
+            type Query {
+                user(id: ID!): User!
+            }
+
+            type User {
+                id: ID!
+                name: String!
+                avatar: String! @connect__fieldResolver(context: "id name")
+            }
+        `;
+
+    const mappingText = compileGraphQLToMapping(sdl);
+
+    expect(mappingText.toJson()).toMatchInlineSnapshot(`
+      {
+        "operationMappings": [
+          {
+            "mapped": "QueryUser",
+            "original": "user",
+            "request": "QueryUserRequest",
+            "response": "QueryUserResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "resolveMappings": [
+          {
+            "lookupMapping": {
+              "fieldMapping": {
+                "mapped": "avatar",
+                "original": "avatar",
+              },
+              "type": "User",
+            },
+            "request": "ResolveUserAvatarRequest",
+            "response": "ResolveUserAvatarResponse",
+            "rpc": "ResolveUserAvatar",
+            "type": "LOOKUP_TYPE_RESOLVE",
+          },
+        ],
+        "service": "DefaultService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "user",
+                "original": "user",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "avatar",
+                "original": "avatar",
+              },
+            ],
+            "type": "User",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
   it('should correctly map camelCase field names to snake_case in context fields', () => {
     const sdl = `
             type Query {

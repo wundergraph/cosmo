@@ -1,0 +1,89 @@
+---
+title: "@external"
+icon: "arrow-right-from-bracket"
+description: "The @external directive declares that a field is not independently resolvable by the current subgraph, making it available for use with @requires and @provides."
+---
+
+## Definition
+
+```graphql
+directive @external on FIELD_DEFINITION | OBJECT
+```
+
+## Overview
+
+The `@external` directive declares that a field is not independently resolvable by the current subgraph. The exact behavior depends on where the field is referenced:
+
+- **Unresolvable by this subgraph** — An `@external` field referenced only in a [`@requires`](/federation/directives/requires) `FieldSet`, or defined only to satisfy an interface. The router will never consider this subgraph to resolve it. The field is defined locally so that `@requires` can reference it in its `FieldSet` or to satisfy an interface contract.
+- **Conditionally resolvable by this subgraph** — An `@external` field referenced in a [`@provides`](/federation/directives/provides) `FieldSet`. The subgraph can resolve this field, but only at specific query paths where `@provides` is applied. At all other paths, the router fetches it from another subgraph.
+
+An `@external` field must be referenced in `@key`, `@provides`, and/or `@requires`, or defined to satisfy an interface. If it is not used in any of these ways, composition will reject the schema. Every `@external` field must also have a non-external counterpart: the same field defined without `@external` in at least one other subgraph.
+
+In most schemas, `@external` only appears on entity types (types with a [`@key`](/federation/directives/key) directive), where fields come from multiple subgraphs.
+
+## Field-Level Declaration
+
+When applied to a single field definition, `@external` marks only that field as coming from another subgraph. In this example, two subgraphs contribute to the `Event` entity: the **"scheduling"** subgraph resolves `capacity` and `registrationCount`, while the **"waitlist"** subgraph needs those values to compute `spotsRemaining` and therefore declares them `@external`:
+
+```graphql
+# scheduling subgraph — resolves capacity and registrationCount
+type Event @key(fields: "id") {
+  id: ID!
+  name: String!
+  capacity: Int!
+  registrationCount: Int!
+}
+```
+
+```graphql
+# waitlist subgraph — capacity and registrationCount belong to scheduling
+type Event @key(fields: "id") {
+  id: ID!
+  capacity: Int @external
+  registrationCount: Int @external
+  spotsRemaining: Int! @requires(fields: "capacity registrationCount")
+}
+```
+
+`capacity` and `registrationCount` are declared here only so that `@requires` can reference them. The router will still fetch their values from the scheduling subgraph.
+
+## Object-Level Declaration
+
+Applying `@external` to an object type marks all fields currently defined on that type as external:
+
+```graphql
+# notifications subgraph — ContactInfo is resolved by the users subgraph
+type ContactInfo @external {
+  email: String!
+  phone: String
+}
+```
+
+This is equivalent to marking each field `@external` individually. It is typically used when a subgraph needs to reference a complete object type resolved by another subgraph.
+
+## Behavior at Composition
+
+External fields are excluded from the subgraph's contribution to the composed supergraph schema. They exist in the subgraph's SDL only to support directives that reference them. The router knows which subgraph resolves the field and will fetch it from there.
+
+If a field is declared `@external` in one subgraph but is never defined (without `@external`) in any other subgraph, composition will fail.
+
+## Key Fields and `@external`
+
+Key fields (those listed in `@key(fields: "...")`) are implicitly shareable across subgraphs and do not need `@external`. If a subgraph only needs to reference an entity without resolving any of its fields, use `resolvable: false` on the `@key` instead of adding `@external` to each field:
+
+```graphql
+# ticketing subgraph — references Event but cannot resolve its fields
+type Event @key(fields: "id", resolvable: false) {
+  id: ID!
+}
+```
+
+<Warning>
+Explicitly marking a key field as `@external` makes it truly external: the subgraph will no longer be considered a source for that field, which changes how the router plans queries. Only do this intentionally.
+</Warning>
+
+For more details on how these semantics differ across federation versions, see [Understanding Federation Versions](https://wundergraph.com/blog/understanding-federation-versions).
+
+## See Also
+
+[`@key`](/federation/directives/key) designates an object type as a federation entity. [`@requires`](/federation/directives/requires) uses external fields to declare dependencies for a locally-resolved field. [`@provides`](/federation/directives/provides) declares that external fields can be resolved at a specific query path.
