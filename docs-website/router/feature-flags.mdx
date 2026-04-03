@@ -73,4 +73,4 @@ The manifest is regenerated automatically when a feature flag is enabled, disabl
 
 ### Router behavior
 
-The router builds a separate execution pipeline for each feature flag, each with its own schema and plan cache. All pipelines share the same manifest, but each one validates and plans operations against its own schema independently. An operation in the manifest that is invalid on a particular feature flag's schema is skipped during cache warmup and returns a validation error at request time. This is expected for operations that target a different feature flag.
+Each feature flag has its own schema and plan cache. Operations in the manifest are validated per feature flag. An operation targeting one feature flag may be invalid on another — the router handles this gracefully.
