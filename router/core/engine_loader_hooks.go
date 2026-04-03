@@ -167,6 +167,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			exprCtx.Subgraph.Request.ClientTrace.FetchDuration = fetchLatency
 		}
 	}
+	loadLatency := responseInfo.LoadDuration
 
 	if f.storeSubgraphResponseBody {
 		exprCtx.Subgraph.Response.Body.Raw = responseInfo.GetResponseBody()
@@ -215,7 +216,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			zap.String("subgraph_name", ds.Name),
 			zap.String("subgraph_id", ds.ID),
 			zap.Int("status", responseInfo.StatusCode),
-			zap.Duration("latency", fetchLatency),
+			zap.Duration("latency", loadLatency),
 		}
 		path := ds.Name
 		if responseInfo.Request != nil {
@@ -286,10 +287,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 
 		attrOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 		f.metricStore.MeasureRequestCount(ctx, metricSliceAttrs, attrOpt)
-		f.metricStore.MeasureLatency(ctx, fetchLatency, metricSliceAttrs, attrOpt)
+		f.metricStore.MeasureLatency(ctx, loadLatency, metricSliceAttrs, attrOpt)
 	} else {
 		f.metricStore.MeasureRequestCount(ctx, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
-		f.metricStore.MeasureLatency(ctx, fetchLatency, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
+		f.metricStore.MeasureLatency(ctx, loadLatency, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
 	}
 
 	span.SetAttributes(traceAttrs...)
