@@ -1,0 +1,79 @@
+---
+title: "@requires"
+icon: "link"
+description: "The @requires directive declares that an entity field's resolver depends on fields from another subgraph, which the router must fetch first."
+---
+
+## Definition
+
+```graphql
+directive @requires(fields: FieldSet!) on FIELD_DEFINITION
+```
+
+## Arguments
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `fields` | `FieldSet!` | A selection set (as a string) of `@external` fields that must be resolved before this field can be computed. |
+
+## Overview
+
+The `@requires` directive declares that a field in the current subgraph cannot be resolved without first knowing the value of certain fields that are resolved by _another_ subgraph.
+
+When the router encounters a field annotated with `@requires`, it fetches the required fields from the subgraph(s) that resolve them, then passes those values alongside the entity key when calling the current subgraph's resolver. This makes it possible to implement computed fields that depend on data scattered across multiple subgraphs, without any of that orchestration leaking into your application code.
+
+To use `@requires`, the entity must have a [`@key`](/federation/directives/key) directive, and the fields listed in `fields` must be declared [`@external`](/federation/directives/external) on the same type in the current subgraph. Those same fields must be defined and resolvable in at least one other subgraph.
+
+## Example
+
+The waitlist subgraph needs to compute how many spots are left for an event. The `capacity` and `registrationCount` fields are resolved by the scheduling subgraph, so the waitlist subgraph declares them `@external` and uses `@requires` to pull them in:
+
+```graphql
+# scheduling subgraph
+type Event @key(fields: "id") {
+  id: ID!
+  name: String!
+  capacity: Int!
+  registrationCount: Int!
+}
+```
+
+```graphql
+# waitlist subgraph
+type Event @key(fields: "id") {
+  id: ID!
+  capacity: Int @external
+  registrationCount: Int @external
+  spotsRemaining: Int! @requires(fields: "capacity registrationCount")
+}
+```
+
+When a client queries `spotsRemaining`, the router first fetches `capacity` and `registrationCount` from the scheduling subgraph, then calls the waitlist subgraph's resolver for `Event.spotsRemaining` with those values already in hand. The resolver can compute the result directly, without making its own call back to scheduling.
+
+## Nested Field Dependencies
+
+`@requires` supports nested selection sets, allowing you to depend on fields within nested objects. Here the scheduling subgraph computes a `localStartTime` by pulling the timezone from the venue, which is resolved by a separate venues subgraph:
+
+```graphql
+# scheduling subgraph
+type Event @key(fields: "id") {
+  id: ID!
+  startsAt: String!
+  venue: Venue @external
+  localStartTime: String! @requires(fields: "venue { timezone }")
+}
+
+type Venue {
+  timezone: String! @external
+}
+```
+
+The router will fetch `venue.timezone` from the subgraph that resolves it and include it in the representation passed to the scheduling subgraph's resolver.
+
+## Cosmo Connect (gRPC)
+
+When using `@requires` with Cosmo Connect's gRPC integration, the router generates a dedicated RPC method for the requiring field and passes both the entity key and required field values in a batched, structured request. See [**@requires in Cosmo Connect**](/router/gRPC/requires) for the full gRPC-specific documentation, including the generated protobuf schema, batching behavior, and implementation guidelines.
+
+## See Also
+
+[`@key`](/federation/directives/key) designates an object type as a federation entity and is required for using `@requires`. [`@external`](/federation/directives/external) marks fields as resolved by another subgraph, which is required for fields listed in `@requires`. [`@provides`](/federation/directives/provides) handles the complementary case: declaring that external fields are already available at a specific query path.

@@ -5,9 +5,7 @@ description: "To maintain control over your data and ensure high performance, ut
 ---
 
 
-The router is a stateless component, allowing it to be scaled horizontally without requiring persistence. However, it needs to fetch the execution configuration from a storage source at startup and when new schema updates are published. This execution config provides the instructions for executing and planning GraphQL operations.
-
-The same approach applies to persisted operations (PO), which manage an allowlist of permitted GraphQL operations that can execute against the router. The router must download these operations once before they can be executed.
+The router is a stateless component, allowing it to be scaled horizontally without requiring persistence. However, it needs to fetch artifacts such as the execution configuration and persisted operations from a storage source. By default, the router fetches these from the Cosmo CDN. You can configure custom storage providers to use your own infrastructure instead.
 
 For both mechanisms, different storage providers can be used:
 
@@ -15,18 +13,14 @@ For both mechanisms, different storage providers can be used:
 
 * **Amazon S3**: An object storage protocol. We support any S3 compatible object-storage e.g. Minio and AWS.
 
-<Check>
-  By removing the dependency on Cosmo Cloud, your router no longer relies on us for operations while still benefiting from all its features.
-</Check>
-
-When using a custom storage provider, you are responsible for manually pushing those artifacts as part of your CI process. In the next section, we will explain how to do this:
+When using a custom storage provider, you are responsible for manually pushing those artifacts as part of your CI process.
 
 ## Define a provider
 
-Before you can use a storage provider, you have to define it in the [`storage_providers`](/router/storage-providers) section of your `config.yaml` file.
+Before you can use a storage provider, you have to define it in the `storage_providers` section of your `config.yaml` file. Each provider is given an `id` that you reference from other configuration sections.
 
 <CodeGroup>
-  ```bash config.yaml
+  ```yaml config.yaml
   version: 1
   storage_providers:
     s3:
@@ -47,7 +41,7 @@ Before you can use a storage provider, you have to define it in the [`storage_pr
 If you are using EC2 or EKS on AWS and have configured [`node IAM roles`](https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html) you don't need to provide an `access_key` or `secret_key` and the S3 client will handle this on your behalf.
 
 <CodeGroup>
-  ```bash config.yaml
+```yaml config.yaml
 version: 1
 storage_providers:
   s3:
@@ -59,103 +53,13 @@ storage_providers:
 ```
 </CodeGroup>
 
-## Execution config
+## Using storage providers
 
-After configuring the storage provider, you can use it by referencing it in the `provider_id` field.
+Once a provider is defined, you reference it by `provider_id` in the configuration of each feature. The following features support custom storage providers:
 
-<CodeGroup>
-  ```bash config.yaml
-  version: 1
-  execution_config:
-    storage:
-      provider_id: s3
-      object_path: "router.json"
-  ```
-</CodeGroup>
+* [**Execution config**](/router/configuration#execution-config-options) — load the router execution configuration from S3 instead of the Cosmo CDN.
+* [**Persisted operations**](/router/persisted-queries/persisted-operations#using-a-custom-storage-provider) — load individual persisted operations or the PQL manifest from S3.
 
-The `object_path` field points to the file in your bucket that is updated after each schema deployment in your CI/CD pipeline. The following snippet illustrates how it could look like:
-
-```bash
-# Publish your subgraph
-wgc subgraph publish my-subgraph --schema ./schema.graphqls
-# Download the latest execution config after successful composition
-wgc router fetch mygraph -o router.json
-# Upload the execution config to your S3 storage
-aws s3 cp router.json s3://cosmo/
-```
-
-First, we publish our schema changes to Cosmo. After that, we will download the latest execution config and upload it to your own S3 provider. The router will check for updates every 10 seconds (default) and hot-reload the router accordingly without impacting current user traffic.
-
-### Fallback storage
-
-You can configure a fallback storage for fetching the execution config in the event the router cannot reach the primary storage. If enabled, it will default to using the Cosmo CDN but you can specify the provider as well. You cannot use the same provider for both primary and fallback storage.
-
-<CodeGroup>
-  ```yaml config.yaml
-  version: 1
-  execution_config:
-    storage:
-      provider_id: s3
-      object_path: "router.json"
-    fallback_storage:
-      enabled: true
-      provider_id: minio
-      object_path: "router.json"
-  ```
-</CodeGroup>
-
-### Best Practices
+## Best Practices
 
 * Create different S3 credentials for READ and WRITE to reduce the attack surface.
-
-## Persisted Operations
-
-After configuring the storage provider, you can use it by referencing it in the `provider_id` field.
-
-<CodeGroup>
-  ```yaml config.yaml
-  version: 1
-  persisted_operations:
-    cache:
-      size: 100MB
-    storage:
-      provider_id: s3
-      object_prefix: "prod/operations"
-  ```
-</CodeGroup>
-
-The `object_prefix` field points to the location in the bucket where the persisted operations are uploaded. Each persisted operation needs to follow the naming convention: **SHA256** of the file + `.json` as filename extension. A persisted operation is a JSON document and must follow the following structure:
-
-* `version`: The version of the persisted operation format.
-
-* `body`: The actual content of the persistent operation.
-
-### Example
-
-Given the following persisted operation:
-
-<CodeGroup>
-  ```json c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2.json
-  {"version":1,"body":"{\n  employees {\n    id\n    details {\n      forename\n    }\n  }\n}"}
-  ```
-</CodeGroup>
-
-Upload the file to the bucket location as follows:
-
-```bash
-# Upload the persisted operation to S3
-aws s3 cp c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2.json s3://cosmo/prod/operations/
-```
-
-Now, you can make a persisted operation (PO) request against the router, and it will fetch the operation from your S3 and execute it. Subsequent requests are cached and won't add additional latency.
-
-```bash
-curl 'http://localhost:3002/graphql' \
-    -H 'graphql-client-name: test' \
-    -H 'Content-Type: application/json' \
-    -d '{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2"}}}'
-```
-
-### Best Practices
-
-* We can cache persisted operations effectively only by using an immutable filename, such as the SHA-256 hash of the file.

@@ -30,12 +30,12 @@ class InMemoryBlobStorage implements BlobStorage {
     return Promise.resolve({ stream, metadata: obj.metadata });
   }
 
-  headObject({ key, schemaVersionId }: { key: string; schemaVersionId: string }): Promise<boolean> {
+  headObject({ key, version }: { key: string; version: string }): Promise<boolean> {
     const obj = this.objects.get(key);
     if (!obj) {
       return Promise.reject(new BlobNotFoundError(`Object with key ${key} not found`));
     }
-    if (obj.metadata?.version === schemaVersionId) {
+    if (obj.metadata?.version === version) {
       return Promise.resolve(false);
     }
     return Promise.resolve(true);
@@ -551,6 +551,207 @@ describe('CDN handlers', () => {
         },
       });
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe('Test persisted operations manifest handler', async () => {
+    const federatedGraphId = 'federatedGraphId';
+    const organizationId = 'organizationId';
+    const token = await generateToken(organizationId, federatedGraphId, secretKey);
+    const blobStorage = new InMemoryBlobStorage();
+    const requestPath = `/${organizationId}/${federatedGraphId}/operations/manifest.json`;
+
+    const app = new Hono();
+
+    cdn(app, {
+      authJwtSecret: secretKey,
+      authAdmissionJwtSecret: secretAdmissionKey,
+      blobStorage,
+    });
+
+    test('it returns a 401 if no Authorization header is provided', async () => {
+      const res = await app.request(requestPath, {
+        method: 'GET',
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns a 401 if an invalid Authorization header is provided', async () => {
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token.slice(0, -1)}}`,
+        },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns a 400 if the graph or organization ids does not match with the JWT payload', async () => {
+      const res = await app.request(`/foo/bar/operations/manifest.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    test('it returns a 401 if the token has expired', async () => {
+      const token = await new SignJWT({
+        organization_id: organizationId,
+        federated_graph_id: federatedGraphId,
+        exp: Math.floor(Date.now() / 1000) - 60,
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .sign(new TextEncoder().encode(secretKey));
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns the manifest with ETag on first request', async () => {
+      const manifestContents = JSON.stringify({
+        version: 1,
+        revision: 'abc123',
+        generatedAt: '2025-01-01T00:00:00.000Z',
+        operations: {
+          sha256hash1: 'query { hello }',
+        },
+      });
+
+      blobStorage.objects.set(`${organizationId}/${federatedGraphId}/operations/manifest.json`, {
+        buffer: Buffer.from(manifestContents),
+        metadata: { version: 'abc123' },
+      });
+
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Type')).toBe('application/json; charset=UTF-8');
+      expect(res.headers.get('ETag')).toBe('"abc123"');
+      expect(await res.text()).toBe(manifestContents);
+    });
+
+    test('it returns 304 with ETag when If-None-Match matches', async () => {
+      blobStorage.objects.set(`${organizationId}/${federatedGraphId}/operations/manifest.json`, {
+        buffer: Buffer.from(JSON.stringify({ version: 1, revision: 'abc123', operations: {} })),
+        metadata: { version: 'abc123' },
+      });
+
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'If-None-Match': '"abc123"',
+        },
+      });
+      expect(res.status).toBe(304);
+      expect(res.headers.get('ETag')).toBe('"abc123"');
+    });
+
+    test('it returns 200 with new ETag when If-None-Match does not match', async () => {
+      const manifestContents = JSON.stringify({
+        version: 1,
+        revision: 'def456',
+        generatedAt: '2025-01-01T00:00:00.000Z',
+        operations: {
+          sha256hash1: 'query { hello }',
+        },
+      });
+
+      blobStorage.objects.set(`${organizationId}/${federatedGraphId}/operations/manifest.json`, {
+        buffer: Buffer.from(manifestContents),
+        metadata: { version: 'def456' },
+      });
+
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'If-None-Match': '"old-revision"',
+        },
+      });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('ETag')).toBe('"def456"');
+      expect(await res.text()).toBe(manifestContents);
+    });
+
+    test('ETag round-trip: fetch returns ETag, re-fetch with that ETag returns 304', async () => {
+      const manifestContents = JSON.stringify({
+        version: 1,
+        revision: 'rev-round-trip',
+        generatedAt: '2025-01-01T00:00:00.000Z',
+        operations: { hash1: 'query { hello }' },
+      });
+
+      blobStorage.objects.set(`${organizationId}/${federatedGraphId}/operations/manifest.json`, {
+        buffer: Buffer.from(manifestContents),
+        metadata: { version: 'rev-round-trip' },
+      });
+
+      // First request: no ETag, should get 200 with ETag
+      const res1 = await app.request(requestPath, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(res1.status).toBe(200);
+      const etag = res1.headers.get('ETag');
+      expect(etag).toBe('"rev-round-trip"');
+      expect(await res1.text()).toBe(manifestContents);
+
+      // Second request: send ETag back as If-None-Match, should get 304
+      const res2 = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'If-None-Match': etag!,
+        },
+      });
+      expect(res2.status).toBe(304);
+      expect(res2.headers.get('ETag')).toBe(etag);
+    });
+
+    test('it returns a 404 if the manifest does not exist', async () => {
+      const otherBlobStorage = new InMemoryBlobStorage();
+      const otherApp = new Hono();
+
+      cdn(otherApp, {
+        authJwtSecret: secretKey,
+        authAdmissionJwtSecret: secretAdmissionKey,
+        blobStorage: otherBlobStorage,
+      });
+
+      const res = await otherApp.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(404);
+    });
+
+    test('it does not conflict with the individual persisted operations route', async () => {
+      const operationContents = JSON.stringify({ version: 1, body: 'query { hello }' });
+      blobStorage.objects.set(`${organizationId}/${federatedGraphId}/operations/clientName/operation.json`, {
+        buffer: Buffer.from(operationContents),
+      });
+
+      const res = await app.request(`/${organizationId}/${federatedGraphId}/operations/clientName/operation.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe(operationContents);
     });
   });
 

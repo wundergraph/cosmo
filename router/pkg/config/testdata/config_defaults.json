@@ -317,7 +317,8 @@
       "Period": 1000000000,
       "RejectExceedingRequests": false,
       "RejectStatusCode": 200,
-      "HideStatsFromResponseExtension": false
+      "HideStatsFromResponseExtension": false,
+      "Overrides": null
     },
     "Storage": {
       "URLs": null,
@@ -542,6 +543,18 @@
     "Storage": {
       "ProviderID": "",
       "ObjectPrefix": ""
+    },
+    "Manifest": {
+      "Enabled": false,
+      "FileName": "manifest.json",
+      "PollInterval": 10000000000,
+      "PollJitter": 5000000000,
+      "Warmup": {
+        "Enabled": true,
+        "Workers": 4,
+        "ItemsPerSecond": 50,
+        "Timeout": 30000000000
+      }
     }
   },
   "AutomaticPersistedQueries": {

@@ -312,8 +312,13 @@ export class GraphQLToMappingVisitor {
       const fields = type.getFields();
 
       for (const field of Object.values(fields)) {
-        const hasDirective = field.astNode?.directives?.some((d) => d.name.value === CONNECT_FIELD_RESOLVER);
-        if (field.args.length === 0 && !hasDirective) {
+        const hasResolveDirective = field.astNode?.directives?.some((d) => d.name.value === CONNECT_FIELD_RESOLVER);
+        if (field.args.length === 0 && !hasResolveDirective) {
+          continue;
+        }
+
+        const hasRequireDirective = field.astNode?.directives?.some((d) => d.name.value === REQUIRES_DIRECTIVE_NAME);
+        if (field.args.length > 0 && hasRequireDirective) {
           continue;
         }
 

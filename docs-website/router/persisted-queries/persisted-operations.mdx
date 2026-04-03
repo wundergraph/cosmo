@@ -25,28 +25,75 @@ The control plane replicates these operations in the Cosmo CDN, where the router
 
 Persisted operations require some tooling on the client side. Consult the documentation for your GraphQL client library to find out how to generate a query manifest or query map.
 
-Once this list of operations has been generated, typically in your CI or CD pipeline, you can use [`wgc`](/cli/intro) to register your operations:
+### Supported manifest formats
+
+`wgc operations push` automatically detects the format of your manifest file. The following formats are supported:
+
+<Tabs>
+  <Tab title="Apollo">
+    The Apollo persisted query manifest format:
+
+    ```json manifest.json
+    {
+      "format": "apollo-persisted-query-manifest",
+      "version": 1,
+      "operations": [
+        {
+          "id": "dc67510fb4289672bea757e862d6b00e83db5d3c",
+          "name": "GetEmployees",
+          "type": "query",
+          "body": "query GetEmployees { employees { id } }"
+        }
+      ]
+    }
+    ```
+  </Tab>
+  <Tab title="Relay">
+    Relay query maps are supported in two formats — as an array of `[id, query]` pairs or as a `{id: query}` object:
+
+    ```json relay-query-map.json
+    {
+      "dc67510fb4289672bea757e862d6b00e83db5d3c": "query GetEmployees { employees { id } }",
+      "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2": "mutation UpdateEmployee($id: ID!) { updateEmployee(id: $id) { id } }"
+    }
+    ```
+
+    ```bash
+    wgc operations push mygraph -n default -c web -f relay-query-map.json
+    ```
+  </Tab>
+  <Tab title="GraphQL">
+    Plain `.graphql` or `.gql` files containing a single operation. The SHA-256 hash is computed automatically:
+
+    ```graphql operations.graphql
+    query GetEmployees {
+      employees {
+        id
+      }
+    }
+    ```
+
+    ```bash
+    wgc operations push mygraph -n default -c web -f operations.graphql
+    ```
+  </Tab>
+</Tabs>
+
+### Pushing operations
+
+Once your manifest is generated, push it using `wgc`:
 
 ```bash
 wgc operations push mygraph -n default -c web -f my-operations-manifest.json
 ```
 
-This will register the operations for your federated graph named `mygraph` in the `default` namespace (as seen in the Studio) and your client named `web` (indicated by the `graphql-client-name` HTTP header), using the same operation identifiers as your library when possible. If your library doesn't generate these identifiers, Cosmo will automatically generate them.
+This registers the operations for your federated graph named `mygraph` in the `default` namespace and your client named `web` (indicated by the `graphql-client-name` HTTP header). You can push multiple files at once using the `-f` flag multiple times.
 
-When pushing the operations, you will see a short summary of the operations that were pushed, indicating how many were created and how many were already registered. Alternatively, the `--output` flag can be used to obtain a JSON summary that can easily be processed by your tooling.
+When pushing the operations, you will see a short summary indicating how many were created and how many were already registered. Use `--format json` for machine-readable output:
 
 ```bash
-wgc operations push mygraph -n default -c my-client -f persisted-query-manifest.json --format json                                   (11-25 10:23)
-{
-  "2d9df67f96ce804da7a9107d33373132a53bf56aec29ef4b4e06569a43a16935": {
-    "body": "query Employees {\n  employees {\n    id\n    role {\n      department\n      title\n      __typename\n    }\n    details {\n      forename\n      surname\n      location\n      __typename\n    }\n    __typename\n  }\n}",
-    "status": "up_to_date"
-  },
-...
-}
+wgc operations push mygraph -n default -c my-client -f manifest.json --format json
 ```
-
-Finally, you should enable persisted operations in your GraphQL client library.
 
 To see all available options for `wgc operations push`, see [Push](/cli/operations/push).
 
@@ -68,6 +115,50 @@ Operations are currently deleted one at a time from the UI.
 <Note>
   Studio always asks for confirmation before deleting operations. If traffic is detected for the selected operation, the dialog warns that the operation is receiving traffic. If analytics data is unavailable, Studio cannot guarantee that existing clients won't break. You can always check the metrics using the link in the dialog.
 </Note>
+
+## PQL Manifest
+
+By default, the router fetches persisted operations individually from the Cosmo CDN on each request. When the **PQL manifest** is enabled, the router instead loads all persisted operations from a single manifest file at startup and serves them entirely from memory, eliminating per-request network overhead.
+
+```yaml
+persisted_operations:
+  manifest:
+    enabled: true
+```
+
+The manifest is automatically updated in the Cosmo CDN whenever operations are added or deleted via `wgc operations push` or Studio. The router polls for updates using `poll_interval` and `poll_jitter`, picking up changes without requiring a restart. You can also load the manifest from a custom [storage provider](#using-a-custom-storage-provider).
+
+<Note>
+  When the manifest is enabled, it is **authoritative** — the router does not fall back to fetching individual operations from the CDN. Unknown operation hashes are rejected immediately.
+</Note>
+
+### Cache warmup
+
+When the PQL manifest is enabled, the router automatically warms up its caches by pre-processing all operations from the manifest at startup and after each manifest update. Each operation goes through parsing, normalization, validation, and query planning — the same steps that happen on a regular request. Once warmed, every operation is served entirely from cache with zero processing overhead on the first request.
+
+Cache warmup is enabled by default and can be configured or disabled:
+
+```yaml
+persisted_operations:
+  manifest:
+    enabled: true
+    warmup:
+      enabled: true        # default: true
+      workers: 4            # number of concurrent workers (default: 4)
+      items_per_second: 50  # rate limit, 0 = unlimited (default: 50)
+      timeout: 30s          # maximum time for warmup to complete (default: 30s)
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `enabled` | `true` | Set to `false` to disable cache warmup for manifest operations. |
+| `workers` | `4` | Number of concurrent workers used to pre-process operations. Increase for large manifests. |
+| `items_per_second` | `50` | Rate limit for items processed per second. Set to `0` for unlimited throughput. |
+| `timeout` | `30s` | Maximum time allowed for the warmup to complete. If the timeout is exceeded, the router logs an error but continues serving requests normally. |
+
+## Using a custom storage provider
+
+You can load persisted operations from your own S3-compatible storage instead of the Cosmo CDN. First, [define a storage provider](/router/storage-providers), then reference it in your persisted operations configuration.
 
 ## Disallowing non-persisted Operations
 
