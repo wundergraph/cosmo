@@ -33,6 +33,10 @@ Note that unless specified by the `--namespace` parameter, the namespace will be
   If either the base composition (the federated graph with the original subgraphs) or the feature flag composition fail, the router execution config will not be updated with the feature flag configuration.
 </Warning>
 
+<Info>
+  Enabling a feature flag regenerates the [PQL manifest](/router/persisted-queries/persisted-operations#pql-manifest) for all affected federated graphs. Persisted operations that are only valid on this feature flag's schema are restored in the manifest.
+</Info>
+
 ## Parameters
 
 * `<name>`: The name of the feature flag to enable. Returns an error if the feature flag does not exist in the specified (otherwise "default") namespace.

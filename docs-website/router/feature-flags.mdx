@@ -51,3 +51,26 @@ X-Feature-Flag: test_checkout
 ```
 
 When the router receives `X-Feature-Flag: test_checkout`, it composes the operation against the replacement schema and forwards traffic to the routing URLs declared in the flag configuration.
+
+## Persisted operations
+
+Feature flags work with [persisted operations](/router/persisted-queries/persisted-operations) and the [PQL manifest](/router/persisted-queries/persisted-operations#pql-manifest).
+
+### Upload validation
+
+When you push persisted operations with `wgc operations push`, the control plane validates each operation against the base graph schema **and** all enabled feature flag composition schemas. An operation is accepted if it is valid on at least one schema. This allows you to persist operations that use fields introduced by a feature flag subgraph.
+
+### Manifest filtering
+
+The PQL manifest only includes operations the router can serve:
+
+- Operations valid on the base graph are always included.
+- Operations valid only on a feature flag schema are included while that feature flag is enabled.
+- When a feature flag is disabled, its operations are removed from the manifest. When re-enabled, they reappear.
+- When a feature flag is deleted, its operations are permanently removed from the manifest.
+
+The manifest is regenerated automatically when a feature flag is enabled, disabled, or deleted.
+
+### Router behavior
+
+The router builds a separate execution pipeline for each feature flag, each with its own schema and plan cache. All pipelines share the same manifest, but each one validates and plans operations against its own schema independently. An operation in the manifest that is invalid on a particular feature flag's schema is skipped during cache warmup and returns a validation error at request time. This is expected for operations that target a different feature flag.
