@@ -1,0 +1,151 @@
+---
+title: "Okta (OIN version)"
+description: "Configure SCIM with Okta using the app from OIN."
+icon: shield-check
+---
+
+
+### Steps to set up SCIM with Okta
+
+<Steps>
+  <Step>
+  Set up the password policy (password should contain at least one number and one symbol), if using the **Classic Engine on Okta** follow the below step&#x73;**,** or if using the  **OIE engine,**&#x66;ollow the steps as mentioned in this  ****[**Okta guide**](https://help.okta.com/oie/en-us/content/topics/identity-engine/authenticators/configure-password.htm)**.**
+
+  * Navigate to Security -> Authentication on your Okta Administrator Dashboard.
+
+  * Click Edit and update the password policy by enabling Number and Symbol, then click on Update Policy.
+
+<Frame>
+  <img
+    src="/images/studio/scim/authentication-policy-editing-in-okta.png"
+    alt="Authentication policy editing in Okta"
+    title="Authentication policy editing in Okta"
+  />
+</Frame>
+</Step>
+<Step>
+Navigate to the Applications view within your Okta Administrator Dashboard.
+</Step>
+<Step>
+Click on **Browse App Catalog.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/browse-app-catalog-in-okta-applications.png"
+    alt="Browse App Catalog in Okta Applications"
+    title="Browse App Catalog in Okta Applications"
+  />
+</Frame>
+</Step>
+<Step>
+ Search for **Wundergraph Cosmo.**
+</Step>
+<Step>
+Click on **Add Integration**.
+
+<Frame>
+  <img
+    src="/images/studio/scim/add-wundergraph-cosmo-integration.png"
+    alt="Add WunderGraph Cosmo integration"
+    title="Add WunderGraph Cosmo integration"
+  />
+</Frame>
+</Step>
+<Step>
+Now give the app a name and then click on **Next.**
+</Step>
+<Step>
+Select **Administrator sets username, user sets password** and for **Application username format** under **Credentials Details** select  **Email**and then click **Done.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/wundergraph-cosmo-sign-on-setup.png"
+    alt="WunderGraph Cosmo sign-on setup"
+    title="WunderGraph Cosmo sign-on-setup"
+  />
+</Frame>
+</Step>
+<Step>
+Navigate to the settings page on WunderGraph Cosmo and enable **SCIM.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/generative-ai-enable-option-in-cosmo.png"
+    alt="Generative AI enable option in Cosmo"
+    title="Generative AI enable option in Cosmo"
+  />
+</Frame>
+</Step>
+<Step>
+Once SCIM is enabled, you will be provided with a  **SCIM Server URL,**&#x63;opy i&#x74;**.**
+</Step>
+<Step>
+Navigate to the API Keys page on WunderGraph Cosmo and click on New API Key.
+</Step>
+<Step>
+Provide the key with a name, select **Never** for **Expires,** then select  **SCIM**under **Permissions, t**hen click on **Generate API key.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/create-scim-api-key.png"
+    alt="Create SCIM API key"
+    title="Create SCIM API key"
+  />
+</Frame>
+</Step>
+<Step>
+Copy the API key provided.
+</Step>
+<Step>
+Navigate to the provisioning tab of the app created on okta, then click on **Configure API Integration**.
+
+<Frame>
+  <img
+    src="/images/studio/scim/configure-api-integration-for-wundergraph-cosmo.png"
+    alt="Configure API Integration for WunderGraph Cosmo"
+    title="Configure API Integration for WunderGraph Cosmo"
+  />
+</Frame>
+</Step>
+<Step>
+Check the **Enable API Integration** and then populate the  **API token**with the  **API key**copied in the previous steps.
+</Step>
+<Step>
+Click on **Test API Credentials** and once it's verified successfully, click on **Save**
+</Step>
+<Step>
+Navigate to the "**to App"** ta&#x62;**, and** click on **Edit.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/test-app-to-app-provisioning-setup.png"
+    alt="Test app To App provisioning setup"
+    title="Test app To App provisioning setup"
+  />
+</Frame>
+</Step>
+<Step>
+Enable  **Create Users, Update User Attributes, Deactivate Users**and **Sync Password.**
+</Step>
+<Step>
+Under **Sync Password** for **Password type**, select **Sync Okta Password.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/provisioning-to-app-user-setup.png"
+    alt="Provisioning to App user setup"
+    title="Provisioning to App user setup"
+  />
+</Frame>
+</Step>
+<Step>
+Click **save.**
+</Step>
+<Step>
+Now you can navigate the Assignments tab and assign users/groups who should have access to WunderGraph Cosmo.
+</Step>
+</Steps>
+
+<Info>
+If you are using both **SSO with OIDC** and **SCIM**, please make sure that the users assigned in both apps are the same.
+</Info>

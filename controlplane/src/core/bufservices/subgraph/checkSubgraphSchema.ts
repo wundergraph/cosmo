@@ -7,6 +7,7 @@ import {
   CheckSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -122,6 +123,7 @@ export function checkSubgraphSchema(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     let linkedSubgraph:
@@ -189,6 +191,13 @@ export function checkSubgraphSchema(
     }
 
     const subgraphName = subgraph?.name || req.subgraphName;
+    const ignoreExternalKeys =
+      (
+        await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+        })
+      )?.enabled ?? false;
 
     const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
       labels: subgraph ? subgraph.labels : req.labels,
@@ -205,7 +214,12 @@ export function checkSubgraphSchema(
     let newGraphQLSchema: GraphQLSchema | undefined;
     if (newSchemaSDL) {
       try {
-        // Here we check if the schema is valid as a subgraph SDL
+        /* Here we check if the schema is valid as a subgraph SDL
+         * `buildSchema` only calls normalization in isolation.
+         * The `disableResolvabilityChecks` flag is only used in the federation step.
+         * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+         * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+         */
         const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
         if (!result.success) {
           return {
@@ -281,8 +295,12 @@ export function checkSubgraphSchema(
       limit,
       chClient: opts.chClient,
       newGraphQLSchema,
-      disableResolvabilityValidation: req.disableResolvabilityValidation,
+      compositionOptions: {
+        disableResolvabilityValidation: req.disableResolvabilityValidation,
+        ignoreExternalKeys,
+      },
       webhookService,
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     // Extract variables from checkResult
@@ -449,8 +467,12 @@ export function checkSubgraphSchema(
         limit: targetLimit,
         chClient: opts.chClient,
         newGraphQLSchema: targetNewGraphQLSchema,
-        disableResolvabilityValidation: req.disableResolvabilityValidation,
+        compositionOptions: {
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+          ignoreExternalKeys,
+        },
         webhookService,
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       await schemaCheckRepo.addLinkedSchemaCheck({

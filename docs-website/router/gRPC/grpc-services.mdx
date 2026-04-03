@@ -1,0 +1,112 @@
+---
+title: "gRPC Services"
+description: "Deploy gRPC services independently for distributed GraphQL Federation."
+sidebarTitle: gRPC Services
+icon: server
+---
+
+## Introduction
+
+gRPC services in Cosmo are independent, remotely deployed services that communicate with the Cosmo Router over the network using gRPC protocol. Unlike router plugins that run as local processes managed by the router, gRPC services operate as standalone microservices that can be deployed anywhere in your infrastructure.
+
+This approach is ideal for distributed architectures where services are owned by different teams, require independent scaling, or need to be implemented in languages other than Go.
+
+For an overview of gRPC concepts shared between plugins and services, see our [gRPC Concepts documentation](/router/gRPC/concepts).
+
+## Tutorial
+
+[gRPC Service Quickstart](/tutorial/grpc-service-quickstart) - Learn how to create a gRPC service and integrate it into your GraphQL Federation.
+
+## What Makes gRPC Services Unique
+
+gRPC services are standalone microservices that expose their functionality through gRPC endpoints and integrate into your GraphQL Federation as subgraphs. These services:
+
+- **Run independently** as separate deployments with their own lifecycle management
+- **Communicate over the network** using standard gRPC protocol
+- **Maintain service autonomy** while participating in the federated graph
+- **Scale independently** based on their specific requirements
+- **Support any gRPC language** - Python, Java, C#, Node.js, Rust, and many others
+
+The key distinction from router plugins is that services are:
+- **Remotely deployed** rather than co-located with the router
+- **Network-based** communication instead of inter-process communication
+- **Independently managed** with separate deployment pipelines
+- **Service-oriented** following microservices architecture patterns
+
+## Key Differences from router plugins
+
+<CardGroup cols={2}>
+    <Card title="Remote Deployment" icon="cloud">
+        Unlike plugins that run as locally forked processes managed by the router, gRPC services can be deployed anywhere in your infrastructure - different servers, containers, or even cloud regions.
+    </Card>
+    
+    <Card title="Language Agnostic" icon="globe">
+        While router plugins currently only support Go, gRPC services can be implemented in any language that supports gRPC - Python, Java, C#, Node.js, Rust, and many others.
+    </Card>
+    
+    <Card title="Independent Scaling" icon="arrows-split-up-and-left">
+        Services can be scaled independently based on their specific load patterns and resource requirements, without affecting the router or other services.
+    </Card>
+    
+    <Card title="Network Communication" icon="network-wired">
+        Communication happens over the network using standard gRPC protocols, enabling distributed architectures and cross-datacenter deployments.
+    </Card>
+    
+    <Card title="Service Autonomy" icon="building">
+        Each service maintains its own deployment lifecycle, monitoring, and operational concerns, following traditional microservices patterns.
+    </Card>
+    
+    <Card title="Team Independence" icon="users">
+        Different teams can own and operate their services independently, using their preferred languages, frameworks, and deployment strategies.
+    </Card>
+</CardGroup>
+
+## When to Choose gRPC Services
+
+**Choose gRPC Services when:**
+- <Icon icon="globe" /> You need to use languages other than Go 
+- <Icon icon="users" /> Services are owned by different teams
+- <Icon icon="arrows-split-up-and-left" /> You require independent scaling and deployment
+- <Icon icon="network-wired" /> Services are distributed across different environments
+- <Icon icon="building" /> You want to maintain existing microservices architecture
+- <Icon icon="clock" /> Services have different release cycles
+
+**Choose router plugins when:**
+- <Icon icon="rocket" /> You want the simplest possible deployment model
+- <Icon icon="bolt" /> Performance is critical (lower latency with local communication)
+- <Icon icon="laptop-code" /> You're comfortable with Go development
+- <Icon icon="arrows-rotate" /> You prefer unified deployment and monitoring
+
+## Service Architecture
+
+gRPC services integrate into GraphQL Federation through this architecture:
+
+1. **Independent Deployment**: Services are deployed and managed independently from the router
+2. **Network Discovery**: The router discovers and connects to services over the network
+3. **Protocol Translation**: The router translates GraphQL requests to gRPC calls over the network
+4. **Autonomous Operation**: Services handle their own scaling, monitoring, and lifecycle management
+5. **Distributed Response**: Results are collected from multiple distributed services and assembled
+
+## Deployment Considerations
+
+### Network Configuration
+- Services must be accessible from the router over the network
+- Consider network latency and reliability in your architecture
+- Plan for service discovery and health checking
+
+### Security
+- Implement proper authentication between router and services
+- Consider network security and encryption (when TLS support is available)
+- Follow microservices security best practices
+
+### Monitoring and Observability
+- Set up independent monitoring for each service
+- Implement distributed tracing across services
+- Plan for service health checks and circuit breakers
+
+### Scaling Strategy
+- Design services to scale independently based on load
+- Consider auto-scaling policies for each service
+- Plan for different resource requirements per service
+
+See also: [gRPC Plugins](/router/gRPC/plugins)

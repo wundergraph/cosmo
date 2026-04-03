@@ -23,3 +23,5 @@ logs
 CHANGELOG.md
 CHANGELOG
 .husky
+**/testdata
+docs-website

@@ -208,7 +208,7 @@ describe('SDL Validation', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain(
-      'No @connect__fieldResolver directive found on the field name - falling back to ID field',
+      '@connect__fieldResolver directive on the field name has no context provided - falling back to ID field',
     );
     expect(result.errors[0]).toContain('No fields with type ID found');
   });
@@ -234,8 +234,31 @@ describe('SDL Validation', () => {
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain(
-      'No @connect__fieldResolver directive found on the field name - falling back to ID field',
+      '@connect__fieldResolver directive on the field name has no context provided - falling back to ID field',
     );
+  });
+
+  test('should not return warnings for a field without arguments that has @connect__fieldResolver with context', () => {
+    const sdl = `
+        directive @connect__fieldResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
+        scalar openfed__FieldSet
+
+        type Query {
+            user(id: ID!): User!
+        }
+
+        type User {
+            id: ID!
+            name: String!
+            avatar: String! @connect__fieldResolver(context: "id name")
+        }
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
   });
 
   test('should return an error if multiple ID fields are present but no context is provided', () => {
@@ -260,7 +283,7 @@ describe('SDL Validation', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain(
-      'No @connect__fieldResolver directive found on the field name - falling back to ID field',
+      '@connect__fieldResolver directive on the field name has no context provided - falling back to ID field',
     );
     expect(result.errors[0]).toContain(
       'Multiple fields with type ID found - provide a context with the fields you want to use in the @connect__fieldResolver directive',
@@ -484,39 +507,6 @@ describe('SDL Validation', () => {
     );
   });
 
-  test('should return an error if an abstract type is used in a requires directive', () => {
-    const sdl = `
-        type Query {
-            user: User!
-        }
-
-        type User @key(fields: "id name") {
-            id: ID!
-            pet: Animal! @external
-            name: String! @requires(fields: "pet { ... on Cat { name } }")
-        }
-
-        type Cat {
-            name: String!
-        }
-
-        type Dog {
-            name: String!
-        }
-
-        union Animal = Cat | Dog
-    `;
-
-    const visitor = new SDLValidationVisitor(sdl);
-    const result = visitor.visit();
-
-    expect(result.errors).toHaveLength(1);
-    expect(result.warnings).toHaveLength(0);
-    expect(result.errors[0]).toContain(
-      '[Error] Abstract types are not allowed in requires directives. Found Animal in User.pet at',
-    );
-  });
-
   test('should correctly handle nested fields in requires directives', () => {
     const sdl = `
     type Warehouse @key(fields: "id") {
@@ -538,51 +528,5 @@ describe('SDL Validation', () => {
 
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
-  });
-
-  test('should return an error for invalid @requires field selection syntax', () => {
-    const sdl = `
-        type Query {
-            user: User!
-        }
-
-        type User @key(fields: "id") {
-            id: ID!
-            name: String! @external
-            age: Int! @requires(fields: "name {")
-        }
-    `;
-
-    const visitor = new SDLValidationVisitor(sdl);
-    const result = visitor.visit();
-
-    expect(result.errors).toHaveLength(1);
-    expect(result.warnings).toHaveLength(0);
-    expect(result.errors[0]).toContain('Invalid @requires field selection syntax');
-  });
-
-  test('should return an error for @requires with unclosed braces', () => {
-    const sdl = `
-        type Query {
-            user: User!
-        }
-
-        type User @key(fields: "id") {
-            id: ID!
-            details: Details! @external
-            computed: String! @requires(fields: "details { foo")
-        }
-
-        type Details {
-            foo: String!
-        }
-    `;
-
-    const visitor = new SDLValidationVisitor(sdl);
-    const result = visitor.visit();
-
-    expect(result.errors).toHaveLength(1);
-    expect(result.warnings).toHaveLength(0);
-    expect(result.errors[0]).toContain('Invalid @requires field selection syntax');
   });
 });

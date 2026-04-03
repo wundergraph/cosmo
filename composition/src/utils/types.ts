@@ -1,5 +1,5 @@
-import { Kind } from 'graphql';
-import { SubgraphName } from '../types/types';
+import { type Kind } from 'graphql';
+import { type SubgraphName } from '../types/types';
 
 export type RootTypeName = 'Mutation' | 'Query' | 'Subscription';
 

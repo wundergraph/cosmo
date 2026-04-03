@@ -1,0 +1,36 @@
+---
+title: "Move"
+description: "Moves the monograph from one namespace to another."
+icon: arrow-right-arrow-left
+---
+
+## Usage
+
+```bash
+npx wgc monograph move <name> -n fromNS -t toNS
+```
+
+Moving a monograph will also move the single underlying subgraph. No recomposition takes place.
+
+## Description
+
+The `npx wgc monograph move` command allows you to move a monograph into a different namespace.
+
+## Parameters
+
+* `<name>`: The name of the monograph you want to move.
+
+## Options
+
+* `-n, --namespace` : The namespace of the monograph.
+
+* `-t, --to`: The new namespace of the monograph.
+
+## Example
+
+Moves the monograph named "mygraph" into the "production" namespace.
+
+```bash
+npx wgc monograph move mygraph -n default -t production
+```
+

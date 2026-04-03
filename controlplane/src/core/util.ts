@@ -14,28 +14,13 @@ import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
 import DOMPurify from 'isomorphic-dompurify';
-import {
-  ContractTagOptions,
-  FederationResult,
-  FederationResultWithContracts,
-  LATEST_ROUTER_COMPATIBILITY_VERSION,
-  newContractTagOptionsFromArrays,
-} from '@wundergraph/composition';
-import { SubgraphType, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { MemberRole, WebsocketSubprotocol, ProposalOrigin as ProposalOriginEnum } from '../db/models.js';
-import {
-  AuthContext,
-  CompositionOptions,
-  DateRange,
-  FederatedGraphDTO,
-  Label,
-  ResponseMessage,
-  S3StorageOptions,
-} from '../types/index.js';
+import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
+import { ProposalOrigin, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
+import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
+import { paginationDefaults } from './constants.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
-import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
-import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
@@ -550,29 +535,6 @@ export const checkIfLabelMatchersChanged = (data: {
   return false;
 };
 
-export function getFederationResultWithPotentialContracts(
-  federatedGraph: FederatedGraphDTO,
-  subgraphsToCompose: SubgraphsToCompose,
-  tagOptionsByContractName: Map<string, ContractTagOptions>,
-  compositionOptions?: CompositionOptions,
-): FederationResult | FederationResultWithContracts {
-  // This condition is only true when entering the method to specifically create/update a contract
-  if (federatedGraph.contract) {
-    return composeFederatedContract(
-      subgraphsToCompose.compositionSubgraphs,
-      newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
-      federatedGraph.routerCompatibilityVersion,
-      compositionOptions,
-    );
-  }
-  return composeFederatedGraphWithPotentialContracts(
-    subgraphsToCompose.compositionSubgraphs,
-    tagOptionsByContractName,
-    federatedGraph.routerCompatibilityVersion,
-    compositionOptions,
-  );
-}
-
 export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): string {
   if (federatedGraphDTOs.length === 0) {
     return LATEST_ROUTER_COMPATIBILITY_VERSION;
@@ -582,6 +544,23 @@ export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: 
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Normalizes pagination parameters by applying defaults and clamping to safe bounds.
+ * Uses the standard pagination defaults from constants unless overridden.
+ */
+export function normalizePagination(
+  opts: { limit?: number; offset?: number },
+  overrides?: { maxLimit?: number; maxOffset?: number },
+): { limit: number; offset: number } {
+  const maxLimit = overrides?.maxLimit ?? paginationDefaults.maxLimit;
+  const maxOffset = overrides?.maxOffset ?? paginationDefaults.maxOffset;
+
+  return {
+    limit: clamp(opts.limit || paginationDefaults.defaultLimit, paginationDefaults.minLimit, maxLimit),
+    offset: clamp(opts.offset || 0, paginationDefaults.minOffset, maxOffset),
+  };
 }
 
 export const isCheckSuccessful = ({
@@ -594,6 +573,8 @@ export const isCheckSuccessful = ({
   hasProposalMatchError,
   isLinkedTrafficCheckFailed,
   isLinkedPruningCheckFailed,
+  checkExtensionDeliveryId,
+  checkExtensionErrorMessage,
 }: {
   isComposable: boolean;
   isBreaking: boolean;
@@ -604,9 +585,15 @@ export const isCheckSuccessful = ({
   hasProposalMatchError: boolean;
   isLinkedTrafficCheckFailed?: boolean;
   isLinkedPruningCheckFailed?: boolean;
+  checkExtensionDeliveryId?: string;
+  checkExtensionErrorMessage?: string;
 }) => {
   // if a subgraph is linked to another subgraph, then the status of the check depends on the traffic and pruning check of the linked subgraph
   if (isLinkedTrafficCheckFailed || isLinkedPruningCheckFailed) {
+    return false;
+  }
+
+  if (checkExtensionDeliveryId && checkExtensionErrorMessage) {
     return false;
   }
 
@@ -664,15 +651,6 @@ export const convertToSubgraphType = (type: string) => {
     }
   }
 };
-
-export function newCompositionOptions(disableResolvabilityValidation?: boolean): CompositionOptions | undefined {
-  if (!disableResolvabilityValidation) {
-    return;
-  }
-  return {
-    disableResolvabilityValidation,
-  };
-}
 
 export function toProposalOriginEnum(value: ProposalOrigin): ProposalOriginEnum {
   switch (value) {

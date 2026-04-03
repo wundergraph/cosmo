@@ -62,7 +62,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	if cfg.Timeout <= 0 {
 		w.timeout = time.Second * 30
 	}
-	w.log.Info("Warmup started",
+	w.log.Debug("Warmup started",
 		zap.Int("workers", cfg.Workers),
 		zap.Int("items_per_second", cfg.ItemsPerSecond),
 		zap.Duration("timeout", cfg.Timeout),
@@ -84,7 +84,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 		)
 		return err
 	}
-	w.log.Info("Warmup completed",
+	w.log.Debug("Warmup completed",
 		zap.Int("processed_items", completed),
 		zap.Duration("duration", time.Since(start)),
 	)
@@ -123,7 +123,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 		return 0, nil
 	}
 
-	w.log.Info("Starting processing",
+	w.log.Debug("Starting processing",
 		zap.Int("items", len(items)),
 	)
 
@@ -132,7 +132,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	done := ctx.Done()
 	index := make(chan int, len(items))
 	defer close(index)
-	itemCompleted := make(chan struct{})
+	itemCompleted := make(chan struct{}, w.workers)
 
 	for i, item := range items {
 		if item.Client == nil {
@@ -175,7 +175,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 						)
 					}
 
-					if err == nil && w.afterOperation != nil {
+					if err == nil && res != nil && w.afterOperation != nil {
 						w.afterOperation(res)
 					}
 
@@ -252,6 +252,7 @@ type CacheWarmupOperationPlanResult struct {
 	ClientName    string
 	ClientVersion string
 	PlanningTime  time.Duration
+	PlanCacheHit  bool
 }
 
 type CacheWarmupPlanningProcessor struct {
@@ -382,5 +383,6 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		ClientName:    item.Client.Name,
 		ClientVersion: item.Client.Version,
 		PlanningTime:  time.Since(planningStart),
+		PlanCacheHit:  opContext.planCacheHit,
 	}, nil
 }

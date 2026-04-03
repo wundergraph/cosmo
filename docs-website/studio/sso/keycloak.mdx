@@ -1,0 +1,151 @@
+---
+title: "Keycloak"
+description: "Setting up SSO with Keycloak"
+icon: "key"
+---
+
+### Steps to set Keyclaok as an OIDC identity provider
+
+<Steps>
+  <Step>
+    Navigate to the **Clients** view within your Keyclaok Dashboard.
+  </Step>
+  <Step>
+    Click on **Create Client**.
+  </Step>
+  <Step>
+  Select OpenID Connect as the **Client Type, and** give the client a  **Client ID**and a  **Name**and then click on **Next.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/create-openid-connect-client.png"
+    alt="Create client form for OpenID Connect with general, capability, and login settings"
+    title="Create OpenID Connect client"
+  />
+</Frame>
+  </Step>
+  <Step>
+  Enable **Client authentication,** then click on **Next** and then click on  **Save**on the next pag&#x65;**.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/create-client-settings-overview.png"
+    alt="Create client page in Cosmo Docs with client authentication on and authorization off"
+    title="Create client settings overview"
+  />
+</Frame>
+  </Step>
+  <Step>
+  Navigate to the **Credentials** tab and then copy the **Client Secret.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/client-authenticator-with-id-and-secret.png"
+    alt="Client Authenticator settings showing client ID, secret, and regenerate option"
+    title="Client Authenticator with ID and secret"
+  />
+</Frame>
+  </Step>
+  <Step>
+  Navigate to the **Realm Settings** and then copy the link of **OpenID Endpoint Configuration.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/openid-and-saml-metadata-settings.png"
+    alt="OpenID and SAML metadata settings with user-managed access turned off"
+    title="OpenID and SAML metadata settings"
+  />
+</Frame>
+  </Step>
+  <Step>
+
+  Navigate to the settings page on Cosmo.
+  </Step>
+  <Step>
+  Click on **Connect.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/organization-settings-with-ai-rbac-scim.png"
+    alt="Organization settings showing name, slug, and status of AI, RBAC, and SCIM features"
+    title="Organization settings with AI, RBAC, SCIM"
+  />
+</Frame>
+
+  </Step>
+  <Step>
+  Give the connection a name, paste the **OpenID Endpoint Configuration** copied before, into the  **Discovery Endpoint,**&#x61;nd paste the **Client ID** and  **Client secret**copied before into the **Client ID** and  **Client Secret fields respectively,** &#x61;nd then click on **Connect.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/oidc-provider-configuration-form.png"
+    alt="Connect OpenID Connect Provider form with fields for name, endpoint, and credentials"
+    title="OIDC provider configuration form"
+  />
+</Frame>
+
+  </Step>
+  <Step>
+  Configure the mapping between the roles in Cosmo and the user groups in Keycloak. The field **Group in the provider** can be populated with the name of the group or a regex to match the user groups. Once all the mappers are configured, click on **Save**.
+  
+  <Frame>
+    <img 
+    src="/images/studio/sso/group-to-role-mapping-dialog.png" 
+    alt="Group mapper configuration dialog linking provider groups to Cosmo roles"
+    title="Group-to-role mapping dialog"
+    />
+  </Frame>
+  </Step>
+  <Step>
+  Copy the sign-in and sign-out redirect URIs displayed in the dialog.
+
+<Frame>
+  <img
+    src="/images/studio/sso/oidc-provider-configuration-steps.png"
+    alt="Steps to configure OIDC provider with sign-in and sign-out redirect URLs"
+    title="OIDC provider configuration steps"
+  />
+</Frame>
+  </Step>
+  <Step>
+  Navigate back to the client created on Keycloak and populate the **Valid redirect URIs** and **Valid post Logout redirect URIs** with the above-copied sign-in and sign-out URLs respectively. Click on **Save**.
+
+<Frame>
+  <img
+    src="/images/studio/sso/access-settings-for-redirect-urls.png"
+    alt="Access settings showing valid redirect and logout URLs fields"
+    title="Access settings for redirect URLs"
+  />
+</Frame>
+
+  </Step>
+
+  <Step>
+  Navigate to the **Client Scopes** tab, click on the first client scope(usually would be \$\{**clientID}-dedicated**), and then click on **Configure a new mapper.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/client-scope-with-no-mappers-configured.png"
+    alt="Client scope page showing dedicated mappers section with no mappers added"
+    title="Client scope with no mappers configured"
+  />
+</Frame>
+  </Step>
+  <Step>
+  Select **Group Membership.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/group-membership-mapper-configuration.png"
+    alt="Configure new mapper dialog with Group Membership option for token mapping"
+    title="Group membership mapper configuration"
+  />
+</Frame>
+  </Step>
+  <Step>
+  Give the mapper a name, then populate the **Token Claim Name** with **"**&#x73;soGroup&#x73;**"** and then click on **Save.**
+  </Step>
+  <Step>
+  Now you can assign users/groups to the application, and those users will be able to log into Cosmo using the URL provided on setting up the provider.
+  </Step>
+</Steps>

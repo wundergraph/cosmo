@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -49,6 +51,7 @@ type server struct {
 	state       atomic.Pointer[serverState]
 	healthcheck health.Checker
 	baseURL     string
+	listener    net.Listener // Pre-bound listener for synchronous port check
 }
 
 type httpServerOptions struct {
@@ -64,7 +67,13 @@ type httpServerOptions struct {
 	healthCheckPath    string
 }
 
-func newServer(opts *httpServerOptions) *server {
+func newServer(opts *httpServerOptions) (*server, error) {
+	// Bind the port synchronously to detect port conflicts immediately
+	listener, err := net.Listen("tcp", opts.addr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to bind to address %s: %w", opts.addr, err)
+	}
+
 	httpServer := &http.Server{
 		Addr:        opts.addr,
 		ReadTimeout: 60 * time.Second,
@@ -89,6 +98,7 @@ func newServer(opts *httpServerOptions) *server {
 		mu:          sync.RWMutex{},
 		healthcheck: opts.healthcheck,
 		baseURL:     opts.baseURL,
+		listener:    listener, // Store the pre-bound listener
 	}
 
 	// Store the initial state with health check mux (graphServer nil until first config)
@@ -104,7 +114,7 @@ func newServer(opts *httpServerOptions) *server {
 		n.state.Load().mux.ServeHTTP(w, r)
 	})
 
-	return n
+	return n, nil
 }
 
 func (s *server) HealthChecks() health.Checker {
@@ -140,15 +150,17 @@ func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
 	}
 }
 
-// listenAndServe starts the server and blocks until the server is shutdown.
+// listenAndServe starts the server using the pre-bound listener and blocks until shutdown.
+// This method is called in a goroutine; the port was already bound in newServer().
 func (s *server) listenAndServe() error {
 	if s.tlsConfig != nil && s.tlsConfig.Enabled {
-		// Leave the cert and key empty to use the default ones
-		if err := s.httpServer.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		// Use TLS with the pre-bound listener
+		if err := s.httpServer.ServeTLS(s.listener, "", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 	} else {
-		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		// Use plain HTTP with the pre-bound listener
+		if err := s.httpServer.Serve(s.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 	}

@@ -1,0 +1,56 @@
+---
+title: "Dynatrace"
+description: "Export OpenTelemetry traces and metrics to Dynatrace and Cosmo Cloud."
+icon: "server"
+---
+
+Use multiple OTLP exporters when you want to send telemetry data to Dynatrace and Cosmo Cloud at the same time.
+
+<Warning>
+  Do not commit Dynatrace API tokens to source control. Reference them through an environment variable such as `${DYNATRACE_API_TOKEN}`.
+</Warning>
+
+## Router configuration
+
+The following example exports traces and metrics to both Cosmo Cloud and Dynatrace:
+
+<CodeGroup>
+  ```yaml config.yaml
+  telemetry:
+    service_name: "cosmo-router"
+
+    tracing:
+      enabled: true
+      exporters:
+        # Cosmo Cloud
+        - endpoint: https://cosmo-otel.wundergraph.com
+          exporter: "http"
+          headers: {Authorization: Bearer ${ROUTER_TOKEN}}
+
+        # Dynatrace traces
+        - endpoint: https://${DYNATRACEHOST}.live.dynatrace.com
+          path: /api/v2/otlp/v1/traces
+          exporter: "http"
+          headers: {Authorization: "Api-Token ${DYNATRACE_API_TOKEN}"}
+
+    metrics:
+      otlp:
+        enabled: true
+        exporters:
+          # Cosmo Cloud
+          - endpoint: https://cosmo-otel.wundergraph.com
+            exporter: "http"
+            headers: {Authorization: Bearer ${ROUTER_TOKEN}}
+
+          # Dynatrace metrics
+          - endpoint: https://${DYNATRACEHOST}.live.dynatrace.com
+            path: /api/v2/otlp/v1/metrics
+            exporter: "http"
+            headers: {Authorization: "Api-Token ${DYNATRACE_API_TOKEN}"}
+  ```
+</CodeGroup>
+
+## Notes
+
+- Dynatrace uses different OTLP HTTP paths for traces and metrics.
+- If you do not want to export to Cosmo Cloud, remove the Cosmo Cloud exporters from the configuration.

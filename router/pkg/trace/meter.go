@@ -169,7 +169,14 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 		// Either memory exporter or the configured exporters are used.
 		if config.MemoryExporter != nil {
-			opts = append(opts, sdktrace.WithSyncer(config.MemoryExporter))
+			exporter := config.MemoryExporter
+			if config.Config.TestErrorHandler != nil {
+				exporter = &errorLoggingExporter{
+					wrapped: exporter,
+					handler: config.Config.TestErrorHandler,
+				}
+			}
+			opts = append(opts, sdktrace.WithSyncer(exporter))
 		} else {
 			for _, exp := range config.Config.Exporters {
 				if exp.Disabled {
@@ -213,15 +220,13 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 	tp := sdktrace.NewTracerProvider(opts...)
 
-	// Don't set it globally when we use the router in tests.
-	// In practice, setting it globally only makes sense for module development.
+	// Don't set globals when we use the router in tests.
+	// In practice, setting them globally only makes sense for module development.
+	// In tests, the error handler is wired locally via errorLoggingExporter above.
 	if config.MemoryExporter == nil {
 		otel.SetTracerProvider(tp)
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(errHandler(config)))
 	}
-
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		config.Logger.Error("otel error", zap.Error(err))
-	}))
 
 	return tp, nil
 }

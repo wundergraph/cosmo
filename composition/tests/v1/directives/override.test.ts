@@ -1,24 +1,24 @@
 import { describe, expect, test } from 'vitest';
 import {
   ARGUMENT_DEFINITION_UPPER,
-  BatchNormalizationSuccess,
-  ConfigurationData,
+  type BatchNormalizationSuccess,
+  type ConfigurationData,
   duplicateOverriddenFieldErrorMessage,
   duplicateOverriddenFieldsError,
   equivalentSourceAndTargetOverrideErrorMessage,
-  FieldData,
+  type FieldData,
   FIRST_ORDINAL,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidFieldShareabilityError,
   invalidOverrideTargetSubgraphNameWarning,
-  ObjectDefinitionData,
+  type ObjectDefinitionData,
   OVERRIDE,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
+  type Subgraph,
   subgraphValidationError,
-  TypeName,
+  type TypeName,
 } from '../../../src';
 import { SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import { batchNormalize } from '../../../src/v1/normalization/normalization-factory';
@@ -43,7 +43,7 @@ describe('@override directive tests', () => {
     });
 
     test('that @override produces the correct engine configuration', () => {
-      const result = batchNormalize([subgraphA, subgraphE, subgraphF]) as BatchNormalizationSuccess;
+      const result = batchNormalize({ subgraphs: [subgraphA, subgraphE, subgraphF] }) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const a = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(a).toBeDefined();

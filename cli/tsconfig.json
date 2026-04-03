@@ -9,6 +9,6 @@
     "typeRoots": ["./node_modules/@types", "./src/typedefinitions"],
     "rootDir": "."
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*", "test/**/*", "e2e/**/*"],
+  "exclude": ["node_modules", "dist", "test/fixtures/**", "test/testdata/**", "coverage/**/*"]
 }
