@@ -152,32 +152,18 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 			description:    "Hash with bracket notation should use hash bucket",
 		},
 
-		// BucketNormalizedHash - request.operation.normalizedHash
+		// BucketQueryPlanHash - request.operation.queryPlanHash
 		{
-			name:           "operation normalizedHash",
-			expression:     `request.operation.normalizedHash == "12345"`,
-			expectedBucket: BucketNormalizedHash,
-			description:    "Normalized hash access should use normalized hash bucket",
+			name:           "operation queryPlanHash",
+			expression:     `request.operation.queryPlanHash == "12345"`,
+			expectedBucket: BucketQueryPlanHash,
+			description:    "Query plan hash access should use query plan hash bucket",
 		},
 		{
-			name:           "normalizedHash with bracket notation",
-			expression:     `request["operation"]["normalizedHash"]`,
-			expectedBucket: BucketNormalizedHash,
-			description:    "Normalized hash with bracket notation should use normalized hash bucket",
-		},
-
-		// BucketHash - request.operation.variablesHash
-		{
-			name:           "operation variablesHash",
-			expression:     `request.operation.variablesHash == "67890"`,
-			expectedBucket: BucketHash,
-			description:    "Variables hash access should use hash bucket",
-		},
-		{
-			name:           "variablesHash with bracket notation",
-			expression:     `request["operation"]["variablesHash"]`,
-			expectedBucket: BucketHash,
-			description:    "Variables hash with bracket notation should use hash bucket",
+			name:           "queryPlanHash with bracket notation",
+			expression:     `request["operation"]["queryPlanHash"]`,
+			expectedBucket: BucketQueryPlanHash,
+			description:    "Query plan hash with bracket notation should use query plan hash bucket",
 		},
 
 		// BucketValidationTime - request.operation.validationTime
@@ -363,8 +349,8 @@ func bucketName(bucket AttributeBucket) string {
 		return "BucketNormalizationTime"
 	case BucketHash:
 		return "BucketHash"
-	case BucketNormalizedHash:
-		return "BucketNormalizedHash"
+	case BucketQueryPlanHash:
+		return "BucketQueryPlanHash"
 	case BucketValidationTime:
 		return "BucketValidationTime"
 	case BucketPlanningTime:
@@ -390,8 +376,8 @@ func TestBucketPriority(t *testing.T) {
 	assert.True(t, BucketNameOrType < BucketPersistedID, "NameOrType should be lower priority than PersistedID")
 	assert.True(t, BucketPersistedID < BucketNormalizationTime, "PersistedID should be lower priority than NormalizationTime")
 	assert.True(t, BucketNormalizationTime < BucketHash, "NormalizationTime should be lower priority than Hash")
-	assert.True(t, BucketHash < BucketNormalizedHash, "Hash should be lower priority than NormalizedHash")
-	assert.True(t, BucketNormalizedHash < BucketValidationTime, "NormalizedHash should be lower priority than ValidationTime")
+	assert.True(t, BucketHash < BucketQueryPlanHash, "Hash should be lower priority than QueryPlanHash")
+	assert.True(t, BucketQueryPlanHash < BucketValidationTime, "QueryPlanHash should be lower priority than ValidationTime")
 	assert.True(t, BucketValidationTime < BucketPlanningTime, "ValidationTime should be lower priority than PlanningTime")
 	assert.True(t, BucketPlanningTime < BucketSubgraph, "PlanningTime should be lower priority than Subgraph")
 }

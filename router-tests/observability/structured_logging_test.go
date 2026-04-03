@@ -4201,7 +4201,7 @@ func TestAccessLogs(t *testing.T) {
 			)
 		})
 
-		t.Run("validate normalizedHash and variablesHash differ with skip/include variations", func(t *testing.T) {
+		t.Run("validate queryPlanHash differs with skip/include variations", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t,
@@ -4220,15 +4220,9 @@ func TestAccessLogs(t *testing.T) {
 							},
 						},
 						{
-							Key: "normalized_hash",
+							Key: "query_plan_hash",
 							ValueFrom: &config.CustomDynamicAttribute{
-								Expression: "request.operation.normalizedHash",
-							},
-						},
-						{
-							Key: "variables_hash",
-							ValueFrom: &config.CustomDynamicAttribute{
-								Expression: "request.operation.variablesHash",
+								Expression: "request.operation.queryPlanHash",
 							},
 						},
 						{
@@ -4266,7 +4260,7 @@ func TestAccessLogs(t *testing.T) {
 						Variables:     []byte(`{"id": 4,"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 					})
 
-					// Fourth request: different id (changes variablesHash but not normalizedHash)
+					// Fourth request: different id (same queryPlanHash as first, different non-skip/include variable)
 					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						OperationName: []byte(`"Employee"`),
 						Query:         query,
@@ -4311,47 +4305,33 @@ func TestAccessLogs(t *testing.T) {
 					require.True(t, ok)
 					require.Equal(t, hash1, hash4, "hash should be the same when only non-skip/include variables change")
 
-					// normalizedHash should differ between request 1 and 2 (different skip/include values)
-					normalizedHash1, ok := ctx1["normalized_hash"].(string)
+					// queryPlanHash should differ between request 1 and 2 (different skip/include values)
+					queryPlanHash1, ok := ctx1["query_plan_hash"].(string)
 					require.True(t, ok)
-					require.NotEmpty(t, normalizedHash1)
-					normalizedHash2, ok := ctx2["normalized_hash"].(string)
+					require.NotEmpty(t, queryPlanHash1)
+					queryPlanHash2, ok := ctx2["query_plan_hash"].(string)
 					require.True(t, ok)
-					require.NotEmpty(t, normalizedHash2)
-					require.NotEqual(t, normalizedHash1, normalizedHash2, "normalizedHash should differ when skip/include variables change")
+					require.NotEmpty(t, queryPlanHash2)
+					require.NotEqual(t, queryPlanHash1, queryPlanHash2, "queryPlanHash should differ when skip/include variables change")
 
-					// normalizedHash should be the same for request 1 and 3 (same skip/include values)
-					normalizedHash3, ok := ctx3["normalized_hash"].(string)
+					// queryPlanHash should be the same for request 1 and 3 (same skip/include values)
+					queryPlanHash3, ok := ctx3["query_plan_hash"].(string)
 					require.True(t, ok)
-					require.Equal(t, normalizedHash1, normalizedHash3, "normalizedHash should be the same for identical skip/include values")
+					require.Equal(t, queryPlanHash1, queryPlanHash3, "queryPlanHash should be the same for identical skip/include values")
 
-					// normalizedHash should be the same for request 1 and 4 (same skip/include, different id)
-					normalizedHash4, ok := ctx4["normalized_hash"].(string)
+					// queryPlanHash should be the same for request 1 and 4 (same skip/include, different id)
+					queryPlanHash4, ok := ctx4["query_plan_hash"].(string)
 					require.True(t, ok)
-					require.Equal(t, normalizedHash1, normalizedHash4, "normalizedHash should be the same when only non-skip/include variables change")
+					require.Equal(t, queryPlanHash1, queryPlanHash4, "queryPlanHash should be the same when only non-skip/include variables change")
 
-					// variablesHash should differ between request 1 and 4 (different id value)
-					variablesHash1, ok := ctx1["variables_hash"].(string)
-					require.True(t, ok)
-					require.NotEmpty(t, variablesHash1)
-					variablesHash4, ok := ctx4["variables_hash"].(string)
-					require.True(t, ok)
-					require.NotEmpty(t, variablesHash4)
-					require.NotEqual(t, variablesHash1, variablesHash4, "variablesHash should differ when variable values change")
-
-					// variablesHash should be the same for request 1 and 3 (same variable values)
-					variablesHash3, ok := ctx3["variables_hash"].(string)
-					require.True(t, ok)
-					require.Equal(t, variablesHash1, variablesHash3, "variablesHash should be the same for identical variable values")
-
-					// Third request should be a plan cache hit (same normalizedHash as first)
+					// Third request should be a plan cache hit (same queryPlanHash as first)
 					planCacheHit3, ok := ctx3["plan_cache_hit"].(bool)
 					require.True(t, ok)
 					require.True(t, planCacheHit3, "third request should be a plan cache hit")
 				})
 		})
 
-		t.Run("validate hash differs but normalizedHash matches for queries with different variable names", func(t *testing.T) {
+		t.Run("validate hash differs but queryPlanHash matches for queries with different variable names", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t,
@@ -4364,9 +4344,9 @@ func TestAccessLogs(t *testing.T) {
 							},
 						},
 						{
-							Key: "normalized_hash",
+							Key: "query_plan_hash",
 							ValueFrom: &config.CustomDynamicAttribute{
-								Expression: "request.operation.normalizedHash",
+								Expression: "request.operation.queryPlanHash",
 							},
 						},
 					},
@@ -4376,8 +4356,10 @@ func TestAccessLogs(t *testing.T) {
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					// Two queries with different variable names but identical structure.
+					// The operation names differ but hash is computed with a static empty name,
+					// so operation name does not affect hash — only the variable names ($myId vs $eid) do.
 					// hash is computed before variable remapping, so different variable names produce different hashes.
-					// normalizedHash is computed after variable remapping ($myId/$eid both become $0), so they match.
+					// queryPlanHash is computed after variable remapping ($myId/$eid both become $0), so they match.
 					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						OperationName: []byte(`"EmployeeA"`),
 						Query:         `query EmployeeA($myId: Int!) { employee(id: $myId) { id } }`,
@@ -4404,14 +4386,14 @@ func TestAccessLogs(t *testing.T) {
 					require.NotEmpty(t, hashB)
 					require.NotEqual(t, hashA, hashB, "hash should differ because variable names differ before remapping")
 
-					// normalizedHash should match (post-remapping: both $myId and $eid become $0)
-					normalizedHashA, ok := ctxA["normalized_hash"].(string)
+					// queryPlanHash should match (post-remapping: both $myId and $eid become $0)
+					queryPlanHashA, ok := ctxA["query_plan_hash"].(string)
 					require.True(t, ok)
-					require.NotEmpty(t, normalizedHashA)
-					normalizedHashB, ok := ctxB["normalized_hash"].(string)
+					require.NotEmpty(t, queryPlanHashA)
+					queryPlanHashB, ok := ctxB["query_plan_hash"].(string)
 					require.True(t, ok)
-					require.NotEmpty(t, normalizedHashB)
-					require.Equal(t, normalizedHashA, normalizedHashB, "normalizedHash should match because variable names are remapped to canonical names")
+					require.NotEmpty(t, queryPlanHashB)
+					require.Equal(t, queryPlanHashA, queryPlanHashB, "queryPlanHash should match because variable names are remapped to canonical names")
 				})
 		})
 	})

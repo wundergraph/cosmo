@@ -962,7 +962,6 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
-	requestContext.expressionContext.Request.Operation.VariablesHash = strconv.FormatUint(requestContext.operation.variablesHash, 10)
 	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
@@ -979,8 +978,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.expressionContext.Request.Operation.Hash = operationHash
 	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketHash)
 
-	requestContext.expressionContext.Request.Operation.NormalizedHash = strconv.FormatUint(requestContext.operation.internalHash, 10)
-	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizedHash)
+	requestContext.expressionContext.Request.Operation.QueryPlanHash = strconv.FormatUint(requestContext.operation.internalHash, 10)
+	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketQueryPlanHash)
 
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 		httpOperation.traceTimings.EndNormalize()
