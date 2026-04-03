@@ -456,7 +456,7 @@ export class FederatedGraphRepository {
     });
   }
 
-  private applyRbacConditionsToQuery(
+  static applyRbacConditionsToQuery(
     rbac: RBACEvaluator | undefined,
     conditions: (SQL<unknown> | undefined)[],
   ): boolean {
@@ -511,7 +511,7 @@ export class FederatedGraphRepository {
       conditions.push(eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation));
     }
 
-    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+    if (!FederatedGraphRepository.applyRbacConditionsToQuery(opts.rbac, conditions)) {
       return [];
     }
 

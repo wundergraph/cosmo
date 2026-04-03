@@ -435,7 +435,7 @@ export class FeatureFlagRepository {
     ];
 
     if (query) {
-      conditions.push(like(targets.name, `%${query}%`));
+      conditions.push(isValidUuid(query) ? eq(subgraphs.id, query) : like(targets.name, `%${query}%`));
     }
 
     const baseQuery = this.db

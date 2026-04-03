@@ -31,7 +31,6 @@ export function getFederatedGraphByName(
     req.namespace = req.namespace || DefaultNamespace;
 
     const federatedGraph = await fedRepo.byName(req.name, req.namespace);
-
     if (!federatedGraph) {
       return {
         subgraphs: [],
@@ -53,11 +52,13 @@ export function getFederatedGraphByName(
       requestSeries = await analyticsDashRepo.getWeeklyRequestSeries(federatedGraph.id, authContext.organizationId);
     }
 
+    console.log('---------------------------------------------------------------');
     const list = await subgraphRepo.listByFederatedGraph({
       federatedGraphTargetId: federatedGraph.targetId,
       published: false,
       rbac: authContext.rbac,
     });
+    console.log('---------------------------------------------------------------');
 
     const routerRequestToken = await fedRepo.getGraphSignedToken({
       federatedGraphId: federatedGraph.id,
