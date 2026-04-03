@@ -33,7 +33,7 @@ type PostHogFetchResponse = {
 type TelemetryIdentity = {
   userEmail?: string;
   organizationSlug: string;
-}
+};
 
 const buildPostHogOkResponse = () => ({
   status: 200,
@@ -125,7 +125,7 @@ const getIdentity = async (): Promise<TelemetryIdentity> => {
   try {
     if (!apiClient) {
       return {
-        organizationSlug: 'anonymous'
+        organizationSlug: 'anonymous',
       };
     }
 
@@ -139,15 +139,15 @@ const getIdentity = async (): Promise<TelemetryIdentity> => {
     if (resp.response?.code === EnumStatusCode.OK) {
       return {
         organizationSlug: resp.organizationSlug,
-        userEmail: resp.userEmail
+        userEmail: resp.userEmail,
       };
     }
   } catch (err) {
     // skip catch, returning anonymous identity if any error occurs (e.g. network issues, not logged in, etc.)
-    console.debug('Failed to get identity for telemetry, using anonymous.', err)
+    console.debug('Failed to get identity for telemetry, using anonymous.', err);
   }
   return {
-    organizationSlug: 'anonymous'
+    organizationSlug: 'anonymous',
   };
 };
 
@@ -162,7 +162,6 @@ export const capture = async (eventName: string, properties: Record<string, any>
   try {
     const identity = await getIdentity();
     const metadata = getMetadata();
-
 
     client.capture({
       distinctId: identity.userEmail ?? identity.organizationSlug,
