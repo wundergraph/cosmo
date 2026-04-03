@@ -60,7 +60,7 @@ const identify = ({
     organizationSlug,
     plan,
   });
-  posthog.group('orgslug', organizationSlug)
+  posthog.group('orgslug', organizationSlug);
   if (distinctId != email) {
     // This was an old session, aliases it to the new id
     posthog.alias(email, distinctId);
