@@ -4,13 +4,13 @@ import pLimit from 'p-limit';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
+  PersistedOperation,
   PublishedOperation,
   PublishedOperationStatus,
   PublishPersistedOperationsRequest,
   PublishPersistedOperationsResponse,
-  PersistedOperation,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate } from 'graphql';
+import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, GraphQLSchema, parse, validate } from 'graphql';
 import { PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
@@ -118,10 +118,16 @@ export function publishPersistedOperations(
         operations: [],
       };
     }
-    const graphAST = parse(schema.schema);
-    const graphSchema = graphQLBuildASTSchema(graphAST);
+    // Validate all operations against the base graph first.
+    // Only fetch feature flag schemas if any operation fails base validation.
+    const baseGraphSchema = graphQLBuildASTSchema(parse(schema.schema));
+
+    // Track which schemas each operation is valid on (for manifest filtering).
+    const operationValidity = new Map<string, { validOnBaseGraph: boolean; validOnFeatureFlagIds: string[] }>();
+
+    const baseFailedOperations: { operation: (typeof req.operations)[number]; ast: DocumentNode; error: string }[] = [];
+
     for (const operation of req.operations) {
-      const contents = operation.contents;
       let opAST: DocumentNode;
       try {
         opAST = parse(operation.contents);
@@ -129,22 +135,79 @@ export function publishPersistedOperations(
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: `Operation ${operation.id} (${contents}) is not valid: ${e}`,
+            details: `Operation ${operation.id} (${operation.contents}) is not valid: ${e}`,
           },
           operations: [],
         };
       }
-      const errors = validate(graphSchema, opAST, undefined, { maxErrors: 1 });
-      if (errors.length > 0) {
-        const errorDetails = errors.map((e) => `${e.toString()}`).join(', ');
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Operation ${operation.id} ("${contents}") is not valid: ${errorDetails}`,
-          },
-          operations: [],
-        };
+
+      const errors = validate(baseGraphSchema, opAST, undefined, { maxErrors: 1 });
+      if (errors.length === 0) {
+        operationValidity.set(operation.id, { validOnBaseGraph: true, validOnFeatureFlagIds: [] });
+      } else {
+        baseFailedOperations.push({
+          operation,
+          ast: opAST,
+          error: errors.map((e) => e.toString()).join(', '),
+        });
       }
+    }
+
+    // If all operations are valid on the base graph, skip FF schema lookup entirely.
+    if (baseFailedOperations.length > 0 && schema.schemaVersionId) {
+      const ffSchemas = await federatedGraphRepo.getFeatureFlagSchemaVersions({
+        baseSchemaVersionId: schema.schemaVersionId,
+      });
+
+      const ffValidationSchemas: { name: string; id: string; schema: GraphQLSchema }[] = [];
+      for (const ff of ffSchemas) {
+        if (!ff.schemaSDL || !ff.featureFlagName || !ff.featureFlagId) {
+          continue;
+        }
+        try {
+          ffValidationSchemas.push({
+            name: `feature flag "${ff.featureFlagName}"`,
+            id: ff.featureFlagId,
+            schema: graphQLBuildASTSchema(parse(ff.schemaSDL)),
+          });
+        } catch {
+          // Skip FF schemas that fail to parse — don't block PO upload
+        }
+      }
+
+      // Check each base-failed operation against FF schemas
+      for (const { operation, ast, error: baseError } of baseFailedOperations) {
+        const validFfIds: string[] = [];
+        for (const s of ffValidationSchemas) {
+          const errors = validate(s.schema, ast, undefined, { maxErrors: 1 });
+          if (errors.length === 0) {
+            validFfIds.push(s.id);
+          }
+        }
+
+        if (validFfIds.length === 0) {
+          const schemaNames = ['base graph', ...ffValidationSchemas.map((s) => s.name)].join(', ');
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Operation ${operation.id} ("${operation.contents}") is not valid on any schema (checked: ${schemaNames}): ${baseError}`,
+            },
+            operations: [],
+          };
+        }
+
+        operationValidity.set(operation.id, { validOnBaseGraph: false, validOnFeatureFlagIds: validFfIds });
+      }
+    } else if (baseFailedOperations.length > 0) {
+      // No FF schemas to check — report the base graph error
+      const { operation, error } = baseFailedOperations[0];
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Operation ${operation.id} ("${operation.contents}") is not valid: ${error}`,
+        },
+        operations: [],
+      };
     }
 
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
@@ -170,7 +233,7 @@ export function publishPersistedOperations(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: `Operation limit exceeded: adding ${newOperationCount} new operations would bring the total to ${allExistingOperations.length + newOperationCount}, which exceeds the maximum of ${MAX_MANIFEST_OPERATIONS} operations per graph`,
+          details: `Operation limit exceeded: adding ${newOperationCount} new operations would bring the total to ${allExistingOperations.length + newOperationCount}, which exceeds the maximum of ${MAX_MANIFEST_OPERATIONS} operations per graph. Delete unused operations before publishing new ones.`,
         },
         operations: [],
       };
@@ -207,12 +270,15 @@ export function publishPersistedOperations(
         clientName,
         operationId,
       });
+      const validity = operationValidity.get(operationId) ?? { validOnBaseGraph: true, validOnFeatureFlagIds: [] };
       const updatedOp: UpdatedPersistedOperation = {
         operationId,
         hash: operationHash,
         filePath: path,
         contents: operation.contents,
         operationNames,
+        validOnBaseGraph: validity.validOnBaseGraph,
+        validOnFeatureFlagIds: validity.validOnFeatureFlagIds,
       };
 
       if (prev === undefined) {

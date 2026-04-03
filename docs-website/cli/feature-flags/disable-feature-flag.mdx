@@ -29,6 +29,10 @@ The alias for `feature-flag` is `ff`.
 
 Note that unless specified by the `--namespace` parameter, the namespace will be automatically passed as "default".
 
+<Info>
+  Disabling a feature flag regenerates the [PQL manifest](/router/persisted-queries/persisted-operations#pql-manifest) for all affected federated graphs. Persisted operations that are only valid on this feature flag's schema are removed from the manifest until the flag is re-enabled.
+</Info>
+
 ## Parameters
 
 * `<name>`: The name of the feature flag to disable. Returns an error if the feature flag does not exist in the specified (otherwise "default") namespace.

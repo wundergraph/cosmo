@@ -1,12 +1,18 @@
 import crypto from 'node:crypto';
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { aliasedTable, and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { aliasedTable, and, asc, count, desc, eq, exists, isNull, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { FastifyBaseLogger } from 'fastify';
 import { DBSchemaChangeType } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
-import { federatedGraphClients, federatedGraphPersistedOperations, users } from '../../db/schema.js';
+import {
+  featureFlags,
+  federatedGraphClients,
+  federatedGraphPersistedOperations,
+  persistedOperationToFeatureFlags,
+  users,
+} from '../../db/schema.js';
 import type { BlobStorage } from '../blobstorage/index.js';
 import { createManifestBlobStoragePath } from '../bufservices/persisted-operation/utils.js';
 import {
@@ -62,6 +68,7 @@ export class OperationsRepository {
         createdById: userId,
         operationContent: operation.contents,
         operationNames: operation.operationNames,
+        validOnBaseGraph: operation.validOnBaseGraph ?? true,
       };
     });
 
@@ -69,7 +76,7 @@ export class OperationsRepository {
       return;
     }
 
-    await this.db
+    const inserted = await this.db
       .insert(federatedGraphPersistedOperations)
       .values(inserts)
       .onConflictDoUpdate({
@@ -78,8 +85,26 @@ export class OperationsRepository {
           federatedGraphPersistedOperations.clientId,
           federatedGraphPersistedOperations.operationId,
         ],
-        set: { updatedAt: now, updatedById: userId },
-      });
+        set: { updatedAt: now, updatedById: userId, validOnBaseGraph: sql`excluded.valid_on_base_graph` },
+      })
+      .returning({ id: federatedGraphPersistedOperations.id, operationId: federatedGraphPersistedOperations.operationId });
+
+    // Store feature flag validity links
+    const ffInserts: (typeof persistedOperationToFeatureFlags.$inferInsert)[] = [];
+    for (const row of inserted) {
+      const op = operations.find((o) => o.operationId === row.operationId);
+      if (op) {
+        for (const ffId of op.validOnFeatureFlagIds ?? []) {
+          ffInserts.push({ persistedOperationId: row.id, featureFlagId: ffId });
+        }
+      }
+    }
+    if (ffInserts.length > 0) {
+      await this.db
+        .insert(persistedOperationToFeatureFlags)
+        .values(ffInserts)
+        .onConflictDoNothing();
+    }
   }
 
   public async getPersistedOperations(
@@ -240,6 +265,26 @@ export class OperationsRepository {
     return result!.id;
   }
 
+  // Returns true if an operation is servable by the router:
+  // valid on the base graph, or linked to at least one enabled feature flag.
+  private isServableOperation() {
+    return or(
+      eq(federatedGraphPersistedOperations.validOnBaseGraph, true),
+      exists(
+        this.db
+          .select({ one: sql`1` })
+          .from(persistedOperationToFeatureFlags)
+          .innerJoin(featureFlags, eq(featureFlags.id, persistedOperationToFeatureFlags.featureFlagId))
+          .where(
+            and(
+              eq(persistedOperationToFeatureFlags.persistedOperationId, federatedGraphPersistedOperations.id),
+              eq(featureFlags.isEnabled, true),
+            ),
+          ),
+      ),
+    );
+  }
+
   public async getAllPersistedOperationsForGraph(): Promise<
     Array<{
       hash: string;
@@ -259,7 +304,12 @@ export class OperationsRepository {
       })
       .from(federatedGraphPersistedOperations)
       .innerJoin(federatedGraphClients, eq(federatedGraphClients.id, federatedGraphPersistedOperations.clientId))
-      .where(eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId));
+      .where(
+        and(
+          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+          this.isServableOperation(),
+        ),
+      );
 
     return results
       .filter((r) => r.operationContent != null)
