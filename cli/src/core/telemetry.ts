@@ -144,7 +144,9 @@ const getIdentity = async (): Promise<TelemetryIdentity> => {
     }
   } catch (err) {
     // skip catch, returning anonymous identity if any error occurs (e.g. network issues, not logged in, etc.)
-    console.debug('Failed to get identity for telemetry, using anonymous.', err);
+    if (process.env.DEBUG) {
+      console.debug('Failed to get identity for telemetry, using anonymous.', err);
+    }
   }
   return {
     organizationSlug: 'anonymous',
