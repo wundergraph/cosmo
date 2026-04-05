@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { aliasedTable, and, asc, count, desc, eq, exists, isNull, or, sql } from 'drizzle-orm';
+import { aliasedTable, and, asc, count, desc, eq, exists, inArray, isNull, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { FastifyBaseLogger } from 'fastify';
@@ -87,9 +87,13 @@ export class OperationsRepository {
         ],
         set: { updatedAt: now, updatedById: userId, validOnBaseGraph: sql`excluded.valid_on_base_graph` },
       })
-      .returning({ id: federatedGraphPersistedOperations.id, operationId: federatedGraphPersistedOperations.operationId });
+      .returning({
+        id: federatedGraphPersistedOperations.id,
+        operationId: federatedGraphPersistedOperations.operationId,
+      });
 
-    // Store feature flag validity links
+    // Replace feature flag validity links for the affected persisted operations
+    const insertedIds = inserted.map((row) => row.id);
     const ffInserts: (typeof persistedOperationToFeatureFlags.$inferInsert)[] = [];
     for (const row of inserted) {
       const op = operations.find((o) => o.operationId === row.operationId);
@@ -99,11 +103,14 @@ export class OperationsRepository {
         }
       }
     }
-    if (ffInserts.length > 0) {
+    // Delete stale links before inserting the current set
+    if (insertedIds.length > 0) {
       await this.db
-        .insert(persistedOperationToFeatureFlags)
-        .values(ffInserts)
-        .onConflictDoNothing();
+        .delete(persistedOperationToFeatureFlags)
+        .where(inArray(persistedOperationToFeatureFlags.persistedOperationId, insertedIds));
+    }
+    if (ffInserts.length > 0) {
+      await this.db.insert(persistedOperationToFeatureFlags).values(ffInserts).onConflictDoNothing();
     }
   }
 
@@ -305,10 +312,7 @@ export class OperationsRepository {
       .from(federatedGraphPersistedOperations)
       .innerJoin(federatedGraphClients, eq(federatedGraphClients.id, federatedGraphPersistedOperations.clientId))
       .where(
-        and(
-          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
-          this.isServableOperation(),
-        ),
+        and(eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId), this.isServableOperation()),
       );
 
     return results

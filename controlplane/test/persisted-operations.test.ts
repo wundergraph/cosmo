@@ -1,24 +1,27 @@
 import crypto from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi, type Mock } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
+import { persistedOperationToFeatureFlags } from '../src/db/schema.js';
+import { FeatureFlagRepository } from '../src/core/repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
+import { NamespaceRepository } from '../src/core/repositories/NamespaceRepository.js';
 import { MAX_MANIFEST_OPERATIONS, OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
 import {
   afterAllSetup,
   beforeAllSetup,
+  createTestGroup,
+  createTestRBACEvaluator,
   genID,
   genUniqueLabel,
   TestUser,
-  createTestRBACEvaluator,
-  createTestGroup,
 } from '../src/core/test-util.js';
 import {
-  SetupTest,
   createFeatureFlag,
   deleteFeatureFlag,
   featureFlagIntegrationTestSetUp,
+  SetupTest,
   toggleFeatureFlag,
 } from './test-util.js';
 
@@ -49,12 +52,7 @@ const setupFederatedGraphWithFeatureFlag = async (client: Client) => {
   const labels = [{ key: 'team', value: genID('label') }];
   const fedGraphName = genID('fedGraph');
 
-  await featureFlagIntegrationTestSetUp(
-    client,
-    [{ name: 'users', hasFeatureSubgraph: true }],
-    fedGraphName,
-    labels,
-  );
+  await featureFlagIntegrationTestSetUp(client, [{ name: 'users', hasFeatureSubgraph: true }], fedGraphName, labels);
 
   const featureFlagName = genID('flag');
   await createFeatureFlag(client, featureFlagName, labels, ['users-feature'], 'default', true);
@@ -428,6 +426,94 @@ describe('Persisted operations', (ctx) => {
       expect(resp.response?.code).toBe(EnumStatusCode.ERR);
       expect(resp.response?.details).toContain('not valid on any schema');
       expect(resp.response?.details).toContain('nonExistentField');
+    });
+
+    test('Should replace stale feature flag links when re-publishing operations', async (testContext) => {
+      const { client, server, users } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const labels = [{ key: 'team', value: genID('label') }];
+      const fedGraphName = genID('fedGraph');
+
+      await featureFlagIntegrationTestSetUp(
+        client,
+        [{ name: 'users', hasFeatureSubgraph: true }],
+        fedGraphName,
+        labels,
+      );
+
+      // Create two feature flags
+      const ff1Name = genID('flag1');
+      const ff2Name = genID('flag2');
+      await createFeatureFlag(client, ff1Name, labels, ['users-feature'], 'default', true);
+      await createFeatureFlag(client, ff2Name, labels, ['users-feature'], 'default', true);
+
+      const user = users.adminAliceCompanyA;
+      const db = server.db;
+      const logger = server.log;
+
+      // Resolve IDs
+      const fedGraphRepo = new FederatedGraphRepository(logger, db, user.organizationId);
+      const fedGraph = await fedGraphRepo.byName(fedGraphName, 'default');
+      expect(fedGraph).toBeDefined();
+
+      const namespaceRepo = new NamespaceRepository(db, user.organizationId);
+      const namespace = await namespaceRepo.byName('default');
+      expect(namespace).toBeDefined();
+
+      const ffRepo = new FeatureFlagRepository(logger, db, user.organizationId);
+      const ff1 = await ffRepo.getFeatureFlagByName({ featureFlagName: ff1Name, namespaceId: namespace!.id });
+      const ff2 = await ffRepo.getFeatureFlagByName({ featureFlagName: ff2Name, namespaceId: namespace!.id });
+      expect(ff1).toBeDefined();
+      expect(ff2).toBeDefined();
+
+      const opsRepo = new OperationsRepository(db, fedGraph!.id);
+      const clientId = await opsRepo.registerClient('test-client', user.userId);
+
+      const opId = genID('op');
+      const makeOp = (ffIds: string[]) => ({
+        operationId: opId,
+        hash: crypto.createHash('sha256').update(opId).digest('hex'),
+        filePath: `${opId}.graphql`,
+        contents: `query { users { id username } }`,
+        operationNames: ['Users'],
+        validOnBaseGraph: false,
+        validOnFeatureFlagIds: ffIds,
+      });
+
+      // First publish: link to FF1
+      await opsRepo.updatePersistedOperations(clientId, user.userId, [makeOp([ff1!.id])]);
+
+      // Query the junction table to get the persisted operation ID
+      const linksAfterFirst = await db.select().from(persistedOperationToFeatureFlags);
+
+      // Filter to only links for our feature flags
+      const relevantLinksFirst = linksAfterFirst.filter(
+        (l) => l.featureFlagId === ff1!.id || l.featureFlagId === ff2!.id,
+      );
+      expect(relevantLinksFirst).toHaveLength(1);
+      expect(relevantLinksFirst[0].featureFlagId).toBe(ff1!.id);
+
+      // Second publish: change link to FF2 (should remove FF1 link)
+      await opsRepo.updatePersistedOperations(clientId, user.userId, [makeOp([ff2!.id])]);
+
+      const linksAfterSecond = await db.select().from(persistedOperationToFeatureFlags);
+
+      const relevantLinksSecond = linksAfterSecond.filter(
+        (l) => l.featureFlagId === ff1!.id || l.featureFlagId === ff2!.id,
+      );
+      expect(relevantLinksSecond).toHaveLength(1);
+      expect(relevantLinksSecond[0].featureFlagId).toBe(ff2!.id);
+
+      // Third publish: no feature flags (should remove all links)
+      await opsRepo.updatePersistedOperations(clientId, user.userId, [makeOp([])]);
+
+      const linksAfterThird = await db.select().from(persistedOperationToFeatureFlags);
+
+      const relevantLinksThird = linksAfterThird.filter(
+        (l) => l.featureFlagId === ff1!.id || l.featureFlagId === ff2!.id,
+      );
+      expect(relevantLinksThird).toHaveLength(0);
     });
   });
 
