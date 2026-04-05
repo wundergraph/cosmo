@@ -958,6 +958,9 @@ export class SubgraphRepository {
         protoSchemaVersion: schema.protobufSchemaVersions.protoSchema,
         protoMappings: schema.protobufSchemaVersions.protoMappings,
         protoLock: schema.protobufSchemaVersions.protoLock,
+        // Plugin Data
+        pluginDataPlatforms: schema.pluginImageVersions.platform,
+        pluginDataVersion: schema.pluginImageVersions.version,
       })
       .from(schema.targets)
       .innerJoin(
@@ -979,6 +982,14 @@ export class SubgraphRepository {
           eq(schema.subgraphs.schemaVersionId, schema.protobufSchemaVersions.schemaVersionId),
         ),
       )
+      .leftJoin(
+        schema.pluginImageVersions,
+        and(
+          eq(schema.subgraphs.type, 'grpc_plugin'),
+          eq(schema.subgraphs.schemaVersionId, schema.pluginImageVersions.schemaVersionId),
+        ),
+      )
+      .orderBy(asc(schema.schemaVersion.createdAt))
       .where(and(...conditions))
       .execute();
 
@@ -997,6 +1008,13 @@ export class SubgraphRepository {
           mappings: sg.protoMappings ?? '',
           lock: sg.protoLock ?? '',
         };
+
+        if (sg.type === 'grpc_plugin') {
+          proto.pluginData = {
+            platforms: sg.pluginDataPlatforms ?? [],
+            version: sg.pluginDataVersion ?? 'v1',
+          };
+        }
       }
 
       return {
