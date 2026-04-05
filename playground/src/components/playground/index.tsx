@@ -1,3 +1,4 @@
+import { BoltIcon } from '@heroicons/react/24/solid';
 import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
@@ -11,7 +12,7 @@ import {
   parse,
   validate,
 } from 'graphql';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
@@ -23,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
-import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView } from './types';
+import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, CacheMode } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
 import {
@@ -154,12 +155,25 @@ const graphiQLFetch = async (
   onFetch: any,
   url: URL,
   init: RequestInit,
+  cacheMode?: CacheMode,
 ) => {
   try {
     const initialHeaders = init.headers as Record<string, string>;
     let headers: Record<string, string> = scripts?.transformHeaders
       ? scripts.transformHeaders(initialHeaders)
       : { ...initialHeaders };
+
+    // Inject entity cache control headers based on cache mode
+    delete headers['X-WG-Disable-Entity-Cache'];
+    delete headers['X-WG-Disable-Entity-Cache-L1'];
+    delete headers['X-WG-Disable-Entity-Cache-L2'];
+    if (cacheMode === 'disabled') {
+      headers['X-WG-Disable-Entity-Cache'] = 'true';
+    } else if (cacheMode === 'no-l1') {
+      headers['X-WG-Disable-Entity-Cache-L1'] = 'true';
+    } else if (cacheMode === 'no-l2') {
+      headers['X-WG-Disable-Entity-Cache-L2'] = 'true';
+    }
 
     headers = substituteHeadersFromEnv(headers, '0');
 
@@ -225,6 +239,117 @@ const graphiQLFetch = async (
   }
 };
 
+type CacheSummary = { hits: number; total: number } | null;
+
+const collectCacheSummary = (fetches: any): CacheSummary => {
+  if (!fetches) return null;
+
+  let hits = 0;
+  let total = 0;
+
+  const walkFetch = (node: any) => {
+    if (!node) return;
+
+    const trace = node.trace || node.datasource_load_trace;
+
+    // Count every fetch that has a trace (i.e., a real datasource fetch).
+    if (trace) {
+      total++;
+      if (trace.load_skipped) {
+        // Skipped fetches (e.g., @requestScoped L1 injection) count as cache hits.
+        hits++;
+      } else {
+        const ct = trace.cache_trace;
+        if (ct && (ct.l1_hit > 0 || ct.l2_hit > 0)) {
+          hits++;
+        }
+      }
+    }
+
+    const children = node.children || node.fetches || node.traces;
+    if (children) {
+      for (const child of children) {
+        walkFetch(child.fetch || child);
+      }
+    }
+  };
+
+  walkFetch(fetches);
+  return total > 0 ? { hits, total } : null;
+};
+
+const CacheBadge = ({ hits, total }: { hits: number; total: number }) => {
+  const pct = Math.round((hits / total) * 100);
+  const allHit = hits === total;
+  const noneHit = hits === 0;
+
+  return (
+    <TooltipProvider>
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger>
+          <div
+            className={cn(
+              'flex h-8 items-center gap-x-1.5 rounded-md border px-3 text-xs font-medium',
+              noneHit && 'bg-secondary text-secondary-foreground',
+              allHit && 'border-transparent bg-success text-success-foreground',
+              !noneHit && !allHit && 'border-transparent text-white',
+            )}
+            style={
+              !noneHit && !allHit
+                ? {
+                    background: `linear-gradient(to right, hsl(var(--success)) ${pct}%, hsl(var(--muted)) ${pct}%)`,
+                  }
+                : undefined
+            }
+          >
+            <BoltIcon className={cn('h-3.5 w-3.5', noneHit ? 'text-muted-foreground' : 'text-current')} />
+            <span>{hits}/{total} Cached</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          {allHit
+            ? 'All fetches served from cache'
+            : noneHit
+              ? 'No cache hits'
+              : `${hits} of ${total} fetches served from cache`}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+const cacheModeLabels: Record<CacheMode, string> = {
+  enabled: 'Caching enabled',
+  'no-l1': 'Caching (L2 only)',
+  'no-l2': 'Caching (L1 only)',
+  disabled: 'Caching disabled',
+};
+
+const cacheModeColors: Record<CacheMode, string> = {
+  enabled: 'border-success/50 bg-success/10 text-success',
+  'no-l1': 'border-orange-500/50 bg-orange-500/10 text-orange-500',
+  'no-l2': 'border-orange-500/50 bg-orange-500/10 text-orange-500',
+  disabled: 'border-destructive/50 bg-destructive/10 text-destructive',
+};
+
+const CacheControl = () => {
+  const { cacheMode, setCacheMode } = useContext(PlaygroundContext);
+
+  return (
+    <Select value={cacheMode} onValueChange={(val) => setCacheMode(val as CacheMode)}>
+      <SelectTrigger className={cn('h-8 w-auto max-w-[170px] text-xs font-medium', cacheModeColors[cacheMode])}>
+        <SelectValue>{cacheModeLabels[cacheMode]}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="enabled">Caching enabled</SelectItem>
+        <SelectItem value="no-l1">Caching (L2 only)</SelectItem>
+        <SelectItem value="no-l2">Caching (L1 only)</SelectItem>
+        <SelectItem value="disabled">Caching disabled</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+};
+
 const ResponseToolbar = () => {
   const { view, setView } = useContext(PlaygroundContext);
 
@@ -279,11 +404,27 @@ const ResponseToolbar = () => {
   };
 
   const { status, statusText } = useContext(PlaygroundContext);
+  const { response } = useContext(TraceContext);
+
+  const cacheSummary = useMemo<CacheSummary>(() => {
+    try {
+      const parsed = JSON.parse(response || '{}');
+      // Skip introspection responses — they have __schema in data
+      if (parsed?.data?.__schema) return null;
+      const trace = parsed?.extensions?.trace;
+      if (!trace) return null;
+      return collectCacheSummary(trace.fetches || trace);
+    } catch {
+      return null;
+    }
+  }, [response]);
 
   const isSuccess = !!status && status >= 200 && status < 300;
 
   return (
     <div className="flex items-center gap-x-2">
+      <CacheControl />
+      {cacheSummary && <CacheBadge hits={cacheSummary.hits} total={cacheSummary.total} />}
       {(status || statusText) && (
         <Badge className="h-8" variant={isSuccess ? 'success' : 'destructive'}>
           {!isSuccess && <ExclamationTriangleIcon className="mr-1 h-4 w-4" />}
@@ -435,6 +576,10 @@ export const Playground = (input: {
 
   const [isMounted, setIsMounted] = useState(false);
   const [view, setView] = useState<PlaygroundView>('response');
+  const [cacheMode, setCacheMode] = useState<CacheMode>('enabled');
+  const cacheModeRef = useRef<CacheMode>(cacheMode);
+  cacheModeRef.current = cacheMode;
+  const suppressSchemaRefetch = useRef(false);
 
   const [schema, setSchema] = useState<GraphQLSchema | null>(null);
 
@@ -467,6 +612,34 @@ export const Playground = (input: {
   const [headers, setHeaders] = useState(`{
   "X-WG-TRACE" : "true"
 }`);
+
+  // Sync cache mode into the visible headers JSON editor.
+  // Uses suppressSchemaRefetch to prevent the schema re-fetch that would reset stats.
+  const cacheHeaderKeys = [
+    'X-WG-Disable-Entity-Cache',
+    'X-WG-Disable-Entity-Cache-L1',
+    'X-WG-Disable-Entity-Cache-L2',
+  ];
+  useEffect(() => {
+    try {
+      const parsed = JSON.parse(headers || '{}');
+      for (const key of cacheHeaderKeys) delete parsed[key];
+      if (cacheMode === 'disabled') {
+        parsed['X-WG-Disable-Entity-Cache'] = 'true';
+      } else if (cacheMode === 'no-l1') {
+        parsed['X-WG-Disable-Entity-Cache-L1'] = 'true';
+      } else if (cacheMode === 'no-l2') {
+        parsed['X-WG-Disable-Entity-Cache-L2'] = 'true';
+      }
+      const newHeaders = JSON.stringify(parsed, null, 2);
+      if (newHeaders !== headers) {
+        suppressSchemaRefetch.current = true;
+        setHeaders(newHeaders);
+      }
+    } catch {
+      // Headers aren't valid JSON — don't interfere
+    }
+  }, [cacheMode]);
 
   const [response, setResponse] = useState<string>('');
 
@@ -601,6 +774,10 @@ export const Playground = (input: {
   };
 
   useEffect(() => {
+    if (suppressSchemaRefetch.current) {
+      suppressSchemaRefetch.current = false;
+      return;
+    }
     getSchema();
   }, [headers]);
 
@@ -618,7 +795,7 @@ export const Playground = (input: {
       url: url,
       subscriptionUrl: url.replace('http', 'ws'),
       fetch: (...args) =>
-        graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit),
+        graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit, cacheModeRef.current),
     });
   }, [schema, clientValidationEnabled]);
 
@@ -692,6 +869,8 @@ export const Playground = (input: {
           statusText,
           view,
           setView,
+          cacheMode,
+          setCacheMode,
         }}
       >
         <TraceContext.Provider
