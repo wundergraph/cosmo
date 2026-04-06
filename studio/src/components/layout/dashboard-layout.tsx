@@ -129,7 +129,9 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     const basePath = `/${user?.currentOrganization.slug || organizationSlug}`;
     const nsQueryString = `?namespace=${encodeURIComponent(namespace.name)}`;
 
+    // CORE PRODUCT
     const navigation: Partial<NavLink>[] = [
+      { title: 'CORE PRODUCT' },
       {
         title: 'Graphs',
         href: basePath + `/graphs${nsQueryString}`,
@@ -140,12 +142,13 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         href: basePath + `/subgraphs${nsQueryString}`,
         icon: <Component2Icon className="size-4" />,
       },
+      // PLATFORM & RUNTIME
+      { title: 'PLATFORM & RUNTIME' },
       {
         title: 'Feature Flags',
         href: basePath + `/feature-flags${nsQueryString}`,
         icon: <MdOutlineFeaturedPlayList className="size-4" />,
         matchExact: false,
-        separator: !isAdminOrDeveloper,
       },
     ];
 
@@ -165,12 +168,13 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
           title: 'Cache Warmer',
           href: basePath + `/cache-warmer${nsQueryString}`,
           icon: <FaGripfire className="size-4" />,
-          separator: true,
         },
       );
     }
 
+    // ORGANISATION
     navigation.push(
+      { title: 'ORGANISATION' },
       {
         title: 'Members',
         href: basePath + '/members',
@@ -211,6 +215,25 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       );
     }
 
+    if (isAdmin) {
+      navigation.push({
+        title: 'Audit log',
+        href: basePath + '/audit-log',
+        icon: <AiOutlineAudit className="size-4" />,
+      });
+    }
+
+    // SETTINGS & ACCOUNT
+    navigation.push({ title: 'SETTINGS & ACCOUNT' });
+
+    if (isAdminOrDeveloper) {
+      navigation.push({
+        title: 'Settings',
+        href: basePath + '/settings',
+        icon: <PiGear className="size-4" />,
+      });
+    }
+
     if (plans.data?.plans?.length && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY && isAdmin) {
       navigation.push({
         title: 'Billing',
@@ -219,28 +242,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       });
     }
 
-    if (isAdmin) {
-      navigation.push({
-        title: 'Audit log',
-        href: basePath + '/audit-log',
-        icon: <AiOutlineAudit className="size-4" />,
-        separator: !isAdminOrDeveloper,
-      });
-    }
-
-    if (isAdminOrDeveloper) {
-      navigation.push({
-        title: 'Settings',
-        href: basePath + '/settings',
-        icon: <PiGear className="size-4" />,
-        separator: true,
-      });
-    }
-
     navigation.push(
-      {
-        title: 'Account',
-      },
       {
         title: (
           <>

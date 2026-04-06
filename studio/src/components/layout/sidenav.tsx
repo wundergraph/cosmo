@@ -173,28 +173,35 @@ export const SideNav = (props: SideNavLayoutProps) => {
             {props.links?.map((item, index) => {
               if (!item) return null;
 
+              if (!item.href) {
+                return (
+                  <div key={index}>
+                    {index > 0 && <Separator orientation="horizontal" className="mb-1 mt-3 hidden lg:block" />}
+                    <p className="hidden px-3.5 pb-1 pt-2.5 text-[10px] uppercase tracking-[0.7px] text-muted-foreground lg:block">
+                      {item.title}
+                    </p>
+                  </div>
+                );
+              }
+
               const isCurrent =
                 item.href && isActive(encodeURI(item.href.split('?')[0]), router.asPath.split('?')[0], item.matchExact);
 
               return (
                 <div key={index}>
-                  {item.href ? (
-                    <Link
-                      key={index}
-                      href={item.href}
-                      className={cn(
-                        'group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground',
-                        isCurrent ? 'bg-accent/80' : 'transparent',
-                      )}
-                    >
-                      {item.icon}
-
-                      <span className={cn('whitespace-nowrap', item.className)}>{item.title}</span>
-                    </Link>
-                  ) : (
-                    <h4 className="hidden px-3 py-2 text-sm text-muted-foreground lg:block">{item.title}</h4>
-                  )}
-                  {item.separator && <Separator orientation="horizontal" className="my-3 hidden lg:block" />}
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      'group flex items-center gap-2 rounded-r-md py-2 text-sm',
+                      isCurrent
+                        ? '-ml-3 border-l-2 border-primary bg-primary/10 pl-3 pr-3 font-medium text-primary'
+                        : 'px-3 hover:bg-accent hover:text-accent-foreground',
+                    )}
+                  >
+                    {item.icon}
+                    <span className={cn('whitespace-nowrap', item.className)}>{item.title}</span>
+                  </Link>
+                  {item.separator && <Separator orientation="horizontal" className="my-2 hidden lg:block" />}
                 </div>
               );
             })}
