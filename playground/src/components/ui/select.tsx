@@ -96,7 +96,7 @@ const SelectItem = React.forwardRef<
       </SelectPrimitive.ItemIndicator>
     </span>
     <SelectPrimitive.ItemText asChild>
-      <p className="whitespace-pre-wrap">{children}</p>
+      <span className="whitespace-pre-wrap">{children}</span>
     </SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ));
