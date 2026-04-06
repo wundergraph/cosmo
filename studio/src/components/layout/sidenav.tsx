@@ -192,9 +192,9 @@ export const SideNav = (props: SideNavLayoutProps) => {
                   <Link
                     href={item.href}
                     className={cn(
-                      'group mr-2 flex items-center rounded-r-md py-2 text-sm',
+                      'group mr-2 flex items-center rounded-md py-2 text-sm',
                       isCurrent
-                        ? 'border-l-[3px] border-primary bg-primary/10 font-medium text-primary'
+                        ? 'lg:border-l-[3px] border-primary bg-muted lg:bg-primary/10 font-medium text-foreground lg:text-primary lg:rounded-l-none lg:rounded-r-md'
                         : 'gap-2 px-3 hover:bg-accent hover:text-accent-foreground',
                     )}
                   >
