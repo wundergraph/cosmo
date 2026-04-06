@@ -336,6 +336,12 @@ func requestErrorsFromHttpError(httpErr HttpError) graphqlerrors.RequestErrors {
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.
 // It also logs additional information about the error.
 func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, propagation *HeaderPropagation) {
+	// Client disconnections: no point writing a response, and the default case
+	// would produce a 500 status code that otelhttp interprets as an error.
+	if errors.Is(err, context.Canceled) {
+		return
+	}
+
 	requestLogger.Debug("operation error", zap.Error(err))
 
 	var reportErr ReportError
