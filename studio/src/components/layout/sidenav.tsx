@@ -192,14 +192,23 @@ export const SideNav = (props: SideNavLayoutProps) => {
                   <Link
                     href={item.href}
                     className={cn(
-                      'group flex items-center gap-2 rounded-r-md py-2 text-sm',
+                      'group mr-2 flex items-center rounded-r-md py-2 text-sm',
                       isCurrent
-                        ? '-ml-3 border-l-2 border-primary bg-primary/10 pl-3 pr-3 font-medium text-primary'
-                        : 'px-3 hover:bg-accent hover:text-accent-foreground',
+                        ? 'border-l-2 border-primary bg-primary/10 font-medium text-primary'
+                        : 'gap-2 px-3 hover:bg-accent hover:text-accent-foreground',
                     )}
                   >
-                    {item.icon}
-                    <span className={cn('whitespace-nowrap', item.className)}>{item.title}</span>
+                    {isCurrent ? (
+                      <span className="flex min-w-0 flex-1 items-center gap-2 pl-[9px] pr-3">
+                        {item.icon}
+                        <span className={cn('whitespace-nowrap', item.className)}>{item.title}</span>
+                      </span>
+                    ) : (
+                      <>
+                        {item.icon}
+                        <span className={cn('whitespace-nowrap', item.className)}>{item.title}</span>
+                      </>
+                    )}
                   </Link>
                   {item.separator && <Separator orientation="horizontal" className="my-2 hidden lg:block" />}
                 </div>
