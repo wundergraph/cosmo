@@ -292,8 +292,10 @@ func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {
 	return nil
 }
 
-// SpanNameFormatter formats the span name based on the http request
-func SpanNameFormatter(_ string, r *http.Request) string {
+// SpanNameFormatter formats the span name based on the http request.
+// It is a package-level variable so that custom modules can wrap it with
+// additional processing (e.g., normalizing high-cardinality operation names).
+var SpanNameFormatter = func(_ string, r *http.Request) string {
 	requestContext := getRequestContext(r.Context())
 
 	if requestContext != nil && requestContext.operation != nil {
