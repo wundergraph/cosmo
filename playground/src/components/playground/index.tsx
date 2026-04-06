@@ -582,6 +582,13 @@ export const Playground = (input: PlaygroundProps) => {
     ],
   );
 
+  // Keep a ref to the latest extension context so that graphiqlPlugins
+  // doesn't need to depend on it. This prevents the plugin array from being
+  // recreated on every keystroke, which would cause GraphiQL to re-render
+  // all extension content.
+  const extensionContextRef = useRef(extensionContext);
+  extensionContextRef.current = extensionContext;
+
   // Convert panel extensions to GraphiQL plugins
   const graphiqlPlugins = useMemo(() => {
     const plugins: any[] = [
@@ -597,12 +604,12 @@ export const Playground = (input: PlaygroundProps) => {
       plugins.push({
         title: ext.title,
         icon: () => <LuSparkles />,
-        content: () => ext.render(extensionContext),
+        content: () => ext.render(extensionContextRef.current),
       });
     });
 
     return plugins;
-  }, [input.extensions, extensionContext]);
+  }, [input.extensions]);
 
   // Find the plugin that should be visible by default
   const defaultVisiblePlugin = useMemo(() => {
