@@ -5,7 +5,7 @@ import { docsBaseURL } from '@/lib/constants';
 import { formatMetric } from '@/lib/format-metric';
 import { useChartData } from '@/lib/insights-helpers';
 import { cn } from '@/lib/utils';
-import { ChevronDoubleRightIcon, CommandLineIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { ChevronDoubleRightIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { Component2Icon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { migrateFromApollo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
@@ -408,62 +408,43 @@ export const Empty = ({
   let labels = 'team=A';
   return (
     <EmptyState
-      className="h-auto"
-      icon={<CommandLineIcon />}
-      title="No graphs found"
-      description={
-        <>
-          Use the CLI tool to create either a federated graph ({' '}
-          <a
-            target="_blank"
-            rel="noreferrer"
-            href={docsBaseURL + '/cli/federated-graph/create'}
-            className="text-primary"
-          >
-            docs
-          </a>{' '}
-          ) or a monograph ({' '}
-          <a target="_blank" rel="noreferrer" href={docsBaseURL + '/cli/monograph/create'} className="text-primary">
-            docs
-          </a>{' '}
-          ).
-        </>
-      }
-      actions={
-        <div className="flex flex-col gap-y-6">
-          <Tabs defaultValue="federated" className="mt-8 w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="federated">Federated Graph</TabsTrigger>
-              <TabsTrigger value="monograph">Monograph</TabsTrigger>
-            </TabsList>
-            <TabsContent value="federated">
-              <CLI
-                command={`npx wgc federated-graph create production --namespace ${namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
-              />
-            </TabsContent>
-            <TabsContent value="monograph">
-              <CLI
-                command={`npx wgc monograph create production --namespace ${namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
-              />
-            </TabsContent>
-          </Tabs>
+      eyebrow="Get started"
+      title="Create your first graph"
+      description="A graph is the unified API layer that combines your services into a single endpoint. Choose the architecture that fits your team."
+    >
+      <div className="flex flex-col gap-y-6">
+        <Tabs defaultValue="federated" className="mt-8 w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="federated">Federated Graph</TabsTrigger>
+            <TabsTrigger value="monograph">Monograph</TabsTrigger>
+          </TabsList>
+          <TabsContent value="federated">
+            <CLI
+              command={`npx wgc federated-graph create production --namespace ${namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
+            />
+          </TabsContent>
+          <TabsContent value="monograph">
+            <CLI
+              command={`npx wgc monograph create production --namespace ${namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
+            />
+          </TabsContent>
+        </Tabs>
 
-          {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
-            <>
-              <span className="text-sm font-bold">OR</span>
-              <MigrationDialog
-                refetch={refetch}
-                setIsMigrationSuccess={setIsMigrationSuccess}
-                isEmptyState={true}
-                setToken={setToken}
-                isMigrating={isMigrating}
-                setIsMigrating={setIsMigrating}
-              />
-            </>
-          )}
-        </div>
-      }
-    />
+        {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
+          <>
+            <span className="text-sm font-bold">OR</span>
+            <MigrationDialog
+              refetch={refetch}
+              setIsMigrationSuccess={setIsMigrationSuccess}
+              isEmptyState={true}
+              setToken={setToken}
+              isMigrating={isMigrating}
+              setIsMigrating={setIsMigrating}
+            />
+          </>
+        )}
+      </div>
+    </EmptyState>
   );
 };
 
