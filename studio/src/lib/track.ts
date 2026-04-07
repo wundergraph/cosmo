@@ -59,19 +59,26 @@ const identify = ({
     // with the right data
     posthog.reset();
   } else if (distinctId === email) {
-    // This session has been already identified, nothing to do!
+    // This session has been already identified, just keep the organization synchronized!
+    posthog.group('cosmo_organization', organizationId, {
+      id: organizationId,
+      slug: organizationSlug,
+      name: organizationName,
+      plan: plan
+    });
     return;
   }
   
   posthog.identify(email, {
     id,
     email,
-    organizationId,
-    organizationName,
-    organizationSlug,
-    plan,
   });
-  posthog.group('orgslug', organizationSlug);
+  posthog.group('cosmo_organization', organizationId, {
+    id: organizationId,
+    slug: organizationSlug,
+    name: organizationName,
+    plan: plan
+  });
 };
 
 export { resetTracking, identify };
