@@ -9,7 +9,7 @@ import { useRouter } from 'next/router';
 import { EmptyState } from './empty-state';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { CLISteps } from './ui/cli';
+import { CLI, CLISteps } from './ui/cli';
 import { Pagination } from './ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from './ui/table';
 import { Tooltip } from './ui/tooltip';
@@ -24,42 +24,76 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   if (graph?.labelMatchers && graph.labelMatchers.length > 0) {
     label = graph.labelMatchers[0].split(',')[0];
   }
+  const steps = [
+    {
+      title: 'Create a feature subgraph',
+      description:
+        'A feature subgraph is a variant of an existing subgraph that contains your experimental schema changes.',
+      command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
+    },
+    {
+      title: 'Publish the feature subgraph',
+      description:
+        'Deploy your schema changes to the feature subgraph so they\u2019re available to reference in a feature flag.',
+      command: `npx wgc subgraph publish <feature-subgraph-name> --namespace ${namespace} --schema <schema-path> `,
+    },
+    {
+      title: 'Create the feature flag',
+      description:
+        'Tie everything together by creating a feature flag that references your feature subgraph. You can enable or disable it at any time.',
+      command: `npx wgc feature-flag create <feature-flag-name> --namespace ${namespace} --label ${label} --enabled --feature-subgraphs <feature-subgraph-names...>`,
+    },
+  ];
+
   return (
     <EmptyState
-      icon={<CommandLineIcon />}
-      title="Create feature flag using CLI"
-      description={
-        <>
-          No feature flags found. Use the CLI tool to create one.{' '}
-          <a
-            target="_blank"
-            rel="noreferrer"
-            href={docsBaseURL + '/cli/feature-flags/create-feature-flag'}
-            className="text-primary"
-          >
-            Learn more.
-          </a>
-        </>
-      }
-      actions={
-        <CLISteps
-          steps={[
-            {
-              description: 'Create a feature subgraph using the below command.',
-              command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
-            },
-            {
-              description: 'Publish a feature subgraph using the below command.',
-              command: `npx wgc subgraph publish <feature-subgraph-name> --namespace ${namespace} --schema <schema-path> `,
-            },
-            {
-              description: 'Create a feature flag using the below command.',
-              command: `npx wgc feature-flag create <feature-flag-name> --namespace ${namespace} --label ${label} --enabled --feature-subgraphs <feature-subgraph-names...>`,
-            },
-          ]}
-        />
-      }
-    />
+      eyebrow="Get started"
+      title="Create your first feature flag"
+      description="Feature flags let you test schema changes safely by routing traffic to experimental subgraph versions — without affecting your main graph."
+    >
+      <div className="mt-8 flex flex-col gap-y-6 text-left">
+        <div className="rounded-lg border">
+          {steps.map((step, i) => (
+            <div
+              key={i}
+              className={`flex gap-4 p-5 ${i < steps.length - 1 ? 'border-b border-border' : ''}`}
+            >
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                {i + 1}
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <p className="text-sm font-medium text-foreground">{step.title}</p>
+                <p className="text-sm text-muted-foreground">{step.description}</p>
+                <CLI command={step.command} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <div className="relative mb-3 flex items-center">
+            <div className="flex-1 border-t" />
+            <span className="mx-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              LEARN MORE
+            </span>
+            <div className="flex-1 border-t" />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <p className="text-sm text-muted-foreground">
+              Read the full guide on feature flags and how to use them safely.
+            </p>
+            <a
+              href={docsBaseURL + '/cli/feature-flags/create-feature-flag'}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 pl-4 text-sm font-medium text-primary hover:underline"
+            >
+              View docs →
+            </a>
+          </div>
+        </div>
+      </div>
+    </EmptyState>
   );
 };
 
