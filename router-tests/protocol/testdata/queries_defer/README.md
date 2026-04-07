@@ -5,7 +5,7 @@ along with their golden response fixtures (`.txt`).
 
 ## Naming Convention
 
-```
+```text
 {source}_{number}_{description}.graphql
 ```
 
@@ -47,7 +47,7 @@ definitions, inline fragments are first promoted to named fragment definitions.
 
 ```bash
 cd router-tests
-go test -v -run TestDeferTestdataQueries -update ./...
+go test -v -run TestDeferTestDataQueries -update ./...
 ```
 
 Fixtures are deterministic because defer resolution is sequential in this router implementation.

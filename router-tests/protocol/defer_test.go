@@ -58,7 +58,7 @@ func TestDeferTestDataQueries(t *testing.T) {
 		t.Run(group, func(t *testing.T) {
 			for _, name := range groupQueries[group] {
 				t.Run(name, func(t *testing.T) {
-					// t.Parallel()
+					t.Parallel()
 
 					gMultipart := goldie.New(
 						t,
@@ -76,10 +76,10 @@ func TestDeferTestDataQueries(t *testing.T) {
 					testenv.Run(t, &testenv.Config{
 						NoRetryClient: true,
 						ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-							cfg.Debug.PrintIntermediateQueryPlans = true
-							cfg.Debug.PrintPlanningPaths = true
+							// cfg.Debug.PrintIntermediateQueryPlans = true
+							// cfg.Debug.PrintPlanningPaths = true
 							// cfg.Debug.PrintNodeSuggestions = true
-							cfg.Debug.PrintOperationTransformations = true
+							// cfg.Debug.PrintOperationTransformations = true
 						},
 					}, func(t *testing.T, xEnv *testenv.Environment) {
 						queryFilePath := filepath.Join(testDir, fmt.Sprintf("%s.graphql", name))
