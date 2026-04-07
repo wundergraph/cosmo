@@ -47,7 +47,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "serviceSdl": "type Query @extends {\\n    me: User\\n}\\n\\ntype User @key(fields: \\"id\\") {\\n    id: ID!\\n    name: String\\n    username: String\\n}\\n"
           },
           "upstreamSchema": {
-            "key": "26368136088fa936dcb2f977a25a3c3bdc8f369b"
+            "key": "cc8dd262f96b62f7173b9b50b3ce9b8671001446"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -114,7 +114,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "serviceSdl": "type Query @extends {\\n    topProducts(first: Int = 5, random: Boolean): [Product]\\n}\\n\\ntype Product @key(fields: \\"upc\\") {\\n    upc: String!\\n    name: String\\n    price: Int\\n    weight: Int\\n}\\n\\ntype Subscription @extends {\\n    updatedPrice: Product!\\n}\\n\\ntype Mutation @extends {\\n    setPrice(upc: String!, price: Int!): Product\\n}\\n"
           },
           "upstreamSchema": {
-            "key": "04d227115e43995a8fd784c6643b595305dcd5dc"
+            "key": "9cb34d1a909126f44f901bee5e86511d5d102803"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -180,7 +180,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "serviceSdl": "type Review @key(fields: \\"id\\") {\\n    id: ID!\\n    body: String\\n    author: User @provides(fields: \\"username\\")\\n    product: Product\\n}\\n\\ntype User @extends @key(fields: \\"id\\") {\\n    id: ID! @external\\n    username: String @external\\n    reviews: [Review]\\n}\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n    upc: String! @external\\n    reviews: [Review]\\n}\\n"
           },
           "upstreamSchema": {
-            "key": "e11be76baf22108836f0f59b56828dc6754fbaa0"
+            "key": "70591ef8ef0591333c31dec205b60b5868e7dc64"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -247,7 +247,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
             "serviceSdl": "type Product @extends @key(fields: \\"upc\\") {\\n    upc: String! @external\\n    weight: Int @external\\n    price: Int @external\\n    inStock: Boolean\\n    shippingEstimate: Int @requires(fields: \\"price weight\\")\\n}\\n"
           },
           "upstreamSchema": {
-            "key": "de5e83e9a0f6f72eef6748fadaa8c5af6ad3220e"
+            "key": "533f9b452710c4165bea8cc43f0250ae3b183984"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -269,10 +269,10 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
     ],
     "graphqlSchema": "type Query {}",
     "stringStorage": {
-      "26368136088fa936dcb2f977a25a3c3bdc8f369b": "schema {\\n  query: Query\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Query @extends {\\n  me: User\\n}\\n\\ntype User @key(fields: \\"id\\") {\\n  id: ID!\\n  name: String\\n  username: String\\n}\\n\\nscalar openfed__FieldSet",
-      "04d227115e43995a8fd784c6643b595305dcd5dc": "schema {\\n  query: Query\\n  mutation: Mutation\\n  subscription: Subscription\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Mutation @extends {\\n  setPrice(price: Int!, upc: String!): Product\\n}\\n\\ntype Product @key(fields: \\"upc\\") {\\n  name: String\\n  price: Int\\n  upc: String!\\n  weight: Int\\n}\\n\\ntype Query @extends {\\n  topProducts(first: Int = 5, random: Boolean): [Product]\\n}\\n\\ntype Subscription @extends {\\n  updatedPrice: Product!\\n}\\n\\nscalar openfed__FieldSet",
-      "e11be76baf22108836f0f59b56828dc6754fbaa0": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n  reviews: [Review]\\n  upc: String! @external\\n}\\n\\ntype Review @key(fields: \\"id\\") {\\n  author: User @provides(fields: \\"username\\")\\n  body: String\\n  id: ID!\\n  product: Product\\n}\\n\\ntype User @extends @key(fields: \\"id\\") {\\n  id: ID! @external\\n  reviews: [Review]\\n  username: String @external\\n}\\n\\nscalar openfed__FieldSet",
-      "de5e83e9a0f6f72eef6748fadaa8c5af6ad3220e": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n  inStock: Boolean\\n  price: Int @external\\n  shippingEstimate: Int @requires(fields: \\"price weight\\")\\n  upc: String! @external\\n  weight: Int @external\\n}\\n\\nscalar openfed__FieldSet"
+      "cc8dd262f96b62f7173b9b50b3ce9b8671001446": "schema {\\n  query: Query\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ntype Query @extends {\\n  me: User\\n}\\n\\ntype User @key(fields: \\"id\\") {\\n  id: ID!\\n  name: String\\n  username: String\\n}\\n\\nscalar openfed__FieldSet",
+      "9cb34d1a909126f44f901bee5e86511d5d102803": "schema {\\n  query: Query\\n  mutation: Mutation\\n  subscription: Subscription\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ntype Mutation @extends {\\n  setPrice(price: Int!, upc: String!): Product\\n}\\n\\ntype Product @key(fields: \\"upc\\") {\\n  name: String\\n  price: Int\\n  upc: String!\\n  weight: Int\\n}\\n\\ntype Query @extends {\\n  topProducts(first: Int = 5, random: Boolean): [Product]\\n}\\n\\ntype Subscription @extends {\\n  updatedPrice: Product!\\n}\\n\\nscalar openfed__FieldSet",
+      "70591ef8ef0591333c31dec205b60b5868e7dc64": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n  reviews: [Review]\\n  upc: String! @external\\n}\\n\\ntype Review @key(fields: \\"id\\") {\\n  author: User @provides(fields: \\"username\\")\\n  body: String\\n  id: ID!\\n  product: Product\\n}\\n\\ntype User @extends @key(fields: \\"id\\") {\\n  id: ID! @external\\n  reviews: [Review]\\n  username: String @external\\n}\\n\\nscalar openfed__FieldSet",
+      "533f9b452710c4165bea8cc43f0250ae3b183984": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n  inStock: Boolean\\n  price: Int @external\\n  shippingEstimate: Int @requires(fields: \\"price weight\\")\\n  upc: String! @external\\n  weight: Int @external\\n}\\n\\nscalar openfed__FieldSet"
     },
     "graphqlClientSchema": "type Query {}"
   },
@@ -349,7 +349,7 @@ exports[`Router Config Builder > Build config with plugin subgraph > router.conf
             "serviceSdl": "type Query @extends {\\n    me: User\\n}\\n\\ntype User @key(fields: \\"id\\") {\\n    id: ID!\\n    name: String\\n    username: String\\n}\\n"
           },
           "upstreamSchema": {
-            "key": "26368136088fa936dcb2f977a25a3c3bdc8f369b"
+            "key": "cc8dd262f96b62f7173b9b50b3ce9b8671001446"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -416,7 +416,7 @@ exports[`Router Config Builder > Build config with plugin subgraph > router.conf
             "serviceSdl": "type Query @extends {\\n    topProducts(first: Int = 5, random: Boolean): [Product]\\n}\\n\\ntype Product @key(fields: \\"upc\\") {\\n    upc: String!\\n    name: String\\n    price: Int\\n    weight: Int\\n}\\n\\ntype Subscription @extends {\\n    updatedPrice: Product!\\n}\\n\\ntype Mutation @extends {\\n    setPrice(upc: String!, price: Int!): Product\\n}\\n"
           },
           "upstreamSchema": {
-            "key": "04d227115e43995a8fd784c6643b595305dcd5dc"
+            "key": "9cb34d1a909126f44f901bee5e86511d5d102803"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -482,7 +482,7 @@ exports[`Router Config Builder > Build config with plugin subgraph > router.conf
             "serviceSdl": "type Review @key(fields: \\"id\\") {\\n    id: ID!\\n    body: String\\n    author: User @provides(fields: \\"username\\")\\n    product: Product\\n}\\n\\ntype User @extends @key(fields: \\"id\\") {\\n    id: ID! @external\\n    username: String @external\\n    reviews: [Review]\\n}\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n    upc: String! @external\\n    reviews: [Review]\\n}\\n"
           },
           "upstreamSchema": {
-            "key": "e11be76baf22108836f0f59b56828dc6754fbaa0"
+            "key": "70591ef8ef0591333c31dec205b60b5868e7dc64"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -544,7 +544,7 @@ exports[`Router Config Builder > Build config with plugin subgraph > router.conf
             "serviceSdl": "type Product @extends @key(fields: \\"upc\\") {\\n    upc: String! @external\\n    weight: Int @external\\n    price: Int @external\\n    inStock: Boolean\\n    shippingEstimate: Int @requires(fields: \\"price weight\\")\\n}\\n"
           },
           "upstreamSchema": {
-            "key": "de5e83e9a0f6f72eef6748fadaa8c5af6ad3220e"
+            "key": "533f9b452710c4165bea8cc43f0250ae3b183984"
           },
           "grpc": {
             "mapping": {
@@ -588,10 +588,10 @@ exports[`Router Config Builder > Build config with plugin subgraph > router.conf
     ],
     "graphqlSchema": "type Query {}",
     "stringStorage": {
-      "26368136088fa936dcb2f977a25a3c3bdc8f369b": "schema {\\n  query: Query\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Query @extends {\\n  me: User\\n}\\n\\ntype User @key(fields: \\"id\\") {\\n  id: ID!\\n  name: String\\n  username: String\\n}\\n\\nscalar openfed__FieldSet",
-      "04d227115e43995a8fd784c6643b595305dcd5dc": "schema {\\n  query: Query\\n  mutation: Mutation\\n  subscription: Subscription\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Mutation @extends {\\n  setPrice(price: Int!, upc: String!): Product\\n}\\n\\ntype Product @key(fields: \\"upc\\") {\\n  name: String\\n  price: Int\\n  upc: String!\\n  weight: Int\\n}\\n\\ntype Query @extends {\\n  topProducts(first: Int = 5, random: Boolean): [Product]\\n}\\n\\ntype Subscription @extends {\\n  updatedPrice: Product!\\n}\\n\\nscalar openfed__FieldSet",
-      "e11be76baf22108836f0f59b56828dc6754fbaa0": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n  reviews: [Review]\\n  upc: String! @external\\n}\\n\\ntype Review @key(fields: \\"id\\") {\\n  author: User @provides(fields: \\"username\\")\\n  body: String\\n  id: ID!\\n  product: Product\\n}\\n\\ntype User @extends @key(fields: \\"id\\") {\\n  id: ID! @external\\n  reviews: [Review]\\n  username: String @external\\n}\\n\\nscalar openfed__FieldSet",
-      "de5e83e9a0f6f72eef6748fadaa8c5af6ad3220e": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n  inStock: Boolean\\n  price: Int @external\\n  shippingEstimate: Int @requires(fields: \\"price weight\\")\\n  upc: String! @external\\n  weight: Int @external\\n}\\n\\nscalar openfed__FieldSet"
+      "cc8dd262f96b62f7173b9b50b3ce9b8671001446": "schema {\\n  query: Query\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ntype Query @extends {\\n  me: User\\n}\\n\\ntype User @key(fields: \\"id\\") {\\n  id: ID!\\n  name: String\\n  username: String\\n}\\n\\nscalar openfed__FieldSet",
+      "9cb34d1a909126f44f901bee5e86511d5d102803": "schema {\\n  query: Query\\n  mutation: Mutation\\n  subscription: Subscription\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ntype Mutation @extends {\\n  setPrice(price: Int!, upc: String!): Product\\n}\\n\\ntype Product @key(fields: \\"upc\\") {\\n  name: String\\n  price: Int\\n  upc: String!\\n  weight: Int\\n}\\n\\ntype Query @extends {\\n  topProducts(first: Int = 5, random: Boolean): [Product]\\n}\\n\\ntype Subscription @extends {\\n  updatedPrice: Product!\\n}\\n\\nscalar openfed__FieldSet",
+      "70591ef8ef0591333c31dec205b60b5868e7dc64": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n  reviews: [Review]\\n  upc: String! @external\\n}\\n\\ntype Review @key(fields: \\"id\\") {\\n  author: User @provides(fields: \\"username\\")\\n  body: String\\n  id: ID!\\n  product: Product\\n}\\n\\ntype User @extends @key(fields: \\"id\\") {\\n  id: ID! @external\\n  reviews: [Review]\\n  username: String @external\\n}\\n\\nscalar openfed__FieldSet",
+      "533f9b452710c4165bea8cc43f0250ae3b183984": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n  inStock: Boolean\\n  price: Int @external\\n  shippingEstimate: Int @requires(fields: \\"price weight\\")\\n  upc: String! @external\\n  weight: Int @external\\n}\\n\\nscalar openfed__FieldSet"
     },
     "graphqlClientSchema": "type Query {}"
   },
@@ -666,7 +666,7 @@ exports[`Router Config Builder > that the federatedClientSDL property is not pro
             "serviceSdl": "type Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n}"
           },
           "upstreamSchema": {
-            "key": "71852430be20eb0aaee86a90ab19650150647219"
+            "key": "bfc3653bb145b8f0cf78d6102078aafe6656169e"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -721,7 +721,7 @@ exports[`Router Config Builder > that the federatedClientSDL property is not pro
             "serviceSdl": "type Product {\\n  upc: Int!\\n}\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n  products: [Product]!\\n}"
           },
           "upstreamSchema": {
-            "key": "7792956bbbbc1a32270a4136a1b5177d2613e20f"
+            "key": "993260a1cd52415930ea6b7f1fde13d20e922f7e"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -734,10 +734,10 @@ exports[`Router Config Builder > that the federatedClientSDL property is not pro
         ]
       }
     ],
-    "graphqlSchema": "directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account {\\n  id: Int!\\n  products: [Product]!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}",
+    "graphqlSchema": "type Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account {\\n  id: Int!\\n  products: [Product]!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}",
     "stringStorage": {
-      "71852430be20eb0aaee86a90ab19650150647219": "schema {\\n  query: Query\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n}\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\nscalar openfed__FieldSet",
-      "7792956bbbbc1a32270a4136a1b5177d2613e20f": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n  products: [Product]!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}\\n\\nscalar openfed__FieldSet"
+      "bfc3653bb145b8f0cf78d6102078aafe6656169e": "schema {\\n  query: Query\\n}\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n}\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\nscalar openfed__FieldSet",
+      "993260a1cd52415930ea6b7f1fde13d20e922f7e": "directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n  products: [Product]!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}\\n\\nscalar openfed__FieldSet"
     }
   },
   "subgraphs": [
@@ -801,7 +801,7 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
             "serviceSdl": "type Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n}"
           },
           "upstreamSchema": {
-            "key": "71852430be20eb0aaee86a90ab19650150647219"
+            "key": "bfc3653bb145b8f0cf78d6102078aafe6656169e"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -856,7 +856,7 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
             "serviceSdl": "type Product {\\n  upc: Int!\\n}\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n  products: [Product]! @inaccessible\\n}"
           },
           "upstreamSchema": {
-            "key": "b1a402c7daf53ae64e71597643e3ceb455c4ff74"
+            "key": "6b73a9206363fc22e76424c155c49e609fc6ebf2"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -869,10 +869,10 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
         ]
       }
     ],
-    "graphqlSchema": "directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\\n\\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\nscalar openfed__Scope\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account {\\n  id: Int!\\n  products: [Product]!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}",
+    "graphqlSchema": "directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account {\\n  id: Int!\\n  products: [Product]!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}",
     "stringStorage": {
-      "71852430be20eb0aaee86a90ab19650150647219": "schema {\\n  query: Query\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n}\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\nscalar openfed__FieldSet",
-      "b1a402c7daf53ae64e71597643e3ceb455c4ff74": "directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\\n\\ndirective @composeDirective(name: String!) repeatable on SCHEMA\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ndirective @interfaceObject on OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @override(from: String!) on FIELD_DEFINITION\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\\n\\ndirective @shareable repeatable on FIELD_DEFINITION | OBJECT\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n  products: [Product]! @inaccessible\\n}\\n\\ntype Product {\\n  upc: Int!\\n}\\n\\nscalar openfed__FieldSet\\n\\nscalar openfed__Scope"
+      "bfc3653bb145b8f0cf78d6102078aafe6656169e": "schema {\\n  query: Query\\n}\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n}\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\nscalar openfed__FieldSet",
+      "6b73a9206363fc22e76424c155c49e609fc6ebf2": "directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n  products: [Product]! @inaccessible\\n}\\n\\ntype Product {\\n  upc: Int!\\n}\\n\\nscalar openfed__FieldSet"
     },
     "graphqlClientSchema": "type Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account {\\n  id: Int!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}"
   },
@@ -937,7 +937,7 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
             "serviceSdl": "type Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n}"
           },
           "upstreamSchema": {
-            "key": "71852430be20eb0aaee86a90ab19650150647219"
+            "key": "bfc3653bb145b8f0cf78d6102078aafe6656169e"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -992,7 +992,7 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
             "serviceSdl": "type Product {\\n  upc: Int!\\n}\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n  products: [Product]! @tag(name: \\"test\\")\\n}"
           },
           "upstreamSchema": {
-            "key": "b0d8fd1148ce938654fc21ef67d04364b633fc75"
+            "key": "baa5cc1f8e478b5a2897fc191952b3f2d3899264"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -1007,8 +1007,8 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
     ],
     "graphqlSchema": "directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account {\\n  id: Int!\\n  products: [Product]!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}",
     "stringStorage": {
-      "71852430be20eb0aaee86a90ab19650150647219": "schema {\\n  query: Query\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n}\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\nscalar openfed__FieldSet",
-      "b0d8fd1148ce938654fc21ef67d04364b633fc75": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n  products: [Product]! @tag(name: \\"test\\")\\n}\\n\\ntype Product {\\n  upc: Int!\\n}\\n\\nscalar openfed__FieldSet"
+      "bfc3653bb145b8f0cf78d6102078aafe6656169e": "schema {\\n  query: Query\\n}\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n}\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\nscalar openfed__FieldSet",
+      "baa5cc1f8e478b5a2897fc191952b3f2d3899264": "directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n  products: [Product]! @tag(name: \\"test\\")\\n}\\n\\ntype Product {\\n  upc: Int!\\n}\\n\\nscalar openfed__FieldSet"
     },
     "graphqlClientSchema": "type Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account {\\n  id: Int!\\n  products: [Product]!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}"
   },

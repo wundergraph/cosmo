@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -16,33 +17,44 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/wundergraph/cosmo/router/internal/headers"
+	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"go.uber.org/zap"
 )
 
-// authKey is a custom context key for storing the auth token.
-type authKey struct{}
-
-// withAuthKey adds an auth key to the context.
-func withAuthKey(ctx context.Context, auth string) context.Context {
-	return context.WithValue(ctx, authKey{}, auth)
+// reservedToolNames contains tool names that are internally registered by the MCP server
+// and must not be used by operations when omitToolNamePrefix is enabled.
+var reservedToolNames = []string{
+	"get_schema",
+	"execute_graphql",
+	"get_operation_info",
 }
 
-// authFromRequest extracts the auth token from the request headers.
-func authFromRequest(ctx context.Context, r *http.Request) context.Context {
-	return withAuthKey(ctx, r.Header.Get("Authorization"))
+// requestHeadersKey is a custom context key for storing request headers.
+type requestHeadersKey struct{}
+
+// withRequestHeaders adds request headers to the context.
+func withRequestHeaders(ctx context.Context, headers http.Header) context.Context {
+	return context.WithValue(ctx, requestHeadersKey{}, headers)
 }
 
-// tokenFromContext extracts the auth token from the context.
-// This can be used by clients to pass the auth token to the server.
-func tokenFromContext(ctx context.Context) (string, error) {
-	auth, ok := ctx.Value(authKey{}).(string)
+// requestHeadersFromRequest extracts all headers from the request and stores them in context.
+func requestHeadersFromRequest(ctx context.Context, r *http.Request) context.Context {
+	// Clone the headers to avoid any mutation issues
+	headers := r.Header.Clone()
+	return withRequestHeaders(ctx, headers)
+}
+
+// headersFromContext extracts the request headers from the context.
+func headersFromContext(ctx context.Context) (http.Header, error) {
+	headers, ok := ctx.Value(requestHeadersKey{}).(http.Header)
 	if !ok {
-		return "", fmt.Errorf("missing auth")
+		return nil, fmt.Errorf("missing request headers")
 	}
-	return auth, nil
+	return headers, nil
 }
 
 // Options represents configuration options for the GraphQLSchemaServer
@@ -53,9 +65,6 @@ type Options struct {
 	OperationsDir string
 	// ListenAddr is the address where the server should listen to
 	ListenAddr string
-	// BaseURL of the MCP server. This is the URL advertised to the LLM clients.
-	// By default, the base URL is relative to the URL that the router is running on.
-	BaseURL string
 	// Enabled determines whether the MCP server should be started
 	Enabled bool
 	// Logger is the logger to be used
@@ -68,14 +77,17 @@ type Options struct {
 	EnableArbitraryOperations bool
 	// ExposeSchema determines whether the GraphQL schema is exposed
 	ExposeSchema bool
+	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
+	OmitToolNamePrefix bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
+	// CorsConfig is the CORS configuration for the MCP server
+	CorsConfig cors.Config
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
 type GraphQLSchemaServer struct {
 	server                    *server.MCPServer
-	baseURL                   string
 	graphName                 string
 	operationsDir             string
 	listenAddr                string
@@ -87,10 +99,12 @@ type GraphQLSchemaServer struct {
 	excludeMutations          bool
 	enableArbitraryOperations bool
 	exposeSchema              bool
+	omitToolNamePrefix        bool
 	stateless                 bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
+	corsConfig                cors.Config
 }
 
 type graphqlRequest struct {
@@ -216,11 +230,17 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		excludeMutations:          options.ExcludeMutations,
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
+		omitToolNamePrefix:        options.OmitToolNamePrefix,
 		stateless:                 options.Stateless,
-		baseURL:                   options.BaseURL,
+		corsConfig:                options.CorsConfig,
 	}
 
 	return gs, nil
+}
+
+// SetHTTPClient allows setting a custom HTTP client (useful for testing)
+func (s *GraphQLSchemaServer) SetHTTPClient(client *http.Client) {
+	s.httpClient = client
 }
 
 // WithGraphName sets the graph name
@@ -234,13 +254,6 @@ func WithGraphName(graphName string) func(*Options) {
 func WithOperationsDir(operationsDir string) func(*Options) {
 	return func(o *Options) {
 		o.OperationsDir = operationsDir
-	}
-}
-
-// WithBaseURL sets the base URL
-func WithBaseURL(baseURL string) func(*Options) {
-	return func(o *Options) {
-		o.BaseURL = baseURL
 	}
 }
 
@@ -285,6 +298,26 @@ func WithStateless(stateless bool) func(*Options) {
 	}
 }
 
+// WithOmitToolNamePrefix sets the omit tool name prefix option
+func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
+	return func(o *Options) {
+		o.OmitToolNamePrefix = omitToolNamePrefix
+	}
+}
+
+func WithCORS(corsCfg cors.Config) func(*Options) {
+	return func(o *Options) {
+		// Force specific CORS settings for MCP server
+		corsCfg.AllowOrigins = []string{"*"}
+		corsCfg.AllowMethods = []string{"GET", "PUT", "POST", "DELETE", "OPTIONS"}
+		corsCfg.AllowHeaders = append(corsCfg.AllowHeaders, "Content-Type", "Accept", "Authorization", "Last-Event-ID", "Mcp-Protocol-Version", "Mcp-Session-Id")
+		if corsCfg.MaxAge <= 0 {
+			corsCfg.MaxAge = 24 * time.Hour
+		}
+		o.CorsConfig = corsCfg
+	}
+}
+
 // Serve starts the server with the configured options and returns a streamable HTTP server.
 func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 	// Create custom HTTP server
@@ -299,16 +332,16 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 		server.WithStreamableHTTPServer(httpServer),
 		server.WithLogger(NewZapAdapter(s.logger.With(zap.String("component", "mcp-server")))),
 		server.WithStateLess(s.stateless),
-		server.WithHTTPContextFunc(authFromRequest),
+		server.WithHTTPContextFunc(requestHeadersFromRequest),
 		server.WithHeartbeatInterval(10*time.Second),
 	)
 
-	corsMiddleware := WithCORS("GET", "POST", "PUT", "DELETE")
+	middleware := cors.New(s.corsConfig)
 
 	mux := http.NewServeMux()
 
 	// No OAuth protection - original behavior
-	mux.Handle("/mcp", corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/mcp", middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		streamableHTTPServer.ServeHTTP(w, r)
 	})))
 
@@ -369,6 +402,7 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 	}
 
 	s.server.DeleteTools(s.registeredTools...)
+	s.registeredTools = nil
 
 	if err := s.registerTools(); err != nil {
 		return fmt.Errorf("failed to register tools: %w", err)
@@ -504,15 +538,24 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		// Convert the operation name to snake_case for consistent tool naming
 		operationToolName := strcase.ToSnake(op.Name)
 
+		// Use the operation description directly if provided, otherwise generate a default description
 		var toolDescription string
-
 		if op.Description != "" {
-			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s. %s", op.Name, op.OperationType, op.Description)
+			toolDescription = op.Description
 		} else {
 			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
 
-		toolName := fmt.Sprintf("execute_operation_%s", operationToolName)
+		toolName := operationToolName
+		if !s.omitToolNamePrefix {
+			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
+		} else if slices.Contains(s.registeredTools, operationToolName) || slices.Contains(reservedToolNames, operationToolName) {
+			s.logger.Error("Skipping operation due to tool name collision",
+				zap.String("operation", op.Name),
+				zap.String("conflicting_tool", operationToolName),
+			)
+			continue
+		}
 		tool := mcp.NewToolWithRawSchema(
 			toolName,
 			toolDescription,
@@ -672,23 +715,35 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-
-	token, err := tokenFromContext(ctx)
+	// Forward all headers from the original MCP request to the GraphQL server
+	// The router's header forwarding rules will then determine what gets sent to subgraphs
+	reqHeaders, err := headersFromContext(ctx)
 	if err != nil {
-		s.logger.Debug("failed to get token from context", zap.Error(err))
-	} else if token != "" {
-		req.Header.Set("Authorization", token)
+		s.logger.Debug("failed to get headers from context", zap.Error(err))
+	} else {
+		// Copy all headers from the MCP request
+		for key, values := range reqHeaders {
+			// Skip headers that should not be forwarded
+			if _, ok := headers.SkippedHeaders[key]; ok {
+				continue
+			}
+			for _, value := range values {
+				req.Header.Add(key, value)
+			}
+		}
 	}
 
-	// Forward Authorization header if provided
+	// Override specific headers that must be set for GraphQL requests
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -760,44 +815,4 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 
 		return mcp.NewToolResultText(schemaStr), nil
 	}
-}
-
-// WithCORS creates a reusable CORS middleware that can be used with any HTTP handler.
-// It handles preflight OPTIONS requests and sets appropriate CORS headers.
-//
-// Example usage:
-//
-//	corsMiddleware := WithCORS("GET", "POST", "PUT", "DELETE")
-//	http.Handle("/api/", corsMiddleware(apiHandler))
-//
-// The middleware sets the following CORS headers:
-//   - Access-Control-Allow-Origin: *
-//   - Access-Control-Allow-Methods: specified methods + OPTIONS
-//   - Access-Control-Allow-Headers: Content-Type, Authorization
-//   - Access-Control-Max-Age: 86400 (24 hours)
-func WithCORS(allowedMethods ...string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			// Set CORS headers for all requests
-			setCORSHeaders(w, allowedMethods)
-
-			// Handle preflight OPTIONS requests
-			if req.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-
-			// Call the next handler
-			next.ServeHTTP(w, req)
-		})
-	}
-}
-
-// setCORSHeaders sets common CORS headers
-// Only used for web browsers, not for API clients
-func setCORSHeaders(w http.ResponseWriter, allowedMethods []string) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allowedMethods, "OPTIONS"), ", "))
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, Last-Event-ID, Mcp-Protocol-Version, Mcp-Session-Id")
-	w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
 }

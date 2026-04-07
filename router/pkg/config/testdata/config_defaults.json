@@ -28,7 +28,11 @@
       "Attributes": null,
       "OperationContentAttributes": false,
       "ExportGraphQLVariables": false,
-      "WithNewRoot": false
+      "WithNewRoot": false,
+      "SanitizeUTF8": {
+        "Enabled": false,
+        "LogSanitizations": false
+      }
     },
     "Metrics": {
       "Attributes": null,
@@ -40,11 +44,20 @@
         "EngineStats": {
           "Subscriptions": false
         },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false
+        },
         "CircuitBreaker": false,
         "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "Exporters": null
+        "Exporters": null,
+        "LogExporter": {
+          "Enabled": false,
+          "ExcludeMetrics": null,
+          "IncludeMetrics": null
+        }
       },
       "Prometheus": {
         "Enabled": true,
@@ -56,13 +69,23 @@
         "EngineStats": {
           "Subscriptions": false
         },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false
+        },
         "CircuitBreaker": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "ExcludeScopeInfo": false,
         "SchemaFieldUsage": {
           "Enabled": false,
-          "IncludeOperationSha": false
+          "IncludeOperationSha": false,
+          "Exporter": {
+            "BatchSize": 4096,
+            "QueueSize": 12800,
+            "Interval": 2000000000,
+            "ExportTimeout": 10000000000
+          }
         }
       },
       "CardinalityLimit": 2000
@@ -108,6 +131,15 @@
         "CertFile": "",
         "Required": false
       }
+    },
+    "Client": {
+      "All": {
+        "CertFile": "",
+        "KeyFile": "",
+        "CaFile": "",
+        "InsecureSkipCaVerification": false
+      },
+      "Subgraphs": null
     }
   },
   "CacheControl": {
@@ -131,14 +163,29 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "RouterURL": ""
+    "RouterURL": "",
+    "OmitToolNamePrefix": false
+  },
+  "ConnectRPC": {
+    "Enabled": false,
+    "Server": {
+      "ListenAddr": "localhost:5026",
+      "BaseURL": ""
+    },
+    "Storage": {
+      "ProviderID": ""
+    },
+    "GraphQLEndpoint": ""
   },
   "DemoMode": false,
   "Modules": null,
   "Headers": {
     "All": null,
     "Subgraphs": null,
-    "CookieWhitelist": null
+    "CookieWhitelist": null,
+    "Router": {
+      "Response": null
+    }
   },
   "TrafficShaping": {
     "All": {
@@ -231,9 +278,14 @@
   },
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
+  "IntrospectionConfig": {
+    "Enabled": true,
+    "Secret": ""
+  },
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
+  "LogServiceName": "@wundergraph/router",
   "ShutdownDelay": 60000000000,
   "GracePeriod": 30000000000,
   "PollInterval": 10000000000,
@@ -249,7 +301,8 @@
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": null
-    }
+    },
+    "IgnoreIntrospection": false
   },
   "Authorization": {
     "RequireAuthentication": false,
@@ -264,7 +317,8 @@
       "Period": 1000000000,
       "RejectExceedingRequests": false,
       "RejectStatusCode": 200,
-      "HideStatsFromResponseExtension": false
+      "HideStatsFromResponseExtension": false,
+      "Overrides": null
     },
     "Storage": {
       "URLs": null,
@@ -289,16 +343,26 @@
       "Nats": null,
       "Kafka": null,
       "Redis": null
+    },
+    "Handlers": {
+      "OnReceiveEvents": {
+        "MaxConcurrentHandlers": 100,
+        "HandlerTimeout": 5000000000
+      }
     }
   },
   "CacheWarmup": {
     "Enabled": false,
     "Source": {
-      "Filesystem": null
+      "Filesystem": null,
+      "CdnSource": {
+        "Enabled": true
+      }
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
-    "Timeout": 30000000000
+    "Timeout": 30000000000,
+    "InMemoryFallback": true
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
@@ -327,6 +391,7 @@
     },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
+    "CostControl": null,
     "DepthLimit": null,
     "ParserLimits": {
       "ApproximateDepthLimit": 200,
@@ -350,10 +415,14 @@
       "EnableResolverDebugging": false,
       "EnablePersistedOperationsCacheResponseHeader": false,
       "EnableNormalizationCacheResponseHeader": false,
+      "EnableCacheResponseHeaders": false,
       "AlwaysIncludeQueryPlan": false,
       "AlwaysSkipLoader": false
     },
     "EnableSingleFlight": true,
+    "ForceEnableSingleFlight": false,
+    "EnableInboundRequestDeduplication": true,
+    "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,
@@ -366,6 +435,8 @@
     "WebSocketClientPingTimeout": 30000000000,
     "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
+    "SlowPlanCacheSize": 300,
+    "SlowPlanCacheThreshold": 100000000,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,
@@ -380,7 +451,8 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
-    "ValidateRequiredExternalFields": false
+    "ValidateRequiredExternalFields": false,
+    "RelaxSubgraphOperationFieldSelectionMergingNullability": false
   },
   "WebSocket": {
     "Enabled": true,
@@ -471,6 +543,18 @@
     "Storage": {
       "ProviderID": "",
       "ObjectPrefix": ""
+    },
+    "Manifest": {
+      "Enabled": false,
+      "FileName": "manifest.json",
+      "PollInterval": 10000000000,
+      "PollJitter": 5000000000,
+      "Warmup": {
+        "Enabled": true,
+        "Workers": 4,
+        "ItemsPerSecond": 50,
+        "Timeout": 30000000000
+      }
     }
   },
   "AutomaticPersistedQueries": {

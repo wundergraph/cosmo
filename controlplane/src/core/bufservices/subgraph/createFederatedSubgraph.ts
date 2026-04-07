@@ -20,6 +20,7 @@ import {
   getLogger,
   handleError,
   isValidGraphName,
+  isValidGrpcNamingScheme,
   isValidLabels,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -166,6 +167,19 @@ export function createFederatedSubgraph(
           admissionErrors: [],
         };
       }
+      // For GRPC_SERVICE subgraphs, validate that routing URL follows gRPC naming scheme
+      if (req.type === SubgraphType.GRPC_SERVICE && !isValidGrpcNamingScheme(routingUrl)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details:
+              `Routing URL must follow gRPC naming scheme. ` +
+              `See https://grpc.io/docs/guides/custom-name-resolution/ for examples.`,
+          },
+          compositionErrors: [],
+          admissionErrors: [],
+        };
+      }
       if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
         return {
           response: {
@@ -225,7 +239,7 @@ export function createFederatedSubgraph(
         organizationId: authContext.organizationId,
         featureId: 'plugins',
       });
-      const limit = feature?.limit === -1 ? 0 : feature?.limit ?? 0;
+      const limit = feature?.limit === -1 ? 0 : (feature?.limit ?? 0);
       if (count >= limit) {
         return {
           response: {

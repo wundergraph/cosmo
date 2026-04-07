@@ -150,7 +150,8 @@
       "key": "id",
       "rpc": "LookupProjectById",
       "request": "LookupProjectByIdRequest",
-      "response": "LookupProjectByIdResponse"
+      "response": "LookupProjectByIdResponse",
+      "requiredFieldMappings": []
     },
     {
       "typeName": "Milestone",
@@ -158,7 +159,8 @@
       "key": "id",
       "rpc": "LookupMilestoneById",
       "request": "LookupMilestoneByIdRequest",
-      "response": "LookupMilestoneByIdResponse"
+      "response": "LookupMilestoneByIdResponse",
+      "requiredFieldMappings": []
     },
     {
       "typeName": "Task",
@@ -166,7 +168,8 @@
       "key": "id",
       "rpc": "LookupTaskById",
       "request": "LookupTaskByIdRequest",
-      "response": "LookupTaskByIdResponse"
+      "response": "LookupTaskByIdResponse",
+      "requiredFieldMappings": []
     },
     {
       "typeName": "Employee",
@@ -174,7 +177,79 @@
       "key": "id",
       "rpc": "LookupEmployeeById",
       "request": "LookupEmployeeByIdRequest",
-      "response": "LookupEmployeeByIdResponse"
+      "response": "LookupEmployeeByIdResponse",
+      "requiredFieldMappings": [
+        {
+          "fieldMapping": {
+            "original": "taggedProjectSummary",
+            "mapped": "tagged_project_summary",
+            "argumentMappings": []
+          },
+          "rpc": "RequireEmployeeTaggedProjectSummaryById",
+          "request": "RequireEmployeeTaggedProjectSummaryByIdRequest",
+          "response": "RequireEmployeeTaggedProjectSummaryByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "workItemInfo",
+            "mapped": "work_item_info",
+            "argumentMappings": []
+          },
+          "rpc": "RequireEmployeeWorkItemInfoById",
+          "request": "RequireEmployeeWorkItemInfoByIdRequest",
+          "response": "RequireEmployeeWorkItemInfoByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "reviewReport",
+            "mapped": "review_report",
+            "argumentMappings": []
+          },
+          "rpc": "RequireEmployeeReviewReportById",
+          "request": "RequireEmployeeReviewReportByIdRequest",
+          "response": "RequireEmployeeReviewReportByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "workSetupSummary",
+            "mapped": "work_setup_summary",
+            "argumentMappings": []
+          },
+          "rpc": "RequireEmployeeWorkSetupSummaryById",
+          "request": "RequireEmployeeWorkSetupSummaryByIdRequest",
+          "response": "RequireEmployeeWorkSetupSummaryByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "workItemHandlerInfo",
+            "mapped": "work_item_handler_info",
+            "argumentMappings": []
+          },
+          "rpc": "RequireEmployeeWorkItemHandlerInfoById",
+          "request": "RequireEmployeeWorkItemHandlerInfoByIdRequest",
+          "response": "RequireEmployeeWorkItemHandlerInfoByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "workItemSpecsInfo",
+            "mapped": "work_item_specs_info",
+            "argumentMappings": []
+          },
+          "rpc": "RequireEmployeeWorkItemSpecsInfoById",
+          "request": "RequireEmployeeWorkItemSpecsInfoByIdRequest",
+          "response": "RequireEmployeeWorkItemSpecsInfoByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "deepWorkItemInfo",
+            "mapped": "deep_work_item_info",
+            "argumentMappings": []
+          },
+          "rpc": "RequireEmployeeDeepWorkItemInfoById",
+          "request": "RequireEmployeeDeepWorkItemInfoByIdRequest",
+          "response": "RequireEmployeeDeepWorkItemInfoByIdResponse"
+        }
+      ]
     },
     {
       "typeName": "Product",
@@ -182,7 +257,8 @@
       "key": "upc",
       "rpc": "LookupProductByUpc",
       "request": "LookupProductByUpcRequest",
-      "response": "LookupProductByUpcResponse"
+      "response": "LookupProductByUpcResponse",
+      "requiredFieldMappings": []
     }
   ],
   "typeFieldMappings": [
@@ -567,6 +643,84 @@
           "original": "priorityMatrix",
           "mapped": "priority_matrix",
           "argumentMappings": []
+        },
+        {
+          "original": "subProjects",
+          "mapped": "sub_projects",
+          "argumentMappings": [
+            {
+              "original": "includeArchived",
+              "mapped": "include_archived"
+            }
+          ]
+        },
+        {
+          "original": "filteredTasks",
+          "mapped": "filtered_tasks",
+          "argumentMappings": [
+            {
+              "original": "status",
+              "mapped": "status"
+            },
+            {
+              "original": "priority",
+              "mapped": "priority"
+            },
+            {
+              "original": "limit",
+              "mapped": "limit"
+            }
+          ]
+        },
+        {
+          "original": "completionRate",
+          "mapped": "completion_rate",
+          "argumentMappings": [
+            {
+              "original": "includeSubtasks",
+              "mapped": "include_subtasks"
+            }
+          ]
+        },
+        {
+          "original": "estimatedDaysRemaining",
+          "mapped": "estimated_days_remaining",
+          "argumentMappings": [
+            {
+              "original": "fromDate",
+              "mapped": "from_date"
+            }
+          ]
+        },
+        {
+          "original": "criticalDeadline",
+          "mapped": "critical_deadline",
+          "argumentMappings": [
+            {
+              "original": "withinDays",
+              "mapped": "within_days"
+            }
+          ]
+        },
+        {
+          "original": "topPriorityItem",
+          "mapped": "top_priority_item",
+          "argumentMappings": [
+            {
+              "original": "category",
+              "mapped": "category"
+            }
+          ]
+        },
+        {
+          "original": "taskCount",
+          "mapped": "task_count",
+          "argumentMappings": []
+        },
+        {
+          "original": "activeMilestoneCount",
+          "mapped": "active_milestone_count",
+          "argumentMappings": []
         }
       ]
     },
@@ -627,6 +781,26 @@
           "original": "reviewers",
           "mapped": "reviewers",
           "argumentMappings": []
+        },
+        {
+          "original": "isAtRisk",
+          "mapped": "is_at_risk",
+          "argumentMappings": [
+            {
+              "original": "threshold",
+              "mapped": "threshold"
+            }
+          ]
+        },
+        {
+          "original": "daysUntilDue",
+          "mapped": "days_until_due",
+          "argumentMappings": [
+            {
+              "original": "fromDate",
+              "mapped": "from_date"
+            }
+          ]
         }
       ]
     },
@@ -717,6 +891,26 @@
           "original": "reviewerIds",
           "mapped": "reviewer_ids",
           "argumentMappings": []
+        },
+        {
+          "original": "isBlocked",
+          "mapped": "is_blocked",
+          "argumentMappings": [
+            {
+              "original": "checkDependencies",
+              "mapped": "check_dependencies"
+            }
+          ]
+        },
+        {
+          "original": "totalEffort",
+          "mapped": "total_effort",
+          "argumentMappings": [
+            {
+              "original": "includeSubtasks",
+              "mapped": "include_subtasks"
+            }
+          ]
         }
       ]
     },
@@ -761,11 +955,191 @@
       ]
     },
     {
+      "type": "TechnicalWorkItem",
+      "fieldMappings": [
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "priority",
+          "mapped": "priority",
+          "argumentMappings": []
+        },
+        {
+          "original": "codeCount",
+          "mapped": "code_count",
+          "argumentMappings": []
+        },
+        {
+          "original": "handler",
+          "mapped": "handler",
+          "argumentMappings": []
+        },
+        {
+          "original": "specs",
+          "mapped": "specs",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "ManagementWorkItem",
+      "fieldMappings": [
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "priority",
+          "mapped": "priority",
+          "argumentMappings": []
+        },
+        {
+          "original": "teamSize",
+          "mapped": "team_size",
+          "argumentMappings": []
+        },
+        {
+          "original": "handler",
+          "mapped": "handler",
+          "argumentMappings": []
+        },
+        {
+          "original": "specs",
+          "mapped": "specs",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "WorkItemHandler",
+      "fieldMappings": [
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "assignedItem",
+          "mapped": "assigned_item",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "TechnicalSpecs",
+      "fieldMappings": [
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "complexity",
+          "mapped": "complexity",
+          "argumentMappings": []
+        },
+        {
+          "original": "metrics",
+          "mapped": "metrics",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "ManagementSpecs",
+      "fieldMappings": [
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "scope",
+          "mapped": "scope",
+          "argumentMappings": []
+        },
+        {
+          "original": "metrics",
+          "mapped": "metrics",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "WorkMetrics",
+      "fieldMappings": [
+        {
+          "original": "score",
+          "mapped": "score",
+          "argumentMappings": []
+        },
+        {
+          "original": "efficiency",
+          "mapped": "efficiency",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "WorkApproval",
+      "fieldMappings": [
+        {
+          "original": "comment",
+          "mapped": "comment",
+          "argumentMappings": []
+        },
+        {
+          "original": "approvedAt",
+          "mapped": "approved_at",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "WorkRejection",
+      "fieldMappings": [
+        {
+          "original": "reason",
+          "mapped": "reason",
+          "argumentMappings": []
+        },
+        {
+          "original": "rejectionCode",
+          "mapped": "rejection_code",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "WorkSetup",
+      "fieldMappings": [
+        {
+          "original": "priority",
+          "mapped": "priority",
+          "argumentMappings": []
+        },
+        {
+          "original": "primaryItem",
+          "mapped": "primary_item",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
       "type": "Employee",
       "fieldMappings": [
         {
           "original": "id",
           "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "expertise",
+          "mapped": "expertise",
           "argumentMappings": []
         },
         {
@@ -796,6 +1170,89 @@
         {
           "original": "projectHistory",
           "mapped": "project_history",
+          "argumentMappings": []
+        },
+        {
+          "original": "taggedProjectSummary",
+          "mapped": "tagged_project_summary",
+          "argumentMappings": []
+        },
+        {
+          "original": "primaryWorkItem",
+          "mapped": "primary_work_item",
+          "argumentMappings": []
+        },
+        {
+          "original": "lastWorkReview",
+          "mapped": "last_work_review",
+          "argumentMappings": []
+        },
+        {
+          "original": "workSetup",
+          "mapped": "work_setup",
+          "argumentMappings": []
+        },
+        {
+          "original": "workItemInfo",
+          "mapped": "work_item_info",
+          "argumentMappings": []
+        },
+        {
+          "original": "reviewReport",
+          "mapped": "review_report",
+          "argumentMappings": []
+        },
+        {
+          "original": "workSetupSummary",
+          "mapped": "work_setup_summary",
+          "argumentMappings": []
+        },
+        {
+          "original": "workItemHandlerInfo",
+          "mapped": "work_item_handler_info",
+          "argumentMappings": []
+        },
+        {
+          "original": "workItemSpecsInfo",
+          "mapped": "work_item_specs_info",
+          "argumentMappings": []
+        },
+        {
+          "original": "deepWorkItemInfo",
+          "mapped": "deep_work_item_info",
+          "argumentMappings": []
+        },
+        {
+          "original": "currentWorkload",
+          "mapped": "current_workload",
+          "argumentMappings": [
+            {
+              "original": "includeCompleted",
+              "mapped": "include_completed"
+            },
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            }
+          ]
+        },
+        {
+          "original": "averageTaskCompletionDays",
+          "mapped": "average_task_completion_days",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            },
+            {
+              "original": "priority",
+              "mapped": "priority"
+            }
+          ]
+        },
+        {
+          "original": "totalProjectCount",
+          "mapped": "total_project_count",
           "argumentMappings": []
         }
       ]
@@ -934,6 +1391,294 @@
           "mapped": "PROJECT_UPDATE_TYPE_TEAM_CHANGE"
         }
       ]
+    }
+  ],
+  "resolveMappings": [
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "subProjects",
+          "mapped": "sub_projects",
+          "argumentMappings": [
+            {
+              "original": "includeArchived",
+              "mapped": "include_archived"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectSubProjects",
+      "request": "ResolveProjectSubProjectsRequest",
+      "response": "ResolveProjectSubProjectsResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "filteredTasks",
+          "mapped": "filtered_tasks",
+          "argumentMappings": [
+            {
+              "original": "status",
+              "mapped": "status"
+            },
+            {
+              "original": "priority",
+              "mapped": "priority"
+            },
+            {
+              "original": "limit",
+              "mapped": "limit"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectFilteredTasks",
+      "request": "ResolveProjectFilteredTasksRequest",
+      "response": "ResolveProjectFilteredTasksResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "completionRate",
+          "mapped": "completion_rate",
+          "argumentMappings": [
+            {
+              "original": "includeSubtasks",
+              "mapped": "include_subtasks"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectCompletionRate",
+      "request": "ResolveProjectCompletionRateRequest",
+      "response": "ResolveProjectCompletionRateResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "estimatedDaysRemaining",
+          "mapped": "estimated_days_remaining",
+          "argumentMappings": [
+            {
+              "original": "fromDate",
+              "mapped": "from_date"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectEstimatedDaysRemaining",
+      "request": "ResolveProjectEstimatedDaysRemainingRequest",
+      "response": "ResolveProjectEstimatedDaysRemainingResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "criticalDeadline",
+          "mapped": "critical_deadline",
+          "argumentMappings": [
+            {
+              "original": "withinDays",
+              "mapped": "within_days"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectCriticalDeadline",
+      "request": "ResolveProjectCriticalDeadlineRequest",
+      "response": "ResolveProjectCriticalDeadlineResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "topPriorityItem",
+          "mapped": "top_priority_item",
+          "argumentMappings": [
+            {
+              "original": "category",
+              "mapped": "category"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectTopPriorityItem",
+      "request": "ResolveProjectTopPriorityItemRequest",
+      "response": "ResolveProjectTopPriorityItemResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "taskCount",
+          "mapped": "task_count",
+          "argumentMappings": []
+        }
+      },
+      "rpc": "ResolveProjectTaskCount",
+      "request": "ResolveProjectTaskCountRequest",
+      "response": "ResolveProjectTaskCountResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "activeMilestoneCount",
+          "mapped": "active_milestone_count",
+          "argumentMappings": []
+        }
+      },
+      "rpc": "ResolveProjectActiveMilestoneCount",
+      "request": "ResolveProjectActiveMilestoneCountRequest",
+      "response": "ResolveProjectActiveMilestoneCountResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Milestone",
+        "fieldMapping": {
+          "original": "isAtRisk",
+          "mapped": "is_at_risk",
+          "argumentMappings": [
+            {
+              "original": "threshold",
+              "mapped": "threshold"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveMilestoneIsAtRisk",
+      "request": "ResolveMilestoneIsAtRiskRequest",
+      "response": "ResolveMilestoneIsAtRiskResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Milestone",
+        "fieldMapping": {
+          "original": "daysUntilDue",
+          "mapped": "days_until_due",
+          "argumentMappings": [
+            {
+              "original": "fromDate",
+              "mapped": "from_date"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveMilestoneDaysUntilDue",
+      "request": "ResolveMilestoneDaysUntilDueRequest",
+      "response": "ResolveMilestoneDaysUntilDueResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Task",
+        "fieldMapping": {
+          "original": "isBlocked",
+          "mapped": "is_blocked",
+          "argumentMappings": [
+            {
+              "original": "checkDependencies",
+              "mapped": "check_dependencies"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveTaskIsBlocked",
+      "request": "ResolveTaskIsBlockedRequest",
+      "response": "ResolveTaskIsBlockedResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Task",
+        "fieldMapping": {
+          "original": "totalEffort",
+          "mapped": "total_effort",
+          "argumentMappings": [
+            {
+              "original": "includeSubtasks",
+              "mapped": "include_subtasks"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveTaskTotalEffort",
+      "request": "ResolveTaskTotalEffortRequest",
+      "response": "ResolveTaskTotalEffortResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Employee",
+        "fieldMapping": {
+          "original": "currentWorkload",
+          "mapped": "current_workload",
+          "argumentMappings": [
+            {
+              "original": "includeCompleted",
+              "mapped": "include_completed"
+            },
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveEmployeeCurrentWorkload",
+      "request": "ResolveEmployeeCurrentWorkloadRequest",
+      "response": "ResolveEmployeeCurrentWorkloadResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Employee",
+        "fieldMapping": {
+          "original": "averageTaskCompletionDays",
+          "mapped": "average_task_completion_days",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            },
+            {
+              "original": "priority",
+              "mapped": "priority"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveEmployeeAverageTaskCompletionDays",
+      "request": "ResolveEmployeeAverageTaskCompletionDaysRequest",
+      "response": "ResolveEmployeeAverageTaskCompletionDaysResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Employee",
+        "fieldMapping": {
+          "original": "totalProjectCount",
+          "mapped": "total_project_count",
+          "argumentMappings": []
+        }
+      },
+      "rpc": "ResolveEmployeeTotalProjectCount",
+      "request": "ResolveEmployeeTotalProjectCountRequest",
+      "response": "ResolveEmployeeTotalProjectCountResponse"
     }
   ]
 }

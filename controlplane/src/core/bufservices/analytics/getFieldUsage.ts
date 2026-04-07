@@ -76,6 +76,8 @@ export function getFieldUsage(
       namedType: req.namedType,
       range: req.range,
       dateRange: dr,
+      isArgument: req.isArgument ?? false, // default to false if not provided
+      isInput: req.isInput ?? false, // default to false if not provided
     });
 
     return {

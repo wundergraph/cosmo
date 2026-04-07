@@ -1,4 +1,4 @@
-import { ChangeType, CriticalityLevel, diff, TypeOfChangeType } from '@graphql-inspector/core';
+import { ChangeType, CriticalityLevel, diff, TypeOfChangeType, SerializableChange } from '@graphql-inspector/core';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GraphQLSchema } from 'graphql';
 import { buildSchema } from './composition.js';
@@ -9,6 +9,8 @@ export interface SchemaDiff {
   // path is the path to the field or type that changed
   path: string;
   isBreaking: boolean;
+  // meta contains structured data about the change from graphql-inspector
+  meta: SerializableChange['meta'];
 }
 
 export interface GetDiffBetweenGraphsSuccess {
@@ -34,6 +36,7 @@ export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: G
       message: change.message,
       changeType: change.type,
       path: change.path ?? '',
+      meta: change.meta,
       isBreaking:
         change.criticality.level === CriticalityLevel.Breaking ||
         // We consider enum value changes as breaking changes because it is common to use enums in switch statements
@@ -82,6 +85,7 @@ export async function getDiffBetweenGraphs(
         message: breakingChange.message,
         changeType: breakingChange.changeType,
         path: breakingChange.path,
+        meta: breakingChange.meta,
         isBreaking: true,
       };
     });
@@ -93,6 +97,7 @@ export async function getDiffBetweenGraphs(
         message: nonBreakingChange.message,
         changeType: nonBreakingChange.changeType,
         path: nonBreakingChange.path,
+        meta: nonBreakingChange.meta,
         isBreaking: false,
       };
     });

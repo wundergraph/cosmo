@@ -24,6 +24,7 @@ import type { RouterOptions } from '../../routes.js';
 import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficInspector.js';
 import { enrichLogger, getLogger, handleError, toProposalOriginEnum } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
 export function createProposal(
   opts: RouterOptions,
@@ -38,7 +39,7 @@ export function createProposal(
 
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-    const proposalRepo = new ProposalRepository(opts.db);
+    const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
@@ -70,6 +71,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -95,6 +97,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -124,6 +127,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -153,6 +157,7 @@ export function createProposal(
           checkUrl: '',
           proposalUrl: '',
           proposalName: '',
+          composedSchemaBreakingChanges: [],
         };
       }
     } else {
@@ -187,6 +192,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -211,6 +217,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -237,6 +244,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -279,6 +287,7 @@ export function createProposal(
             checkUrl: '',
             proposalUrl: '',
             proposalName: '',
+            composedSchemaBreakingChanges: [],
           };
         }
 
@@ -305,6 +314,7 @@ export function createProposal(
             checkUrl: '',
             proposalUrl: '',
             proposalName: '',
+            composedSchemaBreakingChanges: [],
           };
         }
 
@@ -329,6 +339,7 @@ export function createProposal(
             checkUrl: '',
             proposalUrl: '',
             proposalName: '',
+            composedSchemaBreakingChanges: [],
           };
         }
       }
@@ -383,6 +394,7 @@ export function createProposal(
       contractRepo,
       graphCompostionRepo,
       opts.chClient,
+      opts.webhookProxyUrl,
     );
 
     const {
@@ -397,10 +409,13 @@ export function createProposal(
       graphPruneErrors,
       compositionWarnings,
       operationUsageStats,
+      composedSchemaBreakingChanges,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
-      hasLinkedSchemaChecks,
     } = await schemaCheckRepo.checkMultipleSchemas({
+      actorId: authContext.userId,
+      blobStorage: opts.blobStorage,
+      admissionConfig: { cdnBaseUrl: opts.cdnBaseUrl, jwtSecret: opts.jwtSecret },
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
       orgRepo,
@@ -425,6 +440,14 @@ export function createProposal(
       logger,
       chClient: opts.chClient,
       skipProposalMatchCheck: true,
+      webhookService: new OrganizationWebhookService(
+        opts.db,
+        authContext.organizationId,
+        opts.logger,
+        opts.billingDefaultPlanId,
+        opts.webhookProxyUrl,
+      ),
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     if (checkId) {
@@ -454,7 +477,7 @@ export function createProposal(
       proposalName: proposal.name,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
-      hasLinkedSchemaChecks,
+      composedSchemaBreakingChanges,
     };
   });
 }

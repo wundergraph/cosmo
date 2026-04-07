@@ -37,6 +37,9 @@ func main() {
 			ProductsFG:   *productsFeatureSubgraph,
 		},
 		EnableDebug: *debug,
+		GetPubSubName: func(name string) string {
+			return name
+		},
 	}
 	ctx := context.Background()
 	subgraphs, err := subgraphs.New(ctx, &config)

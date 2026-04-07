@@ -1,16 +1,24 @@
-import { Warning } from '../warnings/types';
-import { DocumentNode, GraphQLSchema, OperationTypeNode } from 'graphql';
-import { ConfigurationData } from '../router-configuration/types';
+import { type Warning } from '../warnings/types';
 import {
-  AuthorizationData,
-  ConditionalFieldData,
-  EntityData,
-  EntityInterfaceSubgraphData,
-  ParentDefinitionData,
-  PersistedDirectiveDefinitionData,
+  type DirectiveDefinitionNode,
+  type DocumentNode,
+  type GraphQLSchema,
+  type OperationTypeNode,
+  type SchemaDefinitionNode,
+  type SchemaExtensionNode,
+} from 'graphql';
+import { type ConfigurationData, type Costs } from '../router-configuration/types';
+import {
+  type AuthorizationData,
+  type ConditionalFieldData,
+  type EntityData,
+  type EntityInterfaceSubgraphData,
+  type ParentDefinitionData,
+  type PersistedDirectiveDefinitionData,
 } from '../schema-building/types';
-import { Graph } from '../resolvability-graph/graph';
-import { InternalSubgraph } from '../subgraph/types';
+import { type Graph } from '../resolvability-graph/graph';
+import { type InternalSubgraph } from '../subgraph/types';
+import { type DirectiveName, type TypeName } from '../types/types';
 
 export type NormalizationFailure = {
   errors: Array<Error>;
@@ -22,7 +30,9 @@ export type NormalizationSuccess = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
-  configurationDataByTypeName: Map<string, ConfigurationData>;
+  configurationDataByTypeName: Map<TypeName, ConfigurationData>;
+  costs: Costs;
+  directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityDataByTypeName: Map<string, EntityData>;
   fieldCoordsByNamedTypeName: Map<string, Set<string>>;
@@ -40,6 +50,7 @@ export type NormalizationSuccess = {
   subgraphString: string;
   success: true;
   warnings: Array<Warning>;
+  schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
 };
 
 export type NormalizationResult = NormalizationFailure | NormalizationSuccess;

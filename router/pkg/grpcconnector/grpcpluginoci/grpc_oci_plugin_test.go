@@ -1,6 +1,7 @@
 package grpcpluginoci
 
 import (
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpccommon"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -65,4 +66,28 @@ func TestNewGRPCOCIPlugin(t *testing.T) {
 			assert.False(t, plugin.disposed.Load())
 		})
 	}
+}
+
+func TestNewGRPCOCIPluginWithStartupConfig(t *testing.T) {
+	t.Run("successful creation with startup config", func(t *testing.T) {
+		telemetry := &grpccommon.GRPCTelemetry{
+			Tracing: &grpccommon.GRPCTracing{
+				Sampler: 1.0,
+			},
+		}
+		plugin := GRPCPluginConfig{
+			Logger:        zap.NewNop(),
+			ImageRef:      "cosmo-registry.wundergraph-test/org/image",
+			RegistryToken: "lalala",
+			StartupConfig: grpccommon.GRPCStartupParams{
+				Telemetry: telemetry,
+			},
+		}
+
+		grpcPlugin, err := NewGRPCOCIPlugin(plugin)
+		assert.NoError(t, err)
+
+		assert.NotNil(t, grpcPlugin.startupConfig.Telemetry)
+		assert.Equal(t, grpcPlugin.startupConfig.Telemetry, telemetry)
+	})
 }

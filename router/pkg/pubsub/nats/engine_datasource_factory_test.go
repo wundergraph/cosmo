@@ -1,17 +1,23 @@
 package nats
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
+	"go.uber.org/zap"
 )
+
+// testNatsEventBuilder is a reusable event builder for tests
+func testNatsEventBuilder(data []byte) datasource.MutableStreamEvent {
+	return &MutableEvent{Data: data}
+}
 
 func TestNatsEngineDataSourceFactory(t *testing.T) {
 	// Create the data source to test with a real adapter
@@ -33,8 +39,10 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	mockAdapter := NewMockAdapter(t)
 
 	// Configure mock expectations for Publish
-	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Subject == "test-subject"
+	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
+		return event.ProviderID() == "test-provider" && event.Subject == "test-subject"
+	}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+		return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"test":"data"}`)
 	})).Return(nil)
 
 	// Create the data source with mock adapter
@@ -55,10 +63,9 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	require.NoError(t, err)
 
 	// Call Load on the data source
-	out := &bytes.Buffer{}
-	err = ds.Load(context.Background(), []byte(input), out)
+	data, err := ds.Load(context.Background(), nil, []byte(input))
 	require.NoError(t, err)
-	require.Equal(t, `{"success": true}`, out.String())
+	require.Equal(t, `{"__typename": "edfs__PublishResult", "success": true}`, string(data))
 }
 
 func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
@@ -164,14 +171,16 @@ func TestNatsEngineDataSourceFactoryWithStreamConfiguration(t *testing.T) {
 func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 	// Create mock adapter
 	mockAdapter := NewMockAdapter(t)
+	provider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop(), testNatsEventBuilder)
+
+	// Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent) ([]byte, error)
 
 	// Configure mock expectations for Request
-	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Subject == "test-subject"
-	}), mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-		w := args.Get(2).(io.Writer)
-		w.Write([]byte(`{"response": "test"}`))
-	})
+	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
+		return event.ProviderID() == "test-provider" && event.Subject == "test-subject"
+	}), mock.MatchedBy(func(event datasource.StreamEvent) bool {
+		return event != nil && strings.EqualFold(string(event.GetData()), `{"test":"data"}`)
+	})).Return([]byte(`{"response": "test"}`), nil)
 
 	// Create the data source with mock adapter
 	pubsub := &EngineDataSourceFactory{
@@ -179,7 +188,7 @@ func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 		eventType:   EventTypeRequest,
 		subjects:    []string{"test-subject"},
 		fieldName:   "testField",
-		NatsAdapter: mockAdapter,
+		NatsAdapter: provider,
 	}
 
 	// Get the data source
@@ -192,10 +201,9 @@ func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 	require.NoError(t, err)
 
 	// Call Load on the data source
-	out := &bytes.Buffer{}
-	err = ds.Load(context.Background(), []byte(input), out)
+	data, err := ds.Load(context.Background(), nil, []byte(input))
 	require.NoError(t, err)
-	require.Equal(t, `{"response": "test"}`, out.String())
+	require.Equal(t, `{"response": "test"}`, string(data))
 }
 
 func TestTransformEventConfig(t *testing.T) {

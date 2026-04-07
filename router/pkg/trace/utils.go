@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -74,7 +75,7 @@ func GetClientDetails(r *http.Request, clientHeader config.ClientHeader) (string
 // If called multiple times, every error will be attached.
 func AttachErrToSpan(span trace.Span, err error) {
 	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
+		SetSanitizedSpanStatus(span, codes.Error, err.Error())
 		span.SetAttributes(rotel.WgRequestError.Bool(true))
 		span.RecordError(err)
 	}
@@ -83,10 +84,17 @@ func AttachErrToSpan(span trace.Span, err error) {
 func AttachErrToSpanFromContext(ctx context.Context, err error) {
 	span := trace.SpanFromContext(ctx)
 	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
+		SetSanitizedSpanStatus(span, codes.Error, err.Error())
 		span.SetAttributes(rotel.WgRequestError.Bool(true))
 		span.RecordError(err)
 	}
+}
+
+func SetSanitizedSpanStatus(span trace.Span, code codes.Code, description string) {
+	if description != "" && !utf8.ValidString(description) {
+		description = strings.ToValidUTF8(description, "\ufffd")
+	}
+	span.SetStatus(code, description)
 }
 
 func GetTraceID(ctx context.Context) string {

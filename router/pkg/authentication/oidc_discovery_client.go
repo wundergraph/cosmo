@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -44,7 +45,10 @@ func (c *oidcDiscoveryClient) RoundTrip(req *http.Request) (*http.Response, erro
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
 
 	oidcConfig := new(oidcConfiguration)
 	if err := json.NewDecoder(resp.Body).Decode(oidcConfig); err != nil {

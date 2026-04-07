@@ -2,17 +2,15 @@ package core
 
 import (
 	"context"
-	"slices"
+	"errors"
 	"time"
 
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/zap"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-
-	"go.opentelemetry.io/otel/attribute"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 )
 
 type OperationProtocol string
@@ -30,16 +28,14 @@ func (p OperationProtocol) String() string {
 // OperationMetrics is a struct that holds the metrics for an operation. It should be created on the parent router request
 // subgraph metrics are created in the transport or engine loader hooks.
 type OperationMetrics struct {
-	requestContentLength int64
-	routerMetrics        RouterMetrics
-	operationStartTime   time.Time
-	inflightMetric       func()
-	routerConfigVersion  string
-	logger               *zap.Logger
-	trackUsageInfo       bool
-
-	promSchemaUsageEnabled             bool
-	promSchemaUsageIncludeOperationSha bool
+	requestContentLength     int64
+	routerMetrics            RouterMetrics
+	operationStartTime       time.Time
+	inflightMetric           func()
+	routerConfigVersion      string
+	logger                   *zap.Logger
+	trackUsageInfo           bool
+	prometheusTrackUsageInfo bool
 }
 
 func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, responseSize int, exportSynchronous bool) {
@@ -61,7 +57,10 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	o := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
 
-	if reqContext.error != nil {
+	// Client disconnections are not server-side errors and should not inflate error metrics.
+	isError := reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled)
+
+	if isError {
 		rm.MeasureRequestError(ctx, sliceAttrs, o)
 
 		attrs = append(attrs, rotel.WgRequestError.Bool(true))
@@ -77,47 +76,41 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	rm.MeasureRequestSize(ctx, m.requestContentLength, sliceAttrs, o)
 	rm.MeasureResponseSize(ctx, int64(responseSize), sliceAttrs, o)
 
-	if m.trackUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
-		m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
+	// Record operation cost metrics from cached values
+	if reqContext.operation != nil {
+		if reqContext.operation.costEstimatedSet {
+			rm.MeasureOperationCostEstimated(ctx, int64(reqContext.operation.costEstimated), sliceAttrs, o)
+		}
+		if reqContext.operation.costActualSet {
+			rm.MeasureOperationCostActual(ctx, int64(reqContext.operation.costActual), sliceAttrs, o)
+		}
 	}
 
-	// Prometheus usage metrics, disabled by default
-	if m.promSchemaUsageEnabled && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
-		opAttrs := []attribute.KeyValue{
-			rotel.WgOperationName.String(reqContext.operation.name),
-			rotel.WgOperationType.String(reqContext.operation.opType),
+	// Export schema usage info to configured exporters.
+	// Client disconnections are excluded from the error flag to stay consistent with
+	// the error metrics above.
+	if reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
+		// GraphQL metrics export (to metrics service)
+		if m.trackUsageInfo {
+			m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, isError, exportSynchronous)
 		}
 
-		if m.promSchemaUsageIncludeOperationSha && reqContext.operation.sha256Hash != "" {
-			opAttrs = append(opAttrs, rotel.WgOperationSha256.String(reqContext.operation.sha256Hash))
-		}
-
-		for _, field := range reqContext.operation.typeFieldUsageInfo {
-			if field.ExactParentTypeName == "" {
-				continue
-			}
-
-			fieldAttrs := []attribute.KeyValue{
-				rotel.WgGraphQLFieldName.String(field.Path[len(field.Path)-1]),
-				rotel.WgGraphQLParentType.String(field.ExactParentTypeName),
-			}
-
-			rm.MeasureSchemaFieldUsage(ctx, 1, []attribute.KeyValue{}, otelmetric.WithAttributeSet(attribute.NewSet(slices.Concat(opAttrs, fieldAttrs)...)))
+		// Prometheus metrics export (to local Prometheus metrics)
+		if m.prometheusTrackUsageInfo {
+			m.routerMetrics.ExportSchemaUsageInfoPrometheus(reqContext.operation, statusCode, isError, exportSynchronous)
 		}
 	}
 }
 
 type OperationMetricsOptions struct {
-	InFlightAddOption    otelmetric.AddOption
-	SliceAttributes      []attribute.KeyValue
-	RouterConfigVersion  string
-	RequestContentLength int64
-	RouterMetrics        RouterMetrics
-	Logger               *zap.Logger
-	TrackUsageInfo       bool
-
-	PrometheusSchemaUsageEnabled    bool
-	PrometheusSchemaUsageIncludeSha bool
+	InFlightAddOption        otelmetric.AddOption
+	SliceAttributes          []attribute.KeyValue
+	RouterConfigVersion      string
+	RequestContentLength     int64
+	RouterMetrics            RouterMetrics
+	Logger                   *zap.Logger
+	TrackUsageInfo           bool
+	PrometheusTrackUsageInfo bool
 }
 
 // newOperationMetrics creates a new OperationMetrics struct and starts the operation metrics.
@@ -127,15 +120,13 @@ func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 
 	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.SliceAttributes, opts.InFlightAddOption)
 	return &OperationMetrics{
-		requestContentLength: opts.RequestContentLength,
-		operationStartTime:   operationStartTime,
-		inflightMetric:       inflightMetric,
-		routerConfigVersion:  opts.RouterConfigVersion,
-		routerMetrics:        opts.RouterMetrics,
-		logger:               opts.Logger,
-		trackUsageInfo:       opts.TrackUsageInfo,
-
-		promSchemaUsageEnabled:             opts.PrometheusSchemaUsageEnabled,
-		promSchemaUsageIncludeOperationSha: opts.PrometheusSchemaUsageIncludeSha,
+		requestContentLength:     opts.RequestContentLength,
+		operationStartTime:       operationStartTime,
+		inflightMetric:           inflightMetric,
+		routerConfigVersion:      opts.RouterConfigVersion,
+		routerMetrics:            opts.RouterMetrics,
+		logger:                   opts.Logger,
+		trackUsageInfo:           opts.TrackUsageInfo,
+		prometheusTrackUsageInfo: opts.PrometheusTrackUsageInfo,
 	}
 }

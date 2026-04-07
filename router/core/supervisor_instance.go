@@ -3,6 +3,10 @@ package core
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -13,9 +17,6 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
-	"os"
-	"strings"
 )
 
 // newRouter creates a new router instance.
@@ -40,7 +41,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
 		mLimit, err := memlimit.SetGoMemLimitWithOpts(
 			memlimit.WithRatio(0.9),
-			memlimit.WithProvider(memlimit.FromCgroupHybrid),
+			memlimit.WithProvider(memlimit.FromCgroup),
 		)
 		if err == nil {
 			params.Logger.Info("GOMEMLIMIT set automatically", zap.String("limit", humanize.Bytes(uint64(mLimit))))
@@ -49,7 +50,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		}
 	}
 
-	options := optionsFromResources(logger, cfg)
+	options := optionsFromResources(logger, cfg, params.ReloadPersistentState)
 	options = append(options, additionalOptions...)
 
 	authenticators, err := setupAuthenticators(ctx, logger, cfg)
@@ -58,7 +59,26 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 	}
 
 	if len(authenticators) > 0 {
-		options = append(options, WithAccessController(NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)))
+		accessController, err := NewAccessController(AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   cfg.Authorization.RequireAuthentication,
+			SkipIntrospectionQueries: cfg.Authentication.IgnoreIntrospection,
+			IntrospectionSkipSecret:  cfg.IntrospectionConfig.Secret,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not create access controller: %w", err)
+		}
+
+		options = append(options, WithAccessController(accessController))
+	}
+
+	if cfg.Authentication.IgnoreIntrospection && cfg.IntrospectionConfig.Secret == "" {
+		params.Logger.Warn("introspection operations are not authenticated. " +
+			"Consider setting introspection.secret configuration parameter or set authentication.ignore_introspection to false. Do not use this in production.")
+	}
+
+	if !cfg.Authentication.IgnoreIntrospection && cfg.IntrospectionConfig.Secret != "" {
+		params.Logger.Warn("introspection.secret configuration parameter is ignored because authentication.ignore_introspection is false.")
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY
@@ -161,13 +181,13 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 	return NewRouter(options...)
 }
 
-func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
+func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersistentState *ReloadPersistentState) []Option {
 	options := []Option{
 		WithListenerAddr(config.ListenAddr),
 		WithOverrideRoutingURL(config.OverrideRoutingURL),
 		WithOverrides(config.Overrides),
 		WithLogger(logger),
-		WithIntrospection(config.IntrospectionEnabled),
+		WithIntrospection(config.IntrospectionEnabled, config.IntrospectionConfig),
 		WithQueryPlans(config.QueryPlansEnabled),
 		WithPlayground(config.PlaygroundEnabled),
 		WithGraphApiToken(config.Graph.Token),
@@ -241,8 +261,12 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithClientHeader(config.ClientHeader),
 		WithCacheWarmupConfig(&config.CacheWarmup),
 		WithMCP(config.MCP),
+		WithConnectRPC(config.ConnectRPC),
 		WithPlugins(config.Plugins),
 		WithDemoMode(config.DemoMode),
+		WithStreamsHandlerConfiguration(config.Events.Handlers),
+		WithReloadPersistentState(reloadPersistentState),
+		WithSubgraphTLSConfiguration(config.TLS.Client),
 	}
 
 	return options
@@ -263,6 +287,7 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 			URL:               jwks.URL,
 			RefreshInterval:   jwks.RefreshInterval,
 			AllowedAlgorithms: jwks.Algorithms,
+			AllowedUse:        jwks.AllowedUse,
 
 			Secret:    jwks.Secret,
 			Algorithm: jwks.Algorithm,

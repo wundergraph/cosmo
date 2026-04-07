@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { joinLabel } from '@wundergraph/cosmo-shared';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import {
@@ -15,13 +14,12 @@ import {
 import {
   createNamespace,
   createSubgraph,
+  DEFAULT_GRPC_SUBGRAPH_URL_ONE,
+  DEFAULT_GRPC_SUBGRAPH_URL_THREE,
+  DEFAULT_GRPC_SUBGRAPH_URL_TWO,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
-  createThenPublishSubgraph,
-  createFederatedGraph,
-  DEFAULT_ROUTER_URL,
-  DEFAULT_NAMESPACE,
 } from '../test-util.js';
 
 let dbname = '';
@@ -51,8 +49,9 @@ describe('Publish feature subgraph tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that a feature subgraph can be created and published inheriting STANDARD type from base subgraph', async () => {
+  test('that a feature subgraph can be created and published inheriting STANDARD type from base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -89,15 +88,14 @@ describe('Publish feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
     expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.STANDARD);
     expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
-
-    await server.close();
   });
 
-  test('that a feature subgraph cannot be created and published with a plugin base subgraph using wgc fs publish', async () => {
+  test('that a feature subgraph cannot be created and published with a plugin base subgraph using wgc fs publish', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const basePluginName = genID('basePlugin');
     const featureSubgraphName = genID('featureSubgraph');
@@ -127,15 +125,14 @@ describe('Publish feature subgraph tests', () => {
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
       `Cannot create a feature subgraph with a plugin base subgraph using this command. Since the base subgraph "${basePluginName}" is a plugin, please use the 'wgc feature-subgraph create' command to create the feature subgraph first, then publish it using the 'wgc router plugin publish' command.`,
     );
-
-    await server.close();
   });
 
-  test('that a plugin subgraph cannot be published with STANDARD type', async () => {
+  test('that a plugin subgraph cannot be published with STANDARD type', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const pluginLabel = genUniqueLabel('plugin');
@@ -162,12 +159,11 @@ describe('Publish feature subgraph tests', () => {
     expect(publishPluginResponse.response?.details).toBe(
       `Subgraph ${pluginName} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`,
     );
-
-    await server.close();
   });
 
-  test('that publishFederatedSubgraph fails when base subgraph does not exist', async () => {
+  test('that publishFederatedSubgraph fails when base subgraph does not exist', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const nonExistentBaseSubgraph = genID('nonExistentBase');
     const featureSubgraphName = genID('featureSubgraph');
@@ -187,12 +183,11 @@ describe('Publish feature subgraph tests', () => {
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
       `Base subgraph "${nonExistentBaseSubgraph}" does not exist in the namespace "default".`,
     );
-
-    await server.close();
   });
 
-  test('that publishFederatedSubgraph fails when base subgraph exists in different namespace', async () => {
+  test('that publishFederatedSubgraph fails when base subgraph exists in different namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -221,12 +216,11 @@ describe('Publish feature subgraph tests', () => {
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
       `Base subgraph "${baseSubgraphName}" does not exist in the namespace "${namespace}".`,
     );
-
-    await server.close();
   });
 
-  test('that publishFederatedSubgraph requires routing URL for feature subgraphs based on standard subgraphs', async () => {
+  test('that publishFederatedSubgraph requires routing URL for feature subgraphs based on standard subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -249,12 +243,11 @@ describe('Publish feature subgraph tests', () => {
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
       'A valid, non-empty routing URL is required to create and publish a feature subgraph.',
     );
-
-    await server.close();
   });
 
-  test('that publishFederatedSubgraph validates invalid routing URL for feature subgraphs', async () => {
+  test('that publishFederatedSubgraph validates invalid routing URL for feature subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -276,12 +269,11 @@ describe('Publish feature subgraph tests', () => {
 
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(publishFeatureSubgraphResponse.response?.details).toBe('Routing URL "invalid-url" is not a valid URL.');
-
-    await server.close();
   });
 
-  test('that publishFederatedSubgraph validates subscription URL for feature subgraphs', async () => {
+  test('that publishFederatedSubgraph validates subscription URL for feature subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -306,12 +298,11 @@ describe('Publish feature subgraph tests', () => {
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
       'Subscription URL "invalid-subscription-url" is not a valid URL',
     );
-
-    await server.close();
   });
 
-  test('that publishFederatedSubgraph validates graph name for feature subgraphs', async () => {
+  test('that publishFederatedSubgraph validates graph name for feature subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const invalidFeatureSubgraphName = 'invalid name with spaces';
@@ -335,12 +326,11 @@ describe('Publish feature subgraph tests', () => {
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
       "The name of the subgraph is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.",
     );
-
-    await server.close();
   });
 
-  test('that publishFederatedSubgraph handles invalid schema validation', async () => {
+  test('that publishFederatedSubgraph handles invalid schema validation', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -361,12 +351,11 @@ describe('Publish feature subgraph tests', () => {
     });
 
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA);
-
-    await server.close();
   });
 
-  test('that publishFederatedSubgraph handles authorization for feature subgraphs', async () => {
+  test('that publishFederatedSubgraph handles authorization for feature subgraphs', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -393,12 +382,11 @@ describe('Publish feature subgraph tests', () => {
     });
 
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
-  test('that publishFederatedSubgraph successfully creates feature subgraph with subscription URL and protocol', async () => {
+  test('that publishFederatedSubgraph successfully creates feature subgraph with subscription URL and protocol', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -429,12 +417,11 @@ describe('Publish feature subgraph tests', () => {
     });
     expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraphResponse.graph?.subscriptionUrl).toBe('wss://api.example.com/subscriptions');
-
-    await server.close();
   });
 
-  test('that publishFederatedSubgraph works with disableResolvabilityValidation flag', async () => {
+  test('that publishFederatedSubgraph works with disableResolvabilityValidation flag', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -455,51 +442,49 @@ describe('Publish feature subgraph tests', () => {
     });
 
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-    test('that publishFederatedSubgraph works with namespace parameter', async () => {
-      const { client, server } = await SetupTest({ dbname });
+  test('that publishFederatedSubgraph works with namespace parameter', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
-      const baseSubgraphName = genID('baseSubgraph');
-      const featureSubgraphName = genID('featureSubgraph');
-      const namespace = genID('namespace').toLowerCase();
+    const baseSubgraphName = genID('baseSubgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+    const namespace = genID('namespace').toLowerCase();
 
-      // Create namespace
-      await createNamespace(client, namespace);
+    // Create namespace
+    await createNamespace(client, namespace);
 
-      // Create base subgraph in the namespace
-      await createSubgraph(client, baseSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, namespace);
+    // Create base subgraph in the namespace
+    await createSubgraph(client, baseSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, namespace);
 
-      // Create feature subgraph in the same namespace (replicating CLI call)
-      const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
-        baseSubgraphName,
-        disableResolvabilityValidation: false,
-        isFeatureSubgraph: true,
-        labels: [],
-        name: featureSubgraphName,
-        namespace,
-        routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
-        schema: 'type Query { hello: String }',
-        type: SubgraphType.STANDARD,
-      });
-
-      expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-
-      // Verify the feature subgraph was created in the correct namespace
-      const getFeatureSubgraphResponse = await client.getSubgraphByName({
-        name: featureSubgraphName,
-        namespace,
-      });
-      expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-      expect(getFeatureSubgraphResponse.graph?.namespace).toBe(namespace);
-
-      await server.close();
+    // Create feature subgraph in the same namespace (replicating CLI call)
+    const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
+      baseSubgraphName,
+      disableResolvabilityValidation: false,
+      isFeatureSubgraph: true,
+      labels: [],
+      name: featureSubgraphName,
+      namespace,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      schema: 'type Query { hello: String }',
+      type: SubgraphType.STANDARD,
     });
 
-  test('that creating and publishing a feature subgraph in one step fails when base subgraph is a grpc service - replicating fs publish command', async () => {
+    expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify the feature subgraph was created in the correct namespace
+    const getFeatureSubgraphResponse = await client.getSubgraphByName({
+      name: featureSubgraphName,
+      namespace,
+    });
+    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraphResponse.graph?.namespace).toBe(namespace);
+  });
+
+  test('that creating and publishing a feature subgraph in one step fails when base subgraph is a grpc service - replicating fs publish command', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseGrpcServiceName = genID('baseGrpcService');
     const featureSubgraphName = genID('featureSubgraph');
@@ -509,7 +494,7 @@ describe('Publish feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -529,7 +514,7 @@ describe('Publish feature subgraph tests', () => {
       isFeatureSubgraph: true,
       labels: [],
       name: featureSubgraphName, // Feature subgraph doesn't exist yet
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       schema: 'type Query { hello: String }',
       type: SubgraphType.STANDARD, // This is what the CLI passes regardless of base type
     });
@@ -545,12 +530,11 @@ describe('Publish feature subgraph tests', () => {
       name: featureSubgraphName,
     });
     expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 
-  test('that a feature subgraph cannot be published with a GRPC service base subgraph using wgc fs publish after creation', async () => {
+  test('that a feature subgraph cannot be published with a GRPC service base subgraph using wgc fs publish after creation', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseGrpcServiceName = genID('baseGrpcService');
     const featureSubgraphName = genID('featureSubgraph');
@@ -560,7 +544,7 @@ describe('Publish feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -568,7 +552,7 @@ describe('Publish feature subgraph tests', () => {
     // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       labels: [],
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
@@ -589,12 +573,11 @@ describe('Publish feature subgraph tests', () => {
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
       `Subgraph ${featureSubgraphName} is a grpc service. Please use the 'wgc grpc-service publish' command to publish the grpc service.`,
     );
-
-    await server.close();
   });
 
-  test('that a feature subgraph can be created and published inheriting GRPC_SERVICE type from base subgraph', async () => {
+  test('that a feature subgraph can be created and published inheriting GRPC_SERVICE type from base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseGrpcServiceName = genID('baseGrpcService');
     const featureSubgraphName = genID('featureGrpcService');
@@ -604,7 +587,7 @@ describe('Publish feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -619,7 +602,7 @@ describe('Publish feature subgraph tests', () => {
     // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       labels: [],
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
@@ -650,13 +633,12 @@ describe('Publish feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
     expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
-
-    await server.close();
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_TWO);
   });
 
-  test('that multiple feature subgraphs can be created and published from the same gRPC service base', async () => {
+  test('that multiple feature subgraphs can be created and published from the same gRPC service base', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseGrpcServiceName = genID('baseGrpcService');
     const featureSubgraphName1 = genID('featureGrpcService1');
@@ -667,7 +649,7 @@ describe('Publish feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -681,7 +663,7 @@ describe('Publish feature subgraph tests', () => {
     // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
     const createFeatureSubgraph1Response = await client.createFederatedSubgraph({
       name: featureSubgraphName1,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       labels: [],
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
@@ -700,7 +682,7 @@ describe('Publish feature subgraph tests', () => {
     // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
     const createFeatureSubgraph2Response = await client.createFederatedSubgraph({
       name: featureSubgraphName2,
-      routingUrl: 'http://localhost:4003',
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_THREE,
       labels: [],
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
@@ -723,7 +705,7 @@ describe('Publish feature subgraph tests', () => {
     expect(getFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraph1Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
     expect(getFeatureSubgraph1Response.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraph1Response.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getFeatureSubgraph1Response.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_TWO);
 
     const getFeatureSubgraph2Response = await client.getSubgraphByName({
       name: featureSubgraphName2,
@@ -731,13 +713,12 @@ describe('Publish feature subgraph tests', () => {
     expect(getFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraph2Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
     expect(getFeatureSubgraph2Response.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraph2Response.graph?.routingURL).toBe('http://localhost:4003');
-
-    await server.close();
+    expect(getFeatureSubgraph2Response.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_THREE);
   });
 
-  test('that publishFederatedSubgraph fails to publish gRPC service feature subgraph without required proto information', async () => {
+  test('that publishFederatedSubgraph fails to publish gRPC service feature subgraph without required proto information', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseGrpcServiceName = genID('baseGrpcService');
     const featureSubgraphName = genID('featureGrpcService');
@@ -747,7 +728,7 @@ describe('Publish feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -755,7 +736,7 @@ describe('Publish feature subgraph tests', () => {
     // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       labels: [],
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
@@ -774,7 +755,5 @@ describe('Publish feature subgraph tests', () => {
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
       'The proto is required for plugin and grpc subgraphs.',
     );
-
-    await server.close();
   });
 });

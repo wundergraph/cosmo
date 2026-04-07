@@ -21,9 +21,7 @@ logs
 .idea
 
 CHANGELOG.md
+CHANGELOG
 .husky
-
-
-controlplane/migrations
-
-composition/tests/unstaged-tests
+**/testdata
+docs-website

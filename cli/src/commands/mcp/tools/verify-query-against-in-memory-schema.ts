@@ -18,10 +18,13 @@ export const registerVerifyQueryAgainstInMemorySchemaTool = ({
   server: McpServer;
   opts: BaseCommandOptions;
 }) => {
-  server.tool(
+  server.registerTool(
     'verify_query_against_in_memory_schema',
-    'Verify if a GraphQL query is valid against a local in memory Supergraph or GraphQL SDL.',
-    { query: z.string(), schema: z.string() },
+    {
+      title: 'Verify Query Against In Memory Schema',
+      description: 'Verify if a GraphQL query is valid against a local in memory Supergraph or GraphQL SDL.',
+      inputSchema: { query: z.string(), schema: z.string() },
+    },
     ({ query, schema: schemaString }) => {
       try {
         let document;

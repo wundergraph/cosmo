@@ -1,3 +1,4 @@
+import { getNormalizedFieldSet, safeParse } from '@wundergraph/composition';
 import { camelCase, snakeCase, upperFirst } from 'lodash-es';
 
 /**
@@ -10,7 +11,7 @@ import { camelCase, snakeCase, upperFirst } from 'lodash-es';
 /**
  * The names of the GraphQL operation types
  */
-export type OperationTypeName = 'Query' | 'Mutation' | 'Subscription';
+export type OperationTypeName = 'Query' | 'Mutation' | 'Subscription' | 'Resolve';
 
 /**
  * Converts a GraphQL field name to a Protocol Buffer field name (snake_case)
@@ -27,10 +28,22 @@ export function graphqlArgumentToProtoField(argName: string): string {
 }
 
 /**
+ * Converts a proto field name (snake_case) to the expected protobuf JSON format (camelCase)
+ * This matches how protobuf JSON marshaling automatically converts field names
+ */
+export function protoFieldToProtoJSON(protoFieldName: string): string {
+  return camelCase(protoFieldName);
+}
+
+/**
  * Creates an operation method name from an operation type and field name
  */
 export function createOperationMethodName(operationType: OperationTypeName, fieldName: string): string {
   return `${operationType}${upperFirst(camelCase(fieldName))}`;
+}
+
+export function createResolverMethodName(parentTypeName: string, fieldName: string): string {
+  return `Resolve${upperFirst(camelCase(parentTypeName))}${upperFirst(camelCase(fieldName))}`;
 }
 
 /**
@@ -50,15 +63,95 @@ export function createResponseMessageName(methodName: string): string {
 /**
  * Creates an entity lookup method name for an entity type
  */
-export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
-  const normalizedKey = keyString
-    .split(/[,\s]+/)
-    .filter((field) => field.length > 0)
-    .map((field) => upperFirst(camelCase(field)))
-    .sort()
-    .join('And');
+export function createEntityLookupMethodName(typeName: string, keyString = 'id'): string {
+  const normalizedKey = createMethodSuffixFromEntityKey(keyString);
+  return `Lookup${typeName}${normalizedKey}`;
+}
 
-  return `Lookup${typeName}By${normalizedKey}`;
+/**
+ * Creates a key message name for an entity lookup request
+ * @param typeName - The name of the entity type
+ * @param keyString - The key string
+ * @returns The name of the key message
+ */
+export function createEntityLookupRequestKeyMessageName(typeName: string, keyString = 'id'): string {
+  const requestName = createRequestMessageName(createEntityLookupMethodName(typeName, keyString));
+  return `${requestName}Key`;
+}
+
+/**
+ * Creates a required fields method name for an entity type.
+ * The fields are sorted alphabetically.
+ * @param typeName - The name of the entity type
+ * @param fieldName - The name of the field that is required
+ * @param keyString - The key string
+ * @returns The name of the required fields method
+ * @example
+ * createRequiredFieldsMethodName('User', 'post', 'id') // => 'RequireUserPostById'
+ * createRequiredFieldsMethodName('User', 'post', 'id name') // => 'RequireUserPostByIdAndName'
+ * createRequiredFieldsMethodName('User', 'post', 'name,id') // => 'RequireUserPostByIdAndName'
+ */
+export function createRequiredFieldsMethodName(typeName: string, fieldName: string, keyString = 'id'): string {
+  const normalizedKey = createMethodSuffixFromEntityKey(keyString);
+  return `Require${typeName}${upperFirst(camelCase(fieldName))}${normalizedKey}`;
+}
+
+/**
+ * Creates a method suffix from an entity key string
+ * @param keyString - The key string
+ * @returns The method suffix
+ */
+export function createMethodSuffixFromEntityKey(keyString = 'id'): string {
+  const normalizedKey = formatKeyElements(keyString).join('And');
+
+  return `By${normalizedKey}`;
+}
+
+/**
+ * Normalizes a key string into a canonical field set representation.
+ *
+ * Parses the key string as a GraphQL selection set and applies normalization
+ * logic from the composition package to produce a consistent string representation.
+ * @remarks We currently don't support nested keys, so we apply a simple deduplication logic.
+ *
+ * @param keyString - The key string from a @key directive (e.g., "id name", "id,name")
+ * @returns The normalized field set string
+ * @throws Error if the key string cannot be parsed as a valid GraphQL selection
+ *
+ * @example
+ * normalizeKeyString('id name')     // => 'id name'
+ * normalizeKeyString('name id')     // => 'id name' (sorted)
+ * normalizeKeyString('id,name')     // => 'id name'
+ */
+export function normalizeKeyString(keyString: string): string {
+  const { error, documentNode } = safeParse('{' + keyString + '}');
+  if (error || !documentNode) {
+    throw new Error(`Invalid field set for key directive: ${keyString} - error: ${error?.message}`);
+  }
+
+  const normalizedFieldSet = getNormalizedFieldSet(documentNode);
+  return [...new Set(normalizedFieldSet.split(/[\s,]+/))].join(' ');
+}
+
+/**
+ * Formats key elements into PascalCase.
+ *
+ * This function normalizes a key string, splits it into individual field names,
+ * converts each to PascalCase. Used primarily for generating consistent method name suffixes from entity keys.
+ *
+ * @param keyString - The key string from a @key directive (e.g., "id name", "user_id,name")
+ * @returns Array of PascalCase field names
+ *
+ * @example
+ * formatKeyElements('id,name')       // => ['Id', 'Name']
+ * formatKeyElements('name,id')       // => ['Id', 'Name']
+ * formatKeyElements('name id name')  // => ['Id', 'Name']
+ * formatKeyElements('user_id')       // => ['UserId']
+ */
+export function formatKeyElements(keyString: string): string[] {
+  return normalizeKeyString(keyString)
+    .split(/[\s,]+/)
+    .map((field) => upperFirst(camelCase(field)));
 }
 
 /**
@@ -73,4 +166,31 @@ export function graphqlEnumValueToProtoEnumValue(enumTypeName: string, enumValue
  */
 export function createEnumUnspecifiedValue(enumTypeName: string): string {
   return `${snakeCase(enumTypeName).toUpperCase()}_UNSPECIFIED`;
+}
+
+/**
+ * Creates a response result name for a resolver response
+ * @param methodName - The name of the method
+ * @returns The name of the response result built from the method name
+ */
+export function resolverResponseResultName(methodName: string): string {
+  return `${upperFirst(camelCase(methodName))}Result`;
+}
+
+/**
+ * Creates a type field arguments name for a type field
+ * @param methodName - The method name
+ * @returns The name of the type field arguments built from the method name
+ */
+export function typeFieldArgsName(methodName: string): string {
+  return `${methodName}Args`;
+}
+
+/**
+ * Creates a type field context name for a type field
+ * @param methodName - The method name
+ * @returns The name of the type field context built from the method name
+ */
+export function typeFieldContextName(methodName: string): string {
+  return `${methodName}Context`;
 }

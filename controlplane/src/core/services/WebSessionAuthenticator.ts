@@ -1,7 +1,13 @@
 import cookie from 'cookie';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { eq } from 'drizzle-orm';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { UserSession } from '../../types/index.js';
 import { decrypt, userSessionCookieName } from '../crypto/jwt.js';
 import { UserRepository } from '../repositories/UserRepository.js';
+import * as schema from '../../db/schema.js';
+import AuthUtils from '../auth-utils.js';
+import { AuthenticationError } from '../errors/errors.js';
 
 export const OrganizationSlugHeader = 'cosmo-org-slug';
 
@@ -14,6 +20,7 @@ export type WebAuthAuthContext = {
 
 export default class WebSessionAuthenticator {
   constructor(
+    private db: PostgresJsDatabase<typeof schema>,
     private jwtSecret: string,
     private userRepository: UserRepository,
   ) {}
@@ -37,17 +44,37 @@ export default class WebSessionAuthenticator {
         });
 
         if (!decryptedJwt.iss) {
-          throw new Error('Missing user id in JWT');
+          throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Missing user id in JWT');
+        }
+
+        // Ensure that the session is still valid
+        if (!decryptedJwt.sessionId) {
+          throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Missing session id in JWT');
+        }
+
+        const existingSessions = await this.db
+          .select()
+          .from(schema.sessions)
+          .where(eq(schema.sessions.id, decryptedJwt.sessionId))
+          .limit(1)
+          .execute();
+
+        if (
+          existingSessions.length !== 1 ||
+          existingSessions[0].userId.toLowerCase() !== decryptedJwt.iss?.toLowerCase() ||
+          AuthUtils.isSessionExpired(existingSessions[0])
+        ) {
+          throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Invalid or expired session');
         }
 
         const organizationSlug = headers.get(OrganizationSlugHeader);
         if (!organizationSlug) {
-          throw new Error('Missing organization slug header');
+          throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Missing organization slug header');
         }
 
         const user = await this.userRepository.byId(decryptedJwt.iss);
         if (!user) {
-          throw new Error('User not found');
+          throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'User not found');
         }
 
         return {
@@ -59,6 +86,6 @@ export default class WebSessionAuthenticator {
       }
     }
 
-    throw new Error('Missing user session cookie');
+    throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Missing user session cookie');
   }
 }

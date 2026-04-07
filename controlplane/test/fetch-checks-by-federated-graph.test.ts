@@ -33,8 +33,9 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('Should be able to fetch checks for a federated graph that exists', async () => {
+  test('Should be able to fetch checks for a federated graph that exists', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -110,13 +111,11 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     // Check if we have checks now after running the check
     expect(checksResp.checks.length).toBe(1);
     expect(checksResp.checksCountBasedOnDateRange).toBe(1);
-
-    // Cleanup
-    await server.close();
   });
 
-  test('Should return not found for a non-existent federated graph', async () => {
+  test('Should return not found for a non-existent federated graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const nonExistentGraphName = genID('nonExistentGraph');
 
@@ -132,12 +131,11 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
 
     expect(checksResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(checksResp.checks).toHaveLength(0);
-
-    await server.close();
   });
 
-  test('Should return hasChecks=false when no checks have been run', async () => {
+  test('Should return hasChecks=false when no checks have been run', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -201,13 +199,13 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
 
     expect(checksResp.checks).toHaveLength(0);
     expect(checksResp.checksCountBasedOnDateRange).toBe(0);
-
-    await server.close();
   });
 
-  test('Should validate limit parameter', async () => {
+  test('Should validate limit parameter', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
+    const subgraphName = genID('subgraph');
     const federatedGraphName = genID('fedGraph');
 
     // Create a federated graph
@@ -220,11 +218,31 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
 
     expect(createFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
 
+    // Create a subgraph
+    const createSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [{ key: 'team', value: 'A' }],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    expect(createSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create 51 checks
+    for (let i = 0; i < 51; i++) {
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        schema: Uint8Array.from(Buffer.from(`type Query { a: String }`)),
+      });
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    }
+
     const now = new Date();
     const oneDayAgo = subDays(now, 1);
 
-    // Test with invalid limit (> 50)
-    const checksWithInvalidLimitResp = await client.getChecksByFederatedGraphName({
+    // Test with limit > 50 - should succeed but return max 50 results
+    const checksWithLimitOver50Resp = await client.getChecksByFederatedGraphName({
       name: federatedGraphName,
       namespace: DEFAULT_NAMESPACE,
       limit: 51,
@@ -236,8 +254,9 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
       },
     });
 
-    expect(checksWithInvalidLimitResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(checksWithInvalidLimitResp.response?.details).toBe('Invalid limit');
+    expect(checksWithLimitOver50Resp.response?.code).toBe(EnumStatusCode.OK);
+    // Limit is clamped to 50, so we should get maximum 50 checks back
+    expect(checksWithLimitOver50Resp.checks.length).toBe(50);
 
     // Test with valid limit
     const checksWithValidLimitResp = await client.getChecksByFederatedGraphName({
@@ -253,12 +272,12 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     });
 
     expect(checksWithValidLimitResp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
+    expect(checksWithValidLimitResp.checks.length).toBe(50);
   });
 
-  test('Should filter checks by specified subgraphs', async () => {
+  test('Should filter checks by specified subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName1 = genID('subgraph1');
@@ -462,12 +481,11 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     const checkSubgraphs2 = checksFilteredResp2.checks[0].checkedSubgraphs;
     expect(checkSubgraphs2.length).toBe(1);
     expect(checkSubgraphs2[0].subgraphName).toBe(subgraphName2);
-
-    await server.close();
   });
 
-  test('Should return hasChecks=true when no checks exist for the date range but total checks exist', async () => {
+  test('Should return hasChecks=true when no checks exist for the date range but total checks exist', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -591,12 +609,11 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
 
     expect(currentChecksResp.response?.code).toBe(EnumStatusCode.OK);
     expect(currentChecksResp.checks.length).toBeGreaterThan(0);
-
-    await server.close();
   });
 
-  test('Should handle federated graphs and subgraphs with same names in different namespaces and fetch checks for each federated graph', async () => {
+  test('Should handle federated graphs and subgraphs with same names in different namespaces and fetch checks for each federated graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     // Define common names for resources in both namespaces
     const federatedGraphName = genID('fedGraph');
@@ -783,12 +800,11 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     // The check should exist for the graph overall, but not for the specified subgraph ID
     expect(checksRespMismatch.checks.length).toBe(0);
     expect(checksRespMismatch.checksCountBasedOnDateRange).toBe(0);
-
-    await server.close();
   });
 
-  test('Should validate that checks are associated to contracts', async () => {
+  test('Should validate that checks are associated to contracts', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const contractGraphName = genID('contract');
@@ -941,7 +957,5 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     // Verify that the check contains information about the subgraph
     expect(federatedGraphCheck.checkedSubgraphs[0].subgraphName).toBe(subgraphName);
     expect(contractCheck.checkedSubgraphs[0].subgraphName).toBe(subgraphName);
-
-    await server.close();
   });
 });

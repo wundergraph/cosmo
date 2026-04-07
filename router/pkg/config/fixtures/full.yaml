@@ -20,7 +20,11 @@ playground:
   path: '/my-playground'
   concurrency_limit: 1500
 introspection_enabled: true
+introspection:
+  enabled: true
+  secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
+log_service_name: 'my-custom-router'
 shutdown_delay: 15s
 grace_period: 20s
 poll_interval: 10s
@@ -30,6 +34,21 @@ liveness_check_path: '/health/live'
 router_registration: true
 graphql_path: /graphql
 dev_mode: false
+tls:
+  server:
+    enabled: false
+  client:
+    all:
+      cert_file: '/path/to/client.crt'
+      key_file: '/path/to/client.key'
+      ca_file: '/path/to/ca.crt'
+      insecure_skip_ca_verification: false
+    subgraphs:
+      products:
+        cert_file: '/path/to/products-client.crt'
+        key_file: '/path/to/products-client.key'
+        ca_file: '/path/to/products-ca.crt'
+        insecure_skip_ca_verification: false
 instance_id: ''
 graphql_metrics:
   enabled: true
@@ -42,6 +61,7 @@ mcp:
   expose_schema: false
   enable_arbitrary_operations: false
   exclude_mutations: false
+  omit_tool_name_prefix: false
   graph_name: cosmo
   router_url: https://cosmo-router.wundergraph.com
   server:
@@ -147,6 +167,9 @@ telemetry:
       connection_stats: true
       engine_stats:
         subscriptions: true
+      cost_stats:
+        estimated_enabled: false
+        actual_enabled: false
       exclude_metric_labels: []
       exclude_metrics: []
       # If no exporters are defined, the default one is used
@@ -157,6 +180,11 @@ telemetry:
           path: '/v1/metrics'
           endpoint: https://my-otel-collector.example.com
           # headers: {Authorization: Bearer <my-token>}
+      log_exporter:
+        enabled: true
+        exclude_metrics:
+          - "process\\."
+          - "server\\.uptime"
 
     # Expose OpenTelemetry metrics for scraping
     prometheus:
@@ -167,13 +195,16 @@ telemetry:
       connection_stats: true
       engine_stats:
         subscriptions: true
+      cost_stats:
+        estimated_enabled: false
+        actual_enabled: false
       exclude_metrics: []
       exclude_metric_labels: []
       exclude_scope_info: true
 
       schema_usage:
         enabled: true
-        include_operation_sha: false
+        include_operation_sha: true
 
 cache_control_policy:
   enabled: true
@@ -263,10 +294,17 @@ headers:
   cookie_whitelist:
     - 'cookie1'
     - 'cookie2'
+  router:
+    response:
+      - name: 'X-Client-Version'
+        expression: "request.header.Get('User-Agent')"
+      - name: 'X-Request-ID'
+        expression: "request.header.Get('X-Request-ID') ?? 'default-request-id'"
 
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information
 authentication:
+  ignore_introspection: false
   jwt:
     jwks:
       - url: 'https://example.com/.well-known/jwks.json'
@@ -325,6 +363,10 @@ events:
         urls:
           - 'redis://localhost:6379/11'
         cluster_enabled: true
+  handlers:
+    on_receive_events:
+      max_concurrent_handlers: 100
+      handler_timeout: 5s
 
 engine:
   enable_single_flight: true
@@ -345,6 +387,7 @@ engine:
   debug:
     report_websocket_connections: false
     report_memory_usage: false
+    enable_cache_response_headers: false
 
 rate_limit:
   enabled: true
@@ -360,6 +403,11 @@ rate_limit:
     burst: 60
     period: '60s'
     reject_exceeding_requests: true
+    overrides:
+      - matching: '^premium-.*'
+        rate: 200
+        burst: 200
+        period: '60s'
 
 override_routing_url:
   subgraphs:
@@ -435,6 +483,12 @@ security:
       enabled: true
       limit: 4
       ignore_persisted_operations: true
+  cost_control:
+    enabled: true
+    mode: enforce
+    max_estimated_limit: 1000
+    estimated_list_size: 10
+    expose_headers: false
   operation_name_length_limit: 2000
 persisted_operations:
   safelist:
@@ -445,6 +499,11 @@ persisted_operations:
   storage:
     provider_id: s3
     object_prefix: '5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo'
+  manifest:
+    enabled: true
+    file_name: manifest.json
+    poll_interval: 30s
+    poll_jitter: 10s
 
 automatic_persisted_queries:
   enabled: true

@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'vitest';
-import { compileGraphQLToProto } from '../../src';
-import { expectValidProto } from '../util';
+import { describe, expect, it, test } from 'vitest';
+import { compileGraphQLToProto } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 describe('SDL to Proto - Basic Types', () => {
   test('should convert scalar types correctly', () => {
@@ -291,7 +291,12 @@ describe('SDL to Proto - Basic Types', () => {
     const { proto: protoText } = compileGraphQLToProto(sdl, {
       serviceName: 'CustomService',
       packageName: 'custom.v1',
-      goPackage: customGoPackage,
+      protoOptions: [
+        {
+          name: 'go_package',
+          constant: `"github.com/example/mypackage;mypackage"`,
+        },
+      ],
     });
 
     // Validate Proto definition

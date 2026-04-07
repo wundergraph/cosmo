@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
 import {
   buildRouterConfig,
   type ComposedSubgraph,
@@ -28,6 +27,8 @@ import Table from 'cli-table3';
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
+
+const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
 
 type ConfigSubgraph = StandardSubgraphConfig | SubgraphPluginConfig | GRPCSubgraphConfig;
 
@@ -111,6 +112,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
   const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
   const schema = subgraphConfig?.schema;
   const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+  const costs = subgraphConfig?.costs;
 
   if (s.kind === SubgraphKind.Standard) {
     const composedSubgraph: ComposedSubgraph = {
@@ -124,6 +126,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
       websocketSubprotocol: s.websocketSubprotocol,
       schema,
       configurationDataByTypeName,
+      costs,
     };
     return composedSubgraph;
   }
@@ -140,6 +143,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
       version: s.version,
       schema,
       configurationDataByTypeName,
+      costs,
     };
     return composedSubgraphPlugin;
   }
@@ -154,6 +158,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
     mapping: s.mapping,
     schema,
     configurationDataByTypeName,
+    costs,
   };
   return composedSubgraphGRPC;
 }
@@ -170,6 +175,7 @@ export default (opts: BaseCommandOptions) => {
     '--disable-resolvability-validation',
     'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
   );
+  command.option('--ignore-external-keys', 'This flag ignores errors related to true external entity keys.');
 
   command.action(async (options) => {
     const inputFile = resolve(options.input);
@@ -206,7 +212,10 @@ export default (opts: BaseCommandOptions) => {
           definitions: parse(s.sdl),
         };
       }),
-      options.disableResolvabilityValidation,
+      {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        ignoreExternalKeys: options.ignoreExternalKeys,
+      },
     );
 
     if (!result.success) {
@@ -241,18 +250,18 @@ export default (opts: BaseCommandOptions) => {
       console.log(compositionWarningsTable.toString());
     }
 
-    const federatedClientSDL = result.shouldIncludeClientSchema ? printSchema(result.federatedGraphClientSchema) : '';
+    const federatedClientSDL = result.shouldIncludeClientSchema
+      ? printSchemaWithDirectives(result.federatedGraphClientSchema)
+      : '';
     const routerConfig = buildRouterConfig({
       federatedClientSDL,
       federatedSDL: printSchemaWithDirectives(result.federatedGraphSchema),
       fieldConfigurations: result.fieldConfigurations,
       // @TODO get router compatibility version programmatically
       routerCompatibilityVersion: ROUTER_COMPATIBILITY_VERSION_ONE,
-      schemaVersionId: 'static',
+      schemaVersionId: STATIC_SCHEMA_VERSION_ID,
       subgraphs: subgraphs.map((s, index) => constructRouterSubgraph(result, s, index)),
     });
-
-    routerConfig.version = randomUUID();
 
     if (config.feature_flags && config.feature_flags.length > 0) {
       const ffConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
@@ -586,7 +595,10 @@ async function buildFeatureFlagsConfig(
         url: normalizeURL(s.routingUrl),
         definitions: parse(s.sdl),
       })),
-      options.disableResolvabilityValidation,
+      {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        ignoreExternalKeys: options.ignoreExternalKeys,
+      },
     );
 
     if (!featureResult.success) {
@@ -640,6 +652,7 @@ async function buildFeatureFlagsConfig(
         const subgraphConfig = featureResult.subgraphConfigBySubgraphName.get(s.name);
         const schema = subgraphConfig?.schema;
         const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+        const costs = subgraphConfig?.costs;
 
         const composedSubgraph: ComposedSubgraph = {
           kind: SubgraphKind.Standard,
@@ -652,6 +665,7 @@ async function buildFeatureFlagsConfig(
           websocketSubprotocol: s.websocketSubprotocol,
           schema,
           configurationDataByTypeName,
+          costs,
         };
         return composedSubgraph;
       }),
@@ -663,7 +677,7 @@ async function buildFeatureFlagsConfig(
       engineConfig: featureRouterConfig.engineConfig,
     });
 
-    ffConfigs.configByFeatureFlagName[ff.name].version = randomUUID();
+    ffConfigs.configByFeatureFlagName[ff.name].version = STATIC_SCHEMA_VERSION_ID;
   }
 
   return ffConfigs;

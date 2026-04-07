@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/composition",
-  "version": "0.46.3",
+  "version": "0.55.0",
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
@@ -18,8 +18,10 @@
     "test:watch": "vitest test",
     "test": "vitest run",
     "test:core": "vitest run --exclude ./tests/unstaged-tests",
-    "lint": "prettier --check src tests",
-    "lint:fix": "prettier --write src tests",
+    "test:coverage": "vitest run --coverage",
+    "lint": "prettier --check .",
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
+    "format": "prettier -w -c .",
     "postversion": "node ./scripts/get-composition-version.mjs"
   },
   "main": "./dist/index.js",
@@ -30,7 +32,7 @@
   "dependencies": {
     "@graphql-tools/merge": "^9.0.0",
     "@graphql-tools/schema": "^10.0.0",
-    "@graphql-tools/utils": "^10.1.0",
+    "@graphql-tools/utils": "^11.0.0",
     "core-js": "^3.41.0",
     "graphql": "^16.9.0",
     "lodash": "^4.17.21",
@@ -38,6 +40,7 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.17.0",
+    "@vitest/coverage-v8": "3.2.4",
     "del-cli": "^5.0.0",
     "typescript": "5.5.2",
     "vitest": "^3.2.4"

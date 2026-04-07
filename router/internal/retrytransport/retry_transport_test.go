@@ -252,7 +252,7 @@ func TestShortCircuitOnSuccess(t *testing.T) {
 	body, err := io.ReadAll(resp.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, "success", string(body))
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestMaxRetryCountRespected(t *testing.T) {

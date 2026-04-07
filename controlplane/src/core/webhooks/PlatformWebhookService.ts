@@ -3,6 +3,7 @@ import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications
 import pino from 'pino';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { webhookAxiosRetryCond } from '../util.js';
 import { makeWebhookRequest } from './utils.js';
 
@@ -11,6 +12,11 @@ interface User {
   user_email: string;
   user_first_name?: string;
   user_last_name?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
 }
 
 interface ApolloMigrate {
@@ -34,7 +40,7 @@ export type EventType<T extends keyof EventMap> = {
 };
 
 export interface IPlatformWebhookService {
-  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]): void;
+  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]): Promise<void>;
 }
 
 export class PlatformWebhookService implements IPlatformWebhookService {
@@ -43,12 +49,23 @@ export class PlatformWebhookService implements IPlatformWebhookService {
   private logger: pino.Logger;
   private httpClient: AxiosInstance;
 
-  constructor(webhookURL = '', webhookKey = '', logger: pino.Logger) {
+  constructor(webhookURL = '', webhookKey = '', logger: pino.Logger, proxyUrl?: string) {
     this.url = webhookURL;
     this.key = webhookKey;
     this.logger = logger;
 
+    let agent: HttpsProxyAgent<string> | undefined;
+    if (proxyUrl) {
+      try {
+        agent = new HttpsProxyAgent(proxyUrl);
+      } catch (e) {
+        logger.error(e, 'Could not create proxy agent');
+      }
+    }
+
     this.httpClient = axios.create({
+      httpAgent: agent,
+      httpsAgent: agent,
       timeout: 10_000,
     });
     axiosRetry(this.httpClient, {
@@ -95,5 +112,6 @@ export class MockPlatformWebhookService implements IPlatformWebhookService {
 
   send<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {
     this.sentEvents.push({ eventName, eventPayload });
+    return Promise.resolve();
   }
 }

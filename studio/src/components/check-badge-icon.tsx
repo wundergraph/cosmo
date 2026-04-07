@@ -1,5 +1,5 @@
-import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
-import { Badge } from "./ui/badge";
+import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
+import { Badge } from './ui/badge';
 
 const isCheckSuccessful = (
   isComposable: boolean,
@@ -11,6 +11,7 @@ const isCheckSuccessful = (
   hasProposalMatchError: boolean,
   isLinkedTrafficCheckFailed?: boolean,
   isLinkedPruningCheckFailed?: boolean,
+  checkExtensionError?: string,
 ) => {
   // if a subgraph is linked to another subgraph, then the status of the check depends on the traffic and pruning check of the linked subgraph
   if (isLinkedTrafficCheckFailed || isLinkedPruningCheckFailed) {
@@ -21,11 +22,11 @@ const isCheckSuccessful = (
     isComposable &&
     // If no breaking changes found
     // OR Breaking changes are found, but no client traffic is found and traffic check is not skipped
-    (!isBreaking ||
-      (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
+    (!isBreaking || (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
     !hasLintErrors &&
     !hasGraphPruningErrors &&
-    !hasProposalMatchError
+    !hasProposalMatchError &&
+    !Boolean(checkExtensionError)
   );
 };
 
@@ -34,11 +35,7 @@ const getCheckBadge = (successful: boolean, isForced: boolean) => {
     return <Badge variant="outline">FORCED</Badge>;
   }
 
-  return successful ? (
-    <Badge variant="success">PASSED</Badge>
-  ) : (
-    <Badge variant="destructive">FAILED</Badge>
-  );
+  return successful ? <Badge variant="success">PASSED</Badge> : <Badge variant="destructive">FAILED</Badge>;
 };
 
 const getCheckIcon = (check: boolean) => {

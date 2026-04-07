@@ -1,31 +1,20 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
-import { PlusCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
-import { CheckIcon, PlusCircledIcon } from "@radix-ui/react-icons";
-import { Column } from "@tanstack/react-table";
-import { CustomOptions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { ComponentType, useEffect, useState } from "react";
-import { MdTextRotationNone } from "react-icons/md";
-import { Input } from "../ui/input";
-import { Slider } from "../ui/slider";
-import { Toggle } from "../ui/toggle";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { AnalyticsFilter } from "./filters";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import { PlusCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PlusCircledIcon } from '@radix-ui/react-icons';
+import { Column } from '@tanstack/react-table';
+import { CustomOptions } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { ComponentType, useEffect, useMemo, useState } from 'react';
+import { MdTextRotationNone } from 'react-icons/md';
+import { Input } from '../ui/input';
+import { Slider } from '../ui/slider';
+import { Toggle } from '../ui/toggle';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { AnalyticsFilter } from './filters';
 
 interface Option {
   label: string;
@@ -37,6 +26,7 @@ interface DataTableFacetedFilter<TData, TValue> {
   column?: Column<TData, TValue>;
   id: string;
   onSelect?: (value?: any) => void;
+  validateSelection?: (value: string[]) => boolean; // Returns true if valid, false if invalid
   selectedOptions?: string[];
   title?: string;
   options: Option[];
@@ -49,16 +39,10 @@ const SliderWithOptions = ({
   onValueChange,
 }: {
   defaultRange: { start: number; end: number };
-  onValueChange: ({
-    rangeValue,
-  }: {
-    rangeValue: { start: number; end: number };
-  }) => void;
+  onValueChange: ({ rangeValue }: { rangeValue: { start: number; end: number } }) => void;
   unit: string;
 }) => {
-  const [range, setRange] = useState<{ start: number; end: number }>(
-    defaultRange,
-  );
+  const [range, setRange] = useState<{ start: number; end: number }>(defaultRange);
 
   return (
     <div className="flex flex-col gap-y-5 px-2 pt-5">
@@ -90,35 +74,29 @@ const SliderWithOptions = ({
               if (Number(e.target.value) > range.end) {
                 setRange({
                   start: range.end,
-                  end:
-                    Number(e.target.value) > 60 ? 60 : Number(e.target.value),
+                  end: Number(e.target.value) > 60 ? 60 : Number(e.target.value),
                 });
                 onValueChange({
                   rangeValue: {
                     start: range.end,
-                    end:
-                      Number(e.target.value) > 60 ? 60 : Number(e.target.value),
+                    end: Number(e.target.value) > 60 ? 60 : Number(e.target.value),
                   },
                 });
               } else {
                 setRange({
                   ...range,
-                  start:
-                    Number(e.target.value) > 0 ? Number(e.target.value) : 0,
+                  start: Number(e.target.value) > 0 ? Number(e.target.value) : 0,
                 });
                 onValueChange({
                   rangeValue: {
                     ...range,
-                    start:
-                      Number(e.target.value) > 0 ? Number(e.target.value) : 0,
+                    start: Number(e.target.value) > 0 ? Number(e.target.value) : 0,
                   },
                 });
               }
             }}
           />
-          <span className="absolute right-2 text-sm text-muted-foreground">
-            {unit}
-          </span>
+          <span className="absolute right-2 text-sm text-muted-foreground">{unit}</span>
         </div>
         <div className="relative flex items-center">
           <Input
@@ -128,35 +106,29 @@ const SliderWithOptions = ({
               if (Number(e.target.value) > range.start) {
                 setRange({
                   ...range,
-                  end:
-                    Number(e.target.value) > 60 ? 60 : Number(e.target.value),
+                  end: Number(e.target.value) > 60 ? 60 : Number(e.target.value),
                 });
                 onValueChange({
                   rangeValue: {
                     ...range,
-                    end:
-                      Number(e.target.value) > 60 ? 60 : Number(e.target.value),
+                    end: Number(e.target.value) > 60 ? 60 : Number(e.target.value),
                   },
                 });
               } else {
                 setRange({
-                  start:
-                    Number(e.target.value) > 0 ? Number(e.target.value) : 0,
+                  start: Number(e.target.value) > 0 ? Number(e.target.value) : 0,
                   end: range.start,
                 });
                 onValueChange({
                   rangeValue: {
-                    start:
-                      Number(e.target.value) > 0 ? Number(e.target.value) : 0,
+                    start: Number(e.target.value) > 0 ? Number(e.target.value) : 0,
                     end: range.start,
                   },
                 });
               }
             }}
           />
-          <span className="absolute right-2 text-sm text-muted-foreground">
-            {unit}
-          </span>
+          <span className="absolute right-2 text-sm text-muted-foreground">{unit}</span>
         </div>
       </div>
     </div>
@@ -177,51 +149,30 @@ const regularFilter = (value: string, search: string) => {
   return 0;
 };
 
-const areAllFilteredOptionsSelected = ({
-  selectedValues,
-  filteredOptions,
-  options,
-}: {
-  selectedValues: Set<string>;
-  filteredOptions: Option[];
-  options: Option[];
-}) => {
-  if (
-    filteredOptions.length === options.length &&
-    selectedValues.size === filteredOptions.length
-  ) {
-    return true;
-  }
-  return filteredOptions.every((option) => selectedValues.has(option.value));
-};
-
 export function DataTableFilterCommands<TData, TValue>({
   onSelect,
+  validateSelection,
   selectedOptions,
   title,
   options,
   customOptions,
 }: DataTableFacetedFilter<TData, TValue>) {
-  const selectedValues = new Set(selectedOptions);
-  const [input, setInput] = useState("");
+  // Memoized Set for efficient operations and automatic deduplication
+  // - Use selectedValues (Set) for: display checks (size, has), iteration (Array.from)
+  // - Use selectedOptions (Array) for: building new filter arrays to pass to onSelect
+  const selectedValues = useMemo(() => new Set(selectedOptions ?? []), [selectedOptions]);
+  const [input, setInput] = useState('');
   const [range, setRange] = useState<{ start: number; end: number }>({
     start: 0,
     end: 10,
   });
   let content: React.ReactNode;
 
-  // the options are filtered based on the search input
-  const [filteredOptions, setFilteredOptions] = useState(options);
   const [shouldPrefixSearch, setShouldPrefixSearch] = useState(false);
   const [searchValue, setSearchValue] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (
-      !selectedOptions ||
-      selectedOptions.length === 0 ||
-      customOptions !== CustomOptions.Range
-    )
-      return;
+    if (!selectedOptions || selectedOptions.length === 0 || customOptions !== CustomOptions.Range) return;
     const option1 = JSON.parse(selectedOptions[0]).value;
     const option2 = JSON.parse(selectedOptions[1]).value;
 
@@ -234,31 +185,24 @@ export function DataTableFilterCommands<TData, TValue>({
     }
   }, [customOptions, selectedOptions]);
 
-  const updateRangeFilters = ({
-    rangeValue,
-  }: {
-    rangeValue: { start: number; end: number };
-  }) => {
-    selectedValues.clear();
+  const updateRangeFilters = ({ rangeValue }: { rangeValue: { start: number; end: number } }) => {
     setRange({
       start: rangeValue.start,
       end: rangeValue.end,
     });
-    selectedValues.add(
+    // Create new filter values without mutating selectedValues
+    const filterValues = [
       JSON.stringify({
         label: (rangeValue.start * 10 ** 9).toString(),
         value: (rangeValue.start * 10 ** 9).toString(),
         operator: 4,
       }),
-    );
-    selectedValues.add(
       JSON.stringify({
         label: (rangeValue.end * 10 ** 9).toString(),
         value: (rangeValue.end * 10 ** 9).toString(),
         operator: 5,
       }),
-    );
-    const filterValues = Array.from(selectedValues);
+    ];
     onSelect?.(filterValues);
   };
 
@@ -280,16 +224,30 @@ export function DataTableFilterCommands<TData, TValue>({
               className="flex-shrink-0"
               disabled={!input}
               onClick={() => {
-                selectedValues.add(
-                  JSON.stringify({
-                    label: input,
-                    value: input,
-                    operator: 0,
-                  }),
-                );
-                const filterValues = Array.from(selectedValues);
+                const newValue = JSON.stringify({
+                  label: input,
+                  value: input,
+                  operator: 0,
+                });
+
+                // Check if already exists using Set for O(1) lookup
+                if (selectedValues.has(newValue)) {
+                  setInput(''); // Clear input for duplicate
+                  return; // Already exists, don't add duplicate
+                }
+
+                // Build new filter array from selectedOptions (source of truth)
+                const filterValues = [...(selectedOptions ?? []), newValue];
+
+                // Validate BEFORE calling onSelect
+                if (validateSelection && !validateSelection(filterValues)) {
+                  // Don't clear input - let user see what they tried to add
+                  // The parent will show a toast with the error message
+                  return; // Validation failed
+                }
+
                 onSelect?.(filterValues);
-                setInput("");
+                setInput('');
               }}
             >
               <PlusCircleIcon className="h-5 w-5" />
@@ -300,26 +258,21 @@ export function DataTableFilterCommands<TData, TValue>({
             <>
               <div className="mt-2 flex flex-col px-2">
                 {Array.from(selectedValues).map((val) => {
-                  const selected = JSON.parse(
-                    val,
-                  ) as AnalyticsFilter["options"][number];
+                  const selected = JSON.parse(val) as AnalyticsFilter['options'][number];
 
                   return (
-                    <div
-                      className="flex w-full items-center justify-between gap-x-4 text-sm"
-                      key={selected.value}
-                    >
+                    <div className="flex w-full items-center justify-between gap-x-4 text-sm" key={selected.value}>
                       <span className="w-full truncate">{selected.label}</span>
                       <Button
                         size="icon-sm"
                         variant="ghost"
                         className="flex-shrink-0 text-muted-foreground"
                         onClick={() => {
-                          selectedValues.delete(JSON.stringify(selected));
-                          const filterValues = Array.from(selectedValues);
-                          onSelect?.(
-                            filterValues.length ? filterValues : undefined,
-                          );
+                          // Build new filter array by removing the item from selectedOptions
+                          const filterValues = (selectedOptions ?? []).filter((opt) => opt !== val);
+
+                          // Removal doesn't need validation (always allowed)
+                          onSelect?.(filterValues.length ? filterValues : undefined);
                         }}
                       >
                         <XCircleIcon className="h-5 w-5" />
@@ -334,7 +287,7 @@ export function DataTableFilterCommands<TData, TValue>({
                 size="sm"
                 onClick={() => {
                   onSelect?.(undefined);
-                  setInput("");
+                  setInput('');
                 }}
               >
                 Clear Filters
@@ -361,7 +314,7 @@ export function DataTableFilterCommands<TData, TValue>({
               size="sm"
               onClick={() => {
                 onSelect?.(undefined);
-                setInput("");
+                setInput('');
               }}
             >
               Clear Filters
@@ -375,24 +328,11 @@ export function DataTableFilterCommands<TData, TValue>({
       break;
   }
 
-  useEffect(() => {
-    if (!searchValue) {
-      setFilteredOptions(options);
-      return;
-    }
-    const filtered = options.filter((option) =>
-      shouldPrefixSearch
-        ? option.label.toLowerCase().startsWith(searchValue.toLowerCase())
-        : option.label.toLowerCase().includes(searchValue.toLowerCase()),
-    );
-    setFilteredOptions(filtered);
-  }, [options, searchValue, shouldPrefixSearch]);
-
   return (
     <Command
       className="w-72"
       filter={shouldPrefixSearch ? prefixFilter : regularFilter}
-      key={shouldPrefixSearch ? "prefix" : "regular"}
+      key={shouldPrefixSearch ? 'prefix' : 'regular'}
     >
       {customOptions === undefined && (
         <>
@@ -411,9 +351,7 @@ export function DataTableFilterCommands<TData, TValue>({
                   <Toggle
                     size="sm"
                     pressed={shouldPrefixSearch}
-                    onPressedChange={(pressed) =>
-                      setShouldPrefixSearch(pressed)
-                    }
+                    onPressedChange={(pressed) => setShouldPrefixSearch(pressed)}
                   >
                     <MdTextRotationNone className="h-4 w-4" />
                   </Toggle>
@@ -432,76 +370,43 @@ export function DataTableFilterCommands<TData, TValue>({
                     <CommandItem
                       key={option.value}
                       onSelect={() => {
-                        if (isSelected) {
-                          selectedValues.delete(option.value);
-                        } else {
-                          selectedValues.add(option.value);
+                        // Build new filter array from selectedOptions (source of truth)
+                        const filterValues = isSelected
+                          ? (selectedOptions ?? []).filter((v) => v !== option.value)
+                          : [...(selectedOptions ?? []), option.value];
+
+                        // Validate BEFORE calling onSelect to prevent optimistic UI updates
+                        if (filterValues.length > 0 && validateSelection && !validateSelection(filterValues)) {
+                          // Validation failed - don't call onSelect, UI stays unchanged
+                          return;
                         }
-                        const filterValues = Array.from(selectedValues);
-                        onSelect?.(
-                          filterValues.length ? filterValues : undefined,
-                        );
+
+                        onSelect?.(filterValues.length ? filterValues : undefined);
                       }}
                     >
                       <div
                         className={cn(
-                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                          isSelected
-                            ? "bg-primary text-primary-foreground"
-                            : "opacity-50 [&_svg]:invisible",
+                          'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
+                          isSelected ? 'bg-primary text-primary-foreground' : 'opacity-50 [&_svg]:invisible',
                         )}
                       >
-                        <CheckIcon className={cn("h-4 w-4")} />
+                        <CheckIcon className={cn('h-4 w-4')} />
                       </div>
-                      {option.icon && (
-                        <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
-                      )}
+                      {option.icon && <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />}
                       <span className="truncate">{option.label}</span>
                     </CommandItem>
                   );
                 })}
               </CommandGroup>
             ) : (
-              <div className="flex w-full items-center justify-center p-4 text-sm">
-                No filters.
-              </div>
+              <div className="flex w-full items-center justify-center p-4 text-sm">No filters.</div>
             )}
           </CommandList>
           <>
-            <Separator orientation="horizontal" />
-            <div className="flex justify-center gap-x-2 pt-1">
-              <Button
-                variant="ghost"
-                className="w-full justify-center text-center"
-                onClick={() => {
-                  const filterValues = Array.from(selectedValues);
-                  onSelect?.(
-                    filterValues.length
-                      ? [
-                          ...filterValues,
-                          ...filteredOptions.map((option) => option.value),
-                        ]
-                      : filteredOptions.map((option) => option.value),
-                  );
-                }}
-                disabled={areAllFilteredOptionsSelected({
-                  selectedValues,
-                  filteredOptions,
-                  options,
-                })}
-              >
-                {areAllFilteredOptionsSelected({
-                  selectedValues,
-                  filteredOptions,
-                  options,
-                })
-                  ? "Selected All"
-                  : "Select All"}
-              </Button>
-
-              {selectedValues.size > 0 && (
-                <>
-                  <Separator orientation="vertical" className="h-8" />
+            {selectedValues.size > 0 && (
+              <>
+                <Separator orientation="horizontal" />
+                <div className="flex justify-center gap-x-2 pt-1">
                   <Button
                     variant="ghost"
                     className="w-full justify-center text-center"
@@ -511,9 +416,9 @@ export function DataTableFilterCommands<TData, TValue>({
                   >
                     Clear Selection
                   </Button>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </>
         </>
       )}
@@ -525,6 +430,7 @@ export function DataTableFilterCommands<TData, TValue>({
 export function DataTableFacetedFilter<TData, TValue>({
   id,
   onSelect,
+  validateSelection,
   selectedOptions,
   title,
   options,
@@ -541,30 +447,16 @@ export function DataTableFacetedFilter<TData, TValue>({
           {selectedValues?.size > 0 && (
             <>
               <Separator orientation="vertical" className="mx-2 h-4" />
-              <Badge
-                variant="muted"
-                className="rounded-sm px-1 font-normal lg:hidden"
-              >
-                {customOptions === CustomOptions.Range
-                  ? selectedValues.size / 2
-                  : selectedValues.size}
+              <Badge variant="muted" className="rounded-sm px-1 font-normal lg:hidden">
+                {customOptions === CustomOptions.Range ? selectedValues.size / 2 : selectedValues.size}
               </Badge>
               <div className="hidden space-x-1 lg:flex">
                 {selectedValues.size > 1 ? (
-                  <Badge
-                    variant="muted"
-                    className="rounded-sm px-1 font-normal"
-                  >
-                    {customOptions === CustomOptions.Range
-                      ? selectedValues.size / 2
-                      : selectedValues.size}{" "}
-                    selected
+                  <Badge variant="muted" className="rounded-sm px-1 font-normal">
+                    {customOptions === CustomOptions.Range ? selectedValues.size / 2 : selectedValues.size} selected
                   </Badge>
                 ) : (
-                  <Badge
-                    variant="muted"
-                    className="rounded-sm px-1 font-normal"
-                  >
+                  <Badge variant="muted" className="rounded-sm px-1 font-normal">
                     {JSON.parse(Array.from(selectedValues)[0]).label}
                   </Badge>
                 )}
@@ -577,6 +469,7 @@ export function DataTableFacetedFilter<TData, TValue>({
         <DataTableFilterCommands
           id={id}
           onSelect={onSelect}
+          validateSelection={validateSelection}
           selectedOptions={selectedOptions}
           title={title}
           options={options}

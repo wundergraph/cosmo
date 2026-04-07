@@ -7,10 +7,13 @@ import {
   CompositionError,
   CompositionWarning,
   DeploymentError,
+  SubgraphPublishStats,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { SubgraphCommandJsonOutput } from './core/types/types.js';
+import { printTruncationWarning } from './utils.js';
 
-export const handleCompositionResult = ({
+export function handleCompositionResult({
+  totalErrorCounts,
   responseCode,
   responseDetails,
   compositionErrors,
@@ -40,13 +43,14 @@ export const handleCompositionResult = ({
   subgraphCompositionDetailedErrorMessage: string;
   deploymentErrorMessage: string;
   defaultErrorMessage: string;
+  totalErrorCounts?: SubgraphPublishStats;
   shouldOutputJson?: boolean;
   suppressWarnings?: boolean;
   failOnCompositionError?: boolean;
   failOnCompositionErrorMessage?: string;
   failOnAdmissionWebhookError?: boolean;
   failOnAdmissionWebhookErrorMessage?: string;
-}) => {
+}) {
   switch (responseCode) {
     case EnumStatusCode.OK: {
       if (shouldOutputJson) {
@@ -104,6 +108,15 @@ export const handleCompositionResult = ({
         console.log(compositionErrorsTable.toString());
       }
       if (failOnCompositionError) {
+        // Only composition errors were displayed at this point; warnings come after the switch statement
+        printTruncationWarning({
+          displayedErrorCounts: new SubgraphPublishStats({
+            compositionErrors: compositionErrors.length,
+            compositionWarnings: 0,
+            deploymentErrors: 0,
+          }),
+          totalErrorCounts,
+        });
         console.log(pc.red(pc.bold(failOnCompositionErrorMessage || 'The command failed due to composition errors.')));
         throw new Error(failOnCompositionErrorMessage || 'The command failed due to composition errors.');
       }
@@ -145,6 +158,15 @@ export const handleCompositionResult = ({
         console.log(deploymentErrorsTable.toString());
       }
       if (failOnAdmissionWebhookError) {
+        // Only deployment errors were displayed at this point; warnings come after the switch statement
+        printTruncationWarning({
+          displayedErrorCounts: new SubgraphPublishStats({
+            compositionErrors: 0,
+            compositionWarnings: 0,
+            deploymentErrors: deploymentErrors.length,
+          }),
+          totalErrorCounts,
+        });
         console.log(
           pc.red(pc.bold(failOnAdmissionWebhookErrorMessage || 'The command failed due to admission webhook errors.')),
         );
@@ -175,6 +197,9 @@ export const handleCompositionResult = ({
     }
   }
 
+  // Track what was actually displayed
+  const displayedWarnings = suppressWarnings ? 0 : compositionWarnings.length;
+
   if (!shouldOutputJson && !suppressWarnings && compositionWarnings.length > 0) {
     const compositionWarningsTable = new Table({
       head: [
@@ -198,4 +223,13 @@ export const handleCompositionResult = ({
     }
     console.log(compositionWarningsTable.toString());
   }
-};
+
+  // Determine what was actually displayed based on the response code
+  const displayedErrorCounts = new SubgraphPublishStats({
+    compositionErrors: responseCode === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED ? compositionErrors.length : 0,
+    compositionWarnings: displayedWarnings,
+    deploymentErrors: responseCode === EnumStatusCode.ERR_DEPLOYMENT_FAILED ? deploymentErrors.length : 0,
+  });
+
+  printTruncationWarning({ displayedErrorCounts, totalErrorCounts });
+}

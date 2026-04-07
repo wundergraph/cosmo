@@ -1,9 +1,9 @@
-import { FieldData, InputValueData, ParentDefinitionData } from '../schema-building/types';
-import { FieldName, TypeName } from '../types/types';
+import { type FieldData, type InputValueData, type ParentDefinitionData } from '../schema-building/types';
+import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
 
 export type InvalidRootTypeFieldEventsDirectiveData = {
   definesDirectives: boolean;
-  invalidDirectiveNames: string[];
+  invalidDirectiveNames: Array<string>;
 };
 
 export type IncompatibleMergedTypesErrorParams = {
@@ -33,4 +33,24 @@ export type SemanticNonNullLevelsNonNullErrorParams = {
 export type OneOfRequiredFieldsErrorParams = {
   requiredFieldNames: Array<FieldName>;
   typeName: TypeName;
+};
+
+export type IncompatibleParentTypeMergeErrorParams = {
+  existingData: ParentDefinitionData;
+  incomingSubgraphName: SubgraphName;
+  incomingNodeType?: string;
+};
+
+export type IncompatibleTypeWithProvidesErrorMessageParams = {
+  fieldCoords: string;
+  responseType: TypeName;
+  subgraphName: SubgraphName;
+};
+
+export type NonExternalConditionalFieldErrorParams = {
+  directiveCoords: string;
+  fieldSet: string;
+  directiveName: DirectiveName;
+  subgraphName: SubgraphName;
+  targetCoords: string;
 };

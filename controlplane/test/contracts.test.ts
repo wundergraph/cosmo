@@ -4,7 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { normalizeString } from '@wundergraph/composition/tests/utils/utils.js';
+import { normalizeString } from '../../composition/tests/utils/utils.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
@@ -22,7 +22,7 @@ import {
   SetupTest,
 } from './test-util.js';
 
-const schemaDefinition = `schema {\n  query: Query\n}\n\n`
+const schemaDefinition = `schema {\n  query: Query\n}\n\n`;
 let dbname = '';
 
 vi.mock('../src/core/clickhouse/index.js', () => {
@@ -51,8 +51,9 @@ describe('Contract tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that a contract is created for a federated graph with excluded tags', async () => {
+  test('that a contract is created for a federated graph with excluded tags', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -102,12 +103,11 @@ describe('Contract tests', () => {
     expect(contractGraphRes.graph?.readme).toBe('test');
     expect(contractGraphRes.graph?.supportsFederation).toEqual(true);
     expect(blobStorage.keys().length).toBe(2);
-
-    await server.close();
   });
 
-  test('that a contract is created for a federated graph with included tags', async () => {
+  test('that a contract is created for a federated graph with included tags', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -157,12 +157,11 @@ describe('Contract tests', () => {
     expect(contractGraphRes.graph?.readme).toBe('test');
     expect(contractGraphRes.graph?.supportsFederation).toEqual(true);
     expect(blobStorage.keys().length).toBe(2);
-
-    await server.close();
   });
 
-  test('that an error is returned if a contract is created with both excluded and included tags', async () => {
-    const { client, server, } = await SetupTest({ dbname, chClient });
+  test('that an error is returned if a contract is created with both excluded and included tags', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -197,12 +196,11 @@ describe('Contract tests', () => {
       `The "exclude" and "include" options for tags are currently mutually exclusive.` +
         ` Both options have been provided, but one of the options must be empty or unset.`,
     );
-
-    await server.close();
   });
 
-  test('that the exclude tags of a contract are updated', async () => {
+  test('that the exclude tags of a contract are updated', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -250,12 +248,11 @@ describe('Contract tests', () => {
     });
     expect(contractGraphUpdatedRes.graph?.contract?.excludeTags).toEqual(['new']);
     expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual([]);
-
-    await server.close();
   });
 
-  test('that the include tags of a contract are updated', async () => {
+  test('that the include tags of a contract are updated', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -303,12 +300,11 @@ describe('Contract tests', () => {
     });
     expect(contractGraphUpdatedRes.graph?.contract?.excludeTags).toEqual([]);
     expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual(['new']);
-
-    await server.close();
   });
 
-  test('that an error is returned if a contract is updated with both excludes and includes', async () => {
+  test('that an error is returned if a contract is updated with both excludes and includes', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -356,12 +352,11 @@ describe('Contract tests', () => {
       `The "exclude" and "include" options for tags are currently mutually exclusive.` +
         ` Both options have been provided, but one of the options must be empty or unset.`,
     );
-
-    await server.close();
   });
 
-  test('that contract tags are updated from exclude to include', async () => {
+  test('that contract tags are updated from exclude to include', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -409,12 +404,11 @@ describe('Contract tests', () => {
     });
     expect(contractGraphUpdatedRes.graph?.contract?.excludeTags).toEqual([]);
     expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual(['new']);
-
-    await server.close();
   });
 
-  test('that contract tags are updated from include to exclude', async () => {
+  test('that contract tags are updated from include to exclude', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -462,12 +456,11 @@ describe('Contract tests', () => {
     });
     expect(contractGraphUpdatedRes.graph?.contract?.excludeTags).toEqual(['new']);
     expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual([]);
-
-    await server.close();
   });
 
-  test('that contract routing url and readme is updated', async () => {
+  test('that contract routing url and readme is updated', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -535,12 +528,11 @@ describe('Contract tests', () => {
     expect(contractGraphUpdatedRes.graph?.contract?.includeTags).toEqual([]);
     expect(contractGraphUpdatedRes.graph?.routingURL).toEqual('http://localhost:8082');
     expect(contractGraphUpdatedRes.graph?.readme).toBeUndefined();
-
-    await server.close();
   });
 
-  test('that contract is deleted upon deleting source federated graph', async () => {
+  test('that contract is deleted upon deleting source federated graph', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -589,12 +581,11 @@ describe('Contract tests', () => {
     expect(contractGraphDeletedRes.response?.code).toEqual(EnumStatusCode.ERR_NOT_FOUND);
 
     expect(blobStorage.keys().length).toBe(0);
-
-    await server.close();
   });
 
-  test('that label matcher update on source federated graph propagates to contract graphs with exclude tags', async () => {
+  test('that label matcher update on source federated graph propagates to contract graphs with exclude tags', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -641,12 +632,11 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(contractGraphUpdatedRes.graph?.labelMatchers).toEqual([joinLabel(label), joinLabel(label2)]);
-
-    await server.close();
   });
 
-  test('that label matcher update on source federated graph propagates to contract graphs with include tags', async () => {
+  test('that label matcher update on source federated graph propagates to contract graphs with include tags', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -693,12 +683,11 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(contractGraphUpdatedRes.graph?.labelMatchers).toEqual([joinLabel(label), joinLabel(label2)]);
-
-    await server.close();
   });
 
-  test('that label matcher update should not be possible for contract graphs', async () => {
+  test('that label matcher update should not be possible for contract graphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -735,12 +724,11 @@ describe('Contract tests', () => {
     });
 
     expect(res.response?.code).toEqual(EnumStatusCode.ERR);
-
-    await server.close();
   });
 
-  test('that moving source federated graph moves contract graph', async () => {
+  test('that moving source federated graph moves contract graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -787,12 +775,11 @@ describe('Contract tests', () => {
       namespace: prod,
     });
     expect(contractResAfterMove.response?.code).toEqual(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('that moving contract federated graph is not allowed', async () => {
+  test('that moving contract federated graph is not allowed', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -832,12 +819,11 @@ describe('Contract tests', () => {
       newNamespace: prod,
     });
     expect(moveRes.response?.code).toEqual(EnumStatusCode.ERR);
-
-    await server.close();
   });
 
-  test('that contract graph for a monograph is also a monograph', async () => {
+  test('that contract graph for a monograph is also a monograph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -866,12 +852,11 @@ describe('Contract tests', () => {
     expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK);
     expect(getContractRes.graph?.supportsFederation).toEqual(false);
     expect(getContractRes.subgraphs.length).toEqual(1);
-
-    await server.close();
   });
 
-  test('that moving source monograph also moves contract graph', async () => {
+  test('that moving source monograph also moves contract graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -911,12 +896,11 @@ describe('Contract tests', () => {
     });
     expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK);
     expect(getContractRes.subgraphs.length).toEqual(1);
-
-    await server.close();
   });
 
-  test('that contract is deleted upon deleting source monograph', async () => {
+  test('that contract is deleted upon deleting source monograph', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -960,12 +944,11 @@ describe('Contract tests', () => {
     expect(getContractRes.response?.code).toEqual(EnumStatusCode.ERR_NOT_FOUND);
 
     expect(blobStorage.keys().length).toBe(0);
-
-    await server.close();
   });
 
-  test('that contract is migrated upon migrating monograph', async () => {
+  test('that contract is migrated upon migrating monograph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -999,12 +982,11 @@ describe('Contract tests', () => {
     });
     expect(getContractRes.response?.code).toEqual(EnumStatusCode.OK);
     expect(getContractRes.graph?.supportsFederation).toEqual(true);
-
-    await server.close();
   });
 
-  test('that publishing subgraph recomposes contract with exclude tags', async () => {
+  test('that publishing subgraph recomposes contract with exclude tags', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -1038,9 +1020,12 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
-}`);
+}`,
+    );
 
     await client.publishFederatedSubgraph({
       name: subgraphName,
@@ -1054,12 +1039,11 @@ describe('Contract tests', () => {
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse2.clientSchema).toEqual(schemaDefinition + `type Query {\n  hello: String!\n  hi: String!\n}`);
-
-    await server.close();
   });
 
-  test('that publishing subgraph recomposes contract with include tags', async () => {
+  test('that publishing subgraph recomposes contract with include tags', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -1107,12 +1091,11 @@ describe('Contract tests', () => {
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse2.clientSchema).toEqual(schemaDefinition + `type Query {\n  hi: String!\n}`);
-
-    await server.close();
   });
 
-  test('that deleting subgraph recomposes contract with exclude tags', async () => {
+  test('that deleting subgraph recomposes contract with exclude tags', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -1156,10 +1139,13 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
   test: String!
-}`);
+}`,
+    );
 
     await client.deleteFederatedSubgraph({
       subgraphName: subgraph2Name,
@@ -1171,15 +1157,17 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse2.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
-}`);
-
-    await server.close();
+}`,
+    );
   });
 
-  test('that deleting subgraph recomposes contract with include tags', async () => {
+  test('that deleting subgraph recomposes contract with include tags', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -1236,12 +1224,11 @@ describe('Contract tests', () => {
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse2.clientSchema).toEqual(schemaDefinition + `type Query {\n  hi: String!\n}`);
-
-    await server.close();
   });
 
-  test('that moving a constituent subgraph recomposes its contract', async () => {
+  test('that moving a constituent subgraph recomposes its contract', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -1289,10 +1276,13 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
   test: String!
-}`);
+}`,
+    );
 
     await client.moveSubgraph({
       name: subgraph2Name,
@@ -1305,15 +1295,17 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse2.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
-}`);
-
-    await server.close();
+}`,
+    );
   });
 
-  test('that publishing a monograph recomposes its contract', async () => {
+  test('that publishing a monograph recomposes its contract', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -1349,10 +1341,13 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
   test: String!
-}`);
+}`,
+    );
 
     const publishRes2 = await client.publishMonograph({
       name: monographName,
@@ -1366,15 +1361,17 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse2.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
-}`);
-
-    await server.close();
+}`,
+    );
   });
 
-  test('that updating label matchers of a source federated graph recomposes its contract', async () => {
+  test('that updating label matchers of a source federated graph recomposes its contract', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -1429,10 +1426,13 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
   test: String!
-}`);
+}`,
+    );
 
     const updateRes = await client.updateFederatedGraph({
       name: fedGraphName,
@@ -1447,12 +1447,11 @@ describe('Contract tests', () => {
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
     expect(sdlResponse2.clientSchema).toEqual(schemaDefinition + `type Query {\n  hello: String!\n}`);
-
-    await server.close();
   });
 
-  test('that a contract is not produced if its source graph does not compose successfully', async () => {
+  test('that a contract is not produced if its source graph does not compose successfully', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -1509,12 +1508,11 @@ describe('Contract tests', () => {
     await assertNumberOfCompositions(client, contractName, 0, namespace, EnumStatusCode.ERR_NOT_FOUND);
     // The base graph compositions should remain at 2
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
-
-    await server.close();
   });
 
-  test('that updating a contract whose source graph has not successfully composed produces a composition error', async () => {
+  test('that updating a contract whose source graph has not successfully composed produces a composition error', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -1607,12 +1605,11 @@ describe('Contract tests', () => {
     await assertNumberOfCompositions(client, contractName, 2, namespace);
     // The source graph compositions should remain at three
     await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
-
-    await server.close();
   });
 
-  test('that a contract with exclude tags uploads the correct client schema to the router', async () => {
+  test('that a contract with exclude tags uploads the correct client schema to the router', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -1690,6 +1687,7 @@ describe('Contract tests', () => {
         query: Query
         mutation: Mutation
       }
+      
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       
@@ -1866,12 +1864,11 @@ describe('Contract tests', () => {
       }
     `),
     );
-
-    await server.close();
   });
 
-  test('that a contract with include tags uploads the correct client schema to the router', async () => {
+  test('that a contract with include tags uploads the correct client schema to the router', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -1949,12 +1946,9 @@ describe('Contract tests', () => {
         query: Query
         mutation: Mutation
       }
-      directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-      directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+      
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-
-      scalar openfed__Scope
+      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       
       type Query {
         internalUser(id: ID!): InternalUser! @tag(name: "dev-only")
@@ -2054,12 +2048,8 @@ describe('Contract tests', () => {
         mutation: Mutation
       }
       
-      directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-      directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-
-      scalar openfed__Scope
+      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       
       type Query {
         internalUser(id: ID!): InternalUser! @tag(name: "dev-only")
@@ -2126,7 +2116,5 @@ describe('Contract tests', () => {
       }
     `),
     );
-
-    await server.close();
   });
 });

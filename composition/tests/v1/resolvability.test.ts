@@ -1,30 +1,24 @@
 import {
-  EntityAncestorCollection,
-  EntityAncestorData,
+  type EntityAncestorCollection,
+  type EntityAncestorData,
   federateSubgraphs,
   generateResolvabilityErrorReasons,
   generateSelectionSetSegments,
   generateSharedResolvabilityErrorReasons,
-  GraphFieldData,
+  type GraphFieldData,
   newRootFieldData,
   OBJECT,
   parse,
   QUERY,
   renderSelectionSet,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
-  UnresolvableFieldData,
+  type Subgraph,
+  type UnresolvableFieldData,
   unresolvablePathError,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
+import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from './utils/utils';
 import {
-  versionOnePersistedBaseSchema,
-  versionOnePersistedDirectiveDefinitions,
-  versionOneRouterDefinitions,
-  versionTwoRouterDefinitions,
-} from './utils/utils';
-import {
-  documentNodeToNormalizedString,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -33,11 +27,10 @@ import {
 
 describe('Field resolvability tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Nested {
         nest: Nested2
@@ -59,8 +52,6 @@ describe('Field resolvability tests', () => {
       type Query {
         query: Nested
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -70,6 +61,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.query.nest.nest.nest';
     const rootFieldData = newRootFieldData(QUERY, 'query', new Set<string>(['subgraph-b']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -92,6 +84,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.friend';
     const rootFieldData = newRootFieldData(QUERY, 'friend', new Set<string>(['subgraph-d']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -120,6 +113,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-w']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'nestedObject',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: false,
@@ -147,6 +141,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-w']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'nestedObject',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: false,
@@ -169,6 +164,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.friend';
     const rootFieldData = newRootFieldData(QUERY, 'friend', new Set<string>(['subgraph-d']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -191,6 +187,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.friend';
     const rootFieldData = newRootFieldData(QUERY, 'friend', new Set<string>(['subgraph-d']));
     const fieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -200,6 +197,7 @@ describe('Field resolvability tests', () => {
       typeName: 'Friend',
     };
     const fieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'hobbies',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -208,16 +206,15 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-g']),
       typeName: 'Friend',
     };
-    const result = federateSubgraphsFailure([subgraphD, subgraphF, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(2);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphD, subgraphF, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toStrictEqual(
       unresolvablePathError(
         fieldDataOne,
         generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData: fieldDataOne }),
       ),
     );
-    expect(result.errors[1]).toStrictEqual(
+    expect(errors[1]).toStrictEqual(
       unresolvablePathError(
         fieldDataTwo,
         generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData: fieldDataTwo }),
@@ -226,11 +223,10 @@ describe('Field resolvability tests', () => {
   });
 
   test('that shared queries that return a type that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphsSuccess([subgraphD, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphD, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Friend {
         age: Int!
@@ -240,19 +236,16 @@ describe('Field resolvability tests', () => {
       type Query {
         friend: Friend
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that shared queries that return an interface that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphsSuccess([subgraphH, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphH, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Friend implements Human {
         age: Int!
@@ -276,6 +269,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.humans.... on Friend';
     const rootFieldData = newRootFieldData(QUERY, 'humans', new Set<string>(['subgraph-i']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -284,10 +278,9 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-j']),
       typeName: 'Friend',
     };
-    const result = federateSubgraphsFailure([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       unresolvablePathError(
         unresolvableFieldData,
         generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData }),
@@ -299,6 +292,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.humans.... on Friend.pets.... on Cat';
     const rootFieldData = newRootFieldData(QUERY, 'humans', new Set<string>(['subgraph-k']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -307,10 +301,9 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-l']),
       typeName: 'Cat',
     };
-    const result = federateSubgraphsFailure([subgraphK, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphK, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       unresolvablePathError(
         unresolvableFieldData,
         generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData }),
@@ -319,11 +312,10 @@ describe('Field resolvability tests', () => {
   });
 
   test('that shared queries that return a union that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphsSuccess([subgraphM, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphM, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Enemy {
         name: String!
@@ -347,6 +339,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.humans.... on Enemy';
     const rootFieldData = newRootFieldData(QUERY, 'humans', new Set<string>(['subgraph-o']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -355,9 +348,9 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-p']),
       typeName: 'Enemy',
     };
-    const result = federateSubgraphsFailure([subgraphO, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphO, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       unresolvablePathError(
         unresolvableFieldData,
         generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData }),
@@ -366,12 +359,20 @@ describe('Field resolvability tests', () => {
   });
 
   test('that an entity ancestor provides access to an otherwise unreachable field', () => {
-    const result = federateSubgraphsSuccess([subgraphQ, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphQ, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        SCHEMA_QUERY_DEFINITION +
           `
+        type NestedObject {
+            age: Int!
+            name: String!
+        }
+        
+        type Object {
+            nestedObject: NestedObject!
+        }
+        
         type Query {
           entity: SometimesEntity!
         }
@@ -380,26 +381,16 @@ describe('Field resolvability tests', () => {
             id: ID!
             object: Object!
         }
-        
-        type Object {
-            nestedObject: NestedObject!
-        }
-        
-        type NestedObject {
-            name: String!
-            age: Int!
-        }
     `,
       ),
     );
   });
 
   test('that a nested self-referential type does not create an infinite validation loop', () => {
-    const result = federateSubgraphsSuccess([subgraphS, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphS, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Friend {
           name: String!
@@ -417,19 +408,16 @@ describe('Field resolvability tests', () => {
           friend: Friend
           object: Object!
         }
-        
-        scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that unreachable interface implementations do not return an error', () => {
-    const result = federateSubgraphsSuccess([subgraphT, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphT, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         interface Interface {
           field: String!
@@ -452,11 +440,13 @@ describe('Field resolvability tests', () => {
   });
 
   test('that extensions do not affect resolvability', () => {
-    const result = federateSubgraphsSuccess([subgraphX, subgraphY, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphX, subgraphY, subgraphZ],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Entity {
           age: Int!
@@ -487,17 +477,18 @@ describe('Field resolvability tests', () => {
   });
 
   test('that a root field cycle does not affect resolvability', () => {
-    const result = federateSubgraphsSuccess([subgraphAA, subgraphAB], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphAA, subgraphAB],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
         `
         schema {
           query: Query
           mutation: Mutation
-        }` +
-          versionOnePersistedDirectiveDefinitions +
-          `
+        }
+        
         type Mutation {
           mutation: Mutation!
         }
@@ -520,6 +511,7 @@ describe('Field resolvability tests', () => {
       typeName: 'EntityOne',
     };
     const fieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'entityTwo',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: false,
@@ -529,6 +521,7 @@ describe('Field resolvability tests', () => {
       typeName: 'EntityOne',
     };
     const fieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -560,6 +553,7 @@ describe('Field resolvability tests', () => {
       typeName: 'EntityOne',
     };
     const fieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath + '.object.nestedObject'), {
         isLeaf: true,
@@ -569,6 +563,7 @@ describe('Field resolvability tests', () => {
       typeName: 'NestedObject',
     };
     const fieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'entityTwo',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: false,
@@ -600,6 +595,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-ae']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -625,11 +621,13 @@ describe('Field resolvability tests', () => {
   });
 
   test('that entity resolve chains (leapfrogging) are valid', () => {
-    const result = federateSubgraphsSuccess([subgraphAK, subgraphAL, subgraphAM], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphAK, subgraphAL, subgraphAM],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type EntityOne {
           entityTwo: EntityTwo
@@ -655,19 +653,16 @@ describe('Field resolvability tests', () => {
         type Query {
           entityOne: EntityOne!
         }
-        
-        scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that cyclical references are valid', () => {
-    const result = federateSubgraphsSuccess([subgraphAN], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphAN], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type A {
             b: B!
@@ -693,11 +688,13 @@ describe('Field resolvability tests', () => {
   });
 
   test('that revisited fields do not produce false positives #1', () => {
-    const result = federateSubgraphsSuccess([subgraphAP, subgraphAQ], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphAP, subgraphAQ],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type EntityOne {
           age: Int!
@@ -725,11 +722,10 @@ describe('Field resolvability tests', () => {
   });
 
   test('that revisited fields do not produce false positives #2', () => {
-    const result = federateSubgraphsSuccess([subgraphAR], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphAR], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type NestedObjectOne {
           name: String!
@@ -762,7 +758,7 @@ describe('Field resolvability tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Entity {
           age: Int!
@@ -791,19 +787,20 @@ describe('Field resolvability tests', () => {
         type Query {
           objectOne: ObjectOne!
         }
-        
-        scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that inaccessible concrete types that implement an interface are not assessed by the resolvability graph', () => {
-    const result = federateSubgraphsSuccess([subgraphAU, subgraphAV], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphAU, subgraphAV],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
         type Entity implements Interface {
           age: Int!
@@ -824,19 +821,19 @@ describe('Field resolvability tests', () => {
         type Query {
           interface: Interface!
         }
-      
-        scalar openfed__Scope
       `,
       ),
     );
   });
 
   test('that interface objects do not create false positives #1.1', () => {
-    const result = federateSubgraphsSuccess([subgraphAW, subgraphAX], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphAW, subgraphAX],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type EntityOne implements Interface {
             age: Int!
@@ -861,18 +858,19 @@ describe('Field resolvability tests', () => {
             entityOne: [EntityOne!]!
             entityTwo: [EntityTwo!]!
           }
-          
-          scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that interface objects do not create false positives #1.2', () => {
-    const result = federateSubgraphsSuccess([subgraphAX, subgraphAW], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphAX, subgraphAW],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type EntityOne implements Interface {
             age: Int!
@@ -897,19 +895,19 @@ describe('Field resolvability tests', () => {
             entityOne: [EntityOne!]!
             entityTwo: [EntityTwo!]!
           }
-          
-          scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that interface objects can contribute implicit keys #1.1', () => {
-    const result = federateSubgraphsSuccess([subgraphAY, subgraphAX, subgraphAW], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphAY, subgraphAX, subgraphAW],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type EntityOne implements Interface {
             age: Int!
@@ -936,19 +934,19 @@ describe('Field resolvability tests', () => {
             entityOne: [EntityOne!]!
             entityTwo: [EntityTwo!]!
           }
-          
-          scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that interface objects can contribute implicit keys #1.2', () => {
-    const result = federateSubgraphsSuccess([subgraphAW, subgraphAX, subgraphAY], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphAW, subgraphAX, subgraphAY],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type EntityOne implements Interface {
             age: Int!
@@ -975,19 +973,19 @@ describe('Field resolvability tests', () => {
             entityOne: [EntityOne!]!
             entityTwo: [EntityTwo!]!
           }
-          
-          scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that interface objects can contribute implicit keys #1.3', () => {
-    const result = federateSubgraphsSuccess([subgraphAY, subgraphAW, subgraphAX], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphAY, subgraphAW, subgraphAX],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type EntityOne implements Interface {
             age: Int!
@@ -1014,19 +1012,20 @@ describe('Field resolvability tests', () => {
             entityOne: [EntityOne!]!
             entityTwo: [EntityTwo!]!
           }
-          
-          scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that inaccessible fields are not considered for resolvability', () => {
-    const result = federateSubgraphsSuccess([subgraphAZ, subgraphAO], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphAZ, subgraphAO],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
           type Entity {
             age: Int!
@@ -1037,8 +1036,6 @@ describe('Field resolvability tests', () => {
           type Query {
             entities: [Entity!]!
           }
-          
-          scalar openfed__Scope
     `,
       ),
     );
@@ -1051,7 +1048,7 @@ describe('Field resolvability tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type EntityOne {
             age: Int!
@@ -1069,19 +1066,19 @@ describe('Field resolvability tests', () => {
           type Query {
             entityOne: EntityOne!
           }
-          
-          scalar openfed__Scope
     `,
       ),
     );
   });
 
-  test('that shared entity fields frm a root field do not produce false positives', () => {
-    const result = federateSubgraphsSuccess([subgraphBF, subgraphBG], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+  test('that shared entity fields from a root field do not produce false positives', () => {
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphBF, subgraphBG],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type Entity {
             age: Int!
@@ -1093,19 +1090,19 @@ describe('Field resolvability tests', () => {
           type Query {
             entity: Entity!
           }
-          
-          scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that interface objects satisfied by implicit keys do not produce false positives', () => {
-    const result = federateSubgraphsSuccess([subgraphBH, subgraphBI], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphBH, subgraphBI],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type Entity implements Interface {
             id: ID!
@@ -1127,8 +1124,6 @@ describe('Field resolvability tests', () => {
           type Query {
             entity: Entity!
           }
-          
-          scalar openfed__Scope
     `,
       ),
     );
@@ -1143,6 +1138,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entity', new Set<string>([subgraphBH.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'isNew',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1168,7 +1164,7 @@ describe('Field resolvability tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type EntityOne {
             age: Int!
@@ -1196,8 +1192,6 @@ describe('Field resolvability tests', () => {
           type Query {
             entity: EntityOne!
           }
-      
-          scalar openfed__Scope
     `,
       ),
     );
@@ -1212,6 +1206,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entity', new Set<string>([subgraphBM.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1240,6 +1235,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entity', new Set<string>([subgraphBM.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1266,7 +1262,7 @@ describe('Field resolvability tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
           type Entity {
             age: Int!
@@ -1289,7 +1285,9 @@ describe('Field resolvability tests', () => {
     });
     expect(resultOne.success).toBe(false);
     const resultTwo = federateSubgraphs({
-      disableResolvabilityValidation: true,
+      options: {
+        disableResolvabilityValidation: true,
+      },
       subgraphs: [subgraphBQ, subgraphBR],
       version: ROUTER_COMPATIBILITY_VERSION_ONE,
     });
@@ -1300,7 +1298,7 @@ describe('Field resolvability tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([aaaa, aaab], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       interface Interface {
         id: ID!
@@ -1345,8 +1343,6 @@ describe('Field resolvability tests', () => {
       type Query {
         objectA: Output!
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );
@@ -1356,7 +1352,7 @@ describe('Field resolvability tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([baaa, baab], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type ObjectA {
           a: ID
@@ -1390,7 +1386,7 @@ describe('Field resolvability tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([caaa, caab], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type ObjectA {
           a: ID
@@ -1420,7 +1416,7 @@ describe('Field resolvability tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([daaa, daab], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         interface Interface {
           id: ID!
@@ -1454,8 +1450,6 @@ describe('Field resolvability tests', () => {
         type Query {
           interface: Interface
         }
-        
-        scalar openfed__Scope
         `,
       ),
     );
@@ -1465,7 +1459,7 @@ describe('Field resolvability tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([eaaa, eaab], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Entity {
           id: ID!
@@ -1495,6 +1489,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([eaaa.name, eaac.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'id',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1517,7 +1512,7 @@ describe('Field resolvability tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([eaaa, eaac, eaad], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Entity {
           id: ID!
@@ -1550,6 +1545,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([eaac.name, eaae.name]));
     const unresolvableFieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.object'), {
         isLeaf: true,
@@ -1559,6 +1555,7 @@ describe('Field resolvability tests', () => {
       typeName: OBJECT,
     };
     const unresolvableFieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.objectTwo'), {
         isLeaf: true,
@@ -1601,6 +1598,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([eaac.name, eaae.name]));
     const unresolvableFieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.object'), {
         isLeaf: true,
@@ -1610,6 +1608,7 @@ describe('Field resolvability tests', () => {
       typeName: OBJECT,
     };
     const unresolvableFieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.objectTwo'), {
         isLeaf: true,
@@ -1619,6 +1618,7 @@ describe('Field resolvability tests', () => {
       typeName: OBJECT,
     };
     const unresolvableFieldDataThree: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities'), {
         isLeaf: true,
@@ -1661,6 +1661,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.object.nestedObjectTwo';
     const rootFieldData = newRootFieldData(QUERY, 'object', new Set<string>([faaa.name, faab.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'id',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1683,7 +1684,7 @@ describe('Field resolvability tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([gaaa, gaab], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Object {
         object: Object!
@@ -1691,6 +1692,168 @@ describe('Field resolvability tests', () => {
       
       type Query {
         object: Object!
+      }
+    `,
+      ),
+    );
+  });
+
+  test('that errors are returned for unresolvable fields involving a shared root query field and unreachable nested entities', () => {
+    const { errors } = federateSubgraphsFailure([haaa, haab, haac], ROUTER_COMPATIBILITY_VERSION_ONE);
+    const entityAncestors: EntityAncestorCollection = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([
+        [haaa.name, new Set<string>(['idB'])],
+        [haab.name, new Set<string>(['idB'])],
+        [haac.name, new Set<string>(['idA'])],
+      ]),
+      subgraphNames: [haaa.name, haab.name],
+      typeName: 'EntityA',
+    };
+    const rootFieldData = newRootFieldData(QUERY, 'a', new Set<string>([haaa.name, haab.name]));
+
+    const unresolvableFieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'createdAt',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
+        isLeaf: true,
+        name: 'createdAt',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([haaa.name]),
+      typeName: 'EntityA',
+    };
+    const unresolvableFieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'active',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
+        isLeaf: true,
+        name: 'active',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([haaa.name]),
+      typeName: 'EntityA',
+    };
+    const unresolvableFieldDataThree: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'b',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
+        isLeaf: false,
+        name: 'b',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([haab.name]),
+      typeName: 'EntityA',
+    };
+    expect(errors).toHaveLength(3);
+    expect(errors).toStrictEqual([
+      unresolvablePathError(
+        unresolvableFieldDataOne,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataOne,
+        }),
+      ),
+      unresolvablePathError(
+        unresolvableFieldDataTwo,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataTwo,
+        }),
+      ),
+      unresolvablePathError(
+        unresolvableFieldDataThree,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataThree,
+        }),
+      ),
+    ]);
+  });
+
+  test('that an error is returned if a field is unreachable due a true @external entity key field', () => {
+    const entityAncestors: EntityAncestorCollection = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([[iaab.name, new Set<string>(['id'])]]),
+      subgraphNames: [iaaa.name, iaab.name],
+      typeName: 'Entity',
+    };
+    const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([iaaa.name]));
+    const fieldPath = 'query.entities';
+    const unresolvableFieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>([iaaa.name]),
+      fieldName: 'id',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'id',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([iaab.name]),
+      typeName: 'Entity',
+    };
+    const unresolvableFieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'name',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'name',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([iaab.name]),
+      typeName: 'Entity',
+    };
+    const { errors } = federateSubgraphsFailure([iaaa, iaab], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    expect(errors).toStrictEqual([
+      unresolvablePathError(
+        unresolvableFieldDataOne,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataOne,
+        }),
+      ),
+      unresolvablePathError(
+        unresolvableFieldDataTwo,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataTwo,
+        }),
+      ),
+    ]);
+  });
+
+  test('that @external entity keys are ignored if set in options', () => {
+    const { federatedGraphSchema } = federateSubgraphsSuccess([iaaa, iaab], ROUTER_COMPATIBILITY_VERSION_ONE, {
+      ignoreExternalKeys: true,
+    });
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        type Entity {
+          id: ID!
+          name: String!
+        }
+      
+        type Query {
+          entities: [Entity!]!
+        }
+      `,
+      ),
+    );
+  });
+
+  test('that an @external key can still be a valid target', () => {
+    const { federatedGraphSchema } = federateSubgraphsSuccess([jaaa, jaab], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+      type Entity {
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        entities: [Entity!]!
       }
     `,
       ),
@@ -3379,6 +3542,128 @@ const gaab: Subgraph = {
     
     type Query {
       object: Object!
+    }
+  `),
+};
+
+const haaa: Subgraph = {
+  name: 'haaa',
+  url: '',
+  definitions: parse(`
+    scalar ScalarID @inaccessible
+    
+    type EntityA @shareable @key(fields: "idB") {
+      idA: ID!
+      idB: ScalarID! @inaccessible
+      createdAt: String!
+      active: Boolean!
+    }
+    
+    type Query {
+      a: EntityA @shareable
+    }
+  `),
+};
+
+const haab: Subgraph = {
+  name: 'haab',
+  url: '',
+  definitions: parse(`
+    scalar ScalarID @inaccessible
+    
+    type EntityA @shareable @key(fields: "idB") {
+      idA: ID!
+      idB: ScalarID! @inaccessible
+      b: EntityBConnection!
+    }
+    
+    type EntityB @shareable @key(fields: "idB") {
+      idA: ID!
+      idB: ScalarID! @inaccessible
+      a: EntityA
+    }
+    
+    type EntityBConnection {
+      edges: [EntityBEdge]
+      nodes: [EntityB]
+    }
+    
+    type EntityBEdge {
+      node: EntityB
+    }
+    
+    type Query {
+      a: EntityA @shareable
+    }
+  `),
+};
+
+const haac: Subgraph = {
+  name: 'haac',
+  url: '',
+  definitions: parse(`
+    type EntityA @shareable @key(fields: "idA") {
+      idA: ID!
+    }
+    
+    type EntityB @shareable @key(fields: "idA") {
+      idA: ID!
+      c: EntityC
+    }
+    
+    type EntityC @shareable @key(fields: "id") {
+      id: ID!
+      a: EntityA
+    }
+  `),
+};
+
+const iaaa: Subgraph = {
+  name: 'iaaa',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID! @external
+    }
+    
+    type Query {
+      entities: [Entity!]!
+    }
+  `),
+};
+
+const iaab: Subgraph = {
+  name: 'iaab',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const jaaa: Subgraph = {
+  name: 'jaaa',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID! @external
+      name: String!
+    }
+  `),
+};
+
+const jaab: Subgraph = {
+  name: 'jaab',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+    }
+    
+    type Query {
+      entities: [Entity!]!
     }
   `),
 };

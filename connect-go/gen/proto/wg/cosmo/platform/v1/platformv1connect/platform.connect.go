@@ -142,12 +142,24 @@ const (
 	// PlatformServicePublishPersistedOperationsProcedure is the fully-qualified name of the
 	// PlatformService's PublishPersistedOperations RPC.
 	PlatformServicePublishPersistedOperationsProcedure = "/wg.cosmo.platform.v1.PlatformService/PublishPersistedOperations"
+	// PlatformServiceCheckPersistedOperationTrafficProcedure is the fully-qualified name of the
+	// PlatformService's CheckPersistedOperationTraffic RPC.
+	PlatformServiceCheckPersistedOperationTrafficProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckPersistedOperationTraffic"
+	// PlatformServiceDeletePersistedOperationProcedure is the fully-qualified name of the
+	// PlatformService's DeletePersistedOperation RPC.
+	PlatformServiceDeletePersistedOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeletePersistedOperation"
 	// PlatformServiceGetPersistedOperationsProcedure is the fully-qualified name of the
 	// PlatformService's GetPersistedOperations RPC.
 	PlatformServiceGetPersistedOperationsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetPersistedOperations"
 	// PlatformServiceGetAuditLogsProcedure is the fully-qualified name of the PlatformService's
 	// GetAuditLogs RPC.
 	PlatformServiceGetAuditLogsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAuditLogs"
+	// PlatformServiceInitializeCosmoUserProcedure is the fully-qualified name of the PlatformService's
+	// InitializeCosmoUser RPC.
+	PlatformServiceInitializeCosmoUserProcedure = "/wg.cosmo.platform.v1.PlatformService/InitializeCosmoUser"
+	// PlatformServiceListOrganizationsProcedure is the fully-qualified name of the PlatformService's
+	// ListOrganizations RPC.
+	PlatformServiceListOrganizationsProcedure = "/wg.cosmo.platform.v1.PlatformService/ListOrganizations"
 	// PlatformServiceGetFederatedGraphsProcedure is the fully-qualified name of the PlatformService's
 	// GetFederatedGraphs RPC.
 	PlatformServiceGetFederatedGraphsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFederatedGraphs"
@@ -481,6 +493,12 @@ const (
 	// PlatformServiceDeleteCacheWarmerOperationProcedure is the fully-qualified name of the
 	// PlatformService's DeleteCacheWarmerOperation RPC.
 	PlatformServiceDeleteCacheWarmerOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteCacheWarmerOperation"
+	// PlatformServiceGetSubgraphCheckExtensionsConfigProcedure is the fully-qualified name of the
+	// PlatformService's GetSubgraphCheckExtensionsConfig RPC.
+	PlatformServiceGetSubgraphCheckExtensionsConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphCheckExtensionsConfig"
+	// PlatformServiceConfigureSubgraphCheckExtensionsProcedure is the fully-qualified name of the
+	// PlatformService's ConfigureSubgraphCheckExtensions RPC.
+	PlatformServiceConfigureSubgraphCheckExtensionsProcedure = "/wg.cosmo.platform.v1.PlatformService/ConfigureSubgraphCheckExtensions"
 	// PlatformServiceGetBillingPlansProcedure is the fully-qualified name of the PlatformService's
 	// GetBillingPlans RPC.
 	PlatformServiceGetBillingPlansProcedure = "/wg.cosmo.platform.v1.PlatformService/GetBillingPlans"
@@ -529,6 +547,12 @@ const (
 	// PlatformServiceGetClientsFromAnalyticsProcedure is the fully-qualified name of the
 	// PlatformService's GetClientsFromAnalytics RPC.
 	PlatformServiceGetClientsFromAnalyticsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetClientsFromAnalytics"
+	// PlatformServiceGetOperationClientsProcedure is the fully-qualified name of the PlatformService's
+	// GetOperationClients RPC.
+	PlatformServiceGetOperationClientsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOperationClients"
+	// PlatformServiceGetOperationDeprecatedFieldsProcedure is the fully-qualified name of the
+	// PlatformService's GetOperationDeprecatedFields RPC.
+	PlatformServiceGetOperationDeprecatedFieldsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOperationDeprecatedFields"
 	// PlatformServiceValidateAndFetchPluginDataProcedure is the fully-qualified name of the
 	// PlatformService's ValidateAndFetchPluginData RPC.
 	PlatformServiceValidateAndFetchPluginDataProcedure = "/wg.cosmo.platform.v1.PlatformService/ValidateAndFetchPluginData"
@@ -538,6 +562,12 @@ const (
 	// PlatformServiceUnlinkSubgraphProcedure is the fully-qualified name of the PlatformService's
 	// UnlinkSubgraph RPC.
 	PlatformServiceUnlinkSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/UnlinkSubgraph"
+	// PlatformServiceVerifyAPIKeyGraphAccessProcedure is the fully-qualified name of the
+	// PlatformService's VerifyAPIKeyGraphAccess RPC.
+	PlatformServiceVerifyAPIKeyGraphAccessProcedure = "/wg.cosmo.platform.v1.PlatformService/VerifyAPIKeyGraphAccess"
+	// PlatformServiceRecomposeGraphProcedure is the fully-qualified name of the PlatformService's
+	// RecomposeGraph RPC.
+	PlatformServiceRecomposeGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/RecomposeGraph"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -579,8 +609,12 @@ var (
 	platformServiceGetRouterTokensMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetRouterTokens")
 	platformServiceDeleteRouterTokenMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteRouterToken")
 	platformServicePublishPersistedOperationsMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("PublishPersistedOperations")
+	platformServiceCheckPersistedOperationTrafficMethodDescriptor        = platformServiceServiceDescriptor.Methods().ByName("CheckPersistedOperationTraffic")
+	platformServiceDeletePersistedOperationMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("DeletePersistedOperation")
 	platformServiceGetPersistedOperationsMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetPersistedOperations")
 	platformServiceGetAuditLogsMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetAuditLogs")
+	platformServiceInitializeCosmoUserMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("InitializeCosmoUser")
+	platformServiceListOrganizationsMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("ListOrganizations")
 	platformServiceGetFederatedGraphsMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphs")
 	platformServiceGetFederatedGraphsBySubgraphLabelsMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphsBySubgraphLabels")
 	platformServiceGetFederatedGraphByNameMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphByName")
@@ -692,6 +726,8 @@ var (
 	platformServiceConfigureCacheWarmerMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("ConfigureCacheWarmer")
 	platformServiceGetCacheWarmerConfigMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerConfig")
 	platformServiceDeleteCacheWarmerOperationMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("DeleteCacheWarmerOperation")
+	platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphCheckExtensionsConfig")
+	platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("ConfigureSubgraphCheckExtensions")
 	platformServiceGetBillingPlansMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetBillingPlans")
 	platformServiceCreateCheckoutSessionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
 	platformServiceCreateBillingPortalSessionMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
@@ -708,9 +744,13 @@ var (
 	platformServiceGetProposalChecksMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
 	platformServiceGetOperationsMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetOperations")
 	platformServiceGetClientsFromAnalyticsMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetClientsFromAnalytics")
+	platformServiceGetOperationClientsMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetOperationClients")
+	platformServiceGetOperationDeprecatedFieldsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetOperationDeprecatedFields")
 	platformServiceValidateAndFetchPluginDataMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("ValidateAndFetchPluginData")
 	platformServiceLinkSubgraphMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("LinkSubgraph")
 	platformServiceUnlinkSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
+	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
+	platformServiceRecomposeGraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -774,10 +814,18 @@ type PlatformServiceClient interface {
 	DeleteRouterToken(context.Context, *connect.Request[v1.DeleteRouterTokenRequest]) (*connect.Response[v1.DeleteRouterTokenResponse], error)
 	// Add persisted operations
 	PublishPersistedOperations(context.Context, *connect.Request[v1.PublishPersistedOperationsRequest]) (*connect.Response[v1.PublishPersistedOperationsResponse], error)
+	// Check if persisted operation has any traffic
+	CheckPersistedOperationTraffic(context.Context, *connect.Request[v1.CheckPersistedOperationTrafficRequest]) (*connect.Response[v1.CheckPersistedOperationTrafficResponse], error)
+	// Delete/remove a persisted operation
+	DeletePersistedOperation(context.Context, *connect.Request[v1.DeletePersistedOperationRequest]) (*connect.Response[v1.DeletePersistedOperationResponse], error)
 	// GetPersistedOperations returns operations for the registered client id
 	GetPersistedOperations(context.Context, *connect.Request[v1.GetPersistedOperationsRequest]) (*connect.Response[v1.GetPersistedOperationsResponse], error)
 	// GetAuditLogs returns the audit logs of the organization
 	GetAuditLogs(context.Context, *connect.Request[v1.GetAuditLogsRequest]) (*connect.Response[v1.GetAuditLogsResponse], error)
+	// InitializeCosmoUser takes a bearer token and ensures that the user associated with it (if valid) exists in Cosmo
+	InitializeCosmoUser(context.Context, *connect.Request[v1.InitializeCosmoUserRequest]) (*connect.Response[v1.InitializeCosmoUserResponse], error)
+	// ListOrganizations returns all the organization the authenticated user is a member of
+	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
 	// GetFederatedGraphs returns the list of federated graphs.
 	GetFederatedGraphs(context.Context, *connect.Request[v1.GetFederatedGraphsRequest]) (*connect.Response[v1.GetFederatedGraphsResponse], error)
 	// GetFederatedGraphsBySubgraphLabels returns the list of federated graphs based on the subgraph labels
@@ -992,6 +1040,8 @@ type PlatformServiceClient interface {
 	GetCacheWarmerConfig(context.Context, *connect.Request[v1.GetCacheWarmerConfigRequest]) (*connect.Response[v1.GetCacheWarmerConfigResponse], error)
 	// DeleteCacheWarmerOperation deletes a cache warmer operation.
 	DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error)
+	GetSubgraphCheckExtensionsConfig(context.Context, *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error)
+	ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -1027,12 +1077,20 @@ type PlatformServiceClient interface {
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
 	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
 	GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error)
+	// GetOperationClients returns the clients that have used a specific operation
+	GetOperationClients(context.Context, *connect.Request[v1.GetOperationClientsRequest]) (*connect.Response[v1.GetOperationClientsResponse], error)
+	// GetOperationDeprecatedFields returns the deprecated fields used in a specific operation
+	GetOperationDeprecatedFields(context.Context, *connect.Request[v1.GetOperationDeprecatedFieldsRequest]) (*connect.Response[v1.GetOperationDeprecatedFieldsResponse], error)
 	// ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
 	ValidateAndFetchPluginData(context.Context, *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error)
 	// LinkSubgraph links one subgraph to another
 	LinkSubgraph(context.Context, *connect.Request[v1.LinkSubgraphRequest]) (*connect.Response[v1.LinkSubgraphResponse], error)
 	// UnlinkSubgraph unlinks one subgraph from another
 	UnlinkSubgraph(context.Context, *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error)
+	// VerifyAPIKeyGraphAccess checks if the token or the jwt has organization admin or developer  and checks if the token has permissions to write to the graph
+	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
+	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
+	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -1261,6 +1319,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServicePublishPersistedOperationsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		checkPersistedOperationTraffic: connect.NewClient[v1.CheckPersistedOperationTrafficRequest, v1.CheckPersistedOperationTrafficResponse](
+			httpClient,
+			baseURL+PlatformServiceCheckPersistedOperationTrafficProcedure,
+			connect.WithSchema(platformServiceCheckPersistedOperationTrafficMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deletePersistedOperation: connect.NewClient[v1.DeletePersistedOperationRequest, v1.DeletePersistedOperationResponse](
+			httpClient,
+			baseURL+PlatformServiceDeletePersistedOperationProcedure,
+			connect.WithSchema(platformServiceDeletePersistedOperationMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getPersistedOperations: connect.NewClient[v1.GetPersistedOperationsRequest, v1.GetPersistedOperationsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetPersistedOperationsProcedure,
@@ -1271,6 +1341,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceGetAuditLogsProcedure,
 			connect.WithSchema(platformServiceGetAuditLogsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		initializeCosmoUser: connect.NewClient[v1.InitializeCosmoUserRequest, v1.InitializeCosmoUserResponse](
+			httpClient,
+			baseURL+PlatformServiceInitializeCosmoUserProcedure,
+			connect.WithSchema(platformServiceInitializeCosmoUserMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		listOrganizations: connect.NewClient[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse](
+			httpClient,
+			baseURL+PlatformServiceListOrganizationsProcedure,
+			connect.WithSchema(platformServiceListOrganizationsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getFederatedGraphs: connect.NewClient[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse](
@@ -1946,6 +2028,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceDeleteCacheWarmerOperationMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getSubgraphCheckExtensionsConfig: connect.NewClient[v1.GetSubgraphCheckExtensionsConfigRequest, v1.GetSubgraphCheckExtensionsConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceGetSubgraphCheckExtensionsConfigProcedure,
+			connect.WithSchema(platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		configureSubgraphCheckExtensions: connect.NewClient[v1.ConfigureSubgraphCheckExtensionsRequest, v1.ConfigureSubgraphCheckExtensionsResponse](
+			httpClient,
+			baseURL+PlatformServiceConfigureSubgraphCheckExtensionsProcedure,
+			connect.WithSchema(platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getBillingPlans: connect.NewClient[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse](
 			httpClient,
 			baseURL+PlatformServiceGetBillingPlansProcedure,
@@ -2042,6 +2136,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getOperationClients: connect.NewClient[v1.GetOperationClientsRequest, v1.GetOperationClientsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOperationClientsProcedure,
+			connect.WithSchema(platformServiceGetOperationClientsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getOperationDeprecatedFields: connect.NewClient[v1.GetOperationDeprecatedFieldsRequest, v1.GetOperationDeprecatedFieldsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOperationDeprecatedFieldsProcedure,
+			connect.WithSchema(platformServiceGetOperationDeprecatedFieldsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		validateAndFetchPluginData: connect.NewClient[v1.ValidateAndFetchPluginDataRequest, v1.ValidateAndFetchPluginDataResponse](
 			httpClient,
 			baseURL+PlatformServiceValidateAndFetchPluginDataProcedure,
@@ -2058,6 +2164,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceUnlinkSubgraphProcedure,
 			connect.WithSchema(platformServiceUnlinkSubgraphMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		verifyAPIKeyGraphAccess: connect.NewClient[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse](
+			httpClient,
+			baseURL+PlatformServiceVerifyAPIKeyGraphAccessProcedure,
+			connect.WithSchema(platformServiceVerifyAPIKeyGraphAccessMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		recomposeGraph: connect.NewClient[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse](
+			httpClient,
+			baseURL+PlatformServiceRecomposeGraphProcedure,
+			connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -2101,8 +2219,12 @@ type platformServiceClient struct {
 	getRouterTokens                       *connect.Client[v1.GetRouterTokensRequest, v1.GetRouterTokensResponse]
 	deleteRouterToken                     *connect.Client[v1.DeleteRouterTokenRequest, v1.DeleteRouterTokenResponse]
 	publishPersistedOperations            *connect.Client[v1.PublishPersistedOperationsRequest, v1.PublishPersistedOperationsResponse]
+	checkPersistedOperationTraffic        *connect.Client[v1.CheckPersistedOperationTrafficRequest, v1.CheckPersistedOperationTrafficResponse]
+	deletePersistedOperation              *connect.Client[v1.DeletePersistedOperationRequest, v1.DeletePersistedOperationResponse]
 	getPersistedOperations                *connect.Client[v1.GetPersistedOperationsRequest, v1.GetPersistedOperationsResponse]
 	getAuditLogs                          *connect.Client[v1.GetAuditLogsRequest, v1.GetAuditLogsResponse]
+	initializeCosmoUser                   *connect.Client[v1.InitializeCosmoUserRequest, v1.InitializeCosmoUserResponse]
+	listOrganizations                     *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
 	getFederatedGraphs                    *connect.Client[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse]
 	getFederatedGraphsBySubgraphLabels    *connect.Client[v1.GetFederatedGraphsBySubgraphLabelsRequest, v1.GetFederatedGraphsBySubgraphLabelsResponse]
 	getFederatedGraphByName               *connect.Client[v1.GetFederatedGraphByNameRequest, v1.GetFederatedGraphByNameResponse]
@@ -2214,6 +2336,8 @@ type platformServiceClient struct {
 	configureCacheWarmer                  *connect.Client[v1.ConfigureCacheWarmerRequest, v1.ConfigureCacheWarmerResponse]
 	getCacheWarmerConfig                  *connect.Client[v1.GetCacheWarmerConfigRequest, v1.GetCacheWarmerConfigResponse]
 	deleteCacheWarmerOperation            *connect.Client[v1.DeleteCacheWarmerOperationRequest, v1.DeleteCacheWarmerOperationResponse]
+	getSubgraphCheckExtensionsConfig      *connect.Client[v1.GetSubgraphCheckExtensionsConfigRequest, v1.GetSubgraphCheckExtensionsConfigResponse]
+	configureSubgraphCheckExtensions      *connect.Client[v1.ConfigureSubgraphCheckExtensionsRequest, v1.ConfigureSubgraphCheckExtensionsResponse]
 	getBillingPlans                       *connect.Client[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse]
 	createCheckoutSession                 *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
 	createBillingPortalSession            *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
@@ -2230,9 +2354,13 @@ type platformServiceClient struct {
 	getProposalChecks                     *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
 	getOperations                         *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
 	getClientsFromAnalytics               *connect.Client[v1.GetClientsFromAnalyticsRequest, v1.GetClientsFromAnalyticsResponse]
+	getOperationClients                   *connect.Client[v1.GetOperationClientsRequest, v1.GetOperationClientsResponse]
+	getOperationDeprecatedFields          *connect.Client[v1.GetOperationDeprecatedFieldsRequest, v1.GetOperationDeprecatedFieldsResponse]
 	validateAndFetchPluginData            *connect.Client[v1.ValidateAndFetchPluginDataRequest, v1.ValidateAndFetchPluginDataResponse]
 	linkSubgraph                          *connect.Client[v1.LinkSubgraphRequest, v1.LinkSubgraphResponse]
 	unlinkSubgraph                        *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
+	verifyAPIKeyGraphAccess               *connect.Client[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse]
+	recomposeGraph                        *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -2416,6 +2544,17 @@ func (c *platformServiceClient) PublishPersistedOperations(ctx context.Context, 
 	return c.publishPersistedOperations.CallUnary(ctx, req)
 }
 
+// CheckPersistedOperationTraffic calls
+// wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic.
+func (c *platformServiceClient) CheckPersistedOperationTraffic(ctx context.Context, req *connect.Request[v1.CheckPersistedOperationTrafficRequest]) (*connect.Response[v1.CheckPersistedOperationTrafficResponse], error) {
+	return c.checkPersistedOperationTraffic.CallUnary(ctx, req)
+}
+
+// DeletePersistedOperation calls wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation.
+func (c *platformServiceClient) DeletePersistedOperation(ctx context.Context, req *connect.Request[v1.DeletePersistedOperationRequest]) (*connect.Response[v1.DeletePersistedOperationResponse], error) {
+	return c.deletePersistedOperation.CallUnary(ctx, req)
+}
+
 // GetPersistedOperations calls wg.cosmo.platform.v1.PlatformService.GetPersistedOperations.
 func (c *platformServiceClient) GetPersistedOperations(ctx context.Context, req *connect.Request[v1.GetPersistedOperationsRequest]) (*connect.Response[v1.GetPersistedOperationsResponse], error) {
 	return c.getPersistedOperations.CallUnary(ctx, req)
@@ -2424,6 +2563,16 @@ func (c *platformServiceClient) GetPersistedOperations(ctx context.Context, req 
 // GetAuditLogs calls wg.cosmo.platform.v1.PlatformService.GetAuditLogs.
 func (c *platformServiceClient) GetAuditLogs(ctx context.Context, req *connect.Request[v1.GetAuditLogsRequest]) (*connect.Response[v1.GetAuditLogsResponse], error) {
 	return c.getAuditLogs.CallUnary(ctx, req)
+}
+
+// InitializeCosmoUser calls wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser.
+func (c *platformServiceClient) InitializeCosmoUser(ctx context.Context, req *connect.Request[v1.InitializeCosmoUserRequest]) (*connect.Response[v1.InitializeCosmoUserResponse], error) {
+	return c.initializeCosmoUser.CallUnary(ctx, req)
+}
+
+// ListOrganizations calls wg.cosmo.platform.v1.PlatformService.ListOrganizations.
+func (c *platformServiceClient) ListOrganizations(ctx context.Context, req *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error) {
+	return c.listOrganizations.CallUnary(ctx, req)
 }
 
 // GetFederatedGraphs calls wg.cosmo.platform.v1.PlatformService.GetFederatedGraphs.
@@ -3008,6 +3157,18 @@ func (c *platformServiceClient) DeleteCacheWarmerOperation(ctx context.Context, 
 	return c.deleteCacheWarmerOperation.CallUnary(ctx, req)
 }
 
+// GetSubgraphCheckExtensionsConfig calls
+// wg.cosmo.platform.v1.PlatformService.GetSubgraphCheckExtensionsConfig.
+func (c *platformServiceClient) GetSubgraphCheckExtensionsConfig(ctx context.Context, req *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error) {
+	return c.getSubgraphCheckExtensionsConfig.CallUnary(ctx, req)
+}
+
+// ConfigureSubgraphCheckExtensions calls
+// wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions.
+func (c *platformServiceClient) ConfigureSubgraphCheckExtensions(ctx context.Context, req *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error) {
+	return c.configureSubgraphCheckExtensions.CallUnary(ctx, req)
+}
+
 // GetBillingPlans calls wg.cosmo.platform.v1.PlatformService.GetBillingPlans.
 func (c *platformServiceClient) GetBillingPlans(ctx context.Context, req *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
 	return c.getBillingPlans.CallUnary(ctx, req)
@@ -3093,6 +3254,17 @@ func (c *platformServiceClient) GetClientsFromAnalytics(ctx context.Context, req
 	return c.getClientsFromAnalytics.CallUnary(ctx, req)
 }
 
+// GetOperationClients calls wg.cosmo.platform.v1.PlatformService.GetOperationClients.
+func (c *platformServiceClient) GetOperationClients(ctx context.Context, req *connect.Request[v1.GetOperationClientsRequest]) (*connect.Response[v1.GetOperationClientsResponse], error) {
+	return c.getOperationClients.CallUnary(ctx, req)
+}
+
+// GetOperationDeprecatedFields calls
+// wg.cosmo.platform.v1.PlatformService.GetOperationDeprecatedFields.
+func (c *platformServiceClient) GetOperationDeprecatedFields(ctx context.Context, req *connect.Request[v1.GetOperationDeprecatedFieldsRequest]) (*connect.Response[v1.GetOperationDeprecatedFieldsResponse], error) {
+	return c.getOperationDeprecatedFields.CallUnary(ctx, req)
+}
+
 // ValidateAndFetchPluginData calls wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData.
 func (c *platformServiceClient) ValidateAndFetchPluginData(ctx context.Context, req *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error) {
 	return c.validateAndFetchPluginData.CallUnary(ctx, req)
@@ -3106,6 +3278,16 @@ func (c *platformServiceClient) LinkSubgraph(ctx context.Context, req *connect.R
 // UnlinkSubgraph calls wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph.
 func (c *platformServiceClient) UnlinkSubgraph(ctx context.Context, req *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error) {
 	return c.unlinkSubgraph.CallUnary(ctx, req)
+}
+
+// VerifyAPIKeyGraphAccess calls wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess.
+func (c *platformServiceClient) VerifyAPIKeyGraphAccess(ctx context.Context, req *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error) {
+	return c.verifyAPIKeyGraphAccess.CallUnary(ctx, req)
+}
+
+// RecomposeGraph calls wg.cosmo.platform.v1.PlatformService.RecomposeGraph.
+func (c *platformServiceClient) RecomposeGraph(ctx context.Context, req *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error) {
+	return c.recomposeGraph.CallUnary(ctx, req)
 }
 
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
@@ -3169,10 +3351,18 @@ type PlatformServiceHandler interface {
 	DeleteRouterToken(context.Context, *connect.Request[v1.DeleteRouterTokenRequest]) (*connect.Response[v1.DeleteRouterTokenResponse], error)
 	// Add persisted operations
 	PublishPersistedOperations(context.Context, *connect.Request[v1.PublishPersistedOperationsRequest]) (*connect.Response[v1.PublishPersistedOperationsResponse], error)
+	// Check if persisted operation has any traffic
+	CheckPersistedOperationTraffic(context.Context, *connect.Request[v1.CheckPersistedOperationTrafficRequest]) (*connect.Response[v1.CheckPersistedOperationTrafficResponse], error)
+	// Delete/remove a persisted operation
+	DeletePersistedOperation(context.Context, *connect.Request[v1.DeletePersistedOperationRequest]) (*connect.Response[v1.DeletePersistedOperationResponse], error)
 	// GetPersistedOperations returns operations for the registered client id
 	GetPersistedOperations(context.Context, *connect.Request[v1.GetPersistedOperationsRequest]) (*connect.Response[v1.GetPersistedOperationsResponse], error)
 	// GetAuditLogs returns the audit logs of the organization
 	GetAuditLogs(context.Context, *connect.Request[v1.GetAuditLogsRequest]) (*connect.Response[v1.GetAuditLogsResponse], error)
+	// InitializeCosmoUser takes a bearer token and ensures that the user associated with it (if valid) exists in Cosmo
+	InitializeCosmoUser(context.Context, *connect.Request[v1.InitializeCosmoUserRequest]) (*connect.Response[v1.InitializeCosmoUserResponse], error)
+	// ListOrganizations returns all the organization the authenticated user is a member of
+	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
 	// GetFederatedGraphs returns the list of federated graphs.
 	GetFederatedGraphs(context.Context, *connect.Request[v1.GetFederatedGraphsRequest]) (*connect.Response[v1.GetFederatedGraphsResponse], error)
 	// GetFederatedGraphsBySubgraphLabels returns the list of federated graphs based on the subgraph labels
@@ -3387,6 +3577,8 @@ type PlatformServiceHandler interface {
 	GetCacheWarmerConfig(context.Context, *connect.Request[v1.GetCacheWarmerConfigRequest]) (*connect.Response[v1.GetCacheWarmerConfigResponse], error)
 	// DeleteCacheWarmerOperation deletes a cache warmer operation.
 	DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error)
+	GetSubgraphCheckExtensionsConfig(context.Context, *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error)
+	ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -3422,12 +3614,20 @@ type PlatformServiceHandler interface {
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
 	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
 	GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error)
+	// GetOperationClients returns the clients that have used a specific operation
+	GetOperationClients(context.Context, *connect.Request[v1.GetOperationClientsRequest]) (*connect.Response[v1.GetOperationClientsResponse], error)
+	// GetOperationDeprecatedFields returns the deprecated fields used in a specific operation
+	GetOperationDeprecatedFields(context.Context, *connect.Request[v1.GetOperationDeprecatedFieldsRequest]) (*connect.Response[v1.GetOperationDeprecatedFieldsResponse], error)
 	// ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
 	ValidateAndFetchPluginData(context.Context, *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error)
 	// LinkSubgraph links one subgraph to another
 	LinkSubgraph(context.Context, *connect.Request[v1.LinkSubgraphRequest]) (*connect.Response[v1.LinkSubgraphResponse], error)
 	// UnlinkSubgraph unlinks one subgraph from another
 	UnlinkSubgraph(context.Context, *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error)
+	// VerifyAPIKeyGraphAccess checks if the token or the jwt has organization admin or developer  and checks if the token has permissions to write to the graph
+	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
+	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
+	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -3652,6 +3852,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServicePublishPersistedOperationsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceCheckPersistedOperationTrafficHandler := connect.NewUnaryHandler(
+		PlatformServiceCheckPersistedOperationTrafficProcedure,
+		svc.CheckPersistedOperationTraffic,
+		connect.WithSchema(platformServiceCheckPersistedOperationTrafficMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeletePersistedOperationHandler := connect.NewUnaryHandler(
+		PlatformServiceDeletePersistedOperationProcedure,
+		svc.DeletePersistedOperation,
+		connect.WithSchema(platformServiceDeletePersistedOperationMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetPersistedOperationsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetPersistedOperationsProcedure,
 		svc.GetPersistedOperations,
@@ -3662,6 +3874,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetAuditLogsProcedure,
 		svc.GetAuditLogs,
 		connect.WithSchema(platformServiceGetAuditLogsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceInitializeCosmoUserHandler := connect.NewUnaryHandler(
+		PlatformServiceInitializeCosmoUserProcedure,
+		svc.InitializeCosmoUser,
+		connect.WithSchema(platformServiceInitializeCosmoUserMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceListOrganizationsHandler := connect.NewUnaryHandler(
+		PlatformServiceListOrganizationsProcedure,
+		svc.ListOrganizations,
+		connect.WithSchema(platformServiceListOrganizationsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFederatedGraphsHandler := connect.NewUnaryHandler(
@@ -4337,6 +4561,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceDeleteCacheWarmerOperationMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetSubgraphCheckExtensionsConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceGetSubgraphCheckExtensionsConfigProcedure,
+		svc.GetSubgraphCheckExtensionsConfig,
+		connect.WithSchema(platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceConfigureSubgraphCheckExtensionsHandler := connect.NewUnaryHandler(
+		PlatformServiceConfigureSubgraphCheckExtensionsProcedure,
+		svc.ConfigureSubgraphCheckExtensions,
+		connect.WithSchema(platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetBillingPlansHandler := connect.NewUnaryHandler(
 		PlatformServiceGetBillingPlansProcedure,
 		svc.GetBillingPlans,
@@ -4433,6 +4669,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetOperationClientsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOperationClientsProcedure,
+		svc.GetOperationClients,
+		connect.WithSchema(platformServiceGetOperationClientsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetOperationDeprecatedFieldsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOperationDeprecatedFieldsProcedure,
+		svc.GetOperationDeprecatedFields,
+		connect.WithSchema(platformServiceGetOperationDeprecatedFieldsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceValidateAndFetchPluginDataHandler := connect.NewUnaryHandler(
 		PlatformServiceValidateAndFetchPluginDataProcedure,
 		svc.ValidateAndFetchPluginData,
@@ -4449,6 +4697,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceUnlinkSubgraphProcedure,
 		svc.UnlinkSubgraph,
 		connect.WithSchema(platformServiceUnlinkSubgraphMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceVerifyAPIKeyGraphAccessHandler := connect.NewUnaryHandler(
+		PlatformServiceVerifyAPIKeyGraphAccessProcedure,
+		svc.VerifyAPIKeyGraphAccess,
+		connect.WithSchema(platformServiceVerifyAPIKeyGraphAccessMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceRecomposeGraphHandler := connect.NewUnaryHandler(
+		PlatformServiceRecomposeGraphProcedure,
+		svc.RecomposeGraph,
+		connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -4525,10 +4785,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceDeleteRouterTokenHandler.ServeHTTP(w, r)
 		case PlatformServicePublishPersistedOperationsProcedure:
 			platformServicePublishPersistedOperationsHandler.ServeHTTP(w, r)
+		case PlatformServiceCheckPersistedOperationTrafficProcedure:
+			platformServiceCheckPersistedOperationTrafficHandler.ServeHTTP(w, r)
+		case PlatformServiceDeletePersistedOperationProcedure:
+			platformServiceDeletePersistedOperationHandler.ServeHTTP(w, r)
 		case PlatformServiceGetPersistedOperationsProcedure:
 			platformServiceGetPersistedOperationsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetAuditLogsProcedure:
 			platformServiceGetAuditLogsHandler.ServeHTTP(w, r)
+		case PlatformServiceInitializeCosmoUserProcedure:
+			platformServiceInitializeCosmoUserHandler.ServeHTTP(w, r)
+		case PlatformServiceListOrganizationsProcedure:
+			platformServiceListOrganizationsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFederatedGraphsProcedure:
 			platformServiceGetFederatedGraphsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFederatedGraphsBySubgraphLabelsProcedure:
@@ -4751,6 +5019,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetCacheWarmerConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteCacheWarmerOperationProcedure:
 			platformServiceDeleteCacheWarmerOperationHandler.ServeHTTP(w, r)
+		case PlatformServiceGetSubgraphCheckExtensionsConfigProcedure:
+			platformServiceGetSubgraphCheckExtensionsConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceConfigureSubgraphCheckExtensionsProcedure:
+			platformServiceConfigureSubgraphCheckExtensionsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetBillingPlansProcedure:
 			platformServiceGetBillingPlansHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateCheckoutSessionProcedure:
@@ -4783,12 +5055,20 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetOperationsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetClientsFromAnalyticsProcedure:
 			platformServiceGetClientsFromAnalyticsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOperationClientsProcedure:
+			platformServiceGetOperationClientsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOperationDeprecatedFieldsProcedure:
+			platformServiceGetOperationDeprecatedFieldsHandler.ServeHTTP(w, r)
 		case PlatformServiceValidateAndFetchPluginDataProcedure:
 			platformServiceValidateAndFetchPluginDataHandler.ServeHTTP(w, r)
 		case PlatformServiceLinkSubgraphProcedure:
 			platformServiceLinkSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceUnlinkSubgraphProcedure:
 			platformServiceUnlinkSubgraphHandler.ServeHTTP(w, r)
+		case PlatformServiceVerifyAPIKeyGraphAccessProcedure:
+			platformServiceVerifyAPIKeyGraphAccessHandler.ServeHTTP(w, r)
+		case PlatformServiceRecomposeGraphProcedure:
+			platformServiceRecomposeGraphHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -4942,12 +5222,28 @@ func (UnimplementedPlatformServiceHandler) PublishPersistedOperations(context.Co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.PublishPersistedOperations is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) CheckPersistedOperationTraffic(context.Context, *connect.Request[v1.CheckPersistedOperationTrafficRequest]) (*connect.Response[v1.CheckPersistedOperationTrafficResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeletePersistedOperation(context.Context, *connect.Request[v1.DeletePersistedOperationRequest]) (*connect.Response[v1.DeletePersistedOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) GetPersistedOperations(context.Context, *connect.Request[v1.GetPersistedOperationsRequest]) (*connect.Response[v1.GetPersistedOperationsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetPersistedOperations is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetAuditLogs(context.Context, *connect.Request[v1.GetAuditLogsRequest]) (*connect.Response[v1.GetAuditLogsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetAuditLogs is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) InitializeCosmoUser(context.Context, *connect.Request[v1.InitializeCosmoUserRequest]) (*connect.Response[v1.InitializeCosmoUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ListOrganizations is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetFederatedGraphs(context.Context, *connect.Request[v1.GetFederatedGraphsRequest]) (*connect.Response[v1.GetFederatedGraphsResponse], error) {
@@ -5394,6 +5690,14 @@ func (UnimplementedPlatformServiceHandler) DeleteCacheWarmerOperation(context.Co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteCacheWarmerOperation is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) GetSubgraphCheckExtensionsConfig(context.Context, *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetSubgraphCheckExtensionsConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) GetBillingPlans(context.Context, *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetBillingPlans is not implemented"))
 }
@@ -5458,6 +5762,14 @@ func (UnimplementedPlatformServiceHandler) GetClientsFromAnalytics(context.Conte
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) GetOperationClients(context.Context, *connect.Request[v1.GetOperationClientsRequest]) (*connect.Response[v1.GetOperationClientsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOperationClients is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOperationDeprecatedFields(context.Context, *connect.Request[v1.GetOperationDeprecatedFieldsRequest]) (*connect.Response[v1.GetOperationDeprecatedFieldsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOperationDeprecatedFields is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) ValidateAndFetchPluginData(context.Context, *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData is not implemented"))
 }
@@ -5468,4 +5780,12 @@ func (UnimplementedPlatformServiceHandler) LinkSubgraph(context.Context, *connec
 
 func (UnimplementedPlatformServiceHandler) UnlinkSubgraph(context.Context, *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RecomposeGraph is not implemented"))
 }

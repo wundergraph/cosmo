@@ -9,6 +9,7 @@ on:
       - 'router-plugin/**/*'
       - 'router-tests/**/*'
       - 'connect/**/*'
+      - 'Makefile'
       - '.github/workflows/router-ci.yaml'
 
 concurrency:
@@ -49,11 +50,29 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - name: Generate code
+      - uses: ./.github/actions/node
+
+      - name: Install Cli Node Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
+
+      - name: Install Bun For Plugin Building
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+
+      - name: Generate Go code
         run: make generate-go
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+      - name: Generate test configs from demo
+        working-directory: ./router-tests
+        run: ./update-config-no-edg.sh
+
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: router
 
       - name: Install dependencies
         working-directory: ./router
@@ -127,11 +146,29 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
-      - name: Generate code
+      - uses: ./.github/actions/node
+
+      - name: Install Cli Node Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
+
+      - name: Install Bun For Plugin Building
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+
+      - name: Generate Go code
         run: make generate-go
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+      - name: Generate test configs from demo
+        working-directory: ./router-tests
+        run: ./update-config-no-edg.sh
+
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: router
 
       - name: Install dependencies
         working-directory: ./router
@@ -149,24 +186,47 @@ jobs:
 
       - name: Test
         working-directory: ./router
-        run: make test
+        run: make test-coverage
 
       - name: Build
         working-directory: ./router
         run: make build
 
+      - name: Upload integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: router-tests-coverage
+          coverage-path: router/coverage.out
+          retention-days: 14
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
   integration_test:
-    runs-on: ubuntu-latest-l
+    runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      GOMAXPROCS: 4
     strategy:
       fail-fast: false
       matrix:
-        test_target:
-          [
-            './. ./fuzzquery ./lifecycle ./modules',
-            './telemetry',
-            './events',
-          ]
+        include:
+          - test_target: './observability'
+            label: observability
+          - test_target: './security'
+            label: security
+          - test_target: './operations'
+            label: operations
+          - test_target: './subscriptions'
+            label: subscriptions
+          - test_target: './protocol'
+            label: protocol
+          - test_target: './fuzzquery ./lifecycle ./modules'
+            label: fuzzquery_lifecycle_modules
+          - test_target: './telemetry'
+            label: telemetry
+          - test_target: './events'
+            label: events
+          - test_target: './connectrpc'
+            label: connectrpc
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
@@ -234,10 +294,10 @@ jobs:
       kafka:
         image: bitnamilegacy/kafka:3.7.0
         options: >-
-          --health-cmd "kafka-broker-api-versions.sh --version"
+          --health-cmd "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 | grep ApiVersion"
           --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-timeout 10s
+          --health-retries 10
         env:
           KAFKA_ENABLE_KRAFT: yes
           KAFKA_CFG_PROCESS_ROLES: controller,broker
@@ -297,8 +357,23 @@ jobs:
         with:
           cache-dependency-path: |
             router-tests/go.sum
+
       - name: Install tools
         run: make setup-build-tools
+
+      - uses: ./.github/actions/node
+
+      - name: Install Cli Node Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
+
+      - name: Install Bun For Plugin Building
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+
       - name: Install dependencies
         working-directory: ./router-tests
         run: go mod download
@@ -316,12 +391,30 @@ jobs:
           docker exec "$cid" redis-cli -p 6379 ping
           docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" ping
           docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" cluster nodes
-      - name: Run Integration tests ${{ matrix.test_target }}
+
+      - name: Run Integration tests ${{ matrix.label }}
         working-directory: ./router-tests
-        run: make test test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
-      - name: Run Flaky Integration tests ${{ matrix.test_target }}
+        run: make test-coverage test_retry_count=0 test_params="-run '^Test' -skip '^TestFlaky' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
+
+      - name: Upload integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: router-${{ matrix.label }}-nonFlaky
+          coverage-path: router-tests/coverage.out
+          retention-days: 14
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Run Flaky Integration tests ${{ matrix.label }}
         working-directory: ./router-tests
-        run: make test test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
+
+      - name: Upload flaky integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: router-${{ matrix.label }}-flaky
+          coverage-path: router-tests/coverage.out
+          retention-days: 14
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository

@@ -1,4 +1,5 @@
 import { randomFill } from 'node:crypto';
+import { isIPv4, isIPv6 } from 'node:net';
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
 import {
@@ -12,31 +13,16 @@ import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
-import {
-  ContractTagOptions,
-  FederationResult,
-  FederationResultWithContracts,
-  LATEST_ROUTER_COMPATIBILITY_VERSION,
-  newContractTagOptionsFromArrays,
-} from '@wundergraph/composition';
-import { SubgraphType, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { MemberRole, WebsocketSubprotocol, ProposalOrigin as ProposalOriginEnum } from '../db/models.js';
-import {
-  AuthContext,
-  CompositionOptions,
-  DateRange,
-  FederatedGraphDTO,
-  Label,
-  ResponseMessage,
-  S3StorageOptions,
-} from '../types/index.js';
+import DOMPurify from 'isomorphic-dompurify';
+import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
+import { ProposalOrigin, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
+import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
+import { paginationDefaults } from './constants.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
-import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
-import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
-const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
@@ -311,34 +297,6 @@ export const isValidGraphName = (name: string): boolean => {
   return graphNameRegex.test(name);
 };
 
-export const isValidOrganizationSlug = (slug: string): boolean => {
-  // these reserved slugs are the root paths of the studio,
-  // so the org slug should not be the same as one of our root paths
-  const reservedSlugs = ['login', 'signup', 'create', 'account'];
-
-  if (slug.length < 3 || slug.length > 24) {
-    return false;
-  }
-
-  if (!organizationSlugRegex.test(slug)) {
-    return false;
-  }
-
-  if (reservedSlugs.includes(slug)) {
-    return false;
-  }
-
-  return true;
-};
-
-export const isValidOrganizationName = (name: string): boolean => {
-  if (name.length === 0 || name.length > 24) {
-    return false;
-  }
-
-  return true;
-};
-
 export const isValidPluginVersion = (version: string): boolean => {
   return pluginVersionRegex.test(version);
 };
@@ -361,6 +319,13 @@ export const validateDateRanges = ({
 
   if (validatedDateRange) {
     const startDate = new Date(validatedDateRange.start);
+    const endDate = new Date(validatedDateRange.end);
+    if (startDate > endDate || endDate < subHours(new Date(), limit * 24)) {
+      return {
+        range: validatedRange,
+        dateRange: undefined,
+      };
+    }
     if (startDate < subHours(new Date(), limit * 24)) {
       validatedDateRange.start = formatISO(subHours(new Date(), limit * 24));
     }
@@ -492,6 +457,45 @@ export function createBatches<T>(array: T[], batchSize: number): T[][] {
   return batches;
 }
 
+/**
+ * Distributes a limit across multiple arrays that are logically grouped.
+ * Arrays are processed in order, with earlier arrays having priority.
+ *
+ * Example: limitCombinedArrays([errors, warnings], 50)
+ * - If errors has 70 items and warnings has 10 items: returns [50 errors, 0 warnings]
+ * - If errors has 30 items and warnings has 30 items: returns [30 errors, 20 warnings]
+ * - If errors has 10 items and warnings has 70 items: returns [10 errors, 40 warnings]
+ *
+ * @param arrays The arrays to limit (order determines priority)
+ * @param limit The combined maximum number of items across all arrays
+ * @returns The limited arrays in the same order as input
+ */
+export function limitCombinedArrays<T>(arrays: T[][], limit: number | null): T[][] {
+  if (arrays.length === 0) {
+    return [];
+  }
+
+  if (limit == null) {
+    return arrays;
+  }
+
+  const result: T[][] = [];
+  let remaining = limit;
+
+  // Process arrays in order, taking as much as possible from each
+  for (const arr of arrays) {
+    if (remaining === 0) {
+      result.push([]);
+    } else {
+      const itemsToTake = Math.min(arr.length, remaining);
+      result.push(arr.slice(0, itemsToTake));
+      remaining -= itemsToTake;
+    }
+  }
+
+  return result;
+}
+
 export const checkIfLabelMatchersChanged = (data: {
   isContract: boolean;
   currentLabelMatchers: string[];
@@ -531,29 +535,6 @@ export const checkIfLabelMatchersChanged = (data: {
   return false;
 };
 
-export function getFederationResultWithPotentialContracts(
-  federatedGraph: FederatedGraphDTO,
-  subgraphsToCompose: SubgraphsToCompose,
-  tagOptionsByContractName: Map<string, ContractTagOptions>,
-  compositionOptions?: CompositionOptions,
-): FederationResult | FederationResultWithContracts {
-  // This condition is only true when entering the method to specifically create/update a contract
-  if (federatedGraph.contract) {
-    return composeFederatedContract(
-      subgraphsToCompose.compositionSubgraphs,
-      newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
-      federatedGraph.routerCompatibilityVersion,
-      compositionOptions,
-    );
-  }
-  return composeFederatedGraphWithPotentialContracts(
-    subgraphsToCompose.compositionSubgraphs,
-    tagOptionsByContractName,
-    federatedGraph.routerCompatibilityVersion,
-    compositionOptions,
-  );
-}
-
 export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): string {
   if (federatedGraphDTOs.length === 0) {
     return LATEST_ROUTER_COMPATIBILITY_VERSION;
@@ -563,6 +544,23 @@ export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: 
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Normalizes pagination parameters by applying defaults and clamping to safe bounds.
+ * Uses the standard pagination defaults from constants unless overridden.
+ */
+export function normalizePagination(
+  opts: { limit?: number; offset?: number },
+  overrides?: { maxLimit?: number; maxOffset?: number },
+): { limit: number; offset: number } {
+  const maxLimit = overrides?.maxLimit ?? paginationDefaults.maxLimit;
+  const maxOffset = overrides?.maxOffset ?? paginationDefaults.maxOffset;
+
+  return {
+    limit: clamp(opts.limit || paginationDefaults.defaultLimit, paginationDefaults.minLimit, maxLimit),
+    offset: clamp(opts.offset || 0, paginationDefaults.minOffset, maxOffset),
+  };
 }
 
 export const isCheckSuccessful = ({
@@ -575,6 +573,8 @@ export const isCheckSuccessful = ({
   hasProposalMatchError,
   isLinkedTrafficCheckFailed,
   isLinkedPruningCheckFailed,
+  checkExtensionDeliveryId,
+  checkExtensionErrorMessage,
 }: {
   isComposable: boolean;
   isBreaking: boolean;
@@ -585,9 +585,15 @@ export const isCheckSuccessful = ({
   hasProposalMatchError: boolean;
   isLinkedTrafficCheckFailed?: boolean;
   isLinkedPruningCheckFailed?: boolean;
+  checkExtensionDeliveryId?: string;
+  checkExtensionErrorMessage?: string;
 }) => {
   // if a subgraph is linked to another subgraph, then the status of the check depends on the traffic and pruning check of the linked subgraph
   if (isLinkedTrafficCheckFailed || isLinkedPruningCheckFailed) {
+    return false;
+  }
+
+  if (checkExtensionDeliveryId && checkExtensionErrorMessage) {
     return false;
   }
 
@@ -646,15 +652,6 @@ export const convertToSubgraphType = (type: string) => {
   }
 };
 
-export function newCompositionOptions(disableResolvabilityValidation?: boolean): CompositionOptions | undefined {
-  if (!disableResolvabilityValidation) {
-    return;
-  }
-  return {
-    disableResolvabilityValidation,
-  };
-}
-
 export function toProposalOriginEnum(value: ProposalOrigin): ProposalOriginEnum {
   switch (value) {
     case ProposalOrigin.EXTERNAL: {
@@ -673,6 +670,214 @@ export function fromProposalOriginEnum(value: ProposalOriginEnum): ProposalOrigi
     }
     default: {
       return ProposalOrigin.INTERNAL;
+    }
+  }
+}
+
+export function sanitizeReadme(value: string | undefined | null): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.length === 0 ? null : DOMPurify.sanitize(trimmedValue);
+}
+
+export function isValidLocalhostOrSecureEndpoint(value: string) {
+  if (!value) {
+    return false;
+  }
+
+  let isValid = false;
+  try {
+    const endpoint = new URL(value);
+    isValid =
+      (endpoint.hostname === 'localhost' && (endpoint.protocol === 'http:' || endpoint.protocol === 'https:')) ||
+      (endpoint.hostname !== 'localhost' && endpoint.protocol === 'https:');
+  } catch {
+    // ignore
+  }
+
+  return isValid;
+}
+
+function isValidPort(port: string | undefined): boolean {
+  if (port === undefined) {
+    return true;
+  }
+  if (!/^\d+$/.test(port)) {
+    return false;
+  }
+  const portNum = Number.parseInt(port, 10);
+  // Valid port range is 1-65535 (port 0 is reserved)
+  return portNum >= 1 && portNum <= 65_535;
+}
+
+function isValidHostname(hostname: string): boolean {
+  if (!hostname || hostname.length > 253) {
+    return false;
+  }
+  const labels = hostname.split('.');
+  return labels.every((label) => /^[\da-z](?:[\da-z-]{0,61}[\da-z])?$/i.test(label));
+}
+
+function isValidHostOrIpv4(host: string): boolean {
+  return isIPv4(host) || isValidHostname(host);
+}
+
+function isValidHostPort(target: string): boolean {
+  if (!target || target.includes('/')) {
+    return false;
+  }
+  const lastColonIndex = target.lastIndexOf(':');
+  if (lastColonIndex === -1) {
+    return isValidHostOrIpv4(target);
+  }
+  if (target.indexOf(':') !== lastColonIndex) {
+    return false;
+  }
+  const host = target.slice(0, lastColonIndex);
+  const port = target.slice(lastColonIndex + 1);
+  if (!host || !port) {
+    return false;
+  }
+  return isValidHostOrIpv4(host) && isValidPort(port);
+}
+
+function isValidDnsTarget(rest: string): boolean {
+  if (!rest) {
+    return false;
+  }
+  if (rest.startsWith('//')) {
+    const remainder = rest.slice(2);
+    if (!remainder) {
+      return false;
+    }
+    const slashIndex = remainder.indexOf('/');
+    const endpoint = slashIndex === -1 ? remainder : remainder.slice(slashIndex + 1);
+    return isValidHostPort(endpoint);
+  }
+  return isValidHostPort(rest);
+}
+
+/**
+ * Validates if a routing URL is using one of the supported gRPC naming schemes.
+ * Supported schemes: dns:, unix:, unix-abstract:, vsock:, ipv4:, ipv6:
+ */
+export function isValidGrpcNamingScheme(url: string): boolean {
+  const value = url.trim();
+  if (!value) {
+    return false;
+  }
+
+  const supportedSchemes = new Set(['dns', 'unix', 'unix-abstract', 'vsock', 'ipv4', 'ipv6']);
+  const schemeMatch = /^([a-z][\d+.a-z-]*):/i.exec(value);
+  if (!schemeMatch) {
+    return isValidDnsTarget(value);
+  }
+
+  const scheme = schemeMatch[1].toLowerCase();
+  const rest = value.slice(schemeMatch[0].length);
+  if (!supportedSchemes.has(scheme)) {
+    return isValidDnsTarget(value);
+  }
+
+  switch (scheme) {
+    case 'dns': {
+      if (rest.startsWith('//')) {
+        const remainder = rest.slice(2);
+        const slashIndex = remainder.indexOf('/');
+        if (slashIndex === -1) {
+          return false; // No host:port path found
+        }
+        const endpoint = remainder.slice(slashIndex + 1);
+        if (!endpoint) {
+          return false; // Empty endpoint after slash
+        }
+        return isValidHostPort(endpoint);
+      }
+      return isValidDnsTarget(rest);
+    }
+    case 'unix': {
+      if (!rest) {
+        return false;
+      }
+      let path = rest;
+      if (rest.startsWith('//')) {
+        const remainder = rest.slice(2);
+        const slashIndex = remainder.indexOf('/');
+        path = slashIndex === -1 ? '' : remainder.slice(slashIndex);
+      }
+      return path.length > 0 && path !== '/';
+    }
+    case 'unix-abstract': {
+      return rest.length > 0;
+    }
+    case 'vsock': {
+      const parts = rest.split(':');
+      if (parts.length !== 2) {
+        return false;
+      }
+      const [cid, port] = parts;
+      if (!/^\d+$/.test(cid) || !/^\d+$/.test(port)) {
+        return false;
+      }
+      // Validate port range (1-65535)
+      return isValidPort(port);
+    }
+    case 'ipv4': {
+      if (!rest) {
+        return false;
+      }
+      const endpoints = rest.split(',').map((endpoint) => endpoint.trim());
+      return endpoints.every((endpoint) => {
+        if (!endpoint) {
+          return false;
+        }
+        const lastColonIndex = endpoint.lastIndexOf(':');
+        if (lastColonIndex === -1) {
+          return isIPv4(endpoint);
+        }
+        if (endpoint.indexOf(':') !== lastColonIndex) {
+          return false;
+        }
+        const host = endpoint.slice(0, lastColonIndex);
+        const port = endpoint.slice(lastColonIndex + 1);
+        return isIPv4(host) && isValidPort(port);
+      });
+    }
+    case 'ipv6': {
+      if (!rest) {
+        return false;
+      }
+      const endpoints = rest.split(',').map((endpoint) => endpoint.trim());
+      return endpoints.every((endpoint) => {
+        if (!endpoint) {
+          return false;
+        }
+        if (endpoint.startsWith('[')) {
+          const closingIndex = endpoint.indexOf(']');
+          if (closingIndex === -1) {
+            return false;
+          }
+          const address = endpoint.slice(1, closingIndex);
+          if (!isIPv6(address)) {
+            return false;
+          }
+          const portPart = endpoint.slice(closingIndex + 1);
+          if (!portPart) {
+            return true;
+          }
+          if (!portPart.startsWith(':')) {
+            return false;
+          }
+          return isValidPort(portPart.slice(1));
+        }
+        return isIPv6(endpoint);
+      });
+    }
+    default: {
+      return false;
     }
   }
 }

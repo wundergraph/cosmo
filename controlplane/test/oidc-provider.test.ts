@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { afterAllSetup, beforeAllSetup, TestUser } from '../src/core/test-util.js';
+import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -16,7 +17,8 @@ describe('OIDC provider', (ctx) => {
   });
 
   test('Should be able to create an OIDC provider ', async (testContext) => {
-    const { client, server, users } = await SetupTest({ dbname });
+    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
@@ -42,12 +44,12 @@ describe('OIDC provider', (ctx) => {
     expect(getOIDCProviderResponse.mappers).toHaveLength(1);
     expect(getOIDCProviderResponse.mappers[0].groupId).toBe(adminGroup.groupId);
     expect(getOIDCProviderResponse.mappers[0].ssoGroup).toBe('admin_group');
-
-    await server.close();
   });
 
   test('Non admins should not be able to create an OIDC provider ', async (testContext) => {
     const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
+
     authenticator.changeUser(TestUser.devJoeCompanyA);
 
     const orgGroups = await client.getOrganizationGroups({});
@@ -88,12 +90,11 @@ describe('OIDC provider', (ctx) => {
     expect(createOIDCProviderResponse.response?.details).toBe(
       'The user does not have the permissions to perform this operation',
     );
-
-    await server.close();
   });
 
   test('Should be able to delete an OIDC provider ', async (testContext) => {
-    const { client, server, users } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
@@ -125,12 +126,15 @@ describe('OIDC provider', (ctx) => {
 
     getOIDCProviderResponse = await client.getOIDCProvider({});
     expect(getOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 
   test('Non admins should not be able to delete an OIDC provider ', async (testContext) => {
-    const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    const { client, server, authenticator } = await SetupTest({
+      dbname,
+      enableMultiUsers: true,
+      enabledFeatures: ['oidc'],
+    });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
@@ -172,12 +176,11 @@ describe('OIDC provider', (ctx) => {
     expect(deleteOIDCProviderResponse.response?.details).toBe(
       'The user does not have the permissions to perform this operation',
     );
-
-    await server.close();
   });
 
   test('Should be able to update mappers of an OIDC provider ', async (testContext) => {
-    const { client, server, users } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
@@ -223,12 +226,15 @@ describe('OIDC provider', (ctx) => {
     expect(getOIDCProviderResponse.endpoint).toBe('localhost:8080');
     expect(getOIDCProviderResponse.name).toBe('okta');
     expect(getOIDCProviderResponse.mappers).toHaveLength(2);
-
-    await server.close();
   });
 
   test('Non admins should not be able to update mappers of an OIDC provider ', async (testContext) => {
-    const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    const { client, server, authenticator } = await SetupTest({
+      dbname,
+      enableMultiUsers: true,
+      enabledFeatures: ['oidc'],
+    });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
@@ -293,7 +299,75 @@ describe('OIDC provider', (ctx) => {
     expect(updateMappersResponse.response?.details).toBe(
       'The user does not have the permissions to perform this operation',
     );
+  });
 
-    await server.close();
+  test('Should not be able to create an OIDC provider when the feature is not enabled', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+
+    const createOIDCProviderResponse = await client.createOIDCProvider({
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
+      clientID: '0oab1c2',
+      clientSecrect: 'secret',
+      mappers: [
+        new GroupMapper({
+          groupId: adminGroup.groupId,
+          ssoGroup: 'admin_group',
+        }),
+      ],
+      name: 'okta',
+    });
+
+    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
+    expect(createOIDCProviderResponse.response?.details).toBe('OIDC feature is not enabled for this organization.');
+  });
+
+  test('Should not be able to update IDP mappers when the feature is not enabled', async (testContext) => {
+    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    testContext.onTestFinished(() => server.close());
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+    const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
+
+    const createOIDCProviderResponse = await client.createOIDCProvider({
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
+      clientID: '0oab1c2',
+      clientSecrect: 'secret',
+      mappers: [
+        new GroupMapper({
+          groupId: adminGroup.groupId,
+          ssoGroup: 'admin_group',
+        }),
+      ],
+      name: 'okta',
+    });
+    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const orgRepo = new OrganizationRepository(server.log, server.db);
+    await orgRepo.updateFeature({
+      organizationId: users.adminAliceCompanyA.organizationId,
+      id: 'oidc',
+      enabled: false,
+    });
+
+    const updateMappersResponse = await client.updateIDPMappers({
+      mappers: [
+        new GroupMapper({
+          groupId: adminGroup.groupId,
+          ssoGroup: 'admin_group',
+        }),
+        new GroupMapper({
+          groupId: developerGroup.groupId,
+          ssoGroup: 'developer_group',
+        }),
+      ],
+    });
+
+    expect(updateMappersResponse.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
+    expect(updateMappersResponse.response?.details).toBe('OIDC feature is not enabled for this organization.');
   });
 });

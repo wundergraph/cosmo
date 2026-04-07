@@ -1,13 +1,14 @@
 package kafka
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 )
 
@@ -29,11 +30,13 @@ func TestKafkaEngineDataSourceFactory(t *testing.T) {
 // TestEngineDataSourceFactoryWithMockAdapter tests the EngineDataSourceFactory with a mocked adapter
 func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapter(t)
+	mockAdapter := datasource.NewMockProvider(t)
 
 	// Configure mock expectations for Publish
-	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Topic == "test-topic"
+	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishEventConfiguration) bool {
+		return event.ProviderID() == "test-provider" && event.Topic == "test-topic"
+	}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+		return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"test":"data"}`)
 	})).Return(nil)
 
 	// Create the data source with mock adapter
@@ -54,16 +57,15 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	require.NoError(t, err)
 
 	// Call Load on the data source
-	out := &bytes.Buffer{}
-	err = ds.Load(context.Background(), []byte(input), out)
+	data, err := ds.Load(context.Background(), nil, []byte(input))
 	require.NoError(t, err)
-	require.Equal(t, `{"success": true}`, out.String())
+	require.Equal(t, `{"__typename": "edfs__PublishResult", "success": true}`, string(data))
 }
 
 // TestEngineDataSourceFactory_GetResolveDataSource_WrongType tests the EngineDataSourceFactory with a mocked adapter
 func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapter(t)
+	mockAdapter := datasource.NewMockProvider(t)
 
 	// Create the data source with mock adapter
 	pubsub := &EngineDataSourceFactory{

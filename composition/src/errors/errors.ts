@@ -1,19 +1,22 @@
-import { Kind, OperationTypeNode } from 'graphql';
+import { Kind, type OperationTypeNode } from 'graphql';
 import {
-  EntityInterfaceFederationData,
-  FieldData,
-  InputValueData,
-  ObjectDefinitionData,
+  type EntityInterfaceFederationData,
+  type FieldData,
+  type InputValueData,
+  type ObjectDefinitionData,
 } from '../schema-building/types';
 import {
-  IncompatibleMergedTypesErrorParams,
-  InvalidNamedTypeErrorParams,
-  InvalidRootTypeFieldEventsDirectiveData,
-  OneOfRequiredFieldsErrorParams,
-  SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
-  SemanticNonNullLevelsNonNullErrorParams,
+  type IncompatibleMergedTypesErrorParams,
+  type IncompatibleParentTypeMergeErrorParams,
+  type IncompatibleTypeWithProvidesErrorMessageParams,
+  type InvalidNamedTypeErrorParams,
+  type InvalidRootTypeFieldEventsDirectiveData,
+  type NonExternalConditionalFieldErrorParams,
+  type OneOfRequiredFieldsErrorParams,
+  type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
+  type SemanticNonNullLevelsNonNullErrorParams,
 } from './types';
-import { UnresolvableFieldData } from '../resolvability-graph/utils/utils';
+import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
 import {
   AND_UPPER,
   ARGUMENT,
@@ -24,6 +27,7 @@ import {
   INTERFACE,
   LEVELS,
   LITERAL_NEW_LINE,
+  LITERAL_PERIOD,
   NOT_UPPER,
   OR_UPPER,
   QUOTATION_JOIN,
@@ -31,15 +35,26 @@ import {
   SUBSCRIPTION_FILTER,
   SUBSCRIPTION_FILTER_CONDITION,
   SUBSCRIPTION_FILTER_VALUE,
+  TYPENAME,
   UNION,
   VALUES,
 } from '../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdinal } from '../utils/utils';
-import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
+import {
+  type ImplementationErrors,
+  type InvalidEntityInterface,
+  type InvalidRequiredInputValueData,
+} from '../utils/types';
 import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
-import { NodeType, TypeName } from '../types/types';
+import {
+  type ArgumentName,
+  type DirectiveArgumentCoords,
+  type FieldName,
+  type NodeType,
+  type TypeName,
+} from '../types/types';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -98,7 +113,7 @@ export function incompatibleInputValueDefaultValuesError(
 
 export function incompatibleSharedEnumError(parentName: string): Error {
   return new Error(
-    `Enum "${parentName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs.`,
+    `Enum "${parentName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs. To update an Enum used as both an input and output, add any new Enum values with the @inaccessible directive in the origin subgraph. Next, add those new Enum values to all other subgraphs that define the Enum—this time without the @inaccessible directive. Finally, once all subgraphs have been updated, remove @inaccessible from the Enum values in the origin subgraph.`,
   );
 }
 
@@ -306,7 +321,7 @@ export function duplicateDirectiveArgumentDefinitionsErrorMessage(argumentNames:
 export function invalidArgumentValueErrorMessage(
   value: string,
   hostName: string,
-  argumentName: string,
+  argumentName: ArgumentName,
   expectedTypeString: string,
 ): string {
   return ` The value "${value}" provided to argument "${hostName}(${argumentName}: ...)" is not a valid "${expectedTypeString}" type.`;
@@ -334,24 +349,25 @@ export function unexpectedEdgeFatalError(typeName: string, edgeNames: Array<stri
   return new Error(
     `Fatal: The type "${typeName}" visited the following unexpected edge` +
       (edgeNames.length > 1 ? 's' : '') +
-      `:\n " ${edgeNames.join(QUOTATION_JOIN)}".`,
+      `:\n "${edgeNames.join(QUOTATION_JOIN)}".`,
   );
 }
 
-export function incompatibleParentKindMergeError(
-  parentTypeName: string,
-  expectedTypeString: string,
-  actualTypeString: string,
-): Error {
-  return new Error(
-    ` When merging types, expected "${parentTypeName}" to be type "${expectedTypeString}" but received "${actualTypeString}".`,
-  );
-}
+const interfaceObject = `"Interface Object" (an "Object" type that also defines the "@interfaceObject" directive)`;
 
-export function fieldTypeMergeFatalError(fieldName: string) {
+export function incompatibleParentTypeMergeError({
+  existingData,
+  incomingNodeType,
+  incomingSubgraphName,
+}: IncompatibleParentTypeMergeErrorParams): Error {
+  const existingSubgraphNames = [...existingData.subgraphNames];
+  const nodeType = incomingNodeType ? `"${incomingNodeType}"` : interfaceObject;
   return new Error(
-    `Fatal: Unsuccessfully merged the cross-subgraph types of field "${fieldName}"` +
-      ` without producing a type error object.`,
+    ` "${existingData.name}" is defined using incompatible types across subgraphs.` +
+      ` It is defined as type "${kindToNodeType(existingData.kind)}" in subgraph` +
+      (existingSubgraphNames.length > 1 ? 's' : '') +
+      ` "${existingSubgraphNames.join(QUOTATION_JOIN)}" but type ${nodeType} in subgraph` +
+      ` "${incomingSubgraphName}".`,
   );
 }
 
@@ -378,7 +394,7 @@ export function unexpectedParentKindForChildError(
   childTypeString: string,
 ): Error {
   return new Error(
-    ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}"` +
+    ` Expected "${parentTypeName}" to be type "${expectedTypeString}" but received "${actualTypeString}"` +
       ` when handling child "${childName}" of type "${childTypeString}".`,
   );
 }
@@ -682,9 +698,13 @@ export function invalidConfigurationDataErrorMessage(typeName: string, fieldName
   );
 }
 
-export function incompatibleTypeWithProvidesErrorMessage(fieldCoords: string, responseType: string): string {
+export function incompatibleTypeWithProvidesErrorMessage({
+  fieldCoords,
+  responseType,
+  subgraphName,
+}: IncompatibleTypeWithProvidesErrorMessageParams): string {
   return (
-    ` A "@provides" directive is declared on field "${fieldCoords}".\n` +
+    ` A "@provides" directive is declared on field "${fieldCoords}" in subgraph "${subgraphName}".\n` +
     ` However, the response type "${responseType}" is not an Object nor Interface.`
   );
 }
@@ -1470,19 +1490,23 @@ export function externalInterfaceFieldsError(typeName: string, fieldNames: Array
   );
 }
 
-export function nonExternalConditionalFieldError(
-  directiveCoords: string,
-  subgraphName: string,
-  targetCoords: string,
-  fieldSet: string,
-  fieldSetDirectiveName: string,
-): Error {
+export function nonExternalConditionalFieldError({
+  directiveCoords,
+  fieldSet,
+  directiveName,
+  subgraphName,
+  targetCoords,
+}: NonExternalConditionalFieldErrorParams): Error {
+  const segments = targetCoords.split(LITERAL_PERIOD);
+  const isTypeName = segments[segments.length - 1] === TYPENAME;
   return new Error(
-    `The field "${directiveCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirectiveName}"` +
+    `The field "${directiveCoords}" in subgraph "${subgraphName}" defines a "@${directiveName}"` +
       ` directive with the following field set:\n "${fieldSet}".` +
-      `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared "@external".` +
+      (isTypeName
+        ? `\nHowever, none of the field set ancestors of "__typename" is declared "@external".`
+        : `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared "@external".`) +
       `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part of` +
-      ` a "@${fieldSetDirectiveName}" directive field set.`,
+      ` a "@${directiveName}" directive field set.`,
   );
 }
 
@@ -1584,6 +1608,13 @@ export function invalidDirectiveDefinitionError(directiveName: string, errorMess
   );
 }
 
+export function typeNameAlreadyProvidedErrorMessage(fieldCoords: string, subgraphName: string): string {
+  return (
+    ` The field "${fieldCoords}" is unconditionally provided by subgraph "${subgraphName}" and should not form` +
+    ` part of any "@provides" field set.`
+  );
+}
+
 export function fieldAlreadyProvidedErrorMessage(
   fieldCoords: string,
   subgraphName: string,
@@ -1671,5 +1702,101 @@ export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOf
       ` required (non-nullable): "` +
       requiredFieldNames.join(QUOTATION_JOIN) +
       `".`,
+  );
+}
+
+export function listSizeInvalidSlicingArgumentErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  argumentName: ArgumentName,
+): string {
+  return ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" does not reference a defined argument on this field.`;
+}
+
+export function listSizeSlicingArgumentNotIntErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  argumentName: ArgumentName,
+  actualType: TypeName,
+): string {
+  return (
+    ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" references an argument of type` +
+    ` "${actualType}", but slicing arguments must be of type "Int" or "Int!".`
+  );
+}
+
+export function listSizeSizedFieldNotFoundErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  fieldName: FieldName,
+  returnTypeName: TypeName,
+): string {
+  return ` The "sizedFields" value "${fieldName}" on "${directiveCoords}" does not reference a defined field on the return type "${returnTypeName}".`;
+}
+
+export function listSizeSizedFieldNotListErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  fieldName: FieldName,
+  returnTypeName: TypeName,
+  fieldReturnType: TypeName,
+): string {
+  return (
+    ` The "sizedFields" value "${fieldName}" on "${directiveCoords}" references field "${returnTypeName}.${fieldName}",` +
+    ` which returns type "${fieldReturnType}". Sized fields must return a list type.`
+  );
+}
+
+export function listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  returnType: TypeName,
+): string {
+  return (
+    ` The "@listSize" directive on "${directiveCoords}" is invalid because the field returns type "${returnType}",` +
+    ` which is not a list type, and no "sizedFields" argument is provided.`
+  );
+}
+
+export function listSizeSizedFieldsInvalidReturnTypeErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  returnTypeName: TypeName,
+): string {
+  return (
+    ` The "sizedFields" argument on "${directiveCoords}" is invalid because` +
+    ` the return type "${returnTypeName}" is not an object or interface type.`
+  );
+}
+
+export function listSizeSizedFieldsOnListsErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  returnTypeName: TypeName,
+): string {
+  return (
+    ` The "sizedFields" argument on "${directiveCoords}" is invalid because` +
+    ` the return type "${returnTypeName}" must not be a list.`
+  );
+}
+
+export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+): string {
+  return (
+    ` The "@listSize" directive on "${directiveCoords}" defines both "assumedSize" and "slicingArguments".` +
+    ` When both are used, "requireOneSlicingArgument" must be set to false.`
+  );
+}
+
+export function listSizeAssumedSizeSlicingArgDefaultErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  slicingArgName: ArgumentName,
+): string {
+  return (
+    ` The "@listSize" directive on "${directiveCoords}" defines both "assumedSize" and "slicingArguments",` +
+    ` but slicing argument "${slicingArgName}" has a default value. When "assumedSize" is used as a fallback` +
+    ` for missing slicing arguments, none of the slicing arguments may have default values.`
+  );
+}
+
+export function costOnInterfaceFieldErrorMessage(directiveCoords: DirectiveArgumentCoords): string {
+  return (
+    ` The "@cost" directive at "${directiveCoords}" is not permitted on fields or arguments of an Interface type.` +
+    ` The cost of an interface field is derived from the costs of the corresponding fields` +
+    ` on the concrete types that implement the interface.`
   );
 }

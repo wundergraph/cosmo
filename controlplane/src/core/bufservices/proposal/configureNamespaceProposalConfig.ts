@@ -28,7 +28,7 @@ export function configureNamespaceProposalConfig(
       throw new UnauthorizedError();
     }
 
-    const proposalRepo = new ProposalRepository(opts.db);
+    const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const auditLogRepo = new AuditLogRepository(opts.db);
 

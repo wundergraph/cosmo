@@ -80,6 +80,40 @@ proto3.util.setEnumType(DataSourceKind, "wg.cosmo.node.v1.DataSourceKind", [
 ]);
 
 /**
+ * Defines the type of lookup operation
+ *
+ * @generated from enum wg.cosmo.node.v1.LookupType
+ */
+export enum LookupType {
+  /**
+   * Unspecified lookup type
+   *
+   * @generated from enum value: LOOKUP_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Lookup type for field resolution
+   *
+   * @generated from enum value: LOOKUP_TYPE_RESOLVE = 1;
+   */
+  RESOLVE = 1,
+
+  /**
+   * Lookup type for the @requires directive
+   *
+   * @generated from enum value: LOOKUP_TYPE_REQUIRES = 2;
+   */
+  REQUIRES = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(LookupType)
+proto3.util.setEnumType(LookupType, "wg.cosmo.node.v1.LookupType", [
+  { no: 0, name: "LOOKUP_TYPE_UNSPECIFIED" },
+  { no: 1, name: "LOOKUP_TYPE_RESOLVE" },
+  { no: 2, name: "LOOKUP_TYPE_REQUIRES" },
+]);
+
+/**
  * Defines the type of GraphQL operation
  *
  * @generated from enum wg.cosmo.node.v1.OperationType
@@ -804,6 +838,11 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
    */
   interfaceObjects: EntityInterfaceConfiguration[] = [];
 
+  /**
+   * @generated from field: wg.cosmo.node.v1.CostConfiguration cost_configuration = 16;
+   */
+  costConfiguration?: CostConfiguration;
+
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -827,6 +866,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 13, name: "custom_events", kind: "message", T: DataSourceCustomEvents },
     { no: 14, name: "entity_interfaces", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
     { no: 15, name: "interface_objects", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
+    { no: 16, name: "cost_configuration", kind: "message", T: CostConfiguration },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {
@@ -843,6 +883,183 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
 
   static equals(a: DataSourceConfiguration | PlainMessage<DataSourceConfiguration> | undefined, b: DataSourceConfiguration | PlainMessage<DataSourceConfiguration> | undefined): boolean {
     return proto3.util.equals(DataSourceConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.CostConfiguration
+ */
+export class CostConfiguration extends Message<CostConfiguration> {
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.FieldWeightConfiguration field_weights = 1;
+   */
+  fieldWeights: FieldWeightConfiguration[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.FieldListSizeConfiguration list_sizes = 2;
+   */
+  listSizes: FieldListSizeConfiguration[] = [];
+
+  /**
+   * @generated from field: map<string, int32> type_weights = 3;
+   */
+  typeWeights: { [key: string]: number } = {};
+
+  /**
+   * @generated from field: map<string, int32> directive_argument_weights = 4;
+   */
+  directiveArgumentWeights: { [key: string]: number } = {};
+
+  constructor(data?: PartialMessage<CostConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.CostConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "field_weights", kind: "message", T: FieldWeightConfiguration, repeated: true },
+    { no: 2, name: "list_sizes", kind: "message", T: FieldListSizeConfiguration, repeated: true },
+    { no: 3, name: "type_weights", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 5 /* ScalarType.INT32 */} },
+    { no: 4, name: "directive_argument_weights", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 5 /* ScalarType.INT32 */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CostConfiguration {
+    return new CostConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CostConfiguration {
+    return new CostConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CostConfiguration {
+    return new CostConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CostConfiguration | PlainMessage<CostConfiguration> | undefined, b: CostConfiguration | PlainMessage<CostConfiguration> | undefined): boolean {
+    return proto3.util.equals(CostConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.FieldWeightConfiguration
+ */
+export class FieldWeightConfiguration extends Message<FieldWeightConfiguration> {
+  /**
+   * @generated from field: string type_name = 1;
+   */
+  typeName = "";
+
+  /**
+   * @generated from field: string field_name = 2;
+   */
+  fieldName = "";
+
+  /**
+   * @generated from field: optional int32 weight = 3;
+   */
+  weight?: number;
+
+  /**
+   * @generated from field: map<string, int32> argument_weights = 4;
+   */
+  argumentWeights: { [key: string]: number } = {};
+
+  constructor(data?: PartialMessage<FieldWeightConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FieldWeightConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "weight", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 4, name: "argument_weights", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 5 /* ScalarType.INT32 */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldWeightConfiguration {
+    return new FieldWeightConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FieldWeightConfiguration {
+    return new FieldWeightConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FieldWeightConfiguration {
+    return new FieldWeightConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FieldWeightConfiguration | PlainMessage<FieldWeightConfiguration> | undefined, b: FieldWeightConfiguration | PlainMessage<FieldWeightConfiguration> | undefined): boolean {
+    return proto3.util.equals(FieldWeightConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.FieldListSizeConfiguration
+ */
+export class FieldListSizeConfiguration extends Message<FieldListSizeConfiguration> {
+  /**
+   * @generated from field: string type_name = 1;
+   */
+  typeName = "";
+
+  /**
+   * @generated from field: string field_name = 2;
+   */
+  fieldName = "";
+
+  /**
+   * @generated from field: optional int32 assumed_size = 3;
+   */
+  assumedSize?: number;
+
+  /**
+   * @generated from field: repeated string slicing_arguments = 4;
+   */
+  slicingArguments: string[] = [];
+
+  /**
+   * @generated from field: repeated string sized_fields = 5;
+   */
+  sizedFields: string[] = [];
+
+  /**
+   * @generated from field: optional bool require_one_slicing_argument = 6;
+   */
+  requireOneSlicingArgument?: boolean;
+
+  constructor(data?: PartialMessage<FieldListSizeConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FieldListSizeConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "assumed_size", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 4, name: "slicing_arguments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "sized_fields", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "require_one_slicing_argument", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldListSizeConfiguration {
+    return new FieldListSizeConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FieldListSizeConfiguration {
+    return new FieldListSizeConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FieldListSizeConfiguration {
+    return new FieldListSizeConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FieldListSizeConfiguration | PlainMessage<FieldListSizeConfiguration> | undefined, b: FieldListSizeConfiguration | PlainMessage<FieldListSizeConfiguration> | undefined): boolean {
+    return proto3.util.equals(FieldListSizeConfiguration, a, b);
   }
 }
 
@@ -1730,6 +1947,8 @@ export class SSLConfiguration extends Message<SSLConfiguration> {
 }
 
 /**
+ * Defines mapping for a gRPC service
+ *
  * @generated from message wg.cosmo.node.v1.GRPCMapping
  */
 export class GRPCMapping extends Message<GRPCMapping> {
@@ -1775,6 +1994,13 @@ export class GRPCMapping extends Message<GRPCMapping> {
    */
   enumMappings: EnumMapping[] = [];
 
+  /**
+   * Mappings for GraphQL resolve operations to gRPC service methods
+   *
+   * @generated from field: repeated wg.cosmo.node.v1.LookupMapping resolve_mappings = 7;
+   */
+  resolveMappings: LookupMapping[] = [];
+
   constructor(data?: PartialMessage<GRPCMapping>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1789,6 +2015,7 @@ export class GRPCMapping extends Message<GRPCMapping> {
     { no: 4, name: "entity_mappings", kind: "message", T: EntityMapping, repeated: true },
     { no: 5, name: "type_field_mappings", kind: "message", T: TypeFieldMapping, repeated: true },
     { no: 6, name: "enum_mappings", kind: "message", T: EnumMapping, repeated: true },
+    { no: 7, name: "resolve_mappings", kind: "message", T: LookupMapping, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GRPCMapping {
@@ -1805,6 +2032,128 @@ export class GRPCMapping extends Message<GRPCMapping> {
 
   static equals(a: GRPCMapping | PlainMessage<GRPCMapping> | undefined, b: GRPCMapping | PlainMessage<GRPCMapping> | undefined): boolean {
     return proto3.util.equals(GRPCMapping, a, b);
+  }
+}
+
+/**
+ * Defines mapping for a lookup operation
+ *
+ * @generated from message wg.cosmo.node.v1.LookupMapping
+ */
+export class LookupMapping extends Message<LookupMapping> {
+  /**
+   * Type of lookup operation
+   *
+   * @generated from field: wg.cosmo.node.v1.LookupType type = 1;
+   */
+  type = LookupType.UNSPECIFIED;
+
+  /**
+   * Mappings for GraphQL type fields to gRPC message fields
+   *
+   * @generated from field: wg.cosmo.node.v1.LookupFieldMapping lookup_mapping = 2;
+   */
+  lookupMapping?: LookupFieldMapping;
+
+  /**
+   * Mapped gRPC method name
+   *
+   * @generated from field: string rpc = 3;
+   */
+  rpc = "";
+
+  /**
+   * Mapped gRPC request message type name
+   *
+   * @generated from field: string request = 4;
+   */
+  request = "";
+
+  /**
+   * Mapped gRPC response message type name
+   *
+   * @generated from field: string response = 5;
+   */
+  response = "";
+
+  constructor(data?: PartialMessage<LookupMapping>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.LookupMapping";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type", kind: "enum", T: proto3.getEnumType(LookupType) },
+    { no: 2, name: "lookup_mapping", kind: "message", T: LookupFieldMapping },
+    { no: 3, name: "rpc", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LookupMapping {
+    return new LookupMapping().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LookupMapping {
+    return new LookupMapping().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LookupMapping {
+    return new LookupMapping().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: LookupMapping | PlainMessage<LookupMapping> | undefined, b: LookupMapping | PlainMessage<LookupMapping> | undefined): boolean {
+    return proto3.util.equals(LookupMapping, a, b);
+  }
+}
+
+/**
+ * Defines mapping for a lookup field
+ *
+ * @generated from message wg.cosmo.node.v1.LookupFieldMapping
+ */
+export class LookupFieldMapping extends Message<LookupFieldMapping> {
+  /**
+   * GraphQL type name
+   *
+   * @generated from field: string type = 1;
+   */
+  type = "";
+
+  /**
+   * Mapping for the lookup field
+   *
+   * @generated from field: wg.cosmo.node.v1.FieldMapping field_mapping = 2;
+   */
+  fieldMapping?: FieldMapping;
+
+  constructor(data?: PartialMessage<LookupFieldMapping>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.LookupFieldMapping";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "field_mapping", kind: "message", T: FieldMapping },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LookupFieldMapping {
+    return new LookupFieldMapping().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LookupFieldMapping {
+    return new LookupFieldMapping().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LookupFieldMapping {
+    return new LookupFieldMapping().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: LookupFieldMapping | PlainMessage<LookupFieldMapping> | undefined, b: LookupFieldMapping | PlainMessage<LookupFieldMapping> | undefined): boolean {
+    return proto3.util.equals(LookupFieldMapping, a, b);
   }
 }
 
@@ -1929,6 +2278,13 @@ export class EntityMapping extends Message<EntityMapping> {
    */
   response = "";
 
+  /**
+   * Mappings for required fields
+   *
+   * @generated from field: repeated wg.cosmo.node.v1.RequiredFieldMapping required_field_mappings = 7;
+   */
+  requiredFieldMappings: RequiredFieldMapping[] = [];
+
   constructor(data?: PartialMessage<EntityMapping>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1943,6 +2299,7 @@ export class EntityMapping extends Message<EntityMapping> {
     { no: 4, name: "rpc", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "required_field_mappings", kind: "message", T: RequiredFieldMapping, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityMapping {
@@ -1959,6 +2316,69 @@ export class EntityMapping extends Message<EntityMapping> {
 
   static equals(a: EntityMapping | PlainMessage<EntityMapping> | undefined, b: EntityMapping | PlainMessage<EntityMapping> | undefined): boolean {
     return proto3.util.equals(EntityMapping, a, b);
+  }
+}
+
+/**
+ * Defines mapping for required fields
+ *
+ * @generated from message wg.cosmo.node.v1.RequiredFieldMapping
+ */
+export class RequiredFieldMapping extends Message<RequiredFieldMapping> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.FieldMapping field_mapping = 1;
+   */
+  fieldMapping?: FieldMapping;
+
+  /**
+   * Mapped gRPC method name
+   *
+   * @generated from field: string rpc = 2;
+   */
+  rpc = "";
+
+  /**
+   * gRPC request message type name
+   *
+   * @generated from field: string request = 3;
+   */
+  request = "";
+
+  /**
+   * gRPC response message type name
+   *
+   * @generated from field: string response = 4;
+   */
+  response = "";
+
+  constructor(data?: PartialMessage<RequiredFieldMapping>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.RequiredFieldMapping";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "field_mapping", kind: "message", T: FieldMapping },
+    { no: 2, name: "rpc", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RequiredFieldMapping {
+    return new RequiredFieldMapping().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RequiredFieldMapping {
+    return new RequiredFieldMapping().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RequiredFieldMapping {
+    return new RequiredFieldMapping().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RequiredFieldMapping | PlainMessage<RequiredFieldMapping> | undefined, b: RequiredFieldMapping | PlainMessage<RequiredFieldMapping> | undefined): boolean {
+    return proto3.util.equals(RequiredFieldMapping, a, b);
   }
 }
 

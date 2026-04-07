@@ -18,7 +18,6 @@ type ProviderBuilder struct {
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
-	adapters         map[string]Adapter
 }
 
 // NewProviderBuilder creates a new Redis PubSub provider builder
@@ -33,7 +32,6 @@ func NewProviderBuilder(
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
-		adapters:         make(map[string]Adapter),
 	}
 }
 
@@ -43,8 +41,12 @@ func (b *ProviderBuilder) TypeID() string {
 }
 
 // DataSource creates a Redis PubSub data source for the given event configuration
-func (b *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.RedisEventConfiguration) (datasource.EngineDataSourceFactory, error) {
+func (b *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.RedisEventConfiguration, providers map[string]datasource.Provider) (datasource.EngineDataSourceFactory, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
+	provider, ok := providers[providerId]
+	if !ok {
+		return nil, fmt.Errorf("failed to get adapter for provider %s with ID %s", b.TypeID(), providerId)
+	}
 
 	var eventType EventType
 	switch data.GetEngineEventConfiguration().GetType() {
@@ -57,19 +59,23 @@ func (b *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.RedisEventCo
 	}
 
 	return &EngineDataSourceFactory{
-		RedisAdapter: b.adapters[providerId],
 		fieldName:    data.GetEngineEventConfiguration().GetFieldName(),
 		eventType:    eventType,
 		channels:     data.GetChannels(),
 		providerId:   providerId,
+		RedisAdapter: provider,
+		logger:       b.logger,
 	}, nil
 }
 
 // Providers returns the Redis PubSub providers for the given provider IDs
 func (b *ProviderBuilder) BuildProvider(provider config.RedisEventSource, providerOpts datasource.ProviderOpts) (datasource.Provider, error) {
 	adapter := NewProviderAdapter(b.ctx, b.logger, provider.URLs, provider.ClusterEnabled, providerOpts)
-	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, b.logger)
-	b.adapters[provider.ID] = adapter
+	eventBuilder := func(data []byte) datasource.MutableStreamEvent {
+		return &MutableEvent{Data: data}
+	}
+
+	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, b.logger, eventBuilder)
 
 	return pubSubProvider, nil
 }

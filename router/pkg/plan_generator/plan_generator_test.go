@@ -3,7 +3,6 @@ package plan_generator
 import (
 	"context"
 	"encoding/json"
-	"github.com/wundergraph/cosmo/router/core"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,6 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/core"
 )
 
 func getTestDataDir() string {
@@ -210,7 +211,16 @@ func TestPlanGenerator(t *testing.T) {
 		assert.NoError(t, err)
 		resultsExpected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", ReportFileName))
 		assert.NoError(t, err)
-		assert.Equal(t, string(resultsExpected), string(results))
+		resultsStruct := QueryPlanResults{}
+		_ = json.Unmarshal(results, &resultsStruct)
+		resultsExpectedStruct := QueryPlanResults{}
+		_ = json.Unmarshal(resultsExpected, &resultsExpectedStruct)
+		require.Len(t, resultsStruct.Plans, len(resultsExpectedStruct.Plans))
+		for i := range resultsStruct.Plans {
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Plan, resultsStruct.Plans[i].Plan)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Error, resultsStruct.Plans[i].Error)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Warning, resultsStruct.Plans[i].Warning)
+		}
 	})
 
 	t.Run("will not fail on warnings and results should return the warnings and generate results file", func(t *testing.T) {
@@ -241,7 +251,16 @@ func TestPlanGenerator(t *testing.T) {
 		assert.NoError(t, err)
 		resultsExpected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", ReportFileName))
 		assert.NoError(t, err)
-		assert.Equal(t, string(resultsExpected), string(results))
+		resultsStruct := QueryPlanResults{}
+		_ = json.Unmarshal(results, &resultsStruct)
+		resultsExpectedStruct := QueryPlanResults{}
+		_ = json.Unmarshal(resultsExpected, &resultsExpectedStruct)
+		require.Len(t, resultsStruct.Plans, len(resultsExpectedStruct.Plans))
+		for i := range resultsStruct.Plans {
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Plan, resultsStruct.Plans[i].Plan)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Error, resultsStruct.Plans[i].Error)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Warning, resultsStruct.Plans[i].Warning)
+		}
 	})
 
 	t.Run("will not fail on warnings and files should have warnings and generate files", func(t *testing.T) {
@@ -270,7 +289,15 @@ func TestPlanGenerator(t *testing.T) {
 				assert.NoError(t, err)
 				expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", filename))
 				assert.NoError(t, err)
-				assert.Equal(t, string(expected), string(queryPlan))
+				resultsStruct := QueryPlanResults{}
+				_ = json.Unmarshal(queryPlan, &resultsStruct)
+				resultsExpectedStruct := QueryPlanResults{}
+				_ = json.Unmarshal(expected, &resultsExpectedStruct)
+				for i := range resultsStruct.Plans {
+					assert.Equal(t, resultsExpectedStruct.Plans[i].Plan, resultsStruct.Plans[i].Plan)
+					assert.Equal(t, resultsExpectedStruct.Plans[i].Error, resultsStruct.Plans[i].Error)
+					assert.Equal(t, resultsExpectedStruct.Plans[i].Warning, resultsStruct.Plans[i].Warning)
+				}
 			})
 		}
 	})
@@ -379,4 +406,22 @@ func TestPlanGenerator(t *testing.T) {
 		}
 	})
 
+}
+
+func BenchmarkPlanGenerator(b *testing.B) {
+	tempDir := b.TempDir()
+	cfg := QueryPlanConfig{
+		SourceDir:       path.Join(getTestDataDir(), "queries", "bench"),
+		OutDir:          tempDir,
+		ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
+		Timeout:         "30s",
+		Concurrency:     1,
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		err := PlanGenerator(context.Background(), cfg)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
 }

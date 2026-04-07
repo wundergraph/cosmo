@@ -17,14 +17,18 @@
   <a href="https://wundergraph.com/jobs"><strong>Hiring</strong></a>
 </p>
 
+<p align="center">
+  <a href="https://human-oss.dev"><img src="https://human-oss.dev/badge.svg" alt="Open Source AI Manifesto"></a>
+</p>
+
 ## Overview
 
 WunderGraph Cosmo is a comprehensive Lifecycle API Management platform tailored for Federated GraphQL. It encompasses everything from Schema Registry, composition checks, and analytics, to metrics, tracing, and routing. Whether you’re looking to deploy 100% on-prem or prefer a [Managed Service](https://cosmo.wundergraph.com/login), Cosmo offers flexibility without vendor lock-in, all under the Apache 2.0 license.
 
 ## The State of GraphQL Federation 2024
 
-Get insights from industry experts and Federation practicioners across all industries and learn how companies are using GraphQL Federation.
-Head over to the [State of GraphQL Federation 2024](https://wundergraph.com/state-of-graphql-federation/2024) page and download the full **48 page PDF report** for free!
+Get insights from industry experts and Federation practitioners across all industries and learn how companies are using GraphQL Federation.
+Head over to the [State of GraphQL Federation 2024](https://wundergraph.com/state-of-graphql-federation/2024) page and download the full **48-page PDF report** for free!
 
 ### Why Federated GraphQL?
 

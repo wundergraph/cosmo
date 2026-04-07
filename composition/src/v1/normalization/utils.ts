@@ -1,6 +1,6 @@
-import { BREAK, ConstDirectiveNode, DocumentNode, Kind, OperationTypeNode, print, visit } from 'graphql';
+import { BREAK, type ConstDirectiveNode, type DocumentNode, Kind, OperationTypeNode, print, visit } from 'graphql';
 import { isKindAbstract, lexicographicallySortDocumentNode } from '../../ast/utils';
-import { NormalizationFactory } from './normalization-factory';
+import { type NormalizationFactory } from './normalization-factory';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
   argumentsInKeyFieldSetErrorMessage,
@@ -16,15 +16,21 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
 } from '../../errors/errors';
-import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../utils/constants';
-import { RequiredFieldConfiguration } from '../../router-configuration/types';
-import { CompositeOutputData, DirectiveDefinitionData, InputValueData } from '../../schema-building/types';
+import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../constants/constants';
+import { type RequiredFieldConfiguration } from '../../router-configuration/types';
+import {
+  type CompositeOutputData,
+  type DirectiveDefinitionData,
+  type InputValueData,
+} from '../../schema-building/types';
 import { getTypeNodeNamedTypeName } from '../../schema-building/ast';
 import {
   AUTHENTICATED_DEFINITION_DATA,
   COMPOSE_DIRECTIVE_DEFINITION_DATA,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA,
   CONFIGURE_DESCRIPTION_DEFINITION_DATA,
+  CONNECT_FIELD_RESOLVER_DEFINITION_DATA,
+  COST_DEFINITION_DATA,
   DEPRECATED_DEFINITION_DATA,
   EXTENDS_DEFINITION_DATA,
   EXTERNAL_DEFINITION_DATA,
@@ -34,6 +40,7 @@ import {
   KAFKA_SUBSCRIBE_DEFINITION_DATA,
   KEY_DEFINITION_DATA,
   LINK_DEFINITION_DATA,
+  LIST_SIZE_DEFINITION_DATA,
   NATS_PUBLISH_DEFINITION_DATA,
   NATS_REQUEST_DEFINITION_DATA,
   NATS_SUBSCRIBE_DEFINITION_DATA,
@@ -56,6 +63,8 @@ import {
   COMPOSE_DIRECTIVE,
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
+  CONNECT_FIELD_RESOLVER,
+  COST,
   DEPRECATED,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
@@ -71,9 +80,10 @@ import {
   INTERFACE_OBJECT,
   KEY,
   LINK,
+  LIST_SIZE,
+  LITERAL_PERIOD,
   ONE_OF,
   OVERRIDE,
-  PERIOD,
   PROVIDES,
   QUERY,
   REQUIRE_FETCH_REASONS,
@@ -82,11 +92,13 @@ import {
   SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
+  STRING_SCALAR,
   SUBSCRIPTION_FILTER,
   TAG,
+  TYPENAME,
 } from '../../utils/string-constants';
 import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
-import { FieldSetData, KeyFieldSetData } from './types';
+import { type FieldSetData, type KeyFieldSetData } from './types';
 
 export function newFieldSetData(): FieldSetData {
   return {
@@ -138,8 +150,7 @@ export function validateKeyFieldSets(
 ): RequiredFieldConfiguration[] | undefined {
   const entityInterfaceData = nf.entityInterfaceDataByTypeName.get(entityParentData.name);
   const entityTypeName = entityParentData.name;
-  const configurations: RequiredFieldConfiguration[] = [];
-  const allKeyFieldSetPaths: Array<Set<string>> = [];
+  const configurations: Array<RequiredFieldConfiguration> = [];
   // If the key is on an entity interface/interface object, an entity data node should not be propagated
   const entityDataNode = entityInterfaceData ? undefined : nf.internalGraph.addEntityDataNode(entityParentData.name);
   const graphNode = nf.internalGraph.addOrUpdateNode(entityParentData.name);
@@ -157,6 +168,7 @@ export function validateKeyFieldSets(
     let currentDepth = -1;
     let shouldDefineSelectionSet = true;
     let lastFieldName = '';
+    let isUnconditionallyExternalKey = false;
     visit(documentNode, {
       Argument: {
         enter(node) {
@@ -201,6 +213,9 @@ export function validateKeyFieldSets(
           const fieldName = node.name.value;
           const fieldCoords = `${parentTypeName}.${fieldName}`;
           lastFieldName = fieldName;
+          if (fieldName === TYPENAME) {
+            return;
+          }
           const fieldData = parentData.fieldDataByName.get(fieldName);
           // undefined if the field does not exist on the parent
           if (!fieldData) {
@@ -215,6 +230,21 @@ export function validateKeyFieldSets(
           if (definedFields[currentDepth].has(fieldName)) {
             errorMessages.push(duplicateFieldInFieldSetErrorMessage(rawFieldSet, fieldCoords));
             return BREAK;
+          }
+          const externalFieldData = fieldData.externalFieldDataBySubgraphName.get(nf.subgraphName);
+          if (
+            !nf.isSubgraphEventDrivenGraph &&
+            externalFieldData?.isDefinedExternal &&
+            !externalFieldData.isUnconditionallyProvided
+          ) {
+            const conditionalData = nf.conditionalFieldDataByCoords.get(fieldCoords);
+            if (!conditionalData && !nf.options.ignoreExternalKeys) {
+              isUnconditionallyExternalKey = true;
+              const edge = graphNode.headToTailEdges.get(fieldName);
+              if (edge) {
+                edge.isExternal = true;
+              }
+            }
           }
           // Add the field set for which the field coordinates contribute a key field
           getValueOrDefault(
@@ -234,7 +264,7 @@ export function validateKeyFieldSets(
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // The base scalars are not in the parents map
           if (BASE_SCALARS.has(namedTypeName)) {
-            keyFieldSetPaths.add(currentPath.join(PERIOD));
+            keyFieldSetPaths.add(currentPath.join(LITERAL_PERIOD));
             currentPath.pop();
             return;
           }
@@ -262,7 +292,7 @@ export function validateKeyFieldSets(
             );
             return BREAK;
           }
-          keyFieldSetPaths.add(currentPath.join(PERIOD));
+          keyFieldSetPaths.add(currentPath.join(LITERAL_PERIOD));
           currentPath.pop();
         },
       },
@@ -278,6 +308,17 @@ export function validateKeyFieldSets(
             const parentData = parentDatas[currentDepth];
             const parentTypeName = parentData.name;
             const fieldCoordinates = `${parentTypeName}.${lastFieldName}`;
+            if (lastFieldName === TYPENAME) {
+              errorMessages.push(
+                invalidSelectionSetDefinitionErrorMessage(
+                  rawFieldSet,
+                  [fieldCoordinates],
+                  STRING_SCALAR,
+                  kindToNodeType(Kind.SCALAR_TYPE_DEFINITION),
+                ),
+              );
+              return BREAK;
+            }
             // If the last field is not an object-like
             const fieldData = parentData.fieldDataByName.get(lastFieldName);
             if (!fieldData) {
@@ -333,20 +374,21 @@ export function validateKeyFieldSets(
       nf.errors.push(invalidDirectiveError(KEY, entityTypeName, numberToOrdinal(keyNumber), errorMessages));
       continue;
     }
+
     configurations.push({
       fieldName: '',
       selectionSet: fieldSet,
       ...(isUnresolvable ? { disableEntityResolver: true } : {}),
     });
     graphNode.satisfiedFieldSets.add(fieldSet);
+    if (isUnconditionallyExternalKey) {
+      graphNode.externalFieldSets.add(fieldSet);
+    }
     if (isUnresolvable) {
       continue;
     }
     entityDataNode?.addTargetSubgraphByFieldSet(fieldSet, nf.subgraphName);
-    allKeyFieldSetPaths.push(keyFieldSetPaths);
   }
-  // todo
-  // nf.internalGraph.addEntityNode(entityTypeName, allKeyFieldSetPaths);
   if (configurations.length > 0) {
     return configurations;
   }
@@ -394,6 +436,8 @@ export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefin
     [COMPOSE_DIRECTIVE, COMPOSE_DIRECTIVE_DEFINITION_DATA],
     [CONFIGURE_DESCRIPTION, CONFIGURE_DESCRIPTION_DEFINITION_DATA],
     [CONFIGURE_CHILD_DESCRIPTIONS, CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA],
+    [CONNECT_FIELD_RESOLVER, CONNECT_FIELD_RESOLVER_DEFINITION_DATA],
+    [COST, COST_DEFINITION_DATA],
     [DEPRECATED, DEPRECATED_DEFINITION_DATA],
     [EDFS_KAFKA_PUBLISH, KAFKA_PUBLISH_DEFINITION_DATA],
     [EDFS_KAFKA_SUBSCRIBE, KAFKA_SUBSCRIBE_DEFINITION_DATA],
@@ -408,6 +452,7 @@ export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefin
     [INTERFACE_OBJECT, INTERFACE_OBJECT_DEFINITION_DATA],
     [KEY, KEY_DEFINITION_DATA],
     [LINK, LINK_DEFINITION_DATA],
+    [LIST_SIZE, LIST_SIZE_DEFINITION_DATA],
     [ONE_OF, ONE_OF_DEFINITION_DATA],
     [OVERRIDE, OVERRIDE_DEFINITION_DATA],
     [PROVIDES, PROVIDES_DEFINITION_DATA],

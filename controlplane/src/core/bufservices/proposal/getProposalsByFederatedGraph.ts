@@ -9,7 +9,7 @@ import {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, fromProposalOriginEnum, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { clamp, enrichLogger, fromProposalOriginEnum, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -26,7 +26,7 @@ export function getProposalsByFederatedGraph(
     logger = enrichLogger(ctx, logger, authContext);
 
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const proposalRepo = new ProposalRepository(opts.db);
+    const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
@@ -95,17 +95,9 @@ export function getProposalsByFederatedGraph(
       };
     }
 
-    // check that the limit is less than the max option provided in the ui
-    if (req.limit > 50) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'Invalid limit',
-        },
-        proposals: [],
-        isProposalsEnabled: namespace.enableProposals,
-      };
-    }
+    // default to 10 if no limit is provided
+    req.limit = clamp(req.limit || 10, 1, 50);
+    req.offset = clamp(req.offset || 0, 0, 500_000);
 
     const { proposals } = await proposalRepo.ByFederatedGraphId({
       federatedGraphId: federatedGraph.id,
@@ -118,10 +110,7 @@ export function getProposalsByFederatedGraph(
     // Get the latest check success for each proposal
     const proposalsWithChecks = await Promise.all(
       proposals.map(async (proposal) => {
-        const latestCheck = await proposalRepo.getLatestCheckForProposal(
-          proposal.proposal.id,
-          authContext.organizationId,
-        );
+        const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
         return {
           ...proposal,
           latestCheckSuccess: latestCheck?.isSuccessful || false,

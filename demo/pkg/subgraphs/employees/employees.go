@@ -8,8 +8,10 @@ import (
 )
 
 func NewSchema(natsPubSubByProviderID map[string]nats.Adapter) graphql.ExecutableSchema {
-	return generated.NewExecutableSchema(generated.Config{Resolvers: &subgraph.Resolver{
-		NatsPubSubByProviderID: natsPubSubByProviderID,
-		EmployeesData:          subgraph.Employees,
-	}})
+	return generated.NewExecutableSchema(generated.Config{
+		Resolvers: &subgraph.Resolver{
+			NatsPubSubByProviderID: natsPubSubByProviderID,
+			EmployeesData:          subgraph.Employees,
+		},
+	})
 }

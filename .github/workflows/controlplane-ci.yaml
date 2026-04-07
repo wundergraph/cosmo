@@ -20,7 +20,7 @@ env:
 
 jobs:
   build_test:
-    timeout-minutes: 10
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     services:
       redis:
@@ -66,11 +66,22 @@ jobs:
       - name: Generate email templates
         run: pnpm run --filter ./controlplane/emails build
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+      - name: Lint & format
+        run: pnpm run --filter ./controlplane/ lint:fix
+
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: controlplane
 
       - name: Build
         run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition --filter ./protographic build
+
+      - name: Check `dist` directory structure
+        run: |
+          if [ ! -f "controlplane/dist/index.js" ]; then
+            exit 1
+          fi
+        shell: bash
 
       - uses: actions/setup-java@v4
         with:
@@ -81,9 +92,19 @@ jobs:
         run: nohup .github/scripts/setup-keycloak.sh &
 
       - name: Test
-        run: pnpm run --filter controlplane test
+        run: pnpm run --filter controlplane test:coverage
         env:
           DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"
+
+      - name: Upload Coverage to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: controlplane-tests-coverage
+          coverage-path: |
+            controlplane/coverage/clover.xml
+            controlplane/coverage/coverage-final.json
+          retention-days: 14
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
@@ -103,3 +124,4 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: controlplane
           image_description: "Cosmo Controlplane"
+

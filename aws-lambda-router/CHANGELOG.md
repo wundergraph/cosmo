@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.40.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.40.1...aws-lambda-router@0.40.2) (2026-03-31)
+
+### Bug Fixes
+
+* jsonparser upgrade ([#2709](https://github.com/wundergraph/cosmo/issues/2709)) ([f2860f8](https://github.com/wundergraph/cosmo/commit/f2860f8dce5488da3f47f53068f0e3ad522280d0)) (@SkArchon)
+
+## [0.40.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.40.0...aws-lambda-router@0.40.1) (2026-03-19)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.40.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.39.2...aws-lambda-router@0.40.0) (2026-03-05)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+## [0.39.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.39.1...aws-lambda-router@0.39.2) (2026-02-24)
+
+### Bug Fixes
+
+* bump go-m1cpu to v0.1.7 to fix compiler warnings ([#2550](https://github.com/wundergraph/cosmo/issues/2550)) ([88e4878](https://github.com/wundergraph/cosmo/commit/88e48782c392c84e6e0bd2cd7e79072409712f82)) (@jensneuse)
+
+## [0.39.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.39.0...aws-lambda-router@0.39.1) (2025-12-04)
+
+### Bug Fixes
+
+* cache vars and remapping normalization ([#2318](https://github.com/wundergraph/cosmo/issues/2318)) ([d0e45f6](https://github.com/wundergraph/cosmo/commit/d0e45f65fb9bef61925dd434b9fda37d999fa5fd)) (@devsergiy)
+
 # [0.39.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.38.4...aws-lambda-router@0.39.0) (2025-09-06)
 
 ### Features

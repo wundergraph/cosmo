@@ -1,6 +1,7 @@
 /* eslint-disable import/named */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import {
+  CompositionOptions,
   federateSubgraphs,
   FederationResult,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -17,6 +18,7 @@ import {
   SubscriptionProtocol,
   WebsocketSubprotocol,
 } from '@wundergraph/cosmo-shared';
+import { SubgraphPublishStats } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { config, configFile } from './core/config.js';
 import { KeycloakToken } from './commands/auth/utils.js';
 
@@ -179,9 +181,9 @@ export const introspectSubgraph = async ({
 /**
  * Composes a list of subgraphs into a single schema.
  */
-export function composeSubgraphs(subgraphs: Subgraph[], disableResolvabilityValidation?: boolean): FederationResult {
+export function composeSubgraphs(subgraphs: Subgraph[], options?: CompositionOptions): FederationResult {
   // @TODO get router compatibility version programmatically
-  return federateSubgraphs({ disableResolvabilityValidation, subgraphs, version: ROUTER_COMPATIBILITY_VERSION_ONE });
+  return federateSubgraphs({ options, subgraphs, version: ROUTER_COMPATIBILITY_VERSION_ONE });
 }
 
 export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;
@@ -294,3 +296,36 @@ export const validateSubscriptionProtocols = ({
     }
   }
 };
+
+type PrintTruncationWarningParams = {
+  displayedErrorCounts: SubgraphPublishStats;
+  totalErrorCounts?: SubgraphPublishStats;
+};
+
+export function printTruncationWarning({ displayedErrorCounts, totalErrorCounts }: PrintTruncationWarningParams) {
+  if (!totalErrorCounts) {
+    return;
+  }
+
+  const truncatedItems: string[] = [];
+
+  if (totalErrorCounts.compositionErrors > displayedErrorCounts.compositionErrors) {
+    truncatedItems.push(
+      `composition errors (${displayedErrorCounts.compositionErrors} of ${totalErrorCounts.compositionErrors} shown)`,
+    );
+  }
+  if (totalErrorCounts.compositionWarnings > displayedErrorCounts.compositionWarnings) {
+    truncatedItems.push(
+      `composition warnings (${displayedErrorCounts.compositionWarnings} of ${totalErrorCounts.compositionWarnings} shown)`,
+    );
+  }
+  if (totalErrorCounts.deploymentErrors > displayedErrorCounts.deploymentErrors) {
+    truncatedItems.push(
+      `deployment errors (${displayedErrorCounts.deploymentErrors} of ${totalErrorCounts.deploymentErrors} shown)`,
+    );
+  }
+
+  if (truncatedItems.length > 0) {
+    console.log(pc.yellow(`\nNote: Some results were truncated: ${truncatedItems.join(', ')}.`));
+  }
+}

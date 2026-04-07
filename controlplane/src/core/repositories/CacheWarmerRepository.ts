@@ -48,8 +48,8 @@ export class CacheWarmerRepository {
 
     const query = `
       WITH
-        toDateTime('${start}') AS startDate,
-        toDateTime('${end}') AS endDate
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT
         max(MaxDuration) as maxDuration,
         OperationHash as operationHash,
@@ -57,7 +57,7 @@ export class CacheWarmerRepository {
         OperationPersistedID as operationPersistedID,
         if(ClientName = 'unknown', '', ClientName) as clientName,
         if(ClientVersion = 'missing', '', ClientVersion) as clientVersion,
-        func_rank(${quantile}, BucketCounts) as rank,
+        func_rank({quantile:Float64}, BucketCounts) as rank,
         func_rank_bucket_lower_index(rank, BucketCounts) as b,
         round(func_histogram_v2(
             rank,
@@ -68,13 +68,23 @@ export class CacheWarmerRepository {
       sumForEachMerge(BucketCounts) as BucketCounts
       FROM ${this.client.database}.operation_planning_metrics_5_30
       WHERE Timestamp >= startDate AND Timestamp <= endDate
-      AND FederatedGraphID = '${federatedGraphId}'
-      AND OrganizationID = '${organizationId}'
+      AND FederatedGraphID = {federatedGraphId:String}
+      AND OrganizationID = {organizationId:String}
       AND OperationName != 'IntrospectionQuery'
       GROUP BY OperationHash, OperationName, OperationPersistedID, ClientName, ClientVersion
-      HAVING maxDuration >= ${minPlanningTimeInMs}
-      ORDER BY planningTime DESC LIMIT ${maxOperationsCount}
+      HAVING maxDuration >= {minPlanningTimeInMs:UInt32}
+      ORDER BY planningTime DESC LIMIT {maxOperationsCount:UInt32}
     `;
+
+    const params = {
+      startDate: start,
+      endDate: end,
+      quantile,
+      federatedGraphId,
+      organizationId,
+      minPlanningTimeInMs,
+      maxOperationsCount,
+    };
 
     const res: {
       operationHash: string;
@@ -83,7 +93,7 @@ export class CacheWarmerRepository {
       clientName: string;
       clientVersion: string;
       planningTime: number;
-    }[] = await this.client.queryPromise(query);
+    }[] = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
       return res;
@@ -108,23 +118,38 @@ export class CacheWarmerRepository {
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, rangeInHours);
     const [start, end] = getDateRange(parsedDateRange);
 
+    // Escape single quotes in operation hashes and build the IN clause
+    const escapedHashes = operationHashes
+      .map((hash) => {
+        const escaped = hash.replace(/'/g, "''");
+        return `'${escaped}'`;
+      })
+      .join(',');
+
     const query = `
      WITH
-        toDateTime('${start}') AS startDate,
-        toDateTime('${end}') AS endDate
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT 
         OperationContent as operationContent, 
         OperationHash as operationHash
       FROM ${this.client.database}.gql_metrics_operations
-      WHERE OrganizationID = '${organizationID}' 
-      AND FederatedGraphID = '${federatedGraphID}'
-      AND Timestamp >= startDate AND Timestamp <= endDate AND OperationHash IN (${operationHashes.map((hash) => `'${hash}'`).join(',')})
+      WHERE OrganizationID = {organizationID:String}
+      AND FederatedGraphID = {federatedGraphID:String}
+      AND Timestamp >= startDate AND Timestamp <= endDate AND OperationHash IN (${escapedHashes})
       GROUP BY
         OperationContent,
         OperationHash
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params = {
+      startDate: start,
+      endDate: end,
+      organizationID,
+      federatedGraphID,
+    };
+
+    const res = await this.client.queryPromise(query, params);
 
     const operationContentMap = new Map<string, string>();
 

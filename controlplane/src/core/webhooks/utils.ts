@@ -1,8 +1,7 @@
 import { createHmac } from 'node:crypto';
-import { AxiosError, AxiosInstance } from 'axios';
-import pino from 'pino';
+import { AxiosInstance } from 'axios';
 
-export const makeWebhookRequest = <Data = any>(
+export const makeWebhookRequest = <Data = any, TResponse = any>(
   axiosInstance: AxiosInstance,
   data: Data,
   url: string,
@@ -17,7 +16,7 @@ export const makeWebhookRequest = <Data = any>(
     headers['X-Cosmo-Signature-256'] = createHmac('sha256', signatureKey).update(dataString).digest('hex');
   }
 
-  return axiosInstance.post(url, data, {
+  return axiosInstance.post<TResponse>(url, data, {
     headers,
   });
 };

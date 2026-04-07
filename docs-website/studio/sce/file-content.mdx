@@ -1,0 +1,304 @@
+---
+title: "File Structure"
+sidebarTitle: File Structure
+icon: file-export
+description: "Definition of the Subgraph Check extension payload structure."
+---
+
+## SubgraphCheckExtensionContent
+<Note>
+  The fields listed below are all optional and can be included or excluded based on the
+  [namespace configuration](/studio/subgraph-check-extensions#configuration).
+</Note>
+
+| Field                | Type                                                               | Description                                                                                   |
+|----------------------|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| `subgraphs`          | [`SubgraphInfo[]`](#subgraphinfo) or `undefined`                   | A list of subgraphs that trigger the check.                                                   |
+| `compositions`       | [`CompositionInfo[]`](#compositioninfo) or `undefined`             | A list of all compositions produced by the check.                                             |
+| `affectedOperations` | [`AffectedOperationInfo[]`](#affectedoperationinfo) or `undefined` | A list containing all the operations affected by the check.                                   |
+
+## SubgraphInfo
+| Field                | Type                                                       | Description                                                                                   |
+|----------------------|------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| `id`                 | `string`                                                   | The unique identifier of the subgraph.                                                        |
+| `name`               | `string`                                                   | The name of the subgraph.                                                                     |
+| `labels`             | [`LabelInfo[]`](#labelinfo)                                | The list of labels the subgraph is associated with.                                           |
+| `oldComposedSdl`     | `string` or `undefined`                                    | The original subgraph SDL                                                                     |
+| `newComposedSdl`     | `string` or `undefined`                                    | The new subgraph SDL                                                                          |
+| `lintIssues`         | [`LintIssue[]`](#lintissue) or `undefined`                 | A list containing all the lint issues detected based on the `Lint Policies`.                  |
+| `graphPruningIssues` | [`GraphPruningIssue[]`](#graphpruningissue) or `undefined` | A list containing all the graph pruning issues detected based on the `Graph Pruning Policies` |
+| `schemaChanges`      | [`SchemaChangeInfo[]`](#schemachangeinfo) or `undefined`   | A list containing all the changes detected by the check.                                      |
+
+
+## CompositionInfo
+| Field                   | Type                                                    | Description                                                         |
+|-------------------------|---------------------------------------------------------|---------------------------------------------------------------------|
+| `id`                    | `string`                                                | The unique identifier of the composition.                           |
+| `name`                  | `string`                                                | The name of the composition.                                        |
+| `composedSchema`        | `string`                                                | The composed SDL schema.                                            |
+| `federatedClientSchema` | `string`                                                | The composed schema for the Federated Client.                       |
+| `subgraphs`             | [`CompositionSubgraphInfo[]`](#compositionsubgraphinfo) | A collection of all subgraphs that contributed to this composition. |
+
+### LabelInfo
+Provides information about the labels associated with the subgraph.
+
+| Field  | Type     | Description            |
+|--------|----------|------------------------|
+| `key`  | `string` | The key of the label.  |
+| `name` | `string` | The name of the label. |
+
+## CompositionSubgraphInfo
+| Field  | Type     | Description                            |
+|--------|----------|----------------------------------------|
+| `id`   | `string` | The unique identifier of the subgraph. |
+| `name` | `string` | The name of the subgraph.              |
+| `sdl`  | `string` | The SDL of the subgraph.               |
+
+## LintIssue
+| Field           | Type                                      | Description                                               |
+|-----------------|-------------------------------------------|-----------------------------------------------------------|
+| `lintRuleType`  | `string`                                  | One of the [lint rule](/studio/lint-policy/linter-rules). |
+| `severity`      | [`LintSeverity`](#lintseverity)           | The severity of the issue.                                |
+| `message`       | `string`                                  | A message describing the issue.                           |
+| `issueLocation` | [`LintIssueLocation`](#lintissuelocation) | The location of the issue related to the schema.          |
+
+## LintSeverity
+| Field   | Value | Description                |
+|---------|-------|----------------------------|
+| Warning | `0`   | Represents a lint warning. |
+| Error   | `1`   | Represents a lint error.   |
+
+## LintIssueLocation
+| Field       | Type                    | Description                              |
+|-------------|-------------------------|------------------------------------------|
+| `line`      | `number`                | The line number of the lint issue.       |
+| `column`    | `number`                | The column number of the lint issue.     |
+| `endLine`   | `number` or `undefined` | The end line number of the lint issue.   |
+| `endColumn` | `number` or `undefined` | The end column number of the lint issue. |
+
+## GraphPruningIssue
+| Field                  | Type                                                      | Description                                      |
+|------------------------|-----------------------------------------------------------|--------------------------------------------------|
+| `graphPruningRuleType` | [`GraphPruningRuleType`](#graphpruningruletype)           | The graph pruning rule.                          |
+| `severity`             | [`GraphPruningSeverity`](#graphpruningseverity)           | The severity of the issue.                       |
+| `fieldPath`            | `string`                                                  | The path to the field.                           |
+| `message`              | `string`                                                  | A message describing the issue.                  |
+| `issueLocation`        | [`GraphPruningIssueLocation`](#graphpruningissuelocation) | The location of the issue related to the schema. |
+| `federatedGraphId`     | `string`                                                  | The unique identifier of the Federated graph.    |
+| `federatedGraphName`   | `string`                                                  | The name of the Federated graph.                 |
+| `subgraphName`         | `string` or `undefined`                                   | The name of the subgraph.                        |
+
+## GraphPruningRuleType
+| Value                                 | Description                                                    |
+|---------------------------------------|----------------------------------------------------------------|
+| `UNUSED_FIELDS`                       | Represents a graph pruning issue related to a federated graph. |
+| `DEPRECATED_FIELDS`                   | Represents a graph pruning issue related to a subgraph.        |
+| `REQUIRE_DEPRECATION_BEFORE_DELETION` | Represents a graph pruning issue related to a subgraph.        |
+
+## GraphPruningSeverity
+| Field   | Value | Description                         |
+|---------|-------|-------------------------------------|
+| Warning | `0`   | Represents a graph pruning warning. |
+| Error   | `1`   | Represents a graph pruning error.   |
+
+## GraphPruningIssueLocation
+| Field       | Type                    | Description                                       |
+|-------------|-------------------------|---------------------------------------------------|
+| `line`      | `number`                | The line number of the graph pruning issue.       |
+| `column`    | `number`                | The column number of the graph pruning issue.     |
+| `endLine`   | `number` or `undefined` | The end line number of the graph pruning issue.   |
+| `endColumn` | `number` or `undefined` | The end column number of the graph pruning issue. |
+
+## SchemaChangeInfo
+| Field        | Type      | Description                                                                                                        |
+|--------------|-----------|--------------------------------------------------------------------------------------------------------------------|
+| `message`    | `string`  | A `string` representation of the change.                                                                           |
+| `changeType` | `string`  | A string representing the type of change. You can find the possible values [here](#list-of-possible-change-types). |
+| `path`       | `string`  | The path to the schema change.                                                                                     |
+| `isBreaking` | `boolean` | A value indicating whether the detected change is considered breaking or not.                                      |
+
+### List of possible change types
+- FIELD_ARGUMENT_DESCRIPTION_CHANGED
+- FIELD_ARGUMENT_DEFAULT_CHANGED
+- FIELD_ARGUMENT_TYPE_CHANGED
+- DIRECTIVE_REMOVED
+- DIRECTIVE_ADDED
+- DIRECTIVE_DESCRIPTION_CHANGED
+- DIRECTIVE_LOCATION_ADDED
+- DIRECTIVE_LOCATION_REMOVED
+- DIRECTIVE_ARGUMENT_ADDED
+- DIRECTIVE_ARGUMENT_REMOVED
+- DIRECTIVE_ARGUMENT_DESCRIPTION_CHANGED
+- DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED
+- DIRECTIVE_ARGUMENT_TYPE_CHANGED
+- ENUM_VALUE_REMOVED
+- ENUM_VALUE_ADDED
+- ENUM_VALUE_DESCRIPTION_CHANGED
+- ENUM_VALUE_DEPRECATION_REASON_CHANGED
+- ENUM_VALUE_DEPRECATION_REASON_ADDED
+- ENUM_VALUE_DEPRECATION_REASON_REMOVED
+- FIELD_REMOVED
+- FIELD_ADDED
+- FIELD_DESCRIPTION_CHANGED
+- FIELD_DESCRIPTION_ADDED
+- FIELD_DESCRIPTION_REMOVED
+- FIELD_DEPRECATION_ADDED
+- FIELD_DEPRECATION_REMOVED
+- FIELD_DEPRECATION_REASON_CHANGED
+- FIELD_DEPRECATION_REASON_ADDED
+- FIELD_DEPRECATION_REASON_REMOVED
+- FIELD_TYPE_CHANGED
+- FIELD_ARGUMENT_ADDED
+- FIELD_ARGUMENT_REMOVED
+- INPUT_FIELD_REMOVED
+- INPUT_FIELD_ADDED
+- INPUT_FIELD_DESCRIPTION_ADDED
+- INPUT_FIELD_DESCRIPTION_REMOVED
+- INPUT_FIELD_DESCRIPTION_CHANGED
+- INPUT_FIELD_DEFAULT_VALUE_CHANGED
+- INPUT_FIELD_TYPE_CHANGED
+- OBJECT_TYPE_INTERFACE_ADDED
+- OBJECT_TYPE_INTERFACE_REMOVED
+- SCHEMA_QUERY_TYPE_CHANGED
+- SCHEMA_MUTATION_TYPE_CHANGED
+- SCHEMA_SUBSCRIPTION_TYPE_CHANGED
+- TYPE_REMOVED
+- TYPE_ADDED
+- TYPE_KIND_CHANGED
+- TYPE_DESCRIPTION_CHANGED
+- TYPE_DESCRIPTION_REMOVED
+- TYPE_DESCRIPTION_ADDED
+- UNION_MEMBER_REMOVED
+- UNION_MEMBER_ADDED
+- DIRECTIVE_USAGE_UNION_MEMBER_ADDED
+- DIRECTIVE_USAGE_UNION_MEMBER_REMOVED
+- DIRECTIVE_USAGE_ENUM_ADDED
+- DIRECTIVE_USAGE_ENUM_REMOVED
+- DIRECTIVE_USAGE_ENUM_VALUE_ADDED
+- DIRECTIVE_USAGE_ENUM_VALUE_REMOVED
+- DIRECTIVE_USAGE_INPUT_OBJECT_ADDED
+- DIRECTIVE_USAGE_INPUT_OBJECT_REMOVED
+- DIRECTIVE_USAGE_FIELD_ADDED
+- DIRECTIVE_USAGE_FIELD_REMOVED
+- DIRECTIVE_USAGE_SCALAR_ADDED
+- DIRECTIVE_USAGE_SCALAR_REMOVED
+- DIRECTIVE_USAGE_OBJECT_ADDED
+- DIRECTIVE_USAGE_OBJECT_REMOVED
+- DIRECTIVE_USAGE_INTERFACE_ADDED
+- DIRECTIVE_USAGE_INTERFACE_REMOVED
+- DIRECTIVE_USAGE_ARGUMENT_DEFINITION_ADDED
+- DIRECTIVE_USAGE_ARGUMENT_DEFINITION_REMOVED
+- DIRECTIVE_USAGE_SCHEMA_ADDED
+- DIRECTIVE_USAGE_SCHEMA_REMOVED
+- DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED
+- DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED
+- DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_ADDED
+- DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_REMOVED
+
+## AffectedOperationInfo
+| Field            | Type       | Description                                                                  |
+|------------------|------------|------------------------------------------------------------------------------|
+| `schemaChangeId` | `string`   | The unique identifier of the schema change.                                  |
+| `hash`           | `string`   | The unique hash of the operation.                                            |
+| `name`           | `string`   | The name of the operation.                                                   |
+| `type`           | `string`   | The type of the operation.                                                   |
+| `firstSeenAt`    | `ISO Date` | A `Date` with the `ISO` format indicating when the operation was first seen. |
+| `lastSeenAt`     | `ISO Date` | A `Date` with the `ISO` format indicating when the operation was last seen.  |
+| `isSafeOverride` | `boolean`  | A value indicating whether it is safe for the operation to be overridden.    |
+
+```typescript
+interface SubgraphInfo {
+  id: string;
+  name: string;
+  labels: LabelInfo[];
+  oldComposedSdl?: string;
+  newComposedSdl?: string;
+  lintIssues?: LintIssue[];
+  graphPruningIssues?: GraphPruningIssue[];
+  schemaChanges?: SchemaChangeInfo[];
+}
+
+interface LabelInfo {
+  key: string;
+  name: string;
+}
+
+interface CompositionInfo {
+  id: string;
+  name: string;
+  composedSchema?: string;
+  federatedClientSchema?: string;
+  subgraphs: CompositionSubgraphInfo[];
+}
+
+interface CompositionSubgraphInfo {
+  id: string;
+  name: string;
+  sdl: string;
+}
+
+interface LintIssue {
+  lintRuleType: string;
+  severity: LintSeverity;
+  message: string;
+  issueLocation: LintIssueLocation;
+}
+
+interface LintIssueLocation {
+  line: number;
+  column: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
+enum LintSeverity {
+  Warning = 0,
+  Error = 1
+}
+
+interface GraphPruningIssue {
+  graphPruningRuleType: string;
+  severity: GraphPruningSeverity;
+  fieldPath: string;
+  message: string;
+  issueLocation: GraphPruningIssueLocation;
+  federatedGraphId: string;
+  federatedGraphName: string;
+  subgraphName?: string;
+}
+
+interface GraphPruningIssueLocation {
+  line: number;
+  column: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
+enum GraphPruningSeverity {
+  Warning = 0,
+  Error = 1
+}
+
+interface SchemaChangeInfo {
+  message: string;
+  changeType: string;
+  path: string;
+  isBreaking: boolean;
+}
+
+interface AffectedOperationInfo {
+  schemaChangeId: string;
+  hash: string;
+  name: string;
+  type: string;
+  lastSeenAt: Date;
+  firstSeenAt: Date;
+  isSafeOverride: boolean;
+}
+
+interface SubgraphCheckExtensionContent {
+  subgraphs?: SubgraphInfo[];
+  compositions?: CompositionInfo;
+  affectedOperations?: AffectedOperationInfo[];
+}
+```

@@ -3,20 +3,20 @@
 @tailwind utilities;
 
 @font-face {
-  font-family: "Inter";
+  font-family: 'Inter';
   font-weight: 100 900;
   font-display: block;
   font-style: normal;
-  font-named-instance: "Regular";
-  src: url("/fonts/Inter-roman.var.woff2") format("woff2");
+  font-named-instance: 'Regular';
+  src: url('/fonts/Inter-roman.var.woff2') format('woff2');
 }
 @font-face {
-  font-family: "Inter";
+  font-family: 'Inter';
   font-weight: 100 900;
   font-display: block;
   font-style: italic;
-  font-named-instance: "Italic";
-  src: url("/fonts/Inter-italic.var.woff2") format("woff2");
+  font-named-instance: 'Italic';
+  src: url('/fonts/Inter-italic.var.woff2') format('woff2');
 }
 
 @layer base {
@@ -141,9 +141,9 @@
   .table-action {
     @apply border border-transparent group-hover:border group-hover:border-border group-hover:bg-background data-[state=open]:border data-[state=open]:border-border data-[state=open]:bg-background group-hover:hover:bg-accent/50;
   }
-  input[type="number"]::-webkit-outer-spin-button,
-  input[type="number"]::-webkit-inner-spin-button,
-  input[type="number"] {
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number'] {
     -webkit-appearance: none;
     margin: 0;
     -moz-appearance: textfield !important;
@@ -165,7 +165,40 @@
   }
 }
 
-pre[class*="language-"] code {
+/* Static highlight: fixed tilt (no animation) */
+.feature-icon-tile-border-highlight {
+  width: 150%;
+  height: 150%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(22deg);
+  /* Two ellipses: one end anchored at center (50% 50%), opposite directions, reach past corners */
+  background:
+    radial-gradient(
+      ellipse 47% 12% at 3% 50%,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 28%,
+      rgba(255, 255, 255, 0.12) 50%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 47% 12% at 97% 50%,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 28%,
+      rgba(255, 255, 255, 0.12) 50%,
+      transparent 72%
+    );
+}
+
+.feature-icon-tile-border-highlight::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+pre[class*='language-'] code {
   display: block;
 }
 

@@ -1,0 +1,197 @@
+---
+title: "Okta"
+description: "Configure SCIM with Okta."
+icon: "user-shield"
+---
+
+
+
+### Steps to set up SCIM with Okta
+
+<Steps>
+<Step>
+ Set up the password policy (password should contain at least one number and one symbol), if using the **Classic Engine on Okta** follow the below step&#x73;**,** or if using the  **OIE engine,**&#x66;ollow the steps as mentioned in this  [**Okta guide**](https://help.okta.com/oie/en-us/content/topics/identity-engine/authenticators/configure-password.htm)**.**
+
+  * Navigate to Security -> Authentication on your Okta Administrator Dashboard.
+
+  * Click Edit and update the password policy by enabling Number and Symbol, then click on Update Policy.
+<Frame>
+  <img
+    src="/images/studio/scim/okta-password-policy-configuration.png"
+    alt="Okta application settings"
+    title="Okta application settings"
+  />
+</Frame>
+</Step>
+<Step>
+ Navigate to the Applications view within your Okta Administrator Dashboard.
+</Step>
+<Step>
+Click on **Create App Integration**.
+
+<Frame>
+  <img
+    src="/images/studio/scim/okta-app-integration-creation.png"
+    alt="Okta sign-on configuration"
+    title="Okta sign-on configuration"
+  />
+</Frame>
+</Step>
+<Step>
+ A dialog appears, select SWA - Secure Web Authentication and then click **Next.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/okta-swa-app-integration-setup.png"
+    alt="SCIM provisioning settings"
+    title="SCIM provisioning settings"
+  />
+</Frame>
+</Step>
+<Step>
+Now give the app a name and populate the app's login URL with [**https://cosmo.wundergraph.com/login**](https://cosmo.wundergraph.com/login)**.**
+</Step>
+<Step>
+ For "**Who sets the credentials**", select **Administrator sets username, user sets password.**
+</Step>
+<Step>
+ For the **application username**, select **Email** and then click **Finish.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/swa-integration-setup-for-test-app.png"
+    alt="SCIM user provisioning actions"
+    title="SCIM user provisioning actions"
+  />
+</Frame>
+</Step>
+<Step>
+ Now navigate to the **General** tab, click on **Edit** in **App settings.**
+</Step>
+<Step>
+ Enable  **SCIM provisioning**and then click on **Save.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/test-app-provisioning-settings.png"
+    alt="SCIM connector test result"
+    title="SCIM connector test result"
+  />
+</Frame>
+</Step>
+<Step>
+  Navigate to the settings page on WunderGraph Cosmo and enable **SCIM.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/enable-generative-ai-in-cosmo-settings.png"
+    alt="Provisioning to app settings"
+    title="Provisioning to app settings"
+  />
+</Frame>
+</Step>
+<Step>
+Once SCIM is enabled, you will be provided with a  **SCIM Server URL,**&#x63;opy i&#x74;**.**
+</Step>
+<Step>
+Navigate to the API Keys page on WunderGraph Cosmo and click on New API Key.
+</Step>
+<Step>
+Provide the key with a name, select **Never** for **Expires,** then select  **SCIM** under **Permissions**, then click on **Generate API key.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/create-scim-api-key-for-project.png"
+    alt="SCIM key generation screen"
+    title="SCIM key generation screen"
+  />
+</Frame>
+</Step>
+<Step>
+Copy the API key provided.
+</Step>
+<Step>
+Navigate to the provisioning tab of the app created on okta, then click on **Edit**.
+
+<Frame>
+  <img
+    src="/images/studio/scim/scim-connection-setup-in-okta.png"
+    alt="Okta assignments screen"
+    title="Okta assignments screen"
+  />
+</Frame>
+</Step>
+<Step>
+Populate the **SCIM connector base URL** with the copied **SCIM server URL** .
+</Step>
+<Step>
+Populate the **Unique identifier field for users** with **"email".**
+</Step>
+<Step>
+Select **Import New Users and Profile Updates, Push New Users and Push Profile Updates** for **Supported provisioning actions.**
+</Step>
+<Step>
+Select  **HTTP Header**for **Authentication Mode.**
+</Step>
+<Step>
+Populate the **Authorization** field  under HTTP Header with the above-copied API key.
+
+<Frame>
+  <img
+    src="/images/studio/scim/scim-connection-configuration-for-test-app.png"
+    alt="Okta user profile"
+    title="Okta user profile"
+  />
+</Frame>
+</Step>
+<Step>
+Click on Test Connector Configuration, a dialog will appear showing the connector is configured successfully, click Close.
+
+<Frame>
+  <img
+    src="/images/studio/scim/connector-configuration-test-successful.png"
+    alt="Okta group provisioning overview"
+    title="Okta group provisioning overview"
+  />
+</Frame>
+</Step>
+<Step>
+Click on **Save.**
+</Step>
+<Step>
+Navigate to the "**to App"** ta&#x62;**, and** click on **Edit.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/to-app-configuration-for-test-app.png"
+    alt="To App configuration for test app"
+    title="To App configuration for test app"
+  />
+</Frame>
+</Step>
+<Step>
+Enable  **Create Users, Update User Attributes, Deactivate Users**and **Sync Password.**
+</Step>
+<Step>
+Under **Sync Password** for **Password type**, select **Sync Okta Password.**
+
+<Frame>
+  <img
+    src="/images/studio/scim/provisioning-to-app-setup-for-user-creation.png"
+    alt="Provisioning to App setup for user creation"
+    title="Provisioning to App setup for user creation"
+  />
+</Frame>
+</Step>
+<Step>
+Click **save.**
+</Step>
+<Step>
+Now you can navigate the Assignments tab and assign users/groups who should have access to WunderGraph Cosmo.
+
+</Step>
+</Steps>
+<Info>
+  If you are using both **SSO with OIDC** and **SCIM**, please make sure that the users assigned in both apps are the same.
+</Info>
+

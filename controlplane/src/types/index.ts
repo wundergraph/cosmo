@@ -1,14 +1,9 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import {
-  DBSubgraphType,
-  GraphPruningRuleEnum,
-  LintRuleEnum,
-  OrganizationRole,
-  ProposalMatch,
-  ProposalOrigin,
-} from '../db/models.js';
+import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, ProposalOrigin } from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
+
+export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
 
 export type FeatureIds =
   | 'users'
@@ -21,17 +16,19 @@ export type FeatureIds =
   | 'requests'
   | 'feature-flags'
   // Boolean features
-  | 'rbac'
-  | 'sso'
-  | 'security'
-  | 'support'
   | 'ai'
-  | 'oidc'
-  | 'scim'
-  | 'field-pruning-grace-period'
   | 'cache-warmer'
+  | 'composition-ignore-external-keys' // COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
+  | 'field-pruning-grace-period'
+  | 'oidc'
+  | 'plugins'
   | 'proposals'
-  | 'plugins';
+  | 'rbac'
+  | 'scim'
+  | 'security'
+  | 'sso'
+  | 'subgraph-check-extensions'
+  | 'support';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -224,6 +221,8 @@ export interface SchemaCheckDTO {
   breakingChangesSkipped: boolean;
   errorMessage?: string;
   linkedChecks: LinkedCheckDTO[];
+  checkExtensionDeliveryId: string | undefined;
+  checkExtensionErrorMessage: string | undefined;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -250,6 +249,14 @@ export interface SchemaCheckDetailsDTO {
   }[];
   compositionErrors: string[];
   compositionWarnings: string[];
+  composedSchemaBreakingChanges: {
+    id: string;
+    message: string;
+    changeType: string;
+    path?: string;
+    isBreaking: boolean;
+    federatedGraphName: string;
+  }[];
 }
 
 export interface OrganizationDTO {
@@ -315,6 +322,7 @@ export interface OrganizationInvitationDTO {
   email: string;
   invitedBy?: string;
   groups: { groupId: string; kcGroupId: string | null }[];
+  lastSentAt?: Date;
 }
 
 export interface APIKeyDTO {
@@ -322,6 +330,7 @@ export interface APIKeyDTO {
   name: string;
   createdAt: string;
   lastUsedAt: string;
+  external: boolean;
   expiresAt: string;
   createdBy: string;
   group: { id: string; name: string } | undefined;
@@ -539,6 +548,7 @@ export interface ClientDTO {
 export interface PersistedOperationWithClientDTO {
   id: string;
   operationId: string;
+  operationNames: string[];
   hash: string;
   filePath: string;
   createdAt: string;
@@ -646,10 +656,8 @@ export interface MailerParams {
   smtpPassword: string;
 }
 
-type LintRuleType = Record<LintRuleEnum, LintRuleEnum>;
-
 // when the rules are changed, it has to be changed in the constants.ts file in the studio to maintain consistency.
-export const LintRules: LintRuleType = {
+export const LintRules = {
   FIELD_NAMES_SHOULD_BE_CAMEL_CASE: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
   TYPE_NAMES_SHOULD_BE_PASCAL_CASE: 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
   SHOULD_NOT_HAVE_TYPE_PREFIX: 'SHOULD_NOT_HAVE_TYPE_PREFIX',
@@ -668,7 +676,9 @@ export const LintRules: LintRuleType = {
   DISALLOW_CASE_INSENSITIVE_ENUM_VALUES: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
   NO_TYPENAME_PREFIX_IN_TYPE_FIELDS: 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
   REQUIRE_DEPRECATION_REASON: 'REQUIRE_DEPRECATION_REASON',
-};
+} as const;
+
+export type LintRule = keyof typeof LintRules;
 
 export type Severity = 1 | 2;
 export type LintSeverityLevel = 'warn' | 'error';
@@ -681,7 +691,7 @@ export interface RulesConfig {
 }
 
 export interface LintIssueResult {
-  lintRuleType: LintRuleEnum | undefined;
+  lintRuleType: LintRule | undefined;
   severity: LintSeverity;
   message: string;
   issueLocation: {
@@ -694,7 +704,7 @@ export interface LintIssueResult {
 
 export interface SchemaLintDTO {
   severity: LintSeverityLevel;
-  ruleName: LintRuleEnum;
+  ruleName: LintRule;
 }
 
 export interface SchemaLintIssues {
@@ -749,6 +759,7 @@ export interface Field {
     endColumn?: number;
   };
   isDeprecated: boolean;
+  deprecationReason?: string;
 }
 export interface S3StorageOptions {
   url: string;
@@ -769,6 +780,7 @@ export interface NamespaceDTO {
   enableCacheWarmer: boolean;
   checksTimeframeInDays?: number;
   enableProposals: boolean;
+  enableSubgraphCheckExtensions: boolean;
 }
 
 export interface ProposalDTO {
@@ -792,7 +804,3 @@ export interface ProposalSubgraphDTO {
   isNew: boolean;
   labels: Label[];
 }
-
-export type CompositionOptions = {
-  disableResolvabilityValidation: boolean;
-};

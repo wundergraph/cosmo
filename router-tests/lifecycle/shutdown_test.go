@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	integration "github.com/wundergraph/cosmo/router-tests"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/goleak"
@@ -17,8 +17,10 @@ import (
 
 func TestShutdownGoroutineLeaks(t *testing.T) {
 	defer goleak.VerifyNone(t,
-		goleak.IgnoreTopFunction("github.com/hashicorp/consul/sdk/freeport.checkFreedPorts"), // Freeport, spawned by init
-		goleak.IgnoreAnyFunction("net/http.(*conn).serve"),                                   // HTTPTest server I can't close if I want to keep the problematic goroutine open for the test
+		// Freeport, spawned by init
+		goleak.IgnoreTopFunction("github.com/wundergraph/cosmo/router-tests/freeport.checkFreedPorts"),
+		// HTTPTest server I can't close if I want to keep the problematic goroutine open for the test
+		goleak.IgnoreAnyFunction("net/http.(*conn).serve"),
 	)
 
 	xEnv, err := testenv.CreateTestEnv(t, &testenv.Config{
@@ -29,13 +31,13 @@ func TestShutdownGoroutineLeaks(t *testing.T) {
 			core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 				Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 					"employees": {
-						MaxIdleConns: integration.ToPtr(10),
+						MaxIdleConns: testutils.ToPtr(10),
 					},
 					"products": {
-						MaxIdleConns: integration.ToPtr(10),
+						MaxIdleConns: testutils.ToPtr(10),
 					},
 					"mood": {
-						MaxIdleConns: integration.ToPtr(10),
+						MaxIdleConns: testutils.ToPtr(10),
 					},
 				},
 			})),

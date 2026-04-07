@@ -1,41 +1,32 @@
-import withMarkdoc from "@markdoc/next.js";
-import { withSentryConfig } from "@sentry/nextjs";
-import pkg from "./package.json" with { type: "json" };
+import withMarkdoc from '@markdoc/next.js';
+import { withSentryConfig } from '@sentry/nextjs';
+import pkg from './package.json' with { type: 'json' };
 
-const isPreview = process.env.VERCEL_ENV === "preview";
+const isPreview = process.env.VERCEL_ENV === 'preview';
+const isProduction = process.env.NODE_ENV === 'production';
 // Allow it only for development once https://github.com/vercel/next.js/issues/23587 is fixed
 const allowUnsafeEval = true;
 // Report CSP violations to the console instead of blocking them
 const debugCSP = false;
 // Enable or disable the sentry integration
-const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === "true";
-const isSentryFeatureReplayEnabled =
-  isSentryEnabled && process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === "true";
-const clientTracesSampleRate = parseFloat(
-  process.env.NEXT_PUBLIC_SENTRY_CLIENT_TRACES_SAMPLE_RATE || "0",
-);
-const serverSampleRate = parseFloat(
-  process.env.SENTRY_SERVER_SAMPLE_RATE || "0",
-);
+const isSentryEnabled = process.env.NEXT_PUBLIC_SENTRY_ENABLED === 'true';
+const isSentryFeatureReplayEnabled = isSentryEnabled && process.env.NEXT_PUBLIC_SENTRY_REPLAY_ENABLED === 'true';
+const clientTracesSampleRate = parseFloat(process.env.NEXT_PUBLIC_SENTRY_CLIENT_TRACES_SAMPLE_RATE || '0');
+const serverSampleRate = parseFloat(process.env.SENTRY_SERVER_SAMPLE_RATE || '0');
 
-const isSentryTracesEnabled =
-  clientTracesSampleRate > 0 || serverSampleRate > 0;
+const isSentryTracesEnabled = clientTracesSampleRate > 0 || serverSampleRate > 0;
 
-const sentryDebugEnabled = process.env.SENTRY_DEBUG === "true";
-const sentryOrganization = process.env.SENTRY_ORG || "";
-const sentryProject = process.env.SENTRY_PROJECT || "";
-const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || "";
+const sentryDebugEnabled = process.env.SENTRY_DEBUG === 'true';
+const sentryOrganization = process.env.SENTRY_ORG || '';
+const sentryProject = process.env.SENTRY_PROJECT || '';
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN || '';
 
 if (isSentryEnabled) {
-  if (sentryAuthToken === "") {
-    throw Error(
-      "SENTRY_AUTH_TOKEN please ensure it's set during build time when using sentry!",
-    );
+  if (sentryAuthToken === '') {
+    throw Error("SENTRY_AUTH_TOKEN please ensure it's set during build time when using sentry!");
   }
-  if (sentryOrganization === "" || sentryProject === "") {
-    throw Error(
-      "SENTRY_ORG or SENTRY_PROJECT not set please check your environment variables!",
-    );
+  if (sentryOrganization === '' || sentryProject === '') {
+    throw Error('SENTRY_ORG or SENTRY_PROJECT not set please check your environment variables!');
   }
 }
 
@@ -50,26 +41,34 @@ if (isSentryEnabled) {
 // Important: 'unsafe-eval' is only used in development mode, when script is injected by Next.js
 
 const lightweightCspHeader = `
-  style-src 'report-sample' 'self' 'unsafe-inline' data:;
+  style-src 'report-sample' 'self' 'unsafe-inline' data: ${isPreview || isProduction ? 'https://vercel.live' : ''};
   object-src 'none';
   base-uri 'self';
-  font-src 'self' data:;
-  frame-src 'self' https://js.stripe.com https://hooks.stripe.com ${
-    isPreview ? "https://vercel.live/ https://vercel.com" : ""
+  font-src 'self' data:${isPreview || isProduction ? ' https://vercel.live https://assets.vercel.com' : ''};
+  frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com${
+    isPreview || isProduction ? ' https://vercel.live https://vercel.com' : ''
   };
-  img-src 'self'${
-    isPreview
-      ? " https://vercel.live/ https://vercel.com *.pusher.com/ data: blob:"
-      : ""
-  } *.ads.linkedin.com;
+  img-src 'self' https://wundergraph.com ${
+    isPreview || isProduction ? ' https://vercel.live/ https://vercel.com *.pusher.com data: blob:' : ''
+  } *.ads.linkedin.com *.google.com;
    script-src 'report-sample' 'self' 'unsafe-inline' ${
-     allowUnsafeEval ? "'unsafe-eval'" : ""
+     allowUnsafeEval ? "'unsafe-eval'" : ''
    } https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://static.reo.dev${
-     isPreview ? " https://vercel.live https://vercel.com" : ""
-   } https://www.googletagmanager.com https://snap.licdn.com;
-  manifest-src 'self';
-  media-src 'self';
-  worker-src 'self' ${isSentryFeatureReplayEnabled ? "blob:" : ""};
+     isPreview || isProduction ? ' https://vercel.live https://vercel.com' : ''
+   } ${
+     isProduction
+       ? [
+           'https://www.googletagmanager.com',
+           'https://snap.licdn.com',
+           'https://cmp.osano.com',
+           'https://googleads.g.doubleclick.net',
+           'https://*.clarity.ms',
+         ].join(' ')
+       : ''
+   };
+    manifest-src 'self';
+    media-src 'self';
+    worker-src 'self'${isSentryFeatureReplayEnabled ? ' blob:' : ''};
 `;
 
 /**
@@ -83,7 +82,7 @@ const lightweightCspHeader = `
 //   connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
 //     process.env.NEXT_PUBLIC_COSMO_CP_URL
 //   } https://*.wundergraph.com wss://*.wundergraph.com https://plausible.io https://api.stripe.com https://maps.googleapis.com ${
-//     isPreview
+//     isPreview || isProduction
 //       ? "https://vercel.live https://vercel.com *.pusher.com *.pusherapp.com"
 //       : ""
 //   };
@@ -92,7 +91,16 @@ const lightweightCspHeader = `
 
 /** @type {import("next").NextConfig} */
 const config = {
-  output: "standalone",
+  output: 'standalone',
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'wundergraph.com',
+        pathname: '/images/**',
+      },
+    ],
+  },
   // This is done to reduce the production build size
   // see: https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/tree-shaking/
   webpack: (config, { webpack }) => {
@@ -107,33 +115,31 @@ const config = {
 
     config.resolve.alias = {
       ...config.resolve.alias,
-      graphql$: "graphql/index.js",
+      graphql$: 'graphql/index.js',
     };
 
     return config;
   },
-  pageExtensions: ["md", "mdoc", "js", "jsx", "ts", "tsx"],
+  pageExtensions: ['md', 'mdoc', 'js', 'jsx', 'ts', 'tsx'],
   publicRuntimeConfig: {
     version: pkg.version,
   },
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: '/(.*)',
         headers: [
           {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
           },
           {
-            key: "X-Frame-Options",
-            value: "DENY",
+            key: 'X-Frame-Options',
+            value: 'DENY',
           },
           {
-            key: debugCSP
-              ? "Content-Security-Policy-Report-Only"
-              : "Content-Security-Policy",
-            value: lightweightCspHeader.replace(/\n/g, ""),
+            key: debugCSP ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy',
+            value: lightweightCspHeader.replace(/\n/g, ''),
           },
         ],
       },
@@ -142,16 +148,16 @@ const config = {
   async rewrites() {
     return [
       {
-        source: "/ingest/static/:path*",
-        destination: "https://eu-assets.i.posthog.com/static/:path*",
+        source: '/ingest/static/:path*',
+        destination: 'https://eu-assets.i.posthog.com/static/:path*',
       },
       {
-        source: "/ingest/:path*",
-        destination: "https://eu.i.posthog.com/:path*",
+        source: '/ingest/:path*',
+        destination: 'https://eu.i.posthog.com/:path*',
       },
       {
-        source: "/ingest/decide",
-        destination: "https://eu.i.posthog.com/decide",
+        source: '/ingest/decide',
+        destination: 'https://eu.i.posthog.com/decide',
       },
     ];
   },
@@ -206,13 +212,9 @@ const withOptionalSentryConfig = (org, project, config) =>
 
 const withOptionalFeatures = (config) => {
   if (isSentryEnabled) {
-    config = withOptionalSentryConfig(
-      sentryOrganization,
-      sentryProject,
-      config,
-    );
+    config = withOptionalSentryConfig(sentryOrganization, sentryProject, config);
   }
   return config;
 };
 
-export default withOptionalFeatures(withMarkdoc({ mode: "static" })(config));
+export default withOptionalFeatures(withMarkdoc({ mode: 'static' })(config));

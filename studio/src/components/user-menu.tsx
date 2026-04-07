@@ -4,13 +4,51 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useUser } from "@/hooks/use-user";
-import { resetTracking } from "@/lib/track";
-import Link from "next/link";
-import { ThemeToggle } from "./theme-toggle";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Button } from "./ui/button";
+} from '@/components/ui/dropdown-menu';
+import { useUser } from '@/hooks/use-user';
+import { resetTracking } from '@/lib/track';
+import Link from 'next/link';
+import { ThemeToggle } from './theme-toggle';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { Button } from './ui/button';
+import { PropsWithChildren } from 'react';
+
+const localStorageKeysToRemove = [
+  'graphiql:headers',
+  'graphiql:queries',
+  'graphiql:tabState',
+  'graphiql:variables',
+  'graphiql:query',
+  'graphiql:operationName',
+  'playground:pre-flight:selected',
+  'playground:pre-operation:selected',
+  'playground:post-operation:selected',
+  'playground:script:tabState',
+];
+
+function removeLocalStorageItems() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  for (const key of localStorageKeysToRemove) {
+    window.localStorage.removeItem(key);
+  }
+}
+
+const LogoutLink = ({ children }: PropsWithChildren) => {
+  return (
+    <Link
+      onClick={() => {
+        removeLocalStorageItems();
+        resetTracking();
+      }}
+      href={process.env.NEXT_PUBLIC_COSMO_CP_URL + '/v1/auth/logout'}
+    >
+      {children || 'Logout'}
+    </Link>
+  );
+};
 
 export const UserMenuMobile = () => {
   const user = useUser();
@@ -21,14 +59,7 @@ export const UserMenuMobile = () => {
     <div className="flex flex-col items-center justify-center gap-y-4">
       <p className="text-sm font-bold">{user.email}</p>
       <Button>
-        <Link
-          onClick={() => {
-            resetTracking();
-          }}
-          href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/logout"}
-        >
-          Logout
-        </Link>
+        <LogoutLink />
       </Button>
     </div>
   );
@@ -52,7 +83,7 @@ export const UserMenu = () => {
             </AvatarFallback>
           </Avatar>
           {hasInvitations ? (
-            <div className="absolute right-0 top-0 -translate-x-0.5 -translate-y-0.5 rounded-full border-2 border-background pointer-events-none">
+            <div className="pointer-events-none absolute right-0 top-0 -translate-x-0.5 -translate-y-0.5 rounded-full border-2 border-background">
               <div className="absolute size-2 animate-ping rounded-full bg-blue-400" />
               <div className="size-2 rounded-full bg-blue-400" />
             </div>
@@ -60,9 +91,7 @@ export const UserMenu = () => {
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[180px]">
-        <p className="cursor-text truncate px-2 py-1.5 text-sm font-semibold">
-          {user.email}
-        </p>
+        <p className="cursor-text truncate px-2 py-1.5 text-sm font-semibold">{user.email}</p>
         <Link href="/account/invitations">
           <DropdownMenuItem>
             Invitations
@@ -77,9 +106,9 @@ export const UserMenu = () => {
         <DropdownMenuSeparator />
         <ThemeToggle />
         <DropdownMenuSeparator />
-        <Link href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/logout"}>
+        <LogoutLink>
           <DropdownMenuItem>Logout</DropdownMenuItem>
-        </Link>
+        </LogoutLink>
       </DropdownMenuContent>
     </DropdownMenu>
   );

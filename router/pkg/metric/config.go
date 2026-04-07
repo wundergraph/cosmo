@@ -3,6 +3,7 @@ package metric
 import (
 	"net/url"
 	"regexp"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -25,6 +26,7 @@ type PrometheusConfig struct {
 	GraphqlCache    bool
 	EngineStats     EngineStatsConfig
 	CircuitBreaker  bool
+	CostStats       config.CostStats
 	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from Prometheus exporter
@@ -41,6 +43,14 @@ type PrometheusConfig struct {
 type PrometheusSchemaFieldUsage struct {
 	Enabled             bool
 	IncludeOperationSha bool
+	Exporter            PrometheusSchemaFieldUsageExporter
+}
+
+type PrometheusSchemaFieldUsageExporter struct {
+	BatchSize     int
+	QueueSize     int
+	Interval      time.Duration
+	ExportTimeout time.Duration
 }
 
 type OpenTelemetryExporter struct {
@@ -66,12 +76,22 @@ func (e *EngineStatsConfig) Enabled() bool {
 	return e.Subscription
 }
 
+type LogExporterConfig struct {
+	Enabled        bool
+	ExcludeMetrics []*regexp.Regexp
+	// IncludeMetrics is an allowlist. If set, only metrics matching these patterns are logged.
+	IncludeMetrics []*regexp.Regexp
+	// ExportInterval overrides the default export interval. If zero, the default interval is used.
+	ExportInterval time.Duration
+}
+
 type OpenTelemetry struct {
 	Enabled         bool
 	ConnectionStats bool
 	RouterRuntime   bool
 	GraphqlCache    bool
 	CircuitBreaker  bool
+	CostStats       config.CostStats
 	EngineStats     EngineStatsConfig
 	Exporters       []*OpenTelemetryExporter
 	// Metrics to exclude from the OTLP exporter.
@@ -79,8 +99,9 @@ type OpenTelemetry struct {
 	// Metric labels to exclude from the OTLP exporter.
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
-	TestReader sdkmetric.Reader
-	Streams    bool
+	TestReader  sdkmetric.Reader
+	Streams     bool
+	LogExporter LogExporterConfig
 }
 
 func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {

@@ -1,26 +1,27 @@
 import {
   buildASTSchema,
-  ConstDirectiveNode,
-  ConstObjectValueNode,
-  DirectiveDefinitionNode,
-  DocumentNode,
-  GraphQLSchema,
+  type ConstDirectiveNode,
+  type ConstObjectValueNode,
+  type DefinitionNode,
+  type DirectiveDefinitionNode,
+  type DocumentNode,
+  type GraphQLSchema,
   Kind,
-  ListTypeNode,
-  NamedTypeNode,
-  NonNullTypeNode,
-  StringValueNode,
-  TypeNode,
+  type ListTypeNode,
+  type NamedTypeNode,
+  type NonNullTypeNode,
+  type StringValueNode,
+  type TypeNode,
 } from 'graphql';
 import {
   getMutableTypeNode,
   getTypeNodeNamedTypeName,
-  MutableEnumValueNode,
-  MutableFieldNode,
-  MutableInputValueNode,
-  MutableIntermediateTypeNode,
-  MutableTypeDefinitionNode,
-  MutableTypeNode,
+  type MutableDefinitionNode,
+  type MutableEnumValueNode,
+  type MutableFieldNode,
+  type MutableInputValueNode,
+  type MutableIntermediateTypeNode,
+  type MutableTypeNode,
 } from '../../schema-building/ast';
 import { stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
@@ -33,7 +34,7 @@ import {
   incompatibleFederatedFieldNamedTypeError,
   incompatibleMergedTypesError,
   incompatibleParentKindFatalError,
-  incompatibleParentKindMergeError,
+  incompatibleParentTypeMergeError,
   incompatibleSharedEnumError,
   invalidFieldShareabilityError,
   invalidImplementedTypeError,
@@ -74,18 +75,23 @@ import {
   unknownNamedTypeError,
 } from '../../errors/errors';
 import {
-  ChildTagData,
-  FederationFactoryParams,
+  type ChildTagData,
   getDescriptionFromString,
-  InterfaceImplementationData,
-  InterfaceObjectForInternalGraphOptions,
+  type InterfaceImplementationData,
+  type InterfaceObjectForInternalGraphOptions,
   newChildTagData,
   newParentTagData,
-  ParentTagData,
-  SubscriptionFilterData,
+  type ParentTagData,
+  type SubscriptionFilterData,
   validateImplicitFieldSets,
 } from './utils';
-import { SUBSCRIPTION_FILTER_INPUT_NAMES, SUBSCRIPTION_FILTER_LIST_INPUT_NAMES } from '../utils/string-constants';
+import {
+  CLIENT_PERSISTED_DIRECTIVE_NAMES,
+  DEPENDENCIES_BY_DIRECTIVE_NAME,
+  IGNORED_FEDERATED_TYPE_NAMES,
+  SUBSCRIPTION_FILTER_INPUT_NAMES,
+  SUBSCRIPTION_FILTER_LIST_INPUT_NAMES,
+} from '../constants/strings';
 import {
   getNodeCoords,
   isNodeLeaf,
@@ -101,56 +107,44 @@ import {
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
-  FieldConfiguration,
-  RequiredFieldConfiguration,
-  SubscriptionCondition,
-  SubscriptionFieldCondition,
-  SubscriptionFilterValue,
+  type FieldConfiguration,
+  type RequiredFieldConfiguration,
+  type SubscriptionCondition,
+  type SubscriptionFieldCondition,
+  type SubscriptionFilterValue,
 } from '../../router-configuration/types';
-import {
-  AUTHENTICATED_DEFINITION,
-  BASE_SCALARS,
-  DEPRECATED_DEFINITION,
-  INACCESSIBLE_DEFINITION,
-  MAX_OR_SCOPES,
-  ONE_OF_DEFINITION,
-  REQUIRES_SCOPES_DEFINITION,
-  SCOPE_SCALAR_DEFINITION,
-  SEMANTIC_NON_NULL_DEFINITION,
-  TAG_DEFINITION,
-} from '../utils/constants';
+import { BASE_SCALARS, DIRECTIVE_DEFINITION_BY_NAME, MAX_OR_SCOPES } from '../constants/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
 import { isNodeQuery } from '../normalization/utils';
 import {
-  AuthorizationData,
-  ChildData,
-  CompositeOutputData,
-  EntityData,
-  EntityInterfaceFederationData,
-  EnumValueData,
+  type AuthorizationData,
+  type ChildData,
+  type CompositeOutputData,
+  type EntityData,
+  type EntityInterfaceFederationData,
+  type EnumValueData,
   ExtensionType,
-  FieldData,
-  InputObjectDefinitionData,
-  InputValueData,
-  InterfaceDefinitionData,
-  NodeData,
-  ObjectDefinitionData,
-  ParentDefinitionData,
-  PersistedDirectiveDefinitionData,
-  ScalarDefinitionData,
-  UnionDefinitionData,
+  type FieldData,
+  type InputObjectDefinitionData,
+  type InputValueData,
+  type InterfaceDefinitionData,
+  type NodeData,
+  type ObjectDefinitionData,
+  type ParentDefinitionData,
+  type PersistedDirectiveDefinitionData,
+  type PersistedDirectivesData,
+  type ScalarDefinitionData,
+  type UnionDefinitionData,
 } from '../../schema-building/types';
 import {
   addValidPersistedDirectiveDefinitionNodeByData,
   areKindsEqual,
   compareAndValidateInputValueDefaultValues,
-  extractPersistedDirectives,
   generateDeprecatedDirective,
   getClientPersistedDirectiveNodes,
   getClientSchemaFieldNodeByFieldData,
   getDefinitionDataCoords,
   getInitialFederatedDescription,
-  getNodeForRouterSchemaByData,
   getSubscriptionFilterValue,
   isFieldData,
   isLeafKind,
@@ -167,6 +161,8 @@ import {
   setLongestDescription,
   setMutualExecutableLocations,
   setParentDataExtensionType,
+  upsertDeprecatedDirective,
+  upsertTagDirectives,
   validateExternalAndShareable,
 } from '../../schema-building/utils';
 
@@ -174,23 +170,24 @@ import { renameRootTypes } from './walkers';
 import { cloneDeep } from 'lodash';
 import {
   DivergentType,
-  FederateTypeParams,
-  FederateTypeResult,
+  type FederateTypeParams,
+  type FederateTypeResult,
   getMostRestrictiveMergedTypeNode,
 } from '../schema-building/type-merging';
-import { Graph } from '../../resolvability-graph/graph';
-import { GraphNode } from '../../resolvability-graph/graph-nodes';
-import { InternalSubgraph, SubgraphConfig } from '../../subgraph/types';
-import { Warning } from '../../warnings/types';
+import { type Graph } from '../../resolvability-graph/graph';
+import { type GraphNode } from '../../resolvability-graph/graph-nodes';
+import { type InternalSubgraph, type SubgraphConfig } from '../../subgraph/types';
+import { type Warning } from '../../warnings/types';
 import {
-  ContractTagOptions,
-  FederationResult,
-  FederationResultWithContracts,
-  MutualParentDefinitionData,
+  type ContractTagOptions,
+  type FederationResult,
+  type FederationResultWithContracts,
+  type MutualParentDefinitionData,
 } from '../../federation/types';
 import {
   AND_UPPER,
   AUTHENTICATED,
+  AUTHORIZATION_DIRECTIVES,
   CONDITION,
   DEPRECATED,
   ENUM_VALUE,
@@ -201,12 +198,13 @@ import {
   INPUT_OBJECT,
   LEFT_PARENTHESIS,
   LIST,
+  LITERAL_PERIOD,
+  NON_REPEATABLE_PERSISTED_DIRECTIVES,
   NOT_UPPER,
   OBJECT,
   ONE_OF,
   OR_UPPER,
   PARENT_DEFINITION_DATA,
-  PERIOD,
   QUERY,
   REQUIRES_SCOPES,
   SEMANTIC_NON_NULL,
@@ -218,7 +216,7 @@ import {
 } from '../../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
 import {
-  addIterableValuesToSet,
+  addIterableToSet,
   addMapEntries,
   addNewObjectValueMapEntries,
   copyArrayValueMap,
@@ -231,43 +229,67 @@ import {
   getValueOrDefault,
   kindToNodeType,
 } from '../../utils/utils';
-import {
+import type {
   GraphFieldData,
   ImplementationErrors,
   InvalidEntityInterface,
   InvalidFieldImplementation,
   InvalidRequiredInputValueData,
 } from '../../utils/types';
-import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
-import { ContractName, DirectiveName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
+import {
+  type ContractName,
+  type DirectiveName,
+  type FieldCoords,
+  type FieldName,
+  type SubgraphName,
+  type TypeName,
+} from '../../types/types';
 import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
-import { ValidateOneOfDirectiveParams } from './params';
+import type {
+  ExtractPersistedDirectivesParams,
+  FederateSubgraphsContractV1Params,
+  FederateSubgraphsWithContractsV1Params,
+  FederationFactoryParams,
+  FederationParams,
+  ValidateOneOfDirectiveParams,
+} from './params';
+import {
+  AUTHENTICATED_DEFINITION,
+  DEPRECATED_DEFINITION,
+  INACCESSIBLE_DEFINITION,
+  ONE_OF_DEFINITION,
+  REQUIRES_SCOPES_DEFINITION,
+  SEMANTIC_NON_NULL_DEFINITION,
+  TAG_DEFINITION,
+} from '../constants/directive-definitions';
+import type { CompositionOptions } from '../../types/params';
 
 export class FederationFactory {
-  authorizationDataByParentTypeName: Map<string, AuthorizationData>;
-  coordsByNamedTypeName = new Map<string, Set<string>>();
-  disableResolvabilityValidation: boolean = false;
-  clientDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION];
+  authorizationDataByParentTypeName: Map<TypeName, AuthorizationData>;
+  coordsByNamedTypeName = new Map<TypeName, Set<string>>();
+  directiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
+  clientDefinitions: Array<MutableDefinitionNode | DefinitionNode> = [];
   currentSubgraphName = '';
-  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
+  concreteTypeNamesByAbstractTypeName: Map<TypeName, Set<TypeName>>;
   subgraphNamesByNamedTypeNameByFieldCoords = new Map<string, Map<string, Set<string>>>();
-  entityDataByTypeName: Map<string, EntityData>;
+  entityDataByTypeName: Map<TypeName, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
-  errors: Error[] = [];
+  errors: Array<Error> = [];
   fieldConfigurationByFieldCoords = new Map<string, FieldConfiguration>();
   fieldCoordsByNamedTypeName: Map<TypeName, Set<FieldCoords>>;
   inaccessibleCoords = new Set<string>();
   inaccessibleRequiredInputValueErrorByCoords = new Map<string, Error>();
   internalGraph: Graph;
-  internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
+  internalSubgraphBySubgraphName: Map<SubgraphName, InternalSubgraph>;
   invalidORScopesCoords = new Set<string>();
   isMaxDepth = false;
   isVersionTwo = false;
   namedInputValueTypeNames = new Set<TypeName>();
-  namedOutputTypeNames = new Set<string>();
-  parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
-  parentTagDataByTypeName = new Map<string, ParentTagData>();
-  persistedDirectiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>([
+  namedOutputTypeNames = new Set<TypeName>();
+  options: CompositionOptions;
+  parentDefinitionDataByTypeName = new Map<TypeName, ParentDefinitionData>();
+  parentTagDataByTypeName = new Map<TypeName, ParentTagData>();
+  persistedDirectiveDefinitionByDirectiveName = new Map<DirectiveName, DirectiveDefinitionNode>([
     [AUTHENTICATED, AUTHENTICATED_DEFINITION],
     [DEPRECATED, DEPRECATED_DEFINITION],
     [INACCESSIBLE, INACCESSIBLE_DEFINITION],
@@ -276,34 +298,71 @@ export class FederationFactory {
     [SEMANTIC_NON_NULL, SEMANTIC_NON_NULL_DEFINITION],
     [TAG, TAG_DEFINITION],
   ]);
-  persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   potentialPersistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
   referencedPersistedDirectiveNames = new Set<DirectiveName>();
-  routerDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION, TAG_DEFINITION];
+  routerDefinitions: Array<MutableDefinitionNode | DefinitionNode> = [];
   subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
   tagNamesByCoords = new Map<string, Set<string>>();
-  warnings: Warning[];
+  warnings: Array<Warning>;
 
   constructor({
     authorizationDataByParentTypeName,
     concreteTypeNamesByAbstractTypeName,
-    disableResolvabilityValidation,
     entityDataByTypeName,
     entityInterfaceFederationDataByTypeName,
     fieldCoordsByNamedTypeName,
     internalGraph,
     internalSubgraphBySubgraphName,
+    options,
     warnings,
   }: FederationFactoryParams) {
     this.authorizationDataByParentTypeName = authorizationDataByParentTypeName;
+    this.options = options ?? {};
     this.concreteTypeNamesByAbstractTypeName = concreteTypeNamesByAbstractTypeName;
-    this.disableResolvabilityValidation = disableResolvabilityValidation ?? false;
     this.entityDataByTypeName = entityDataByTypeName;
     this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
     this.fieldCoordsByNamedTypeName = fieldCoordsByNamedTypeName;
     this.internalGraph = internalGraph;
     this.internalSubgraphBySubgraphName = internalSubgraphBySubgraphName;
     this.warnings = warnings;
+  }
+
+  extractPersistedDirectives({ data, directivesByName }: ExtractPersistedDirectivesParams): PersistedDirectivesData {
+    for (const [directiveName, directiveNodes] of directivesByName) {
+      const definition = this.persistedDirectiveDefinitionByDirectiveName.get(directiveName);
+      // @authenticated and @requiresScopes are handled differently
+      if (!definition) {
+        continue;
+      }
+      this.referencedPersistedDirectiveNames.add(directiveName);
+      if (AUTHORIZATION_DIRECTIVES.has(directiveName) || directiveNodes.length < 1) {
+        continue;
+      }
+      switch (directiveName) {
+        case DEPRECATED: {
+          data.isDeprecated = true;
+          upsertDeprecatedDirective(data, directiveNodes[0]);
+          break;
+        }
+        case TAG: {
+          upsertTagDirectives(data, directiveNodes);
+          break;
+        }
+        default: {
+          const existingDirectives = data.directivesByName.get(directiveName);
+          if (!existingDirectives) {
+            data.directivesByName.set(directiveName, [...directiveNodes]);
+            break;
+          }
+          // Only add one instance of certain directives.
+          if (NON_REPEATABLE_PERSISTED_DIRECTIVES.has(directiveName)) {
+            break;
+          }
+          existingDirectives.push(...directiveNodes);
+        }
+      }
+    }
+    return data;
   }
 
   getValidImplementedInterfaces(data: CompositeOutputData): NamedTypeNode[] {
@@ -552,7 +611,7 @@ export class FederationFactory {
 
   generateTagData() {
     for (const [path, tagNames] of this.tagNamesByCoords) {
-      const paths = path.split(PERIOD);
+      const paths = path.split(LITERAL_PERIOD);
       if (paths.length < 1) {
         continue;
       }
@@ -600,11 +659,10 @@ export class FederationFactory {
   ) {
     const existingData = enumValueDataByName.get(incomingData.name);
     const targetData = existingData || this.copyEnumValueData(incomingData);
-    extractPersistedDirectives(
-      targetData.persistedDirectivesData,
-      incomingData.directivesByDirectiveName,
-      this.persistedDirectiveDefinitionByDirectiveName,
-    );
+    this.extractPersistedDirectives({
+      data: targetData.persistedDirectivesData,
+      directivesByName: incomingData.directivesByName,
+    });
     const isValueInaccessible = isNodeDataInaccessible(incomingData);
     if (isParentInaccessible || isValueInaccessible) {
       this.inaccessibleCoords.add(targetData.federatedCoords);
@@ -620,7 +678,10 @@ export class FederationFactory {
       targetData.configureDescriptionDataBySubgraphName,
     );
     setLongestDescription(targetData, incomingData);
-    addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+    addIterableToSet({
+      source: incomingData.subgraphNames,
+      target: targetData.subgraphNames,
+    });
   }
 
   // To facilitate the splitting of tag paths, field arguments do not use the renamedPath property for tagNamesByPath
@@ -632,11 +693,10 @@ export class FederationFactory {
   ) {
     const existingData = inputValueDataByValueName.get(incomingData.name);
     const targetData = existingData || this.copyInputValueData(incomingData);
-    extractPersistedDirectives(
-      targetData.persistedDirectivesData,
-      incomingData.directivesByDirectiveName,
-      this.persistedDirectiveDefinitionByDirectiveName,
-    );
+    this.extractPersistedDirectives({
+      data: targetData.persistedDirectivesData,
+      directivesByName: incomingData.directivesByName,
+    });
     this.recordTagNamesByCoords(targetData, `${parentCoords}.${targetData.name}`);
     this.namedInputValueTypeNames.add(targetData.namedTypeName);
     getValueOrDefault(this.coordsByNamedTypeName, targetData.namedTypeName, () => new Set<string>()).add(
@@ -651,8 +711,14 @@ export class FederationFactory {
       targetData.configureDescriptionDataBySubgraphName,
     );
     setLongestDescription(targetData, incomingData);
-    addIterableValuesToSet(incomingData.requiredSubgraphNames, targetData.requiredSubgraphNames);
-    addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+    addIterableToSet({
+      source: incomingData.requiredSubgraphNames,
+      target: targetData.requiredSubgraphNames,
+    });
+    addIterableToSet({
+      source: incomingData.subgraphNames,
+      target: targetData.subgraphNames,
+    });
     this.handleInputValueInaccessibility(isParentInaccessible, targetData, parentCoords);
     // TODO refactor type merging
     const mergeResult = getMostRestrictiveMergedTypeNode(
@@ -700,7 +766,7 @@ export class FederationFactory {
   }
 
   handleSubscriptionFilterDirective(incomingData: FieldData, targetData?: FieldData) {
-    const subscriptionFilters = incomingData.directivesByDirectiveName.get(SUBSCRIPTION_FILTER);
+    const subscriptionFilters = incomingData.directivesByName.get(SUBSCRIPTION_FILTER);
     if (!subscriptionFilters) {
       return;
     }
@@ -798,10 +864,10 @@ export class FederationFactory {
     if (!subgraphNamesByNamedTypeName) {
       return;
     }
-    addIterableValuesToSet(
-      incomingData.subgraphNames,
-      getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
-    );
+    addIterableToSet({
+      source: incomingData.subgraphNames,
+      target: getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
+    });
   }
 
   upsertFieldData(
@@ -809,9 +875,6 @@ export class FederationFactory {
     incomingData: FieldData,
     isParentInaccessible: boolean,
   ) {
-    if (incomingData.directivesByDirectiveName.has(SEMANTIC_NON_NULL)) {
-      this.referencedPersistedDirectiveNames.add(SEMANTIC_NON_NULL);
-    }
     const existingData = fieldDataByFieldName.get(incomingData.name);
     const targetData =
       existingData || this.copyFieldData(incomingData, isParentInaccessible || isNodeDataInaccessible(incomingData));
@@ -820,11 +883,10 @@ export class FederationFactory {
     );
     this.namedOutputTypeNames.add(incomingData.namedTypeName);
     this.handleSubscriptionFilterDirective(incomingData, targetData);
-    extractPersistedDirectives(
-      targetData.persistedDirectivesData,
-      incomingData.directivesByDirectiveName,
-      this.persistedDirectiveDefinitionByDirectiveName,
-    );
+    this.extractPersistedDirectives({
+      data: targetData.persistedDirectivesData,
+      directivesByName: incomingData.directivesByName,
+    });
     const isFieldInaccessible = isParentInaccessible || isNodeDataInaccessible(targetData);
     if (isFieldInaccessible) {
       this.inaccessibleCoords.add(targetData.federatedCoords);
@@ -864,10 +926,10 @@ export class FederationFactory {
             }
           }
         }
-        addIterableValuesToSet(
-          incomingData.subgraphNames,
-          getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
-        );
+        addIterableToSet({
+          source: incomingData.subgraphNames,
+          target: getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
+        });
       } else {
         /* If the named types match but there has already been a disparity in the named type names returned by the
          * field, add the incoming subgraph name to the existing subgraph name set for that named type name.
@@ -893,9 +955,18 @@ export class FederationFactory {
       incomingData.externalFieldDataBySubgraphName,
       targetData.externalFieldDataBySubgraphName,
     );
-    addMapEntries(incomingData.isShareableBySubgraphName, targetData.isShareableBySubgraphName);
-    addMapEntries(incomingData.nullLevelsBySubgraphName, targetData.nullLevelsBySubgraphName);
-    addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+    addMapEntries({
+      source: incomingData.isShareableBySubgraphName,
+      target: targetData.isShareableBySubgraphName,
+    });
+    addMapEntries({
+      source: incomingData.nullLevelsBySubgraphName,
+      target: targetData.nullLevelsBySubgraphName,
+    });
+    addIterableToSet({
+      source: incomingData.subgraphNames,
+      target: targetData.subgraphNames,
+    });
   }
 
   getClientSchemaUnionMembers(unionData: UnionDefinitionData): NamedTypeNode[] {
@@ -922,14 +993,13 @@ export class FederationFactory {
   copyMutualParentDefinitionData(sourceData: ParentDefinitionData): MutualParentDefinitionData {
     return {
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
-      directivesByDirectiveName: copyArrayValueMap(sourceData.directivesByDirectiveName),
+      directivesByName: copyArrayValueMap(sourceData.directivesByName),
       extensionType: sourceData.extensionType,
       name: sourceData.name,
-      persistedDirectivesData: extractPersistedDirectives(
-        newPersistedDirectivesData(),
-        sourceData.directivesByDirectiveName,
-        this.persistedDirectiveDefinitionByDirectiveName,
-      ),
+      persistedDirectivesData: this.extractPersistedDirectives({
+        data: newPersistedDirectivesData(),
+        directivesByName: sourceData.directivesByName,
+      }),
       description: getInitialFederatedDescription(sourceData),
     };
   }
@@ -939,7 +1009,7 @@ export class FederationFactory {
       appearances: sourceData.appearances,
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
       federatedCoords: sourceData.federatedCoords,
-      directivesByDirectiveName: copyArrayValueMap(sourceData.directivesByDirectiveName),
+      directivesByName: copyArrayValueMap(sourceData.directivesByName),
       kind: sourceData.kind,
       name: sourceData.name,
       node: {
@@ -948,11 +1018,10 @@ export class FederationFactory {
         name: stringToNameNode(sourceData.name),
       },
       parentTypeName: sourceData.parentTypeName,
-      persistedDirectivesData: extractPersistedDirectives(
-        newPersistedDirectivesData(),
-        sourceData.directivesByDirectiveName,
-        this.persistedDirectiveDefinitionByDirectiveName,
-      ),
+      persistedDirectivesData: this.extractPersistedDirectives({
+        data: newPersistedDirectivesData(),
+        directivesByName: sourceData.directivesByName,
+      }),
       subgraphNames: new Set(sourceData.subgraphNames),
       description: getInitialFederatedDescription(sourceData),
     };
@@ -961,7 +1030,7 @@ export class FederationFactory {
   copyInputValueData(sourceData: InputValueData): InputValueData {
     return {
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
-      directivesByDirectiveName: copyArrayValueMap(sourceData.directivesByDirectiveName),
+      directivesByName: copyArrayValueMap(sourceData.directivesByName),
       federatedCoords: sourceData.federatedCoords,
       fieldName: sourceData.fieldName,
       includeDefaultValue: sourceData.includeDefaultValue,
@@ -978,11 +1047,10 @@ export class FederationFactory {
       },
       originalCoords: sourceData.originalCoords,
       originalParentTypeName: sourceData.originalParentTypeName,
-      persistedDirectivesData: extractPersistedDirectives(
-        newPersistedDirectivesData(),
-        sourceData.directivesByDirectiveName,
-        this.persistedDirectiveDefinitionByDirectiveName,
-      ),
+      persistedDirectivesData: this.extractPersistedDirectives({
+        data: newPersistedDirectivesData(),
+        directivesByName: sourceData.directivesByName,
+      }),
       renamedParentTypeName: sourceData.renamedParentTypeName,
       requiredSubgraphNames: new Set(sourceData.requiredSubgraphNames),
       subgraphNames: new Set(sourceData.subgraphNames),
@@ -1012,9 +1080,6 @@ export class FederationFactory {
   }
 
   copyFieldData(sourceData: FieldData, isInaccessible: boolean): FieldData {
-    if (sourceData.directivesByDirectiveName.has(SEMANTIC_NON_NULL)) {
-      this.referencedPersistedDirectiveNames.add(SEMANTIC_NON_NULL);
-    }
     return {
       argumentDataByName: this.copyInputValueDataByValueName(
         sourceData.argumentDataByName,
@@ -1022,7 +1087,7 @@ export class FederationFactory {
         sourceData.federatedCoords,
       ),
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
-      directivesByDirectiveName: copyArrayValueMap(sourceData.directivesByDirectiveName),
+      directivesByName: copyArrayValueMap(sourceData.directivesByName),
       externalFieldDataBySubgraphName: copyObjectValueMap(sourceData.externalFieldDataBySubgraphName),
       federatedCoords: sourceData.federatedCoords,
       // Intentionally reset; only the subgraph fields involve directive inheritance
@@ -1042,11 +1107,10 @@ export class FederationFactory {
       },
       nullLevelsBySubgraphName: sourceData.nullLevelsBySubgraphName,
       originalParentTypeName: sourceData.originalParentTypeName,
-      persistedDirectivesData: extractPersistedDirectives(
-        newPersistedDirectivesData(),
-        sourceData.directivesByDirectiveName,
-        this.persistedDirectiveDefinitionByDirectiveName,
-      ),
+      persistedDirectivesData: this.extractPersistedDirectives({
+        data: newPersistedDirectivesData(),
+        directivesByName: sourceData.directivesByName,
+      }),
       renamedParentTypeName: sourceData.renamedParentTypeName,
       subgraphNames: new Set(sourceData.subgraphNames),
       type: sourceData.type,
@@ -1199,15 +1263,14 @@ export class FederationFactory {
       }
       return targetData;
     }
-    extractPersistedDirectives(
-      existingData.persistedDirectivesData,
-      incomingData.directivesByDirectiveName,
-      this.persistedDirectiveDefinitionByDirectiveName,
-    );
+    this.extractPersistedDirectives({
+      data: existingData.persistedDirectivesData,
+      directivesByName: incomingData.directivesByName,
+    });
     return existingData;
   }
 
-  upsertParentDefinitionData(incomingData: ParentDefinitionData, subgraphName: string) {
+  upsertParentDefinitionData(incomingData: ParentDefinitionData, subgraphName: SubgraphName) {
     const entityInterfaceData = this.entityInterfaceFederationDataByTypeName.get(incomingData.name);
     const existingData = this.parentDefinitionDataByTypeName.get(incomingData.name);
     const targetData = this.getParentTargetData({ existingData, incomingData });
@@ -1217,6 +1280,15 @@ export class FederationFactory {
       this.inaccessibleCoords.add(targetData.name);
     }
     if (entityInterfaceData && entityInterfaceData.interfaceObjectSubgraphNames.has(subgraphName)) {
+      if (existingData && existingData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        this.errors.push(
+          incompatibleParentTypeMergeError({
+            existingData,
+            incomingSubgraphName: subgraphName,
+          }),
+        );
+        return;
+      }
       targetData.kind = Kind.INTERFACE_TYPE_DEFINITION;
       targetData.node.kind = Kind.INTERFACE_TYPE_DEFINITION;
     }
@@ -1232,11 +1304,11 @@ export class FederationFactory {
         incomingData.kind !== Kind.OBJECT_TYPE_DEFINITION
       ) {
         this.errors.push(
-          incompatibleParentKindMergeError(
-            targetData.name,
-            kindToNodeType(targetData.kind),
-            kindToNodeType(incomingData.kind),
-          ),
+          incompatibleParentTypeMergeError({
+            existingData: targetData,
+            incomingNodeType: kindToNodeType(incomingData.kind),
+            incomingSubgraphName: subgraphName,
+          }),
         );
         return;
       }
@@ -1254,7 +1326,10 @@ export class FederationFactory {
         }
         targetData.appearances += 1;
         targetData.isInaccessible ||= isParentInaccessible;
-        addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+        addIterableToSet({
+          source: incomingData.subgraphNames,
+          target: targetData.subgraphNames,
+        });
         for (const data of incomingData.enumValueDataByName.values()) {
           this.upsertEnumValueData(targetData.enumValueDataByName, data, isParentInaccessible);
         }
@@ -1268,7 +1343,10 @@ export class FederationFactory {
           this.propagateInaccessibilityToExistingChildren(targetData);
         }
         targetData.isInaccessible ||= isParentInaccessible;
-        addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+        addIterableToSet({
+          source: incomingData.subgraphNames,
+          target: targetData.subgraphNames,
+        });
         for (const inputValueData of incomingData.inputValueDataByName.values()) {
           this.upsertInputValueData(
             targetData.inputValueDataByName,
@@ -1288,11 +1366,14 @@ export class FederationFactory {
           this.propagateInaccessibilityToExistingChildren(targetData);
         }
         targetData.isInaccessible ||= isParentInaccessible;
-        addIterableValuesToSet(
-          compositeOutputData.implementedInterfaceTypeNames,
-          targetData.implementedInterfaceTypeNames,
-        );
-        addIterableValuesToSet(compositeOutputData.subgraphNames, targetData.subgraphNames);
+        addIterableToSet({
+          source: compositeOutputData.implementedInterfaceTypeNames,
+          target: targetData.implementedInterfaceTypeNames,
+        });
+        addIterableToSet({
+          source: compositeOutputData.subgraphNames,
+          target: targetData.subgraphNames,
+        });
         for (const fieldData of compositeOutputData.fieldDataByName.values()) {
           this.upsertFieldData(targetData.fieldDataByName, fieldData, targetData.isInaccessible);
         }
@@ -1301,12 +1382,21 @@ export class FederationFactory {
         if (!areKindsEqual(targetData, incomingData)) {
           return;
         }
-        addMapEntries(incomingData.memberByMemberTypeName, targetData.memberByMemberTypeName);
-        addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+        addMapEntries({
+          source: incomingData.memberByMemberTypeName,
+          target: targetData.memberByMemberTypeName,
+        });
+        addIterableToSet({
+          source: incomingData.subgraphNames,
+          target: targetData.subgraphNames,
+        });
         return;
       default:
         // Scalar
-        addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+        addIterableToSet({
+          source: incomingData.subgraphNames,
+          target: targetData.subgraphNames,
+        });
         return;
     }
   }
@@ -1370,7 +1460,10 @@ export class FederationFactory {
     }
     setLongestDescription(existingData, incomingData);
     existingData.repeatable &&= incomingData.repeatable;
-    addIterableValuesToSet(incomingData.subgraphNames, existingData.subgraphNames);
+    addIterableToSet({
+      source: incomingData.subgraphNames,
+      target: existingData.subgraphNames,
+    });
   }
 
   shouldUpdateFederatedFieldAbstractNamedType(abstractTypeName: string, objectTypeNames: Set<string>): boolean {
@@ -1402,7 +1495,7 @@ export class FederationFactory {
 
   handleDisparateFieldNamedTypes() {
     for (const [fieldCoordinates, subgraphNamesByNamedTypeName] of this.subgraphNamesByNamedTypeNameByFieldCoords) {
-      const coordinates = fieldCoordinates.split(PERIOD);
+      const coordinates = fieldCoordinates.split(LITERAL_PERIOD);
       if (coordinates.length !== 2) {
         continue;
       }
@@ -1640,7 +1733,10 @@ export class FederationFactory {
           entityData.subgraphNames.add(subgraphName);
           const configurationData = configurationDataByTypeName.get(concreteTypeName);
           if (configurationData) {
-            addIterableValuesToSet(interfaceObjectConfiguration.fieldNames, configurationData.fieldNames);
+            addIterableToSet({
+              source: interfaceObjectConfiguration.fieldNames,
+              target: configurationData.fieldNames,
+            });
             if (!configurationData.keys) {
               configurationData.keys = [...keys];
             } else {
@@ -1724,6 +1820,7 @@ export class FederationFactory {
 
   fieldDataToGraphFieldData(fieldData: FieldData): GraphFieldData {
     return {
+      externalSubgraphNames: new Set<SubgraphName>(),
       name: fieldData.name,
       namedTypeName: fieldData.namedTypeName,
       isLeaf: isNodeLeaf(this.parentDefinitionDataByTypeName.get(fieldData.namedTypeName)?.kind),
@@ -1734,7 +1831,7 @@ export class FederationFactory {
   getValidFlattenedPersistedDirectiveNodeArray(data: NodeData): Array<ConstDirectiveNode> {
     const coords = getNodeCoords(data);
     const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
-    for (const [directiveName, directiveNodes] of data.persistedDirectivesData.directivesByDirectiveName) {
+    for (const [directiveName, directiveNodes] of data.persistedDirectivesData.directivesByName) {
       if (directiveName === SEMANTIC_NON_NULL && isFieldData(data)) {
         persistedDirectiveNodes.push(
           generateSemanticNonNullDirective(getFirstEntry(data.nullLevelsBySubgraphName) ?? new Set<number>([0])),
@@ -1872,7 +1969,7 @@ export class FederationFactory {
   }
 
   validateOneOfDirective({ data, inputValueNodes, requiredFieldNames }: ValidateOneOfDirectiveParams): boolean {
-    if (!data.directivesByDirectiveName.has(ONE_OF)) {
+    if (!data.directivesByName.has(ONE_OF)) {
       return true;
     }
     if (requiredFieldNames.size > 0) {
@@ -1902,16 +1999,15 @@ export class FederationFactory {
       }
       switch (parentDefinitionData.kind) {
         case Kind.ENUM_TYPE_DEFINITION: {
+          if (IGNORED_FEDERATED_TYPE_NAMES.has(parentTypeName)) {
+            break;
+          }
           const enumValueNodes: Array<MutableEnumValueNode> = [];
           const clientEnumValueNodes: Array<MutableEnumValueNode> = [];
           const mergeMethod = this.getEnumValueMergeMethod(parentTypeName);
           propagateAuthDirectives(parentDefinitionData, this.authorizationDataByParentTypeName.get(parentTypeName));
           for (const enumValueData of parentDefinitionData.enumValueDataByName.values()) {
-            const enumValueNode = getNodeForRouterSchemaByData(
-              enumValueData,
-              this.persistedDirectiveDefinitionByDirectiveName,
-              this.errors,
-            );
+            const enumValueNode = this.getNodeForRouterSchemaByData(enumValueData);
             const isValueInaccessible = isNodeDataInaccessible(enumValueData);
             const clientEnumValueNode: MutableEnumValueNode = {
               ...enumValueData.node,
@@ -1968,6 +2064,9 @@ export class FederationFactory {
           break;
         }
         case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
+          if (IGNORED_FEDERATED_TYPE_NAMES.has(parentTypeName)) {
+            break;
+          }
           const invalidRequiredInputs = new Array<InvalidRequiredInputValueData>();
           const inputValueNodes = new Array<MutableInputValueNode>();
           const clientInputValueNodes = new Array<MutableInputValueNode>();
@@ -2105,7 +2204,7 @@ export class FederationFactory {
           break;
         }
         case Kind.SCALAR_TYPE_DEFINITION: {
-          if (BASE_SCALARS.has(parentTypeName)) {
+          if (IGNORED_FEDERATED_TYPE_NAMES.has(parentTypeName)) {
             break;
           }
           propagateAuthDirectives(parentDefinitionData, this.authorizationDataByParentTypeName.get(parentTypeName));
@@ -2156,7 +2255,7 @@ export class FederationFactory {
       }
       for (const coords of fieldCoords) {
         // The coords should all be exactly <parentTypeName>.<fieldName>
-        const segments = coords.split(PERIOD);
+        const segments = coords.split(LITERAL_PERIOD);
         switch (segments.length) {
           case 2: {
             const parentAuthData = getValueOrDefault(this.authorizationDataByParentTypeName, segments[0], () =>
@@ -2196,7 +2295,7 @@ export class FederationFactory {
     this.handleEntityInterfaces();
     // generate the map of tag data that is used by contracts
     this.generateTagData();
-    this.pushVersionTwoDirectiveDefinitionsToDocumentDefinitions();
+    this.#addDirectiveDefinitionsAndDepsToRouterAndClientSchemas();
     // The named type auth data can only be pushed to the field once it has all been consolidated
     this.pushNamedTypeAuthDataToFields();
   }
@@ -2206,9 +2305,7 @@ export class FederationFactory {
   ) {
     for (const { data, clientSchemaFieldNodes } of interfaceImplementations) {
       data.node.interfaces = this.getValidImplementedInterfaces(data);
-      this.routerDefinitions.push(
-        getNodeForRouterSchemaByData(data, this.persistedDirectiveDefinitionByDirectiveName, this.errors),
-      );
+      this.routerDefinitions.push(this.getNodeForRouterSchemaByData(data));
       if (isNodeDataInaccessible(data)) {
         this.validateReferencesOfInaccessibleType(data);
         this.internalGraph.setNodeInaccessible(data.name);
@@ -2233,38 +2330,31 @@ export class FederationFactory {
     }
   }
 
-  pushVersionTwoDirectiveDefinitionsToDocumentDefinitions() {
-    if (!this.isVersionTwo) {
-      if (this.referencedPersistedDirectiveNames.has(SEMANTIC_NON_NULL)) {
-        this.clientDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
-        // Recreate the array until all directive imports are usage-based.
-        this.routerDefinitions = [DEPRECATED_DEFINITION, SEMANTIC_NON_NULL_DEFINITION, TAG_DEFINITION];
+  #addDirectiveDefinitionsAndDepsToRouterAndClientSchemas() {
+    const clientDependencies = new Set<DefinitionNode>();
+    const routerDependencies = new Set<DefinitionNode>();
+    for (const directiveName of this.referencedPersistedDirectiveNames) {
+      const definition = DIRECTIVE_DEFINITION_BY_NAME.get(directiveName);
+      if (!definition) {
+        continue;
       }
-      return;
+      const dependencies = DEPENDENCIES_BY_DIRECTIVE_NAME.get(directiveName) ?? [];
+      this.directiveDefinitionByName.set(directiveName, definition);
+      if (CLIENT_PERSISTED_DIRECTIVE_NAMES.has(directiveName)) {
+        this.clientDefinitions.push(definition);
+        addIterableToSet({
+          source: dependencies,
+          target: clientDependencies,
+        });
+      }
+      this.routerDefinitions.push(definition);
+      addIterableToSet({
+        source: dependencies,
+        target: routerDependencies,
+      });
     }
-    if (this.referencedPersistedDirectiveNames.has(SEMANTIC_NON_NULL)) {
-      this.clientDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
-      // Recreate the array until all directive imports are usage-based.
-      this.routerDefinitions = [
-        AUTHENTICATED_DEFINITION,
-        DEPRECATED_DEFINITION,
-        INACCESSIBLE_DEFINITION,
-        REQUIRES_SCOPES_DEFINITION,
-        SEMANTIC_NON_NULL_DEFINITION,
-        TAG_DEFINITION,
-        SCOPE_SCALAR_DEFINITION,
-      ];
-      return;
-    }
-    // Recreate the array until all directive imports are usage-based.
-    this.routerDefinitions = [
-      AUTHENTICATED_DEFINITION,
-      DEPRECATED_DEFINITION,
-      INACCESSIBLE_DEFINITION,
-      REQUIRES_SCOPES_DEFINITION,
-      TAG_DEFINITION,
-      SCOPE_SCALAR_DEFINITION,
-    ];
+    this.clientDefinitions.push(...clientDependencies);
+    this.routerDefinitions.push(...routerDependencies);
   }
 
   validatePathSegmentInaccessibility(path: string): boolean {
@@ -2272,7 +2362,7 @@ export class FederationFactory {
       return false;
     }
     const coordinates = path.split(LEFT_PARENTHESIS)[0];
-    const segments = coordinates.split(PERIOD);
+    const segments = coordinates.split(LITERAL_PERIOD);
     let segment = segments[0];
     for (let i = 0; i < segments.length; i++) {
       if (this.inaccessibleCoords.has(segment)) {
@@ -2323,7 +2413,7 @@ export class FederationFactory {
     directiveSubgraphName: string,
     fieldErrorMessages: Array<string>,
   ): string[] {
-    const paths = conditionFieldPath.split(PERIOD);
+    const paths = conditionFieldPath.split(LITERAL_PERIOD);
     if (paths.length < 1) {
       fieldErrorMessages.push(
         invalidSubscriptionFieldConditionFieldPathErrorMessage(inputFieldPath, conditionFieldPath),
@@ -2791,7 +2881,7 @@ export class FederationFactory {
      * These checks can be disabled by setting `disableResolvabilityValidation` to true.
      * This should only be done for troubleshooting purposes.
      * */
-    if (!this.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
+    if (!this.options.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
       const validationResult = this.internalGraph.validate();
       if (!validationResult.success) {
         return { errors: validationResult.errors, success: false, warnings: this.warnings };
@@ -2808,25 +2898,38 @@ export class FederationFactory {
       },
       { assumeValid: true, assumeValidSDL: true },
     );
-    const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
-    for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
-      subgraphConfigBySubgraphName.set(subgraph.name, {
-        configurationDataByTypeName: subgraph.configurationDataByTypeName,
-        isVersionTwo: subgraph.isVersionTwo,
-        parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
-        schema: subgraph.schema,
+    const subgraphConfigBySubgraphName = new Map<SubgraphName, SubgraphConfig>();
+    for (const {
+      configurationDataByTypeName,
+      costs,
+      directiveDefinitionByName,
+      isVersionTwo,
+      name,
+      parentDefinitionDataByTypeName,
+      schema,
+      schemaNode,
+    } of this.internalSubgraphBySubgraphName.values()) {
+      subgraphConfigBySubgraphName.set(name, {
+        configurationDataByTypeName,
+        costs,
+        directiveDefinitionByName,
+        isVersionTwo,
+        parentDefinitionDataByTypeName,
+        schema,
+        schemaNode,
       });
     }
     for (const authorizationData of this.authorizationDataByParentTypeName.values()) {
       upsertAuthorizationConfiguration(this.fieldConfigurationByFieldCoords, authorizationData);
     }
     return {
+      directiveDefinitionByName: this.directiveDefinitionByName,
       fieldConfigurations: Array.from(this.fieldConfigurationByFieldCoords.values()),
-      subgraphConfigBySubgraphName,
       federatedGraphAST: newRouterAST,
       federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
       federatedGraphClientSchema: newClientSchema,
       parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
+      subgraphConfigBySubgraphName,
       success: true,
       warnings: this.warnings,
       ...this.getClientSchemaObjectBoolean(),
@@ -2856,7 +2959,7 @@ export class FederationFactory {
         continue;
       }
       if (!tagNames.isDisjointFrom(childTagData.tagNames)) {
-        getValueOrDefault(childData.persistedDirectivesData.directivesByDirectiveName, INACCESSIBLE, () => [
+        getValueOrDefault(childData.persistedDirectivesData.directivesByName, INACCESSIBLE, () => [
           generateSimpleDirective(INACCESSIBLE),
         ]);
         this.inaccessibleCoords.add(`${parentDefinitionData.name}.${childName}`);
@@ -2864,7 +2967,7 @@ export class FederationFactory {
       }
     }
     if (accessibleChildren < 1) {
-      parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
+      parentDefinitionData.persistedDirectivesData.directivesByName.set(INACCESSIBLE, [
         generateSimpleDirective(INACCESSIBLE),
       ]);
       this.inaccessibleCoords.add(parentDefinitionData.name);
@@ -2885,7 +2988,7 @@ export class FederationFactory {
       }
       const childTagData = childTagDataByChildName.get(childName);
       if (!childTagData || tagNames.isDisjointFrom(childTagData.tagNames)) {
-        getValueOrDefault(childData.persistedDirectivesData.directivesByDirectiveName, INACCESSIBLE, () => [
+        getValueOrDefault(childData.persistedDirectivesData.directivesByName, INACCESSIBLE, () => [
           generateSimpleDirective(INACCESSIBLE),
         ]);
         this.inaccessibleCoords.add(`${parentDefinitionData.name}.${childName}`);
@@ -2893,7 +2996,7 @@ export class FederationFactory {
       }
     }
     if (accessibleChildren < 1) {
-      parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
+      parentDefinitionData.persistedDirectivesData.directivesByName.set(INACCESSIBLE, [
         generateSimpleDirective(INACCESSIBLE),
       ]);
       this.inaccessibleCoords.add(parentDefinitionData.name);
@@ -2917,7 +3020,7 @@ export class FederationFactory {
           continue;
         }
         if (!contractTagOptions.tagNamesToExclude.isDisjointFrom(parentTagData.tagNames)) {
-          parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
+          parentDefinitionData.persistedDirectivesData.directivesByName.set(INACCESSIBLE, [
             generateSimpleDirective(INACCESSIBLE),
           ]);
           this.inaccessibleCoords.add(parentTypeName);
@@ -2964,7 +3067,7 @@ export class FederationFactory {
                 continue;
               }
               if (!contractTagOptions.tagNamesToExclude.isDisjointFrom(childTagData.tagNames)) {
-                getValueOrDefault(fieldData.persistedDirectivesData.directivesByDirectiveName, INACCESSIBLE, () => [
+                getValueOrDefault(fieldData.persistedDirectivesData.directivesByName, INACCESSIBLE, () => [
                   generateSimpleDirective(INACCESSIBLE),
                 ]);
                 this.inaccessibleCoords.add(fieldData.federatedCoords);
@@ -2981,17 +3084,15 @@ export class FederationFactory {
                   continue;
                 }
                 if (!contractTagOptions.tagNamesToExclude.isDisjointFrom(argTagNames)) {
-                  getValueOrDefault(
-                    inputValueData.persistedDirectivesData.directivesByDirectiveName,
-                    INACCESSIBLE,
-                    () => [generateSimpleDirective(INACCESSIBLE)],
-                  );
+                  getValueOrDefault(inputValueData.persistedDirectivesData.directivesByName, INACCESSIBLE, () => [
+                    generateSimpleDirective(INACCESSIBLE),
+                  ]);
                   this.inaccessibleCoords.add(inputValueData.federatedCoords);
                 }
               }
             }
             if (accessibleFields < 1) {
-              parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
+              parentDefinitionData.persistedDirectivesData.directivesByName.set(INACCESSIBLE, [
                 generateSimpleDirective(INACCESSIBLE),
               ]);
               this.inaccessibleCoords.add(parentTypeName);
@@ -3006,7 +3107,7 @@ export class FederationFactory {
         }
         const parentTagData = this.parentTagDataByTypeName.get(parentTypeName);
         if (!parentTagData) {
-          parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
+          parentDefinitionData.persistedDirectivesData.directivesByName.set(INACCESSIBLE, [
             generateSimpleDirective(INACCESSIBLE),
           ]);
           this.inaccessibleCoords.add(parentTypeName);
@@ -3017,7 +3118,7 @@ export class FederationFactory {
           continue;
         }
         if (parentTagData.childTagDataByChildName.size < 1) {
-          parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
+          parentDefinitionData.persistedDirectivesData.directivesByName.set(INACCESSIBLE, [
             generateSimpleDirective(INACCESSIBLE),
           ]);
           this.inaccessibleCoords.add(parentTypeName);
@@ -3054,7 +3155,7 @@ export class FederationFactory {
               }
               const childTagData = parentTagData.childTagDataByChildName.get(fieldName);
               if (!childTagData || contractTagOptions.tagNamesToInclude.isDisjointFrom(childTagData.tagNames)) {
-                getValueOrDefault(fieldData.persistedDirectivesData.directivesByDirectiveName, INACCESSIBLE, () => [
+                getValueOrDefault(fieldData.persistedDirectivesData.directivesByName, INACCESSIBLE, () => [
                   generateSimpleDirective(INACCESSIBLE),
                 ]);
                 this.inaccessibleCoords.add(fieldData.federatedCoords);
@@ -3062,7 +3163,7 @@ export class FederationFactory {
               }
             }
             if (accessibleFields < 1) {
-              parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
+              parentDefinitionData.persistedDirectivesData.directivesByName.set(INACCESSIBLE, [
                 generateSimpleDirective(INACCESSIBLE),
               ]);
               this.inaccessibleCoords.add(parentTypeName);
@@ -3099,25 +3200,38 @@ export class FederationFactory {
       },
       { assumeValid: true, assumeValidSDL: true },
     );
-    const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
-    for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
-      subgraphConfigBySubgraphName.set(subgraph.name, {
-        configurationDataByTypeName: subgraph.configurationDataByTypeName,
-        isVersionTwo: subgraph.isVersionTwo,
-        parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
-        schema: subgraph.schema,
+    const subgraphConfigBySubgraphName = new Map<SubgraphName, SubgraphConfig>();
+    for (const {
+      configurationDataByTypeName,
+      costs,
+      directiveDefinitionByName,
+      isVersionTwo,
+      name,
+      parentDefinitionDataByTypeName,
+      schema,
+      schemaNode,
+    } of this.internalSubgraphBySubgraphName.values()) {
+      subgraphConfigBySubgraphName.set(name, {
+        configurationDataByTypeName,
+        costs,
+        directiveDefinitionByName,
+        isVersionTwo,
+        parentDefinitionDataByTypeName,
+        schema,
+        schemaNode,
       });
     }
     for (const authorizationData of this.authorizationDataByParentTypeName.values()) {
       upsertAuthorizationConfiguration(this.fieldConfigurationByFieldCoords, authorizationData);
     }
     return {
+      directiveDefinitionByName: this.directiveDefinitionByName,
       fieldConfigurations: Array.from(this.fieldConfigurationByFieldCoords.values()),
-      subgraphConfigBySubgraphName,
       federatedGraphAST: newRouterAST,
       federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
       federatedGraphClientSchema: newClientSchema,
       parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
+      subgraphConfigBySubgraphName,
       success: true,
       warnings: this.warnings,
       ...this.getClientSchemaObjectBoolean(),
@@ -3144,19 +3258,16 @@ type FederationFactoryResultFailure = {
 
 type FederationFactoryResult = FederationFactoryResultFailure | FederationFactoryResultSuccess;
 
-function initializeFederationFactory({
-  disableResolvabilityValidation,
-  subgraphs,
-}: FederationParams): FederationFactoryResult {
+function initializeFederationFactory({ options, subgraphs }: FederationParams): FederationFactoryResult {
   if (subgraphs.length < 1) {
     return { errors: [minimumSubgraphRequirementError], success: false, warnings: [] };
   }
-  const result = batchNormalize(subgraphs);
+  const result = batchNormalize({ subgraphs, options });
   if (!result.success) {
     return { errors: result.errors, success: false, warnings: result.warnings };
   }
-  const entityInterfaceFederationDataByTypeName = new Map<string, EntityInterfaceFederationData>();
-  const invalidEntityInterfacesByTypeName = new Map<string, Array<InvalidEntityInterface>>();
+  const entityInterfaceFederationDataByTypeName = new Map<TypeName, EntityInterfaceFederationData>();
+  const invalidEntityInterfacesByTypeName = new Map<TypeName, Array<InvalidEntityInterface>>();
   for (const [subgraphName, internalSubgraph] of result.internalSubgraphBySubgraphName) {
     for (const [typeName, entityInterfaceData] of internalSubgraph.entityInterfaces) {
       const existingData = entityInterfaceFederationDataByTypeName.get(typeName);
@@ -3180,7 +3291,10 @@ function initializeFederationFactory({
         subgraphName,
         () => new Set<TypeName>(),
       );
-      addIterableValuesToSet(subgraphData.concreteTypeNames, definedConcreteTypeNames);
+      addIterableToSet({
+        source: subgraphData.concreteTypeNames,
+        target: definedConcreteTypeNames,
+      });
       if (!subgraphData.isInterfaceObject) {
         if (subgraphData.resolvable && subgraphData.concreteTypeNames.size !== implementations) {
           getValueOrDefault(
@@ -3195,7 +3309,10 @@ function initializeFederationFactory({
         }
         continue;
       }
-      addIterableValuesToSet(entityInterfaceData.concreteTypeNames, definedConcreteTypeNames);
+      addIterableToSet({
+        source: entityInterfaceData.concreteTypeNames,
+        target: definedConcreteTypeNames,
+      });
       const { parentDefinitionDataByTypeName } = getOrThrowError(
         result.internalSubgraphBySubgraphName,
         subgraphName,
@@ -3253,12 +3370,12 @@ function initializeFederationFactory({
     federationFactory: new FederationFactory({
       authorizationDataByParentTypeName: result.authorizationDataByParentTypeName,
       concreteTypeNamesByAbstractTypeName: result.concreteTypeNamesByAbstractTypeName,
-      disableResolvabilityValidation,
       entityDataByTypeName: result.entityDataByTypeName,
       entityInterfaceFederationDataByTypeName,
       fieldCoordsByNamedTypeName: result.fieldCoordsByNamedTypeName,
       internalSubgraphBySubgraphName: result.internalSubgraphBySubgraphName,
       internalGraph: result.internalGraph,
+      options,
       warnings: result.warnings,
     }),
     success: true,
@@ -3266,8 +3383,8 @@ function initializeFederationFactory({
   };
 }
 
-export function federateSubgraphs({ disableResolvabilityValidation, subgraphs }: FederationParams): FederationResult {
-  const federationFactoryResult = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
+export function federateSubgraphs({ options, subgraphs }: FederationParams): FederationResult {
+  const federationFactoryResult = initializeFederationFactory({ options, subgraphs });
   if (!federationFactoryResult.success) {
     return { errors: federationFactoryResult.errors, success: false, warnings: federationFactoryResult.warnings };
   }
@@ -3276,11 +3393,11 @@ export function federateSubgraphs({ disableResolvabilityValidation, subgraphs }:
 
 // the flow when publishing a subgraph that also has contracts
 export function federateSubgraphsWithContracts({
+  options,
   subgraphs,
   tagOptionsByContractName,
-  disableResolvabilityValidation,
 }: FederateSubgraphsWithContractsV1Params): FederationResultWithContracts {
-  const factoryResult = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
+  const factoryResult = initializeFederationFactory({ options, subgraphs });
   if (!factoryResult.success) {
     return {
       errors: factoryResult.errors,
@@ -3314,10 +3431,10 @@ export function federateSubgraphsWithContracts({
 // the flow when adding a completely new contract
 export function federateSubgraphsContract({
   contractTagOptions,
-  disableResolvabilityValidation,
+  options,
   subgraphs,
 }: FederateSubgraphsContractV1Params): FederationResult {
-  const result = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
+  const result = initializeFederationFactory({ options, subgraphs });
   if (!result.success) {
     return { errors: result.errors, success: false, warnings: result.warnings };
   }

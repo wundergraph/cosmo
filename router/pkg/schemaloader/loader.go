@@ -80,7 +80,7 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 		}
 
 		// Extract the operation name and type
-		opName, opType, err := getOperationNameAndType(&opDoc)
+		opName, opType, err := GetOperationNameAndType(&opDoc)
 		if err != nil {
 			l.Logger.Error("Failed to extract MCP operation name and type", zap.String("operation", opName), zap.String("file", path), zap.Error(err))
 			return nil
@@ -116,6 +116,9 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 			}
 		}
 
+		// Extract description from operation definition
+		opDescription := extractOperationDescription(&opDoc)
+
 		// Add to our list of operations
 		operations = append(operations, Operation{
 			Name:            opName,
@@ -123,6 +126,7 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 			Document:        opDoc,
 			OperationString: operationString,
 			OperationType:   opType,
+			Description:     opDescription,
 		})
 
 		return nil
@@ -156,8 +160,8 @@ func parseOperation(path string, operation string) (ast.Document, error) {
 	return opDoc, nil
 }
 
-// getOperationNameAndType extracts the name and type of the first operation in a document
-func getOperationNameAndType(doc *ast.Document) (string, string, error) {
+// GetOperationNameAndType extracts the name and type of the first operation in a document
+func GetOperationNameAndType(doc *ast.Document) (string, string, error) {
 	for _, ref := range doc.RootNodes {
 		if ref.Kind == ast.NodeKindOperationDefinition {
 			opDef := doc.OperationDefinitions[ref.Ref]
@@ -174,10 +178,25 @@ func getOperationNameAndType(doc *ast.Document) (string, string, error) {
 			}
 
 			if opDef.Name.Length() > 0 {
-				return doc.Input.ByteSliceString(opDef.Name), opType, nil
+				return string(doc.Input.ByteSlice(opDef.Name)), opType, nil
 			}
 			return "", opType, nil
 		}
 	}
 	return "", "", fmt.Errorf("no operation found in document")
+}
+
+// extractOperationDescription extracts the description string from an operation definition
+func extractOperationDescription(doc *ast.Document) string {
+	for _, ref := range doc.RootNodes {
+		if ref.Kind == ast.NodeKindOperationDefinition {
+			opDef := doc.OperationDefinitions[ref.Ref]
+			if opDef.Description.IsDefined && opDef.Description.Content.Length() > 0 {
+				description := string(doc.Input.ByteSlice(opDef.Description.Content))
+				return strings.TrimSpace(description)
+			}
+			return ""
+		}
+	}
+	return ""
 }

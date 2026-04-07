@@ -1,8 +1,8 @@
-import { NodeName, RootFieldData, SelectionPath, SubgraphName } from '../../types/types';
-import { NodeResolutionData } from '../../node-resolution-data/node-resolution-data';
+import { type NodeName, type RootFieldData, type SelectionPath, type SubgraphName } from '../../types/types';
+import { type NodeResolutionData } from '../../node-resolution-data/node-resolution-data';
 
-import { EntityAncestorCollection, EntityAncestorData } from './types';
-import { UnresolvableFieldData } from '../utils';
+import { type EntityAncestorCollection, type EntityAncestorData } from './types';
+import { type UnresolvableFieldData } from '../utils';
 
 export type EntityResolvabilityErrorsParams = {
   entityNodeName: NodeName;

@@ -53,9 +53,13 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
+import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composition/composeGraphs.pool.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
+  composition?: {
+    maxThreads: number;
+  };
   database: {
     url: string;
     tls?: {
@@ -90,6 +94,7 @@ export interface BuildConfig {
   webhook?: {
     url?: string;
     key?: string;
+    proxyUrl?: string;
   };
   githubApp?: {
     webhookSecret?: string;
@@ -157,6 +162,10 @@ const developmentLoggerOpts: LoggerOptions = {
 };
 
 export default async function build(opts: BuildConfig) {
+  configureComposeGraphsPool({
+    maxThreads: opts.composition?.maxThreads ?? 0,
+  });
+
   opts.logger = {
     timestamp: stdTimeFunctions.isoTime,
     formatters: {
@@ -175,6 +184,20 @@ export default async function build(opts: BuildConfig) {
     logger,
     // The maximum amount of time in *milliseconds* in which a plugin can load
     pluginTimeout: 10_000, // 10s
+  });
+
+  /**
+   * CVE-2026-25223 prevention
+   */
+  fastify.addHook('onRequest', async (request, reply) => {
+    const contentType = request.headers['content-type'];
+
+    const contentTypeNormalized = contentType || [];
+    const contentTypeValues = Array.isArray(contentTypeNormalized) ? contentTypeNormalized : [contentTypeNormalized];
+
+    if (contentTypeValues.some((v) => v.includes('\t'))) {
+      await reply.code(400).send({ error: 'Invalid Content-Type header' });
+    }
   });
 
   /**
@@ -246,10 +269,17 @@ export default async function build(opts: BuildConfig) {
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const userRepo = new UserRepository(logger, fastify.db);
   const apiKeyRepository = new ApiKeyRepository(fastify.db);
-  const webAuth = new WebSessionAuthenticator(opts.auth.secret, userRepo);
+  const webAuth = new WebSessionAuthenticator(fastify.db, opts.auth.secret, userRepo);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
-  const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);
+  const authenticator = new Authentication(
+    webAuth,
+    apiKeyAuth,
+    accessTokenAuth,
+    graphKeyAuth,
+    organizationRepository,
+    logger,
+  );
 
   const authorizer = new Authorization(logger, opts.stripe?.defaultPlanId);
 
@@ -318,10 +348,15 @@ export default async function build(opts: BuildConfig) {
     useIndividualDeletes:
       isGoogleCloudStorageUrl(opts.s3Storage.url) || isGoogleCloudStorageUrl(s3Config.endpoint as string)
         ? true
-        : opts.s3Storage.useIndividualDeletes ?? false,
+        : (opts.s3Storage.useIndividualDeletes ?? false),
   });
 
-  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
+  const platformWebhooks = new PlatformWebhookService(
+    opts.webhook?.url,
+    opts.webhook?.key,
+    logger,
+    opts.webhook?.proxyUrl,
+  );
 
   const readmeQueue = new AIGraphReadmeQueue(logger, fastify.redisForQueue);
 
@@ -460,6 +495,7 @@ export default async function build(opts: BuildConfig) {
 
   await fastify.register(ScimController, {
     organizationRepository,
+    mailer: mailerClient,
     userRepository: userRepo,
     apiKeyRepository,
     authenticator: apiKeyAuth,
@@ -501,6 +537,7 @@ export default async function build(opts: BuildConfig) {
       },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
+      webhookProxyUrl: opts.webhook?.proxyUrl,
       cdnBaseUrl: opts.cdnBaseUrl,
     }),
     contextValues(req) {
@@ -527,6 +564,12 @@ export default async function build(opts: BuildConfig) {
     await Promise.all(bullWorkers.map((worker) => worker.close()));
 
     fastify.log.debug('Bull workers shut down');
+
+    fastify.log.debug('Shutting down composition worker pool');
+
+    await destroyComposeGraphsPool();
+
+    fastify.log.debug('Composition worker pool shut down');
   });
 
   return fastify;

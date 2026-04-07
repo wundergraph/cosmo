@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/keycloak@0.12.0...keycloak@0.13.0) (2026-03-10)
+
+### Features
+
+* **keycloak:** update to 26.5.4 ([#2612](https://github.com/wundergraph/cosmo/issues/2612)) ([47a0fb5](https://github.com/wundergraph/cosmo/commit/47a0fb5ce166d2e489b8214fcd7da2e6c0b7f11d)) (@pepol)
+
+# [0.12.0](https://github.com/wundergraph/cosmo/compare/keycloak@0.11.3...keycloak@0.12.0) (2026-02-26)
+
+### Features
+
+* **keycloak:** move to official images ([#2561](https://github.com/wundergraph/cosmo/issues/2561)) ([8e81d6b](https://github.com/wundergraph/cosmo/commit/8e81d6b0159d62f1e85a369165036c8a4c14fbd7)) (@pepol)
+
+## [0.11.3](https://github.com/wundergraph/cosmo/compare/keycloak@0.11.2...keycloak@0.11.3) (2026-02-25)
+
+### Bug Fixes
+
+* vulnerabilities ([#2548](https://github.com/wundergraph/cosmo/issues/2548)) ([9972295](https://github.com/wundergraph/cosmo/commit/9972295beae67c0a3a8c87769f1c1a6c80678099)) (@JivusAyrus)
+
+## [0.11.2](https://github.com/wundergraph/cosmo/compare/keycloak@0.11.1...keycloak@0.11.2) (2026-01-12)
+
+### Bug Fixes
+
+* **infra:** ensure base images use target platform ([#2401](https://github.com/wundergraph/cosmo/issues/2401)) ([45d65c4](https://github.com/wundergraph/cosmo/commit/45d65c4c260e7888ecfc46fb46db0d73d33fc75e)) (@endigma)
+
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/keycloak@0.11.0...keycloak@0.11.1) (2025-12-16)
+
+### Bug Fixes
+
+* resolve js-yaml vulnerabilities ([#2415](https://github.com/wundergraph/cosmo/issues/2415)) ([7734754](https://github.com/wundergraph/cosmo/commit/7734754c098a7b85ada9f78771610ebd2754cffe)) (@pepol)
+
 # [0.11.0](https://github.com/wundergraph/cosmo/compare/keycloak@0.10.7...keycloak@0.11.0) (2025-09-23)
 
 ### Features

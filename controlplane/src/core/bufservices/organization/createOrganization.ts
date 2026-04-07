@@ -14,6 +14,7 @@ import type { RouterOptions } from '../../routes.js';
 import { BillingService } from '../../services/BillingService.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
+import { organizationSchema } from '../../constants.js';
 
 export function createOrganization(
   opts: RouterOptions,
@@ -25,6 +26,17 @@ export function createOrganization(
   return handleError<PlainMessage<CreateOrganizationResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
+
+    const validatedReq = organizationSchema.safeParse(req);
+    if (!validatedReq.success) {
+      const { fieldErrors } = validatedReq.error.flatten();
+      return {
+        response: {
+          code: EnumStatusCode.ERR_BAD_REQUEST,
+          details: fieldErrors.name?.[0] || fieldErrors.slug?.[0] || 'Invalid request',
+        },
+      };
+    }
 
     const billingRepo = new BillingRepository(opts.db);
     const plans = await billingRepo.listPlans();
@@ -55,7 +67,7 @@ export function createOrganization(
     // Create the organization group in Keycloak + subgroups
     const [kcRootGroupId, kcCreatedGroups] = await opts.keycloakClient.seedGroup({
       userID: authContext.userId,
-      organizationSlug: req.slug,
+      organizationSlug: validatedReq.data.slug,
       realm: opts.keycloakRealm,
     });
 
@@ -68,8 +80,8 @@ export function createOrganization(
         const auditLogRepo = new AuditLogRepository(tx);
 
         const organization = await orgRepo.createOrganization({
-          organizationName: req.name,
-          organizationSlug: req.slug,
+          organizationName: validatedReq.data.name,
+          organizationSlug: validatedReq.data.slug,
           ownerID: authContext.userId,
           kcGroupId: kcRootGroupId,
         });

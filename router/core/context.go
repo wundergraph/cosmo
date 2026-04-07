@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"net/http"
 	"net/url"
@@ -11,23 +12,22 @@ import (
 	"sync"
 	"time"
 
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
-
+	"github.com/cespare/xxhash/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 var _ RequestContext = (*requestContext)(nil)
@@ -131,9 +131,22 @@ type RequestContext interface {
 	// SetAuthenticationScopes sets the scopes for the request on Authentication
 	// If Authentication is not set, it will be initialized with the scopes
 	SetAuthenticationScopes(scopes []string)
+
 	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
 	// This can be used, e.g. to obfuscate sensitive data in the response
 	SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer)
+
+	// SetForceSha256Compute forces the computation of the Sha256Hash of the operation
+	// This is useful if the Sha256Hash is needed in custom modules but not used anywhere else
+	SetForceSha256Compute()
+
+	// Error returns the error associated with the request, if any
+	Error() error
+}
+
+type HeaderWithHash struct {
+	Header http.Header
+	Hash   uint64
 }
 
 var metricAttrsPool = sync.Pool{
@@ -263,6 +276,75 @@ type requestContext struct {
 	expressionContext expr.Context
 	// customFieldValueRenderer is used to override the default field value rendering behavior
 	customFieldValueRenderer resolve.FieldValueRenderer
+	// forceSha256Compute indicates whether the Sha256Hash of the operation should definitely be computed
+	forceSha256Compute bool
+}
+
+type headerBuilder struct {
+	headers map[string]*HeaderWithHash
+	allHash uint64
+}
+
+func (c *headerBuilder) HashAll() (out uint64) {
+	return c.allHash
+}
+
+func (c *headerBuilder) HeadersForSubgraph(subgraphName string) (http.Header, uint64) {
+	if header, ok := c.headers[subgraphName]; ok {
+		return header.Header.Clone(), header.Hash
+	}
+	return nil, 0
+}
+
+func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropagation, executionPlan plan.Plan) resolve.SubgraphHeadersBuilder {
+
+	keyGen := xxhash.New()
+
+	switch p := executionPlan.(type) {
+	case *plan.SynchronousResponsePlan:
+		headers := make(map[string]*HeaderWithHash, len(p.Response.DataSources))
+		for i := range p.Response.DataSources {
+			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.DataSources[i].Name, ctx)
+			headers[p.Response.DataSources[i].Name] = &HeaderWithHash{
+				Header: h,
+				Hash:   hh,
+			}
+			var b [8]byte
+			binary.LittleEndian.PutUint64(b[:], hh)
+			_, _ = keyGen.Write(b[:])
+		}
+		return &headerBuilder{
+			headers: headers,
+			allHash: keyGen.Sum64(),
+		}
+	case *plan.SubscriptionResponsePlan:
+		headers := make(map[string]*HeaderWithHash, len(p.Response.Response.DataSources)+1)
+		for i := range p.Response.Response.DataSources {
+			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Response.DataSources[i].Name, ctx)
+			headers[p.Response.Response.DataSources[i].Name] = &HeaderWithHash{
+				Header: h,
+				Hash:   hh,
+			}
+			var b [8]byte
+			binary.LittleEndian.PutUint64(b[:], hh)
+			_, _ = keyGen.Write(b[:])
+		}
+		h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Trigger.SourceName, ctx)
+		headers[p.Response.Trigger.SourceName] = &HeaderWithHash{
+			Header: h,
+			Hash:   hh,
+		}
+		var b [8]byte
+		binary.LittleEndian.PutUint64(b[:], hh)
+		_, _ = keyGen.Write(b[:])
+		return &headerBuilder{
+			headers: headers,
+			allHash: keyGen.Sum64(),
+		}
+	}
+	return &headerBuilder{
+		headers: make(map[string]*HeaderWithHash),
+	}
 }
 
 func (c *requestContext) SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer) {
@@ -462,6 +544,15 @@ func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 	auth.SetScopes(scopes)
 }
 
+func (c *requestContext) SetForceSha256Compute() {
+	c.forceSha256Compute = true
+}
+
+// Error returns the error associated with the request, if any
+func (c *requestContext) Error() error {
+	return c.error
+}
+
 type OperationContext interface {
 	// Name is the name of the operation
 	Name() string
@@ -475,10 +566,25 @@ type OperationContext interface {
 	Variables() *astjson.Value
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
+
+	// Sha256Hash returns the SHA256 hash of the original operation
+	// It is important to note that this hash is not calculated just because this method has been called
+	// and is only calculated based on other existing logic (such as if sha256Hash is used in expressions)
+	Sha256Hash() string
+
 	// QueryPlanStats returns some statistics about the query plan for the operation
 	// if called too early in request chain, it may be inaccurate for modules, using
 	// in Middleware is recommended
 	QueryPlanStats() (QueryPlanStats, error)
+
+	// Timings returns the timing information for various stages of operation processing
+	// if called too early in request chain, it may be inaccurate for modules, using
+	// in Middleware is recommended
+	Timings() OperationTimings
+
+	// Cost returns cost results for the operation.
+	// This should be called after planning is complete; using in Middleware is recommended.
+	Cost() (OperationCost, error)
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -507,10 +613,12 @@ type operationContext struct {
 	// RawContent is the raw content of the operation
 	rawContent string
 	// Content is the normalized content of the operation
-	content    string
-	variables  *astjson.Value
-	files      []*httpclient.FileUpload
-	clientInfo *ClientInfo
+	content       string
+	variables     *astjson.Value
+	variablesHash uint64
+	files         []*httpclient.FileUpload
+	clientInfo    *ClientInfo
+	planConfig    plan.Configuration
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -523,12 +631,21 @@ type operationContext struct {
 	sha256Hash string
 	protocol   OperationProtocol
 
-	persistedOperationCacheHit bool
-	normalizationCacheHit      bool
+	persistedOperationCacheHit     bool
+	normalizationCacheHit          bool
+	variablesNormalizationCacheHit bool
+	variablesRemappingCacheHit     bool
 
-	typeFieldUsageInfo graphqlschemausage.TypeFieldMetrics
-	argumentUsageInfo  []*graphqlmetrics.ArgumentUsageInfo
-	inputUsageInfo     []*graphqlmetrics.InputUsageInfo
+	// Costs related fields used as a cache through the lifetime of operation.
+	costEstimated    int  // populated after planning
+	costActual       int  // populated after execution
+	costEstimatedSet bool // set to true when costEstimated is populated
+	costActualSet    bool // set to true when costActual is populated
+
+	typeFieldUsageInfo        graphqlschemausage.TypeFieldMetrics
+	typeFieldUsageInfoMetrics []*graphqlmetrics.TypeFieldUsageInfo // Cached conversion result
+	argumentUsageInfo         []*graphqlmetrics.ArgumentUsageInfo
+	inputUsageInfo            []*graphqlmetrics.InputUsageInfo
 
 	parsingTime       time.Duration
 	validationTime    time.Duration
@@ -576,10 +693,46 @@ func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
 }
 
+func (o *operationContext) Sha256Hash() string {
+	return o.sha256Hash
+}
+
+func (o *operationContext) Timings() OperationTimings {
+	return OperationTimings{
+		ParsingTime:       o.parsingTime,
+		ValidationTime:    o.validationTime,
+		PlanningTime:      o.planningTime,
+		NormalizationTime: o.normalizationTime,
+	}
+}
+
+// GetTypeFieldUsageInfoMetrics returns the cached conversion of typeFieldUsageInfo.
+// This avoids repeated allocations when multiple exporters need the same data.
+func (o *operationContext) GetTypeFieldUsageInfoMetrics() []*graphqlmetrics.TypeFieldUsageInfo {
+	if o.typeFieldUsageInfoMetrics == nil && o.typeFieldUsageInfo != nil {
+		o.typeFieldUsageInfoMetrics = o.typeFieldUsageInfo.IntoGraphQLMetrics()
+	}
+	return o.typeFieldUsageInfoMetrics
+}
+
+// OperationTimings contains timing information for various stages of operation processing
+type OperationTimings struct {
+	ParsingTime       time.Duration
+	ValidationTime    time.Duration
+	PlanningTime      time.Duration
+	NormalizationTime time.Duration
+}
+
 type QueryPlanStats struct {
 	TotalSubgraphFetches int
 	SubgraphFetches      map[string]int
 	SubgraphRootFields   []SubgraphRootField
+}
+
+// OperationCost holds cost results for an operation.
+type OperationCost struct {
+	// Estimated is the static cost calculated before execution based on @cost and @listSize directives.
+	Estimated int
 }
 
 type SubgraphRootField struct {
@@ -678,6 +831,13 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 	}
 
 	return qps, nil
+}
+
+func (o *operationContext) Cost() (OperationCost, error) {
+	if !o.costEstimatedSet {
+		return OperationCost{}, errors.New("cost control is not enabled or not yet computed")
+	}
+	return OperationCost{Estimated: o.costEstimated}, nil
 }
 
 type SubgraphResolver struct {

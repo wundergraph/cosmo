@@ -1,9 +1,8 @@
-package events
+package events_test
 
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,46 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router/core"
-
 	"github.com/hasura/go-graphql-client"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/twmb/franz-go/pkg/kgo"
+
+	"github.com/wundergraph/cosmo/router-tests/events"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
-
-const KafkaWaitTimeout = time.Second * 30
-
-func assertKafkaLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
-	t.Helper()
-	line, _, err := reader.ReadLine()
-	assert.NoError(t, err)
-	assert.Equal(t, expected, string(line))
-}
-
-func assertKafkaMultipartPrefix(t *testing.T, reader *bufio.Reader) {
-	t.Helper()
-	assertKafkaLineEquals(t, reader, "")
-	assertKafkaLineEquals(t, reader, "--graphql")
-	assertKafkaLineEquals(t, reader, "Content-Type: application/json")
-	assertKafkaLineEquals(t, reader, "")
-}
-
-func assertKafkaMultipartValueEventually(t *testing.T, reader *bufio.Reader, expected string) {
-	t.Helper()
-	assert.Eventually(t, func() bool {
-		assertKafkaMultipartPrefix(t, reader)
-		line, _, err := reader.ReadLine()
-		assert.NoError(t, err)
-		if string(line) == "{}" {
-			return false
-		}
-		assert.Equal(t, expected, string(line))
-		return true
-	}, KafkaWaitTimeout, time.Millisecond*100)
-}
 
 type kafkaSubscriptionArgs struct {
 	dataValue []byte
@@ -74,7 +42,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -105,17 +73,22 @@ func TestKafkaEvents(t *testing.T) {
 				clientRunCh <- client.Run()
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			// Wait for the subscription to be registered and a trigger to be created in the engine.
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			// Publish with retry: the first message may be lost because the Kafka consumer
+			// group hasn't finished rebalancing yet. KafkaPublishUntilReceived retries
+			// until the engine's MessagesSent counter increments.
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, EventWaitTimeout)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
 
 			require.NoError(t, client.Close())
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t *testing.T, err error) {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 		})
@@ -130,7 +103,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -162,109 +135,44 @@ func TestKafkaEvents(t *testing.T) {
 				clientRunCh <- client.Run()
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
-			ProduceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			// Warm up: confirm consumer has partition assignment with a valid message
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, EventWaitTimeout)
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], ``) // Empty message
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.ErrorContains(t, args.errValue, "Invalid message received")
 			})
 
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
 
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.ErrorContains(t, args.errValue, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.")
 			})
 
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
 
 			require.NoError(t, client.Close())
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t *testing.T, err error) {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
-		})
-	})
-
-	t.Run("every subscriber gets the message", func(t *testing.T) {
-		t.Parallel()
-
-		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
-			EnableKafka:              true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
-
-			var subscriptionOne struct {
-				employeeUpdatedMyKafka struct {
-					ID      float64 `graphql:"id"`
-					Details struct {
-						Forename string `graphql:"forename"`
-						Surname  string `graphql:"surname"`
-					} `graphql:"details"`
-				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
-			}
-
-			surl := xEnv.GraphQLWebSocketSubscriptionURL()
-			client := graphql.NewSubscriptionClient(surl)
-
-			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
-			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
-					dataValue: dataValue,
-					errValue:  errValue,
-				}
-				return nil
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, subscriptionOneID)
-
-			subscriptionTwoArgsCh := make(chan kafkaSubscriptionArgs)
-			subscriptionTwoID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				subscriptionTwoArgsCh <- kafkaSubscriptionArgs{
-					dataValue: dataValue,
-					errValue:  errValue,
-				}
-				return nil
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, subscriptionTwoID)
-
-			clientRunCh := make(chan error)
-			go func() {
-				clientRunCh <- client.Run()
-			}()
-
-			xEnv.WaitForSubscriptionCount(2, KafkaWaitTimeout)
-
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				require.NoError(t, args.errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
-
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				require.NoError(t, args.errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
-
-			require.NoError(t, client.Close())
-
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t *testing.T, err error) {
-				require.NoError(t, err)
-			}, "unable to close client before timeout")
 		})
 	})
 
@@ -277,7 +185,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -319,96 +227,36 @@ func TestKafkaEvents(t *testing.T) {
 				clientRunCh <- client.Run()
 			}()
 
-			xEnv.WaitForSubscriptionCount(2, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(2, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, EventWaitTimeout)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionTwoArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
 
-			ProduceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
+			xEnv.KafkaPublishUntilReceived(topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`, 2, EventWaitTimeout)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(args.dataValue))
 			})
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionTwoArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(args.dataValue))
 			})
 
 			require.NoError(t, client.Close())
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t *testing.T, err error) {
-				require.NoError(t, err)
-			}, "unable to close client before timeout")
-		})
-	})
-
-	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
-		t.Parallel()
-
-		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
-			EnableKafka:              true,
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EnableNetPoll = false
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
-
-			var subscriptionOne struct {
-				employeeUpdatedMyKafka struct {
-					ID      float64 `graphql:"id"`
-					Details struct {
-						Forename string `graphql:"forename"`
-						Surname  string `graphql:"surname"`
-					} `graphql:"details"`
-				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
-			}
-
-			surl := xEnv.GraphQLWebSocketSubscriptionURL()
-			client := graphql.NewSubscriptionClient(surl)
-
-			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
-			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
-					dataValue: dataValue,
-					errValue:  errValue,
-				}
-				return nil
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, subscriptionOneID)
-
-			clientRunCh := make(chan error)
-			go func() {
-				clientRunCh <- client.Run()
-			}()
-
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
-
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				require.NoError(t, args.errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
-
-			require.NoError(t, client.Close())
-
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t *testing.T, err error) {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 		})
@@ -431,7 +279,7 @@ func TestKafkaEvents(t *testing.T) {
 					core.WithSubscriptionHeartbeatInterval(subscriptionHeartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				EnsureTopicExists(t, xEnv, topics...)
+				events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -445,13 +293,14 @@ func TestKafkaEvents(t *testing.T) {
 				defer resp.Body.Close()
 				reader := bufio.NewReader(resp.Body)
 
-				xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+				xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+				xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
-				ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				assertKafkaMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+				xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, EventWaitTimeout)
+				assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
-				ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				assertKafkaMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+				events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 			})
 		})
 
@@ -480,10 +329,10 @@ func TestKafkaEvents(t *testing.T) {
 				defer resp.Body.Close()
 				reader := bufio.NewReader(resp.Body)
 
-				assertKafkaMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+				assertMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
 
-				xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-				xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+				xEnv.WaitForSubscriptionCount(0, EventWaitTimeout)
+				xEnv.WaitForConnectionCount(0, EventWaitTimeout)
 			})
 		})
 	})
@@ -497,12 +346,12 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 			client := http.Client{
-				Timeout: time.Second * 10,
+				Timeout: time.Second * 30,
 			}
 			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, gErr)
@@ -528,11 +377,12 @@ func TestKafkaEvents(t *testing.T) {
 				}
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, EventWaitTimeout)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(t *testing.T, response struct {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, responseCh, func(t *testing.T, response struct {
 				response *http.Response
 				err      error
 			}) {
@@ -540,15 +390,10 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, http.StatusOK, response.response.StatusCode)
 				reader := bufio.NewReader(response.response.Body)
 				defer response.response.Body.Close()
-				eventNext, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "event: next", string(eventNext))
-				data, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
-				line, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "", string(line))
+				eventNext := testenv.ReadSSEField(t, reader)
+				require.Equal(t, "event: next", eventNext)
+				data := testenv.ReadSSEField(t, reader)
+				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", data)
 			})
 		})
 	})
@@ -562,12 +407,12 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 			client := http.Client{
-				Timeout: time.Second * 10,
+				Timeout: time.Second * 30,
 			}
 			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, gErr)
@@ -593,11 +438,12 @@ func TestKafkaEvents(t *testing.T) {
 				}
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, EventWaitTimeout)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(t *testing.T, resp struct {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, responseCh, func(t *testing.T, resp struct {
 				response *http.Response
 				err      error
 			}) {
@@ -606,15 +452,10 @@ func TestKafkaEvents(t *testing.T) {
 				defer resp.response.Body.Close()
 				reader := bufio.NewReader(resp.response.Body)
 
-				eventNext, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "event: next", string(eventNext))
-				data, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
-				line, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "", string(line))
+				eventNext := testenv.ReadSSEField(t, reader)
+				require.Equal(t, "event: next", eventNext)
+				data := testenv.ReadSSEField(t, reader)
+				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", data)
 			})
 		})
 	})
@@ -634,7 +475,7 @@ func TestKafkaEvents(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			client := http.Client{
-				Timeout: time.Second * 10,
+				Timeout: time.Second * 30,
 			}
 			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, err)
@@ -651,15 +492,13 @@ func TestKafkaEvents(t *testing.T) {
 			defer resp.Body.Close()
 			reader := bufio.NewReader(resp.Body)
 
-			eventNext, _, err := reader.ReadLine()
-			require.NoError(t, err)
-			require.Equal(t, "event: next", string(eventNext))
-			data, _, err := reader.ReadLine()
-			require.NoError(t, err)
-			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", string(data))
+			eventNext := testenv.ReadSSELine(t, reader)
+			require.Equal(t, "event: next", eventNext)
+			data := testenv.ReadSSELine(t, reader)
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", data)
 
-			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(0, EventWaitTimeout)
+			xEnv.WaitForConnectionCount(0, EventWaitTimeout)
 		})
 	})
 
@@ -672,7 +511,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -698,7 +537,8 @@ func TestKafkaEvents(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
 
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			testData := map[uint32]struct {
 				ID       int
@@ -712,10 +552,17 @@ func TestKafkaEvents(t *testing.T) {
 			}
 
 			// Events 1, 2, 11, and 12 should be included
+			expectedMessages := uint64(0)
 			for i := uint32(1); i < 13; i++ {
-				ProduceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				if i == 1 {
+					xEnv.KafkaPublishUntilReceived(topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i), 1, EventWaitTimeout)
+				} else {
+					events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				}
 				if i == 1 || i == 2 || i == 11 || i == 12 {
-					conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
+					expectedMessages++
+					xEnv.WaitForMessagesSent(expectedMessages, EventWaitTimeout)
+					conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 					gErr := conn.ReadJSON(&msg)
 					require.NoError(t, gErr)
 					require.Equal(t, "1", msg.ID)
@@ -739,7 +586,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -765,7 +612,8 @@ func TestKafkaEvents(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
 
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			testData := map[uint32]struct {
 				ID       int
@@ -779,10 +627,17 @@ func TestKafkaEvents(t *testing.T) {
 			}
 
 			// Events 1, 2, 11, and 12 should be included
+			expectedMessages := uint64(0)
 			for i := uint32(1); i < 13; i++ {
-				ProduceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				if i == 1 {
+					xEnv.KafkaPublishUntilReceived(topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i), 1, EventWaitTimeout)
+				} else {
+					events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				}
 				if i == 1 || i == 2 || i == 11 || i == 12 {
-					conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
+					expectedMessages++
+					xEnv.WaitForMessagesSent(expectedMessages, EventWaitTimeout)
+					conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 					gErr := conn.ReadJSON(&msg)
 					require.NoError(t, gErr)
 					require.Equal(t, "1", msg.ID)
@@ -806,7 +661,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -832,14 +687,15 @@ func TestKafkaEvents(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
 
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			// The message should be ignored because "1" does not equal 1
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`)
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"Employee","id":1}`)
 
 			// This message should be delivered because it matches the filter
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":12}`)
-			conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id":12}`, 1, EventWaitTimeout)
+			conn.SetReadDeadline(time.Now().Add(EventWaitTimeout))
 			readErr := conn.ReadJSON(&msg)
 			require.NoError(t, readErr)
 			require.Equal(t, "1", msg.ID)
@@ -861,7 +717,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -892,32 +748,40 @@ func TestKafkaEvents(t *testing.T) {
 				clientRunCh <- client.Run()
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
-			ProduceKafkaMessage(t, xEnv, topics[0], `{asas`) // Invalid message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				require.ErrorContains(t, args.errValue, "Invalid message received")
-			})
-
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			// Warm up: confirm consumer has partition assignment with a valid message
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id":1}`, 1, EventWaitTimeout)
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
 
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{asas`) // Invalid message
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.ErrorContains(t, args.errValue, "Invalid message received")
+			})
+
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.ErrorContains(t, args.errValue, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.")
 			})
 
-			ProduceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
 
 			require.NoError(t, client.Close())
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t *testing.T, err error) {
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 		})
@@ -932,7 +796,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			// Send a mutation to trigger the first subscription
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -940,10 +804,27 @@ func TestKafkaEvents(t *testing.T) {
 			})
 			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
 
-			records, err := readKafkaMessages(xEnv, topics[0], 1)
+			records, err := events.ReadKafkaMessages(xEnv, EventWaitTimeout, topics[0], 1)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(records))
 			require.Equal(t, `{"employeeID":3,"update":{"name":"name test"}}`, string(records[0].Value))
+		})
+	})
+
+	t.Run("mutate returns correct typename", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"employeeUpdated"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { __typename success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"__typename":"edfs__PublishResult","success":true}}}`, resOne.Body)
 		})
 	})
 
@@ -980,7 +861,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			EnsureTopicExists(t, xEnv, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -1006,7 +887,8 @@ func TestKafkaEvents(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
 
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			const MsgCount = uint32(12)
 
@@ -1024,9 +906,13 @@ func TestKafkaEvents(t *testing.T) {
 
 			// Events 1, 3, 4, 7, and 11 should be included
 			for i := int(MsgCount); i > 0; i-- {
-				ProduceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				if i == 11 {
+					xEnv.KafkaPublishUntilReceived(topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i), 1, EventWaitTimeout)
+				} else {
+					events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				}
 				if i == 1 || i == 3 || i == 4 || i == 7 || i == 11 {
-					conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
+					conn.SetReadDeadline(time.Now().Add(EventWaitTimeout))
 					jsonErr := conn.ReadJSON(&msg)
 					require.NoError(t, jsonErr)
 					require.Equal(t, "1", msg.ID)
@@ -1040,21 +926,140 @@ func TestKafkaEvents(t *testing.T) {
 			}
 		})
 	})
-}
 
-func readKafkaMessages(xEnv *testenv.Environment, topicName string, msgs int) ([]*kgo.Record, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	t.Run("every subscriber gets the message", func(t *testing.T) {
+		t.Parallel()
 
-	client, err := kgo.NewClient(
-		kgo.SeedBrokers(xEnv.GetKafkaSeeds()...),
-		kgo.ConsumeTopics(xEnv.GetPubSubName(topicName)),
-	)
-	if err != nil {
-		return nil, err
-	}
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
-	fetchs := client.PollRecords(ctx, msgs)
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
-	return fetchs.Records(), nil
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			subscriptionTwoArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionTwoID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionTwoArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionTwoID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(2, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, EventWaitTimeout)
+
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionTwoArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
+			require.NoError(t, client.Close())
+
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+		})
+	})
+
+	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.EnableNetPoll = false
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
+
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, EventWaitTimeout)
+
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
+			require.NoError(t, client.Close())
+
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+		})
+	})
 }

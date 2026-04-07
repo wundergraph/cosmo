@@ -5,6 +5,10 @@
 
 version: '1'
 
+#graphql_metrics:
+#  enabled: true
+#  collector_endpoint: http://localhost:4005
+
 execution_config:
   file:
     path: './__schemas/config.json'

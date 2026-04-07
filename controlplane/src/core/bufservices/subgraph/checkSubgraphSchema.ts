@@ -7,6 +7,7 @@ import {
   CheckSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -24,7 +25,10 @@ import {
   handleError,
   isValidGraphName,
   isValidLabels,
+  limitCombinedArrays,
 } from '../../util.js';
+import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { maxRowLimitForChecks, defaultRetentionLimitInDays } from '../../constants.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -58,6 +62,7 @@ export function checkSubgraphSchema(
         },
         breakingChanges: [],
         nonBreakingChanges: [],
+        composedSchemaBreakingChanges: [],
         compositionErrors: [],
         checkId: '',
         checkedFederatedGraphs: [],
@@ -78,6 +83,7 @@ export function checkSubgraphSchema(
         },
         breakingChanges: [],
         nonBreakingChanges: [],
+        composedSchemaBreakingChanges: [],
         compositionErrors: [],
         checkId: '',
         checkedFederatedGraphs: [],
@@ -100,6 +106,7 @@ export function checkSubgraphSchema(
         },
         breakingChanges: [],
         nonBreakingChanges: [],
+        composedSchemaBreakingChanges: [],
         compositionErrors: [],
         checkId: '',
         checkedFederatedGraphs: [],
@@ -110,6 +117,14 @@ export function checkSubgraphSchema(
         compositionWarnings: [],
       };
     }
+
+    const webhookService = new OrganizationWebhookService(
+      opts.db,
+      authContext.organizationId,
+      opts.logger,
+      opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
+    );
 
     let linkedSubgraph:
       | {
@@ -144,6 +159,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges: [],
           nonBreakingChanges: [],
+          composedSchemaBreakingChanges: [],
           compositionErrors: [],
           checkId: '',
           checkedFederatedGraphs: [],
@@ -161,6 +177,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges: [],
           nonBreakingChanges: [],
+          composedSchemaBreakingChanges: [],
           compositionErrors: [],
           checkId: '',
           checkedFederatedGraphs: [],
@@ -174,6 +191,13 @@ export function checkSubgraphSchema(
     }
 
     const subgraphName = subgraph?.name || req.subgraphName;
+    const ignoreExternalKeys =
+      (
+        await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+        })
+      )?.enabled ?? false;
 
     const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
       labels: subgraph ? subgraph.labels : req.labels,
@@ -190,7 +214,12 @@ export function checkSubgraphSchema(
     let newGraphQLSchema: GraphQLSchema | undefined;
     if (newSchemaSDL) {
       try {
-        // Here we check if the schema is valid as a subgraph SDL
+        /* Here we check if the schema is valid as a subgraph SDL
+         * `buildSchema` only calls normalization in isolation.
+         * The `disableResolvabilityChecks` flag is only used in the federation step.
+         * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+         * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+         */
         const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
         if (!result.success) {
           return {
@@ -200,6 +229,7 @@ export function checkSubgraphSchema(
             },
             breakingChanges: [],
             nonBreakingChanges: [],
+            composedSchemaBreakingChanges: [],
             compositionErrors: [],
             checkId: '',
             checkedFederatedGraphs: [],
@@ -223,6 +253,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges: [],
           nonBreakingChanges: [],
+          composedSchemaBreakingChanges: [],
           compositionErrors: [],
           checkId: '',
           checkedFederatedGraphs: [],
@@ -240,25 +271,16 @@ export function checkSubgraphSchema(
       featureId: 'breaking-change-retention',
     });
 
-    let limit = changeRetention?.limit ?? 7;
+    let limit = changeRetention?.limit ?? defaultRetentionLimitInDays;
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
-    const {
-      response,
-      checkId: schemaCheckID,
-      breakingChanges,
-      nonBreakingChanges,
-      compositionErrors,
-      compositionWarnings,
-      operationUsageStats,
-      proposalMatchMessage,
-      hasClientTraffic,
-      checkedFederatedGraphs,
-      lintWarnings,
-      lintErrors,
-      graphPruneWarnings,
-      graphPruneErrors,
-    } = await subgraphRepo.performSchemaCheck({
+    // If req.limit is not provided, we return all rows
+    const returnLimit = req.limit === undefined ? null : clamp(req.limit, 1, maxRowLimitForChecks);
+
+    const checkResult = await subgraphRepo.performSchemaCheck({
+      actorId: authContext.userId,
+      blobStorage: opts.blobStorage,
+      admissionConfig: { cdnBaseUrl: opts.cdnBaseUrl, jwtSecret: opts.jwtSecret },
       organizationSlug: authContext.organizationSlug,
       namespace,
       subgraphName,
@@ -273,8 +295,62 @@ export function checkSubgraphSchema(
       limit,
       chClient: opts.chClient,
       newGraphQLSchema,
-      disableResolvabilityValidation: req.disableResolvabilityValidation,
+      compositionOptions: {
+        disableResolvabilityValidation: req.disableResolvabilityValidation,
+        ignoreExternalKeys,
+      },
+      webhookService,
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
+
+    // Extract variables from checkResult
+    const {
+      response,
+      checkId: schemaCheckID,
+      operationUsageStats,
+      proposalMatchMessage,
+      hasClientTraffic,
+      checkedFederatedGraphs,
+      isCheckExtensionSkipped,
+      checkExtensionErrorMessage,
+    } = checkResult;
+
+    const compositionErrors =
+      returnLimit == null ? checkResult.compositionErrors : checkResult.compositionErrors.slice(0, returnLimit);
+    const compositionWarnings =
+      returnLimit == null ? checkResult.compositionWarnings : checkResult.compositionWarnings.slice(0, returnLimit);
+
+    const [breakingChanges, nonBreakingChanges] = limitCombinedArrays(
+      [checkResult.breakingChanges, checkResult.nonBreakingChanges],
+      returnLimit,
+    );
+
+    const [lintErrors, lintWarnings] = limitCombinedArrays(
+      [checkResult.lintErrors, checkResult.lintWarnings],
+      returnLimit,
+    );
+
+    const [graphPruneErrors, graphPruneWarnings] = limitCombinedArrays(
+      [checkResult.graphPruneErrors, checkResult.graphPruneWarnings],
+      returnLimit,
+    );
+
+    const composedSchemaBreakingChanges =
+      returnLimit == null
+        ? checkResult.composedSchemaBreakingChanges
+        : checkResult.composedSchemaBreakingChanges.slice(0, returnLimit);
+
+    const counts = {
+      lintWarnings: checkResult.lintWarnings.length,
+      lintErrors: checkResult.lintErrors.length,
+      breakingChanges: checkResult.breakingChanges.length,
+      nonBreakingChanges: checkResult.nonBreakingChanges.length,
+      compositionErrors: checkResult.compositionErrors.length,
+      compositionWarnings: checkResult.compositionWarnings.length,
+      graphPruneErrors: checkResult.graphPruneErrors.length,
+      graphPruneWarnings: checkResult.graphPruneWarnings.length,
+      composedSchemaBreakingChanges: checkResult.composedSchemaBreakingChanges.length,
+    };
 
     if (response && response.code !== EnumStatusCode.OK) {
       return {
@@ -284,6 +360,7 @@ export function checkSubgraphSchema(
         },
         breakingChanges,
         nonBreakingChanges,
+        composedSchemaBreakingChanges,
         operationUsageStats,
         compositionErrors,
         checkId: schemaCheckID,
@@ -295,6 +372,7 @@ export function checkSubgraphSchema(
         clientTrafficCheckSkipped: req.skipTrafficCheck,
         compositionWarnings,
         proposalMatchMessage,
+        counts,
       };
     }
 
@@ -311,6 +389,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges,
           nonBreakingChanges,
+          composedSchemaBreakingChanges,
           operationUsageStats,
           compositionErrors,
           checkId: schemaCheckID,
@@ -324,6 +403,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -341,6 +421,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges,
           nonBreakingChanges,
+          composedSchemaBreakingChanges,
           operationUsageStats,
           compositionErrors,
           checkId: schemaCheckID,
@@ -354,10 +435,11 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
-      let targetLimit = changeRetention?.limit ?? 7;
+      let targetLimit = changeRetention?.limit ?? defaultRetentionLimitInDays;
       targetLimit = clamp(targetNamespace?.checksTimeframeInDays ?? targetLimit, 1, targetLimit);
 
       let targetNewGraphQLSchema = newGraphQLSchema;
@@ -370,6 +452,9 @@ export function checkSubgraphSchema(
       }
 
       const targetCheckResult = await subgraphRepo.performSchemaCheck({
+        actorId: authContext.userId,
+        blobStorage: opts.blobStorage,
+        admissionConfig: { cdnBaseUrl: opts.cdnBaseUrl, jwtSecret: opts.admissionWebhookJWTSecret },
         organizationSlug: authContext.organizationSlug,
         namespace: targetNamespace,
         subgraphName: targetSubgraph.name,
@@ -382,7 +467,12 @@ export function checkSubgraphSchema(
         limit: targetLimit,
         chClient: opts.chClient,
         newGraphQLSchema: targetNewGraphQLSchema,
-        disableResolvabilityValidation: req.disableResolvabilityValidation,
+        compositionOptions: {
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+          ignoreExternalKeys,
+        },
+        webhookService,
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       await schemaCheckRepo.addLinkedSchemaCheck({
@@ -398,6 +488,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges,
           nonBreakingChanges,
+          composedSchemaBreakingChanges,
           operationUsageStats,
           compositionErrors,
           checkId: schemaCheckID,
@@ -411,6 +502,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -444,6 +536,7 @@ export function checkSubgraphSchema(
       },
       breakingChanges,
       nonBreakingChanges,
+      composedSchemaBreakingChanges,
       operationUsageStats,
       compositionErrors,
       checkId: schemaCheckID,
@@ -457,6 +550,9 @@ export function checkSubgraphSchema(
       proposalMatchMessage,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
+      isCheckExtensionSkipped,
+      checkExtensionErrorMessage,
+      counts,
     };
   });
 }

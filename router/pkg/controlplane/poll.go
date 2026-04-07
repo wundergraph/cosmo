@@ -49,6 +49,11 @@ func (c *Poll) Subscribe(ctx context.Context, handler func()) {
 			case <-ctx.Done():
 				return
 			case <-timer.C:
+				// Check if context was cancelled while waiting for timer
+				if ctx.Err() != nil {
+					return
+				}
+
 				// Execute handler
 				handler()
 

@@ -1,0 +1,168 @@
+---
+title: "Security & Compliance"
+description: "Cosmo, with SOC 2 Type II certification and enterprise-grade access controls, ensures security, privacy, and compliance by design."
+icon: lock
+---
+
+## Security & Privacy by Design
+
+Cosmo follows a strict “security by design” approach to ensure compliance and data protection.
+
+* 100% open-source (Apache 2.0) and can be fully self-hosted.
+
+* Continuously fuzz-tested for security vulnerabilities.
+
+* Supports Trusted Documents, Persisted Operations, and complexity-based rate-limiting to prevent OWASP Top 10 GraphQL security threats.
+
+* SSO support for OIDC and SAML.
+
+## Data Privacy & Information Segregation
+
+By default, sensitive information is segregated from the Cosmo Managed Service.
+
+* The Router is self-hosted in hybrid deployments, and only anonymized metadata is sent to Cosmo Managed Service for analytics and tracing.
+
+* Request/response data never leaves your infrastructure—WunderGraph cannot access your Cosmo Router instance.
+
+* Privacy safeguards are built-in by design and cannot be bypassed, intentionally or accidentally.
+
+<Frame caption="How Cosmo's Architecture Integrates with Clickhouse">
+  <img src="/images/architecture-new.png" alt="Diagram showing how Cosmo's architecture integrates with ClickHouse, Postgres, OpenTelemetry, and GraphQL, managed by WunderGraph and hosted on your own infrastructure." />
+</Frame>
+
+## Regulatory Compliance
+
+Cosmo’s security framework and operational controls are designed to meet the highest industry standards, ensuring robust protection for your data and infrastructure:
+
+* **SOC 2 Type II Certified:** Cosmo has achieved SOC 2 Type II certification, verifying that our security, availability, processing integrity, confidentiality, and privacy controls meet the AICPA’s Trust Services Criteria.
+
+* **ISO 27001 (In Preparation):** We are actively working towards ISO 27001 certification and implementing a rigorous Information Security Management System (ISMS) to mitigate security risks.
+
+* **GDPR Compliant:** We adhere to General Data Protection Regulation (GDPR) requirements, ensuring strict data privacy measures and giving users complete control over their personal data.
+
+* **HIPAA Compliant:** Our infrastructure includes safeguards for handling protected health information (PHI) in accordance with the Health Insurance Portability and Accountability Act (HIPAA).
+
+To maintain compliance, Cosmo follows these principles:
+
+* **Security by Design:** Implements an ISMS to meet SOC 2 Trust Service Criteria, ensuring security is integrated into every stage of development.
+
+* **Data Privacy & Segregation:** The Cosmo Router is configured by default to prevent sensitive request information from being sent to the Control Plane or Analytics, ensuring data privacy and compliance.
+
+* **Access Controls & Authentication:** This feature supports single sign-on (SSO) via OpenID Connect (OIDC) and Security Assertion Markup Language (SAML), facilitating secure identity management.
+
+* **Audit Logging & Monitoring:** WunderGraph has undergone a comprehensive SOC 2 Type II audit with continuous evidence collection to ensure compliance. This reflects robust audit logging and monitoring practices.
+
+* **Configuration Integrity:** Employs cryptographic validation and signing (HMAC-SHA256) for router configurations to prevent tampering and ensure authenticity.
+
+* **Role-Based Access Control (RBAC):** Utilizes RBAC to manage access to resources within the organization, assigning permissions to roles to establish a structured access control system.
+
+* **Advanced Security Configurations:** Provides options to disable introspection, enforce persisted operations, and configure Cross-Origin Resource Sharing (CORS) to enhance security posture.
+
+## Metadata Collection Overview
+
+Cosmo collects only anonymized metadata for analytics, schema usage analysis, and tracing. This metadata cannot be linked to request payloads and is used exclusively for analytics.
+
+### GraphQL Request Metadata
+
+* User agent
+
+* HTTP method & URL
+
+* Operation content (no user data)
+
+* Query type
+
+* Operation name & hash
+
+* Response status code
+
+* Request/response content length
+
+* Request duration (latency)
+
+* Inflight request count
+
+* Client name & version
+
+* Organization ID
+
+### Router Metadata
+
+* Name of the running graph
+
+* Used protocol
+
+* Current router binary version
+
+* Current router schema version
+
+* Hostname
+
+* Client IP (anonymized)
+
+* Process ID
+
+* Telemetry service name
+
+* Telemetry SDK version
+
+### Schema Usage Metadata
+
+* Used GraphQL fields
+
+* Used GraphQL types, arguments, and input
+
+* Field request count
+
+## Personally Identifiable Information (PII)
+
+WunderGraph minimizes the collection of Personally Identifiable Information (PII), gathering only what is necessary to provide and secure the managed service:
+
+* **User Name & Email:** Required for authentication and access management
+
+* **Audit Trail & Access Log Data:** Maintained for security monitoring and compliance
+
+* **GeoLocation & IP Address:** Used for security measures, including intrusion detection and prevention.
+
+* **User-Provided Content:** Any information the user shares, such as schema discussions or other related contributions.
+
+## Config Validation & Signing
+
+<CardGroup>
+  <Card title="Documentation" icon="book" href="/router/security/config-validation-and-signing" horizontal/>
+</CardGroup>
+
+<Frame caption="Validated and Signed Composition">
+  <img src="/images/val4.png" />
+</Frame>
+
+* Router configurations can be updated via CDN or file with cryptographic validation & signing to prevent tampering.
+
+* Before being applied, all configurations must pass an Admission Webhook validation to prevent unauthorized changes.
+
+* Config validation includes signature verification (HMAC-SHA256) to ensure authenticity and integrity.
+
+* To prevent security threats like malicious subgraph redirection, the Router automatically rejects any configuration that fails validation.
+
+* Webhook signature verification (SHA-256) ensures the secure transmission of configuration updates.
+
+* A dedicated signing key ensures that only authorized updates to router configurations are accepted.
+
+* Supports domain-based subgraph URL validation to prevent unauthorized endpoints from being introduced.
+
+* Timing-safe signature verification prevents brute-force attacks on configuration signatures.
+
+## Organizational Security & Compliance
+
+* SOC 2 Type II Certified (Report available upon request).
+
+* ISO 27001 certification in preparation
+
+* An information security management system (ISMS) is in place.
+
+* Secure Software Development Lifecycle (SDLC) policies enforce security best practices.
+
+* Continuous security training for WunderGraph staff.
+
+* $5M E\&O and Cyber Insurance Coverage.
+

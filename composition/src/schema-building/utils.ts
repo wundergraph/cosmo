@@ -1,52 +1,53 @@
 import {
-  BooleanValueNode,
-  ConstDirectiveNode,
-  ConstValueNode,
-  DirectiveDefinitionNode,
-  EnumValueDefinitionNode,
-  EnumValueNode,
-  FieldDefinitionNode,
-  FloatValueNode,
-  InputValueDefinitionNode,
-  IntValueNode,
+  type BooleanValueNode,
+  type ConstDirectiveNode,
+  type ConstValueNode,
+  DEFAULT_DEPRECATION_REASON,
+  type DefinitionNode,
+  type DirectiveDefinitionNode,
+  type EnumValueDefinitionNode,
+  type EnumValueNode,
+  type FieldDefinitionNode,
+  type FloatValueNode,
+  type InputValueDefinitionNode,
+  type IntValueNode,
   Kind,
-  NullValueNode,
+  type NullValueNode,
   OperationTypeNode,
   print,
-  StringValueNode,
-  TypeNode,
+  type StringValueNode,
+  type TypeNode,
 } from 'graphql';
 import {
-  AuthorizationData,
-  ChildData,
-  CompositeOutputData,
-  ConditionalFieldData,
-  DefinitionData,
-  EnumValueData,
+  type AuthorizationData,
+  type ChildData,
+  type CompositeOutputData,
+  type ConditionalFieldData,
+  type DefinitionData,
   ExtensionType,
-  ExternalFieldData,
-  FieldData,
-  InputValueData,
-  InterfaceDefinitionData,
-  NodeData,
-  ObjectDefinitionData,
-  ParentDefinitionData,
-  PersistedDirectiveDefinitionData,
-  PersistedDirectivesData,
-  SchemaData,
+  type ExternalFieldData,
+  type FieldData,
+  type InputObjectDefinitionData,
+  type InputValueData,
+  type InterfaceDefinitionData,
+  type NodeData,
+  type ObjectDefinitionData,
+  type ParentDefinitionData,
+  type PersistedDirectiveDefinitionData,
+  type PersistedDirectivesData,
+  type SchemaData,
 } from './types';
-import { MutableFieldNode, MutableInputValueNode, MutableTypeDefinitionNode } from './ast';
-import { ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
+import { type MutableDefinitionNode, type MutableFieldNode, type MutableInputValueNode } from './ast';
+import { type ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
 import {
   incompatibleInputValueDefaultValuesError,
   invalidRepeatedFederatedDirectiveErrorMessage,
   invalidRequiredInputValueError,
 } from '../errors/errors';
-import { SubscriptionFilterValue } from '../router-configuration/types';
+import { type SubscriptionFilterValue } from '../router-configuration/types';
 import {
   ARGUMENT,
   AUTHENTICATED,
-  AUTHORIZATION_DIRECTIVES,
   BOOLEAN_SCALAR,
   DEPRECATED,
   DEPRECATED_DEFAULT_ARGUMENT_VALUE,
@@ -58,7 +59,6 @@ import {
   INPUT_NODE_KINDS,
   INT_SCALAR,
   MUTATION,
-  NON_REPEATABLE_PERSISTED_DIRECTIVES,
   OUTPUT_NODE_KINDS,
   PERSISTED_CLIENT_DIRECTIVES,
   QUERY,
@@ -69,7 +69,6 @@ import {
   SHAREABLE,
   STRING_SCALAR,
   SUBSCRIPTION,
-  TAG,
 } from '../utils/string-constants';
 import {
   generateRequiresScopesDirective,
@@ -78,14 +77,14 @@ import {
   getEntriesNotInHashSet,
   getFirstEntry,
 } from '../utils/utils';
-import { InputNodeKind, InvalidRequiredInputValueData, OutputNodeKind } from '../utils/types';
+import { type InputNodeKind, type InvalidRequiredInputValueData, type OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
-import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
+import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
     deprecatedReason: '',
-    directivesByDirectiveName: new Map<DirectiveName, ConstDirectiveNode[]>(),
+    directivesByName: new Map<DirectiveName, Array<ConstDirectiveNode>>(),
     isDeprecated: false,
     tagDirectiveByName: new Map<string, ConstDirectiveNode>(),
   };
@@ -99,11 +98,11 @@ type IsNodeExternalOrShareableResult = {
 export function isNodeExternalOrShareable(
   node: ObjectTypeNode | FieldDefinitionNode,
   areAllFieldsShareable: boolean,
-  directivesByDirectiveName: Map<DirectiveName, ConstDirectiveNode[]>,
+  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>,
 ): IsNodeExternalOrShareableResult {
   const result: IsNodeExternalOrShareableResult = {
-    isExternal: directivesByDirectiveName.has(EXTERNAL),
-    isShareable: areAllFieldsShareable || directivesByDirectiveName.has(SHAREABLE),
+    isExternal: directivesByName.has(EXTERNAL),
+    isShareable: areAllFieldsShareable || directivesByName.has(SHAREABLE),
   };
   if (!node.directives?.length) {
     return result;
@@ -123,6 +122,17 @@ export function isNodeExternalOrShareable(
 
 export function isTypeRequired(node: TypeNode): boolean {
   return node.kind === Kind.NON_NULL_TYPE;
+}
+
+export function isTypeNodeListType(node: TypeNode): boolean {
+  switch (node.kind) {
+    case Kind.LIST_TYPE:
+      return true;
+    case Kind.NON_NULL_TYPE:
+      return isTypeNodeListType(node.type);
+    default:
+      return false;
+  }
 }
 
 // TODO replace naïve comparison
@@ -223,7 +233,7 @@ type ChildDefinitionNode = EnumValueDefinitionNode | FieldDefinitionNode | Input
 function propagateFieldDataArguments(fieldData: FieldData) {
   for (const argumentData of fieldData.argumentDataByName.values()) {
     // First propagate the argument's directives
-    for (const directiveNodes of argumentData.directivesByDirectiveName.values()) {
+    for (const directiveNodes of argumentData.directivesByName.values()) {
       argumentData.node.directives.push(...directiveNodes);
     }
     fieldData.node.arguments.push(argumentData.node);
@@ -238,7 +248,32 @@ export function childMapToValueArray<T extends ChildData, U extends ChildDefinit
     if (isFieldData(childData)) {
       propagateFieldDataArguments(childData);
     }
-    for (const directiveNodes of childData.directivesByDirectiveName.values()) {
+    for (const [directiveName, directiveNodes] of childData.directivesByName) {
+      if (directiveName === DEPRECATED) {
+        // @deprecated is non-repeatable
+        const directiveNode = directiveNodes[0];
+        if (!directiveNode) {
+          continue;
+        }
+        if (directiveNode.arguments?.length) {
+          childData.node.directives.push(directiveNode);
+          continue;
+        }
+        childData.node.directives.push({
+          ...directiveNode,
+          arguments: [
+            {
+              kind: Kind.ARGUMENT,
+              value: {
+                kind: Kind.STRING,
+                value: DEFAULT_DEPRECATION_REASON,
+              },
+              name: stringToNameNode(REASON),
+            },
+          ],
+        });
+        continue;
+      }
       childData.node.directives.push(...directiveNodes);
     }
     valueArray.push(childData.node);
@@ -285,7 +320,7 @@ export function setParentDataExtensionType(existingData: ParentDefinitionData, i
   existingData.extensionType = ExtensionType.NONE;
 }
 
-function upsertDeprecatedDirective(
+export function upsertDeprecatedDirective(
   persistedDirectivesData: PersistedDirectivesData,
   incomingDirectiveNode: ConstDirectiveNode,
 ) {
@@ -299,7 +334,7 @@ function upsertDeprecatedDirective(
   }
 }
 
-function upsertTagDirectives(
+export function upsertTagDirectives(
   persistedDirectivesData: PersistedDirectivesData,
   incomingDirectiveNodes: ConstDirectiveNode[],
 ) {
@@ -310,53 +345,15 @@ function upsertTagDirectives(
   }
 }
 
-export function extractPersistedDirectives(
-  persistedDirectivesData: PersistedDirectivesData,
-  directivesByDirectiveName: Map<DirectiveName, ConstDirectiveNode[]>,
-  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
-): PersistedDirectivesData {
-  for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
-    // @authenticated and @requiresScopes are handled differently
-    if (
-      AUTHORIZATION_DIRECTIVES.has(directiveName) ||
-      !persistedDirectiveDefinitionByDirectiveName.has(directiveName)
-    ) {
-      continue;
-    }
-    if (directiveName === DEPRECATED) {
-      persistedDirectivesData.isDeprecated = true;
-      upsertDeprecatedDirective(persistedDirectivesData, directiveNodes[0]);
-      continue;
-    }
-    if (directiveName === TAG) {
-      upsertTagDirectives(persistedDirectivesData, directiveNodes);
-      continue;
-    }
-    const existingDirectives = persistedDirectivesData.directivesByDirectiveName.get(directiveName);
-    if (!existingDirectives) {
-      persistedDirectivesData.directivesByDirectiveName.set(directiveName, [...directiveNodes]);
-      continue;
-    }
-    // Only add one instance of certain directives.
-    if (NON_REPEATABLE_PERSISTED_DIRECTIVES.has(directiveName)) {
-      continue;
-    }
-    existingDirectives.push(...directiveNodes);
-  }
-  return persistedDirectivesData;
-}
-
 export function propagateAuthDirectives(parentData: ParentDefinitionData, authData?: AuthorizationData) {
   if (!authData) {
     return;
   }
   if (authData.requiresAuthentication) {
-    parentData.persistedDirectivesData.directivesByDirectiveName.set(AUTHENTICATED, [
-      generateSimpleDirective(AUTHENTICATED),
-    ]);
+    parentData.persistedDirectivesData.directivesByName.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
   }
   if (authData.requiredScopes.length > 0) {
-    parentData.persistedDirectivesData.directivesByDirectiveName.set(REQUIRES_SCOPES, [
+    parentData.persistedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
       generateRequiresScopesDirective(authData.requiredScopes),
     ]);
   }
@@ -371,12 +368,10 @@ export function propagateFieldAuthDirectives(fieldData: FieldData, authData?: Au
     return;
   }
   if (fieldAuthData.originalData.requiresAuthentication) {
-    fieldData.persistedDirectivesData.directivesByDirectiveName.set(AUTHENTICATED, [
-      generateSimpleDirective(AUTHENTICATED),
-    ]);
+    fieldData.persistedDirectivesData.directivesByName.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
   }
   if (fieldAuthData.originalData.requiredScopes.length > 0) {
-    fieldData.persistedDirectivesData.directivesByDirectiveName.set(REQUIRES_SCOPES, [
+    fieldData.persistedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
       generateRequiresScopesDirective(fieldAuthData.originalData.requiredScopes),
     ]);
   }
@@ -400,14 +395,14 @@ export function generateDeprecatedDirective(reason: string): ConstDirectiveNode 
 }
 
 function getValidFlattenedPersistedDirectiveNodeArray(
-  directivesByDirectiveName: Map<DirectiveName, ConstDirectiveNode[]>,
-  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
+  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>,
+  persistedDirectiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>,
   directiveCoords: string,
   errors: Error[],
 ): ConstDirectiveNode[] {
-  const persistedDirectiveNodes: ConstDirectiveNode[] = [];
-  for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
-    const persistedDirectiveDefinition = persistedDirectiveDefinitionByDirectiveName.get(directiveName);
+  const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
+  for (const [directiveName, directiveNodes] of directivesByName) {
+    const persistedDirectiveDefinition = persistedDirectiveDefinitionByName.get(directiveName);
     if (!persistedDirectiveDefinition) {
       continue;
     }
@@ -426,7 +421,7 @@ function getValidFlattenedPersistedDirectiveNodeArray(
 
 function getRouterPersistedDirectiveNodes<T extends NodeData>(
   nodeData: T,
-  persistedDirectiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  persistedDirectiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>,
   errors: Error[],
 ): ConstDirectiveNode[] {
   const persistedDirectiveNodes = [...nodeData.persistedDirectivesData.tagDirectiveByName.values()];
@@ -435,8 +430,8 @@ function getRouterPersistedDirectiveNodes<T extends NodeData>(
   }
   persistedDirectiveNodes.push(
     ...getValidFlattenedPersistedDirectiveNodeArray(
-      nodeData.persistedDirectivesData.directivesByDirectiveName,
-      persistedDirectiveDefinitionByDirectiveName,
+      nodeData.persistedDirectivesData.directivesByName,
+      persistedDirectiveDefinitionByName,
       nodeData.name,
       errors,
     ),
@@ -445,11 +440,11 @@ function getRouterPersistedDirectiveNodes<T extends NodeData>(
 }
 
 export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T): ConstDirectiveNode[] {
-  const persistedDirectiveNodes: ConstDirectiveNode[] = [];
+  const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
   if (nodeData.persistedDirectivesData.isDeprecated) {
     persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.persistedDirectivesData.deprecatedReason));
   }
-  for (const [directiveName, directiveNodes] of nodeData.persistedDirectivesData.directivesByDirectiveName) {
+  for (const [directiveName, directiveNodes] of nodeData.persistedDirectivesData.directivesByName) {
     if (directiveName === SEMANTIC_NON_NULL && isFieldData(nodeData)) {
       persistedDirectiveNodes.push(
         generateSemanticNonNullDirective(getFirstEntry(nodeData.nullLevelsBySubgraphName) ?? new Set<number>([0])),
@@ -466,17 +461,6 @@ export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T
     persistedDirectiveNodes.push(directiveNodes[0]);
   }
   return persistedDirectiveNodes;
-}
-
-export function getNodeForRouterSchemaByData<T extends ParentDefinitionData | EnumValueData>(
-  data: T,
-  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
-  errors: Error[],
-): T['node'] {
-  data.node.name = stringToNameNode(data.name);
-  data.node.description = data.description;
-  data.node.directives = getRouterPersistedDirectiveNodes(data, persistedDirectiveDefinitionByDirectiveName, errors);
-  return data.node;
 }
 
 export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): MutableFieldNode {
@@ -557,7 +541,7 @@ function addValidatedArgumentNodes(
 }
 
 export function addValidPersistedDirectiveDefinitionNodeByData(
-  definitions: MutableTypeDefinitionNode[],
+  definitions: (MutableDefinitionNode | DefinitionNode)[],
   data: PersistedDirectiveDefinitionData,
   persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
   errors: Error[],
@@ -678,10 +662,7 @@ export function isTypeValidImplementation(
 }
 
 export function isNodeDataInaccessible(data: NodeData): boolean {
-  return (
-    data.persistedDirectivesData.directivesByDirectiveName.has(INACCESSIBLE) ||
-    data.directivesByDirectiveName.has(INACCESSIBLE)
-  );
+  return data.persistedDirectivesData.directivesByName.has(INACCESSIBLE) || data.directivesByName.has(INACCESSIBLE);
 }
 
 export function isLeafKind(kind: Kind): boolean {
@@ -781,6 +762,10 @@ export function areKindsEqual<T extends ParentDefinitionData>(a: T, b: ParentDef
 
 export function isFieldData(data: ChildData | NodeData | SchemaData): data is FieldData {
   return data.kind === Kind.FIELD_DEFINITION;
+}
+
+export function isInputObjectDefinitionData(data: ParentDefinitionData): data is InputObjectDefinitionData {
+  return data.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION;
 }
 
 export function isInputNodeKind(kind: Kind): kind is InputNodeKind {

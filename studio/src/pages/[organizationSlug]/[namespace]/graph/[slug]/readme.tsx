@@ -1,18 +1,12 @@
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphContext,
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { OverviewToolbar } from "@/components/overview/OverviewToolbar";
-import { CLI } from "@/components/ui/cli";
-import { docsBaseURL } from "@/lib/constants";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { useRouter } from "next/router";
-import { useContext } from "react";
-import Markdown from "react-markdown";
-import rehypeRaw from "rehype-raw";
-import remarkGfm from "remark-gfm";
+import { EmptyState } from '@/components/empty-state';
+import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { OverviewToolbar } from '@/components/overview/OverviewToolbar';
+import { CLI } from '@/components/ui/cli';
+import { docsBaseURL } from '@/lib/constants';
+import { CommandLineIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/router';
+import { useContext } from 'react';
+import { SafeMarkdown } from '@/components/safe-markdown';
 
 const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
   const router = useRouter();
@@ -24,11 +18,11 @@ const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
       title="Add federated graph README using CLI"
       description={
         <>
-          No graph readme found. Use the CLI tool to add the readme.{" "}
+          No graph readme found. Use the CLI tool to add the readme.{' '}
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/studio/graph-documentation"}
+            href={docsBaseURL + '/studio/graph-documentation'}
             className="text-primary"
           >
             Learn more.
@@ -38,12 +32,8 @@ const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
       actions={
         <CLI
           command={`npx wgc ${
-            !graphContext?.graph?.supportsFederation
-              ? "monograph"
-              : "federated-graph"
-          } update ${fedGraphName} --namespace ${
-            router.query.namespace
-          } --readme <path-to-readme>`}
+            !graphContext?.graph?.supportsFederation ? 'monograph' : 'federated-graph'
+          } update ${fedGraphName} --namespace ${router.query.namespace} --readme <path-to-readme>`}
         />
       }
     />
@@ -54,19 +44,17 @@ const FederatedGraphReadmePage = () => {
   const router = useRouter();
   const slug = router.query.slug as string;
   const graph = useContext(GraphContext);
-
-  if (!graph || !graph.graph) return null;
+  if (!graph || !graph.graph) {
+    return null;
+  }
 
   const { readme } = graph.graph;
-
   return (
     <div>
       {readme ? (
         <div className="flex h-full w-full">
           <div className="prose-pre:scrollbar-custom prose mx-auto h-full w-full max-w-full dark:prose-invert prose-code:bg-secondary prose-pre:!bg-secondary/50">
-            <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-              {readme}
-            </Markdown>
+            <SafeMarkdown content={readme} />
           </div>
         </div>
       ) : (
@@ -78,7 +66,7 @@ const FederatedGraphReadmePage = () => {
 
 FederatedGraphReadmePage.getLayout = (page: React.ReactNode) => {
   return getGraphLayout(page, {
-    title: "README",
+    title: 'README',
   });
 };
 
@@ -92,7 +80,7 @@ FederatedGraphReadmePage.getLayout = (page: React.ReactNode) => {
       {page}
     </GraphPageLayout>,
     {
-      title: "README",
+      title: 'README',
     },
   );
 };

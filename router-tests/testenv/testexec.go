@@ -14,12 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
-)
 
-const routerDir = "../router"
+	"github.com/wundergraph/cosmo/router-tests/freeport"
+)
 
 var (
 	buildOnce sync.Once
@@ -81,15 +80,16 @@ func buildRouterBin(t *testing.T, ctx context.Context) {
 	buildOnce.Do(func() {
 		t.Log("Building router binary...")
 
+		rDir := filepath.Join(routerTestsDir, "..", "router")
 		cmd := exec.Command("make", "build-race")
-		cmd.Dir = routerDir
+		cmd.Dir = rDir
 		err := runCmdWithLogs(t, ctx, cmd, true, nil) // Run the build command
 		if err != nil {
 			t.Fatalf("failed to execute runCmdWithLogs: %v", err)
 		}
 
 		// Determine the binary path after successful build
-		binPath := filepath.Join(routerDir, "router") // Adjust if needed for Windows
+		binPath := filepath.Join(rDir, "router")
 		require.FileExists(t, binPath, "Router binary was not found after build")
 
 		routerBin = binPath // Store the path for reuse
@@ -118,13 +118,12 @@ func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOpti
 		return nil, err
 	}
 
-	port := freeport.GetOne(t)
-	listenerAddr := fmt.Sprintf("localhost:%d", port)
+	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	token, err := generateJwtToken()
 	if err != nil {
 		return nil, err
 	}
-	testCdn := SetupCDNServer(t, freeport.GetOne(t))
+	testCdn, _ := SetupCDNServer(t)
 	var envs []string
 
 	envVars := map[string]string{

@@ -44,6 +44,9 @@ spec:
       {{- end }}
       labels:
         {{- include "controlplane.selectorLabels" . | nindent 8 }}
+        {{- range $key, $value := .Values.commonLabels }}
+        {{ $key }}: {{ quote $value }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -104,6 +107,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.secretName" . }}
                   key: jwtSessionSecret
+            - name: AUTH_SSO_COOKIE_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: authSsoCookieDomain
             - name: DB_URL
               valueFrom:
                 secretKeyRef:
@@ -180,6 +188,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.secretName" . }}
                   key: webhookSecret
+            {{- if .Values.configuration.webhookProxyUrl }}
+            - name: WEBHOOK_PROXY_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: webhookProxyUrl
+            {{- end }}
             - name: GITHUB_APP_CLIENT_ID
               valueFrom:
                 configMapKeyRef:

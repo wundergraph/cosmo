@@ -1,16 +1,17 @@
-import { DataTableFacetedFilter } from "./data-table-faceted-filter";
-import { DataTablePrimaryFilterMenu } from "./data-table-primary-filter-menu";
-import { ColumnFiltersState } from "@tanstack/react-table";
-import { Button } from "../ui/button";
-import { Cross2Icon } from "@radix-ui/react-icons";
-import React from "react";
-import { CustomOptions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { DataTableFacetedFilter } from './data-table-faceted-filter';
+import { DataTablePrimaryFilterMenu } from './data-table-primary-filter-menu';
+import { ColumnFiltersState } from '@tanstack/react-table';
+import { Button } from '../ui/button';
+import { Cross2Icon } from '@radix-ui/react-icons';
+import React from 'react';
+import { CustomOptions } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 export interface AnalyticsFilter {
   id: string;
   title: string;
   selectedOptions?: string[];
   onSelect?: (value?: string[]) => void;
+  validateSelection?: (value: string[]) => boolean; // Returns true if valid, false if invalid
   options: Array<{
     label: string;
     value: string;
@@ -20,16 +21,13 @@ export interface AnalyticsFilter {
 
 export interface AnalyticsFiltersProps {
   filters: AnalyticsFilter[];
+  className?: string;
 }
 
 export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = (props) => {
-  const { filters = [] } = props;
+  const { filters = [], className } = props;
 
-  return (
-    <>
-      {filters.length > 0 && <DataTablePrimaryFilterMenu filters={filters} />}
-    </>
-  );
+  return <>{filters.length > 0 && <DataTablePrimaryFilterMenu filters={filters} className={className} />}</>;
 };
 
 export interface AnalyticsSelectedFiltersProps {
@@ -38,14 +36,10 @@ export interface AnalyticsSelectedFiltersProps {
   onReset?: () => void;
 }
 
-export const AnalyticsSelectedFilters: React.FC<
-  AnalyticsSelectedFiltersProps
-> = (props) => {
+export const AnalyticsSelectedFilters: React.FC<AnalyticsSelectedFiltersProps> = (props) => {
   const { filters, selectedFilters = [], onReset } = props;
   const availableFilters = filters.map(({ id }) => id);
-  const isFiltered =
-    selectedFilters.filter(({ id }) => availableFilters.includes(id)).length >
-    0;
+  const isFiltered = selectedFilters.filter(({ id }) => availableFilters.includes(id)).length > 0;
 
   if (!filters.length) {
     return null;
@@ -54,9 +48,7 @@ export const AnalyticsSelectedFilters: React.FC<
   return (
     <div className="flex flex-wrap gap-1">
       {filters.map((filter, index) => {
-        const isSelected = !!selectedFilters.find(
-          (each) => each.id === filter.id,
-        );
+        const isSelected = !!selectedFilters.find((each) => each.id === filter.id);
 
         if (!isSelected) {
           return null;
@@ -69,11 +61,7 @@ export const AnalyticsSelectedFilters: React.FC<
         );
       })}
       {isFiltered && (
-        <Button
-          onClick={() => onReset?.()}
-          variant="outline"
-          className="mr-1 border-dashed px-3 lg:ml-1"
-        >
+        <Button onClick={() => onReset?.()} variant="outline" className="mr-1 border-dashed px-3 lg:ml-1">
           <Cross2Icon className="mr-2 h-4 w-4" />
           Reset
         </Button>

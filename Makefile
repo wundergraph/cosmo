@@ -52,6 +52,24 @@ infra-debug-down-v:
 infra-debug-up:
 	docker compose -f docker-compose.yml --profile debug up --remove-orphans --detach
 
+format-all:
+	pnpm -r --parallel format
+
+format:
+	@package="$(word 2,$(MAKECMDGOALS))"; \
+	if [ -z "$$package" ]; then \
+		echo "Usage: make format <package>"; \
+		exit 1; \
+	fi; \
+	pnpm --filter "./$$package" --fail-if-no-match run format
+
+ifneq ($(filter format,$(MAKECMDGOALS)),)
+FORMAT_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+.PHONY: $(FORMAT_ARGS)
+$(FORMAT_ARGS):
+	@:
+endif
+
 seed:
 	pnpm -r run --filter './controlplane' seed
 
@@ -67,18 +85,23 @@ create-demo:
 delete-demo:
 	./scripts/delete-local-demo.sh
 
+build-plugins:
+	$(MAKE) -C demo plugin-build-ci
+
 dev-setup: prerequisites
 	pnpm install
 	pnpm generate
 	make generate-go
 	make infra-up
 	pnpm -r run --filter '!studio' build
+	make build-plugins
 
 dev-setup-no-infra: prerequisites
 	pnpm install
 	pnpm generate
 	make generate-go
 	pnpm -r run --filter '!studio' build
+	make build-plugins
 
 build-pnpm:
 	pnpm install

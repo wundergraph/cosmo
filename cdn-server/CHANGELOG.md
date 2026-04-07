@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/cdn@0.17.0...cdn@0.18.0) (2026-03-27)
+
+### Features
+
+* add PQL manifest support for persisted operations ([#2635](https://github.com/wundergraph/cosmo/issues/2635)) ([38a648c](https://github.com/wundergraph/cosmo/commit/38a648cff927b45d5ee5323bf303f83198c64411)) (@StarpTech)
+
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/cdn@0.16.2...cdn@0.17.0) (2026-03-05)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+## [0.16.2](https://github.com/wundergraph/cosmo/compare/cdn@0.16.1...cdn@0.16.2) (2026-02-25)
+
+### Bug Fixes
+
+* resolve cve-2026-25896 ([#2552](https://github.com/wundergraph/cosmo/issues/2552)) ([f271ff2](https://github.com/wundergraph/cosmo/commit/f271ff267c01bc1e8af5f6aeed6ceae187db0fbc)) (@pepol)
+
+## [0.16.1](https://github.com/wundergraph/cosmo/compare/cdn@0.16.0...cdn@0.16.1) (2026-01-12)
+
+### Bug Fixes
+
+* **infra:** ensure base images use target platform ([#2401](https://github.com/wundergraph/cosmo/issues/2401)) ([45d65c4](https://github.com/wundergraph/cosmo/commit/45d65c4c260e7888ecfc46fb46db0d73d33fc75e)) (@endigma)
+
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/cdn@0.15.0...cdn@0.16.0) (2025-11-29)
+
+### Features
+
+* subgraph check extensions ([#2281](https://github.com/wundergraph/cosmo/issues/2281)) ([c190b5a](https://github.com/wundergraph/cosmo/commit/c190b5ad19f9fd8f7a67317a29fe845d475dbf10)) (@wilsonrivera)
+
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/cdn@0.14.5...cdn@0.15.0) (2025-11-19)
+
+### Features
+
+* **admission-server,cdn-server:** upgrade hono to v4.10.6 ([#2340](https://github.com/wundergraph/cosmo/issues/2340)) ([9f9faa0](https://github.com/wundergraph/cosmo/commit/9f9faa00eed1027e8d3cbe08e594c94e08028553)) (@pepol)
+
 ## [0.14.5](https://github.com/wundergraph/cosmo/compare/cdn@0.14.4...cdn@0.14.5) (2025-10-03)
 
 **Note:** Version bump only for package cdn

@@ -6,19 +6,15 @@ import {
   DeleteFederatedSubgraphRequest,
   DeleteFederatedSubgraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import {
-  enrichLogger,
-  getFederatedGraphRouterCompatibilityVersion,
-  getLogger,
-  handleError,
-  newCompositionOptions,
-} from '../../util.js';
+import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -35,14 +31,16 @@ export function deleteFederatedSubgraph(
     logger = enrichLogger(ctx, logger, authContext);
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-    const proposalRepo = new ProposalRepository(opts.db);
+    const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     req.namespace = req.namespace || DefaultNamespace;
@@ -89,12 +87,10 @@ export function deleteFederatedSubgraph(
     });
 
     let proposalMatchMessage: string | undefined;
-    let matchedEntity:
-      | {
-          proposalId: string;
-          proposalSubgraphId: string;
-        }
-      | undefined;
+    const matchedProposalEntities: {
+      proposalId: string;
+      proposalSubgraphId: string;
+    }[] = [];
     if (namespace.enableProposals) {
       const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
         labels: subgraph.labels,
@@ -102,14 +98,14 @@ export function deleteFederatedSubgraph(
       });
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
-        const match = await proposalRepo.matchSchemaWithProposal({
+        const matches = await proposalRepo.matchSchemaWithProposals({
           subgraphName: subgraph.name,
           namespaceId: namespace.id,
           schemaSDL: '',
           routerCompatibilityVersion: getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
           isDeleted: true,
         });
-        if (!match) {
+        if (matches.length === 0) {
           if (proposalConfig.publishSeverityLevel === 'warn') {
             proposalMatchMessage = `The subgraph ${subgraph.name} is not proposed to be deleted in any of the approved proposals.`;
           } else {
@@ -125,9 +121,14 @@ export function deleteFederatedSubgraph(
             };
           }
         }
-        matchedEntity = match;
+        matchedProposalEntities.push(...matches);
       }
     }
+
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
 
     const { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
@@ -184,12 +185,52 @@ export function deleteFederatedSubgraph(
           },
           blobStorage: opts.blobStorage,
           chClient: opts.chClient!,
-          compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+          compositionOptions: {
+            disableResolvabilityValidation: req.disableResolvabilityValidation,
+            ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+          },
           federatedGraphs: affectedFederatedGraphs,
+          webhookProxyUrl: opts.webhookProxyUrl,
         });
+
+        // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+        const refreshedGraphs = await Promise.all(affectedFederatedGraphs.map((g) => fedGraphRepo.byId(g.id)));
+        for (let i = 0; i < affectedFederatedGraphs.length; i++) {
+          const refreshedGraph = refreshedGraphs[i];
+          if (refreshedGraph) {
+            affectedFederatedGraphs[i] = refreshedGraph;
+          }
+        }
 
         return { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings };
       });
+
+    // if this subgraph is part of a proposal, mark the proposal subgraph as published
+    // and if all proposal subgraphs are published, collect proposal details for the webhook
+    const proposalDetailsList: {
+      id: string;
+      name: string;
+      namespace: string;
+      federatedGraphId: string;
+    }[] = [];
+
+    for (const matchedEntity of matchedProposalEntities) {
+      const { allSubgraphsPublished } = await proposalRepo.markProposalSubgraphAsPublished({
+        proposalSubgraphId: matchedEntity.proposalSubgraphId,
+        proposalId: matchedEntity.proposalId,
+      });
+      if (allSubgraphsPublished) {
+        const proposal = await proposalRepo.ById(matchedEntity.proposalId);
+        if (proposal) {
+          proposalDetailsList.push({
+            id: proposal.proposal.id,
+            name: proposal.proposal.name,
+            namespace: req.namespace,
+            federatedGraphId: proposal.proposal.federatedGraphId,
+          });
+        }
+      }
+    }
 
     for (const affectedFederatedGraph of affectedFederatedGraphs) {
       const hasErrors =
@@ -203,6 +244,7 @@ export function deleteFederatedSubgraph(
               id: affectedFederatedGraph.id,
               name: affectedFederatedGraph.name,
               namespace: affectedFederatedGraph.namespace,
+              composedSchemaVersionId: affectedFederatedGraph.composedSchemaVersionId,
             },
             organization: {
               id: authContext.organizationId,
@@ -216,44 +258,34 @@ export function deleteFederatedSubgraph(
       );
     }
 
-    // if this subgraph is part of a proposal, mark the proposal subgraph as published
-    // and if all proposal subgraphs are published, update the proposal state to PUBLISHED
-    if (matchedEntity) {
-      const { allSubgraphsPublished } = await proposalRepo.markProposalSubgraphAsPublished({
-        proposalSubgraphId: matchedEntity.proposalSubgraphId,
-        proposalId: matchedEntity.proposalId,
-      });
-      if (allSubgraphsPublished) {
-        const proposal = await proposalRepo.ById(matchedEntity.proposalId);
-        if (proposal) {
-          const federatedGraph = await fedGraphRepo.byId(proposal.proposal.federatedGraphId);
-          if (federatedGraph) {
-            orgWebhooks.send(
-              {
-                eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
-                payload: {
-                  federated_graph: {
-                    id: federatedGraph.id,
-                    name: federatedGraph.name,
-                    namespace: federatedGraph.namespace,
-                  },
-                  organization: {
-                    id: authContext.organizationId,
-                    slug: authContext.organizationSlug,
-                  },
-                  proposal: {
-                    id: proposal.proposal.id,
-                    name: proposal.proposal.name,
-                    namespace: req.namespace,
-                    state: 'PUBLISHED',
-                  },
-                  actor_id: authContext.userId,
-                },
+    // Send PROPOSAL_STATE_UPDATED webhook for each published proposal
+    for (const proposalDetails of proposalDetailsList) {
+      const federatedGraph = affectedFederatedGraphs.find((g) => g.id === proposalDetails.federatedGraphId);
+      if (federatedGraph) {
+        orgWebhooks.send(
+          {
+            eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+            payload: {
+              federated_graph: {
+                id: federatedGraph.id,
+                name: federatedGraph.name,
+                namespace: federatedGraph.namespace,
               },
-              authContext.userId,
-            );
-          }
-        }
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
+              proposal: {
+                id: proposalDetails.id,
+                name: proposalDetails.name,
+                namespace: proposalDetails.namespace,
+                state: 'PUBLISHED',
+              },
+              actor_id: authContext.userId,
+            },
+          },
+          authContext.userId,
+        );
       }
     }
 

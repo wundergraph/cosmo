@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
+import pLimit from 'p-limit';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -7,15 +8,20 @@ import {
   PublishedOperationStatus,
   PublishPersistedOperationsRequest,
   PublishPersistedOperationsResponse,
+  PersistedOperation,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate } from 'graphql';
 import { PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { MAX_MANIFEST_OPERATIONS, OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { createBlobStoragePath } from './utils.js';
+
+const MAX_PERSISTED_OPERATIONS = 100;
+const PARALLEL_PERSISTED_OPERATIONS_LIMIT = 25;
 
 export function publishPersistedOperations(
   opts: RouterOptions,
@@ -39,6 +45,16 @@ export function publishPersistedOperations(
 
     if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
       throw new UnauthorizedError();
+    }
+
+    if (req.operations.length > MAX_PERSISTED_OPERATIONS) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Payload Too Large: max ${MAX_PERSISTED_OPERATIONS} operations per request`,
+        },
+        operations: [],
+      };
     }
 
     const userId = authContext.userId;
@@ -141,41 +157,72 @@ export function publishPersistedOperations(
     const operationsByOperationId = new Map(
       operationsResult.map((op) => [op.operationId, { hash: op.hash, operationNames: op.operationNames }]),
     );
-    for (const operation of req.operations) {
+
+    // Check if adding new operations would exceed the manifest limit
+    const allExistingOperations = await operationsRepo.getAllPersistedOperationsForGraph();
+    const existingHashes = new Set(allExistingOperations.map((op) => op.hash));
+    const newOperationCount = req.operations.filter((op) => {
+      const hash = crypto.createHash('sha256').update(op.contents).digest('hex');
+      return !existingHashes.has(hash);
+    }).length;
+
+    if (allExistingOperations.length + newOperationCount > MAX_MANIFEST_OPERATIONS) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Operation limit exceeded: adding ${newOperationCount} new operations would bring the total to ${allExistingOperations.length + newOperationCount}, which exceeds the maximum of ${MAX_MANIFEST_OPERATIONS} operations per graph`,
+        },
+        operations: [],
+      };
+    }
+
+    const processOperation = async (
+      operation: PersistedOperation,
+    ): Promise<{
+      publishedOperation: PublishedOperation | null;
+      updatedOp: UpdatedPersistedOperation | null;
+      error: { operationId: string; path: string } | null;
+    }> => {
       const operationId = operation.id;
       const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
       const prev = operationsByOperationId.get(operationId);
       if (prev !== undefined && prev.hash !== operationHash) {
         // We're trying to update an operation with the same ID but different hash
-        operations.push(
-          new PublishedOperation({
+        return {
+          publishedOperation: new PublishedOperation({
             id: operationId,
             hash: prev.hash,
             status: PublishedOperationStatus.CONFLICT,
             operationNames: prev.operationNames,
           }),
-        );
-        continue;
+          updatedOp: null,
+          error: null,
+        };
       }
       const operationNames = extractOperationNames(operation.contents);
-      operationsByOperationId.set(operationId, { hash: operationHash, operationNames });
       const clientName = encodeURIComponent(req.clientName);
-      const path = `${organizationId}/${federatedGraph.id}/operations/${clientName}/${operationId}.json`;
-      updatedOperations.push({
+      const path = createBlobStoragePath({
+        organizationId,
+        fedGraphId: federatedGraph.id,
+        clientName,
+        operationId,
+      });
+      const updatedOp: UpdatedPersistedOperation = {
         operationId,
         hash: operationHash,
         filePath: path,
         contents: operation.contents,
         operationNames,
-      });
+      };
 
-      // New operation
-      let status: PublishedOperationStatus;
       if (prev === undefined) {
         const data: PublishedOperationData = {
           version: 1,
           body: operation.contents,
         };
+        // Deprecated: Uploading individual operations to blob storage is deprecated.
+        // The router now downloads all operations at once via the PQL manifest, avoiding
+        // per-request CDN latency. This upload is kept for backward compatibility with older routers.
         try {
           await opts.blobStorage.putObject({
             key: path,
@@ -185,29 +232,71 @@ export function publishPersistedOperations(
         } catch (e) {
           logger.error(e, `Could not store operation contents for ${operationId} at ${path}`);
           return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `Could not store operation contents for ${operationId} at ${path}`,
-            },
-            operations: [],
+            publishedOperation: null,
+            updatedOp: null,
+            error: { operationId, path },
           };
         }
-
-        status = PublishedOperationStatus.CREATED;
-      } else {
-        status = PublishedOperationStatus.UP_TO_DATE;
+        return {
+          publishedOperation: new PublishedOperation({
+            id: operationId,
+            hash: operationHash,
+            status: PublishedOperationStatus.CREATED,
+            operationNames,
+          }),
+          updatedOp,
+          error: null,
+        };
       }
-      operations.push(
-        new PublishedOperation({
+
+      return {
+        publishedOperation: new PublishedOperation({
           id: operationId,
           hash: operationHash,
-          status,
+          status: PublishedOperationStatus.UP_TO_DATE,
           operationNames,
         }),
-      );
+        updatedOp,
+        error: null,
+      };
+    };
+
+    const limit = pLimit(PARALLEL_PERSISTED_OPERATIONS_LIMIT);
+    const results = await Promise.all(req.operations.map((op) => limit(() => processOperation(op))));
+
+    const firstError = results.find((r) => r.error !== null);
+    if (firstError?.error) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Could not store operation contents for ${firstError.error.operationId} at ${firstError.error.path}`,
+        },
+        operations: [],
+      };
+    }
+
+    for (const r of results) {
+      operations.push(r.publishedOperation!);
+      if (r.updatedOp !== null) {
+        updatedOperations.push(r.updatedOp);
+      }
     }
 
     await operationsRepo.updatePersistedOperations(clientId, userId, updatedOperations);
+
+    try {
+      await operationsRepo.generateAndUploadManifest({
+        organizationId,
+        blobStorage: opts.blobStorage,
+        logger,
+      });
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      logger.error(error, 'Failed to regenerate PQL manifest after publishing persisted operations', {
+        federatedGraphId: federatedGraph.id,
+        organizationId,
+      });
+    }
 
     return {
       response: {
