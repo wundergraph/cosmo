@@ -9,11 +9,13 @@ import { useRouter } from 'next/router';
 import { useContext, useEffect, useState } from 'react';
 import Fuse from 'fuse.js';
 import { Subgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { set } from 'lodash';
 import { Toolbar } from '@/components/ui/toolbar';
 import { getFeatureSubgraphsByFederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useQuery } from '@connectrpc/connect-query';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { keepPreviousData } from '@tanstack/react-query';
+import { Loader } from '@/components/ui/loader';
+import { cn } from '@/lib/utils';
 
 const SubGraphsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
@@ -31,7 +33,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
   const [search, setSearch] = useState(router.query.search as string);
   const applyParams = useApplyParams();
 
-  const { data: featureSubgraphsData } = useQuery(
+  const { data: featureSubgraphsData, isFetching } = useQuery(
     getFeatureSubgraphsByFederatedGraph,
     {
       federatedGraphName: graphData?.graph?.name,
@@ -42,6 +44,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
     },
     {
       enabled: !!graphData?.graph?.name && tab === 'featureSubgraphs',
+      placeholderData: keepPreviousData,
     },
   );
 
@@ -96,13 +99,21 @@ const SubGraphsPage: NextPageWithLayout = () => {
           </Button>
         )}
       </div>
-      <SubgraphsTable
-        key={tab}
-        subgraphs={tab === 'featureSubgraphs' ? filteredFeatureSubgraphs : filteredSubgraphs}
-        graph={graphData.graph}
-        totalCount={totalCount}
-        tab={tab === 'featureSubgraphs' ? 'featureSubgraphs' : 'subgraphs'}
-      />
+      <div className={cn('scrollbar-custom relative w-full', isFetching ? 'overflow-hidden' : 'overflow-auto')}>
+        {isFetching && (
+          <div className="absolute h-full w-full bg-background/50 p-24">
+            <Loader />
+          </div>
+        )}
+
+        <SubgraphsTable
+          key={tab}
+          subgraphs={tab === 'featureSubgraphs' ? filteredFeatureSubgraphs : filteredSubgraphs}
+          graph={graphData.graph}
+          totalCount={totalCount}
+          tab={tab === 'featureSubgraphs' ? 'featureSubgraphs' : 'subgraphs'}
+        />
+      </div>
     </div>
   );
 };

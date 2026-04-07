@@ -932,6 +932,37 @@ export class SubgraphRepository {
       return [];
     }
 
+    return this.getSubgraphsMatching({
+      conditions,
+      published: data.published,
+      aaa: true,
+      includeSubgraphs: data.includeSubgraphs,
+    });
+  }
+
+  public getSubgraphsByTargetIds(ids: string[], rbac?: RBACEvaluator): Promise<SubgraphDTO[]> {
+    const conditions: (SQL<unknown> | undefined)[] = [
+      // eq(schema.targets.organizationId, this.organizationId),
+      // eq(schema.targets.type, 'subgraph'),
+      inArray(schema.targets.id, ids),
+    ];
+
+    return SubgraphRepository.applyRbacConditionsToQuery(rbac, conditions)
+      ? this.getSubgraphsMatching({ conditions, aaa: false })
+      : Promise.resolve([]);
+  }
+
+  private async getSubgraphsMatching({
+    conditions,
+    published,
+    aaa,
+    includeSubgraphs,
+  }: {
+    conditions: (SQL<unknown> | undefined)[];
+    published?: boolean;
+    aaa?: boolean;
+    includeSubgraphs?: string[];
+  }) {
     const subgraphs = await this.db
       .select({
         name: schema.targets.name,
@@ -965,13 +996,16 @@ export class SubgraphRepository {
       .from(schema.targets)
       .innerJoin(
         schema.subgraphs,
-        Array.isArray(data.includeSubgraphs) && data.includeSubgraphs.length > 0
-          ? and(eq(schema.subgraphs.targetId, schema.targets.id), inArray(schema.subgraphs.id, data.includeSubgraphs))
+        Array.isArray(includeSubgraphs) && includeSubgraphs.length > 0
+          ? and(eq(schema.subgraphs.targetId, schema.targets.id), inArray(schema.subgraphs.id, includeSubgraphs))
           : eq(schema.subgraphs.targetId, schema.targets.id),
       )
       .innerJoin(schema.namespaces, eq(schema.namespaces.id, schema.targets.namespaceId))
-      .innerJoin(schema.subgraphsToFederatedGraph, eq(schema.subgraphsToFederatedGraph.subgraphId, schema.subgraphs.id))
-      [data.published ? 'innerJoin' : 'leftJoin'](
+      [aaa ? 'innerJoin' : 'leftJoin'](
+        schema.subgraphsToFederatedGraph,
+        eq(schema.subgraphsToFederatedGraph.subgraphId, schema.subgraphs.id),
+      )
+      [published ? 'innerJoin' : 'leftJoin'](
         schema.schemaVersion,
         eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id),
       )

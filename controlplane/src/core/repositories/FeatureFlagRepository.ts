@@ -5,6 +5,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
 import { parse } from 'graphql';
+import { alias } from 'drizzle-orm/pg-core';
 import * as schema from '../../db/schema.js';
 import {
   featureFlagToFeatureSubgraphs,
@@ -438,12 +439,15 @@ export class FeatureFlagRepository {
       conditions.push(isValidUuid(query) ? eq(subgraphs.id, query) : like(targets.name, `%${query}%`));
     }
 
+    const baseSubgraphs = alias(subgraphs, 'base_subgraphs');
+    const baseTargets = alias(targets, 'base_targets');
     const baseQuery = this.db
       .selectDistinct({
         id: subgraphs.id,
         name: targets.name,
         targetId: subgraphs.targetId,
         baseSubgraphId: featureSubgraphsToBaseSubgraphs.baseSubgraphId,
+        baseSubgraphName: baseTargets.name,
         schemaVersionId: subgraphs.schemaVersionId,
         createdAt: targets.createdAt,
       })
@@ -464,6 +468,8 @@ export class FeatureFlagRepository {
         eq(featureSubgraphsToBaseSubgraphs.baseSubgraphId, subgraphsToFederatedGraph.subgraphId),
       )
       .innerJoin(namespaces, eq(namespaces.id, targets.namespaceId))
+      .innerJoin(baseSubgraphs, eq(baseSubgraphs.id, featureSubgraphsToBaseSubgraphs.baseSubgraphId))
+      .innerJoin(baseTargets, eq(baseTargets.id, baseSubgraphs.targetId))
       .where(and(...conditions, eq(subgraphsToFederatedGraph.federatedGraphId, federatedGraphId)))
       .orderBy(asc(targets.createdAt));
 
@@ -485,22 +491,31 @@ export class FeatureFlagRepository {
 
     const featureSubgraphTargets = await baseQuery.execute();
 
+    // Retrieve the subgraphs in chunks so we don't run into "too many parameters" errors
+    const a: SubgraphDTO[] = [];
+    const pendingFeatureSubgraphs = featureSubgraphTargets.map((target) => target.targetId);
+    while (pendingFeatureSubgraphs.length > 0) {
+      const chunkOfIdsToFetch = pendingFeatureSubgraphs.splice(0, 100);
+      const chunkOfSubgraphs = await subgraphRepo.getSubgraphsByTargetIds(chunkOfIdsToFetch);
+      a.push(...chunkOfSubgraphs);
+    }
+
     const featureSubgraphs: FeatureSubgraphDTO[] = [];
     for (const f of featureSubgraphTargets) {
-      const fs = await subgraphRepo.byTargetId(f.targetId);
+      const fs = a.find((graph) => graph.targetId === f.targetId);
       if (!fs) {
         continue;
       }
 
-      const baseSubgraph = await subgraphRepo.byId(f.baseSubgraphId);
-      if (!baseSubgraph) {
-        continue;
-      }
+      // const baseSubgraph = await subgraphRepo.byId(f.baseSubgraphId);
+      // if (!baseSubgraph) {
+      //   continue;
+      // }
 
       featureSubgraphs.push({
         ...fs,
         baseSubgraphId: f.baseSubgraphId,
-        baseSubgraphName: baseSubgraph.name,
+        baseSubgraphName: f.baseSubgraphName,
       });
     }
 
