@@ -1,0 +1,67 @@
+# MCP OAuth Scope Enforcement — Test Configuration
+# yaml-language-server: $schema=../../router/pkg/config/config.schema.json
+#
+# This config is used by the E2E tests in McpOAuthScopes.test.ts.
+# It adds built-in tool scope requirements on top of the base MCP OAuth setup.
+#
+# Usage:
+#   1. Start the test OAuth server:
+#        go run ./router-tests/cmd/oauth-server
+#   2. Start the router with this config (from the repo root):
+#        go run ./router/cmd/router -config client-tests/mcp-ts/mcp.test.config.yaml
+#   3. Run the tests:
+#        cd client-tests/mcp-ts && pnpm test
+
+authentication:
+  jwt:
+    jwks:
+      - url: 'http://localhost:9099/.well-known/jwks.json'
+        refresh_interval: 1m
+
+execution_config:
+  file:
+    path: '../router-tests/testenv/testdata/config.json'
+    watch: true
+    watch_interval: 20s
+
+mcp:
+  enabled: true
+  graph_name: 'my-graph'
+  omit_tool_name_prefix: true
+
+  server:
+    listen_addr: 'localhost:5025'
+    base_url: 'http://localhost:5026'
+
+  oauth:
+    enabled: true
+    authorization_server_url: 'http://localhost:9099'
+    jwks:
+      - url: 'http://localhost:9099/.well-known/jwks.json'
+        refresh_interval: 1m
+        algorithms: ['RS256']
+    scope_challenge_include_token_scopes: true
+    scopes:
+      initialize: ['mcp:connect']
+      tools_list: ['mcp:tools:read']
+      tools_call: ['mcp:tools:call']
+      execute_graphql: ['mcp:graphql:execute']
+      get_schema: ['mcp:schema:read']
+      get_operation_info: ['mcp:ops:read']
+
+  storage:
+    provider_id: 'mcp-operations'
+
+  session:
+    stateless: true
+
+  exclude_mutations: false
+  enable_arbitrary_operations: true
+  expose_schema: true
+
+  router_url: 'http://localhost:3002/graphql'
+
+storage_providers:
+  file_system:
+    - id: 'mcp-operations'
+      path: './../../connectrpc-tutorial/services'

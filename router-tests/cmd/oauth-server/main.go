@@ -46,6 +46,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httptest"
+	"net/http/httputil"
 	"os"
 	"os/signal"
 	"strings"
@@ -175,7 +177,7 @@ func newOAuthServer(port, clientID, clientSecret, defaultScopes string) (*server
 	mux.HandleFunc("/authorize", h.handleAuthorize)
 
 	return &serverWithHandler{
-		Server:  &http.Server{Addr: ":" + port, Handler: withCORS(mux)},
+		Server:  &http.Server{Addr: ":" + port, Handler: withDebugLog(withCORS(mux))},
 		handler: h,
 	}, nil
 }
@@ -458,5 +460,30 @@ func withCORS(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
+	})
+}
+
+// withDebugLog wraps an http.Handler to dump full request and response details.
+func withDebugLog(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqDump, err := httputil.DumpRequest(r, true)
+		if err != nil {
+			log.Printf("[DEBUG] ▶ REQUEST dump error: %v", err)
+		} else {
+			log.Printf("[DEBUG] ▶ REQUEST %s %s\n%s", r.Method, r.URL.Path, string(reqDump))
+		}
+
+		rec := httptest.NewRecorder()
+		next.ServeHTTP(rec, r)
+
+		log.Printf("[DEBUG] ◀ RESPONSE %s %s → %d\n  Headers: %v\n  Body: %s",
+			r.Method, r.URL.Path, rec.Code, rec.Header(), rec.Body.String())
+
+		// Copy recorded response to the real writer
+		for k, v := range rec.Header() {
+			w.Header()[k] = v
+		}
+		w.WriteHeader(rec.Code)
+		_, _ = w.Write(rec.Body.Bytes())
 	})
 }
