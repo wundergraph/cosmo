@@ -92,7 +92,8 @@
       "mdast-util-to-hast": ">=13.2.1",
       "js-yaml": ">=4.1.1",
       "fast-xml-parser": ">=5.3.6",
-      "@aws-sdk/client-sesv2": "^3.996.0"
+      "@aws-sdk/client-sesv2": "^3.996.0",
+      "handlebars": "4.7.9"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"
