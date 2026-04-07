@@ -55,7 +55,9 @@ func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http
 		return nil, errors.Join(err, ErrUnauthorized)
 	}
 	if auth != nil {
-		auth.SetScopesClaim(a.scopeClaim)
+		if a.scopeClaim != "" {
+			auth.SetScopesClaim(a.scopeClaim)
+		}
 		w.Header().Set("X-Authenticated-By", auth.Authenticator())
 		return r.WithContext(authentication.NewContext(r.Context(), auth)), nil
 	}
