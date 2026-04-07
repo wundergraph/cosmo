@@ -1,11 +1,14 @@
 import fs from 'node:fs/promises';
+import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node:fs';
 import path from 'node:path';
 import { program } from 'commander';
-import { execa } from 'execa';
+import { execa, type ResultPromise } from 'execa';
 import ora from 'ora';
 import pc from 'picocolors';
 import { z } from 'zod';
 import { config, cacheDir } from '../../core/config.js';
+import { getDefaultPlatforms, publishPluginPipeline, readPluginFiles } from '../../core/plugin-publish.js';
+import type { BaseCommandOptions } from '../../core/types/types.js';
 import { visibleLength } from '../../utils.js';
 import type { UserInfo } from './types.js';
 
@@ -244,4 +247,78 @@ export async function checkDockerReadiness(): Promise<void> {
   }
 
   spinner.succeed('Docker is ready.');
+}
+
+/**
+ * Returns the path to the demo log file at ~/.cache/cosmo/demo/demo.log.
+ * Creates the parent directory if needed.
+ */
+export function getDemoLogPath(): string {
+  const cosmoDir = path.join(cacheDir, 'demo');
+  if (!existsSync(cosmoDir)) {
+    mkdirSync(cosmoDir, { recursive: true });
+  }
+  return path.join(cosmoDir, 'demo.log');
+}
+
+function pipeToLog(logStream: WriteStream, proc: ResultPromise) {
+  proc.stdout?.pipe(logStream, { end: false });
+  proc.stderr?.pipe(logStream, { end: false });
+}
+
+/**
+ * Publishes demo plugins sequentially.
+ * Returns [error] on first failure; spinner shows which plugin failed.
+ */
+export async function publishAllPlugins({
+  client,
+  supportDir,
+  signal,
+  logPath,
+}: {
+  client: BaseCommandOptions['client'];
+  supportDir: string;
+  signal: AbortSignal;
+  logPath: string;
+}) {
+  const pluginNames = config.demoPluginNames;
+  const namespace = config.demoNamespace;
+  const labels = [config.demoLabelMatcher];
+  // The demo router always runs in a Linux Docker container, so we need
+  // linux builds for both architectures regardless of the host OS.
+  const platforms = [...new Set([...getDefaultPlatforms(), 'linux/amd64', 'linux/arm64'])];
+  const logStream = createWriteStream(logPath, { flags: 'w' });
+
+  try {
+    for (let i = 0; i < pluginNames.length; i++) {
+      const pluginName = pluginNames[i];
+      const pluginDir = path.join(supportDir, 'plugins', pluginName);
+
+      const spinner = ora(`Publishing plugin ${pc.bold(pluginName)} (${i + 1}/${pluginNames.length})…`).start();
+
+      const files = await readPluginFiles(pluginDir);
+      const result = await publishPluginPipeline({
+        client,
+        pluginDir,
+        pluginName,
+        namespace,
+        labels,
+        platforms,
+        files,
+        cancelSignal: signal,
+        onProcess: (proc) => pipeToLog(logStream, proc),
+      });
+
+      if (result.error) {
+        spinner.fail(`Failed to publish plugin ${pc.bold(pluginName)}: ${result.error.message}`);
+        return { error: result.error };
+      }
+
+      spinner.succeed(`Plugin ${pc.bold(pluginName)} published.`);
+    }
+  } finally {
+    logStream.end();
+  }
+
+  return { error: null };
 }
