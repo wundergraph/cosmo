@@ -59,6 +59,8 @@ const MigrationDialog = ({
   setToken,
   isEmptyState,
   compact,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: {
   refetch: () => void;
   isMigrating: boolean;
@@ -67,6 +69,8 @@ const MigrationDialog = ({
   setToken: Dispatch<SetStateAction<string | undefined>>;
   isEmptyState?: boolean;
   compact?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) => {
   const router = useRouter();
   const {
@@ -96,7 +100,10 @@ const MigrationDialog = ({
 
   const { mutate } = useMutation(migrateFromApollo);
 
-  const [open, setOpen] = useState(migrate || false);
+  const [internalOpen, setInternalOpen] = useState(migrate || false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (controlledOnOpenChange ?? setInternalOpen) : setInternalOpen;
 
   const onSubmit: SubmitHandler<MigrateInput> = (data) => {
     setIsMigrating(true);
@@ -142,27 +149,29 @@ const MigrationDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {compact ? (
-        <DialogTrigger asChild>
-          <button className="shrink-0 text-sm text-primary hover:underline">Migrate from Apollo →</button>
-        </DialogTrigger>
-      ) : (
-        <DialogTrigger
-          className={cn({
-            'min-h-[254px]': !isEmptyState,
-          })}
-        >
-          <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
-            <div className="flex items-center justify-center gap-x-5">
-              <SiApollographql className="h-10 w-10" />
-              <ChevronDoubleRightIcon className="animation h-8 w-8" />
-              <Logo width={50} height={50} />
-            </div>
-            <p className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-xl font-semibold text-transparent">
-              Migrate from Apollo
-            </p>
-          </Card>
-        </DialogTrigger>
+      {!isControlled && (
+        compact ? (
+          <DialogTrigger asChild>
+            <button className="shrink-0 text-sm text-primary hover:underline">Migrate from Apollo →</button>
+          </DialogTrigger>
+        ) : (
+          <DialogTrigger
+            className={cn({
+              'min-h-[254px]': !isEmptyState,
+            })}
+          >
+            <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
+              <div className="flex items-center justify-center gap-x-5">
+                <SiApollographql className="h-10 w-10" />
+                <ChevronDoubleRightIcon className="animation h-8 w-8" />
+                <Logo width={50} height={50} />
+              </div>
+              <p className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-xl font-semibold text-transparent">
+                Migrate from Apollo
+              </p>
+            </Card>
+          </DialogTrigger>
+        )
       )}
       <DialogContent>
         {!isMigrating ? (
@@ -412,6 +421,7 @@ export const Empty = ({
   const {
     namespace: { name: namespace },
   } = useWorkspace();
+  const [migrationOpen, setMigrationOpen] = useState(false);
 
   let labels = 'team=A';
   return (
@@ -421,7 +431,7 @@ export const Empty = ({
       description="A graph is the unified API layer that combines your services into a single endpoint. Choose the architecture that fits your team."
     >
       <div className="mt-8 flex flex-col gap-y-6 text-left">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Card 1 — Federated Graph (primary) */}
           <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/[0.03] p-4">
             <div className="flex items-start justify-between">
@@ -495,7 +505,11 @@ export const Empty = ({
             </div>
 
             {/* Apollo migration row */}
-            <div className="flex items-center gap-4 rounded-lg border p-4">
+            <button
+              type="button"
+              onClick={() => setMigrationOpen(true)}
+              className="flex w-full items-center gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-accent/50"
+            >
               <div className="flex shrink-0 items-center gap-2">
                 <SiApollographql className="h-6 w-6" />
                 <ChevronDoubleRightIcon className="h-4 w-4 text-muted-foreground" />
@@ -507,16 +521,18 @@ export const Empty = ({
                   Migrate your existing graphs to Cosmo in a few steps.
                 </p>
               </div>
-              <MigrationDialog
-                refetch={refetch}
-                setIsMigrationSuccess={setIsMigrationSuccess}
-                isEmptyState={true}
-                compact={true}
-                setToken={setToken}
-                isMigrating={isMigrating}
-                setIsMigrating={setIsMigrating}
-              />
-            </div>
+              <span className="shrink-0 text-sm text-primary">Migrate from Apollo →</span>
+            </button>
+            <MigrationDialog
+              refetch={refetch}
+              setIsMigrationSuccess={setIsMigrationSuccess}
+              isEmptyState={true}
+              setToken={setToken}
+              isMigrating={isMigrating}
+              setIsMigrating={setIsMigrating}
+              open={migrationOpen}
+              onOpenChange={setMigrationOpen}
+            />
           </>
         )}
       </div>
