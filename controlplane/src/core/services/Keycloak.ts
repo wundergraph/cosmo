@@ -4,7 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { uid } from 'uid';
 import { FastifyBaseLogger } from 'fastify';
 import { decodeJwt } from 'jose';
-import axios, { type AxiosInstance, isCancel, isAxiosError } from 'axios';
+import axios, { type AxiosInstance, isAxiosError, isCancel } from 'axios';
 import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { MemberRole } from '../../db/models.js';
@@ -298,6 +298,13 @@ export default class Keycloak {
     abortSignal?: AbortSignal;
   }) {
     const openIdConfiguration = await this.#fetchOpenIdConfiguration(discoveryEndpoint, abortSignal);
+    if (!openIdConfiguration.token_endpoint || !openIdConfiguration.authorization_endpoint) {
+      throw new PublicError(
+        EnumStatusCode.ERR,
+        'The provided OpenID configuration does not contain a valid token or authorization endpoint.',
+      );
+    }
+
     await this.client.identityProviders.create({
       alias,
       displayName: name,
@@ -573,7 +580,7 @@ export default class Keycloak {
             break;
           }
           default: {
-            message = e.code!;
+            message = e.message;
             break;
           }
         }
