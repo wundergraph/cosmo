@@ -117,7 +117,7 @@ export function setGraphRouterCompatibilityVersion(
       featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
-    await opts.db.transaction(async (tx) => {
+    const txResult = await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
       await fedGraphRepo.updateRouterCompatibilityVersion(federatedGraph.id, version);
@@ -180,6 +180,10 @@ export function setGraphRouterCompatibilityVersion(
         };
       }
     });
+
+    if (txResult) {
+      return txResult;
+    }
 
     return {
       response: {
