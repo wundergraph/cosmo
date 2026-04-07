@@ -423,7 +423,7 @@ export const Empty = ({
       <div className="mt-8 flex flex-col gap-y-6 text-left">
         <div className="grid grid-cols-2 gap-4">
           {/* Card 1 — Federated Graph (primary) */}
-          <div className="flex flex-col gap-3 rounded-lg border border-primary/30 p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
             <div className="flex items-start justify-between">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
                 <Component2Icon className="h-4 w-4 text-primary" />
@@ -441,6 +441,7 @@ export const Empty = ({
             </div>
             <CLI
               command={`npx wgc federated-graph create production --namespace ${namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
+              className="bg-background"
             />
             <a
               href={docsBaseURL + '/cli/federated-graph/create'}

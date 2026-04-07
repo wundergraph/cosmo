@@ -87,13 +87,14 @@ export const Empty = ({ graph, tab }: { graph?: FederatedGraph; tab: 'subgraphs'
     >
       <div className="mt-8 flex flex-col gap-y-4 text-left">
         <div className="flex flex-col gap-3 rounded-lg border border-primary bg-primary/5 p-6">
-          <p className="text-sm font-medium">Publish a subgraph</p>
+          <p className="text-sm font-medium">Publish a Subgraph</p>
           <p className="text-sm text-muted-foreground">
             Run the command below to publish your first subgraph. If it doesn&apos;t exist yet, it will be created
             automatically.
           </p>
           <CLI
             command={`npx wgc subgraph publish users --namespace ${namespace} --schema users.graphql --label ${label} --routing-url http://localhost:4003/graphql`}
+            className="bg-background"
           />
           <a
             href={docsBaseURL + '/cli/subgraph/create'}
@@ -106,9 +107,7 @@ export const Empty = ({ graph, tab }: { graph?: FederatedGraph; tab: 'subgraphs'
         </div>
 
         <div className="flex items-center justify-between rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">
-            Learn how subgraphs work and how to structure your services.
-          </p>
+          <p className="text-sm text-muted-foreground">Learn how subgraphs work and how to structure your services.</p>
           <a
             href={docsBaseURL + '/cli/subgraph/create'}
             target="_blank"
