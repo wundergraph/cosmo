@@ -16,8 +16,10 @@ import {
 import {
   checkDockerReadiness,
   clearScreen,
+  getDemoLogPath,
   prepareSupportingData,
   printLogo,
+  publishAllPlugins,
   resetScreen,
   updateScreenWithUserInfo,
 } from './util.js';
@@ -164,13 +166,20 @@ async function handleStep2(
   {
     onboarding,
     userInfo,
+    supportDir,
+    signal,
   }: {
-    onboarding: {
-      finishedAt?: string;
-    };
+    onboarding: { finishedAt?: string };
     userInfo: UserInfo;
+    supportDir: string;
+    signal: AbortSignal;
   },
 ) {
+  function retryFn() {
+    resetScreen(userInfo);
+    return handleStep2(opts, { onboarding, userInfo, supportDir, signal });
+  }
+
   const graphData = await handleGetFederatedGraphResponse(opts.client, {
     onboarding,
     userInfo,
@@ -199,6 +208,26 @@ async function handleStep2(
     onboarding,
     userInfo,
   });
+
+  const logPath = getDemoLogPath();
+  console.log(`\nPublishing plugins… ${pc.dim(`(logs: ${logPath})`)}`);
+
+  const publishResult = await publishAllPlugins({
+    client: opts.client,
+    supportDir,
+    signal,
+    logPath,
+  });
+
+  if (publishResult.error) {
+    await waitForKeyPress(
+      {
+        r: retryFn,
+        R: retryFn,
+      },
+      'Hit [r] to retry. CTRL+C to quit.',
+    );
+  }
 }
 
 async function handleGetOnboardingResponse(client: BaseCommandOptions['client'], userInfo: UserInfo) {
@@ -252,28 +281,38 @@ async function getUserInfo(client: BaseCommandOptions['client']) {
 
 export default function (opts: BaseCommandOptions) {
   return async function handleCommand() {
-    clearScreen();
-    printHello();
-    await prepareSupportingData();
-    await checkDockerReadiness();
-    const userInfo = await getUserInfo(opts.client);
-    updateScreenWithUserInfo(userInfo);
+    const controller = new AbortController();
+    const cleanup = () => controller.abort();
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
 
-    await waitForKeyPress(
-      {
-        Enter: () => undefined,
-      },
-      `It is recommended you run this command along the onboarding wizard at ${config.baseURL}/onboarding with the same account.\nPress ENTER to continue…`,
-    );
+    try {
+      clearScreen();
+      printHello();
+      const supportDir = await prepareSupportingData();
+      await checkDockerReadiness();
+      const userInfo = await getUserInfo(opts.client);
+      updateScreenWithUserInfo(userInfo);
 
-    resetScreen(userInfo);
+      await waitForKeyPress(
+        {
+          Enter: () => undefined,
+        },
+        `It is recommended you run this command along the onboarding wizard at ${config.baseURL}/onboarding with the same account.\nPress ENTER to continue…`,
+      );
 
-    const onboardingCheck = await handleStep1(opts, userInfo);
+      resetScreen(userInfo);
 
-    if (!onboardingCheck) {
-      return;
+      const onboardingCheck = await handleStep1(opts, userInfo);
+
+      if (!onboardingCheck) {
+        return;
+      }
+
+      await handleStep2(opts, { onboarding: onboardingCheck, userInfo, supportDir, signal: controller.signal });
+    } finally {
+      process.off('SIGINT', cleanup);
+      process.off('SIGTERM', cleanup);
     }
-
-    await handleStep2(opts, { onboarding: onboardingCheck, userInfo });
   };
 }

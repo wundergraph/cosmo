@@ -43,6 +43,7 @@ export const config = {
   demoOnboardingRepositoryBranch: 'main' as const,
   dockerBuilderName: 'cosmo-builder' as const,
   demoRouterPort: 3002 as const,
+  demoPluginNames: ['products', 'reviews'] as const,
 };
 
 export const getBaseHeaders = (): HeadersInit => {
