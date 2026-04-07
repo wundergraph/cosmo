@@ -126,8 +126,21 @@ Tokens can be upgraded **on the same MCP session** without reconnecting:
 
 1. Client connects with a token that has `mcp:connect` scope
 2. Client calls `tools/call` and receives `403 Forbidden` with `insufficient_scope`
-3. Client obtains a new token with additional scopes from the authorization server
+3. Client obtains a new token with additional scopes from the authorization server **(requires client support for step-up authorization)**
 4. Client retries with the new token on the same session (same `Mcp-Session-Id`)
+
+<Warning>
+  **MCP client limitation (as of April 2026)**: Most MCP clients — including Claude Code and the MCP TypeScript SDK —
+  do not yet support step-up re-authorization when they receive a `403 insufficient_scope` response. The server
+  implements the flow correctly per the MCP spec, but clients may fail to obtain a new token with broader scopes.
+
+  **Workarounds:**
+  - Include all required scopes in the `initialize` configuration so they are part of the initial `401` challenge
+  - Pre-register OAuth clients on the authorization server with all needed scopes
+  - Use the `scope_challenge_include_token_scopes: true` option to prevent clients from losing existing scopes
+
+  See [Claude Code issue #44652](https://github.com/anthropics/claude-code/issues/44652) for tracking.
+</Warning>
 
 ## Scope Challenge Behavior
 
