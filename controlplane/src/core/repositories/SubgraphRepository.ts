@@ -19,7 +19,6 @@ import {
   eq,
   gt,
   inArray,
-  isNotNull,
   like,
   lt,
   notInArray,
@@ -935,32 +934,32 @@ export class SubgraphRepository {
     return this.getSubgraphsMatching({
       conditions,
       published: data.published,
-      aaa: true,
+      enforceFederatedGraph: true,
       includeSubgraphs: data.includeSubgraphs,
     });
   }
 
   public getSubgraphsByTargetIds(ids: string[], rbac?: RBACEvaluator): Promise<SubgraphDTO[]> {
     const conditions: (SQL<unknown> | undefined)[] = [
-      // eq(schema.targets.organizationId, this.organizationId),
-      // eq(schema.targets.type, 'subgraph'),
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
       inArray(schema.targets.id, ids),
     ];
 
     return SubgraphRepository.applyRbacConditionsToQuery(rbac, conditions)
-      ? this.getSubgraphsMatching({ conditions, aaa: false })
+      ? this.getSubgraphsMatching({ conditions, enforceFederatedGraph: false })
       : Promise.resolve([]);
   }
 
   private async getSubgraphsMatching({
     conditions,
     published,
-    aaa,
+    enforceFederatedGraph,
     includeSubgraphs,
   }: {
     conditions: (SQL<unknown> | undefined)[];
     published?: boolean;
-    aaa?: boolean;
+    enforceFederatedGraph?: boolean;
     includeSubgraphs?: string[];
   }) {
     const subgraphs = await this.db
@@ -1001,7 +1000,7 @@ export class SubgraphRepository {
           : eq(schema.subgraphs.targetId, schema.targets.id),
       )
       .innerJoin(schema.namespaces, eq(schema.namespaces.id, schema.targets.namespaceId))
-      [aaa ? 'innerJoin' : 'leftJoin'](
+      [enforceFederatedGraph ? 'innerJoin' : 'leftJoin'](
         schema.subgraphsToFederatedGraph,
         eq(schema.subgraphsToFederatedGraph.subgraphId, schema.subgraphs.id),
       )

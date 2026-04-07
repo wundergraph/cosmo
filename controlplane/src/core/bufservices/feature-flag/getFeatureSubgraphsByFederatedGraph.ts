@@ -74,6 +74,7 @@ export function getFeatureSubgraphsByFederatedGraph(
         lastUpdatedAt: fs.lastUpdatedAt,
         labels: fs.labels,
         targetId: fs.targetId,
+        creatorUserId: fs.creatorUserId,
         subscriptionUrl: fs.subscriptionUrl,
         namespace: fs.namespace,
         subscriptionProtocol: fs.subscriptionProtocol,
