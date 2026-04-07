@@ -507,11 +507,6 @@ export class FeatureFlagRepository {
         continue;
       }
 
-      // const baseSubgraph = await subgraphRepo.byId(f.baseSubgraphId);
-      // if (!baseSubgraph) {
-      //   continue;
-      // }
-
       featureSubgraphs.push({
         ...fs,
         baseSubgraphId: f.baseSubgraphId,
