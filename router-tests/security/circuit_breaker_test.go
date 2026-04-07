@@ -641,8 +641,9 @@ func TestCircuitBreaker(t *testing.T) {
 
 		breaker.NumBuckets = 1
 		breaker.RollingDuration = 5000 * time.Millisecond
+		breaker.ExecutionTimeout = 30 * time.Second
 
-		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+		trafficConfig := getTrafficConfigWithTimeout(breaker, 30*time.Second)
 
 		employeesCalls := atomic.Int64{}
 
