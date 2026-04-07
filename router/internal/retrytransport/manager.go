@@ -79,7 +79,7 @@ func (m *Manager) Initialize(baseRetryOptions RetryOptions, subgraphRetryOptions
 		if baseRetryOptions.Algorithm != BackoffJitter {
 			return fmt.Errorf("unsupported retry algorithm: %s", baseRetryOptions.Algorithm)
 		}
-		
+
 		err := m.exprManager.AddExpression(baseRetryOptions.Expression)
 		if err != nil {
 			return fmt.Errorf("failed to add base retry expression: %w", err)
