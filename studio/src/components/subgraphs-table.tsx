@@ -24,7 +24,7 @@ import { IoPersonAdd } from 'react-icons/io5';
 import { EmptyState } from './empty-state';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { CLISteps } from './ui/cli';
+import { CLI, CLISteps } from './ui/cli';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Pagination } from './ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from './ui/table';
@@ -81,27 +81,45 @@ export const Empty = ({ graph, tab }: { graph?: FederatedGraph; tab: 'subgraphs'
 
   return (
     <EmptyState
-      icon={<CommandLineIcon />}
-      title="Create subgraph using CLI"
-      description={
-        <>
-          No subgraphs found. Use the CLI tool to create one.{' '}
-          <a target="_blank" rel="noreferrer" href={docsBaseURL + '/cli/subgraph/create'} className="text-primary">
-            Learn more.
+      eyebrow="Get started"
+      title="Add your first subgraph"
+      description="Subgraphs are the individual services that make up your federated graph. Each one exposes part of your schema and runs independently."
+    >
+      <div className="mt-8 flex flex-col gap-y-4 text-left">
+        <div className="flex flex-col gap-3 rounded-lg border border-primary bg-primary/5 p-6">
+          <p className="text-sm font-medium">Publish a subgraph</p>
+          <p className="text-sm text-muted-foreground">
+            Run the command below to publish your first subgraph. If it doesn&apos;t exist yet, it will be created
+            automatically.
+          </p>
+          <CLI
+            command={`npx wgc subgraph publish users --namespace ${namespace} --schema users.graphql --label ${label} --routing-url http://localhost:4003/graphql`}
+          />
+          <a
+            href={docsBaseURL + '/cli/subgraph/create'}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Learn more →
           </a>
-        </>
-      }
-      actions={
-        <CLISteps
-          steps={[
-            {
-              description: 'Publish a subgraph. If the subgraph does not exist, it will be created.',
-              command: `npx wgc subgraph publish users --namespace ${namespace} --schema users.graphql --label ${label} --routing-url http://localhost:4003/graphql`,
-            },
-          ]}
-        />
-      }
-    />
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <p className="text-sm text-muted-foreground">
+            Learn how subgraphs work and how to structure your services.
+          </p>
+          <a
+            href={docsBaseURL + '/cli/subgraph/create'}
+            target="_blank"
+            rel="noreferrer"
+            className="shrink-0 pl-4 text-sm font-medium text-primary hover:underline"
+          >
+            Read the guide →
+          </a>
+        </div>
+      </div>
+    </EmptyState>
   );
 };
 
