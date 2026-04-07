@@ -6,7 +6,7 @@ import { config } from '../../core/config.js';
 import { waitForKeyPress, rainbow } from '../../utils.js';
 import { fetchUserInfo, checkExistingOnboarding } from './api.js';
 import type { UserInfo } from './types.js';
-import { clearScreen, printLogo, resetScreen, updateScreenWithUserInfo } from './util.js';
+import { clearScreen, prepareSupportingData, printLogo, resetScreen, updateScreenWithUserInfo } from './util.js';
 
 function printHello() {
   printLogo();
@@ -69,6 +69,7 @@ export default function (opts: BaseCommandOptions) {
   return async function handleCommand() {
     clearScreen();
     printHello();
+    await prepareSupportingData();
     const userInfo = await getUserInfo(opts.client);
     updateScreenWithUserInfo(userInfo);
 
