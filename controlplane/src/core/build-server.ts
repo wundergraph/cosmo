@@ -290,6 +290,7 @@ export default async function build(opts: BuildConfig) {
     adminUser: opts.keycloak.adminUser,
     adminPassword: opts.keycloak.adminPassword,
     logger,
+    webhookProxyUrl: opts.webhook?.proxyUrl,
   });
 
   let mailerClient: Mailer | undefined;

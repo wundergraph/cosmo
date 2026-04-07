@@ -18,6 +18,7 @@ export default class OidcProvider {
     alias,
     db,
     input,
+    abortSignal,
   }: {
     kcClient: Keycloak;
     kcRealm: string;
@@ -26,6 +27,7 @@ export default class OidcProvider {
     alias: string;
     db: PostgresJsDatabase<typeof schema>;
     input: CreateOIDCProviderRequest;
+    abortSignal?: AbortSignal;
   }) {
     const oidcRepo = new OidcRepository(db);
 
@@ -36,6 +38,7 @@ export default class OidcProvider {
       name: input.name,
       realm: kcRealm,
       alias,
+      abortSignal,
     });
 
     const endpoint = input.discoveryEndpoint.split('/')[2];

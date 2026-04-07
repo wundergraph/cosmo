@@ -66,6 +66,7 @@ export function createOIDCProvider(
       alias,
       db: opts.db,
       input: req,
+      abortSignal: ctx.signal,
     });
 
     return {
