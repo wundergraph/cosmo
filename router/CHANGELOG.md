@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.301.0](https://github.com/wundergraph/cosmo/compare/router@0.300.1...router@0.301.0) (2026-04-06)
+
+### Features
+
+* add query plan hash field for expressions ([#2738](https://github.com/wundergraph/cosmo/issues/2738)) ([65e05e3](https://github.com/wundergraph/cosmo/commit/65e05e348fd0de2606248267d3e99b0dfc7c24de)) (@SkArchon)
+
+## [0.300.1](https://github.com/wundergraph/cosmo/compare/router@0.300.0...router@0.300.1) (2026-04-02)
+
+### Bug Fixes
+
+* **docs:** enhance PQL manifest documentation for clarity and detail ([#2734](https://github.com/wundergraph/cosmo/issues/2734)) ([8522d4e](https://github.com/wundergraph/cosmo/commit/8522d4e4b106173b6a87b09a7dc820900995dfcc)) (@StarpTech)
+
+# [0.300.0](https://github.com/wundergraph/cosmo/compare/router@0.299.0...router@0.300.0) (2026-04-02)
+
+### Bug Fixes
+
+* **http:** add synchronous port binding to avoid false positive server start ([#2730](https://github.com/wundergraph/cosmo/issues/2730)) ([91e7f46](https://github.com/wundergraph/cosmo/commit/91e7f46fbc1612342f73ac38607637d08c09ac86)) (@StarpTech)
+* validate filename and improve PQL docs ([#2733](https://github.com/wundergraph/cosmo/issues/2733)) ([0a35c0e](https://github.com/wundergraph/cosmo/commit/0a35c0e28ef74d28b06a7613f5717feaf2b1c8f9)) (@StarpTech)
+
+### Features
+
+* **pqlmanifest:** implement S3 polling support for PQL manifest ([#2726](https://github.com/wundergraph/cosmo/issues/2726)) ([b5cfa92](https://github.com/wundergraph/cosmo/commit/b5cfa92a4ef5858679a2b912aff6f6ca0e65f1dc)) (@StarpTech)
+
 # [0.299.0](https://github.com/wundergraph/cosmo/compare/router@0.298.0...router@0.299.0) (2026-03-31)
 
 ### Bug Fixes
