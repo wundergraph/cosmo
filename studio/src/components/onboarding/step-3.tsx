@@ -4,11 +4,12 @@ import { useQuery } from '@connectrpc/connect-query';
 import { getFederatedGraphByName } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetFederatedGraphByNameResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { CheckCircledIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { OnboardingContainer } from './onboarding-container';
 import { OnboardingNavigation } from './onboarding-navigation';
 import { FederationAnimation } from './federation-animation';
+import { StatusIcon, type OnboardingStatus } from './status-icon';
 import { Button } from '../ui/button';
 import { CLI } from '../ui/cli';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
@@ -22,7 +23,7 @@ function getDemoGraphStatus({
   data: GetFederatedGraphByNameResponse | undefined;
   isPolling: boolean;
   isError: boolean;
-}): 'pending' | 'ok' | 'fail' | 'error' {
+}): OnboardingStatus {
   if (isError) {
     return 'error';
   }
@@ -47,32 +48,7 @@ function getDemoGraphStatus({
   return isPolling ? 'pending' : 'fail';
 }
 
-const StatusIcon = ({ status }: { status: 'pending' | 'ok' | 'fail' | 'error' }) => {
-  switch (status) {
-    case 'pending':
-      return (
-        <span className="relative -mt-[1px] flex size-6 shrink-0 items-center justify-center">
-          <span className="absolute inline-flex size-3 animate-ping rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex size-3 rounded-full bg-green-500" />
-        </span>
-      );
-    case 'ok':
-      return (
-        <span className="-mt-[1px] flex size-6 shrink-0 items-center justify-center text-green-600 dark:text-green-400">
-          <CheckCircledIcon className="size-5" />
-        </span>
-      );
-    case 'error':
-    case 'fail':
-      return (
-        <span className="-mt-[1px] flex size-6 shrink-0 items-center justify-center">
-          <span className="inline-flex size-3 rounded-full bg-destructive" />
-        </span>
-      );
-  }
-};
-
-const StatusText = ({ status, onRetry }: { status: 'pending' | 'ok' | 'fail' | 'error'; onRetry: () => void }) => {
+const StatusText = ({ status, onRetry }: { status: OnboardingStatus; onRetry: () => void }) => {
   switch (status) {
     case 'pending':
       return (
