@@ -75,25 +75,18 @@ func (a *authentication) SetScopes(scopes []string) {
 		a.claims = make(Claims)
 	}
 	// per https://datatracker.ietf.org/doc/html/rfc8693#section-2.1-4.8, scopes should be space separated
-	a.claims[a.scopeClaimKey()] = strings.Join(scopes, " ")
+	a.claims[a.scopeClaim] = strings.Join(scopes, " ")
 }
 
 func (a *authentication) Scopes() []string {
 	if a == nil {
 		return nil
 	}
-	scopes, ok := a.claims[a.scopeClaimKey()].(string)
+	scopes, ok := a.claims[a.scopeClaim].(string)
 	if !ok {
 		return nil
 	}
 	return strings.Split(scopes, " ")
-}
-
-func (a *authentication) scopeClaimKey() string {
-	if a == nil || len(a.scopeClaim) == 0 {
-		return DefaultScopeClaim
-	}
-	return a.scopeClaim
 }
 
 var errUnacceptableAud = errors.New("audience match not found")
