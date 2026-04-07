@@ -11,7 +11,11 @@ import { RedeliverWebhookService } from '../../webhooks/RedeliverWebhookService.
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function redeliverWebhook(opts: RouterOptions, req: RedeliverWebhookRequest, ctx: HandlerContext): Promise<PlainMessage<RedeliverWebhookResponse>> {
+export function redeliverWebhook(
+  opts: RouterOptions,
+  req: RedeliverWebhookRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<RedeliverWebhookResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<RedeliverWebhookResponse>>(ctx, logger, async () => {

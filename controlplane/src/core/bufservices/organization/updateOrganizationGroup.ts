@@ -13,7 +13,11 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function updateOrganizationGroup(opts: RouterOptions, req: UpdateOrganizationGroupRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateOrganizationGroupResponse>> {
+export function updateOrganizationGroup(
+  opts: RouterOptions,
+  req: UpdateOrganizationGroupRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<UpdateOrganizationGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateOrganizationGroupResponse>>(ctx, logger, async () => {

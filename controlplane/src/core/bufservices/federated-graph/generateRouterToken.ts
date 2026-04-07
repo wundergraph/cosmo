@@ -13,7 +13,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function generateRouterToken(opts: RouterOptions, req: GenerateRouterTokenRequest, ctx: HandlerContext): Promise<PlainMessage<GenerateRouterTokenResponse>> {
+export function generateRouterToken(
+  opts: RouterOptions,
+  req: GenerateRouterTokenRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GenerateRouterTokenResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GenerateRouterTokenResponse>>(ctx, logger, async () => {

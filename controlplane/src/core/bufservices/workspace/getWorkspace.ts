@@ -19,7 +19,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getWorkspace(opts: RouterOptions, req: GetWorkspaceRequest, ctx: HandlerContext): Promise<PlainMessage<GetWorkspaceResponse>> {
+export function getWorkspace(
+  opts: RouterOptions,
+  req: GetWorkspaceRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetWorkspaceResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetWorkspaceResponse>>(ctx, logger, async () => {

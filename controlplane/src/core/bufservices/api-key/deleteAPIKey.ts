@@ -10,7 +10,11 @@ import { OrganizationGroupRepository } from '../../repositories/OrganizationGrou
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function deleteAPIKey(opts: RouterOptions, req: DeleteAPIKeyRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteAPIKeyResponse>> {
+export function deleteAPIKey(
+  opts: RouterOptions,
+  req: DeleteAPIKeyRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<DeleteAPIKeyResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteAPIKeyResponse>>(ctx, logger, async () => {

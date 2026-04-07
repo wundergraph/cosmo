@@ -11,7 +11,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getOperationOverrides(opts: RouterOptions, req: GetOperationOverridesRequest, ctx: HandlerContext): Promise<PlainMessage<GetOperationOverridesResponse>> {
+export function getOperationOverrides(
+  opts: RouterOptions,
+  req: GetOperationOverridesRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetOperationOverridesResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOperationOverridesResponse>>(ctx, logger, async () => {

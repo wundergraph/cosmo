@@ -13,7 +13,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function deleteFederatedGraph(opts: RouterOptions, req: DeleteFederatedGraphRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteFederatedGraphResponse>> {
+export function deleteFederatedGraph(
+  opts: RouterOptions,
+  req: DeleteFederatedGraphRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<DeleteFederatedGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteFederatedGraphResponse>>(ctx, logger, async () => {

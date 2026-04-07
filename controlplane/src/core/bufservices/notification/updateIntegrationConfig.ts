@@ -11,7 +11,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function updateIntegrationConfig(opts: RouterOptions, req: UpdateIntegrationConfigRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateIntegrationConfigResponse>> {
+export function updateIntegrationConfig(
+  opts: RouterOptions,
+  req: UpdateIntegrationConfigRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<UpdateIntegrationConfigResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(ctx, logger, async () => {

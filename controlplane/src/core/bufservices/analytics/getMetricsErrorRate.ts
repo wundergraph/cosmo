@@ -11,7 +11,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getMetricsErrorRate(opts: RouterOptions, req: GetMetricsErrorRateRequest, ctx: HandlerContext): Promise<PlainMessage<GetMetricsErrorRateResponse>> {
+export function getMetricsErrorRate(
+  opts: RouterOptions,
+  req: GetMetricsErrorRateRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetMetricsErrorRateResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetMetricsErrorRateResponse>>(ctx, logger, async () => {

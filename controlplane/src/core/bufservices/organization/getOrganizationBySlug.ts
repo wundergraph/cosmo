@@ -9,7 +9,11 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getOrganizationBySlug(opts: RouterOptions, req: GetOrganizationBySlugRequest, ctx: HandlerContext): Promise<PlainMessage<GetOrganizationBySlugResponse>> {
+export function getOrganizationBySlug(
+  opts: RouterOptions,
+  req: GetOrganizationBySlugRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetOrganizationBySlugResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOrganizationBySlugResponse>>(ctx, logger, async () => {

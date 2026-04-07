@@ -13,7 +13,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getAnalyticsView(opts: RouterOptions, req: GetAnalyticsViewRequest, ctx: HandlerContext): Promise<PlainMessage<GetAnalyticsViewResponse>> {
+export function getAnalyticsView(
+  opts: RouterOptions,
+  req: GetAnalyticsViewRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetAnalyticsViewResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetAnalyticsViewResponse>>(ctx, logger, async () => {

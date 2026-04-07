@@ -10,7 +10,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getSubgraphMembers(opts: RouterOptions, req: GetSubgraphMembersRequest, ctx: HandlerContext): Promise<PlainMessage<GetSubgraphMembersResponse>> {
+export function getSubgraphMembers(
+  opts: RouterOptions,
+  req: GetSubgraphMembersRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetSubgraphMembersResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetSubgraphMembersResponse>>(ctx, logger, async () => {

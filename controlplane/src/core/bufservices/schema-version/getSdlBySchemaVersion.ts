@@ -9,7 +9,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getSdlBySchemaVersion(opts: RouterOptions, req: GetSdlBySchemaVersionRequest, ctx: HandlerContext): Promise<PlainMessage<GetSdlBySchemaVersionResponse>> {
+export function getSdlBySchemaVersion(
+  opts: RouterOptions,
+  req: GetSdlBySchemaVersionRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetSdlBySchemaVersionResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetSdlBySchemaVersionResponse>>(ctx, logger, async () => {

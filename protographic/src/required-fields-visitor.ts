@@ -19,8 +19,19 @@ import {
   visit,
 } from 'graphql';
 import { create } from '@bufbuild/protobuf';
-import { ArgumentMappingSchema, FieldMappingSchema, type FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { CompositeMessageDefinition, CompositeMessageKind, ProtoMessage, ProtoMessageField, RPCMethod, VisitContext } from './types.js';
+import {
+  ArgumentMappingSchema,
+  FieldMappingSchema,
+  type FieldMapping,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import {
+  CompositeMessageDefinition,
+  CompositeMessageKind,
+  ProtoMessage,
+  ProtoMessageField,
+  RPCMethod,
+  VisitContext,
+} from './types.js';
 import { KEY_DIRECTIVE_NAME } from './string-constants.js';
 import {
   createEntityLookupRequestKeyMessageName,

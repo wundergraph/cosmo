@@ -27,7 +27,11 @@ import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getOperations(opts: RouterOptions, req: GetOperationsRequest, ctx: HandlerContext): Promise<PlainMessage<GetOperationsResponse>> {
+export function getOperations(
+  opts: RouterOptions,
+  req: GetOperationsRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetOperationsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOperationsResponse>>(ctx, logger, async () => {

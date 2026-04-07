@@ -12,7 +12,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function migrateMonograph(opts: RouterOptions, req: MigrateMonographRequest, ctx: HandlerContext): Promise<PlainMessage<MigrateMonographResponse>> {
+export function migrateMonograph(
+  opts: RouterOptions,
+  req: MigrateMonographRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<MigrateMonographResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<MigrateMonographResponse>>(ctx, logger, async () => {

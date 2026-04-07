@@ -11,7 +11,11 @@ import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from 
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getProposalChecks(opts: RouterOptions, req: GetProposalChecksRequest, ctx: HandlerContext): Promise<PlainMessage<GetProposalChecksResponse>> {
+export function getProposalChecks(
+  opts: RouterOptions,
+  req: GetProposalChecksRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetProposalChecksResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetProposalChecksResponse>>(ctx, logger, async () => {

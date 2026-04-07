@@ -9,11 +9,20 @@ import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { PlainMessage, AuthContext, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, FederatedGraphDTO } from '../../../types/index.js';
+import {
+  PlainMessage,
+  AuthContext,
+  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+  FederatedGraphDTO,
+} from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { maxRowLimitForChecks } from '../../constants.js';
 
-export function recomposeGraph(opts: RouterOptions, req: RecomposeGraphRequest, ctx: HandlerContext): Promise<PlainMessage<RecomposeGraphResponse>> {
+export function recomposeGraph(
+  opts: RouterOptions,
+  req: RecomposeGraphRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<RecomposeGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<RecomposeGraphResponse>>(ctx, logger, async () => {

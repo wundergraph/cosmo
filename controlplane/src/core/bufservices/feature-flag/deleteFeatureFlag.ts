@@ -19,7 +19,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function deleteFeatureFlag(opts: RouterOptions, req: DeleteFeatureFlagRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteFeatureFlagResponse>> {
+export function deleteFeatureFlag(
+  opts: RouterOptions,
+  req: DeleteFeatureFlagRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<DeleteFeatureFlagResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteFeatureFlagResponse>>(ctx, logger, async () => {

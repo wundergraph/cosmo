@@ -14,7 +14,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function deleteNamespace(opts: RouterOptions, req: DeleteNamespaceRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteNamespaceResponse>> {
+export function deleteNamespace(
+  opts: RouterOptions,
+  req: DeleteNamespaceRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<DeleteNamespaceResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteNamespaceResponse>>(ctx, logger, async () => {

@@ -6,7 +6,11 @@ import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getAPIKeys(opts: RouterOptions, req: GetAPIKeysRequest, ctx: HandlerContext): Promise<PlainMessage<GetAPIKeysResponse>> {
+export function getAPIKeys(
+  opts: RouterOptions,
+  req: GetAPIKeysRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetAPIKeysResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetAPIKeysResponse>>(ctx, logger, async () => {

@@ -13,7 +13,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function forceCheckSuccess(opts: RouterOptions, req: ForceCheckSuccessRequest, ctx: HandlerContext): Promise<PlainMessage<ForceCheckSuccessResponse>> {
+export function forceCheckSuccess(
+  opts: RouterOptions,
+  req: ForceCheckSuccessRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<ForceCheckSuccessResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<ForceCheckSuccessResponse>>(ctx, logger, async () => {

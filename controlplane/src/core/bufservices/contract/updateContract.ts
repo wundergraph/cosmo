@@ -19,7 +19,11 @@ import { enrichLogger, getLogger, handleError, isValidSchemaTags } from '../../u
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function updateContract(opts: RouterOptions, req: UpdateContractRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateContractResponse>> {
+export function updateContract(
+  opts: RouterOptions,
+  req: UpdateContractRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<UpdateContractResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateContractResponse>>(ctx, logger, async () => {

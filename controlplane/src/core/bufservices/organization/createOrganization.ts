@@ -16,7 +16,11 @@ import { OrganizationGroupRepository } from '../../repositories/OrganizationGrou
 import { organizationSchema } from '../../constants.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function createOrganization(opts: RouterOptions, req: CreateOrganizationRequest, ctx: HandlerContext): Promise<PlainMessage<CreateOrganizationResponse>> {
+export function createOrganization(
+  opts: RouterOptions,
+  req: CreateOrganizationRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<CreateOrganizationResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreateOrganizationResponse>>(ctx, logger, async () => {

@@ -14,7 +14,11 @@ import { parseTimeFilters } from '../../repositories/analytics/util.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getFederatedGraphs(opts: RouterOptions, req: GetFederatedGraphsRequest, ctx: HandlerContext): Promise<PlainMessage<GetFederatedGraphsResponse>> {
+export function getFederatedGraphs(
+  opts: RouterOptions,
+  req: GetFederatedGraphsRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetFederatedGraphsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetFederatedGraphsResponse>>(ctx, logger, async () => {

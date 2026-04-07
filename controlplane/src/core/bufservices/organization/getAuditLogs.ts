@@ -12,7 +12,11 @@ import { clamp, enrichLogger, getLogger, handleError, validateDateRanges } from 
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getAuditLogs(opts: RouterOptions, req: GetAuditLogsRequest, ctx: HandlerContext): Promise<PlainMessage<GetAuditLogsResponse>> {
+export function getAuditLogs(
+  opts: RouterOptions,
+  req: GetAuditLogsRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetAuditLogsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetAuditLogsResponse>>(ctx, logger, async () => {

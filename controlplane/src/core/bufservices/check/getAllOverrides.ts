@@ -11,7 +11,11 @@ import { enrichLogger, getLogger, handleError, normalizePagination } from '../..
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getAllOverrides(opts: RouterOptions, req: GetAllOverridesRequest, ctx: HandlerContext): Promise<PlainMessage<GetAllOverridesResponse>> {
+export function getAllOverrides(
+  opts: RouterOptions,
+  req: GetAllOverridesRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetAllOverridesResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetAllOverridesResponse>>(ctx, logger, async () => {

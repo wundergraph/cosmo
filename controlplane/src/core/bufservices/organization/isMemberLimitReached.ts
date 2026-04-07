@@ -9,7 +9,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function isMemberLimitReached(opts: RouterOptions, req: IsMemberLimitReachedRequest, ctx: HandlerContext): Promise<PlainMessage<IsMemberLimitReachedResponse>> {
+export function isMemberLimitReached(
+  opts: RouterOptions,
+  req: IsMemberLimitReachedRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<IsMemberLimitReachedResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<IsMemberLimitReachedResponse>>(ctx, logger, async () => {

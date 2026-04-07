@@ -10,7 +10,11 @@ import { enrichLogger, getLogger, handleError, mergeUrls } from '../../util.js';
 import OidcProvider from '../../services/OidcProvider.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getOIDCProvider(opts: RouterOptions, req: GetOIDCProviderRequest, ctx: HandlerContext): Promise<PlainMessage<GetOIDCProviderResponse>> {
+export function getOIDCProvider(
+  opts: RouterOptions,
+  req: GetOIDCProviderRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetOIDCProviderResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOIDCProviderResponse>>(ctx, logger, async () => {

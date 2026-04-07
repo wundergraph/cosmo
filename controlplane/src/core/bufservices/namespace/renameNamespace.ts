@@ -10,7 +10,11 @@ import { enrichLogger, getLogger, handleError, isValidNamespaceName } from '../.
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function renameNamespace(opts: RouterOptions, req: RenameNamespaceRequest, ctx: HandlerContext): Promise<PlainMessage<RenameNamespaceResponse>> {
+export function renameNamespace(
+  opts: RouterOptions,
+  req: RenameNamespaceRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<RenameNamespaceResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<RenameNamespaceResponse>>(ctx, logger, async () => {

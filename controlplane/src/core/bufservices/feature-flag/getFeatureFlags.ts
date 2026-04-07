@@ -10,7 +10,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getFeatureFlags(opts: RouterOptions, req: GetFeatureFlagsRequest, ctx: HandlerContext): Promise<PlainMessage<GetFeatureFlagsResponse>> {
+export function getFeatureFlags(
+  opts: RouterOptions,
+  req: GetFeatureFlagsRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetFeatureFlagsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetFeatureFlagsResponse>>(ctx, logger, async () => {

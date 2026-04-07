@@ -16,7 +16,11 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function publishMonograph(opts: RouterOptions, req: PublishMonographRequest, ctx: HandlerContext): Promise<PlainMessage<PublishMonographResponse>> {
+export function publishMonograph(
+  opts: RouterOptions,
+  req: PublishMonographRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<PublishMonographResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<PublishMonographResponse>>(ctx, logger, async () => {

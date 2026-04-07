@@ -13,7 +13,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function removeInvitation(opts: RouterOptions, req: RemoveInvitationRequest, ctx: HandlerContext): Promise<PlainMessage<RemoveInvitationResponse>> {
+export function removeInvitation(
+  opts: RouterOptions,
+  req: RemoveInvitationRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<RemoveInvitationResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<RemoveInvitationResponse>>(ctx, logger, async () => {

@@ -12,7 +12,11 @@ import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRep
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function configureCacheWarmer(opts: RouterOptions, req: ConfigureCacheWarmerRequest, ctx: HandlerContext): Promise<PlainMessage<ConfigureCacheWarmerResponse>> {
+export function configureCacheWarmer(
+  opts: RouterOptions,
+  req: ConfigureCacheWarmerRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<ConfigureCacheWarmerResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<ConfigureCacheWarmerResponse>>(ctx, logger, async () => {

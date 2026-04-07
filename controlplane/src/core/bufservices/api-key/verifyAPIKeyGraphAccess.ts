@@ -10,7 +10,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function verifyAPIKeyGraphAccess(opts: RouterOptions, req: VerifyAPIKeyGraphAccessRequest, ctx: HandlerContext): Promise<PlainMessage<VerifyAPIKeyGraphAccessResponse>> {
+export function verifyAPIKeyGraphAccess(
+  opts: RouterOptions,
+  req: VerifyAPIKeyGraphAccessRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<VerifyAPIKeyGraphAccessResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<VerifyAPIKeyGraphAccessResponse>>(ctx, logger, async () => {

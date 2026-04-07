@@ -19,7 +19,11 @@ import type { RouterOptions } from '../../routes.js';
 import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getFederatedGraphById(opts: RouterOptions, req: GetFederatedGraphByIdRequest, ctx: HandlerContext): Promise<PlainMessage<GetFederatedGraphByIdResponse>> {
+export function getFederatedGraphById(
+  opts: RouterOptions,
+  req: GetFederatedGraphByIdRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetFederatedGraphByIdResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetFederatedGraphByIdResponse>>(ctx, logger, async () => {

@@ -7,7 +7,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getClients(opts: RouterOptions, req: GetClientsRequest, ctx: HandlerContext): Promise<PlainMessage<GetClientsResponse>> {
+export function getClients(
+  opts: RouterOptions,
+  req: GetClientsRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetClientsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetClientsResponse>>(ctx, logger, async () => {

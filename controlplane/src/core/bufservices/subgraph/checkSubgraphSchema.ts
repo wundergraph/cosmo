@@ -29,7 +29,11 @@ import {
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { maxRowLimitForChecks, defaultRetentionLimitInDays } from '../../constants.js';
 
-export function checkSubgraphSchema(opts: RouterOptions, req: CheckSubgraphSchemaRequest, ctx: HandlerContext): Promise<PlainMessage<CheckSubgraphSchemaResponse>> {
+export function checkSubgraphSchema(
+  opts: RouterOptions,
+  req: CheckSubgraphSchemaRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<CheckSubgraphSchemaResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CheckSubgraphSchemaResponse>>(ctx, logger, async () => {

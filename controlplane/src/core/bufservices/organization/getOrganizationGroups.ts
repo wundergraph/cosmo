@@ -11,7 +11,11 @@ import { OidcRepository } from '../../repositories/OidcRepository.js';
 import OidcProvider from '../../services/OidcProvider.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getOrganizationGroups(opts: RouterOptions, req: GetOrganizationGroupsRequest, ctx: HandlerContext): Promise<PlainMessage<GetOrganizationGroupsResponse>> {
+export function getOrganizationGroups(
+  opts: RouterOptions,
+  req: GetOrganizationGroupsRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetOrganizationGroupsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOrganizationGroupsResponse>>(ctx, logger, async () => {

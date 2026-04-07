@@ -12,7 +12,11 @@ import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../
 import { isoDateRangeToTimestamps, getDateRange } from '../../repositories/analytics/util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getOperationClients(opts: RouterOptions, req: GetOperationClientsRequest, ctx: HandlerContext): Promise<PlainMessage<GetOperationClientsResponse>> {
+export function getOperationClients(
+  opts: RouterOptions,
+  req: GetOperationClientsRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetOperationClientsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOperationClientsResponse>>(ctx, logger, async () => {

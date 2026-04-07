@@ -11,7 +11,11 @@ import type { PlainMessage } from '../../../types/index.js';
 
 // Get operation content by hash
 // TODO: Specify daterange to improve clickhouse performance
-export function getOperationContent(opts: RouterOptions, req: GetOperationContentRequest, ctx: HandlerContext): Promise<PlainMessage<GetOperationContentResponse>> {
+export function getOperationContent(
+  opts: RouterOptions,
+  req: GetOperationContentRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetOperationContentResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOperationContentResponse>>(ctx, logger, async () => {

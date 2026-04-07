@@ -28,7 +28,11 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { DBSubgraphType } from '../../../db/models.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function createFederatedSubgraph(opts: RouterOptions, req: CreateFederatedSubgraphRequest, ctx: HandlerContext): Promise<PlainMessage<CreateFederatedSubgraphResponse>> {
+export function createFederatedSubgraph(
+  opts: RouterOptions,
+  req: CreateFederatedSubgraphRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<CreateFederatedSubgraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(ctx, logger, async () => {

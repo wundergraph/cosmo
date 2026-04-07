@@ -19,7 +19,11 @@ import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../.
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function updateFederatedGraph(opts: RouterOptions, req: UpdateFederatedGraphRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateFederatedGraphResponse>> {
+export function updateFederatedGraph(
+  opts: RouterOptions,
+  req: UpdateFederatedGraphRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<UpdateFederatedGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateFederatedGraphResponse>>(ctx, logger, async () => {

@@ -27,7 +27,11 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function createProposal(opts: RouterOptions, req: CreateProposalRequest, ctx: HandlerContext): Promise<PlainMessage<CreateProposalResponse>> {
+export function createProposal(
+  opts: RouterOptions,
+  req: CreateProposalRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<CreateProposalResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreateProposalResponse>>(ctx, logger, async () => {

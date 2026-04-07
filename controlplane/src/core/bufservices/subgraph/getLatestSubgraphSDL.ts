@@ -11,7 +11,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getLatestSubgraphSDL(opts: RouterOptions, req: GetLatestSubgraphSDLRequest, ctx: HandlerContext): Promise<PlainMessage<GetLatestSubgraphSDLResponse>> {
+export function getLatestSubgraphSDL(
+  opts: RouterOptions,
+  req: GetLatestSubgraphSDLRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetLatestSubgraphSDLResponse>> {
   req.namespace = req.namespace || DefaultNamespace;
 
   let logger = getLogger(ctx, opts.logger);

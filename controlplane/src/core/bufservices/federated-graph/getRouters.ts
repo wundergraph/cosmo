@@ -10,7 +10,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function getRouters(opts: RouterOptions, req: GetRoutersRequest, ctx: HandlerContext): Promise<PlainMessage<GetRoutersResponse>> {
+export function getRouters(
+  opts: RouterOptions,
+  req: GetRoutersRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetRoutersResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetRoutersResponse>>(ctx, logger, async () => {

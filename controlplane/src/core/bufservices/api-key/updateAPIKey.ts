@@ -10,7 +10,11 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function updateAPIKey(opts: RouterOptions, req: UpdateAPIKeyRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateAPIKeyResponse>> {
+export function updateAPIKey(
+  opts: RouterOptions,
+  req: UpdateAPIKeyRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<UpdateAPIKeyResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateAPIKeyResponse>>(ctx, logger, async () => {

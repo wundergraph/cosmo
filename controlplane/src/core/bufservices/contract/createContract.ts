@@ -18,7 +18,11 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidGraphName, isValidSchemaTags } from '../../util.js';
 
-export function createContract(opts: RouterOptions, req: CreateContractRequest, ctx: HandlerContext): Promise<PlainMessage<CreateContractResponse>> {
+export function createContract(
+  opts: RouterOptions,
+  req: CreateContractRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<CreateContractResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreateContractResponse>>(ctx, logger, async () => {

@@ -26,7 +26,11 @@ import {
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function updateSubgraph(opts: RouterOptions, req: UpdateSubgraphRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateSubgraphResponse>> {
+export function updateSubgraph(
+  opts: RouterOptions,
+  req: UpdateSubgraphRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<UpdateSubgraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateSubgraphResponse>>(ctx, logger, async () => {

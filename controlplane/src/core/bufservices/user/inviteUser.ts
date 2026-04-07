@@ -8,7 +8,11 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { UserInviteService } from '../../services/UserInviteService.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function inviteUser(opts: RouterOptions, req: InviteUserRequest, ctx: HandlerContext): Promise<PlainMessage<InviteUserResponse>> {
+export function inviteUser(
+  opts: RouterOptions,
+  req: InviteUserRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<InviteUserResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<InviteUserResponse>>(ctx, logger, async () => {

@@ -18,7 +18,11 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 
-export function fixSubgraphSchema(opts: RouterOptions, req: FixSubgraphSchemaRequest, ctx: HandlerContext): Promise<PlainMessage<FixSubgraphSchemaResponse>> {
+export function fixSubgraphSchema(
+  opts: RouterOptions,
+  req: FixSubgraphSchemaRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<FixSubgraphSchemaResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<FixSubgraphSchemaResponse>>(ctx, logger, async () => {

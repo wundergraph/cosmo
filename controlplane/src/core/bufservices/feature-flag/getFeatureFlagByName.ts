@@ -12,7 +12,11 @@ import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getFeatureFlagByName(opts: RouterOptions, req: GetFeatureFlagByNameRequest, ctx: HandlerContext): Promise<PlainMessage<GetFeatureFlagByNameResponse>> {
+export function getFeatureFlagByName(
+  opts: RouterOptions,
+  req: GetFeatureFlagByNameRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetFeatureFlagByNameResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetFeatureFlagByNameResponse>>(ctx, logger, async () => {

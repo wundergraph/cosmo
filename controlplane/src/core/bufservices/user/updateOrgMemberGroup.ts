@@ -13,7 +13,11 @@ import { OrganizationGroupRepository } from '../../repositories/OrganizationGrou
 import { UnauthorizedError } from '../../errors/errors.js';
 import { PlainMessage, OrganizationGroupDTO } from '../../../types/index.js';
 
-export function updateOrgMemberGroup(opts: RouterOptions, req: UpdateOrgMemberGroupRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateOrgMemberGroupResponse>> {
+export function updateOrgMemberGroup(
+  opts: RouterOptions,
+  req: UpdateOrgMemberGroupRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<UpdateOrgMemberGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateOrgMemberGroupResponse>>(ctx, logger, async () => {

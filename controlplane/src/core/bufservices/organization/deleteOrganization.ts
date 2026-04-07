@@ -14,7 +14,11 @@ import { delayForManualOrgDeletionInDays } from '../../constants.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function deleteOrganization(opts: RouterOptions, req: DeleteOrganizationRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteOrganizationResponse>> {
+export function deleteOrganization(
+  opts: RouterOptions,
+  req: DeleteOrganizationRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<DeleteOrganizationResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteOrganizationResponse>>(ctx, logger, async () => {

@@ -6,7 +6,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getNamespaces(opts: RouterOptions, req: GetNamespacesRequest, ctx: HandlerContext): Promise<PlainMessage<GetNamespacesResponse>> {
+export function getNamespaces(
+  opts: RouterOptions,
+  req: GetNamespacesRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetNamespacesResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetNamespacesResponse>>(ctx, logger, async () => {

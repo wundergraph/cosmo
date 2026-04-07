@@ -11,7 +11,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function deleteIntegration(opts: RouterOptions, req: DeleteIntegrationRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteIntegrationResponse>> {
+export function deleteIntegration(
+  opts: RouterOptions,
+  req: DeleteIntegrationRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<DeleteIntegrationResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteIntegrationResponse>>(ctx, logger, async () => {

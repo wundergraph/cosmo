@@ -9,8 +9,8 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { createBlobStoragePath } from './utils.js';
 import type { PlainMessage } from '../../../types/index.js';
+import { createBlobStoragePath } from './utils.js';
 
 export function deletePersistedOperation(
   opts: RouterOptions,

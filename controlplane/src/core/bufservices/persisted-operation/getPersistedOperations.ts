@@ -10,7 +10,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getPersistedOperations(opts: RouterOptions, req: GetPersistedOperationsRequest, ctx: HandlerContext): Promise<PlainMessage<GetPersistedOperationsResponse>> {
+export function getPersistedOperations(
+  opts: RouterOptions,
+  req: GetPersistedOperationsRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetPersistedOperationsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetPersistedOperationsResponse>>(ctx, logger, async () => {

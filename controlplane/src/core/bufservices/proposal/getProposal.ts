@@ -13,7 +13,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, fromProposalOriginEnum, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getProposal(opts: RouterOptions, req: GetProposalRequest, ctx: HandlerContext): Promise<PlainMessage<GetProposalResponse>> {
+export function getProposal(
+  opts: RouterOptions,
+  req: GetProposalRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetProposalResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetProposalResponse>>(ctx, logger, async () => {

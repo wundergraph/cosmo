@@ -12,7 +12,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function deleteOIDCProvider(opts: RouterOptions, req: DeleteOIDCProviderRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteOIDCProviderResponse>> {
+export function deleteOIDCProvider(
+  opts: RouterOptions,
+  req: DeleteOIDCProviderRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<DeleteOIDCProviderResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteOIDCProviderResponse>>(ctx, logger, async () => {

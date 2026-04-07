@@ -11,7 +11,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function createCheckoutSession(opts: RouterOptions, req: CreateCheckoutSessionRequest, ctx: HandlerContext): Promise<PlainMessage<CreateCheckoutSessionResponse>> {
+export function createCheckoutSession(
+  opts: RouterOptions,
+  req: CreateCheckoutSessionRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<CreateCheckoutSessionResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreateCheckoutSessionResponse>>(ctx, logger, async () => {

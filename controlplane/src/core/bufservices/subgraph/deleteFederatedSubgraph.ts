@@ -18,7 +18,11 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function deleteFederatedSubgraph(opts: RouterOptions, req: DeleteFederatedSubgraphRequest, ctx: HandlerContext): Promise<PlainMessage<DeleteFederatedSubgraphResponse>> {
+export function deleteFederatedSubgraph(
+  opts: RouterOptions,
+  req: DeleteFederatedSubgraphRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<DeleteFederatedSubgraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<DeleteFederatedSubgraphResponse>>(ctx, logger, async () => {

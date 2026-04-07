@@ -12,7 +12,11 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function createOIDCProvider(opts: RouterOptions, req: CreateOIDCProviderRequest, ctx: HandlerContext): Promise<PlainMessage<CreateOIDCProviderResponse>> {
+export function createOIDCProvider(
+  opts: RouterOptions,
+  req: CreateOIDCProviderRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<CreateOIDCProviderResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreateOIDCProviderResponse>>(ctx, logger, async () => {

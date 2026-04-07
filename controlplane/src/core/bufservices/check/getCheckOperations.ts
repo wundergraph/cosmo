@@ -13,7 +13,11 @@ import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getCheckOperations(opts: RouterOptions, req: GetCheckOperationsRequest, ctx: HandlerContext): Promise<PlainMessage<GetCheckOperationsResponse>> {
+export function getCheckOperations(
+  opts: RouterOptions,
+  req: GetCheckOperationsRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetCheckOperationsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetCheckOperationsResponse>>(ctx, logger, async () => {

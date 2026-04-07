@@ -23,7 +23,11 @@ import { enrichLogger, getLogger, handleError, isCheckSuccessful } from '../../u
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getCheckSummary(opts: RouterOptions, req: GetCheckSummaryRequest, ctx: HandlerContext): Promise<PlainMessage<GetCheckSummaryResponse>> {
+export function getCheckSummary(
+  opts: RouterOptions,
+  req: GetCheckSummaryRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetCheckSummaryResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetCheckSummaryResponse>>(ctx, logger, async () => {

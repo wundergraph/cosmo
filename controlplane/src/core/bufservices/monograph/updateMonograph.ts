@@ -22,7 +22,11 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function updateMonograph(opts: RouterOptions, req: UpdateMonographRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateMonographResponse>> {
+export function updateMonograph(
+  opts: RouterOptions,
+  req: UpdateMonographRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<UpdateMonographResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateMonographResponse>>(ctx, logger, async () => {

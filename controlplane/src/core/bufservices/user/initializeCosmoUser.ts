@@ -9,7 +9,11 @@ import { getLogger, handleError } from '../../util.js';
 import AuthUtils from '../../auth-utils.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function initializeCosmoUser(opts: RouterOptions, req: InitializeCosmoUserRequest, ctx: HandlerContext): Promise<PlainMessage<InitializeCosmoUserResponse>> {
+export function initializeCosmoUser(
+  opts: RouterOptions,
+  req: InitializeCosmoUserRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<InitializeCosmoUserResponse>> {
   const logger = getLogger(ctx, opts.logger);
   return handleError<PlainMessage<InitializeCosmoUserResponse>>(ctx, logger, async () => {
     const userInfo = await opts.authenticator.getUserInfo(req.token);

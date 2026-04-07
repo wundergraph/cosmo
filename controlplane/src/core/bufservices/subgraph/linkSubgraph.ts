@@ -9,7 +9,11 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function linkSubgraph(opts: RouterOptions, req: LinkSubgraphRequest, ctx: HandlerContext): Promise<PlainMessage<LinkSubgraphResponse>> {
+export function linkSubgraph(
+  opts: RouterOptions,
+  req: LinkSubgraphRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<LinkSubgraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<LinkSubgraphResponse>>(ctx, logger, async () => {

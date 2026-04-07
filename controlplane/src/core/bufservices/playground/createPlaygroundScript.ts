@@ -10,7 +10,11 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function createPlaygroundScript(opts: RouterOptions, req: CreatePlaygroundScriptRequest, ctx: HandlerContext): Promise<PlainMessage<CreatePlaygroundScriptResponse>> {
+export function createPlaygroundScript(
+  opts: RouterOptions,
+  req: CreatePlaygroundScriptRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<CreatePlaygroundScriptResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<CreatePlaygroundScriptResponse>>(ctx, logger, async () => {

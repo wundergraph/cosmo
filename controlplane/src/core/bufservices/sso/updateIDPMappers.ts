@@ -12,7 +12,11 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function updateIDPMappers(opts: RouterOptions, req: UpdateIDPMappersRequest, ctx: HandlerContext): Promise<PlainMessage<UpdateIDPMappersResponse>> {
+export function updateIDPMappers(
+  opts: RouterOptions,
+  req: UpdateIDPMappersRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<UpdateIDPMappersResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<UpdateIDPMappersResponse>>(ctx, logger, async () => {

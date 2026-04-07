@@ -11,7 +11,11 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function restoreOrganization(opts: RouterOptions, req: RestoreOrganizationRequest, ctx: HandlerContext): Promise<PlainMessage<RestoreOrganizationResponse>> {
+export function restoreOrganization(
+  opts: RouterOptions,
+  req: RestoreOrganizationRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<RestoreOrganizationResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<RestoreOrganizationResponse>>(ctx, logger, async () => {

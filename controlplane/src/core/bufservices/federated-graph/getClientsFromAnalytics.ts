@@ -11,7 +11,11 @@ import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import type { PlainMessage } from '../../../types/index.js';
 
-export function getClientsFromAnalytics(opts: RouterOptions, req: GetClientsFromAnalyticsRequest, ctx: HandlerContext): Promise<PlainMessage<GetClientsFromAnalyticsResponse>> {
+export function getClientsFromAnalytics(
+  opts: RouterOptions,
+  req: GetClientsFromAnalyticsRequest,
+  ctx: HandlerContext,
+): Promise<PlainMessage<GetClientsFromAnalyticsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetClientsFromAnalyticsResponse>>(ctx, logger, async () => {
