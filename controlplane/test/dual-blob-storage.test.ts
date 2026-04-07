@@ -26,28 +26,38 @@ describe('DualBlobStorage', () => {
       expect(secondary.putObject).toHaveBeenCalledWith(data);
     });
 
-    test('rejects when primary fails', async () => {
+    test('rejects when primary fails and rolls back secondary', async () => {
+      const primaryError = new Error('primary write failed');
       const primary = createMockBlobStorage({
-        putObject: vi.fn().mockRejectedValue(new Error('primary write failed')),
+        putObject: vi.fn().mockRejectedValue(primaryError),
       });
       const secondary = createMockBlobStorage();
       const dual = new DualBlobStorage(primary, secondary);
 
-      await expect(dual.putObject({ key: 'k', body: Buffer.from('d'), contentType: 'text/plain' })).rejects.toThrow(
-        'primary write failed',
-      );
+      await expect(dual.putObject({ key: 'k', body: Buffer.from('d'), contentType: 'text/plain' })).rejects.toMatchObject({
+        message: 'Failed to put object into storage',
+        errors: [primaryError],
+      });
+
+      expect(primary.deleteObject).not.toHaveBeenCalled();
+      expect(secondary.deleteObject).toHaveBeenCalledWith({ key: 'k', abortSignal: undefined });
     });
 
-    test('rejects when secondary fails', async () => {
+    test('rejects when secondary fails and rolls back primary', async () => {
+      const secondaryError = new Error('secondary write failed');
       const primary = createMockBlobStorage();
       const secondary = createMockBlobStorage({
-        putObject: vi.fn().mockRejectedValue(new Error('secondary write failed')),
+        putObject: vi.fn().mockRejectedValue(secondaryError),
       });
       const dual = new DualBlobStorage(primary, secondary);
 
-      await expect(dual.putObject({ key: 'k', body: Buffer.from('d'), contentType: 'text/plain' })).rejects.toThrow(
-        'secondary write failed',
-      );
+      await expect(dual.putObject({ key: 'k', body: Buffer.from('d'), contentType: 'text/plain' })).rejects.toMatchObject({
+        message: 'Failed to put object into storage',
+        errors: [secondaryError],
+      });
+
+      expect(primary.deleteObject).toHaveBeenCalledWith({ key: 'k', abortSignal: undefined });
+      expect(secondary.deleteObject).not.toHaveBeenCalled();
     });
   });
 
@@ -82,16 +92,21 @@ describe('DualBlobStorage', () => {
       expect(result).toBe(secondaryResult);
     });
 
-    test('throws all promises rejected error when both fail', async () => {
+    test('throws aggregate error with both underlying errors when both fail', async () => {
+      const primaryError = new Error('primary read failed');
+      const secondaryError = new Error('secondary read failed');
       const primary = createMockBlobStorage({
-        getObject: vi.fn().mockRejectedValue(new Error('primary read failed')),
+        getObject: vi.fn().mockRejectedValue(primaryError),
       });
       const secondary = createMockBlobStorage({
-        getObject: vi.fn().mockRejectedValue(new Error('secondary read failed')),
+        getObject: vi.fn().mockRejectedValue(secondaryError),
       });
       const dual = new DualBlobStorage(primary, secondary);
 
-      await expect(dual.getObject({ key: 'k' })).rejects.toThrow('All promises were rejected');
+      await expect(dual.getObject({ key: 'k' })).rejects.toMatchObject({
+        message: 'Both primary and secondary storage failed to get object',
+        errors: [primaryError, secondaryError],
+      });
     });
   });
 
