@@ -86,8 +86,8 @@ export const Empty = ({ graph, tab }: { graph?: FederatedGraph; tab: 'subgraphs'
       description="Subgraphs are the individual services that make up your federated graph. Each one exposes part of your schema and runs independently."
     >
       <div className="mt-8 flex flex-col gap-y-4 text-left">
-        <div className="flex flex-col gap-3 rounded-lg border border-primary bg-primary/5 p-6">
-          <p className="text-sm font-medium">Publish a Subgraph</p>
+        <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/[0.03] p-6">
+          <p className="text-sm font-medium">Publish a subgraph</p>
           <p className="text-sm text-muted-foreground">
             Run the command below to publish your first subgraph. If it doesn&apos;t exist yet, it will be created
             automatically.
@@ -104,6 +104,14 @@ export const Empty = ({ graph, tab }: { graph?: FederatedGraph; tab: 'subgraphs'
           >
             Learn more →
           </a>
+        </div>
+
+        <div className="relative flex items-center">
+          <div className="flex-1 border-t" />
+          <span className="mx-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            NEED HELP?
+          </span>
+          <div className="flex-1 border-t" />
         </div>
 
         <div className="flex items-center justify-between rounded-lg border p-4">

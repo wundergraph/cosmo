@@ -58,7 +58,7 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
               key={i}
               className={`flex gap-4 p-5 ${i < steps.length - 1 ? 'border-b border-border' : ''}`}
             >
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                 {i + 1}
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-2">

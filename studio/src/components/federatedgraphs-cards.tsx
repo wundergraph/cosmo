@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Dispatch, SetStateAction, useContext, useEffect, useState } from 'react';
 import { FiCheck, FiCopy } from 'react-icons/fi';
-import { LuSquareDot } from 'react-icons/lu';
+import { LuBox, LuNetwork, LuSquareDot } from 'react-icons/lu';
 import { MdNearbyError } from 'react-icons/md';
 import { SiApollographql } from 'react-icons/si';
 import { Line, LineChart, ResponsiveContainer, XAxis } from 'recharts';
@@ -423,10 +423,10 @@ export const Empty = ({
       <div className="mt-8 flex flex-col gap-y-6 text-left">
         <div className="grid grid-cols-2 gap-4">
           {/* Card 1 — Federated Graph (primary) */}
-          <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/[0.03] p-4">
             <div className="flex items-start justify-between">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                <Component2Icon className="h-4 w-4 text-primary" />
+                <LuNetwork className="h-5 w-5 text-primary" />
               </div>
               <span className="rounded bg-primary/10 px-2 py-1 text-xs font-semibold uppercase text-primary">
                 RECOMMENDED
@@ -457,7 +457,7 @@ export const Empty = ({
           <div className="flex flex-col gap-3 rounded-lg border p-4">
             <div className="flex items-start justify-between">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                <DocumentArrowDownIcon className="h-4 w-4 text-muted-foreground" />
+                <LuBox className="h-5 w-5 text-muted-foreground" />
               </div>
               <span className="rounded bg-muted px-2 py-1 text-xs font-semibold uppercase text-muted-foreground">
                 ALTERNATIVE
