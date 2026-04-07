@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import os from 'node:os';
 import { PostHog } from 'posthog-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { config, getBaseHeaders, getLoginDetails } from './config.js';
+import { config, getBaseHeaders } from './config.js';
 import { CreateClient } from './client/client.js';
 
 // Environment variables to allow opting out of telemetry
@@ -32,7 +32,7 @@ type PostHogFetchResponse = {
 
 type TelemetryIdentity = {
   userEmail?: string;
-  organizationSlug: string;
+  organizationId: string;
 };
 
 const buildPostHogOkResponse = () => ({
@@ -125,7 +125,7 @@ const getIdentity = async (): Promise<TelemetryIdentity> => {
   try {
     if (!apiClient) {
       return {
-        organizationSlug: 'anonymous',
+        organizationId: 'anonymous',
       };
     }
 
@@ -138,7 +138,7 @@ const getIdentity = async (): Promise<TelemetryIdentity> => {
 
     if (resp.response?.code === EnumStatusCode.OK) {
       return {
-        organizationSlug: resp.organizationSlug,
+        organizationId: resp.organizationId || 'anonymous',
         userEmail: resp.userEmail || undefined,
       };
     }
@@ -149,7 +149,7 @@ const getIdentity = async (): Promise<TelemetryIdentity> => {
     }
   }
   return {
-    organizationSlug: 'anonymous',
+    organizationId: 'anonymous',
   };
 };
 
@@ -166,9 +166,9 @@ export const capture = async (eventName: string, properties: Record<string, any>
     const metadata = getMetadata();
 
     client.capture({
-      distinctId: identity.userEmail ?? identity.organizationSlug,
+      distinctId: identity.userEmail ?? identity.organizationId,
       groups: {
-        orgslug: identity.organizationSlug,
+        cosmo_organization: identity.organizationId ?? '',
       },
       event: eventName,
       properties: {

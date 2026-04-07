@@ -64,20 +64,19 @@ const identify = ({
       id: organizationId,
       slug: organizationSlug,
       name: organizationName,
-      plan: plan
+      plan: plan,
     });
     return;
   }
-  
+
   posthog.identify(email, {
     id,
-    email,
   });
   posthog.group('cosmo_organization', organizationId, {
     id: organizationId,
     slug: organizationSlug,
     name: organizationName,
-    plan: plan
+    plan: plan,
   });
 };
 
