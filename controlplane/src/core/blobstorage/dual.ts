@@ -19,11 +19,38 @@ export class DualBlobStorage implements BlobStorage {
     contentType: string;
     metadata?: Metadata;
   }): Promise<void> {
-    await Promise.all([this.primary.putObject(data), this.secondary.putObject(data)]);
+    const results = await Promise.allSettled([this.primary.putObject(data), this.secondary.putObject(data)]);
+    const [primaryResult, secondaryResult] = results;
+
+    if (primaryResult.status === 'fulfilled' && secondaryResult.status === 'fulfilled') {
+      return;
+    }
+
+    // Roll back successful writes before throwing
+    if (primaryResult.status === 'fulfilled') {
+      await this.primary.deleteObject({ key: data.key, abortSignal: data.abortSignal });
+    }
+    if (secondaryResult.status === 'fulfilled') {
+      await this.secondary.deleteObject({ key: data.key, abortSignal: data.abortSignal });
+    }
+
+    const errors = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected').map((r) => r.reason);
+    throw new AggregateError(errors, 'Failed to put object into storage');
   }
 
   async getObject(data: { key: string; abortSignal?: AbortSignal }): Promise<BlobObject> {
-    return await Promise.any([this.primary.getObject(data), this.secondary.getObject(data)]);
+    try {
+      return await this.primary.getObject(data);
+    } catch (primaryError) {
+      try {
+        return await this.secondary.getObject(data);
+      } catch (secondaryError) {
+        throw new AggregateError(
+          [primaryError, secondaryError],
+          'Both primary and secondary storage failed to get object',
+        );
+      }
+    }
   }
 
   async removeDirectory(data: { key: string; abortSignal?: AbortSignal }): Promise<number> {
