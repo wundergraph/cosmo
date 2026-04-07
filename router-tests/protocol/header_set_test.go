@@ -1,23 +1,26 @@
 package integration
 
 import (
-	"github.com/wundergraph/cosmo/router-tests/testutils"
-
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/wundergraph/cosmo/router-tests/testutils"
+
 	"github.com/MicahParks/jwkset"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"go.uber.org/zap"
 )
 
 func TestHeaderSet(t *testing.T) {
@@ -74,6 +77,28 @@ func TestHeaderSet(t *testing.T) {
 					Query:  fmt.Sprintf(`query { headerValue(name:"%s") }`, customHeader),
 				})
 				require.Equal(t, fmt.Sprintf(`{"data":{"headerValue":"%s"}}`, employeeVal), res.Body)
+			})
+		})
+
+		t.Run("global request rule sets header for defer", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(customHeader, employeeVal),
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				payload := []byte(fmt.Sprintf(`{"query":"query { ... @defer { headerValue(name:\"%s\") } }"}`, customHeader))
+
+				req := xEnv.MakeGraphQLDeferRequest(http.MethodPost, bytes.NewReader(payload))
+				res, err := xEnv.RouterClient.Do(req)
+				require.NoError(t, err)
+				defer func() { require.NoError(t, res.Body.Close()) }()
+				assert.Equal(t, http.StatusOK, res.StatusCode)
+
+				body, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+
+				bodyString := string(body)
+				assert.Contains(t, bodyString, `{"data":{},"hasNext":true}`)
+				assert.Contains(t, bodyString, fmt.Sprintf(`{"incremental":[{"data":{"headerValue":"%s"},"path":[]}],"hasNext":false}`, employeeVal))
 			})
 		})
 	})

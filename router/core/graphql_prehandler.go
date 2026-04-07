@@ -1165,6 +1165,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 		case *plan.SynchronousResponsePlan:
 			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+		case *plan.DeferResponsePlan:
+			// TODO: handle
 		}
 
 		if h.queryPlansLoggingEnabled {
@@ -1174,6 +1176,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 				printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
 			case *plan.SubscriptionResponsePlan:
 				printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
+			case *plan.DeferResponsePlan:
+				// TODO: handle
 			}
 			if h.developmentMode {
 				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
