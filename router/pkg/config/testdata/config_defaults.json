@@ -562,6 +562,7 @@
     },
     "Manifest": {
       "Enabled": false,
+      "FileName": "manifest.json",
       "PollInterval": 10000000000,
       "PollJitter": 5000000000,
       "Warmup": {
