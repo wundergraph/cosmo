@@ -4200,6 +4200,202 @@ func TestAccessLogs(t *testing.T) {
 				},
 			)
 		})
+
+		t.Run("validate queryPlanHash differs with skip/include variations", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "sha256_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.sha256Hash",
+							},
+						},
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.hash",
+							},
+						},
+						{
+							Key: "query_plan_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.queryPlanHash",
+							},
+						},
+						{
+							Key: "plan_cache_hit",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.planCacheHit",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					query := `query Employee( $id: Int! = 4 $withAligators: Boolean! $withCats: Boolean! $skipDogs:Boolean! $skipMouses:Boolean! ) { employee(id: $id) { details { pets { name __typename ...AlligatorFields @include(if: $withAligators) ...CatFields @include(if: $withCats) ...DogFields @skip(if: $skipDogs) ...MouseFields @skip(if: $skipMouses) ...PonyFields @include(if: false) } } } } fragment AlligatorFields on Alligator { __typename class dangerous gender name } fragment CatFields on Cat { __typename class gender name type } fragment DogFields on Dog { __typename breed class gender name } fragment MouseFields on Mouse { __typename class gender name } fragment PonyFields on Pony { __typename class gender name }`
+
+					// First request: skipMouses=true, id=4
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         query,
+						Variables:     []byte(`{"id": 4,"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
+					})
+
+					// Second request: skipMouses=false (same query body, different skip/include variable)
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         query,
+						Variables:     []byte(`{"id": 4,"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": false}`),
+					})
+
+					// Third request: same as first (should be plan cache hit)
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         query,
+						Variables:     []byte(`{"id": 4,"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
+					})
+
+					// Fourth request: different id (same queryPlanHash as first, different non-skip/include variable)
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employee"`),
+						Query:         query,
+						Variables:     []byte(`{"id": 3,"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": true}`),
+					})
+
+					requestLogs := xEnv.Observer().FilterMessage("/graphql").All()
+					require.Len(t, requestLogs, 4)
+
+					ctx1 := requestLogs[0].ContextMap()
+					ctx2 := requestLogs[1].ContextMap()
+					ctx3 := requestLogs[2].ContextMap()
+					ctx4 := requestLogs[3].ContextMap()
+
+					// All four requests use the same query body, so sha256Hash must be identical
+					sha256First, ok := ctx1["sha256_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, sha256First)
+					sha256Second, ok := ctx2["sha256_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, sha256First, sha256Second, "sha256Hash should be the same for identical query bodies")
+					sha256Third, ok := ctx3["sha256_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, sha256First, sha256Third, "sha256Hash should be the same for identical query bodies")
+					sha256Fourth, ok := ctx4["sha256_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, sha256First, sha256Fourth, "sha256Hash should be the same for identical query bodies")
+
+					// hash (analytics hash of normalized operation) differs with skip/include
+					// because normalization produces different operations for different skip/include values
+					hash1, ok := ctx1["operation_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, hash1)
+					hash2, ok := ctx2["operation_hash"].(string)
+					require.True(t, ok)
+					require.NotEqual(t, hash1, hash2, "hash should differ when skip/include variables change")
+					hash3, ok := ctx3["operation_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, hash1, hash3, "hash should be the same for identical skip/include values")
+					// hash should be the same for request 1 and 4 (same skip/include, different id)
+					hash4, ok := ctx4["operation_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, hash1, hash4, "hash should be the same when only non-skip/include variables change")
+
+					// queryPlanHash should differ between request 1 and 2 (different skip/include values)
+					queryPlanHash1, ok := ctx1["query_plan_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, queryPlanHash1)
+					queryPlanHash2, ok := ctx2["query_plan_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, queryPlanHash2)
+					require.NotEqual(t, queryPlanHash1, queryPlanHash2, "queryPlanHash should differ when skip/include variables change")
+
+					// queryPlanHash should be the same for request 1 and 3 (same skip/include values)
+					queryPlanHash3, ok := ctx3["query_plan_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, queryPlanHash1, queryPlanHash3, "queryPlanHash should be the same for identical skip/include values")
+
+					// queryPlanHash should be the same for request 1 and 4 (same skip/include, different id)
+					queryPlanHash4, ok := ctx4["query_plan_hash"].(string)
+					require.True(t, ok)
+					require.Equal(t, queryPlanHash1, queryPlanHash4, "queryPlanHash should be the same when only non-skip/include variables change")
+
+					// Third request should be a plan cache hit (same queryPlanHash as first)
+					planCacheHit3, ok := ctx3["plan_cache_hit"].(bool)
+					require.True(t, ok)
+					require.True(t, planCacheHit3, "third request should be a plan cache hit")
+				})
+		})
+
+		t.Run("validate hash differs but queryPlanHash matches for queries with different variable names", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.hash",
+							},
+						},
+						{
+							Key: "query_plan_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.queryPlanHash",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					// Two queries with different variable names but identical structure.
+					// The operation names differ but hash is computed with a static empty name,
+					// so operation name does not affect hash — only the variable names ($myId vs $eid) do.
+					// hash is computed before variable remapping, so different variable names produce different hashes.
+					// queryPlanHash is computed after variable remapping ($myId/$eid both become $0), so they match.
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"EmployeeA"`),
+						Query:         `query EmployeeA($myId: Int!) { employee(id: $myId) { id } }`,
+						Variables:     []byte(`{"myId": 4}`),
+					})
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						OperationName: []byte(`"EmployeeB"`),
+						Query:         `query EmployeeB($eid: Int!) { employee(id: $eid) { id } }`,
+						Variables:     []byte(`{"eid": 4}`),
+					})
+
+					requestLogs := xEnv.Observer().FilterMessage("/graphql").All()
+					require.Len(t, requestLogs, 2)
+
+					ctxA := requestLogs[0].ContextMap()
+					ctxB := requestLogs[1].ContextMap()
+
+					// hash should differ (pre-remapping: different variable names $myId vs $eid)
+					hashA, ok := ctxA["operation_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, hashA)
+					hashB, ok := ctxB["operation_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, hashB)
+					require.NotEqual(t, hashA, hashB, "hash should differ because variable names differ before remapping")
+
+					// queryPlanHash should match (post-remapping: both $myId and $eid become $0)
+					queryPlanHashA, ok := ctxA["query_plan_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, queryPlanHashA)
+					queryPlanHashB, ok := ctxB["query_plan_hash"].(string)
+					require.True(t, ok)
+					require.NotEmpty(t, queryPlanHashB)
+					require.Equal(t, queryPlanHashA, queryPlanHashB, "queryPlanHash should match because variable names are remapped to canonical names")
+				})
+		})
 	})
 }
 
