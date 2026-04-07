@@ -8,6 +8,7 @@ import info from '../../package.json' with { type: 'json' };
 const paths = envPaths('cosmo', { suffix: '' });
 export const configDir = paths.config;
 export const dataDir = paths.data;
+export const cacheDir = paths.cache;
 export const configFile = join(configDir, 'config.yaml');
 
 export const getLoginDetails = (): { accessToken: string; organizationSlug: string } | null => {
@@ -35,6 +36,8 @@ export const config = {
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
   pluginRegistryURL: process.env.PLUGIN_REGISTRY_URL || 'cosmo-registry.wundergraph.com',
+  demoOnboardingRepositoryName: 'wundergraph/cosmo-onboarding' as const,
+  demoOnboardingRepositoryBranch: 'main' as const,
 };
 
 export const getBaseHeaders = (): HeadersInit => {

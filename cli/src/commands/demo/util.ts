@@ -1,3 +1,10 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { program } from 'commander';
+import ora from 'ora';
+import pc from 'picocolors';
+import { z } from 'zod';
+import { config, cacheDir } from '../../core/config.js';
 import { visibleLength } from '../../utils.js';
 import type { UserInfo } from './types.js';
 
@@ -90,4 +97,73 @@ export function updateScreenWithUserInfo(userInfo: UserInfo) {
 
   // Restore cursor position
   writeEscapeSequence('\u001B8');
+}
+
+const GitHubTreeSchema = z.object({
+  tree: z.array(
+    z.object({
+      type: z.string(),
+      path: z.string(),
+    }),
+  ),
+});
+
+/**
+ * Copies over support files (gRPC plugin data) from onboarding
+ * repository and stores them in the host filesystem [cacheDir]
+ * folder.
+ * @returns [directory] path which contains the support data
+ */
+export async function prepareSupportingData() {
+  const spinner = ora('Preparing supporting data…').start();
+
+  const cosmoDir = path.join(cacheDir, 'demo');
+  await fs.mkdir(cosmoDir, { recursive: true });
+
+  const treeResponse = await fetch(
+    `https://api.github.com/repos/${config.demoOnboardingRepositoryName}/git/trees/${config.demoOnboardingRepositoryBranch}?recursive=1`,
+  );
+  if (!treeResponse.ok) {
+    spinner.fail('Failed to fetch repository tree.');
+    program.error(`GitHub API error: ${treeResponse.statusText}`);
+  }
+
+  const parsed = GitHubTreeSchema.safeParse(await treeResponse.json());
+  if (!parsed.success) {
+    spinner.fail('Failed to parse repository tree.');
+    program.error('Unexpected response format from GitHub API. The repository structure may have changed.');
+  }
+
+  const files = parsed.data.tree.filter((entry) => entry.type === 'blob' && entry.path.startsWith('plugins/'));
+
+  const results = await Promise.all(
+    files.map(async (file) => {
+      const rawUrl = `https://raw.githubusercontent.com/${config.demoOnboardingRepositoryName}/${config.demoOnboardingRepositoryBranch}/${file.path}`;
+      try {
+        const response = await fetch(rawUrl);
+        if (!response.ok) {
+          return { path: file.path, error: response.statusText };
+        }
+
+        const content = Buffer.from(await response.arrayBuffer());
+        const destPath = path.join(cosmoDir, file.path);
+        await fs.mkdir(path.dirname(destPath), { recursive: true });
+        await fs.writeFile(destPath, content);
+
+        return { path: file.path, error: null };
+      } catch (err) {
+        return { path: file.path, error: err instanceof Error ? err.message : String(err) };
+      }
+    }),
+  );
+
+  const failed = results.filter((r) => r.error !== null);
+  if (failed.length > 0) {
+    spinner.fail(`Failed to fetch some files from onboarding repository or store them in ${cosmoDir}.`);
+    program.error(failed.map((f) => `  ${f.path}: ${f.error}`).join('\n'));
+  }
+
+  spinner.succeed(`Support files copied to ${pc.bold(cosmoDir)}`);
+
+  return cosmoDir;
 }
