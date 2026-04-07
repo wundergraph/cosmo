@@ -34,13 +34,15 @@ describe('DualBlobStorage', () => {
       const secondary = createMockBlobStorage();
       const dual = new DualBlobStorage(primary, secondary);
 
-      await expect(dual.putObject({ key: 'k', body: Buffer.from('d'), contentType: 'text/plain' })).rejects.toMatchObject({
+      await expect(
+        dual.putObject({ key: 'k', body: Buffer.from('d'), contentType: 'text/plain' }),
+      ).rejects.toMatchObject({
         message: 'Failed to put object into storage',
         errors: [primaryError],
       });
 
       expect(primary.deleteObject).not.toHaveBeenCalled();
-      expect(secondary.deleteObject).toHaveBeenCalledWith({ key: 'k', abortSignal: undefined });
+      expect(secondary.deleteObject).toHaveBeenCalledWith({ key: 'k' });
     });
 
     test('rejects when secondary fails and rolls back primary', async () => {
@@ -51,13 +53,33 @@ describe('DualBlobStorage', () => {
       });
       const dual = new DualBlobStorage(primary, secondary);
 
-      await expect(dual.putObject({ key: 'k', body: Buffer.from('d'), contentType: 'text/plain' })).rejects.toMatchObject({
+      await expect(
+        dual.putObject({ key: 'k', body: Buffer.from('d'), contentType: 'text/plain' }),
+      ).rejects.toMatchObject({
         message: 'Failed to put object into storage',
         errors: [secondaryError],
       });
 
-      expect(primary.deleteObject).toHaveBeenCalledWith({ key: 'k', abortSignal: undefined });
+      expect(primary.deleteObject).toHaveBeenCalledWith({ key: 'k' });
       expect(secondary.deleteObject).not.toHaveBeenCalled();
+    });
+    test('includes rollback errors in aggregate when rollback also fails', async () => {
+      const secondaryError = new Error('secondary write failed');
+      const rollbackError = new Error('primary rollback failed');
+      const primary = createMockBlobStorage({
+        deleteObject: vi.fn().mockRejectedValue(rollbackError),
+      });
+      const secondary = createMockBlobStorage({
+        putObject: vi.fn().mockRejectedValue(secondaryError),
+      });
+      const dual = new DualBlobStorage(primary, secondary);
+
+      await expect(
+        dual.putObject({ key: 'k', body: Buffer.from('d'), contentType: 'text/plain' }),
+      ).rejects.toMatchObject({
+        message: 'Failed to put object into storage',
+        errors: [secondaryError, rollbackError],
+      });
     });
   });
 

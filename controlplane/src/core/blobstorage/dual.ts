@@ -26,16 +26,21 @@ export class DualBlobStorage implements BlobStorage {
       return;
     }
 
-    // Roll back successful writes before throwing
+    // Roll back successful writes before throwing, independent of the caller's signal
+    const rollbacks: Promise<void>[] = [];
     if (primaryResult.status === 'fulfilled') {
-      await this.primary.deleteObject({ key: data.key, abortSignal: data.abortSignal });
+      rollbacks.push(this.primary.deleteObject({ key: data.key }));
     }
     if (secondaryResult.status === 'fulfilled') {
-      await this.secondary.deleteObject({ key: data.key, abortSignal: data.abortSignal });
+      rollbacks.push(this.secondary.deleteObject({ key: data.key }));
     }
+    const rollbackResults = await Promise.allSettled(rollbacks);
 
-    const errors = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected').map((r) => r.reason);
-    throw new AggregateError(errors, 'Failed to put object into storage');
+    const putErrors = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected').map((r) => r.reason);
+    const rollbackErrors = rollbackResults
+      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      .map((r) => r.reason);
+    throw new AggregateError([...putErrors, ...rollbackErrors], 'Failed to put object into storage');
   }
 
   async getObject(data: { key: string; abortSignal?: AbortSignal }): Promise<BlobObject> {
