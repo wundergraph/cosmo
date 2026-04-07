@@ -62,7 +62,7 @@ const identify = ({
     // This session has been already identified, nothing to do!
     return;
   }
-
+  
   posthog.identify(email, {
     id,
     email,
