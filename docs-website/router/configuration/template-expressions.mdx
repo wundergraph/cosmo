@@ -64,8 +64,9 @@ The `request` object is a read-only entity that provides details about the incom
 - `request.operation`
 - `request.operation.name`
 - `request.operation.type` (possible values: `mutation` or `query` )
-- `request.operation.hash`
-- `request.operation.sha256Hash`
+- `request.operation.hash` - Hash of the normalized operation. Computed before variable remapping, so queries with different variable names produce different hashes. Identical queries with different skip/include variable values also produce different hashes because normalization inlines those directives.
+- `request.operation.queryPlanHash` - The Hash used as the query plan cache key. Computed after variable remapping (e.g. `$myId` and `$eid` both become `$0`) and includes skip/include variable values. Two requests share the same `queryPlanHash` when they resolve to the same query plan.
+- `request.operation.sha256Hash` - SHA-256 hash of the original operation query string sent by the client. Identical for all requests that send the same raw query body, regardless of variable values.
 - `request.operation.parsingTime` (time.Duration)
 - `request.operation.persistedId`
 - `request.operation.normalizationTime` (time.Duration)

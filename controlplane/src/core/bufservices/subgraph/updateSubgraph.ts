@@ -220,6 +220,7 @@ export function updateSubgraph(
           disableResolvabilityValidation: req.disableResolvabilityValidation,
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
+        opts.webhookProxyUrl,
       );
 
     await auditLogRepo.addAuditLog({

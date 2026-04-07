@@ -635,7 +635,15 @@
       "Period": 60000000000,
       "RejectExceedingRequests": true,
       "RejectStatusCode": 200,
-      "HideStatsFromResponseExtension": false
+      "HideStatsFromResponseExtension": false,
+      "Overrides": [
+        {
+          "Matching": "^premium-.*",
+          "Rate": 200,
+          "Burst": 200,
+          "Period": 60000000000
+        }
+      ]
     },
     "Storage": {
       "URLs": [
@@ -980,6 +988,7 @@
     },
     "Manifest": {
       "Enabled": true,
+      "FileName": "manifest.json",
       "PollInterval": 30000000000,
       "PollJitter": 10000000000,
       "Warmup": {
