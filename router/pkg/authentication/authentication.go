@@ -61,7 +61,7 @@ func (a *authentication) Claims() Claims {
 }
 
 func (a *authentication) SetScopesClaim(scopeClaim string) {
-	if a == nil {
+	if a == nil || scopeClaim == "" {
 		return
 	}
 	a.scopeClaim = scopeClaim
