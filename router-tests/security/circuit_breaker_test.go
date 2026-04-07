@@ -726,6 +726,11 @@ func TestCircuitBreaker(t *testing.T) {
 
 			require.Equal(t, failedTries, employeesCalls.Load())
 
+			// Ensure all previous subscriptions are fully cleaned up before
+			// waiting for the circuit to reset, to prevent leftover subscription
+			// cleanup from interfering with the half-open circuit state.
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+
 			// Wait for current bucket to be cleaned up
 			time.Sleep(breaker.RollingDuration*3 + time.Millisecond*1000)
 
@@ -733,7 +738,6 @@ func TestCircuitBreaker(t *testing.T) {
 			// Verify a success case with messages validated from here onwards
 			// ====
 
-			// Sending a complete must stop the subscription
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
@@ -744,6 +748,12 @@ func TestCircuitBreaker(t *testing.T) {
 
 			_, message, err := testenv.WSReadMessage(t, conn)
 			require.NoError(t, err)
+
+			t.Logf("employeesCalls after recovery: %d", employeesCalls.Load())
+			t.Logf("received message: %s", string(message))
+			t.Logf("circuit breaker status changed count: %d", xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+			t.Logf("circuit breaker open count: %d", xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute").Len())
+
 			require.JSONEq(t, timestampMessage, string(message))
 
 			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{ID: "1", Type: "complete"})
