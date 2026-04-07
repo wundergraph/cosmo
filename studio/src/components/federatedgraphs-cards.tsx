@@ -58,6 +58,7 @@ const MigrationDialog = ({
   setIsMigrationSuccess,
   setToken,
   isEmptyState,
+  compact,
 }: {
   refetch: () => void;
   isMigrating: boolean;
@@ -65,6 +66,7 @@ const MigrationDialog = ({
   setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
   setToken: Dispatch<SetStateAction<string | undefined>>;
   isEmptyState?: boolean;
+  compact?: boolean;
 }) => {
   const router = useRouter();
   const {
@@ -140,22 +142,28 @@ const MigrationDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        className={cn({
-          'min-h-[254px]': !isEmptyState,
-        })}
-      >
-        <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
-          <div className="flex items-center justify-center gap-x-5">
-            <SiApollographql className="h-10 w-10" />
-            <ChevronDoubleRightIcon className="animation h-8 w-8" />
-            <Logo width={50} height={50} />
-          </div>
-          <p className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-xl font-semibold text-transparent">
-            Migrate from Apollo
-          </p>
-        </Card>
-      </DialogTrigger>
+      {compact ? (
+        <DialogTrigger asChild>
+          <button className="shrink-0 text-sm text-primary hover:underline">Migrate from Apollo →</button>
+        </DialogTrigger>
+      ) : (
+        <DialogTrigger
+          className={cn({
+            'min-h-[254px]': !isEmptyState,
+          })}
+        >
+          <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
+            <div className="flex items-center justify-center gap-x-5">
+              <SiApollographql className="h-10 w-10" />
+              <ChevronDoubleRightIcon className="animation h-8 w-8" />
+              <Logo width={50} height={50} />
+            </div>
+            <p className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-xl font-semibold text-transparent">
+              Migrate from Apollo
+            </p>
+          </Card>
+        </DialogTrigger>
+      )}
       <DialogContent>
         {!isMigrating ? (
           <>
@@ -412,35 +420,102 @@ export const Empty = ({
       title="Create your first graph"
       description="A graph is the unified API layer that combines your services into a single endpoint. Choose the architecture that fits your team."
     >
-      <div className="flex flex-col gap-y-6">
-        <Tabs defaultValue="federated" className="mt-8 w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="federated">Federated Graph</TabsTrigger>
-            <TabsTrigger value="monograph">Monograph</TabsTrigger>
-          </TabsList>
-          <TabsContent value="federated">
+      <div className="mt-8 flex flex-col gap-y-6 text-left">
+        <div className="grid grid-cols-2 gap-4">
+          {/* Card 1 — Federated Graph (primary) */}
+          <div className="flex flex-col gap-3 rounded-lg border border-primary/30 p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                <Component2Icon className="h-4 w-4 text-primary" />
+              </div>
+              <span className="rounded bg-primary/10 px-2 py-1 text-xs font-semibold uppercase text-primary">
+                RECOMMENDED
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Federated Graph</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Combine multiple subgraph services into one unified API. Ideal for teams working across distributed
+                services.
+              </p>
+            </div>
             <CLI
               command={`npx wgc federated-graph create production --namespace ${namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
             />
-          </TabsContent>
-          <TabsContent value="monograph">
+            <a
+              href={docsBaseURL + '/cli/federated-graph/create'}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-primary hover:underline"
+            >
+              View docs →
+            </a>
+          </div>
+
+          {/* Card 2 — Monograph (secondary) */}
+          <div className="flex flex-col gap-3 rounded-lg border p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                <DocumentArrowDownIcon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <span className="rounded bg-muted px-2 py-1 text-xs font-semibold uppercase text-muted-foreground">
+                ALTERNATIVE
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Monograph</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                A single, self-contained graph from one service. Best for smaller teams or simpler API architectures.
+              </p>
+            </div>
             <CLI
               command={`npx wgc monograph create production --namespace ${namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
             />
-          </TabsContent>
-        </Tabs>
+            <a
+              href={docsBaseURL + '/cli/monograph/create'}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+            >
+              View docs →
+            </a>
+          </div>
+        </div>
 
         {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
           <>
-            <span className="text-sm font-bold">OR</span>
-            <MigrationDialog
-              refetch={refetch}
-              setIsMigrationSuccess={setIsMigrationSuccess}
-              isEmptyState={true}
-              setToken={setToken}
-              isMigrating={isMigrating}
-              setIsMigrating={setIsMigrating}
-            />
+            {/* OR MIGRATE divider */}
+            <div className="relative flex items-center">
+              <div className="flex-1 border-t" />
+              <span className="mx-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                OR MIGRATE
+              </span>
+              <div className="flex-1 border-t" />
+            </div>
+
+            {/* Apollo migration row */}
+            <div className="flex items-center gap-4 rounded-lg border p-4">
+              <div className="flex shrink-0 items-center gap-2">
+                <SiApollographql className="h-6 w-6" />
+                <ChevronDoubleRightIcon className="h-4 w-4 text-muted-foreground" />
+                <Logo width={24} height={24} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Already using Apollo Studio?</p>
+                <p className="text-xs text-muted-foreground">
+                  Migrate your existing graphs to Cosmo in a few steps.
+                </p>
+              </div>
+              <MigrationDialog
+                refetch={refetch}
+                setIsMigrationSuccess={setIsMigrationSuccess}
+                isEmptyState={true}
+                compact={true}
+                setToken={setToken}
+                isMigrating={isMigrating}
+                setIsMigrating={setIsMigrating}
+              />
+            </div>
           </>
         )}
       </div>
