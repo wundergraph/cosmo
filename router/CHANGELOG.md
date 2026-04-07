@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.301.0](https://github.com/wundergraph/cosmo/compare/router@0.300.1...router@0.301.0) (2026-04-06)
+
+### Features
+
+* add query plan hash field for expressions ([#2738](https://github.com/wundergraph/cosmo/issues/2738)) ([65e05e3](https://github.com/wundergraph/cosmo/commit/65e05e348fd0de2606248267d3e99b0dfc7c24de)) (@SkArchon)
+
 ## [0.300.1](https://github.com/wundergraph/cosmo/compare/router@0.300.0...router@0.300.1) (2026-04-02)
 
 ### Bug Fixes
