@@ -170,6 +170,10 @@ func (rt *RetryHTTPTransport) drainBody(resp *http.Response, logger *zap.Logger)
 }
 
 func isResponseOK(resp *http.Response) bool {
+	// 101 Switching Protocols is a successful response for WebSocket upgrades
+	if resp.StatusCode == http.StatusSwitchingProtocols {
+		return true
+	}
 	// Ensure we don't wait for no reason when subgraphs don't behave
 	// spec-compliant and returns a different status code than 200.
 	return resp.StatusCode >= 200 && resp.StatusCode < 300
