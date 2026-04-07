@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * MCP Debug Proxy — logs all requests/responses between Claude Code and the MCP server.
+ * MCP Debug Proxy — logs all requests/responses between an MCP client and the MCP server.
  * Usage: node mcp-debug-proxy.mjs [listen-port] [target-port]
  *   Defaults: listen on 5026, forward to localhost:5025
  *
