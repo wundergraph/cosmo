@@ -34,6 +34,7 @@ export interface RouterOptions {
   logger: pino.Logger;
   keycloakClient: Keycloak;
   platformWebhooks: IPlatformWebhookService;
+  webhookProxyUrl?: string;
   webBaseUrl: string;
   githubApp?: App;
   slack: { clientID?: string; clientSecret?: string };

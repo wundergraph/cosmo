@@ -36,6 +36,7 @@ export function moveFederatedGraph(opts: RouterOptions, req: MoveGraphRequest, c
         authContext.organizationId,
         opts.logger,
         opts.billingDefaultPlanId,
+        opts.webhookProxyUrl,
       );
       const auditLogRepo = new AuditLogRepository(tx);
       const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
@@ -120,6 +121,8 @@ export function moveFederatedGraph(opts: RouterOptions, req: MoveGraphRequest, c
           jwtSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
+        undefined,
+        opts.webhookProxyUrl,
       );
 
       const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
@@ -158,6 +161,8 @@ export function moveFederatedGraph(opts: RouterOptions, req: MoveGraphRequest, c
             jwtSecret: opts.admissionWebhookJWTSecret,
           },
           opts.chClient!,
+          undefined,
+          opts.webhookProxyUrl,
         );
 
         allCompositionErrors.push(...contractErrors);

@@ -35,6 +35,7 @@ export function deleteFederatedSubgraph(opts: RouterOptions, req: DeleteFederate
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     req.namespace = req.namespace || DefaultNamespace;
@@ -184,6 +185,7 @@ export function deleteFederatedSubgraph(opts: RouterOptions, req: DeleteFederate
             ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           },
           federatedGraphs: affectedFederatedGraphs,
+          webhookProxyUrl: opts.webhookProxyUrl,
         });
 
         // Re-fetch the federated graphs to get the updated composedSchemaVersionId

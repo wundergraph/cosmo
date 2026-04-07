@@ -35,6 +35,7 @@ export function createFederatedGraph(opts: RouterOptions, req: CreateFederatedGr
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
@@ -231,6 +232,7 @@ export function createFederatedGraph(opts: RouterOptions, req: CreateFederatedGr
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
         federatedGraphs: [federatedGraph],
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       compositionErrors.push(...composition.compositionErrors);

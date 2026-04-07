@@ -154,6 +154,7 @@ export class Composer {
     private contractRepo: ContractRepository,
     private graphCompositionRepository: GraphCompositionRepository,
     private chClient?: ClickHouseClient,
+    private proxyUrl?: string,
   ) {}
 
   composeRouterConfigWithFeatureFlags({
@@ -275,6 +276,7 @@ export class Composer {
             this.logger,
             admissionWebhookURL,
             admissionWebhookSecret,
+            this.proxyUrl,
           );
           const resp = await admissionWebhookController.validateConfig(
             {

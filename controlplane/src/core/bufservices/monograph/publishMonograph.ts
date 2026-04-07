@@ -28,6 +28,7 @@ export function publishMonograph(opts: RouterOptions, req: PublishMonographReque
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
@@ -151,6 +152,8 @@ export function publishMonograph(opts: RouterOptions, req: PublishMonographReque
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
+        undefined,
+        opts.webhookProxyUrl,
       );
 
     for (const graph of updatedFederatedGraphs) {

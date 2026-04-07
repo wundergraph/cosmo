@@ -53,6 +53,7 @@ export function publishFederatedSubgraph(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const auditLogRepo = new AuditLogRepository(opts.db);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
@@ -603,6 +604,7 @@ export function publishFederatedSubgraph(
           disableResolvabilityValidation: req.disableResolvabilityValidation,
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
+        opts.webhookProxyUrl,
       );
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published

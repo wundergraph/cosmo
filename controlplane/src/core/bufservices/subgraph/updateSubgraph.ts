@@ -41,6 +41,7 @@ export function updateSubgraph(opts: RouterOptions, req: UpdateSubgraphRequest, 
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     req.namespace = req.namespace || DefaultNamespace;
@@ -214,6 +215,7 @@ export function updateSubgraph(opts: RouterOptions, req: UpdateSubgraphRequest, 
           disableResolvabilityValidation: req.disableResolvabilityValidation,
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
+        opts.webhookProxyUrl,
       );
 
     await auditLogRepo.addAuditLog({

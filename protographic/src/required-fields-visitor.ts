@@ -19,9 +19,8 @@ import {
   visit,
 } from 'graphql';
 import { create } from '@bufbuild/protobuf';
-import { FieldMappingSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import type { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { CompositeMessageDefinition, CompositeMessageKind, ProtoMessage, RPCMethod, VisitContext } from './types.js';
+import { ArgumentMappingSchema, FieldMappingSchema, type FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { CompositeMessageDefinition, CompositeMessageKind, ProtoMessage, ProtoMessageField, RPCMethod, VisitContext } from './types.js';
 import { KEY_DIRECTIVE_NAME } from './string-constants.js';
 import {
   createEntityLookupRequestKeyMessageName,
@@ -30,6 +29,7 @@ import {
   createResponseMessageName,
   graphqlFieldToProtoField,
   formatKeyElements,
+  graphqlArgumentToProtoField,
 } from './naming-conventions.js';
 import { getProtoTypeFromGraphQL } from './proto-utils.js';
 import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
@@ -104,6 +104,9 @@ export class RequiredFieldsVisitor {
   /** Mappings keyed by @key directive fields string */
   private mapping: RequiredFieldMappings = {};
 
+  /** Whether any field argument uses a protobuf wrapper type */
+  private _usesWrapperTypes = false;
+
   /**
    * Creates a new RequiredFieldsVisitor.
    *
@@ -144,10 +147,18 @@ export class RequiredFieldsVisitor {
         continue;
       }
 
+      const argumentMappings = this.requiredField.args.map((arg) =>
+        create(ArgumentMappingSchema, {
+          original: arg.name,
+          mapped: graphqlArgumentToProtoField(arg.name),
+        }),
+      );
+
       this.mapping[this.currentKeyFieldsString] = {
         requiredFieldMapping: create(FieldMappingSchema, {
           original: this.requiredField.name,
           mapped: graphqlFieldToProtoField(this.requiredField.name),
+          argumentMappings,
         }),
       };
       visit(this.fieldSetDoc, this.visitor);
@@ -188,6 +199,14 @@ export class RequiredFieldsVisitor {
    */
   public getMapping(): RequiredFieldMappings {
     return this.mapping;
+  }
+
+  /**
+   * Returns whether any field argument uses a protobuf wrapper type.
+   * Used by the caller to determine if the wrappers.proto import is needed.
+   */
+  public get usesWrapperTypes(): boolean {
+    return this._usesWrapperTypes;
   }
 
   /**
@@ -283,7 +302,7 @@ export class RequiredFieldsVisitor {
 
     // Request messages
     const contextMessageName = `${requiredFieldsMethodName}Context`;
-    this.messageDefinitions.push({
+    const requestMessage: ProtoMessage = {
       messageName: requestMessageName,
       fields: [
         {
@@ -294,7 +313,18 @@ export class RequiredFieldsVisitor {
           description: `${contextMessageName} provides the context for the required fields method ${requiredFieldsMethodName}.`,
         },
       ],
-    });
+    };
+    const requireArgsMessageName = `${requiredFieldsMethodName}Args`;
+    if (this.requiredField.args.length > 0) {
+      requestMessage.fields.push({
+        fieldName: 'field_args',
+        typeName: requireArgsMessageName,
+        fieldNumber: 2,
+        description: `${requireArgsMessageName} provides the field arguments for the required field with method ${requiredFieldsMethodName}.`,
+      });
+    }
+
+    this.messageDefinitions.push(requestMessage);
 
     const fieldsMessageName = `${requiredFieldsMethodName}Fields`;
     const entityKeyRequestMessageName = createEntityLookupRequestKeyMessageName(
@@ -317,6 +347,26 @@ export class RequiredFieldsVisitor {
         },
       ],
     });
+
+    if (this.requiredField.args.length > 0) {
+      const requireArgsMessage: ProtoMessage = {
+        messageName: requireArgsMessageName,
+        fields: this.requiredField.args.map((d, i): ProtoMessageField => {
+          const protoType = getProtoTypeFromGraphQL(false, d.type);
+          if (protoType.isWrapper) {
+            this._usesWrapperTypes = true;
+          }
+          return {
+            fieldName: graphqlArgumentToProtoField(d.name),
+            typeName: protoType.typeName,
+            fieldNumber: i + 1,
+            isRepeated: protoType.isRepeated,
+          };
+        }),
+      };
+
+      this.messageDefinitions.push(requireArgsMessage);
+    }
 
     // Define the prototype for the required fields message.
     // This will be added to the message definitions when the document is left.

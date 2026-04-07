@@ -118,6 +118,7 @@ export function checkSubgraphSchema(opts: RouterOptions, req: CheckSubgraphSchem
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     let linkedSubgraph:
@@ -294,6 +295,7 @@ export function checkSubgraphSchema(opts: RouterOptions, req: CheckSubgraphSchem
         ignoreExternalKeys,
       },
       webhookService,
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     // Extract variables from checkResult
@@ -465,6 +467,7 @@ export function checkSubgraphSchema(opts: RouterOptions, req: CheckSubgraphSchem
           ignoreExternalKeys,
         },
         webhookService,
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       await schemaCheckRepo.addLinkedSchemaCheck({

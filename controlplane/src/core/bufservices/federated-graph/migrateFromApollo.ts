@@ -35,6 +35,7 @@ export function migrateFromApollo(opts: RouterOptions, req: MigrateFromApolloReq
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const auditLogRepo = new AuditLogRepository(opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
@@ -160,6 +161,7 @@ export function migrateFromApollo(opts: RouterOptions, req: MigrateFromApolloReq
           disableResolvabilityValidation: true,
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
     });
 

@@ -203,6 +203,7 @@ export class FederatedGraphRepository {
     readme?: string;
     unsetAdmissionWebhookURL?: boolean;
     unsetLabelMatchers?: boolean;
+    webhookProxyUrl?: string;
   }): Promise<
     | {
         compositionErrors: PlainMessage<CompositionError>[];
@@ -329,6 +330,7 @@ export class FederatedGraphRepository {
           actorId: data.updatedBy,
           chClient: data.chClient,
           compositionOptions: data.compositionOptions,
+          webhookProxyUrl: data.webhookProxyUrl,
         });
 
         return {
@@ -362,6 +364,7 @@ export class FederatedGraphRepository {
     },
     chClient: ClickHouseClient,
     compositionOptions?: CompositionOptions,
+    webhookProxyUrl?: string,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     deploymentErrors: PlainMessage<DeploymentError>[];
@@ -422,6 +425,7 @@ export class FederatedGraphRepository {
           chClient,
           compositionOptions,
           federatedGraphs: [movedContractGraph],
+          webhookProxyUrl,
         });
 
         return {
@@ -441,6 +445,7 @@ export class FederatedGraphRepository {
         },
         chClient,
         compositionOptions,
+        webhookProxyUrl,
       });
 
       return {
@@ -1503,6 +1508,7 @@ export class FederatedGraphRepository {
     chClient,
     blobStorage,
     federatedGraphs,
+    webhookProxyUrl,
   }: {
     actorId: string;
     admissionConfig: {
@@ -1513,6 +1519,7 @@ export class FederatedGraphRepository {
     chClient: ClickHouseClient;
     federatedGraphs: FederatedGraphDTO[];
     compositionOptions?: CompositionOptions;
+    webhookProxyUrl?: string;
   }) => {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
@@ -1528,6 +1535,7 @@ export class FederatedGraphRepository {
         contractRepo,
         graphCompositionRepo,
         chClient,
+        webhookProxyUrl,
       );
 
       const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];

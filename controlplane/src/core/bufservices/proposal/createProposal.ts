@@ -391,6 +391,7 @@ export function createProposal(opts: RouterOptions, req: CreateProposalRequest, 
       contractRepo,
       graphCompostionRepo,
       opts.chClient,
+      opts.webhookProxyUrl,
     );
 
     const {
@@ -440,7 +441,9 @@ export function createProposal(opts: RouterOptions, req: CreateProposalRequest, 
         authContext.organizationId,
         opts.logger,
         opts.billingDefaultPlanId,
+        opts.webhookProxyUrl,
       ),
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     if (checkId) {

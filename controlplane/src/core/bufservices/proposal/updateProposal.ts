@@ -45,6 +45,7 @@ export function updateProposal(opts: RouterOptions, req: UpdateProposalRequest, 
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
@@ -459,6 +460,7 @@ export function updateProposal(opts: RouterOptions, req: UpdateProposalRequest, 
         contractRepo,
         graphCompostionRepo,
         opts.chClient,
+        opts.webhookProxyUrl,
       );
 
       const {
@@ -508,7 +510,9 @@ export function updateProposal(opts: RouterOptions, req: UpdateProposalRequest, 
           authContext.organizationId,
           opts.logger,
           opts.billingDefaultPlanId,
+          opts.webhookProxyUrl,
         ),
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       if (checkId) {

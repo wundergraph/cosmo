@@ -719,6 +719,7 @@ export class SchemaCheckRepository {
     chClient,
     skipProposalMatchCheck,
     webhookService,
+    webhookProxyUrl,
   }: {
     actorId: string;
     blobStorage: BlobStorage;
@@ -741,6 +742,7 @@ export class SchemaCheckRepository {
     chClient?: ClickHouseClient;
     skipProposalMatchCheck: boolean;
     webhookService: OrganizationWebhookService;
+    webhookProxyUrl?: string;
   }) {
     const breakingChanges: SchemaChange[] = [];
     const nonBreakingChanges: SchemaChange[] = [];
@@ -1451,6 +1453,7 @@ export class SchemaCheckRepository {
           ignoreExternalKeys,
         },
         webhookService,
+        webhookProxyUrl,
       });
 
       await this.addLinkedSchemaCheck({

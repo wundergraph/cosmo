@@ -28,6 +28,7 @@ export function moveSubgraph(opts: RouterOptions, req: MoveGraphRequest, ctx: Ha
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     const subgraph = await subgraphRepo.byName(req.name, req.namespace);
@@ -124,6 +125,7 @@ export function moveSubgraph(opts: RouterOptions, req: MoveGraphRequest, ctx: Ha
               disableResolvabilityValidation: req.disableResolvabilityValidation,
               ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
             },
+            opts.webhookProxyUrl,
           );
 
         await auditLogRepo.addAuditLog({

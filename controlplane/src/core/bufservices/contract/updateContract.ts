@@ -37,6 +37,7 @@ export function updateContract(opts: RouterOptions, req: UpdateContractRequest, 
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     req.excludeTags = [...new Set(req.excludeTags)];
@@ -150,6 +151,7 @@ export function updateContract(opts: RouterOptions, req: UpdateContractRequest, 
         disableResolvabilityValidation: req.disableResolvabilityValidation,
         ignoreExternalKeys,
       },
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
@@ -181,6 +183,7 @@ export function updateContract(opts: RouterOptions, req: UpdateContractRequest, 
           },
         },
       ],
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     compositionErrors.push(...composition.compositionErrors);

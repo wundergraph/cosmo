@@ -35,6 +35,7 @@ export function enableFeatureFlag(opts: RouterOptions, req: EnableFeatureFlagReq
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     req.namespace = req.namespace || DefaultNamespace;
@@ -126,6 +127,7 @@ export function enableFeatureFlag(opts: RouterOptions, req: EnableFeatureFlagReq
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
         federatedGraphs,
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       compositionErrors.push(...composition.compositionErrors);
