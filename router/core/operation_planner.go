@@ -7,14 +7,15 @@ import (
 
 	"golang.org/x/sync/singleflight"
 
-	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
-	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
-	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
+	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 )
 
 type planWithMetaData struct {
@@ -82,19 +83,21 @@ func (p *OperationPlanner) planOperation(content string, name string, includeQue
 	}
 
 	var (
-		preparedPlan plan.Plan
+		plannerOptions []plan.Opts
 	)
 
-	// create and postprocess the plan
-	// planning uses the router schema
-	// if ctx.executionOptions.IncludeQueryPlanInResponse {
-	preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report, plan.IncludeQueryPlanInResponse())
-	// } else {
-	// 	preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report)
-	// }
+	if includeQueryPlan || true { // TMP: always calculate query plans
+		plannerOptions = append(plannerOptions, plan.IncludeQueryPlanInResponse())
+	}
+
+	// create the raw query plan
+	// Note: planning uses the router schema as it needs access to all fields (including inaccessible), validation/introspection uses client schema
+	preparedPlan := planner.Plan(&doc, p.executor.RouterSchema, name, &report, plannerOptions...)
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
+
+	// postprocess query plan to get its final state
 	post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
 	post.Process(preparedPlan)
 
