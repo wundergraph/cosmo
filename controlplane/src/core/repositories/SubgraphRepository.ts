@@ -10,21 +10,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { addDays } from 'date-fns';
-import {
-  and,
-  arrayOverlaps,
-  asc,
-  count,
-  desc,
-  eq,
-  gt,
-  inArray,
-  like,
-  lt,
-  notInArray,
-  or,
-  SQL,
-} from 'drizzle-orm';
+import { and, arrayOverlaps, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, SQL } from 'drizzle-orm';
 import { validate as isValidUuid } from 'uuid';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
