@@ -1,0 +1,18 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"employee":{},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"id":1,"details":{"forename":"Jens","location":{"language":"German"}}},"path":["employee"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"path":["employee"]}],"hasNext":false}
+
+--graphql
+--graphql--

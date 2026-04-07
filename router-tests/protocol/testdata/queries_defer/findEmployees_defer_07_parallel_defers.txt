@@ -1,0 +1,18 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"a":[{"details":{"forename":"Stefan"}},{"details":{"forename":"Björn"}},{"details":{"forename":"Sergiy"}},{"details":{"forename":"Eelco"}},{"details":{"forename":"David"}}],"d":[]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"b":[{"details":{"forename":"Jens"}},{"details":{"forename":"Alexandra"}}]},"path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"c":[{"details":{"forename":"David"}}]},"path":[]}],"hasNext":false}
+
+--graphql
+--graphql--

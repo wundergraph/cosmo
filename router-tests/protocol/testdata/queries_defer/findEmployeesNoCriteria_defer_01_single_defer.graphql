@@ -1,0 +1,5 @@
+query {
+  findEmployees {
+    ... @defer { details { forename } }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "data": {
+    "d": [],
+    "a": [
+      {
+        "details": {
+          "forename": "Stefan"
+        }
+      },
+      {
+        "details": {
+          "forename": "Björn"
+        }
+      },
+      {
+        "details": {
+          "forename": "Sergiy"
+        }
+      },
+      {
+        "details": {
+          "forename": "Eelco"
+        }
+      },
+      {
+        "details": {
+          "forename": "David"
+        }
+      }
+    ],
+    "b": [
+      {
+        "details": {
+          "forename": "Jens"
+        }
+      },
+      {
+        "details": {
+          "forename": "Alexandra"
+        }
+      }
+    ],
+    "c": [
+      {
+        "details": {
+          "forename": "David"
+        }
+      }
+    ]
+  }
+}

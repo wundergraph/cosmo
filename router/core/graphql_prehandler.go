@@ -1147,6 +1147,17 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	requestContext.telemetry.ReleaseAttributes(&planningAttrs)
 
+	var printedPlan string
+	switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
+	case *plan.SynchronousResponsePlan:
+		printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
+	case *plan.SubscriptionResponsePlan:
+		printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
+	case *plan.DeferResponsePlan:
+		printedPlan = p.Response.QueryPlanString()
+	}
+	fmt.Println("response plan:", printedPlan)
+
 	// we could log the query plan only if query plans are calculated
 	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||
 		h.alwaysIncludeQueryPlan {
@@ -1154,6 +1165,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 		case *plan.SynchronousResponsePlan:
 			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+		case *plan.DeferResponsePlan:
+			// TODO: handle
 		}
 
 		if h.queryPlansLoggingEnabled {
@@ -1163,6 +1176,8 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 				printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
 			case *plan.SubscriptionResponsePlan:
 				printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
+			case *plan.DeferResponsePlan:
+				// TODO: handle
 			}
 			if h.developmentMode {
 				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)

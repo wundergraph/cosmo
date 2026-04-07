@@ -1,0 +1,28 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"products":[{},{},{}]},"path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"lead":{"__typename":"Employee"}},"path":["products",0]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"id":1},"path":["products",0,"lead"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"derivedMood":"HAPPY"},"path":["products",0,"lead"]}],"hasNext":false}
+
+--graphql
+--graphql--
