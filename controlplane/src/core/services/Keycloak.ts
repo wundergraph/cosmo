@@ -571,7 +571,10 @@ export default class Keycloak {
       // Cast the data to the expected type
       return data as ParsedOpenIdConfiguration;
     } catch (e: unknown) {
-      if (isAxiosError(e)) {
+      if (isCancel(e)) {
+        // The user canceled the request
+        throw new PublicError(EnumStatusCode.ERR, 'Request cancelled by user');
+      } else if (isAxiosError(e)) {
         let message: string;
         switch (e.code) {
           case 'ECONNABORTED': {
@@ -586,9 +589,6 @@ export default class Keycloak {
         }
 
         throw new PublicError(EnumStatusCode.ERR, message);
-      } else if (isCancel(e)) {
-        // The user canceled the request
-        throw new PublicError(EnumStatusCode.ERR, 'Request cancelled by user');
       }
 
       throw e;
