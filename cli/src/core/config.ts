@@ -38,6 +38,7 @@ export const config = {
   pluginRegistryURL: process.env.PLUGIN_REGISTRY_URL || 'cosmo-registry.wundergraph.com',
   demoOnboardingRepositoryName: 'wundergraph/cosmo-onboarding' as const,
   demoOnboardingRepositoryBranch: 'main' as const,
+  dockerBuilderName: 'cosmo-builder' as const,
 };
 
 export const getBaseHeaders = (): HeadersInit => {
