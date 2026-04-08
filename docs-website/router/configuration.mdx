@@ -1752,9 +1752,9 @@ events:
 |                      | authentication.user_info.password | <Icon icon="square" />                        | Password.                                                                                |               |
 |                      | tls                               | <Icon icon="square" />                        | TLS configuration for the NATS provider.                                                 |               |
 |                      | tls.insecure_skip_verify          | <Icon icon="square" />                        | Skip server certificate verification. Not recommended for production.                    | false         |
-|                      | tls.ca_file                       | <Icon icon="square" />                        | Path to a custom CA certificate file (PEM) used to verify the server certificate.        |               |
-|                      | tls.cert_file                     | <Icon icon="square" />                        | Path to the client certificate file (PEM) for mTLS.                                      |               |
-|                      | tls.key_file                      | <Icon icon="square" />                        | Path to the client private key file (PEM) for mTLS.                                      |               |
+|                      | tls.ca_file                       | <Icon icon="square" />                        | Path to a custom CA certificate file (PEM) used to verify the server certificate. Required for mTLS.  |               |
+|                      | tls.cert_file                     | <Icon icon="square" />                        | Path to the client certificate file (PEM) for mTLS. Must be set together with `key_file`.             |               |
+|                      | tls.key_file                      | <Icon icon="square" />                        | Path to the client private key file (PEM) for mTLS. Must be set together with `cert_file`.            |               |
 
 #### TLS
 
