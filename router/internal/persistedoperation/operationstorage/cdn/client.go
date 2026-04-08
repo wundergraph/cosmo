@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
@@ -184,8 +185,9 @@ func gzipAwareReader(resp *http.Response) (io.Reader, func(), error) {
 }
 
 // ReadManifest fetches the PQL manifest from the CDN, delegating to the manifest Fetcher.
-// The objectPath parameter is unused — the Fetcher constructs the path from JWT claims.
-func (cdn *Client) ReadManifest(ctx context.Context, _ string) (*pqlmanifest.Manifest, error) {
+// The objectPath and modifiedSince parameters are unused — the Fetcher constructs the
+// path from JWT claims and uses ETags for conditional requests instead of timestamps.
+func (cdn *Client) ReadManifest(ctx context.Context, _ string, _ time.Time) (*pqlmanifest.Manifest, error) {
 	manifest, _, err := cdn.fetcher.Fetch(ctx, "")
 	if err != nil {
 		return nil, err

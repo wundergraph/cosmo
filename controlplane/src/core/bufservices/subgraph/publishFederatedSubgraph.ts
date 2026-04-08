@@ -605,6 +605,7 @@ export function publishFederatedSubgraph(
           disableResolvabilityValidation: req.disableResolvabilityValidation,
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
+        opts.webhookProxyUrl,
       );
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published
