@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { program } from 'commander';
+import { execa } from 'execa';
 import ora from 'ora';
 import pc from 'picocolors';
 import { z } from 'zod';
@@ -166,4 +167,81 @@ export async function prepareSupportingData() {
   spinner.succeed(`Support files copied to ${pc.bold(cosmoDir)}`);
 
   return cosmoDir;
+}
+
+async function isDockerAvailable(): Promise<boolean> {
+  try {
+    await execa('docker', ['version', '--format', '{{.Client.Version}}']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function isBuildxAvailable(): Promise<boolean> {
+  try {
+    await execa('docker', ['buildx', 'version']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function hasDockerContainerBuilder(): Promise<boolean> {
+  try {
+    const { stdout } = await execa('docker', ['buildx', 'ls']);
+    for (const line of stdout.split('\n')) {
+      // Builder lines start without leading whitespace; the driver follows the name
+      if (!line.startsWith(' ') && line.includes('docker-container')) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+async function createDockerContainerBuilder(builderName: string): Promise<void> {
+  await execa('docker', ['buildx', 'create', '--use', '--driver', 'docker-container', '--name', builderName]);
+  await execa('docker', ['buildx', 'inspect', builderName, '--bootstrap']);
+}
+
+/**
+ * Checks whether host system has [docker] installed and whether [buildx] is set up
+ * properly. In case of failures, show prompt to install/setup.
+ */
+export async function checkDockerReadiness(): Promise<void> {
+  const spinner = ora('Checking Docker availability…').start();
+
+  if (!(await isDockerAvailable())) {
+    spinner.fail('Docker is not available.');
+    program.error(
+      `Docker CLI is not installed or the daemon is not running.\nInstall Docker: ${pc.underline('https://docs.docker.com/get-docker/')}`,
+    );
+  }
+
+  if (!(await isBuildxAvailable())) {
+    spinner.fail('Docker Buildx is not available.');
+    program.error(
+      `Docker Buildx plugin is required for multi-platform builds.\nSee: ${pc.underline('https://docs.docker.com/build/install-buildx/')}`,
+    );
+  }
+
+  if (await hasDockerContainerBuilder()) {
+    spinner.succeed('Docker is ready.');
+    return;
+  }
+
+  spinner.text = `Creating buildx builder "${config.dockerBuilderName}"…`;
+  try {
+    await createDockerContainerBuilder(config.dockerBuilderName);
+  } catch (err) {
+    spinner.fail(`Failed to create buildx builder "${config.dockerBuilderName}".`);
+    program.error(
+      `Could not create a docker-container buildx builder: ${err instanceof Error ? err.message : String(err)}\nYou can create one manually: docker buildx create --use --driver docker-container --name ${config.dockerBuilderName}`,
+    );
+  }
+
+  spinner.succeed('Docker is ready.');
 }
