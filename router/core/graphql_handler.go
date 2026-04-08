@@ -233,7 +233,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					pw.writer.Header().Set(CostEstimatedHeader, strconv.Itoa(reqCtx.operation.costEstimated))
 					if actualListSizes != nil {
 						if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-							actual := costCalc.ActualCost(reqCtx.operation.planConfig, actualListSizes)
+							actual := costCalc.ActualCost(resolveCtx.Variables, actualListSizes)
 							reqCtx.operation.costActual = actual
 							reqCtx.operation.costActualSet = true
 							pw.writer.Header().Set(CostActualHeader, strconv.Itoa(actual))
@@ -255,7 +255,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !reqCtx.operation.costActualSet && resolveCtx.ActualListSizes != nil &&
 			reqCtx.operation.preparedPlan != nil && reqCtx.operation.preparedPlan.preparedPlan != nil {
 			if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-				reqCtx.operation.costActual = costCalc.ActualCost(reqCtx.operation.planConfig, resolveCtx.ActualListSizes)
+				reqCtx.operation.costActual = costCalc.ActualCost(resolveCtx.Variables, resolveCtx.ActualListSizes)
 				reqCtx.operation.costActualSet = true
 			}
 		}
