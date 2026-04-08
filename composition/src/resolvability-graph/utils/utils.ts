@@ -1,18 +1,25 @@
 import { unresolvablePathError } from '../../errors/errors';
 import { getOrThrowError } from '../../utils/utils';
-import { GraphFieldData } from '../../utils/types';
-import { FieldName, RootFieldData, SelectionPath, SubgraphName, TypeName } from '../types/types';
+import { type GraphFieldData } from '../../utils/types';
+import {
+  type FieldName,
+  type RootFieldData,
+  type SelectionPath,
+  type SubgraphName,
+  type TypeName,
+} from '../types/types';
 
 import {
-  GenerateResolvabilityErrorReasonsParams,
-  GenerateSharedResolvabilityErrorReasonsParams,
-  GetMultipliedRelativeOriginPathsParams,
-  ResolvabilityErrorsParams,
-  RootResolvabilityErrorsParams,
-  SharedResolvabilityErrorsParams,
+  type GenerateResolvabilityErrorReasonsParams,
+  type GenerateSharedResolvabilityErrorReasonsParams,
+  type GetMultipliedRelativeOriginPathsParams,
+  type ResolvabilityErrorsParams,
+  type RootResolvabilityErrorsParams,
+  type SharedResolvabilityErrorsParams,
 } from './types/params';
-import { SelectionSetSegments } from './types/types';
+import { type SelectionSetSegments } from './types/types';
 import { LITERAL_SPACE, QUOTATION_JOIN } from '../constants/string-constants';
+import { MAX_RESOLVABILITY_PATH_SIZE } from '../constants/number-constants';
 
 export type UnresolvableFieldData = {
   externalSubgraphNames: Set<SubgraphName>;
@@ -178,12 +185,25 @@ export function generateSharedResolvabilityErrorReasons({
   return reasons;
 }
 
-export function generateSelectionSetSegments(fieldPath: string): SelectionSetSegments {
+export function generateSelectionSetSegments(
+  fieldPath: string,
+  limit: number = MAX_RESOLVABILITY_PATH_SIZE,
+): SelectionSetSegments {
   // Regex is to split on singular periods and not fragments (... on TypeName)
   const pathNodes = fieldPath.split(/(?<=\w)\./);
   let outputStart = '';
   let outputEnd = '';
+  let shouldTruncate = false;
+  const truncatedNumber = pathNodes.length - limit * 2;
+  if (limit > 0 && pathNodes.length > limit * 2 + 1) {
+    // +1 so we always include the root field as the first selection
+    shouldTruncate = true;
+    pathNodes.splice(limit + 1, truncatedNumber - 1);
+  }
   for (let i = 0; i < pathNodes.length; i++) {
+    if (shouldTruncate && i === limit + 1) {
+      outputStart += LITERAL_SPACE.repeat(i + 1) + `... # and ${truncatedNumber} truncated selections\n`;
+    }
     outputStart += LITERAL_SPACE.repeat(i + 1) + pathNodes[i] + ` {\n`;
     outputEnd = LITERAL_SPACE.repeat(i + 1) + `}\n` + outputEnd;
   }

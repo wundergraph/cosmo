@@ -4,6 +4,80 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.112.7](https://github.com/wundergraph/cosmo/compare/wgc@0.112.6...wgc@0.112.7) (2026-04-02)
+
+**Note:** Version bump only for package wgc
+
+## [0.112.6](https://github.com/wundergraph/cosmo/compare/wgc@0.112.5...wgc@0.112.6) (2026-04-01)
+
+**Note:** Version bump only for package wgc
+
+## [0.112.5](https://github.com/wundergraph/cosmo/compare/wgc@0.112.4...wgc@0.112.5) (2026-03-27)
+
+**Note:** Version bump only for package wgc
+
+## [0.112.4](https://github.com/wundergraph/cosmo/compare/wgc@0.112.3...wgc@0.112.4) (2026-03-26)
+
+### Bug Fixes
+
+* **cli:** improve error output for protographic generation errors ([#2687](https://github.com/wundergraph/cosmo/issues/2687)) ([dcd4e0a](https://github.com/wundergraph/cosmo/commit/dcd4e0aeb04dc23f11a46c653fbcc3669fd67086)) (@Noroth)
+
+## [0.112.3](https://github.com/wundergraph/cosmo/compare/wgc@0.112.2...wgc@0.112.3) (2026-03-24)
+
+**Note:** Version bump only for package wgc
+
+## [0.112.2](https://github.com/wundergraph/cosmo/compare/wgc@0.112.1...wgc@0.112.2) (2026-03-20)
+
+### Bug Fixes
+
+* invalid JSON output when `--json` flag used ([#2666](https://github.com/wundergraph/cosmo/issues/2666)) ([edde373](https://github.com/wundergraph/cosmo/commit/edde373165dbe70ce145b3c212cc2a27e6e69dda)) (@comatory)
+
+## [0.112.1](https://github.com/wundergraph/cosmo/compare/wgc@0.112.0...wgc@0.112.1) (2026-03-18)
+
+**Note:** Version bump only for package wgc
+
+# [0.112.0](https://github.com/wundergraph/cosmo/compare/wgc@0.111.0...wgc@0.112.0) (2026-03-17)
+
+### Features
+
+* expose costs ([#2470](https://github.com/wundergraph/cosmo/issues/2470)) ([d43aa40](https://github.com/wundergraph/cosmo/commit/d43aa40f2429fbb212e5618cd5586774e1b6ae7e)) (@ysmolski)
+
+# [0.111.0](https://github.com/wundergraph/cosmo/compare/wgc@0.110.2...wgc@0.111.0) (2026-03-17)
+
+### Features
+
+* add graph recompose ([#2652](https://github.com/wundergraph/cosmo/issues/2652)) ([8bdb7d0](https://github.com/wundergraph/cosmo/commit/8bdb7d08485cb8bde84efb033663e49ed23e060f)) (@Aenimus)
+
+## [0.110.2](https://github.com/wundergraph/cosmo/compare/wgc@0.110.1...wgc@0.110.2) (2026-03-17)
+
+**Note:** Version bump only for package wgc
+
+## [0.110.1](https://github.com/wundergraph/cosmo/compare/wgc@0.110.0...wgc@0.110.1) (2026-03-13)
+
+**Note:** Version bump only for package wgc
+
+# [0.110.0](https://github.com/wundergraph/cosmo/compare/wgc@0.109.1...wgc@0.110.0) (2026-03-12)
+
+### Features
+
+* add limit option for error/warning display in publish command ([#2634](https://github.com/wundergraph/cosmo/issues/2634)) ([1d0085d](https://github.com/wundergraph/cosmo/commit/1d0085d4de4db6ccab82bd42df5cd2a1500f3413)) (@JivusAyrus)
+
+## [0.109.1](https://github.com/wundergraph/cosmo/compare/wgc@0.109.0...wgc@0.109.1) (2026-03-11)
+
+**Note:** Version bump only for package wgc
+
+# [0.109.0](https://github.com/wundergraph/cosmo/compare/wgc@0.108.0...wgc@0.109.0) (2026-03-10)
+
+### Features
+
+* json output support for monograph/subgraph check ([#2590](https://github.com/wundergraph/cosmo/issues/2590)) ([5131bba](https://github.com/wundergraph/cosmo/commit/5131bbac8d24115a61468e8ebf9731b4250830eb)) (@comatory)
+
+# [0.108.0](https://github.com/wundergraph/cosmo/compare/wgc@0.107.1...wgc@0.108.0) (2026-03-10)
+
+### Features
+
+* add composition options ([#2595](https://github.com/wundergraph/cosmo/issues/2595)) ([1cba9ab](https://github.com/wundergraph/cosmo/commit/1cba9ab997a64e8bea18a7f6f01507f2ec2dd82b)) (@Aenimus)
+
 ## [0.107.1](https://github.com/wundergraph/cosmo/compare/wgc@0.107.0...wgc@0.107.1) (2026-03-07)
 
 **Note:** Version bump only for package wgc

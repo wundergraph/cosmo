@@ -48,6 +48,7 @@ export function updateProposal(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
@@ -76,6 +77,7 @@ export function updateProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -97,6 +99,7 @@ export function updateProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -119,6 +122,7 @@ export function updateProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -149,6 +153,7 @@ export function updateProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -172,6 +177,7 @@ export function updateProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -246,6 +252,7 @@ export function updateProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        composedSchemaBreakingChanges: [],
       };
     } else if (req.updateAction.case === 'updatedSubgraphs') {
       if (proposal.proposal.state !== 'DRAFT') {
@@ -266,6 +273,7 @@ export function updateProposal(
           lintingSkipped: false,
           graphPruningSkipped: false,
           checkUrl: '',
+          composedSchemaBreakingChanges: [],
         };
       }
 
@@ -287,6 +295,7 @@ export function updateProposal(
           lintingSkipped: false,
           graphPruningSkipped: false,
           checkUrl: '',
+          composedSchemaBreakingChanges: [],
         };
       }
 
@@ -310,6 +319,7 @@ export function updateProposal(
           lintingSkipped: false,
           graphPruningSkipped: false,
           checkUrl: '',
+          composedSchemaBreakingChanges: [],
         };
       }
 
@@ -354,6 +364,7 @@ export function updateProposal(
               lintingSkipped: false,
               graphPruningSkipped: false,
               checkUrl: '',
+              composedSchemaBreakingChanges: [],
             };
           }
 
@@ -377,6 +388,7 @@ export function updateProposal(
               lintingSkipped: false,
               graphPruningSkipped: false,
               checkUrl: '',
+              composedSchemaBreakingChanges: [],
             };
           }
 
@@ -399,6 +411,7 @@ export function updateProposal(
               lintingSkipped: false,
               graphPruningSkipped: false,
               checkUrl: '',
+              composedSchemaBreakingChanges: [],
             };
           }
         }
@@ -450,6 +463,7 @@ export function updateProposal(
         contractRepo,
         graphCompostionRepo,
         opts.chClient,
+        opts.webhookProxyUrl,
       );
 
       const {
@@ -466,6 +480,7 @@ export function updateProposal(
         operationUsageStats,
         isLinkedTrafficCheckFailed,
         isLinkedPruningCheckFailed,
+        composedSchemaBreakingChanges,
       } = await schemaCheckRepo.checkMultipleSchemas({
         actorId: authContext.userId,
         blobStorage: opts.blobStorage,
@@ -499,7 +514,9 @@ export function updateProposal(
           authContext.organizationId,
           opts.logger,
           opts.billingDefaultPlanId,
+          opts.webhookProxyUrl,
         ),
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       if (checkId) {
@@ -526,6 +543,7 @@ export function updateProposal(
         checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/checks/${checkId}`,
         isLinkedPruningCheckFailed,
         isLinkedTrafficCheckFailed,
+        composedSchemaBreakingChanges,
       };
     } else {
       return {
@@ -545,6 +563,7 @@ export function updateProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        composedSchemaBreakingChanges: [],
       };
     }
   });

@@ -70,7 +70,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "keycloak.fullname" . }}
+                name: {{ include "keycloak.fullname" . }}-http
                 port:
                   number: {{ .Values.global.keycloak.port }}
     {{- end }}

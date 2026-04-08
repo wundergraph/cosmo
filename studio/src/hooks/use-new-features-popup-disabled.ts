@@ -1,15 +1,12 @@
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { useLocalStorage } from "./use-local-storage";
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { useLocalStorage } from './use-local-storage';
 
 export function useNewFeaturesPopupDisabled(): [boolean, Dispatch<SetStateAction<string>>] {
   const [isPopupDisabled, setIsPopupDisabled] = useState(true);
-  const [isPopupDisabledOnClient, setDisablePopup] = useLocalStorage(
-    "dismissHubFeaturesPopup",
-    "false",
-  );
+  const [isPopupDisabledOnClient, setDisablePopup] = useLocalStorage('dismissHubFeaturesPopup', 'false');
 
   useEffect(() => {
-    setIsPopupDisabled(isPopupDisabledOnClient === "true");
+    setIsPopupDisabled(isPopupDisabledOnClient === 'true');
   }, [isPopupDisabledOnClient]);
 
   return [isPopupDisabled, setDisablePopup];

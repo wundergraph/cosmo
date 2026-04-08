@@ -112,6 +112,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
   const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
   const schema = subgraphConfig?.schema;
   const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+  const costs = subgraphConfig?.costs;
 
   if (s.kind === SubgraphKind.Standard) {
     const composedSubgraph: ComposedSubgraph = {
@@ -125,6 +126,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
       websocketSubprotocol: s.websocketSubprotocol,
       schema,
       configurationDataByTypeName,
+      costs,
     };
     return composedSubgraph;
   }
@@ -141,6 +143,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
       version: s.version,
       schema,
       configurationDataByTypeName,
+      costs,
     };
     return composedSubgraphPlugin;
   }
@@ -155,6 +158,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
     mapping: s.mapping,
     schema,
     configurationDataByTypeName,
+    costs,
   };
   return composedSubgraphGRPC;
 }
@@ -171,6 +175,7 @@ export default (opts: BaseCommandOptions) => {
     '--disable-resolvability-validation',
     'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
   );
+  command.option('--ignore-external-keys', 'This flag ignores errors related to true external entity keys.');
 
   command.action(async (options) => {
     const inputFile = resolve(options.input);
@@ -207,7 +212,10 @@ export default (opts: BaseCommandOptions) => {
           definitions: parse(s.sdl),
         };
       }),
-      options.disableResolvabilityValidation,
+      {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        ignoreExternalKeys: options.ignoreExternalKeys,
+      },
     );
 
     if (!result.success) {
@@ -587,7 +595,10 @@ async function buildFeatureFlagsConfig(
         url: normalizeURL(s.routingUrl),
         definitions: parse(s.sdl),
       })),
-      options.disableResolvabilityValidation,
+      {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        ignoreExternalKeys: options.ignoreExternalKeys,
+      },
     );
 
     if (!featureResult.success) {
@@ -641,6 +652,7 @@ async function buildFeatureFlagsConfig(
         const subgraphConfig = featureResult.subgraphConfigBySubgraphName.get(s.name);
         const schema = subgraphConfig?.schema;
         const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+        const costs = subgraphConfig?.costs;
 
         const composedSubgraph: ComposedSubgraph = {
           kind: SubgraphKind.Standard,
@@ -653,6 +665,7 @@ async function buildFeatureFlagsConfig(
           websocketSubprotocol: s.websocketSubprotocol,
           schema,
           configurationDataByTypeName,
+          costs,
         };
         return composedSubgraph;
       }),

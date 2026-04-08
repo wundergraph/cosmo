@@ -38,11 +38,11 @@ export default class ApiKeyAuthenticator {
     });
 
     if (!apiKeyModel || !apiKeyModel.user) {
-      throw new Error('Invalid api key');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Invalid api key');
     }
 
     if (apiKeyModel?.expiresAt && apiKeyModel.expiresAt < new Date()) {
-      throw new Error('Api key is expired');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Api key is expired');
     }
 
     const organization = await this.orgRepo.byId(apiKeyModel.organizationId);

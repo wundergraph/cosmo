@@ -1,8 +1,8 @@
-import { Kind, ListTypeNode, NamedTypeNode, NonNullTypeNode, TypeNode } from 'graphql';
+import { Kind, type ListTypeNode, type NamedTypeNode, type NonNullTypeNode, type TypeNode } from 'graphql';
 import { maximumTypeNestingExceededError } from '../../errors/errors';
-import { getMutableTypeNode, MutableIntermediateTypeNode } from '../../schema-building/ast';
+import { getMutableTypeNode, type MutableIntermediateTypeNode } from '../../schema-building/ast';
 import { stringToNameNode } from '../../ast/utils';
-import { FieldData } from '../../schema-building/types';
+import { type FieldData } from '../../schema-building/types';
 import { MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
 
 export enum DivergentType {

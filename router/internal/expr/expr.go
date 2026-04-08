@@ -86,8 +86,15 @@ type Operation struct {
 	PersistedID       string        `expr:"persistedId"`
 	NormalizationTime time.Duration `expr:"normalizationTime"`
 	Hash              string        `expr:"hash"`
+	QueryPlanHash     string        `expr:"queryPlanHash"`
 	ValidationTime    time.Duration `expr:"validationTime"`
 	PlanningTime      time.Duration `expr:"planningTime"`
+
+	NormalizationCacheHit          bool `expr:"normalizationCacheHit"`
+	VariablesNormalizationCacheHit bool `expr:"variablesNormalizationCacheHit"`
+	VariablesRemappingCacheHit     bool `expr:"variablesRemappingCacheHit"`
+	PersistedOperationCacheHit     bool `expr:"persistedOperationCacheHit"`
+	PlanCacheHit                   bool `expr:"planCacheHit"`
 }
 
 type Client struct {

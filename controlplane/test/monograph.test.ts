@@ -35,6 +35,7 @@ describe('Namespaces', (ctx) => {
 
   test('Creates a monograph with internal labels and one subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const name = genID('mono');
 
@@ -59,12 +60,11 @@ describe('Namespaces', (ctx) => {
     expect(monographRes.subgraphs[0].labels.length).toBe(1);
     expect(monographRes.subgraphs[0].labels[0].key).toBe('_internal');
     expect(monographRes.subgraphs[0].routingURL).toBe('http://localhost:4000');
-
-    await server.close();
   });
 
   test('Publish monograph updates internal subgraph schema', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const name = genID('mono');
 
@@ -95,12 +95,11 @@ describe('Namespaces', (ctx) => {
     });
     expect(subgraphSDL.response?.code).toBe(EnumStatusCode.OK);
     expect(subgraphSDL.sdl).toBe('type Query { hello: String! }');
-
-    await server.close();
   });
 
   test('Migrate monograph removes internal label', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const name = genID('mono');
 
@@ -128,12 +127,11 @@ describe('Namespaces', (ctx) => {
     expect(monographRes.subgraphs.length).toBe(1);
     expect(monographRes.subgraphs[0].labels.length).toBe(1);
     expect(monographRes.subgraphs[0].labels[0].key).toBe('federated');
-
-    await server.close();
   });
 
   test('Lists monographs and federated graphs correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('mono');
     const fedGraph1Name = genID('fedGraph1');
@@ -173,12 +171,11 @@ describe('Namespaces', (ctx) => {
     expect(monographsRes.response?.code).toBe(EnumStatusCode.OK);
     expect(monographsRes.graphs.length).toBe(1);
     expect(monographsRes.graphs.map((g) => g.name)).toContain(monographName);
-
-    await server.close();
   });
 
   test('Federated graph commands do not modify monograph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('mono');
 
@@ -213,12 +210,11 @@ describe('Namespaces', (ctx) => {
       labelMatchers: ['federate=123'],
     });
     expect(updateRes.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 
   test('Monograph commands do not modify federated graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const fedName = genID('fed1');
     const label = genUniqueLabel('label');
@@ -261,7 +257,5 @@ describe('Namespaces', (ctx) => {
       schema: 'type Query { hello: String! }',
     });
     expect(publishRes.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 });

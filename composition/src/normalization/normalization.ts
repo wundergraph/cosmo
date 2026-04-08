@@ -3,47 +3,49 @@ import {
   normalizeSubgraph as normalizeSubgraphV1,
   normalizeSubgraphFromString as normalizeSubgraphFromStringV1,
 } from '../v1/normalization/normalization-factory';
+import { ROUTER_COMPATIBILITY_VERSION_ONE } from '../router-compatibility-version/router-compatibility-version';
+import { type BatchNormalizationResult, type NormalizationResult } from './types';
 import {
-  ROUTER_COMPATIBILITY_VERSION_ONE,
-  SupportedRouterCompatibilityVersion,
-} from '../router-compatibility-version/router-compatibility-version';
-import { BatchNormalizationResult, NormalizationResult } from './types';
-import { DocumentNode } from 'graphql';
-import { Graph } from '../resolvability-graph/graph';
-import { Subgraph } from '../subgraph/types';
+  type BatchNormalizeParams,
+  type NormalizeSubgraphFromStringParams,
+  type NormalizeSubgraphParams,
+} from './params';
 
-export function normalizeSubgraphFromString(
-  schema: string,
+export function normalizeSubgraphFromString({
   noLocation = true,
-  version: SupportedRouterCompatibilityVersion = ROUTER_COMPATIBILITY_VERSION_ONE,
-): NormalizationResult {
+  options,
+  sdlString,
+  version = ROUTER_COMPATIBILITY_VERSION_ONE,
+}: NormalizeSubgraphFromStringParams): NormalizationResult {
   switch (version) {
     default: {
-      return normalizeSubgraphFromStringV1(schema, noLocation);
+      return normalizeSubgraphFromStringV1({ noLocation, options, sdlString });
     }
   }
 }
 
-export function normalizeSubgraph(
-  document: DocumentNode,
-  subgraphName?: string,
-  internalGraph?: Graph,
-  version: SupportedRouterCompatibilityVersion = ROUTER_COMPATIBILITY_VERSION_ONE,
-): NormalizationResult {
+export function normalizeSubgraph({
+  document,
+  internalGraph,
+  options,
+  subgraphName,
+  version = ROUTER_COMPATIBILITY_VERSION_ONE,
+}: NormalizeSubgraphParams): NormalizationResult {
   switch (version) {
     default: {
-      return normalizeSubgraphV1(document, subgraphName, internalGraph);
+      return normalizeSubgraphV1({ document, internalGraph, options, subgraphName });
     }
   }
 }
 
-export function batchNormalize(
-  subgraphs: Array<Subgraph>,
-  version: SupportedRouterCompatibilityVersion = ROUTER_COMPATIBILITY_VERSION_ONE,
-): BatchNormalizationResult {
+export function batchNormalize({
+  options,
+  subgraphs,
+  version = ROUTER_COMPATIBILITY_VERSION_ONE,
+}: BatchNormalizeParams): BatchNormalizationResult {
   switch (version) {
     default: {
-      return batchNormalizeV1(subgraphs);
+      return batchNormalizeV1({ options, subgraphs });
     }
   }
 }

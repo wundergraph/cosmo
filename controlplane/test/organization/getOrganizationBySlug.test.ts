@@ -32,11 +32,13 @@ describe('router compatibility-version list tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that an organization can be fetched by slug', async () => {
+  test('that an organization can be fetched by slug', async (testContext) => {
     const organizationId = randomUUID();
     const organizationSlug = `slug-${organizationId}`;
     const organizationName = 'company-a';
     const { client, server } = await SetupTest({ dbname, chClient, organizationId });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.getOrganizationBySlug({
       slug: organizationSlug,
     });
@@ -46,7 +48,5 @@ describe('router compatibility-version list tests', () => {
     expect(organization).toBeDefined();
     expect(organization!.slug).toBe(organizationSlug);
     expect(organization!.name).toBe(organizationName);
-
-    await server.close();
   });
 });

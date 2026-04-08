@@ -37,15 +37,25 @@ service ProjectsService {
   rpc QuerySearchProjects(QuerySearchProjectsRequest) returns (QuerySearchProjectsResponse) {}
   rpc QueryTasks(QueryTasksRequest) returns (QueryTasksResponse) {}
   rpc QueryTasksByPriority(QueryTasksByPriorityRequest) returns (QueryTasksByPriorityResponse) {}
+  rpc RequireEmployeeDeepWorkItemInfoById(RequireEmployeeDeepWorkItemInfoByIdRequest) returns (RequireEmployeeDeepWorkItemInfoByIdResponse) {}
+  rpc RequireEmployeeReviewReportById(RequireEmployeeReviewReportByIdRequest) returns (RequireEmployeeReviewReportByIdResponse) {}
+  rpc RequireEmployeeTaggedProjectSummaryById(RequireEmployeeTaggedProjectSummaryByIdRequest) returns (RequireEmployeeTaggedProjectSummaryByIdResponse) {}
+  rpc RequireEmployeeWorkItemHandlerInfoById(RequireEmployeeWorkItemHandlerInfoByIdRequest) returns (RequireEmployeeWorkItemHandlerInfoByIdResponse) {}
+  rpc RequireEmployeeWorkItemInfoById(RequireEmployeeWorkItemInfoByIdRequest) returns (RequireEmployeeWorkItemInfoByIdResponse) {}
+  rpc RequireEmployeeWorkItemSpecsInfoById(RequireEmployeeWorkItemSpecsInfoByIdRequest) returns (RequireEmployeeWorkItemSpecsInfoByIdResponse) {}
+  rpc RequireEmployeeWorkSetupSummaryById(RequireEmployeeWorkSetupSummaryByIdRequest) returns (RequireEmployeeWorkSetupSummaryByIdResponse) {}
   rpc ResolveEmployeeAverageTaskCompletionDays(ResolveEmployeeAverageTaskCompletionDaysRequest) returns (ResolveEmployeeAverageTaskCompletionDaysResponse) {}
   rpc ResolveEmployeeCurrentWorkload(ResolveEmployeeCurrentWorkloadRequest) returns (ResolveEmployeeCurrentWorkloadResponse) {}
+  rpc ResolveEmployeeTotalProjectCount(ResolveEmployeeTotalProjectCountRequest) returns (ResolveEmployeeTotalProjectCountResponse) {}
   rpc ResolveMilestoneDaysUntilDue(ResolveMilestoneDaysUntilDueRequest) returns (ResolveMilestoneDaysUntilDueResponse) {}
   rpc ResolveMilestoneIsAtRisk(ResolveMilestoneIsAtRiskRequest) returns (ResolveMilestoneIsAtRiskResponse) {}
+  rpc ResolveProjectActiveMilestoneCount(ResolveProjectActiveMilestoneCountRequest) returns (ResolveProjectActiveMilestoneCountResponse) {}
   rpc ResolveProjectCompletionRate(ResolveProjectCompletionRateRequest) returns (ResolveProjectCompletionRateResponse) {}
   rpc ResolveProjectCriticalDeadline(ResolveProjectCriticalDeadlineRequest) returns (ResolveProjectCriticalDeadlineResponse) {}
   rpc ResolveProjectEstimatedDaysRemaining(ResolveProjectEstimatedDaysRemainingRequest) returns (ResolveProjectEstimatedDaysRemainingResponse) {}
   rpc ResolveProjectFilteredTasks(ResolveProjectFilteredTasksRequest) returns (ResolveProjectFilteredTasksResponse) {}
   rpc ResolveProjectSubProjects(ResolveProjectSubProjectsRequest) returns (ResolveProjectSubProjectsResponse) {}
+  rpc ResolveProjectTaskCount(ResolveProjectTaskCountRequest) returns (ResolveProjectTaskCountResponse) {}
   rpc ResolveProjectTopPriorityItem(ResolveProjectTopPriorityItemRequest) returns (ResolveProjectTopPriorityItemResponse) {}
   rpc ResolveTaskIsBlocked(ResolveTaskIsBlockedRequest) returns (ResolveTaskIsBlockedResponse) {}
   rpc ResolveTaskTotalEffort(ResolveTaskTotalEffortRequest) returns (ResolveTaskTotalEffortResponse) {}
@@ -617,6 +627,40 @@ message ResolveProjectTopPriorityItemResponse {
   repeated ResolveProjectTopPriorityItemResult result = 1;
 }
 
+message ResolveProjectTaskCountContext {
+  string id = 1;
+}
+
+message ResolveProjectTaskCountRequest {
+  // context provides the resolver context for the field taskCount of type Project.
+  repeated ResolveProjectTaskCountContext context = 1;
+}
+
+message ResolveProjectTaskCountResult {
+  int32 task_count = 1;
+}
+
+message ResolveProjectTaskCountResponse {
+  repeated ResolveProjectTaskCountResult result = 1;
+}
+
+message ResolveProjectActiveMilestoneCountContext {
+  string id = 1;
+}
+
+message ResolveProjectActiveMilestoneCountRequest {
+  // context provides the resolver context for the field activeMilestoneCount of type Project.
+  repeated ResolveProjectActiveMilestoneCountContext context = 1;
+}
+
+message ResolveProjectActiveMilestoneCountResult {
+  int32 active_milestone_count = 1;
+}
+
+message ResolveProjectActiveMilestoneCountResponse {
+  repeated ResolveProjectActiveMilestoneCountResult result = 1;
+}
+
 message ResolveMilestoneIsAtRiskArgs {
   google.protobuf.DoubleValue threshold = 1;
 }
@@ -763,8 +807,332 @@ message ResolveEmployeeAverageTaskCompletionDaysResponse {
   repeated ResolveEmployeeAverageTaskCompletionDaysResult result = 1;
 }
 
+message ResolveEmployeeTotalProjectCountContext {
+  int32 id = 1;
+}
+
+message ResolveEmployeeTotalProjectCountRequest {
+  // context provides the resolver context for the field totalProjectCount of type Employee.
+  repeated ResolveEmployeeTotalProjectCountContext context = 1;
+}
+
+message ResolveEmployeeTotalProjectCountResult {
+  int32 total_project_count = 1;
+}
+
+message ResolveEmployeeTotalProjectCountResponse {
+  repeated ResolveEmployeeTotalProjectCountResult result = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdRequest {
+  // RequireEmployeeTaggedProjectSummaryByIdContext provides the context for the required fields method RequireEmployeeTaggedProjectSummaryById.
+  repeated RequireEmployeeTaggedProjectSummaryByIdContext context = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeTaggedProjectSummaryByIdFields fields = 2;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdResponse {
+  // RequireEmployeeTaggedProjectSummaryByIdResult provides the result for the required fields method RequireEmployeeTaggedProjectSummaryById.
+  repeated RequireEmployeeTaggedProjectSummaryByIdResult result = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdResult {
+  string tagged_project_summary = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdFields {
+  string expertise = 1;
+}
+
+message RequireEmployeeWorkItemInfoByIdRequest {
+  // RequireEmployeeWorkItemInfoByIdContext provides the context for the required fields method RequireEmployeeWorkItemInfoById.
+  repeated RequireEmployeeWorkItemInfoByIdContext context = 1;
+}
+
+message RequireEmployeeWorkItemInfoByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeWorkItemInfoByIdFields fields = 2;
+}
+
+message RequireEmployeeWorkItemInfoByIdResponse {
+  // RequireEmployeeWorkItemInfoByIdResult provides the result for the required fields method RequireEmployeeWorkItemInfoById.
+  repeated RequireEmployeeWorkItemInfoByIdResult result = 1;
+}
+
+message RequireEmployeeWorkItemInfoByIdResult {
+  string work_item_info = 1;
+}
+
+message RequireEmployeeWorkItemInfoByIdFields {
+  message TechnicalWorkItem {
+    string name = 1;
+    int32 code_count = 2;
+  }
+
+  message ManagementWorkItem {
+    string name = 1;
+    string team_size = 2;
+  }
+
+  message EmployeeWorkItem {
+    oneof instance {
+      ManagementWorkItem management_work_item = 1;
+      TechnicalWorkItem technical_work_item = 2;
+    }
+  }
+  EmployeeWorkItem primary_work_item = 1;
+}
+
+message RequireEmployeeReviewReportByIdRequest {
+  // RequireEmployeeReviewReportByIdContext provides the context for the required fields method RequireEmployeeReviewReportById.
+  repeated RequireEmployeeReviewReportByIdContext context = 1;
+}
+
+message RequireEmployeeReviewReportByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeReviewReportByIdFields fields = 2;
+}
+
+message RequireEmployeeReviewReportByIdResponse {
+  // RequireEmployeeReviewReportByIdResult provides the result for the required fields method RequireEmployeeReviewReportById.
+  repeated RequireEmployeeReviewReportByIdResult result = 1;
+}
+
+message RequireEmployeeReviewReportByIdResult {
+  string review_report = 1;
+}
+
+message RequireEmployeeReviewReportByIdFields {
+  message WorkApproval {
+    string comment = 1;
+    string approved_at = 2;
+  }
+
+  message WorkRejection {
+    string reason = 1;
+    string rejection_code = 2;
+  }
+
+  message WorkReviewResult {
+    oneof value {
+      WorkApproval work_approval = 1;
+      WorkRejection work_rejection = 2;
+    }
+  }
+  WorkReviewResult last_work_review = 1;
+}
+
+message RequireEmployeeWorkSetupSummaryByIdRequest {
+  // RequireEmployeeWorkSetupSummaryByIdContext provides the context for the required fields method RequireEmployeeWorkSetupSummaryById.
+  repeated RequireEmployeeWorkSetupSummaryByIdContext context = 1;
+}
+
+message RequireEmployeeWorkSetupSummaryByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeWorkSetupSummaryByIdFields fields = 2;
+}
+
+message RequireEmployeeWorkSetupSummaryByIdResponse {
+  // RequireEmployeeWorkSetupSummaryByIdResult provides the result for the required fields method RequireEmployeeWorkSetupSummaryById.
+  repeated RequireEmployeeWorkSetupSummaryByIdResult result = 1;
+}
+
+message RequireEmployeeWorkSetupSummaryByIdResult {
+  string work_setup_summary = 1;
+}
+
+message RequireEmployeeWorkSetupSummaryByIdFields {
+  message WorkSetup {
+    message TechnicalWorkItem {
+      string name = 1;
+      int32 code_count = 2;
+    }
+
+    message ManagementWorkItem {
+      string name = 1;
+      string team_size = 2;
+    }
+
+    message EmployeeWorkItem {
+      oneof instance {
+        ManagementWorkItem management_work_item = 1;
+        TechnicalWorkItem technical_work_item = 2;
+      }
+    }
+    string priority = 1;
+    EmployeeWorkItem primary_item = 2;
+  }
+
+  WorkSetup work_setup = 1;
+}
+
+message RequireEmployeeWorkItemHandlerInfoByIdRequest {
+  // RequireEmployeeWorkItemHandlerInfoByIdContext provides the context for the required fields method RequireEmployeeWorkItemHandlerInfoById.
+  repeated RequireEmployeeWorkItemHandlerInfoByIdContext context = 1;
+}
+
+message RequireEmployeeWorkItemHandlerInfoByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeWorkItemHandlerInfoByIdFields fields = 2;
+}
+
+message RequireEmployeeWorkItemHandlerInfoByIdResponse {
+  // RequireEmployeeWorkItemHandlerInfoByIdResult provides the result for the required fields method RequireEmployeeWorkItemHandlerInfoById.
+  repeated RequireEmployeeWorkItemHandlerInfoByIdResult result = 1;
+}
+
+message RequireEmployeeWorkItemHandlerInfoByIdResult {
+  string work_item_handler_info = 1;
+}
+
+message RequireEmployeeWorkItemHandlerInfoByIdFields {
+  message TechnicalWorkItem {
+    message WorkItemHandler {
+      string name = 1;
+    }
+
+    WorkItemHandler handler = 1;
+  }
+
+  message ManagementWorkItem {
+    message WorkItemHandler {
+      string name = 1;
+    }
+
+    WorkItemHandler handler = 1;
+  }
+
+  message EmployeeWorkItem {
+    oneof instance {
+      ManagementWorkItem management_work_item = 1;
+      TechnicalWorkItem technical_work_item = 2;
+    }
+  }
+  EmployeeWorkItem primary_work_item = 1;
+}
+
+message RequireEmployeeWorkItemSpecsInfoByIdRequest {
+  // RequireEmployeeWorkItemSpecsInfoByIdContext provides the context for the required fields method RequireEmployeeWorkItemSpecsInfoById.
+  repeated RequireEmployeeWorkItemSpecsInfoByIdContext context = 1;
+}
+
+message RequireEmployeeWorkItemSpecsInfoByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeWorkItemSpecsInfoByIdFields fields = 2;
+}
+
+message RequireEmployeeWorkItemSpecsInfoByIdResponse {
+  // RequireEmployeeWorkItemSpecsInfoByIdResult provides the result for the required fields method RequireEmployeeWorkItemSpecsInfoById.
+  repeated RequireEmployeeWorkItemSpecsInfoByIdResult result = 1;
+}
+
+message RequireEmployeeWorkItemSpecsInfoByIdResult {
+  string work_item_specs_info = 1;
+}
+
+message RequireEmployeeWorkItemSpecsInfoByIdFields {
+  message TechnicalWorkItem {
+    message TechnicalSpecs {
+      message WorkMetrics {
+        double score = 1;
+        double efficiency = 2;
+      }
+
+      string name = 1;
+      WorkMetrics metrics = 2;
+    }
+
+    TechnicalSpecs specs = 1;
+  }
+
+  message ManagementWorkItem {
+    message ManagementSpecs {
+      message WorkMetrics {
+        double score = 1;
+        double efficiency = 2;
+      }
+
+      string name = 1;
+      WorkMetrics metrics = 2;
+    }
+
+    ManagementSpecs specs = 1;
+  }
+
+  message EmployeeWorkItem {
+    oneof instance {
+      ManagementWorkItem management_work_item = 1;
+      TechnicalWorkItem technical_work_item = 2;
+    }
+  }
+  EmployeeWorkItem primary_work_item = 1;
+}
+
+message RequireEmployeeDeepWorkItemInfoByIdRequest {
+  // RequireEmployeeDeepWorkItemInfoByIdContext provides the context for the required fields method RequireEmployeeDeepWorkItemInfoById.
+  repeated RequireEmployeeDeepWorkItemInfoByIdContext context = 1;
+}
+
+message RequireEmployeeDeepWorkItemInfoByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeDeepWorkItemInfoByIdFields fields = 2;
+}
+
+message RequireEmployeeDeepWorkItemInfoByIdResponse {
+  // RequireEmployeeDeepWorkItemInfoByIdResult provides the result for the required fields method RequireEmployeeDeepWorkItemInfoById.
+  repeated RequireEmployeeDeepWorkItemInfoByIdResult result = 1;
+}
+
+message RequireEmployeeDeepWorkItemInfoByIdResult {
+  string deep_work_item_info = 1;
+}
+
+message RequireEmployeeDeepWorkItemInfoByIdFields {
+  message TechnicalWorkItem {
+    message WorkItemHandler {
+      message ManagementWorkItem {
+        string name = 1;
+        string team_size = 2;
+      }
+
+      message TechnicalWorkItem {
+        string name = 1;
+        int32 code_count = 2;
+      }
+
+      message EmployeeWorkItem {
+        oneof instance {
+          ManagementWorkItem management_work_item = 1;
+          TechnicalWorkItem technical_work_item = 2;
+        }
+      }
+      EmployeeWorkItem assigned_item = 1;
+    }
+
+    WorkItemHandler handler = 1;
+  }
+
+  message ManagementWorkItem {
+    message WorkItemHandler {
+      string name = 1;
+    }
+
+    WorkItemHandler handler = 1;
+  }
+
+  message EmployeeWorkItem {
+    oneof instance {
+      ManagementWorkItem management_work_item = 1;
+      TechnicalWorkItem technical_work_item = 2;
+    }
+  }
+  EmployeeWorkItem primary_work_item = 1;
+}
+
 message Project {
-  reserved 20 to 25;
   string id = 1;
   string name = 2;
   google.protobuf.StringValue description = 3;
@@ -787,7 +1155,6 @@ message Project {
 }
 
 message Milestone {
-  reserved 12 to 13;
   string id = 1;
   string project_id = 2;
   string name = 3;
@@ -824,7 +1191,6 @@ message Task {
 }
 
 message Employee {
-  reserved 8 to 9;
   int32 id = 1;
   ListOfProject projects = 2;
   repeated Task assigned_tasks = 3;
@@ -963,4 +1329,71 @@ enum ProjectUpdateType {
   PROJECT_UPDATE_TYPE_TASK_ASSIGNED = 3;
   PROJECT_UPDATE_TYPE_PROGRESS_UPDATE = 4;
   PROJECT_UPDATE_TYPE_TEAM_CHANGE = 5;
+}
+
+message EmployeeWorkItem {
+  oneof instance {
+  TechnicalWorkItem technical_work_item = 1;
+  ManagementWorkItem management_work_item = 2;
+  }
+}
+
+message TechnicalWorkItem {
+  string name = 1;
+  int32 priority = 2;
+  int32 code_count = 3;
+  WorkItemHandler handler = 4;
+  TechnicalSpecs specs = 5;
+}
+
+message ManagementWorkItem {
+  string name = 1;
+  int32 priority = 2;
+  string team_size = 3;
+  WorkItemHandler handler = 4;
+  ManagementSpecs specs = 5;
+}
+
+message WorkItemHandler {
+  string name = 1;
+  EmployeeWorkItem assigned_item = 2;
+}
+
+message TechnicalSpecs {
+  string name = 1;
+  double complexity = 2;
+  WorkMetrics metrics = 3;
+}
+
+message ManagementSpecs {
+  string name = 1;
+  double scope = 2;
+  WorkMetrics metrics = 3;
+}
+
+message WorkMetrics {
+  double score = 1;
+  double efficiency = 2;
+}
+
+message WorkReviewResult {
+  oneof value {
+  WorkApproval work_approval = 1;
+  WorkRejection work_rejection = 2;
+  }
+}
+
+message WorkApproval {
+  string comment = 1;
+  string approved_at = 2;
+}
+
+message WorkRejection {
+  string reason = 1;
+  string rejection_code = 2;
+}
+
+message WorkSetup {
+  string priority = 1;
+  EmployeeWorkItem primary_item = 2;
 }

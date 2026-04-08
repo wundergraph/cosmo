@@ -1,0 +1,387 @@
+---
+title: "Configuration Design"
+description: "Designing and structuring configuration files"
+icon: "ruler-combined"
+---
+
+## Config Design Overview
+
+This section gives you an overview of how the router handles configuration merging and provides guidance on how you can structure your configurations effectively.
+
+### Configuration Merging
+
+<Info>
+  Available since Router [0.221.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.221.0)
+</Info>
+
+The router lets you load multiple configurations at once. You can specify your configurations in two ways:
+
+1. Using the `CONFIG_PATH` environment variable or in your `.env` file:
+```bash
+CONFIG_PATH=base.config.yaml,dev.config.yaml
+```
+
+2. Using the `config` flag when starting the router:
+```bash
+# Pass params individually
+./router --config base.config.yaml --config dev.config.yaml
+
+# Or pass them as a comma separated list
+./router --config base.config.yaml,dev.config.yaml
+```
+
+### Environment Variables
+
+The router supports two types of environment variable usage:
+
+1. Direct environment variable settings
+2. Environment variable interpolation in YAML configurations
+
+#### Environment Variable Precedence
+
+Environment variables have the lowest precedence in the configuration hierarchy:
+- They are loaded first
+- YAML configurations are loaded after environment variables and will override any matching values
+
+For example:
+```bash
+# Environment variable
+READINESS_CHECK_PATH=/path1
+```
+
+```yaml
+# config.yaml
+readiness_check_path: /updatedPath
+```
+
+In this case, the final value used will be `/updatedPath` because the YAML configuration overrides the environment variable. Even if the YAML configuration value is empty, as long as it's specified the environment variable will be overridden, for example
+```yaml
+# config.yaml
+readiness_check_path: ""
+```
+
+You have two options for environment files:
+- A base `.env` file for your common settings
+- An override environment file using `OVERRIDE_ENV` for environment-specific settings
+
+The values from your `OVERRIDE_ENV` file will take precedence over the base `.env` file (if you have one).
+
+<Warning>
+Not all configuration values have corresponding environment variables. If you need to configure a value via environment variables but it's not currently supported, do not hesitate to reach out to us.
+</Warning>
+
+### Environment Variable Interpolation
+
+We also allow the interpolation / expanding of environment variables in YAML's by using the following syntax
+```bash
+${ENVAR}
+```
+
+This allows you to do for example the following
+```yaml
+readiness_check_path: /${READINESS_PATH}/${SUFFIX_URL}
+```
+
+With the following environment variables
+```bash
+READINESS_PATH=ready
+SUFFIX_URL=check
+```
+
+Which will result in 
+
+```yaml
+readiness_check_path: /ready/check
+```
+
+<Warning>
+When using environment variable interpolation, make sure the environment variables are set before the router starts. If an environment variable is not set, the interpolation will result in no value.
+</Warning>
+
+#### Understanding Environment Variable Interpolation
+
+Environment variable interpolation provides a way to use environment variables as the source of truth in your configuration. This is particularly useful for:
+
+- Path configurations that might change between environments
+- Sensitive values that should be managed through environment variables
+- Values that need to be dynamically set during deployment
+
+For example, if you have a default environment variable like `READINESS_CHECK_PATH`, you can:
+1. Use it directly in your YAML through interpolation (`${READINESS_CHECK_PATH}`)
+2. Change its value through environment variables without modifying the YAML
+3. Maintain consistency across different environments
+
+This approach is especially valuable when you want to ensure that certain values are always controlled by environment variables rather than being overridden by YAML configurations.
+
+#### How Merging Works
+
+Before we merge your configurations, we validate each YAML file against our [configuration schema](/router/configuration#config-validation-%26-auto-completion). This ensures everything is valid before we start combining them.
+
+Here's how the merging process works:
+- The last configuration in your list has the highest priority
+- If a key exists in multiple files, the last one wins
+- New keys get added if they don't exist yet
+- After merging, we validate everything again to make sure all rules are followed
+
+Let's look at a simple example to see how this works:
+
+**base.yaml**
+```yaml
+listen_addr: 127.0.0.1:3007
+poll_interval: 17s
+```
+
+**dev.yaml**
+```yaml
+listen_addr: listen.address:3007
+readiness_check_path: /health/ready/check
+```
+
+The final output will be:
+```yaml
+listen_addr: listen.address:3007
+poll_interval: 17s
+readiness_check_path: /health/ready/check
+```
+
+As you can see, `listen_addr` from dev.yaml overrode the one from base.yaml, while `poll_interval` carried forward since it wasn't overridden.
+
+If we add another file after **dev.yaml**:
+```yaml
+listen_addr: new.address:3007
+readiness_check_path: /health/ready/check
+```
+
+The final output becomes:
+```yaml
+listen_addr: new.address:3007
+poll_interval: 17s
+readiness_check_path: /health/ready/check
+```
+
+> **Important Note**: When dealing with lists in your YAML configurations, the entire list gets replaced rather than merged. This is especially important to remember when your list elements have a `key` attribute.
+
+Here's an example using a simple array
+
+**base.yaml**
+```yaml
+cors:
+  allow_headers:
+    - header1
+    - header2
+```
+
+<Note>
+Simple scalar values can also be represented as the following in YAML, they are technically the same as the above syntax.
+```
+allow_headers: ["header1", "header2"]
+```
+</Note>
+
+**dev.yaml**
+```yaml
+cors:
+  allow_headers:
+    - overrideHeader1
+    - overrideHeader2
+
+```
+
+The resulting YAML would be 
+
+```yaml
+cors:
+  allow_headers:
+    - overrideHeader1
+    - overrideHeader2
+```
+
+Lists can also contain complex types, for example:
+
+**base.yaml**
+```yaml
+telemetry:
+  attributes:
+    - key: content_type
+      default: 'no-content-type-found'
+      value_from:
+        request_header: content-type
+```
+
+**dev.yaml**
+```yaml
+listen_addr: 127.0.0.1:3007
+telemetry:
+  attributes:
+    - key: operation_sha
+      default: 'no_sha'
+      value_from:
+        context_field: operation_sha256
+    - key: operation_validation_time
+      default: 'no_validation_time'
+      value_from:
+        context_field: operation_validation_time
+```
+
+The final output will be:
+```yaml
+listen_addr: 127.0.0.1:3007
+telemetry:
+  attributes:
+    - key: operation_sha
+      default: 'no_sha'
+      value_from:
+        context_field: operation_sha256
+    - key: operation_validation_time
+      default: 'no_validation_time'
+      value_from:
+        context_field: operation_validation_time
+```
+
+Likewise another caveat is that you should keep in mind validation rules when attempting to design configurations so that it can be merged. Let's take a look at the following example.
+
+**base.config.yaml**
+```yaml
+execution_config:
+  file:
+    path: execution_config.json
+    watch: true
+    watch_interval: 5s
+```
+
+**dev.config.yaml**
+```yaml
+execution_config:
+  file:
+    path: execution_config.json
+    watch: false
+```
+
+In this example, we run into a validation issue after merging. The JSON schema requires that `watch_interval` cannot be present when `watch` is `false`. While each individual configuration file is valid, the merged result becomes invalid because `watch_interval` from the base config remains even though `watch` is set to `false` in the dev config.
+
+To handle this scenario, you have two options:
+
+1. **Recommended Approach**: Set `watch: false` as the default in your base configuration and explicitly enable it where needed:
+```yaml
+# base.config.yaml
+execution_config:
+  file:
+    path: execution_config.json
+    watch: false
+
+# dev.config.yaml
+execution_config:
+  file:
+    path: execution_config.json
+    watch: true
+    watch_interval: 5s
+```
+
+2. **Alternative Approach**: Create separate configurations for different watch settings:
+```yaml
+# base.config.yaml
+execution_config:
+  file:
+    path: execution_config.json
+
+# watch-enabled.config.yaml
+execution_config:
+  file:
+    watch: true
+    watch_interval: 5s
+
+# watch-disabled.config.yaml
+execution_config:
+  file:
+    watch: false
+```
+
+The first approach is generally recommended as it makes the configuration intent clearer and reduces the number of configuration files you need to manage.
+
+### Hot Config Reloading
+
+When you enable [hot config reloading](/router/configuration#config-watcher-hot-reloading), we'll watch all your configuration files for changes. Whenever any configuration changes, we'll reprocess everything and rebuild your final merged configuration.
+
+<Warning>
+The router does not support reloading of .env files at this moment, and any .env change will require you to restart the router.
+</Warning>
+
+## Designing Configurations
+
+Before configuration merging, you had to use one big configuration file, which could get messy and hard to maintain. Now you can split your configurations into smaller, more manageable pieces. Here are some ways you can structure your configurations:
+
+### Environment-Based Structure
+
+This is a common approach where you split your configs by environment:
+
+```
+config/
+  base.config.yaml
+  dev/
+    dev.config.yaml
+  staging/
+    stage.config.yaml
+  production/
+    prod.config.yaml
+```
+
+You can use these environment variables for each environment:
+```bash
+# for dev
+CONFIG_PATH=base.config.yaml,./dev/dev.config.yaml
+
+# for staging
+CONFIG_PATH=base.config.yaml,./staging/stage.config.yaml
+
+# for prod
+CONFIG_PATH=base.config.yaml,./production/prod.config.yaml
+```
+
+### Feature-Based Structure
+
+You can also organize your configs by feature:
+
+```
+config/
+  rate_limit.yaml
+  telemetry.yaml
+  prod/
+    telemetry.yaml
+    tracing.yaml
+    metrics.yaml
+```
+
+Here's how you might use these configs:
+```bash
+# for prod
+CONFIG_PATH=rate_limit.yaml,telemetry.yaml,./prod/telemetry.yaml,./prod/tracing.yaml,./prod/metrics.yaml
+```
+
+> **Note**: When using this approach, be careful not to accidentally duplicate attributes across different files. For example, if you define a rate limiting attribute in both `rate_limit.yaml` and `telemetry.yaml`, the one in `telemetry.yaml` will override the other.
+
+### Combining Configuration and Environment Files
+
+You can even combine both approaches with environment variables:
+
+```
+config/
+  base.config.yaml
+  .env
+  dev/
+    .env.dev
+    dev.config.yaml
+  staging/
+    .env.stage
+    stage.config.yaml
+  production/
+    .env.prod
+    prod.config.yaml
+```
+
+For your staging environment, you would set:
+```bash
+OVERRIDE_ENV=./staging/.env.stage
+```
+
+These configuration patterns are suggestions to help you get started. Feel free to adapt them to match your specific requirements and organizational needs. The key is to maintain a structure that makes sense for your team and use case.
+

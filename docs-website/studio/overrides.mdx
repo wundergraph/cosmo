@@ -1,0 +1,54 @@
+---
+title: "Overrides"
+description: "Override the result of operation checks for breaking changes that affect individual operations that you deem safe. Overrides are active across all graphs in a namespace."
+icon: overline
+---
+
+## Configuring overrides
+
+As part of a schema check, we detect breaking changes and then run operation checks to determine which operations are affected based on real traffic. On the check page, you can configure overrides to either ignore specific breaking changes for an operation or ignore the entire operation in future checks.
+
+<Info>
+  Overrides only apply to operation checks. Breaking changes will still be detected and reported — overrides let you either ignore specific breaking changes for an operation or ignore the entire operation during operation checks. They do not affect other parts of a schema check such as composition, breaking change detection, or linting.
+</Info>
+
+<Info>
+  Applying overrides will not change the outcome of the current check run. Only future checks will take them into account.
+</Info>
+
+<Frame>
+  <img 
+    src="/images/studio/failed-schema-update-affecting-query-employees.png" 
+    alt="Failed schema update with operations and changes showing per-change overrides toggles" 
+    title="Failed schema update with per-change overrides" 
+  />
+</Frame>
+
+You can toggle overrides for all changes from the **Overrides** menu. Select **Ignore all changes** to apply overrides so future checks do not treat the listed breaking changes as breaking for the operation. Select **Ignore operation** to exclude the entire operation from future checks.
+
+<Frame>
+  <img 
+    src="/images/studio/field-type-changes-in-employees-and-roles.png" 
+    alt="Overrides menu showing Ignore all changes and ignore operation actions for an operation" 
+    title="Overrides menu for an operation" 
+  />
+</Frame>
+## Viewing all overrides
+
+You can view all overrides in a single place. From here you can open the configuration to fine tune existing overrides or go to metrics/traces to check current usage.
+
+<Frame>
+  <img 
+    src="/images/studio/operations-with-overrides-and-status-info.png" 
+    alt="Operations with overrides showing change overrides and ignore operation status" 
+    title="Operations with overrides list" 
+  />
+</Frame>
+<br/>
+<Frame>
+  <img 
+    src="/images/studio/employee-override-configuration.png" 
+    alt="Overrides configuration with ignore operation toggle and change overrides list" 
+    title="Operation overrides configuration" 
+  />
+</Frame>

@@ -1,22 +1,18 @@
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Toolbar } from "@/components/ui/toolbar";
-import { HomeIcon } from "@radix-ui/react-icons";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import React from "react";
-import { TbBook } from "react-icons/tb";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Toolbar } from '@/components/ui/toolbar';
+import { HomeIcon } from '@radix-ui/react-icons';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import React from 'react';
+import { TbBook } from 'react-icons/tb';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
-export const OverviewToolbar = ({
-  tab,
-  children,
-}: {
-  tab: "overview" | "readme";
-  children?: React.ReactNode;
-}) => {
+export const OverviewToolbar = ({ tab, children }: { tab: 'overview' | 'readme'; children?: React.ReactNode }) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   const query = {
@@ -32,7 +28,7 @@ export const OverviewToolbar = ({
           <TabsTrigger value="overview" asChild>
             <Link
               href={{
-                pathname: "/[organizationSlug]/[namespace]/graph/[slug]",
+                pathname: '/[organizationSlug]/[namespace]/graph/[slug]',
                 query,
               }}
               className="flex items-center gap-x-2"
@@ -44,7 +40,7 @@ export const OverviewToolbar = ({
           <TabsTrigger value="readme" asChild>
             <Link
               href={{
-                pathname: "/[organizationSlug]/[namespace]/graph/[slug]/readme",
+                pathname: '/[organizationSlug]/[namespace]/graph/[slug]/readme',
                 query,
               }}
               className="flex items-center gap-x-2"

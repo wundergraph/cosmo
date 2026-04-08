@@ -71,6 +71,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -96,6 +97,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -125,6 +127,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -154,6 +157,7 @@ export function createProposal(
           checkUrl: '',
           proposalUrl: '',
           proposalName: '',
+          composedSchemaBreakingChanges: [],
         };
       }
     } else {
@@ -188,6 +192,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -212,6 +217,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -238,6 +244,7 @@ export function createProposal(
         checkUrl: '',
         proposalUrl: '',
         proposalName: '',
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -280,6 +287,7 @@ export function createProposal(
             checkUrl: '',
             proposalUrl: '',
             proposalName: '',
+            composedSchemaBreakingChanges: [],
           };
         }
 
@@ -306,6 +314,7 @@ export function createProposal(
             checkUrl: '',
             proposalUrl: '',
             proposalName: '',
+            composedSchemaBreakingChanges: [],
           };
         }
 
@@ -330,6 +339,7 @@ export function createProposal(
             checkUrl: '',
             proposalUrl: '',
             proposalName: '',
+            composedSchemaBreakingChanges: [],
           };
         }
       }
@@ -384,6 +394,7 @@ export function createProposal(
       contractRepo,
       graphCompostionRepo,
       opts.chClient,
+      opts.webhookProxyUrl,
     );
 
     const {
@@ -398,6 +409,7 @@ export function createProposal(
       graphPruneErrors,
       compositionWarnings,
       operationUsageStats,
+      composedSchemaBreakingChanges,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
     } = await schemaCheckRepo.checkMultipleSchemas({
@@ -433,7 +445,9 @@ export function createProposal(
         authContext.organizationId,
         opts.logger,
         opts.billingDefaultPlanId,
+        opts.webhookProxyUrl,
       ),
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     if (checkId) {
@@ -463,6 +477,7 @@ export function createProposal(
       proposalName: proposal.name,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
+      composedSchemaBreakingChanges,
     };
   });
 }

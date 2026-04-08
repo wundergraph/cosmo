@@ -1,4 +1,4 @@
-import { useFeature } from "./use-feature";
+import { useFeature } from './use-feature';
 
 /**
  * Returns the limit of feature for the current organization or the organization with the given id.

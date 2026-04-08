@@ -1,46 +1,38 @@
-import { PlayIcon } from "@radix-ui/react-icons";
-import { useHotkeys } from "@saas-ui/use-hotkeys";
-import { CacheWarmerOperation } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { FiChevronDown, FiChevronUp } from "react-icons/fi";
-import { CodeViewer } from "../code-viewer";
-import { Button } from "../ui/button";
-import { CopyButton } from "../ui/copy-button";
-import { Kbd } from "../ui/kbd";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
-import { Spacer } from "../ui/spacer";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { useUser } from "@/hooks/use-user";
-import { useContext, useEffect, useState } from "react";
-import { GraphContext } from "../layout/graph-layout";
+import { PlayIcon } from '@radix-ui/react-icons';
+import { useHotkeys } from '@saas-ui/use-hotkeys';
+import { CacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { CodeViewer } from '../code-viewer';
+import { Button } from '../ui/button';
+import { CopyButton } from '../ui/copy-button';
+import { Kbd } from '../ui/kbd';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
+import { Spacer } from '../ui/spacer';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { useUser } from '@/hooks/use-user';
+import { useContext, useEffect, useState } from 'react';
+import { GraphContext } from '../layout/graph-layout';
 
-export const CacheDetailsSheet: React.FC<any> = ({
-  operations,
-}: {
-  operations: CacheWarmerOperation[];
-}) => {
+export const CacheDetailsSheet: React.FC<any> = ({ operations }: { operations: CacheWarmerOperation[] }) => {
   const router = useRouter();
   const operationId = router.query.operationId as string;
 
-  const [index, setIndex] = useState(
-    operations.findIndex((r: CacheWarmerOperation) => r.id === operationId),
-  );
+  const [index, setIndex] = useState(operations.findIndex((r: CacheWarmerOperation) => r.id === operationId));
 
   useEffect(() => {
     if (!operationId) {
       return;
     }
-    const operationIndex = operations.findIndex(
-      (r: CacheWarmerOperation) => r.id === operationId,
-    );
+    const operationIndex = operations.findIndex((r: CacheWarmerOperation) => r.id === operationId);
     setIndex(operationIndex);
   }, [operationId, operations]);
 
   const nextTrace = () => {
     if (index + 1 < operations.length) {
       const newQuery = { ...router.query };
-      newQuery["operationId"] = operations[index + 1].id;
+      newQuery['operationId'] = operations[index + 1].id;
       router.replace({
         query: newQuery,
       });
@@ -50,7 +42,7 @@ export const CacheDetailsSheet: React.FC<any> = ({
   const previousTrace = () => {
     if (index - 1 >= 0) {
       const newQuery = { ...router.query };
-      newQuery["operationId"] = operations[index - 1].id;
+      newQuery['operationId'] = operations[index - 1].id;
       router.replace({
         query: newQuery,
       });
@@ -58,7 +50,7 @@ export const CacheDetailsSheet: React.FC<any> = ({
   };
 
   useHotkeys(
-    "K",
+    'K',
     () => {
       previousTrace();
     },
@@ -67,7 +59,7 @@ export const CacheDetailsSheet: React.FC<any> = ({
   );
 
   useHotkeys(
-    "J",
+    'J',
     () => {
       nextTrace();
     },
@@ -86,7 +78,7 @@ export const CacheDetailsSheet: React.FC<any> = ({
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           const newQuery = { ...router.query };
-          delete newQuery["operationId"];
+          delete newQuery['operationId'];
           router.replace({
             query: newQuery,
           });
@@ -103,12 +95,7 @@ export const CacheDetailsSheet: React.FC<any> = ({
           <div className="space-x-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => previousTrace()}
-                  disabled={index === 0}
-                >
+                <Button variant="secondary" size="sm" onClick={() => previousTrace()} disabled={index === 0}>
                   <FiChevronUp />
                 </Button>
               </TooltipTrigger>
@@ -135,41 +122,23 @@ export const CacheDetailsSheet: React.FC<any> = ({
           </div>
 
           <SheetTitle className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm">
-            <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">
-              {operationId}
-            </code>
-            <CopyButton
-              tooltip="Copy cache warmer operation id"
-              value={operationId || ""}
-            />
+            <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">{operationId}</code>
+            <CopyButton tooltip="Copy cache warmer operation id" value={operationId || ''} />
           </SheetTitle>
 
           <Spacer />
         </SheetHeader>
-        {operationId && index !== -1 && (
-          <CacheOperationDetails operation={operations[index]} />
-        )}
+        {operationId && index !== -1 && <CacheOperationDetails operation={operations[index]} />}
       </SheetContent>
     </Sheet>
   );
 };
 
-export const CacheOperationDetails = ({
-  operation,
-}: {
-  operation: CacheWarmerOperation;
-}) => {
+export const CacheOperationDetails = ({ operation }: { operation: CacheWarmerOperation }) => {
   const user = useUser();
   const graphData = useContext(GraphContext);
 
-  const {
-    operationContent,
-    clientName,
-    clientVersion,
-    operationHash,
-    operationName,
-    operationPersistedId,
-  } = operation;
+  const { operationContent, clientName, clientVersion, operationHash, operationName, operationPersistedId } = operation;
 
   return (
     <div>
@@ -184,7 +153,7 @@ export const CacheOperationDetails = ({
               <td>
                 <div className="flex items-center gap-x-3">
                   <span>:</span>
-                  <span>{operationName || "-"}</span>
+                  <span>{operationName || '-'}</span>
                 </div>
               </td>
             </tr>
@@ -193,9 +162,7 @@ export const CacheOperationDetails = ({
               <td>
                 <div className="flex items-center gap-x-3">
                   <span>:</span>
-                  <div className="flex flex-wrap gap-x-3">
-                    {operationHash || "-"}
-                  </div>
+                  <div className="flex flex-wrap gap-x-3">{operationHash || '-'}</div>
                 </div>
               </td>
             </tr>
@@ -204,9 +171,7 @@ export const CacheOperationDetails = ({
               <td>
                 <div className="flex items-center gap-x-3">
                   <span>:</span>
-                  <div className="flex flex-wrap gap-x-3">
-                    {operationPersistedId || "-"}
-                  </div>
+                  <div className="flex flex-wrap gap-x-3">{operationPersistedId || '-'}</div>
                 </div>
               </td>
             </tr>
@@ -215,9 +180,7 @@ export const CacheOperationDetails = ({
               <td>
                 <div className="flex items-center gap-x-3">
                   <span>:</span>
-                  <div className="flex flex-wrap gap-x-3">
-                    {clientName || "-"}
-                  </div>
+                  <div className="flex flex-wrap gap-x-3">{clientName || '-'}</div>
                 </div>
               </td>
             </tr>
@@ -226,9 +189,7 @@ export const CacheOperationDetails = ({
               <td>
                 <div className="flex items-center gap-x-3">
                   <span>:</span>
-                  <div className="flex flex-wrap gap-x-3">
-                    {clientVersion || "-"}
-                  </div>
+                  <div className="flex flex-wrap gap-x-3">{clientVersion || '-'}</div>
                 </div>
               </td>
             </tr>
@@ -254,11 +215,9 @@ export const CacheOperationDetails = ({
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="icon" asChild>
                     <Link
-                      href={`/${user?.currentOrganization.slug}/${graphData
-                        ?.graph?.namespace}/graph/${graphData?.graph
-                        ?.name}/playground?operation=${encodeURIComponent(
-                        operationContent,
-                      )}`}
+                      href={`/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${
+                        graphData?.graph?.name
+                      }/playground?operation=${encodeURIComponent(operationContent)}`}
                     >
                       <PlayIcon className="h-5" />
                     </Link>

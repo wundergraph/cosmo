@@ -2,16 +2,15 @@ package core
 
 import (
 	"context"
+	"errors"
 	"time"
 
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/zap"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-
-	"go.opentelemetry.io/otel/attribute"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 )
 
 type OperationProtocol string
@@ -58,7 +57,10 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	o := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
 
-	if reqContext.error != nil {
+	// Client disconnections are not server-side errors and should not inflate error metrics.
+	isError := reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled)
+
+	if isError {
 		rm.MeasureRequestError(ctx, sliceAttrs, o)
 
 		attrs = append(attrs, rotel.WgRequestError.Bool(true))
@@ -74,16 +76,28 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	rm.MeasureRequestSize(ctx, m.requestContentLength, sliceAttrs, o)
 	rm.MeasureResponseSize(ctx, int64(responseSize), sliceAttrs, o)
 
-	// Export schema usage info to configured exporters
+	// Record operation cost metrics from cached values
+	if reqContext.operation != nil {
+		if reqContext.operation.costEstimatedSet {
+			rm.MeasureOperationCostEstimated(ctx, int64(reqContext.operation.costEstimated), sliceAttrs, o)
+		}
+		if reqContext.operation.costActualSet {
+			rm.MeasureOperationCostActual(ctx, int64(reqContext.operation.costActual), sliceAttrs, o)
+		}
+	}
+
+	// Export schema usage info to configured exporters.
+	// Client disconnections are excluded from the error flag to stay consistent with
+	// the error metrics above.
 	if reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
 		// GraphQL metrics export (to metrics service)
 		if m.trackUsageInfo {
-			m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
+			m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, isError, exportSynchronous)
 		}
 
 		// Prometheus metrics export (to local Prometheus metrics)
 		if m.prometheusTrackUsageInfo {
-			m.routerMetrics.ExportSchemaUsageInfoPrometheus(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
+			m.routerMetrics.ExportSchemaUsageInfoPrometheus(reqContext.operation, statusCode, isError, exportSynchronous)
 		}
 	}
 }
