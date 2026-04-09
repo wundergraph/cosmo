@@ -267,6 +267,163 @@ function pipeToLog(logStream: WriteStream, proc: ResultPromise) {
 }
 
 /**
+ * Rewrite localhost to host.docker.internal so the container can
+ * reach services running on the host machine.
+ */
+function toDockerHost(url: string) {
+  return url.replace(/localhost/g, 'host.docker.internal');
+}
+
+/**
+ * Best-effort removal of a potentially stale router container
+ * from a previous crashed run.
+ */
+async function removeRouterContainer(): Promise<void> {
+  try {
+    await execa('docker', ['rm', '-f', config.demoRouterContainerName]);
+  } catch {
+    // ignore — container may not exist
+  }
+}
+
+/**
+ * Polls the router's readiness endpoint until it responds 200
+ * or the signal is aborted / max attempts exceeded.
+ */
+async function waitForRouterReady({
+  routerBaseUrl,
+  signal,
+  intervalMs = 1000,
+  maxAttempts = 60,
+}: {
+  routerBaseUrl: string;
+  signal: AbortSignal;
+  intervalMs?: number;
+  maxAttempts?: number;
+}): Promise<boolean> {
+  const url = `${routerBaseUrl}/health/ready`;
+
+  for (let i = 0; i < maxAttempts; i++) {
+    if (signal.aborted) {
+      return false;
+    }
+    try {
+      const res = await fetch(url, { signal });
+      if (res.ok) {
+        return true;
+      }
+    } catch {
+      // not up yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  return false;
+}
+
+/**
+ * Runs the cosmo router as a Docker container. Shows an ora spinner
+ * that transitions from "Starting…" to "Router is ready" once the
+ * health endpoint responds. The process stays alive until the abort
+ * signal fires (CTRL+C / crash) or docker exits on its own.
+ */
+export async function runRouterContainer({
+  routerToken,
+  routerBaseUrl,
+  signal,
+  logPath,
+  onReady,
+}: {
+  routerToken: string;
+  routerBaseUrl: string;
+  signal: AbortSignal;
+  logPath: string;
+  onReady?: () => void;
+}): Promise<{ error: Error | null }> {
+  await removeRouterContainer();
+
+  const port = config.demoRouterPort;
+
+  const args = [
+    'run',
+    '--name',
+    config.demoRouterContainerName,
+    '--rm',
+    '-p',
+    `${port}:${port}`,
+    '--add-host=host.docker.internal:host-gateway',
+    '--pull',
+    'always',
+    '-e',
+    'DEV_MODE=true',
+    '-e',
+    'LOG_LEVEL=debug',
+    '-e',
+    `LISTEN_ADDR=0.0.0.0:${port}`,
+    '-e',
+    `GRAPH_API_TOKEN=${routerToken}`,
+    '-e',
+    'PLUGINS_ENABLED=true',
+  ];
+
+  // Local-dev env vars — only forwarded when set in the wgc process.
+
+  const conditionalEnvs: Array<[string, string | undefined]> = [
+    ['CDN_URL', process.env.CDN_URL],
+    ['REGISTRY_URL', process.env.PLUGIN_REGISTRY_URL],
+    ['PLUGINS_REGISTRY_URL', process.env.PLUGIN_REGISTRY_URL],
+    ['CONTROLPLANE_URL', process.env.COSMO_API_URL],
+    ['DEFAULT_TELEMETRY_ENDPOINT', process.env.DEFAULT_TELEMETRY_ENDPOINT],
+    ['GRAPHQL_METRICS_COLLECTOR_ENDPOINT', process.env.GRAPHQL_METRICS_COLLECTOR_ENDPOINT],
+  ];
+
+  for (const [key, value] of conditionalEnvs) {
+    if (value) {
+      args.push('-e', `${key}=${toDockerHost(value)}`);
+    }
+  }
+
+  args.push(config.demoRouterImage);
+
+  const logStream = createWriteStream(logPath, { flags: 'a' });
+  const spinner = ora(`Starting router on ${pc.bold(routerBaseUrl)}…`).start();
+
+  try {
+    const proc = execa('docker', args, {
+      stdio: 'pipe',
+      ...(signal ? { cancelSignal: signal } : {}),
+    });
+
+    pipeToLog(logStream, proc);
+
+    // Poll readiness in parallel with the long-running docker process
+    waitForRouterReady({ routerBaseUrl, signal }).then((ready) => {
+      if (ready) {
+        spinner.succeed(`Router is ready on ${pc.bold(routerBaseUrl)}.`);
+        console.log(pc.dim(`(logs: ${logPath})`));
+        onReady?.();
+      } else if (!signal.aborted) {
+        spinner.warn('Router started but readiness check timed out. It may still be starting.');
+        console.log(pc.dim(`(logs: ${logPath})`));
+      }
+    });
+
+    await proc;
+  } catch (error) {
+    // Graceful abort — not an error
+    if (error instanceof Error && 'isCanceled' in error && (error as any).isCanceled) {
+      return { error: null };
+    }
+    spinner.fail('Router failed to start.');
+    return { error: error instanceof Error ? error : new Error(String(error)) };
+  } finally {
+    logStream.end();
+  }
+
+  return { error: null };
+}
+
+/**
  * Publishes demo plugins sequentially.
  * Returns [error] on first failure; spinner shows which plugin failed.
  */

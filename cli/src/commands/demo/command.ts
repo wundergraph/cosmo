@@ -22,6 +22,7 @@ import {
   printLogo,
   publishAllPlugins,
   resetScreen,
+  runRouterContainer,
   updateScreenWithUserInfo,
 } from './util.js';
 
@@ -169,16 +170,18 @@ async function handleStep2(
     userInfo,
     supportDir,
     signal,
+    logPath,
   }: {
     onboarding: { finishedAt?: string };
     userInfo: UserInfo;
     supportDir: string;
     signal: AbortSignal;
+    logPath: string;
   },
 ) {
   function retryFn() {
     resetScreen(userInfo);
-    return handleStep2(opts, { onboarding, userInfo, supportDir, signal });
+    return handleStep2(opts, { onboarding, userInfo, supportDir, signal, logPath });
   }
 
   const graphData = await handleGetFederatedGraphResponse(opts.client, {
@@ -202,7 +205,7 @@ async function handleStep2(
       },
       'Hit [ENTER] to continue or [d] to delete the federated graph and its subgraphs to start over. CTRL+C to quit.',
     );
-    return;
+    return { routingUrl: graph.routingURL };
   }
 
   await handleCreateFederatedGraphResponse(opts.client, {
@@ -210,7 +213,9 @@ async function handleStep2(
     userInfo,
   });
 
-  const logPath = getDemoLogPath();
+  const routingUrl = new URL('graphql', 'http://localhost');
+  routingUrl.port = String(config.demoRouterPort);
+
   console.log(`\nPublishing plugins… ${pc.dim(`(logs: ${logPath})`)}`);
 
   const publishResult = await publishAllPlugins({
@@ -229,12 +234,27 @@ async function handleStep2(
       'Hit [r] to retry. CTRL+C to quit.',
     );
   }
+
+  return { routingUrl: routingUrl.toString() };
 }
 
-async function handleStep3(opts: BaseCommandOptions, { userInfo }: { userInfo: UserInfo }) {
+async function handleStep3(
+  opts: BaseCommandOptions,
+  {
+    userInfo,
+    routerBaseUrl,
+    signal,
+    logPath,
+  }: {
+    userInfo: UserInfo;
+    routerBaseUrl: string;
+    signal: AbortSignal;
+    logPath: string;
+  },
+) {
   function retryFn() {
     resetScreen(userInfo);
-    return handleStep3(opts, { userInfo });
+    return handleStep3(opts, { userInfo, routerBaseUrl, signal, logPath });
   }
 
   const tokenParams = {
@@ -262,9 +282,51 @@ async function handleStep3(opts: BaseCommandOptions, { userInfo }: { userInfo: U
   }
 
   spinner.succeed('Router token generated.');
-  console.log(`\n${pc.bold(createResult.token)}\n`);
 
-  // TODO: Step 3b — run router Docker container
+  const sampleQuery = JSON.stringify({
+    query: `query GetProductWithReviews($id: ID!) { product(id: $id) { id title price { currency amount } reviews { id author rating contents } } }`,
+    variables: { id: 'product-1' },
+  });
+
+  async function fireSampleQuery() {
+    const querySpinner = ora('Sending sample query…').start();
+    try {
+      const res = await fetch(`${routerBaseUrl}/graphql`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'GraphQL-Client-Name': 'wgc',
+        },
+        body: sampleQuery,
+      });
+      const body = await res.json();
+      querySpinner.succeed('Sample query response:');
+      console.log(pc.dim(JSON.stringify(body, null, 2)));
+    } catch (err) {
+      querySpinner.fail(`Sample query failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    showQueryPrompt();
+  }
+
+  function showQueryPrompt() {
+    waitForKeyPress(
+      { r: fireSampleQuery, R: fireSampleQuery },
+      'Hit [r] to send a sample query. CTRL+C to stop the router.',
+    );
+  }
+
+  const routerResult = await runRouterContainer({
+    routerToken: createResult.token!,
+    routerBaseUrl,
+    signal,
+    logPath,
+    onReady: showQueryPrompt,
+  });
+
+  if (routerResult.error) {
+    console.error(`\nRouter exited with error: ${routerResult.error.message}`);
+    await waitForKeyPress({ r: retryFn, R: retryFn }, 'Hit [r] to retry. CTRL+C to quit.');
+  }
 }
 
 async function handleGetOnboardingResponse(client: BaseCommandOptions['client'], userInfo: UserInfo) {
@@ -346,9 +408,22 @@ export default function (opts: BaseCommandOptions) {
         return;
       }
 
-      await handleStep2(opts, { onboarding: onboardingCheck, userInfo, supportDir, signal: controller.signal });
+      const logPath = getDemoLogPath();
 
-      await handleStep3(opts, { userInfo });
+      const step2Result = await handleStep2(opts, {
+        onboarding: onboardingCheck,
+        userInfo,
+        supportDir,
+        signal: controller.signal,
+        logPath,
+      });
+
+      if (!step2Result) {
+        return;
+      }
+
+      const routerBaseUrl = new URL(step2Result.routingUrl).origin;
+      await handleStep3(opts, { userInfo, routerBaseUrl, signal: controller.signal, logPath });
     } finally {
       process.off('SIGINT', cleanup);
       process.off('SIGTERM', cleanup);
