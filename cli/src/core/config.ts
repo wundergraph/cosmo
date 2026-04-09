@@ -42,9 +42,13 @@ export const config = {
   demoOnboardingRepositoryName: 'wundergraph/cosmo-onboarding' as const,
   demoOnboardingRepositoryBranch: 'main' as const,
   dockerBuilderName: 'cosmo-builder' as const,
+  defaultTelemetryEndpoint: process.env.DEFAULT_TELEMETRY_ENDPOINT,
+  graphqlMetricsCollectorEndpoint: process.env.GRAPHQL_METRICS_COLLECTOR_ENDPOINT,
   demoRouterPort: 3002 as const,
   demoPluginNames: ['products', 'reviews'] as const,
   demoRouterTokenName: 'demo-router-token' as const,
+  demoRouterImage: 'ghcr.io/wundergraph/cosmo/router:latest' as const,
+  demoRouterContainerName: 'cosmo-demo-router' as const,
 };
 
 export const getBaseHeaders = (): HeadersInit => {
