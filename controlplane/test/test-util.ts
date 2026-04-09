@@ -813,10 +813,14 @@ export async function featureFlagIntegrationTestSetUp(
 }
 
 export async function createNamespace(client: Client<typeof PlatformService>, name: string) {
+  // The server enforces lowercase namespace names, so normalize once here
+  // and return the normalized name for callers to use in subsequent queries.
+  const normalizedName = name.toLowerCase();
   const createNamespaceResponse = await client.createNamespace({
-    name,
+    name: normalizedName,
   });
   expect(createNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+  return normalizedName;
 }
 
 export async function createFeatureFlag(

@@ -40,8 +40,7 @@ describe('Namespace Checks Configuration', () => {
       const { client, server } = await SetupTest({ dbname });
       testContext.onTestFinished(() => server.close());
 
-      const namespace = genID('ns');
-      await createNamespace(client, namespace);
+      const namespace = await createNamespace(client, genID('ns'));
 
       const response = await client.getNamespaceChecksConfig({
         namespace,
@@ -76,8 +75,7 @@ describe('Namespace Checks Configuration', () => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
       onTestFinished(() => server.close());
 
-      const namespace = genID('ns');
-      await createNamespace(client, namespace);
+      const namespace = await createNamespace(client, genID('ns'));
 
       const getNamespaceResponse = await client.getNamespace({ name: namespace });
       expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -103,11 +101,9 @@ describe('Namespace Checks Configuration', () => {
         const { client, server, authenticator, users } = await SetupTest({ dbname });
         onTestFinished(() => server.close());
 
-        const targetNamespace = genID('ns');
-        await createNamespace(client, targetNamespace);
+        const targetNamespace = await createNamespace(client, genID('ns'));
 
-        const otherNamespace = genID('other');
-        await createNamespace(client, otherNamespace);
+        const otherNamespace = await createNamespace(client, genID('other'));
 
         const getOtherResponse = await client.getNamespace({ name: otherNamespace });
         expect(getOtherResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -135,8 +131,7 @@ describe('Namespace Checks Configuration', () => {
       const { client, server } = await SetupTest({ dbname });
       testContext.onTestFinished(() => server.close());
 
-      const namespace = genID('ns');
-      await createNamespace(client, namespace);
+      const namespace = await createNamespace(client, genID('ns'));
 
       // Default timeframe is 7 days — verify this first
       const beforeResponse = await client.getNamespaceChecksConfig({ namespace });
@@ -158,8 +153,7 @@ describe('Namespace Checks Configuration', () => {
       const { client, server } = await SetupTest({ dbname });
       testContext.onTestFinished(() => server.close());
 
-      const namespace = genID('ns');
-      await createNamespace(client, namespace);
+      const namespace = await createNamespace(client, genID('ns'));
 
       const getResponse = await client.getNamespaceChecksConfig({ namespace });
       const limit = getResponse.timeframeLimitInDays;
@@ -179,8 +173,7 @@ describe('Namespace Checks Configuration', () => {
       const { client, server } = await SetupTest({ dbname });
       testContext.onTestFinished(() => server.close());
 
-      const namespace = genID('ns');
-      await createNamespace(client, namespace);
+      const namespace = await createNamespace(client, genID('ns'));
 
       const response = await client.updateNamespaceChecksConfig({
         namespace,
@@ -212,8 +205,7 @@ describe('Namespace Checks Configuration', () => {
         const { client, server, authenticator, users } = await SetupTest({ dbname });
         onTestFinished(() => server.close());
 
-        const namespace = genID('ns');
-        await createNamespace(client, namespace);
+        const namespace = await createNamespace(client, genID('ns'));
 
         const getNamespaceResponse = await client.getNamespace({ name: namespace });
         expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -243,8 +235,7 @@ describe('Namespace Checks Configuration', () => {
         const { client, server, authenticator, users } = await SetupTest({ dbname });
         onTestFinished(() => server.close());
 
-        const namespace = genID('ns');
-        await createNamespace(client, namespace);
+        const namespace = await createNamespace(client, genID('ns'));
 
         const getNamespaceResponse = await client.getNamespace({ name: namespace });
         expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
