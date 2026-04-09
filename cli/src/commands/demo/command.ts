@@ -1,5 +1,4 @@
 import pc from 'picocolors';
-import ora from 'ora';
 import { program } from 'commander';
 import type { FederatedGraph, Subgraph, WhoAmIResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { config } from '../../core/config.js';
@@ -24,6 +23,7 @@ import {
   resetScreen,
   runRouterContainer,
   updateScreenWithUserInfo,
+  demoSpinner,
 } from './util.js';
 
 function printHello() {
@@ -54,7 +54,7 @@ async function handleGetFederatedGraphResponse(
     });
   }
 
-  const spinner = ora().start();
+  const spinner = demoSpinner().start();
   const getFederatedGraphResponse = await fetchFederatedGraphByName(client, {
     name: config.demoGraphName,
     namespace: config.demoNamespace,
@@ -100,7 +100,7 @@ async function cleanupFederatedGraph(
     cleanupFederatedGraph(client, { graphData, userInfo });
   }
 
-  const spinner = ora().start(`Removing federated graph ${pc.bold(graphData.graph.name)}…`);
+  const spinner = demoSpinner(`Removing federated graph ${pc.bold(graphData.graph.name)}…`).start();
   const deleteResponse = await cleanUpFederatedGraph(client, graphData);
 
   if (deleteResponse.error) {
@@ -145,7 +145,7 @@ async function handleCreateFederatedGraphResponse(
   const routingUrl = new URL('graphql', 'http://localhost');
   routingUrl.port = String(config.demoRouterPort);
 
-  const federatedGraphSpinner = ora().start();
+  const federatedGraphSpinner = demoSpinner().start();
   const createGraphResponse = await createFederatedGraph(client, {
     name: config.demoGraphName,
     namespace: config.demoNamespace,
@@ -198,11 +198,14 @@ async function handleStep2(
   const graph = graphData?.graph;
   const subgraphs = graphData?.subgraphs ?? [];
   if (graph) {
-    const cleanupFn = async () =>
+    let deleted = false;
+    const cleanupFn = async () => {
       await cleanupFederatedGraph(opts.client, {
         graphData: { graph, subgraphs },
         userInfo,
       });
+      deleted = true;
+    };
     await waitForKeyPress(
       {
         Enter: () => undefined,
@@ -211,6 +214,10 @@ async function handleStep2(
       },
       'Hit [ENTER] to continue or [d] to delete the federated graph and its subgraphs to start over. CTRL+C to quit.',
     );
+    if (deleted) {
+      console.log(pc.yellow('\nPlease restart the demo command to continue.\n'));
+      process.exit(0);
+    }
     return { routingUrl: graph.routingURL };
   }
 
@@ -278,7 +285,7 @@ async function handleStep3(
     return;
   }
 
-  const spinner = ora().start('Generating router token…');
+  const spinner = demoSpinner('Generating router token…').start();
   const createResult = await createRouterToken(tokenParams);
 
   if (createResult.error) {
@@ -288,6 +295,7 @@ async function handleStep3(
   }
 
   spinner.succeed('Router token generated.');
+  console.log(`  ${pc.bold(createResult.token)}`);
 
   const sampleQuery = JSON.stringify({
     query: `query GetProductWithReviews($id: ID!) { product(id: $id) { id title price { currency amount } reviews { id author rating contents } } }`,
@@ -295,7 +303,7 @@ async function handleStep3(
   });
 
   async function fireSampleQuery() {
-    const querySpinner = ora('Sending sample query…').start();
+    const querySpinner = demoSpinner('Sending sample query…').start();
     try {
       const res = await fetch(`${routerBaseUrl}/graphql`, {
         method: 'POST',
@@ -369,7 +377,7 @@ async function handleStep1(opts: BaseCommandOptions, userInfo: UserInfo) {
 }
 
 async function getUserInfo(client: BaseCommandOptions['client']) {
-  const spinner = ora('Retrieving information about you…').start();
+  const spinner = demoSpinner('Retrieving information about you…').start();
   const { userInfo, error } = await fetchUserInfo(client);
 
   if (error) {
@@ -390,9 +398,6 @@ async function getUserInfo(client: BaseCommandOptions['client']) {
 export default function (opts: BaseCommandOptions) {
   return async function handleCommand() {
     const controller = new AbortController();
-    const cleanup = () => controller.abort();
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
 
     try {
       clearScreen();
@@ -434,8 +439,7 @@ export default function (opts: BaseCommandOptions) {
       const routerBaseUrl = new URL(step2Result.routingUrl).origin;
       await handleStep3(opts, { userInfo, routerBaseUrl, signal: controller.signal, logPath });
     } finally {
-      process.off('SIGINT', cleanup);
-      process.off('SIGTERM', cleanup);
+      // no-op
     }
   };
 }
