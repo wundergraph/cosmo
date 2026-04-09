@@ -184,6 +184,27 @@ async function handleStep2(
     return handleStep2(opts, { onboarding, userInfo, supportDir, signal, logPath });
   }
 
+  async function publishPlugins() {
+    console.log(`\nPublishing plugins… ${pc.dim(`(logs: ${logPath})`)}`);
+
+    const publishResult = await publishAllPlugins({
+      client: opts.client,
+      supportDir,
+      signal,
+      logPath,
+    });
+
+    if (publishResult.error) {
+      await waitForKeyPress(
+        {
+          r: retryFn,
+          R: retryFn,
+        },
+        'Hit [r] to retry. CTRL+C to quit.',
+      );
+    }
+  }
+
   const graphData = await handleGetFederatedGraphResponse(opts.client, {
     onboarding,
     userInfo,
@@ -212,6 +233,7 @@ async function handleStep2(
       console.log(pc.yellow('\nPlease restart the demo command to continue.\n'));
       process.exit(0);
     }
+    await publishPlugins();
     return { routingUrl: graph.routingURL };
   }
 
@@ -223,24 +245,7 @@ async function handleStep2(
   const routingUrl = new URL('graphql', 'http://localhost');
   routingUrl.port = String(config.demoRouterPort);
 
-  console.log(`\nPublishing plugins… ${pc.dim(`(logs: ${logPath})`)}`);
-
-  const publishResult = await publishAllPlugins({
-    client: opts.client,
-    supportDir,
-    signal,
-    logPath,
-  });
-
-  if (publishResult.error) {
-    await waitForKeyPress(
-      {
-        r: retryFn,
-        R: retryFn,
-      },
-      'Hit [r] to retry. CTRL+C to quit.',
-    );
-  }
+  await publishPlugins();
 
   return { routingUrl: routingUrl.toString() };
 }
