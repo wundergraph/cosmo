@@ -577,6 +577,11 @@ export default class Keycloak {
       } else if (isAxiosError(e)) {
         let message: string;
         switch (e.code) {
+          case 'ECONNREFUSED': {
+            message =
+              'The discovery endpoint could. Please, make sure that the discovery endpoint is correct and reachable.';
+            break;
+          }
           case 'ECONNABORTED': {
             message =
               'The discovery endpoint did not respond within the time limit. Please, make sure that he discovery endpoint is correct and reachable.';
