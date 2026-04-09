@@ -107,7 +107,9 @@ describe('Rename namespace', () => {
     });
 
     expect(renameResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(renameResponse.response?.details).toContain('The provided name is invalid');
+    expect(renameResponse.response?.details).toBe(
+      'The provided new name is invalid. The name can contain letters and numbers separated by underscore or hyphens',
+    );
   });
 
   test('Should fail when new name is empty', async (testContext) => {
@@ -122,7 +124,9 @@ describe('Rename namespace', () => {
     });
 
     expect(renameResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(renameResponse.response?.details).toContain('The provided name is invalid');
+    expect(renameResponse.response?.details).toBe(
+      'The provided new name is invalid. The name can contain letters and numbers separated by underscore or hyphens',
+    );
   });
 
   test.each(['organization-admin', 'organization-developer', 'namespace-admin'])(

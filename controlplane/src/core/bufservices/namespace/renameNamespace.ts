@@ -26,13 +26,13 @@ export function renameNamespace(
       throw new UnauthorizedError();
     }
 
-    const isValid = isValidNamespaceName(req.name);
-    if (!isValid) {
+    const isNewNameValid = isValidNamespaceName(req.newName);
+    if (!isNewNameValid) {
       return {
         response: {
           code: EnumStatusCode.ERR,
           details:
-            'The provided name is invalid. The name can contain letters and numbers separated by underscore or hyphens',
+            'The provided new name is invalid. The name can contain letters and numbers separated by underscore or hyphens',
         },
       };
     }
