@@ -780,6 +780,7 @@
       "CacheSize": 1024
     },
     "ComplexityLimits": {
+      "Mode": "enforce",
       "Depth": {
         "Enabled": true,
         "Limit": 5,

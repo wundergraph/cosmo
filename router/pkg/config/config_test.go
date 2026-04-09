@@ -1688,6 +1688,98 @@ access_logs:
 	})
 }
 
+func TestComplexityLimitsModeConfig(t *testing.T) {
+	t.Run("valid mode values are accepted", func(t *testing.T) {
+		t.Parallel()
+
+		for _, mode := range []string{"measure", "enforce"} {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  complexity_limits:
+    mode: `+mode+`
+    depth:
+      enabled: true
+      limit: 5
+`)
+			_, err := LoadConfig([]string{f})
+			require.NoError(t, err, "mode %q should be valid", mode)
+		}
+	})
+
+	t.Run("invalid mode is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  complexity_limits:
+    mode: invalid
+    depth:
+      enabled: true
+      limit: 5
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/security/complexity_limits/mode'")
+		require.ErrorContains(t, err, "value must be one of")
+	})
+
+	t.Run("default mode is enforce", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  complexity_limits:
+    depth:
+      enabled: true
+      limit: 5
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, ComplexityLimitsModeEnforce, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
+	})
+
+	t.Run("measure mode is set correctly", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  complexity_limits:
+    mode: measure
+    depth:
+      enabled: true
+      limit: 5
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, ComplexityLimitsModeMeasure, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
+	})
+
+	t.Run("mode can be set from environment via YAML expansion", func(t *testing.T) {
+		t.Setenv("SECURITY_COMPLEXITY_MODE", "measure")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  complexity_limits:
+    mode: "${SECURITY_COMPLEXITY_MODE}"
+    depth:
+      enabled: true
+      limit: 5
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, ComplexityLimitsModeMeasure, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
+	})
+}
+
 func TestCostControlConfig(t *testing.T) {
 	t.Parallel()
 

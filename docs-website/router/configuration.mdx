@@ -2050,6 +2050,7 @@ The configuration for the security. The security is used to configure the securi
 | SECURITY_BLOCK_PERSISTED_OPERATIONS_CONDITION     | block_persisted_operations.condition     | <Icon icon="square" /> | The [expression](/router/configuration/template-expressions) to evaluate if the operation should be blocked.                       |               |
 |                                                   | complexity_calculation_cache             | <Icon icon="square" /> | Complexity Cache configuration                                                                                                     |               |
 |                                                   | complexity_limits                        | <Icon icon="square" /> | Complexity limits configuration                                                                                                    |               |
+| SECURITY_COMPLEXITY_MODE                          | complexity_limits.mode                   | <Icon icon="square" /> | `measure` calculates complexity without rejecting; `enforce` rejects operations exceeding limits.                                  | enforce       |
 |                                                   | parser_limits.approximate_depth_limit    | <Icon icon="square" /> | The approximate cumulative depth limit of a query, including fragments. Set to 0 to disable.                                       | 200           |
 |                                                   | parser_limits.total_fields_limit         | <Icon icon="square" /> | The total number of fields the parser will allow. Set to 0 to disable.                                                             | 3500          |
 | SECURITY_OPERATION_NAME_LENGTH_LIMIT              | operation_name_length_limit              | <Icon icon="square" /> | The maximum allowed length for the operation name. Set to 0 to disable.                                                            | 512           |
@@ -2074,7 +2075,8 @@ security:
     enabled: true
     size: 1024
   complexity_limits:
-    depth: # the equivalent of `security.depth_limit` prevoiusly
+    mode: enforce # 'measure' calculates complexity without rejecting; 'enforce' rejects operations exceeding limits
+    depth: # the equivalent of `security.depth_limit` previously
       enabled: true
       limit: 7
       ignore_persisted_operations: true
@@ -2145,13 +2147,19 @@ The configuration for adding a complexity limits for queries. We currently expos
 - **Root Fields in Query**
 - **Root Field Aliases in Query**
 
-For all of the limits, if the limit is 0, or `enabled` isn't true, the limit isn't applied. All of them have the same configuration fields:
+A limit is not applied when its value is 0 or `enabled` is not true.
 
-| Environment Variable | YAML                        | Required               | Description                                                                                                                                                                           | Default Value |
-| -------------------- | --------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|                      | enabled                     | <Icon icon="square" /> | Enable the specific limit. If the value is true (default: false), and a valid limit value is set, the limit will be applied                                                           | false         |
-|                      | limit                       | <Icon icon="square" /> | The limit amount for query. If the limit is 0, this limit isn't applied                                                                                                               | 0             |
-|                      | ignore_persisted_operations | <Icon icon="square" /> | Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations | false         |
+The `mode` field controls enforcement versus measurement:
+
+- `measure`: calculates complexity and reports it via telemetry but does not reject requests.
+- `enforce` (default): rejects requests that exceed limits.
+
+| Environment Variable     | YAML                        | Required               | Description                                                                                                                                                                            | Default Value |
+| ------------------------ | --------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| SECURITY_COMPLEXITY_MODE | mode                        | <Icon icon="square" /> | `measure` calculates complexity without rejecting; `enforce` rejects operations exceeding limits.                                                                                      | enforce       |
+|                          | enabled                     | <Icon icon="square" /> | Enable the specific limit. If the value is true (default: false), and a valid limit value is set, the limit will be applied.                                                           | false         |
+|                          | limit                       | <Icon icon="square" /> | The limit amount for query. If the limit is 0, this limit is not applied.                                                                                                              | 0             |
+|                          | ignore_persisted_operations | <Icon icon="square" /> | Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations. | false         |
 
 ## File Upload
 

@@ -496,7 +496,21 @@ type ComplexityCalculationCache struct {
 	CacheSize int64 `yaml:"size,omitempty" envDefault:"1024" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
 }
 
+// ComplexityLimitsMode defines how complexity limits behave.
+type ComplexityLimitsMode string
+
+const (
+	ComplexityLimitsModeUnset   ComplexityLimitsMode = ""
+	ComplexityLimitsModeMeasure ComplexityLimitsMode = "measure"
+	ComplexityLimitsModeEnforce ComplexityLimitsMode = "enforce"
+)
+
 type ComplexityLimits struct {
+	// Mode controls complexity limits behavior:
+	// - "measure": calculates complexity without rejecting operations (for monitoring)
+	// - "enforce": calculates complexity and rejects operations exceeding limits
+	Mode ComplexityLimitsMode `yaml:"mode,omitempty" envDefault:"enforce" env:"SECURITY_COMPLEXITY_MODE"`
+
 	Depth            *ComplexityLimit `yaml:"depth"`
 	TotalFields      *ComplexityLimit `yaml:"total_fields"`
 	RootFields       *ComplexityLimit `yaml:"root_fields"`
@@ -1388,6 +1402,11 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
 		cfg.Config.SubgraphErrorPropagation.OmitLocations = false
 		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
+	}
+
+	// Default complexity limits mode to "enforce" for backward compatibility
+	if cfg.Config.SecurityConfiguration.ComplexityLimits != nil && cfg.Config.SecurityConfiguration.ComplexityLimits.Mode == ComplexityLimitsModeUnset {
+		cfg.Config.SecurityConfiguration.ComplexityLimits.Mode = ComplexityLimitsModeEnforce
 	}
 
 	return cfg, nil
