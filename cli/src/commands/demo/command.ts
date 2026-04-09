@@ -3,6 +3,7 @@ import ora from 'ora';
 import { program } from 'commander';
 import type { FederatedGraph, Subgraph, WhoAmIResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { config } from '../../core/config.js';
+import { createRouterToken, deleteRouterToken } from '../../core/router-token.js';
 import { BaseCommandOptions } from '../../core/types/types.js';
 import { waitForKeyPress, rainbow } from '../../utils.js';
 import type { UserInfo } from './types.js';
@@ -230,6 +231,42 @@ async function handleStep2(
   }
 }
 
+async function handleStep3(opts: BaseCommandOptions, { userInfo }: { userInfo: UserInfo }) {
+  function retryFn() {
+    resetScreen(userInfo);
+    return handleStep3(opts, { userInfo });
+  }
+
+  const tokenParams = {
+    client: opts.client,
+    tokenName: config.demoRouterTokenName,
+    graphName: config.demoGraphName,
+    namespace: config.demoNamespace,
+  };
+
+  // Delete existing token first (idempotent — no error if missing)
+  const deleteResult = await deleteRouterToken(tokenParams);
+  if (deleteResult.error) {
+    console.error(`Failed to clean up existing router token: ${deleteResult.error.message}`);
+    await waitForKeyPress({ r: retryFn, R: retryFn }, 'Hit [r] to retry. CTRL+C to quit.');
+    return;
+  }
+
+  const spinner = ora().start('Generating router token…');
+  const createResult = await createRouterToken(tokenParams);
+
+  if (createResult.error) {
+    spinner.fail(`Failed to generate router token: ${createResult.error.message}`);
+    await waitForKeyPress({ r: retryFn, R: retryFn }, 'Hit [r] to retry. CTRL+C to quit.');
+    return;
+  }
+
+  spinner.succeed('Router token generated.');
+  console.log(`\n${pc.bold(createResult.token)}\n`);
+
+  // TODO: Step 3b — run router Docker container
+}
+
 async function handleGetOnboardingResponse(client: BaseCommandOptions['client'], userInfo: UserInfo) {
   const onboardingCheck = await checkExistingOnboarding(client);
 
@@ -310,6 +347,8 @@ export default function (opts: BaseCommandOptions) {
       }
 
       await handleStep2(opts, { onboarding: onboardingCheck, userInfo, supportDir, signal: controller.signal });
+
+      await handleStep3(opts, { userInfo });
     } finally {
       process.off('SIGINT', cleanup);
       process.off('SIGTERM', cleanup);
