@@ -5,7 +5,7 @@ go 1.25
 require (
 	connectrpc.com/connect v1.16.2
 	github.com/andybalholm/brotli v1.1.0 // indirect
-	github.com/buger/jsonparser v1.1.1
+	github.com/buger/jsonparser v1.1.2
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
 	github.com/dustin/go-humanize v1.0.1
@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.267
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.269
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0

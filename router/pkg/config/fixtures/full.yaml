@@ -24,7 +24,7 @@ introspection:
   enabled: true
   secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
-log_service_name: "my-custom-router"
+log_service_name: 'my-custom-router'
 shutdown_delay: 15s
 grace_period: 20s
 poll_interval: 10s
@@ -205,7 +205,6 @@ telemetry:
       schema_usage:
         enabled: true
         include_operation_sha: true
-        sample_rate: 1.0  # Supports any rate: 1.0, 0.8, 0.5, 0.1, 0.01, etc.
 
 cache_control_policy:
   enabled: true
@@ -404,6 +403,11 @@ rate_limit:
     burst: 60
     period: '60s'
     reject_exceeding_requests: true
+    overrides:
+      - matching: '^premium-.*'
+        rate: 200
+        burst: 200
+        period: '60s'
 
 override_routing_url:
   subgraphs:
@@ -495,6 +499,11 @@ persisted_operations:
   storage:
     provider_id: s3
     object_prefix: '5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo'
+  manifest:
+    enabled: true
+    file_name: manifest.json
+    poll_interval: 30s
+    poll_jitter: 10s
 
 automatic_persisted_queries:
   enabled: true

@@ -635,7 +635,15 @@
       "Period": 60000000000,
       "RejectExceedingRequests": true,
       "RejectStatusCode": 200,
-      "HideStatsFromResponseExtension": false
+      "HideStatsFromResponseExtension": false,
+      "Overrides": [
+        {
+          "Matching": "^premium-.*",
+          "Rate": 200,
+          "Burst": 200,
+          "Period": 60000000000
+        }
+      ]
     },
     "Storage": {
       "URLs": [
@@ -977,6 +985,18 @@
     "Storage": {
       "ProviderID": "s3",
       "ObjectPrefix": "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
+    },
+    "Manifest": {
+      "Enabled": true,
+      "FileName": "manifest.json",
+      "PollInterval": 30000000000,
+      "PollJitter": 10000000000,
+      "Warmup": {
+        "Enabled": true,
+        "Workers": 4,
+        "ItemsPerSecond": 50,
+        "Timeout": 30000000000
+      }
     }
   },
   "AutomaticPersistedQueries": {

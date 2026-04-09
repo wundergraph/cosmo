@@ -29,7 +29,7 @@ import Keycloak from './services/Keycloak.js';
 import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
-import { S3BlobStorage } from './blobstorage/index.js';
+import { S3BlobStorage, DualBlobStorage, type BlobStorage } from './blobstorage/index.js';
 import Mailer from './services/Mailer.js';
 import { OrganizationInvitationRepository } from './repositories/OrganizationInvitationRepository.js';
 import { Authorization } from './services/Authorization.js';
@@ -94,6 +94,7 @@ export interface BuildConfig {
   webhook?: {
     url?: string;
     key?: string;
+    proxyUrl?: string;
   };
   githubApp?: {
     webhookSecret?: string;
@@ -105,6 +106,15 @@ export interface BuildConfig {
   slack: { clientID?: string; clientSecret?: string };
   cdnBaseUrl: string;
   s3Storage: {
+    url: string;
+    endpoint?: string;
+    region?: string;
+    username?: string;
+    password?: string;
+    forcePathStyle?: boolean;
+    useIndividualDeletes?: boolean;
+  };
+  s3StorageFailover?: {
     url: string;
     endpoint?: string;
     region?: string;
@@ -342,7 +352,7 @@ export default async function build(opts: BuildConfig) {
   const s3Config = createS3ClientConfig(bucketName, opts.s3Storage);
 
   const s3Client = new S3Client(s3Config);
-  const blobStorage = new S3BlobStorage(s3Client, bucketName, {
+  const primaryBlobStorage = new S3BlobStorage(s3Client, bucketName, {
     // GCS does not support DeleteObjects; force individual deletes when detected.
     useIndividualDeletes:
       isGoogleCloudStorageUrl(opts.s3Storage.url) || isGoogleCloudStorageUrl(s3Config.endpoint as string)
@@ -350,7 +360,29 @@ export default async function build(opts: BuildConfig) {
         : (opts.s3Storage.useIndividualDeletes ?? false),
   });
 
-  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
+  let blobStorage: BlobStorage = primaryBlobStorage;
+
+  if (opts.s3StorageFailover?.url) {
+    const failoverBucketName = extractS3BucketName(opts.s3StorageFailover);
+    const failoverS3Config = createS3ClientConfig(failoverBucketName, opts.s3StorageFailover);
+    const failoverS3Client = new S3Client(failoverS3Config);
+    const failoverBlobStorage = new S3BlobStorage(failoverS3Client, failoverBucketName, {
+      useIndividualDeletes:
+        isGoogleCloudStorageUrl(opts.s3StorageFailover.url) ||
+        isGoogleCloudStorageUrl(failoverS3Config.endpoint as string)
+          ? true
+          : (opts.s3StorageFailover.useIndividualDeletes ?? false),
+    });
+
+    blobStorage = new DualBlobStorage(primaryBlobStorage, failoverBlobStorage);
+  }
+
+  const platformWebhooks = new PlatformWebhookService(
+    opts.webhook?.url,
+    opts.webhook?.key,
+    logger,
+    opts.webhook?.proxyUrl,
+  );
 
   const readmeQueue = new AIGraphReadmeQueue(logger, fastify.redisForQueue);
 
@@ -531,6 +563,7 @@ export default async function build(opts: BuildConfig) {
       },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
+      webhookProxyUrl: opts.webhook?.proxyUrl,
       cdnBaseUrl: opts.cdnBaseUrl,
     }),
     contextValues(req) {

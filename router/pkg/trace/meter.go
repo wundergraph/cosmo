@@ -35,7 +35,6 @@ type (
 	}
 )
 
-
 func createExporter(log *zap.Logger, exp *ExporterConfig) (sdktrace.SpanExporter, error) {
 	u, err := url.Parse(exp.Endpoint)
 	if err != nil {

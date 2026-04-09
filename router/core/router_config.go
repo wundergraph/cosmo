@@ -8,6 +8,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -84,11 +85,14 @@ type Config struct {
 	routerConfigPollerConfig        *RouterConfigPollerConfig
 	cdnConfig                       config.CDNConfiguration
 	persistedOperationClient        *persistedoperation.Client
+	pqlStore                        *pqlmanifest.Store
+	pqlPoller                       *pqlmanifest.Poller
 	persistedOperationsConfig       config.PersistedOperationsConfig
 	automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 	apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
 	storageProviders                config.StorageProviders
+	providerRegistry                *ProviderRegistry
 	demoMode                        bool
 	eventsConfig                    config.EventsConfiguration
 	prometheusServer                *http.Server

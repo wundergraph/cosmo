@@ -248,6 +248,7 @@ export class SubgraphRepository {
     },
     chClient: ClickHouseClient,
     compositionOptions?: CompositionOptions,
+    webhookProxyUrl?: string,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     compositionWarnings: PlainMessage<CompositionWarning>[];
@@ -475,6 +476,7 @@ export class SubgraphRepository {
         chClient,
         compositionOptions,
         federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
+        webhookProxyUrl,
       });
 
       compositionErrors.push(...cErrors);
@@ -516,6 +518,7 @@ export class SubgraphRepository {
     },
     chClient: ClickHouseClient,
     compositionOptions?: CompositionOptions,
+    webhookProxyUrl?: string,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
@@ -568,6 +571,7 @@ export class SubgraphRepository {
         actorId: data.updatedBy,
         chClient,
         compositionOptions,
+        webhookProxyUrl,
       });
 
       // Re-fetch the federated graphs to get the updated composedSchemaVersionId
@@ -1863,6 +1867,7 @@ export class SubgraphRepository {
     newGraphQLSchema,
     compositionOptions,
     webhookService,
+    webhookProxyUrl,
   }: {
     actorId: string;
     blobStorage: BlobStorage;
@@ -1887,6 +1892,7 @@ export class SubgraphRepository {
     newGraphQLSchema?: GraphQLSchema;
     compositionOptions?: CompositionOptions;
     webhookService: OrganizationWebhookService;
+    webhookProxyUrl?: string;
   }): Promise<
     PlainMessage<CheckSubgraphSchemaResponse> & {
       hasClientTraffic: boolean;
@@ -2053,6 +2059,7 @@ export class SubgraphRepository {
       contractRepo,
       graphCompostionRepo,
       chClient,
+      webhookProxyUrl,
     );
 
     const checkSubgraphs = new Map<string, CheckSubgraph>();
