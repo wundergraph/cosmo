@@ -183,7 +183,11 @@ export const introspectSubgraph = async ({
  */
 export function composeSubgraphs(subgraphs: Subgraph[], options?: CompositionOptions): FederationResult {
   // @TODO get router compatibility version programmatically
-  return federateSubgraphs({ options, subgraphs, version: ROUTER_COMPATIBILITY_VERSION_ONE });
+  return federateSubgraphs({
+    options,
+    subgraphs,
+    version: ROUTER_COMPATIBILITY_VERSION_ONE,
+  });
 }
 
 export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;
@@ -304,13 +308,19 @@ type PrintTruncationWarningParams = {
   totalErrorCounts?: SubgraphPublishStats;
 };
 
+type KeyPressCallback = () => unknown | Promise<unknown>;
+
 /**
  * Waits for a single keypress matching one of the keys in the provided map.
  * Keys are case-sensitive strings. Use 'Enter' for the enter key.
- * For non-Enter keys, the callback fires immediately on keypress (no Enter required).
- * Ctrl+C always exits the process.
+ * Each entry is either a callback function or a descriptor `{ callback, persistent }`.
+ * When `persistent` is true the callback fires but the prompt keeps listening,
+ * useful for side-effect actions (e.g. opening a URL) alongside a terminating key.
  */
-export function waitForKeyPress(keyMap: Record<string, (() => void) | undefined>, message?: string): Promise<void> {
+export function waitForKeyPress(
+  keyMap: Record<string, KeyPressCallback | { callback: KeyPressCallback; persistent: boolean } | undefined>,
+  message?: string,
+): Promise<void> {
   const { promise, resolve } = Promise.withResolvers<void>();
 
   if (message) {
@@ -320,7 +330,7 @@ export function waitForKeyPress(keyMap: Record<string, (() => void) | undefined>
   process.stdin.setRawMode(true);
   process.stdin.resume();
 
-  const onData = (data: Buffer) => {
+  const onData = async (data: Buffer) => {
     const key = data.toString();
 
     // Ctrl+C
@@ -334,14 +344,30 @@ export function waitForKeyPress(keyMap: Record<string, (() => void) | undefined>
     // Normalize Enter (\r or \n)
     const normalized = key === '\r' || key === '\n' ? 'Enter' : key;
 
-    if (normalized in keyMap) {
-      process.stdin.removeListener('data', onData);
-      process.stdin.setRawMode(false);
-      process.stdin.pause();
-      process.stdout.write('\n');
-      keyMap[normalized]?.();
-      resolve();
+    if (!(normalized in keyMap)) {
+      return;
     }
+
+    const entry = keyMap[normalized];
+    if (!entry) {
+      return;
+    }
+
+    const isDescriptor = typeof entry !== 'function';
+    const callback = isDescriptor ? entry.callback : entry;
+    const persistent = isDescriptor ? entry.persistent : false;
+
+    if (persistent) {
+      await callback();
+      return;
+    }
+
+    process.stdin.removeListener('data', onData);
+    process.stdin.setRawMode(false);
+    process.stdin.pause();
+    process.stdout.write('\n');
+    await callback();
+    resolve();
   };
 
   process.stdin.on('data', onData);
