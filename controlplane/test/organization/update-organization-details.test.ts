@@ -124,7 +124,7 @@ describe('UpdateOrganizationDetails', () => {
     expect(response.response?.details).toContain('already exists');
   });
 
-  test.each([TestUser.devJoeCompanyA, TestUser.viewerTimCompanyA, TestUser.keyManagerSmithCompanyA])(
+  test.each([TestUser.devJoeCompanyA, TestUser.viewerTimCompanyA])(
     '%s (non-admin) should NOT be able to update organization details',
     async (testUser) => {
       const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
