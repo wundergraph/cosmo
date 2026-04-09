@@ -139,6 +139,7 @@ export function updateFederatedGraph(
       targetId: federatedGraph.targetId,
       unsetLabelMatchers: req.unsetLabelMatchers,
       updatedBy: authContext.userId,
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     if (result?.deploymentErrors) {

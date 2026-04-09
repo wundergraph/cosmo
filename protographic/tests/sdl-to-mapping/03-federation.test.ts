@@ -1300,6 +1300,134 @@ describe('GraphQL Federation to Proto Mapping', () => {
     `);
   });
 
+  it('maps entity with field containing both args and @requires', () => {
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+
+      type User @key(fields: "id") {
+        id: ID!
+        name: String! @external
+
+        post(slug: String!, maxResults: Int!): Post! @requires(fields: "name")
+      }
+
+      type Post {
+        id: ID!
+        title: String!
+      }
+
+      type Query {
+        user(id: ID!): User
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'UserService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupUserByIdRequest",
+            "requiredFieldMappings": [
+              {
+                "fieldMapping": {
+                  "argumentMappings": [
+                    {
+                      "mapped": "slug",
+                      "original": "slug",
+                    },
+                    {
+                      "mapped": "max_results",
+                      "original": "maxResults",
+                    },
+                  ],
+                  "mapped": "post",
+                  "original": "post",
+                },
+                "request": "RequireUserPostByIdRequest",
+                "response": "RequireUserPostByIdResponse",
+                "rpc": "RequireUserPostById",
+              },
+            ],
+            "response": "LookupUserByIdResponse",
+            "rpc": "LookupUserById",
+            "typeName": "User",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryUser",
+            "original": "user",
+            "request": "QueryUserRequest",
+            "response": "QueryUserResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "UserService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "user",
+                "original": "user",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "slug",
+                    "original": "slug",
+                  },
+                  {
+                    "mapped": "max_results",
+                    "original": "maxResults",
+                  },
+                ],
+                "mapped": "post",
+                "original": "post",
+              },
+            ],
+            "type": "User",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "title",
+                "original": "title",
+              },
+            ],
+            "type": "Post",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
+
   it('maps entity with compound key and required fields', () => {
     const sdl = `
       directive @key(fields: String!) on OBJECT

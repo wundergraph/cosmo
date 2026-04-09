@@ -300,6 +300,7 @@ export function checkSubgraphSchema(
         ignoreExternalKeys,
       },
       webhookService,
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     // Extract variables from checkResult
@@ -471,6 +472,7 @@ export function checkSubgraphSchema(
           ignoreExternalKeys,
         },
         webhookService,
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       await schemaCheckRepo.addLinkedSchemaCheck({

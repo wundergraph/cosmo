@@ -463,6 +463,7 @@ export function updateProposal(
         contractRepo,
         graphCompostionRepo,
         opts.chClient,
+        opts.webhookProxyUrl,
       );
 
       const {
@@ -515,6 +516,7 @@ export function updateProposal(
           opts.billingDefaultPlanId,
           opts.webhookProxyUrl,
         ),
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       if (checkId) {

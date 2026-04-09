@@ -1,0 +1,62 @@
+---
+title: "@specifiedBy"
+icon: "link"
+description: "The @specifiedBy directive links a custom scalar type to a human-readable specification of its format."
+---
+
+## Definition
+
+```graphql
+directive @specifiedBy(url: String!) on SCALAR
+```
+
+## Arguments
+
+| Argument | Type      | Default | Description                                                                |
+| -------- | --------- | ------- | -------------------------------------------------------------------------- |
+| `url`    | `String!` | —       | A URL pointing to a human-readable specification for the custom scalar. |
+
+## Overview
+
+`@specifiedBy` is a built-in GraphQL directive defined in the
+[GraphQL specification](https://spec.graphql.org/October2021/#sec--specifiedBy).
+It provides a machine-readable link between a custom scalar type and the document
+that describes its serialization,
+coercion,
+and validation rules.
+
+The URL is exposed through introspection via the `specifiedByURL` field on scalar types.
+Tools and clients can use this to generate documentation or validate scalar values.
+
+This directive must not be applied to built-in scalar types
+(`String`, `Int`, `Float`, `Boolean`, `ID`).
+
+## Examples
+
+### Linking a scalar to an RFC
+
+```graphql
+scalar UUID @specifiedBy(url: "https://tools.ietf.org/html/rfc4122")
+```
+
+### Linking to the GraphQL Scalars registry
+
+```graphql
+scalar DateTime @specifiedBy(url: "https://scalars.graphql.org/andimarek/date-time")
+```
+
+### Custom format specification
+
+```graphql
+scalar HexColor @specifiedBy(url: "https://developer.mozilla.org/en-US/docs/Web/CSS/hex-color")
+```
+
+## Federation behavior
+
+In a federated graph,
+every subgraph that defines the same custom scalar should use the same `@specifiedBy` URL.
+Cosmo preserves the directive through composition so that introspection on the federated schema
+returns the `specifiedByURL` for each annotated scalar.
+
+The router does not perform any runtime validation based on this directive.
+It is purely a schema metadata directive for documentation and tooling.

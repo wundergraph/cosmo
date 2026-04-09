@@ -91,6 +91,7 @@ export function recomposeGraph(
           ignoreExternalKeys,
         },
         federatedGraphs: [graph],
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
     sendOrgWebhooks({
