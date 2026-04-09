@@ -308,7 +308,10 @@ type PrintTruncationWarningParams = {
  * For non-Enter keys, the callback fires immediately on keypress (no Enter required).
  * Ctrl+C always exits the process.
  */
-export function waitForKeyPress(keyMap: Record<string, (() => void) | undefined>, message?: string): Promise<void> {
+export function waitForKeyPress(
+  keyMap: Record<string, (() => unknown | Promise<unknown>) | undefined>,
+  message?: string,
+): Promise<void> {
   const { promise, resolve } = Promise.withResolvers<void>();
 
   if (message) {
@@ -318,7 +321,7 @@ export function waitForKeyPress(keyMap: Record<string, (() => void) | undefined>
   process.stdin.setRawMode(true);
   process.stdin.resume();
 
-  const onData = (data: Buffer) => {
+  const onData = async (data: Buffer) => {
     const key = data.toString();
 
     // Ctrl+C
@@ -337,7 +340,7 @@ export function waitForKeyPress(keyMap: Record<string, (() => void) | undefined>
       process.stdin.setRawMode(false);
       process.stdin.pause();
       process.stdout.write('\n');
-      keyMap[normalized]?.();
+      await keyMap[normalized]?.();
       resolve();
     }
   };

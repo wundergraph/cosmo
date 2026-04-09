@@ -12,6 +12,14 @@ import type { BaseCommandOptions } from '../../core/types/types.js';
 import { visibleLength } from '../../utils.js';
 import type { UserInfo } from './types.js';
 
+// TODO: ora defaults discardStdin to true which puts stdin into raw mode
+// and restores it to cooked mode when the spinner stops. This conflicts
+// with the demo command's own stdin management (enableRawModeWithCtrlC)
+// causing CTRL+C to stop working between prompts.
+export function demoSpinner(text?: string) {
+  return ora({ text, discardStdin: false });
+}
+
 /**
  * Clears whole screen
  */
@@ -119,7 +127,7 @@ const GitHubTreeSchema = z.object({
  * @returns [directory] path which contains the support data
  */
 export async function prepareSupportingData() {
-  const spinner = ora('Preparing supporting data…').start();
+  const spinner = demoSpinner('Preparing supporting data…').start();
 
   const cosmoDir = path.join(cacheDir, 'demo');
   await fs.mkdir(cosmoDir, { recursive: true });
@@ -215,7 +223,7 @@ async function createDockerContainerBuilder(builderName: string): Promise<void> 
  * properly. In case of failures, show prompt to install/setup.
  */
 export async function checkDockerReadiness(): Promise<void> {
-  const spinner = ora('Checking Docker availability…').start();
+  const spinner = demoSpinner('Checking Docker availability…').start();
 
   if (!(await isDockerAvailable())) {
     spinner.fail('Docker is not available.');
@@ -386,7 +394,7 @@ export async function runRouterContainer({
   args.push(config.demoRouterImage);
 
   const logStream = createWriteStream(logPath, { flags: 'a' });
-  const spinner = ora(`Starting router on ${pc.bold(routerBaseUrl)}…`).start();
+  const spinner = demoSpinner(`Starting router on ${pc.bold(routerBaseUrl)}…`).start();
 
   try {
     const proc = execa('docker', args, {
@@ -451,7 +459,7 @@ export async function publishAllPlugins({
       const pluginName = pluginNames[i];
       const pluginDir = path.join(supportDir, 'plugins', pluginName);
 
-      const spinner = ora(`Publishing plugin ${pc.bold(pluginName)} (${i + 1}/${pluginNames.length})…`).start();
+      const spinner = demoSpinner(`Publishing plugin ${pc.bold(pluginName)} (${i + 1}/${pluginNames.length})…`).start();
 
       const files = await readPluginFiles(pluginDir);
       const result = await publishPluginPipeline({
