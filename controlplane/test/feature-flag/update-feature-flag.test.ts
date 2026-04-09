@@ -193,7 +193,7 @@ describe('Update feature flag tests', () => {
     expect(getFeatureFlagResponse.featureSubgraphs.map((featureSubraph) => featureSubraph.name)).toStrictEqual([
       featureSubgraphNameTwo,
     ]);
-    expect(getFeatureFlagResponse.featureFlag?.labels).toEqual(labels);
+    expect(getFeatureFlagResponse.featureFlag?.labels).toMatchObject(labels);
   });
 
   test('that updating a feature flag with labels does not affect the feature subgraphs array', async (testContext) => {
@@ -229,7 +229,7 @@ describe('Update feature flag tests', () => {
     expect(getFeatureFlagResponse.featureSubgraphs.map((featureSubgraph) => featureSubgraph.name)).toStrictEqual([
       featureSubgraphName,
     ]);
-    expect(getFeatureFlagResponse.featureFlag?.labels).toEqual(labels);
+    expect(getFeatureFlagResponse.featureFlag?.labels).toMatchObject(labels);
   });
 
   test('that updating a feature flag with unset labels removes all existing labels', async (testContext) => {

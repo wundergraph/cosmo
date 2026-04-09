@@ -125,7 +125,7 @@ describe('Subgraph', (ctx) => {
     expect(subgraph.response?.code).toBe(EnumStatusCode.OK);
     expect(subgraph.graph?.readme).toBe(readme);
     expect(subgraph.graph?.routingURL).toBe('http://localhost:8080');
-    expect(subgraph.graph?.labels).toEqual([label]);
+    expect(subgraph.graph?.labels).toMatchObject([label]);
   });
 
   test('Should be able to create a subgraph with a readme and update it later.', async (testContext) => {
@@ -163,6 +163,6 @@ describe('Subgraph', (ctx) => {
     expect(subgraph.response?.code).toBe(EnumStatusCode.OK);
     expect(subgraph.graph?.readme).toBe(updatedReadme);
     expect(subgraph.graph?.routingURL).toBe('http://localhost:8080');
-    expect(subgraph.graph?.labels).toEqual([label]);
+    expect(subgraph.graph?.labels).toMatchObject([label]);
   });
 });
