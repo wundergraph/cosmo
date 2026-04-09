@@ -1131,7 +1131,12 @@ Example:
       const fields = type.getFields();
 
       for (const field of Object.values(fields)) {
-        if (field.args.length === 0 && !this.findResolverDirective(field)) {
+        if (field.args.length === 0 && !this.findDirective(field, CONNECT_FIELD_RESOLVER)) {
+          continue;
+        }
+
+        // Skip fields with @requires directive, they are managed by the required fields visitor
+        if (field.args.length > 0 && this.findDirective(field, REQUIRES_DIRECTIVE_NAME)) {
           continue;
         }
 
@@ -1169,6 +1174,7 @@ Example:
 
         const rpcMethods = visitor.getRPCMethods();
         const messageDefinitions = visitor.getMessageDefinitions();
+        this.usesWrapperTypes = this.usesWrapperTypes || visitor.usesWrapperTypes;
 
         result.rpcMethods.push(...rpcMethods.map((m) => renderRPCMethod(this.includeComments, m).join('\n')));
         result.methodNames.push(...rpcMethods.map((m) => m.name));
@@ -1195,7 +1201,7 @@ Example:
     parent: GraphQLObjectType,
     field: GraphQLField<any, any>,
   ): { context: string; error: string | undefined } {
-    const resolvedDirective = this.findResolverDirective(field);
+    const resolvedDirective = this.findDirective(field, CONNECT_FIELD_RESOLVER);
     if (resolvedDirective) {
       const valueNode = resolvedDirective.arguments?.find((arg) => arg.name.value === CONTEXT)?.value;
       const context = !valueNode || valueNode.kind !== Kind.STRING ? '' : valueNode.value.trim();
@@ -1246,13 +1252,8 @@ Example:
     return type;
   }
 
-  private findResolverDirective(field: GraphQLField<any, any>): DirectiveNode | undefined {
-    const directives = field.astNode?.directives;
-    if (!directives) {
-      return undefined;
-    }
-
-    return directives.find((d) => d.name.value === CONNECT_FIELD_RESOLVER);
+  private findDirective(field: GraphQLField<any, any>, directive: string): DirectiveNode | undefined {
+    return field.astNode?.directives?.find((d) => d.name.value === directive);
   }
 
   /**
@@ -1544,7 +1545,7 @@ Example:
     const allFields = Object.values(type.getFields());
     // Filter out fields that have arguments or @connect__fieldResolver as those are handled in separate resolver rpcs
     const validFields = allFields
-      .filter((field) => field.args.length === 0 && !this.findResolverDirective(field))
+      .filter((field) => field.args.length === 0 && !this.findDirective(field, CONNECT_FIELD_RESOLVER))
       .filter(
         (field) =>
           !field.astNode?.directives?.some(

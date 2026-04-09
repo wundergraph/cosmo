@@ -166,6 +166,7 @@ export function migrateFromApollo(
           disableResolvabilityValidation: true,
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
     });
 

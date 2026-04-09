@@ -634,12 +634,20 @@ type RedisConfiguration struct {
 }
 
 type RateLimitSimpleStrategy struct {
-	Rate                           int           `yaml:"rate" envDefault:"10" env:"RATE_LIMIT_SIMPLE_RATE"`
-	Burst                          int           `yaml:"burst" envDefault:"10" env:"RATE_LIMIT_SIMPLE_BURST"`
-	Period                         time.Duration `yaml:"period" envDefault:"1s" env:"RATE_LIMIT_SIMPLE_PERIOD"`
-	RejectExceedingRequests        bool          `yaml:"reject_exceeding_requests" envDefault:"false" env:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS"`
-	RejectStatusCode               int           `yaml:"reject_status_code" envDefault:"200" env:"RATE_LIMIT_SIMPLE_REJECT_STATUS_CODE"`
-	HideStatsFromResponseExtension bool          `yaml:"hide_stats_from_response_extension" envDefault:"false" env:"RATE_LIMIT_SIMPLE_HIDE_STATS_FROM_RESPONSE_EXTENSION"`
+	Rate                           int                 `yaml:"rate" envDefault:"10" env:"RATE_LIMIT_SIMPLE_RATE"`
+	Burst                          int                 `yaml:"burst" envDefault:"10" env:"RATE_LIMIT_SIMPLE_BURST"`
+	Period                         time.Duration       `yaml:"period" envDefault:"1s" env:"RATE_LIMIT_SIMPLE_PERIOD"`
+	RejectExceedingRequests        bool                `yaml:"reject_exceeding_requests" envDefault:"false" env:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS"`
+	RejectStatusCode               int                 `yaml:"reject_status_code" envDefault:"200" env:"RATE_LIMIT_SIMPLE_REJECT_STATUS_CODE"`
+	HideStatsFromResponseExtension bool                `yaml:"hide_stats_from_response_extension" envDefault:"false" env:"RATE_LIMIT_SIMPLE_HIDE_STATS_FROM_RESPONSE_EXTENSION"`
+	Overrides                      []RateLimitOverride `yaml:"overrides,omitempty"`
+}
+
+type RateLimitOverride struct {
+	Matching string        `yaml:"matching"`
+	Rate     int           `yaml:"rate"`
+	Burst    int           `yaml:"burst"`
+	Period   time.Duration `yaml:"period"`
 }
 
 type CDNConfiguration struct {
@@ -981,6 +989,7 @@ type PQLManifestWarmupConfig struct {
 
 type PQLManifestConfig struct {
 	Enabled      bool                    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	FileName     string                  `yaml:"file_name" envDefault:"manifest.json" env:"FILE_NAME"`
 	PollInterval time.Duration           `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
 	PollJitter   time.Duration           `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER"`
 	Warmup       PQLManifestWarmupConfig `yaml:"warmup" envPrefix:"WARMUP_"`

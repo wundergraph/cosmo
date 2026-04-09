@@ -237,6 +237,7 @@ export function createFederatedGraph(
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
         federatedGraphs: [federatedGraph],
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       compositionErrors.push(...composition.compositionErrors);

@@ -1175,7 +1175,8 @@ These rules apply to requests being made from the Router to all Subgraphs.
 | PERSISTED_OPERATIONS_STORAGE_OBJECT_PREFIX | persisted_operations.storage.object_prefix | <Icon icon="square" />                        | The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. \$prefix/SHA256.json                                                               |               |
 | PERSISTED_OPERATIONS_LOG_UNKNOWN           | persisted_operations.log_unknown           | <Icon icon="square" />                        | Log operations (sent with the operation body) which haven't yet been persisted. If the value is true, all operations not yet persisted are logged to the router logs.                                  | false         |
 | PERSISTED_OPERATIONS_SAFELIST_ENABLED      | persisted_operations.safelist.enabled      | <Icon icon="square" />                        | Only allows persisted operations (sent with operation body). If the value is true, all operations not explicitly added to the safelist are blocked.                                                    | false         |
-| PERSISTED_OPERATIONS_MANIFEST_ENABLED      | persisted_operations.manifest.enabled      | <Icon icon="square" />                        | Enable the PQL manifest. When enabled, the router loads all persisted operations from a single `manifest.json` file and serves them from memory. Uses the `storage` config above when a provider is set, otherwise fetches from the Cosmo CDN. Only S3 and CDN storage providers are supported. | false         |
+| PERSISTED_OPERATIONS_MANIFEST_ENABLED      | persisted_operations.manifest.enabled      | <Icon icon="square" />                        | Enable the PQL manifest. When enabled, the router loads all persisted operations from a single manifest file and serves them from memory. Uses the `storage` config above when a provider is set, otherwise fetches from the Cosmo CDN. Only S3 and CDN storage providers are supported. | false         |
+| PERSISTED_OPERATIONS_MANIFEST_FILE_NAME    | persisted_operations.manifest.file_name    | <Icon icon="square" />                        | The manifest file name. Only used when a custom storage provider is configured. The router resolves the full object path as `<object_prefix>/<file_name>`. Use a `.gz` or `.zst` extension (e.g. `manifest.json.gz`) to enable transparent decompression. Ignored in CDN mode. | manifest.json |
 | PERSISTED_OPERATIONS_MANIFEST_POLL_INTERVAL| persisted_operations.manifest.poll_interval| <Icon icon="square" />                        | The interval at which the router polls the Cosmo CDN for manifest updates (only when no storage provider is configured). Minimum 10s.                                                                 | 10s           |
 | PERSISTED_OPERATIONS_MANIFEST_POLL_JITTER  | persisted_operations.manifest.poll_jitter  | <Icon icon="square" />                        | Random jitter added to each poll interval to avoid thundering herd. Minimum 1s.                                                                                                                        | 5s            |
 
@@ -1947,6 +1948,11 @@ For mor information on how to use the expression language, please refer to the [
 | RATE_LIMIT_SIMPLE_PERIOD                             | period                             | <Icon icon="square-check" iconType="solid" /> | The rate limiting period, e.g. "10s", "1m", etc...                                                                                            | 1s            |
 | RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS          | reject_exceeding_requests          | <Icon icon="square" />                        | Reject the complete request if a sub-request exceeds the rate limit. If set to false, partial responses are possible.                         | false         |
 | RATE_LIMIT_SIMPLE_HIDE_STATS_FROM_RESPONSE_EXTENSION | hide_stats_from_response_extension | <Icon icon="square" />                        | Hide the rate limit stats from the response extension. If the value is true, the rate limit stats are not included in the response extension. | false         |
+|                                                      | overrides                          | <Icon icon="square" />                        | List of per-key rate limit overrides. The first matching override wins; unmatched keys use the global defaults. See [example below](#rate-limiting-example-yaml-configuration). |               |
+|                                                      | overrides.matching            | <Icon icon="square-check" iconType="solid" /> | Go regex pattern matched against the suffix portion of the rate-limit key (the result of `key_suffix_expression`), not the full prefixed Redis key.                                                                                                                  |               |
+|                                                      | overrides.rate                   | <Icon icon="square-check" iconType="solid" /> | Allowed request rate for matching keys.                                                                                                                                        |               |
+|                                                      | overrides.burst                  | <Icon icon="square-check" iconType="solid" /> | Allowed burst rate for matching keys.                                                                                                                                          |               |
+|                                                      | overrides.period                 | <Icon icon="square-check" iconType="solid" /> | Rate limiting period for matching keys, e.g. "10s", "1m".                                                                                                                     |               |
 
 ### Rate Limit Error Extension Code
 
@@ -1968,13 +1974,18 @@ rate_limit:
         reject_exceeding_requests: false
         reject_status_code: 200
         hide_stats_from_response_extension: false
+        overrides:
+            - matching: "^premium-.*"
+              rate: 100
+              burst: 200
+              period: 1s
     storage:
         cluster_enabled: false
         urls:
          - "redis://localhost:6379"
         key_prefix: "cosmo_rate_limit"
     debug: false
-    key_suffix_expression: ""
+    key_suffix_expression: "request.header.Get('X-Api-Key')"
     error_extension_code:
         enabled: true
         code: "RATE_LIMIT_EXCEEDED"
