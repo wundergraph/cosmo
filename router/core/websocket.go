@@ -358,7 +358,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Protocol:                     protocol,
 		Logger:                       requestLogger,
 		Stats:                        h.stats,
-		ConnectionID:                 resolve.ConnectionIDs.Add(1),
+		ConnectionID:                 resolve.NewConnectionID(),
 		ClientInfo:                   clientInfo,
 		InitRequestID:                requestID,
 		ForwardUpgradeHeaders:        h.forwardUpgradeHeadersConfig,
@@ -751,7 +751,7 @@ type WebSocketConnectionHandlerOptions struct {
 	Logger                       *zap.Logger
 	Stats                        statistics.EngineStatistics
 	PlanOptions                  PlanOptions
-	ConnectionID                 int64
+	ConnectionID                 resolve.ConnectionID
 	ClientInfo                   *ClientInfo
 	InitRequestID                string
 	ForwardUpgradeHeaders        forwardConfig
@@ -783,7 +783,7 @@ type WebSocketConnectionHandler struct {
 	upgradeRequestQueryParams json.RawMessage
 
 	initRequestID   string
-	connectionID    int64
+	connectionID    resolve.ConnectionID
 	subscriptionIDs atomic.Int64
 	subscriptions   sync.Map
 	stats           statistics.EngineStatistics
@@ -1173,7 +1173,8 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 		ConnectionID:   h.connectionID,
 		SubscriptionID: subscriptionID,
 	}
-	return h.graphqlHandler.executor.Resolver.CompleteSubscription(id)
+	_ = h.protocol.Complete(msg.ID)
+	return h.graphqlHandler.executor.Resolver.UnsubscribeSubscription(id)
 }
 
 func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, msg *wsproto.Message) (err error) {

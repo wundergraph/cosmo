@@ -67,6 +67,11 @@ var ClientCompleteStopsSubscription = speedtrap.Scenario{
 		// Client sends complete to cancel
 		require.NoError(s, c.Send(`{"id":"1","type":"complete"}`))
 
+		// Server echoes complete back to client
+		msg, err = c.Read()
+		require.NoError(s, err)
+		ja.Assertf(msg, `{"type":"complete","id":"1"}`)
+
 		// Backend should receive a complete with remapped ID
 		msg, err = b.Read()
 		require.NoError(s, err)
