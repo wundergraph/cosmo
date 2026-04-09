@@ -181,7 +181,7 @@
         },
         "storage": {
           "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
-          "required": ["provider_id", "object_prefix"],
+          "required": ["provider_id"],
           "properties": {
             "provider_id": {
               "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
@@ -190,6 +190,75 @@
             "object_prefix": {
               "type": "string",
               "description": "The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. /<prefix>/<sha256>.json"
+            }
+          }
+        },
+        "manifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The configuration for the PQL manifest. When enabled, the router downloads the full persisted operations manifest from the CDN and serves operations from memory.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the PQL manifest feature.",
+              "default": false
+            },
+            "file_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The manifest file name. Only used when a custom storage provider is configured; ignored in CDN mode. Use a .gz or .zst extension (e.g. manifest.json.gz) to enable transparent decompression.",
+              "default": "manifest.json"
+            },
+            "poll_interval": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The interval at which the router polls the CDN for manifest updates. The period is specified as a string with a number and a unit, e.g. 10s, 1m, 1h. Minimum is 10s.",
+              "default": "10s",
+              "duration": {
+                "minimum": "10s"
+              }
+            },
+            "poll_jitter": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum random jitter added to each poll interval. The period is specified as a string with a number and a unit, e.g. 1s, 5s, 10s. Minimum is 1s.",
+              "default": "5s",
+              "duration": {
+                "minimum": "1s"
+              }
+            },
+            "warmup": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Configuration for cache warmup of PQL manifest operations. When enabled, the router pre-processes all operations from the manifest on startup and after manifest updates.",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable cache warmup for PQL manifest operations.",
+                  "default": true
+                },
+                "workers": {
+                  "type": "integer",
+                  "description": "The number of concurrent workers used to warm up the cache.",
+                  "default": 4,
+                  "minimum": 1
+                },
+                "items_per_second": {
+                  "type": "integer",
+                  "description": "Rate limit for items processed per second. Set to 0 for unlimited throughput.",
+                  "default": 50,
+                  "minimum": 0
+                },
+                "timeout": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "description": "The maximum time allowed for the warmup to complete. The period is specified as a string with a number and a unit, e.g. 10s, 1m, 5m.",
+                  "default": "30s",
+                  "duration": {
+                    "minimum": "1s"
+                  }
+                }
+              }
             }
           }
         }
@@ -2148,6 +2217,38 @@
               "type": "boolean",
               "default": false,
               "description": "Hide the rate limit stats from the response extension. If the value is true, the rate limit stats are not included in the response extension."
+            },
+            "overrides": {
+              "type": "array",
+              "description": "Per-key rate limit overrides. Each entry defines a regex pattern matched against the resolved rate-limit key. The first matching override wins; unmatched keys use the global defaults.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "matching": {
+                    "type": "string",
+                    "description": "A regex pattern matched against the resolved rate-limit key."
+                  },
+                  "rate": {
+                    "type": "integer",
+                    "description": "The override rate for matching keys.",
+                    "minimum": 1
+                  },
+                  "burst": {
+                    "type": "integer",
+                    "description": "The override burst for matching keys.",
+                    "minimum": 1
+                  },
+                  "period": {
+                    "type": "string",
+                    "description": "The override period for matching keys.",
+                    "duration": {
+                      "minimum": "1s"
+                    }
+                  }
+                },
+                "required": ["matching", "rate", "burst", "period"]
+              }
             }
           },
           "required": ["rate", "burst", "period"]

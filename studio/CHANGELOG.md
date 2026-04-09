@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.163.2](https://github.com/wundergraph/cosmo/compare/studio@0.163.1...studio@0.163.2) (2026-04-02)
+
+**Note:** Version bump only for package studio
+
+## [0.163.1](https://github.com/wundergraph/cosmo/compare/studio@0.163.0...studio@0.163.1) (2026-03-31)
+
+### Bug Fixes
+
+* pin axios to 1.13.5 across all packages ([#2713](https://github.com/wundergraph/cosmo/issues/2713)) ([9be9143](https://github.com/wundergraph/cosmo/commit/9be91435cbb595626347479c28551bd5d6a11d6f)) (@thisisnithin)
+
+# [0.163.0](https://github.com/wundergraph/cosmo/compare/studio@0.162.0...studio@0.163.0) (2026-03-27)
+
+### Features
+
+* add server-side pagination to operation overrides with limit and offset parameters ([#2695](https://github.com/wundergraph/cosmo/issues/2695)) ([41bb6b9](https://github.com/wundergraph/cosmo/commit/41bb6b9bd149ac9a1eb153ebbeb1c0baf0196351)) (@JivusAyrus)
+
 # [0.162.0](https://github.com/wundergraph/cosmo/compare/studio@0.161.9...studio@0.162.0) (2026-03-18)
 
 ### Features

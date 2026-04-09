@@ -505,7 +505,7 @@ persisted_operations:
 	require.NoError(t, err, &js)
 }
 
-func TestInvalidPersistedOperations(t *testing.T) {
+func TestPersistedOperationsStorageWithoutObjectPrefix(t *testing.T) {
 	t.Parallel()
 
 	f := createTempFileFromFixture(t, `
@@ -525,12 +525,9 @@ persisted_operations:
     size: 100MB
   storage:
     provider_id: s3
-    # Missing object_prefix
 `)
 	_, err := LoadConfig([]string{f})
-	var js *jsonschema.ValidationError
-	require.ErrorAs(t, err, &js)
-	require.Equal(t, "at '/persisted_operations/storage': missing property 'object_prefix'", js.Causes[0].Error())
+	require.NoError(t, err)
 }
 
 func TestValidExecutionConfig(t *testing.T) {
@@ -999,6 +996,16 @@ func TestConfigMerging(t *testing.T) {
 				Storage: PersistedOperationsStorageConfig{
 					ProviderID:   "s3",
 					ObjectPrefix: "ee",
+				},
+				Manifest: PQLManifestConfig{
+					FileName:     "manifest.json",
+					PollInterval: 10 * time.Second,
+					PollJitter:   5 * time.Second,
+					Warmup: PQLManifestWarmupConfig{
+						Enabled: true,
+						Workers: 4,
+						Timeout: 30 * time.Second,
+					},
 				},
 			},
 			AutomaticPersistedQueries: AutomaticPersistedQueriesConfig{
@@ -1829,5 +1836,110 @@ security:
 `)
 		_, err := LoadConfig([]string{f})
 		require.NoError(t, err)
+	})
+}
+
+func TestPQLManifestConfig(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.False(t, cfg.Config.PersistedOperationsConfig.Manifest.Enabled)
+		require.Equal(t, 10*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollInterval)
+		require.Equal(t, 5*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollJitter)
+	})
+
+	t.Run("yaml config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+persisted_operations:
+  manifest:
+    enabled: true
+    poll_interval: 60s
+    poll_jitter: 15s
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.True(t, cfg.Config.PersistedOperationsConfig.Manifest.Enabled)
+		require.Equal(t, 60*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollInterval)
+		require.Equal(t, 15*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollJitter)
+	})
+
+	t.Run("env variables", func(t *testing.T) {
+		t.Setenv("PERSISTED_OPERATIONS_MANIFEST_ENABLED", "true")
+		t.Setenv("PERSISTED_OPERATIONS_MANIFEST_POLL_INTERVAL", "45s")
+		t.Setenv("PERSISTED_OPERATIONS_MANIFEST_POLL_JITTER", "8s")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.True(t, cfg.Config.PersistedOperationsConfig.Manifest.Enabled)
+		require.Equal(t, 45*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollInterval)
+		require.Equal(t, 8*time.Second, cfg.Config.PersistedOperationsConfig.Manifest.PollJitter)
+	})
+
+	t.Run("poll_interval below minimum rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+persisted_operations:
+  manifest:
+    enabled: true
+    poll_interval: 5s
+`)
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, []string{"persisted_operations", "manifest", "poll_interval"}, js.Causes[0].InstanceLocation)
+		require.Equal(t, "at '/persisted_operations/manifest/poll_interval': duration must be greater or equal than 10s", js.Causes[0].Error())
+	})
+
+	t.Run("poll_jitter below minimum rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+persisted_operations:
+  manifest:
+    enabled: true
+    poll_jitter: 500ms
+`)
+		_, err := LoadConfig([]string{f})
+
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, []string{"persisted_operations", "manifest", "poll_jitter"}, js.Causes[0].InstanceLocation)
+		require.Equal(t, "at '/persisted_operations/manifest/poll_jitter': duration must be greater or equal than 1s", js.Causes[0].Error())
 	})
 }

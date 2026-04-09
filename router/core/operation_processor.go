@@ -1222,6 +1222,7 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 		o.cache.persistedOperationNormalizationCache.Set(cacheKey, entry, 1)
 	}
 
+	// This should be the final step to confirm the operation was successfully handled. We rely on this in isPersistedOperationAlreadyCached.
 	o.cache.persistedOperationVariableNamesLock.Lock()
 	o.cache.persistedOperationVariableNames[o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash] = skipIncludeVariableNames
 	o.cache.persistedOperationVariableNamesLock.Unlock()
@@ -1241,7 +1242,17 @@ func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, ski
 		// If there are multiple operations in the document, we need to include the operation name in the cache key
 		_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
 	}
-	_, _ = o.kit.keyGen.WriteString(clientName)
+	manifestEnabled := o.operationProcessor.persistedOperationClient != nil &&
+		o.operationProcessor.persistedOperationClient.ManifestEnabled()
+
+	if !manifestEnabled {
+		// Non-manifest mode: include clientName since operations are per-client.
+		// Manifest mode: exclude clientName because manifest operations are global
+		// and the SHA256 hash already uniquely identifies the operation body.
+		// Cache entries persist across manifest reloads — removed operations are
+		// naturally evicted by the LRU.
+		_, _ = o.kit.keyGen.WriteString(clientName)
+	}
 	o.writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames)
 	sum := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
@@ -1399,7 +1410,14 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 	// Compute and cache estimated cost once after planning
 	if opCtx.preparedPlan != nil && opCtx.preparedPlan.preparedPlan != nil {
 		if costCalc := opCtx.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-			opCtx.costEstimated = costCalc.EstimateCost(opCtx.planConfig, opCtx.variables)
+
+			// Validate that variables/arguments are correct for the requirements in listSize
+			var sliceReport operationreport.Report
+			costCalc.ValidateSliceArguments(opCtx.variables, &sliceReport)
+			if sliceReport.HasErrors() {
+				return &reportError{report: &sliceReport}
+			}
+			opCtx.costEstimated = costCalc.EstimateCost(opCtx.variables)
 			opCtx.costEstimatedSet = true
 		}
 	}

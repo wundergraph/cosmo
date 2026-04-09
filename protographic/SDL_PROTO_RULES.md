@@ -43,8 +43,6 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 #### Federation Features
 
 - ✗ Federation entity lookups with nested keys
-- ✗ Abstract types (interfaces/unions) in @requires field selections
-- ✗ Inline fragments in @requires field selections
 
 #### GraphQL Features
 
@@ -288,6 +286,142 @@ message RequireProductNameByIdFields {
 - Nested types are generated as nested proto messages within the `Fields` message
 - Only the selected fields from nested types are included (e.g., `description` and `reviewSummary` from `ProductDetails`, not `id` or `title`)
 - Field order in the proto matches the normalized selection order
+
+#### Composite Types in Required Fields (Interfaces & Unions)
+
+When `@requires` references a field whose type is an interface or union, the required field selection must include inline fragments to specify which fields to extract from each concrete type.
+
+##### The `__typename` Requirement
+
+When using inline fragments on an interface or union field in `@requires`, `__typename` must be present in the selection set. This is required for the engine to determine which concrete type to deserialize at runtime. Validation produces errors with field paths (e.g., `in "pet.friend"`) for nested selections missing `__typename`.
+
+Example:
+
+```graphql
+@requires(fields: "primaryItem { __typename ... on PalletItem { name } ... on ContainerItem { name } }")
+```
+
+##### Selection Normalization
+
+Before proto generation, selections are normalized by distributing parent-level fields into each inline fragment. For example:
+
+```graphql
+media { id ... on Book { author } ... on Movie { director } }
+```
+
+Normalizes to:
+
+```graphql
+media { ... on Book { id author } ... on Movie { id director } }
+```
+
+This ensures each fragment is self-contained. Nested inline fragments on sub-interfaces are also flattened to concrete types. For example, given `Employee` (interface) with implementors `Manager`, `Engineer`, `Contractor`, and `Intern` — where `Engineer` and `Contractor` also implement `Managed`:
+
+```graphql
+# Before normalization:
+members {
+  id
+  ... on Managed { supervisor }
+}
+
+# After normalization — expanded to all concrete types,
+# with `supervisor` only on types that implement Managed:
+members {
+  ... on Manager { id }
+  ... on Engineer { id supervisor }
+  ... on Contractor { id supervisor }
+  ... on Intern { id }
+}
+```
+
+##### Proto Mapping — Interface/Union Becomes `oneof`
+
+The interface or union type maps to a message with `oneof instance` containing each concrete type. `__typename` is consumed during validation only — it does **not** appear in the generated proto.
+
+```graphql
+type Storage @key(fields: "id") {
+  id: ID!
+  primaryItem: StorageItem! @external
+  itemInfo: String!
+    @requires(
+      fields: "primaryItem { __typename ... on PalletItem { name palletCount } ... on ContainerItem { name containerSize } }"
+    )
+}
+
+interface StorageItem {
+  name: String!
+}
+
+type PalletItem implements StorageItem {
+  name: String!
+  palletCount: Int!
+}
+
+type ContainerItem implements StorageItem {
+  name: String!
+  containerSize: String!
+}
+```
+
+Maps to (Fields message only):
+
+```protobuf
+message RequireStorageItemInfoByIdFields {
+  message PalletItem {
+    string name = 1;
+    int32 pallet_count = 2;
+  }
+
+  message ContainerItem {
+    string name = 1;
+    string container_size = 2;
+  }
+
+  message StorageItem {
+    oneof instance {
+      ContainerItem container_item = 1;
+      PalletItem pallet_item = 2;
+    }
+  }
+
+  StorageItem primary_item = 1;
+}
+```
+
+**Key Points**:
+
+- `__typename` is absent from the proto — it is consumed during validation only
+- The interface type becomes a message with `oneof instance`
+- Each implementing type gets its own message with only the fields selected in its fragment
+- All type messages (`StorageItem`, `PalletItem`, `ContainerItem`) are **nested inside** the `Fields` message. This scoping ensures they don't collide with the root-level messages of the same name, which contain all fields of the type — while the nested versions contain only the subset selected in `@requires`
+- The same pattern applies to union types (union member types instead of implementing types)
+
+#### Required Fields with Arguments
+
+When a field annotated with @requires defines arguments, it is handled the same as other @requires-annotated fields. However, the generated proto request message includes an additional field, field_args, which contains the argument values provided in the query.
+
+```graphql
+type User @key(fields: "id") {
+  id: ID!
+  post(slug: String!, maxResults: Int!): Post! @requires(fields: "name")
+}
+```
+
+Maps to:
+
+```protobuf
+rpc RequireUserPostById(RequireUserPostByIdRequest) returns (RequireUserPostByIdResponse) {}
+
+message RequireUserPostByIdRequest {
+  repeated RequireUserPostByIdContext context = 1;
+  RequireUserPostByIdArgs field_args = 2;  // Added when field has arguments
+}
+
+message RequireUserPostByIdArgs {
+  string slug = 1;
+  int32 max_results = 2;
+}
+```
 
 ## Field Resolvers
 

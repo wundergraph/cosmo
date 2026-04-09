@@ -25,7 +25,7 @@ The operations are validated against the graph schema before registering them. I
 ### Options
 
 - `-n, --namespace` : The namespace of the federated graph (Default: "default").
-- `-c, --client-name <client-name>` The client name / identifier to register these operations under.
+- `-c, --client-name <client-name>` The client name / identifier to register these operations under. By default, the client name must be sent by the client at request time via the `graphql-client-name` HTTP header. When the router runs in [manifest mode](/router/persisted-queries/persisted-operations#pql-manifest), the client name is used only for organizational structure in the Studio (e.g. you could use `"default"`) and is not matched against incoming requests.
 - `-f, --file <filename>` Filename to read operations from. This argument can be used multiple times to read operations from multiple files. See [Description](/cli/operations/push#description) for a list of the supported file formats.
 - `-q, --quiet` Don't produce any output, just exit with success or error. Intended for use in CI checks.
 - `--format <output-format>` Specify an output format for the returned data. Support types include `text` (the default) and `json.`

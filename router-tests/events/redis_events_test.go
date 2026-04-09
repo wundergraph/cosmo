@@ -18,7 +18,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-
 type subscriptionArgs struct {
 	dataValue []byte
 	errValue  error

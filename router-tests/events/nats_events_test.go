@@ -54,7 +54,6 @@ func (c *ConfigPollerMock) Stop(_ context.Context) error {
 	return nil
 }
 
-
 type natsSubscriptionArgs struct {
 	dataValue []byte
 	errValue  error
@@ -1419,7 +1418,6 @@ func TestNatsEvents(t *testing.T) {
 			})
 		})
 	})
-
 
 	t.Run("subscribe to multiple subjects", func(t *testing.T) {
 		t.Parallel()

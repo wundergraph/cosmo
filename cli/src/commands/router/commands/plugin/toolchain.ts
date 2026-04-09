@@ -15,6 +15,7 @@ import prompts from 'prompts';
 import semver from 'semver';
 import { camelCase, upperFirst } from 'lodash-es';
 import pupa from 'pupa';
+import { program } from 'commander';
 import { dataDir } from '../../../../core/config.js';
 import TsTemplates from './templates/typescript.js';
 import { renderValidationResults } from './helper.js';
@@ -546,27 +547,31 @@ export async function generateProtoAndMapping(pluginDir: string, protoOptions: P
 
   const serviceName = upperFirst(camelCase(pluginName)) + 'Service';
 
-  // Validate the GraphQL schema and render results
-  spinner.text = 'Validating GraphQL schema...';
-  const validationResult = validateGraphQLSDL(schema);
-  renderValidationResults(validationResult, schemaFile);
+  try {
+    // Validate the GraphQL schema and render results
+    spinner.text = 'Validating GraphQL schema...';
+    const validationResult = validateGraphQLSDL(schema);
+    renderValidationResults(validationResult, schemaFile);
 
-  spinner.text = 'Generating mapping and proto files...';
+    spinner.text = 'Generating mapping and proto files...';
 
-  const mapping = compileGraphQLToMapping(schema, serviceName);
-  await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
+    const mapping = compileGraphQLToMapping(schema, serviceName);
+    await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
 
-  const proto = compileGraphQLToProto(schema, {
-    serviceName,
-    packageName: 'service',
-    protoOptions,
-    lockData,
-  });
+    const proto = compileGraphQLToProto(schema, {
+      serviceName,
+      packageName: 'service',
+      protoOptions,
+      lockData,
+    });
 
-  await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
-  await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
+    await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
+    await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
 
-  return { serviceName };
+    return { serviceName };
+  } catch (error) {
+    program.error(error instanceof Error ? error.message : String(error));
+  }
 }
 
 /**

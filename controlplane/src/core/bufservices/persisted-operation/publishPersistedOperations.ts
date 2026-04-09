@@ -14,7 +14,7 @@ import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate 
 import { PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { MAX_MANIFEST_OPERATIONS, OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -158,6 +158,24 @@ export function publishPersistedOperations(
       operationsResult.map((op) => [op.operationId, { hash: op.hash, operationNames: op.operationNames }]),
     );
 
+    // Check if adding new operations would exceed the manifest limit
+    const allExistingOperations = await operationsRepo.getAllPersistedOperationsForGraph();
+    const existingHashes = new Set(allExistingOperations.map((op) => op.hash));
+    const newOperationCount = req.operations.filter((op) => {
+      const hash = crypto.createHash('sha256').update(op.contents).digest('hex');
+      return !existingHashes.has(hash);
+    }).length;
+
+    if (allExistingOperations.length + newOperationCount > MAX_MANIFEST_OPERATIONS) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Operation limit exceeded: adding ${newOperationCount} new operations would bring the total to ${allExistingOperations.length + newOperationCount}, which exceeds the maximum of ${MAX_MANIFEST_OPERATIONS} operations per graph`,
+        },
+        operations: [],
+      };
+    }
+
     const processOperation = async (
       operation: PersistedOperation,
     ): Promise<{
@@ -202,6 +220,9 @@ export function publishPersistedOperations(
           version: 1,
           body: operation.contents,
         };
+        // Deprecated: Uploading individual operations to blob storage is deprecated.
+        // The router now downloads all operations at once via the PQL manifest, avoiding
+        // per-request CDN latency. This upload is kept for backward compatibility with older routers.
         try {
           await opts.blobStorage.putObject({
             key: path,
@@ -262,6 +283,20 @@ export function publishPersistedOperations(
     }
 
     await operationsRepo.updatePersistedOperations(clientId, userId, updatedOperations);
+
+    try {
+      await operationsRepo.generateAndUploadManifest({
+        organizationId,
+        blobStorage: opts.blobStorage,
+        logger,
+      });
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      logger.error(error, 'Failed to regenerate PQL manifest after publishing persisted operations', {
+        federatedGraphId: federatedGraph.id,
+        organizationId,
+      });
+    }
 
     return {
       response: {

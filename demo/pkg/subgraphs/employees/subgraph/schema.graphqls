@@ -170,6 +170,10 @@ type Employee implements Identifiable @key(fields: "id") {
   isAvailable: Boolean @external
   rootFieldThrowsError: String @goField(forceResolver: true)
   rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
+  # Abstract type fields for @requires testing with composite types
+  primaryWorkItem: EmployeeWorkItem
+  lastWorkReview: WorkReviewResult
+  workSetup: WorkSetup
 }
 
 type ErrorWrapper {
@@ -209,8 +213,70 @@ type SDK implements IProduct @key(fields: "upc") {
   unicode: String!
 }
 
+# Abstract types for @requires composite type testing
+
+interface EmployeeWorkItem {
+  name: String!
+  priority: Int!
+}
+
+type TechnicalWorkItem implements EmployeeWorkItem @shareable {
+  name: String!
+  priority: Int!
+  codeCount: Int!
+  handler: WorkItemHandler!
+  specs: TechnicalSpecs!
+}
+
+type ManagementWorkItem implements EmployeeWorkItem @shareable {
+  name: String!
+  priority: Int!
+  teamSize: String!
+  handler: WorkItemHandler!
+  specs: ManagementSpecs!
+}
+
+type WorkItemHandler @shareable {
+  name: String!
+  assignedItem: EmployeeWorkItem!
+}
+
+type TechnicalSpecs @shareable {
+  name: String!
+  complexity: Float!
+  metrics: WorkMetrics!
+}
+
+type ManagementSpecs @shareable {
+  name: String!
+  scope: Float!
+  metrics: WorkMetrics!
+}
+
+type WorkMetrics @shareable {
+  score: Float!
+  efficiency: Float!
+}
+
+union WorkReviewResult = WorkApproval | WorkRejection
+
+type WorkApproval @shareable {
+  comment: String!
+  approvedAt: String!
+}
+
+type WorkRejection @shareable {
+  reason: String!
+  rejectionCode: String!
+}
+
+type WorkSetup @shareable {
+  priority: String!
+  primaryItem: EmployeeWorkItem!
+}
+
 input FindEmployeeCriteria @oneOf {
   id: Int
-  department: Department
-  title: String
+  department: Department @cost(weight: 17)
+  title: String @cost(weight: -3) # totally made-up example for testing
 }

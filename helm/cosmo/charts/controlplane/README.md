@@ -68,6 +68,7 @@ WunderGraph Cosmo Controlplane
 | configuration.smtp.username | string | `""` | The username to use. Default is "". |
 | configuration.stripeSecretKey | string | `""` |  |
 | configuration.stripeWebhookSecret | string | `""` |  |
+| configuration.webhookProxyUrl | string | `""` |  |
 | configuration.webhookSecret | string | `""` |  |
 | configuration.webhookUrl | string | `""` |  |
 | deploymentStrategy | object | `{}` |  |

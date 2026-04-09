@@ -1,4 +1,5 @@
 export { S3BlobStorage } from './s3.js';
+export { DualBlobStorage } from './dual.js';
 
 export class BlobNotFoundError extends Error {
   constructor(message: string, cause?: Error) {
