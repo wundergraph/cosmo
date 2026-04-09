@@ -60,6 +60,16 @@ export function renameNamespace(
       throw new UnauthorizedError();
     }
 
+    const nameTaken = await namespaceRepo.byName(req.newName);
+    if (nameTaken) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'The new namespace name is already taken',
+        },
+      };
+    }
+
     await namespaceRepo.rename({
       ...req,
     });
