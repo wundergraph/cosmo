@@ -2254,6 +2254,7 @@ export class NormalizationFactory {
             interfaceField.node.type,
             fieldData.node.type,
             this.concreteTypeNamesByAbstractTypeName,
+            this.parentDefinitionDataByTypeName,
           )
         ) {
           hasErrors = true;

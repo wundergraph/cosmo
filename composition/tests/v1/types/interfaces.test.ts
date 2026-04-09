@@ -1061,6 +1061,51 @@ describe('Interface tests', () => {
         ),
       );
     });
+
+    test('that an interface implementing another interface is a valid covariant return type', () => {
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphAO],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          type Beagle implements Dog & Node {
+            id: ID!
+            name: String!
+          }
+
+          type Brittany implements Dog & Node {
+            id: ID!
+            name: String!
+          }
+
+          interface Dog implements Node {
+            id: ID!
+          }
+
+          interface Edge {
+            cursor: String!
+            node: Node!
+          }
+
+          interface Node {
+            id: ID!
+          }
+
+          type Pet implements Edge {
+            cursor: String!
+            node: Dog!
+          }
+
+          type Query {
+            pet: Pet!
+          }
+        `,
+        ),
+      );
+    });
   });
 });
 
@@ -1686,24 +1731,62 @@ const nbaaa: Subgraph = {
       name: String!
       sound(a: String!, b: Int, c: Float, d: Boolean): String!
     }
-      
+
     interface Pet implements Animal {
       age: Int!
       sound(a: Int, b: String!): String!
     }
-    
+
     extend interface Pet {
       price: Float
       name: String!
     }
-    
+
     type Cat implements Pet & Animal {
       isPurring: Boolean!
       sound(e: Int!): String!
     }
-    
+
     extend type Cat {
       name: String!
+    }
+  `),
+};
+
+const subgraphAO: Subgraph = {
+  name: 'subgraph-ao',
+  url: '',
+  definitions: parse(`
+    type Query {
+      pet: Pet!
+    }
+
+    interface Node {
+      id: ID!
+    }
+
+    type Pet implements Edge {
+      node: Dog!
+      cursor: String!
+    }
+
+    interface Dog implements Node {
+      id: ID!
+    }
+
+    type Beagle implements Dog & Node {
+      id: ID!
+      name: String!
+    }
+
+    type Brittany implements Dog & Node {
+      id: ID!
+      name: String!
+    }
+
+    interface Edge {
+      node: Node!
+      cursor: String!
     }
   `),
 };

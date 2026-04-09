@@ -624,15 +624,16 @@ export function isTypeValidImplementation(
   originalType: TypeNode,
   implementationType: TypeNode,
   concreteTypeNamesByAbstractTypeName: Map<TypeName, Set<TypeName>>,
+  parentDefinitionDataByTypeName?: Map<TypeName, ParentDefinitionData>,
 ): boolean {
   if (originalType.kind === Kind.NON_NULL_TYPE) {
     if (implementationType.kind !== Kind.NON_NULL_TYPE) {
       return false;
     }
-    return isTypeValidImplementation(originalType.type, implementationType.type, concreteTypeNamesByAbstractTypeName);
+    return isTypeValidImplementation(originalType.type, implementationType.type, concreteTypeNamesByAbstractTypeName, parentDefinitionDataByTypeName);
   }
   if (implementationType.kind === Kind.NON_NULL_TYPE) {
-    return isTypeValidImplementation(originalType, implementationType.type, concreteTypeNamesByAbstractTypeName);
+    return isTypeValidImplementation(originalType, implementationType.type, concreteTypeNamesByAbstractTypeName, parentDefinitionDataByTypeName);
   }
   switch (originalType.kind) {
     case Kind.NAMED_TYPE:
@@ -643,10 +644,21 @@ export function isTypeValidImplementation(
           return true;
         }
         const concreteTypes = concreteTypeNamesByAbstractTypeName.get(originalTypeName);
-        if (!concreteTypes) {
-          return false;
+        if (concreteTypes && concreteTypes.has(implementationTypeName)) {
+          return true;
         }
-        return concreteTypes.has(implementationTypeName);
+        // Check if the implementation type is an interface that implements the original interface
+        if (parentDefinitionDataByTypeName) {
+          const implementationData = parentDefinitionDataByTypeName.get(implementationTypeName);
+          if (
+            implementationData &&
+            implementationData.kind === Kind.INTERFACE_TYPE_DEFINITION &&
+            implementationData.implementedInterfaceTypeNames.has(originalTypeName)
+          ) {
+            return true;
+          }
+        }
+        return false;
       }
       return false;
     default:
@@ -655,6 +667,7 @@ export function isTypeValidImplementation(
           originalType.type,
           implementationType.type,
           concreteTypeNamesByAbstractTypeName,
+          parentDefinitionDataByTypeName,
         );
       }
       return false;
