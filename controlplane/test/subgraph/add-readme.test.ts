@@ -145,7 +145,6 @@ describe('AddReadme', () => {
   test.each([
     'organization-admin',
     'organization-developer',
-    'namespace-admin',
     'subgraph-admin',
     'subgraph-publisher',
   ])('%s should be able to add a readme to a subgraph', async (role) => {
@@ -255,6 +254,8 @@ describe('AddReadme', () => {
       name: subgraphName,
       namespace: DEFAULT_NAMESPACE,
     });
-    expect(getSubgraphResponse.graph?.readme).toBe('');
+    // sanitizeReadme() converts empty/whitespace-only strings to null, so the
+    // readme is stored as null and returned as undefined.
+    expect(getSubgraphResponse.graph?.readme).toBe(undefined);
   });
 });

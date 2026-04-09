@@ -3,12 +3,16 @@ import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vit
 import {
   afterAllSetup,
   beforeAllSetup,
-  createAPIKeyTestRBACEvaluator,
   createTestGroup,
   createTestRBACEvaluator,
-  genID,
+  genID
 } from '../../src/core/test-util.js';
-import { DEFAULT_NAMESPACE, createFederatedGraph, createSubgraph, SetupTest } from '../test-util.js';
+import {
+  createFederatedGraph,
+  createThenPublishSubgraph,
+  DEFAULT_NAMESPACE,
+  SetupTest
+} from '../test-util.js';
 
 let dbname = '';
 
@@ -57,15 +61,14 @@ describe('GetFederatedGraphById', () => {
     await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, ['team=A'], 'http://localhost:8080');
 
     const subgraphName = genID('subgraph');
-    await createSubgraph(client, subgraphName, 'http://localhost:4001');
-
-    // Need to publish the subgraph so it gets associated with the federated graph
-    await client.publishFederatedSubgraph({
-      name: subgraphName,
-      namespace: DEFAULT_NAMESPACE,
-      schema: 'type Query { hello: String }',
-      labels: [{ key: 'team', value: 'A' }],
-    });
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String }',
+      [{ key: 'team', value: 'A' }],
+      'http://localhost:4001',
+    );
 
     const graphByName = await client.getFederatedGraphByName({
       name: graphName,

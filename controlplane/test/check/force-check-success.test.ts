@@ -8,7 +8,7 @@ import {
   createTestRBACEvaluator,
   genID,
 } from '../../src/core/test-util.js';
-import { DEFAULT_NAMESPACE, createFederatedGraph, createSubgraph, SetupTest } from '../test-util.js';
+import { DEFAULT_NAMESPACE, createFederatedGraph, createThenPublishSubgraph, SetupTest } from '../test-util.js';
 
 let dbname = '';
 
@@ -46,13 +46,14 @@ describe('ForceCheckSuccess', () => {
     await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
 
     const subgraphName = genID('subgraph');
-    await createSubgraph(client, subgraphName, 'http://localhost:4001');
-
-    await client.publishFederatedSubgraph({
-      name: subgraphName,
-      namespace: DEFAULT_NAMESPACE,
-      schema: 'type Query { hello: String }',
-    });
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String }',
+      [],
+      'http://localhost:4001',
+    );
 
     const checkResp = await client.checkSubgraphSchema({
       subgraphName,
@@ -121,13 +122,14 @@ describe('ForceCheckSuccess', () => {
       await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
 
       const subgraphName = genID('subgraph');
-      await createSubgraph(client, subgraphName, 'http://localhost:4001');
-
-      await client.publishFederatedSubgraph({
-        name: subgraphName,
-        namespace: DEFAULT_NAMESPACE,
-        schema: 'type Query { hello: String }',
-      });
+      await createThenPublishSubgraph(
+        client,
+        subgraphName,
+        DEFAULT_NAMESPACE,
+        'type Query { hello: String }',
+        [],
+        'http://localhost:4001',
+      );
 
       const checkResp = await client.checkSubgraphSchema({
         subgraphName,
