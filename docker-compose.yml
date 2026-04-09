@@ -191,7 +191,7 @@ services:
     depends_on:
       rustfs_perms:
         condition: service_completed_successfully
-    command: "rustfs server /data"
+    command: 'rustfs server /data'
     environment:
       RUSTFS_CONSOLE_ENABLE: 'true'
       RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-admin}
@@ -351,6 +351,38 @@ services:
     volumes:
       - ./docker/redis/:/usr/local/etc/redis/
     restart: on-failure:1
+    profiles:
+      - dev
+
+  # Local OCI plugin registry for gRPC plugin development.
+  # No auth, plain HTTP. For `wgc router plugin publish` to work:
+  #
+  # 1. Trust the registry in the Docker daemon (needed for `docker login`).
+  #    OrbStack: edit ~/.orbstack/config/docker.json, then `orb restart docker`:
+  #      { "insecure-registries": ["host.docker.internal:5050"] }
+  #    Docker Desktop: Settings -> Docker Engine, merge the same key, Apply & Restart.
+  #
+  # 2. Create a buildx builder with insecure registry support (needed for push):
+  #      cat > /tmp/buildkitd.toml << 'EOF'
+  #      [registry."host.docker.internal:5050"]
+  #        http = true
+  #        insecure = true
+  #      EOF
+  #      docker buildx create --name local-registry --driver docker-container --config /tmp/buildkitd.toml --use
+  #
+  # 3. Set PLUGIN_REGISTRY_URL=host.docker.internal:5050 in cli/.env
+  #    (host.docker.internal is required because buildx runs inside a container)
+  #
+  # 4. For the router to pull plugins from this registry, set in router/.env:
+  #      PLUGINS_REGISTRY_URL=localhost:5050
+  #      PLUGINS_REGISTRY_INSECURE=true
+  #    (localhost here because the router runs on the host, not in a container)
+  plugin-registry:
+    image: registry:2
+    ports:
+      - '5050:5000'
+    networks:
+      - primary
     profiles:
       - dev
 
