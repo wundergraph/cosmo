@@ -685,10 +685,6 @@ func (rw *websocketResponseWriter) Error(data []byte) {
 	if err != nil {
 		rw.logger.Debug("Sending error message", zap.Error(err))
 	}
-	// Reference server sends complete after error for graphql-transport-ws
-	if rw.protocol.Subprotocol() == wsproto.GraphQLWSSubprotocol {
-		_ = rw.protocol.Complete(rw.id)
-	}
 }
 
 func (rw *websocketResponseWriter) Write(data []byte) (int, error) {

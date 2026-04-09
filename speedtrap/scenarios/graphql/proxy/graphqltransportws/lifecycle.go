@@ -298,18 +298,11 @@ var OneSubscriptionErrorDoesNotAffectAnother = speedtrap.Scenario{
 		require.NoError(s, b.Send(fmt.Sprintf(
 			`{"id":"%s","type":"next","payload":{"data":{"streamA":{"key":"err2"}}}}`, subID2)))
 
-		// Client receives error for "1", complete for "1", and next for "2"
-		// (unordered). Note: the complete after error contradicts the spec
-		// ("error terminates the operation and no further messages will be
-		// sent") but matches the graphql-ws reference implementation (v6.0.7).
-		// See https://github.com/enisdenjo/graphql-ws/issues/XXX.
+		// Client receives error for "1" and next for "2" (unordered).
 		idType := func(msg string) string { return ExtractID(msg) + ":" + ExtractType(msg) }
 		speedtrap.ReadSwitch(s, c.Messages(), idType,
 			speedtrap.Case("1:error", func(msg string) {
 				ja.Assertf(msg, `{"type":"error","id":"1","payload":[{"message":"sub1 failed"}]}`)
-			}),
-			speedtrap.Case("1:complete", func(msg string) {
-				ja.Assertf(msg, `{"type":"complete","id":"1"}`)
 			}),
 			speedtrap.Case("2:next", func(msg string) {
 				ja.Assertf(msg, `{"type":"next","id":"2","payload":{"data":{"streamA":{"key":"err2"}}}}`)
