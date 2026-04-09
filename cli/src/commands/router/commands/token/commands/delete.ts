@@ -1,9 +1,8 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import inquirer from 'inquirer';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
-import { getBaseHeaders } from '../../../../../core/config.js';
+import { deleteRouterToken } from '../../../../../core/router-token.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
@@ -27,28 +26,24 @@ export default (opts: BaseCommandOptions) => {
         return;
       }
     }
-    const resp = await opts.client.platform.deleteRouterToken(
-      {
-        tokenName: name,
-        fedGraphName: options.graphName,
-        namespace: options.namespace,
-      },
-      {
-        headers: getBaseHeaders(),
-      },
-    );
 
-    if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`A router token called '${name}' was deleted.`)));
-    } else {
+    const result = await deleteRouterToken({
+      client: opts.client,
+      tokenName: name,
+      graphName: options.graphName,
+      namespace: options.namespace,
+    });
+
+    if (result.error) {
       console.log(`Failed to delete router token ${pc.bold(name)}.`);
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
+      if (result.error.message) {
+        console.log(pc.red(pc.bold(result.error.message)));
       }
       process.exitCode = 1;
-      // eslint-disable-next-line no-useless-return
       return;
     }
+
+    console.log(pc.dim(pc.green(`A router token called '${name}' was deleted.`)));
   });
 
   return command;
