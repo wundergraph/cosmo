@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import {
   afterAllSetup,
@@ -115,53 +115,50 @@ describe('ForceCheckSuccess', () => {
     '%s should NOT be able to force a check to success',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+      onTestFinished(() => server.close());
 
-      try {
-        const graphName = genID('fedgraph');
-        await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
+      const graphName = genID('fedgraph');
+      await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
 
-        const subgraphName = genID('subgraph');
-        await createSubgraph(client, subgraphName, 'http://localhost:4001');
+      const subgraphName = genID('subgraph');
+      await createSubgraph(client, subgraphName, 'http://localhost:4001');
 
-        await client.publishFederatedSubgraph({
-          name: subgraphName,
-          namespace: DEFAULT_NAMESPACE,
-          schema: 'type Query { hello: String }',
-        });
+      await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        schema: 'type Query { hello: String }',
+      });
 
-        const checkResp = await client.checkSubgraphSchema({
-          subgraphName,
-          namespace: DEFAULT_NAMESPACE,
-          schema: Buffer.from('type Query { foo: String }'),
-          skipTrafficCheck: true,
-        });
-        expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        schema: Buffer.from('type Query { foo: String }'),
+        skipTrafficCheck: true,
+      });
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
 
-        const getGraphResponse = await client.getFederatedGraphByName({
-          name: graphName,
-          namespace: DEFAULT_NAMESPACE,
-        });
+      const getGraphResponse = await client.getFederatedGraphByName({
+        name: graphName,
+        namespace: DEFAULT_NAMESPACE,
+      });
 
-        authenticator.changeUserWithSuppliedContext({
-          ...users.adminAliceCompanyA,
-          rbac: createTestRBACEvaluator(
-            createTestGroup({
-              role,
-              resources: [getGraphResponse.graph!.targetId],
-            }),
-          ),
-        });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            resources: [getGraphResponse.graph!.targetId],
+          }),
+        ),
+      });
 
-        const response = await client.forceCheckSuccess({
-          graphName,
-          namespace: DEFAULT_NAMESPACE,
-          checkId: checkResp.checkId,
-        });
+      const response = await client.forceCheckSuccess({
+        graphName,
+        namespace: DEFAULT_NAMESPACE,
+        checkId: checkResp.checkId,
+      });
 
-        expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-      } finally {
-        await server.close();
-      }
+      expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     },
   );
 });
