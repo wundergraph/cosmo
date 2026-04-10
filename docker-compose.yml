@@ -176,8 +176,21 @@ services:
     profiles:
       - dev
 
+  # Due to previous use of minio and to ensure that data is correctly migrated, we need to
+  # ensure that rustfs is able to access it. Rustfs runs under a different user than minio, so this
+  # is a one-off run to fix permissions on the volume.
+  rustfs_perms:
+    image: alpine
+    user: root
+    volumes:
+      - minio:/data
+    command: chown -R 10001:10001 /data
+
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.0.0-alpha.92
+    depends_on:
+      rustfs_perms:
+        condition: service_completed_successfully
     command: "rustfs server /data"
     environment:
       RUSTFS_CONSOLE_ENABLE: 'true'
