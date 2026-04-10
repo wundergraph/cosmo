@@ -1726,7 +1726,7 @@ security:
 		require.ErrorContains(t, err, "value must be one of")
 	})
 
-	t.Run("default mode is unset and treated as enforce at runtime", func(t *testing.T) {
+	t.Run("mode is unset when omitted from YAML", func(t *testing.T) {
 		t.Parallel()
 
 		f := createTempFileFromFixture(t, `
