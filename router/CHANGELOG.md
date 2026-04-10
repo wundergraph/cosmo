@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.303.0](https://github.com/wundergraph/cosmo/compare/router@0.302.0...router@0.303.0) (2026-04-08)
+
+### Features
+
+* **router:** support input objects in Cost Control ([#2716](https://github.com/wundergraph/cosmo/issues/2716)) ([2ca7b28](https://github.com/wundergraph/cosmo/commit/2ca7b28087e6504c10e2ccc71c26f689e28fc985)) (@ysmolski)
+
+# [0.302.0](https://github.com/wundergraph/cosmo/compare/router@0.301.1...router@0.302.0) (2026-04-08)
+
+### Features
+
+* **router:** support fields with arguments and [@requires](https://github.com/requires) (Cosmo Connect) ([#2731](https://github.com/wundergraph/cosmo/issues/2731)) ([f90dc88](https://github.com/wundergraph/cosmo/commit/f90dc88c30a16d76de00dc325c2eefb1e203ff13)) (@dkorittki)
+
 ## [0.301.1](https://github.com/wundergraph/cosmo/compare/router@0.301.0...router@0.301.1) (2026-04-07)
 
 ### Bug Fixes
