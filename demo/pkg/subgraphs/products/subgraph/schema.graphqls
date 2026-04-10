@@ -16,6 +16,9 @@ directive @listSize(
   requireOneSlicingArgument: Boolean = true
 ) on FIELD_DEFINITION
 
+# To demonstrate that cost can be applied to the argument of a directive
+directive @expensiveOp(applied: Boolean = true @cost(weight: 44)) on FIELD_DEFINITION
+
 schema {
   query: Queries
   mutation: Mutation
