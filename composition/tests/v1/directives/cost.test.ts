@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   COST,
   costOnInterfaceFieldErrorMessage,
+  type FieldName,
   FIRST_ORDINAL,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
@@ -9,6 +10,7 @@ import {
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
+  type TypeName,
   undefinedRequiredArgumentsErrorMessage,
 } from '../../../src';
 import { COST_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
@@ -19,6 +21,16 @@ import {
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
+
+function fieldWeight(typeName: TypeName, fieldName: FieldName, overrides: Record<string, unknown> = {}) {
+  return {
+    typeName,
+    fieldName,
+    argumentWeights: new Map(),
+    directiveArgumentWeights: new Map(),
+    ...overrides,
+  };
+}
 
 const NORMALIZATION_SCHEMA_QUERY = `
   schema {
@@ -367,18 +379,8 @@ describe('@cost directive tests', () => {
         const costsA = subgraphConfigBySubgraphName.get('subgraph-cost-shared-a')?.costs;
         const costsB = subgraphConfigBySubgraphName.get('subgraph-cost-shared-b')?.costs;
 
-        expect(costsA?.fieldWeights.get('User.name')).toEqual({
-          typeName: 'User',
-          fieldName: 'name',
-          argumentWeights: new Map(),
-          weight: 10,
-        });
-        expect(costsB?.fieldWeights.get('User.name')).toEqual({
-          typeName: 'User',
-          fieldName: 'name',
-          argumentWeights: new Map(),
-          weight: 20,
-        });
+        expect(costsA?.fieldWeights.get('User.name')).toEqual(fieldWeight('User', 'name', { weight: 10 }));
+        expect(costsB?.fieldWeights.get('User.name')).toEqual(fieldWeight('User', 'name', { weight: 20 }));
       });
 
       test('that fields unique to each subgraph only appear in their respective cost configs', () => {
@@ -491,12 +493,7 @@ describe('@cost directive tests', () => {
         subgraphWithCostOnImplementingTypeField,
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(costs.fieldWeights.get('User.id')).toEqual({
-        typeName: 'User',
-        fieldName: 'id',
-        argumentWeights: new Map(),
-        weight: 5,
-      });
+      expect(costs.fieldWeights.get('User.id')).toEqual(fieldWeight('User', 'id', { weight: 5 }));
     });
   });
 
@@ -515,6 +512,66 @@ describe('@cost directive tests', () => {
       expect(costs.directiveArgumentWeights.size).toBeGreaterThan(0);
       expect(costs.directiveArgumentWeights.get('myDirective.arg1')).toBe(3);
       expect(costs.directiveArgumentWeights.get('myDirective.arg2')).toBe(7);
+    });
+
+    test('that a field with a cost-weighted directive records directiveArgumentWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnDirectiveArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
+      // Query.field has @myDirective(arg1: "hello"), and arg1 has @cost(weight: 5)
+      expect(costs.fieldWeights.get('Query.field')).toEqual(
+        fieldWeight('Query', 'field', { directiveArgumentWeights: new Map([['myDirective.arg1', 5]]) }),
+      );
+    });
+
+    test('that a field with a multi-arg cost-weighted directive stores per-argument weights', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithCostOnMultipleDirectiveArguments,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      // Query.field has @myDirective(arg1: "hello", arg2: 42), arg1 costs 3, arg2 costs 7
+      expect(costs.fieldWeights.get('Query.field')).toEqual(
+        fieldWeight('Query', 'field', {
+          directiveArgumentWeights: new Map([
+            ['myDirective.arg1', 3],
+            ['myDirective.arg2', 7],
+          ]),
+        }),
+      );
+    });
+
+    test('that a field with a directive whose argument is null does not record directiveArgumentWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        {
+          name: 'subgraph-null-directive-arg',
+          url: '',
+          definitions: parse(`
+          directive @myDirective(arg1: String @cost(weight: 5)) on FIELD_DEFINITION
+          type Query {
+            field: String! @myDirective(arg1: null)
+          }
+        `),
+        },
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(costs.fieldWeights.get('Query.field')).toBeUndefined();
+    });
+
+    test('that a directive argument with a default value records directiveArgumentWeights even without explicit value', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        {
+          name: 'subgraph-default-directive-arg',
+          url: '',
+          definitions: parse(`
+          directive @myDirective(arg1: Int = 1 @cost(weight: 5)) on FIELD_DEFINITION
+          type Query {
+            field: String! @myDirective
+          }
+        `),
+        },
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(costs.fieldWeights.get('Query.field')).toEqual(
+        fieldWeight('Query', 'field', { directiveArgumentWeights: new Map([['myDirective.arg1', 5]]) }),
+      );
     });
 
     test('that costs without directive argument weights has empty directiveArgumentWeights', () => {
@@ -551,31 +608,21 @@ describe('@cost directive tests', () => {
   describe('costs internal structure tests', () => {
     test('that @cost on a field populates fieldWeights correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnField, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.fieldWeights.get('Query.expensiveField')).toEqual({
-        typeName: 'Query',
-        fieldName: 'expensiveField',
-        argumentWeights: new Map(),
-        weight: 10,
-      });
+      expect(costs.fieldWeights.get('Query.expensiveField')).toEqual(
+        fieldWeight('Query', 'expensiveField', { weight: 10 }),
+      );
     });
 
     test('that @cost on a field argument populates fieldWeights.argumentWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.fieldWeights.get('Query.search')).toEqual({
-        typeName: 'Query',
-        fieldName: 'search',
-        argumentWeights: new Map([['query', 5]]),
-      });
+      expect(costs.fieldWeights.get('Query.search')).toEqual(
+        fieldWeight('Query', 'search', { argumentWeights: new Map([['query', 5]]) }),
+      );
     });
 
     test('that @cost on an input field populates fieldWeights correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnInputField, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.fieldWeights.get('SearchInput.query')).toEqual({
-        typeName: 'SearchInput',
-        fieldName: 'query',
-        argumentWeights: new Map(),
-        weight: 5,
-      });
+      expect(costs.fieldWeights.get('SearchInput.query')).toEqual(fieldWeight('SearchInput', 'query', { weight: 5 }));
     });
 
     test('that @cost on an object type populates typeWeights', () => {
@@ -610,12 +657,9 @@ describe('@cost directive tests', () => {
 
     test('that @cost on both a field and its argument populates a single FieldWeightConfiguration', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnFieldAndArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.fieldWeights.get('Query.search')).toEqual({
-        typeName: 'Query',
-        fieldName: 'search',
-        weight: 10,
-        argumentWeights: new Map([['query', 3]]),
-      });
+      expect(costs.fieldWeights.get('Query.search')).toEqual(
+        fieldWeight('Query', 'search', { weight: 10, argumentWeights: new Map([['query', 3]]) }),
+      );
     });
 
     test('that a subgraph without cost directives has empty costs', () => {
@@ -630,12 +674,7 @@ describe('@cost directive tests', () => {
   describe('extension type tests', () => {
     test('that @cost on a field in an extend type populates fieldWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnExtensionField, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.fieldWeights.get('User.name')).toEqual({
-        typeName: 'User',
-        fieldName: 'name',
-        argumentWeights: new Map(),
-        weight: 5,
-      });
+      expect(costs.fieldWeights.get('User.name')).toEqual(fieldWeight('User', 'name', { weight: 5 }));
     });
 
     test('that @cost on an extend type populates typeWeights', () => {

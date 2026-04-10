@@ -684,7 +684,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		return out
 	}
 	for _, fw := range costConfig.GetFieldWeights() {
-		w := &plan.FieldWeight{}
+		w := &plan.FieldCost{}
 		if fw.Weight != nil {
 			w.HasWeight = true
 			w.Weight = int(*fw.Weight)
@@ -693,6 +693,12 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			w.ArgumentWeights = make(map[string]int, len(args))
 			for k, v := range args {
 				w.ArgumentWeights[k] = int(v)
+			}
+		}
+		if dw := fw.GetDirectiveArgumentWeights(); len(dw) > 0 {
+			w.DirectiveArgumentWeights = make(map[string]int, len(dw))
+			for k, v := range dw {
+				w.DirectiveArgumentWeights[k] = int(v)
 			}
 		}
 		coordinate := plan.FieldCoordinate{TypeName: fw.GetTypeName(), FieldName: fw.GetFieldName()}

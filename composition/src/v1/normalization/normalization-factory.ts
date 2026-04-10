@@ -215,6 +215,7 @@ import {
   type ConfigureDescriptionData,
   type EntityData,
   type EntityInterfaceSubgraphData,
+  type DirectiveDefinitionData,
   type EnumDefinitionData,
   type EnumValueData,
   ExtensionType,
@@ -378,6 +379,7 @@ import {
   type FieldSetParentResult,
   type HandleCostDirectiveParams,
   type HandleListSizeDirectiveParams,
+  type RecordDirectiveWeightOnFieldParams,
   type HandleOverrideDirectiveParams,
   type HandleRequiresScopesDirectiveParams,
   type HandleSemanticNonNullDirectiveParams,
@@ -715,6 +717,9 @@ export class NormalizationFactory {
           listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(directiveCoords, printTypeNode(data.type)),
         );
       }
+      if (!isCost && !isListSize && isField) {
+        this.recordDirectiveWeightOnField({ data: data as FieldData, definitionData, directiveName, directiveNode });
+      }
       return errorMessages;
     }
     const definedArgumentNames = new Set<string>();
@@ -779,6 +784,9 @@ export class NormalizationFactory {
       this.handleCostDirective({ data, directiveCoords, directiveNode, errorMessages });
     } else if (isListSize && isField) {
       this.handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages });
+    }
+    if (!isCost && !isListSize && isField) {
+      this.recordDirectiveWeightOnField({ data: data as FieldData, definitionData, directiveName, directiveNode });
     }
     if (duplicateArgumentNames.size > 0) {
       errorMessages.push(duplicateDirectiveArgumentDefinitionsErrorMessage([...duplicateArgumentNames]));
@@ -2408,6 +2416,20 @@ export class NormalizationFactory {
     data.nullLevelsBySubgraphName.set(this.subgraphName, levels);
   }
 
+  getOrCreateFieldWeight(typeName: TypeName, fieldName: FieldName): FieldWeightConfiguration {
+    const fieldCoords = `${typeName}.${fieldName}`;
+    return getValueOrDefault(
+      this.costs.fieldWeights,
+      fieldCoords,
+      (): FieldWeightConfiguration => ({
+        typeName,
+        fieldName,
+        argumentWeights: new Map(),
+        directiveArgumentWeights: new Map(),
+      }),
+    );
+  }
+
   handleCostDirective({ data, directiveCoords, directiveNode, errorMessages }: HandleCostDirectiveParams) {
     const weightArg = directiveNode.arguments?.find((arg) => arg.name.value === WEIGHT);
     if (!weightArg || weightArg.value.kind !== Kind.INT) {
@@ -2431,16 +2453,7 @@ export class NormalizationFactory {
           errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
           break;
         }
-        const fieldCoords = `${typeName}.${data.name}`;
-        const fieldWeight = getValueOrDefault(
-          this.costs.fieldWeights,
-          fieldCoords,
-          (): FieldWeightConfiguration => ({
-            typeName,
-            fieldName: data.name,
-            argumentWeights: new Map(),
-          }),
-        );
+        const fieldWeight = this.getOrCreateFieldWeight(typeName, data.name);
         fieldWeight.weight = weightValue;
         break;
       }
@@ -2458,33 +2471,58 @@ export class NormalizationFactory {
             errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
             break;
           }
-          const parentFieldCoords = `${typeName}.${ivData.fieldName}`;
-          const fieldWeight = getValueOrDefault(
-            this.costs.fieldWeights,
-            parentFieldCoords,
-            (): FieldWeightConfiguration => ({
-              typeName,
-              fieldName: ivData.fieldName!,
-              argumentWeights: new Map(),
-            }),
-          );
+          const fieldWeight = this.getOrCreateFieldWeight(typeName, ivData.fieldName!);
           fieldWeight.argumentWeights.set(ivData.name, weightValue);
         } else {
           const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
-          const fieldCoords = `${typeName}.${ivData.name}`;
-          const fieldWeight = getValueOrDefault(
-            this.costs.fieldWeights,
-            fieldCoords,
-            (): FieldWeightConfiguration => ({
-              typeName,
-              fieldName: ivData.name,
-              argumentWeights: new Map(),
-            }),
-          );
+          const fieldWeight = this.getOrCreateFieldWeight(typeName, ivData.name);
           fieldWeight.weight = weightValue;
         }
         break;
       }
+    }
+  }
+
+  recordDirectiveWeightOnField({
+    data,
+    definitionData,
+    directiveName,
+    directiveNode,
+  }: RecordDirectiveWeightOnFieldParams) {
+    const typeName = data.renamedParentTypeName || data.originalParentTypeName;
+    const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
+    // Directive argument weights should only be on concrete type fields.
+    if (!parentTypeData || parentTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+      return;
+    }
+
+    // Determine which arguments are active (non-null) on this directive usage.
+    // An argument is active if it has an explicit non-null value or
+    // if it has a default value and was not explicitly set to null.
+    const explicitArgs = new Map<string, ConstValueNode>();
+    if (directiveNode.arguments) {
+      for (const arg of directiveNode.arguments) {
+        explicitArgs.set(arg.name.value, arg.value);
+      }
+    }
+
+    for (const [argName, argData] of definitionData.argumentTypeNodeByName) {
+      const coords = `${directiveName}.${argName}`;
+      const argWeight = this.costs.directiveArgumentWeights.get(coords);
+      if (argWeight === undefined) {
+        continue;
+      }
+      // Check if this argument is active (non-null) at the usage site
+      const explicitValue = explicitArgs.get(argName);
+      if (explicitValue) {
+        if (explicitValue.kind === Kind.NULL) {
+          continue;
+        }
+      } else if (!argData.defaultValue || argData.defaultValue.kind === Kind.NULL) {
+        continue;
+      }
+      const fieldWeight = this.getOrCreateFieldWeight(typeName, data.name);
+      fieldWeight.directiveArgumentWeights.set(coords, argWeight);
     }
   }
 

@@ -82,6 +82,13 @@ export type HandleListSizeDirectiveParams = {
   errorMessages: Array<string>;
 };
 
+export type RecordDirectiveWeightOnFieldParams = {
+  data: FieldData;
+  definitionData: DirectiveDefinitionData;
+  directiveName: string;
+  directiveNode: ConstDirectiveNode;
+};
+
 export type AddInputValueDataByNodeParams = {
   inputValueDataByName: Map<string, InputValueData>;
   isArgument: boolean;
