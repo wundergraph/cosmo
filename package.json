@@ -100,7 +100,8 @@
       "minimatch@5.x": "5.1.8",
       "minimatch@8.x": "8.0.6",
       "minimatch@9.x": "9.0.7",
-      "minimatch@10.x": "10.2.4"
+      "minimatch@10.x": "10.2.4",
+      "express-rate-limit": "8.2.2"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"
