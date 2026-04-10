@@ -184,14 +184,14 @@ services:
       - '10000:9000'
       - '10001:9001'
     volumes:
-      - rustfs:/data
+      - minio:/data
     networks:
       - primary
     restart: unless-stopped
     profiles:
       - default
     post_start:
-      - command: sh -c "sleep 10 && apk add minio-client && mcli alias set rustfs http://localhost:9000 ${S3_ACCESS_KEY_ID:-admin} ${S3_SECRET_ACCESS_KEY:-changeme} && mcli mb rustfs/cosmo"
+      - command: sh -c "sleep 10 && apk add minio-client && mcli alias set rustfs http://localhost:9000 ${S3_ACCESS_KEY_ID:-admin} ${S3_SECRET_ACCESS_KEY:-changeme} && mcli mb -p rustfs/cosmo"
         user: root
 
   nats:
@@ -474,4 +474,4 @@ volumes:
   clickhouse:
   prometheus:
   redis:
-  rustfs:
+  minio:
