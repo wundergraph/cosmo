@@ -1255,18 +1255,18 @@ listen_addr: "localhost:3007"
 		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
 version: "1"
 
-execution_config: 
-  file: 
+execution_config:
+  file:
     path: 'somePath'
 `)
 
 		override1 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
 version: "1"
 
-execution_config: 
-  storage: 
+execution_config:
+  storage:
     provider_id: 'id'
-    object_path: 'there' 
+    object_path: 'there'
 
 `)
 
@@ -1726,7 +1726,7 @@ security:
 		require.ErrorContains(t, err, "value must be one of")
 	})
 
-	t.Run("default mode is enforce", func(t *testing.T) {
+	t.Run("default mode is unset and treated as enforce at runtime", func(t *testing.T) {
 		t.Parallel()
 
 		f := createTempFileFromFixture(t, `
@@ -1740,7 +1740,10 @@ security:
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.Equal(t, ComplexityLimitsModeEnforce, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
+		// When mode is omitted, it remains unset. The runtime check in
+		// ValidateQueryComplexity only skips enforcement for explicit "measure",
+		// so unset is treated as enforce
+		require.Equal(t, ComplexityLimitsModeUnset, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
 	})
 
 	t.Run("measure mode is set correctly", func(t *testing.T) {
@@ -1761,7 +1764,7 @@ security:
 		require.Equal(t, ComplexityLimitsModeMeasure, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
 	})
 
-	t.Run("mode can be set from environment via YAML expansion", func(t *testing.T) {
+	t.Run("mode env var requires YAML expansion", func(t *testing.T) {
 		t.Setenv("SECURITY_COMPLEXITY_MODE", "measure")
 
 		f := createTempFileFromFixture(t, `
@@ -1769,14 +1772,13 @@ version: "1"
 
 security:
   complexity_limits:
-    mode: "${SECURITY_COMPLEXITY_MODE}"
     depth:
       enabled: true
       limit: 5
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.Equal(t, ComplexityLimitsModeMeasure, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
+		require.Equal(t, ComplexityLimitsModeUnset, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
 	})
 }
 

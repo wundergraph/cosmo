@@ -1404,10 +1404,5 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
 	}
 
-	// Default complexity limits mode to "enforce" for backward compatibility
-	if cfg.Config.SecurityConfiguration.ComplexityLimits != nil && cfg.Config.SecurityConfiguration.ComplexityLimits.Mode == ComplexityLimitsModeUnset {
-		cfg.Config.SecurityConfiguration.ComplexityLimits.Mode = ComplexityLimitsModeEnforce
-	}
-
 	return cfg, nil
 }
