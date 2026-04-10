@@ -184,10 +184,12 @@ services:
       - '10000:9000'
       - '10001:9001'
     volumes:
+      # We've previously used minio for S3 provider. Since rustfs is storage-compatible
+      # with minio, we want to reuse the existing minio volume so that existing data is kept.
       - minio:/data
+    restart: unless-stopped
     networks:
       - primary
-    restart: unless-stopped
     profiles:
       - default
     post_start:
@@ -473,5 +475,5 @@ volumes:
   postgres:
   clickhouse:
   prometheus:
-  redis:
   minio:
+  redis:
