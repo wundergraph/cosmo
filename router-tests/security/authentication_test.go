@@ -606,7 +606,7 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
 		})
 	})
-	t.Run("scopes required valid token from configured custom scope claim", func(t *testing.T) {
+	t.Run("scopes are read from custom scope claim", func(t *testing.T) {
 		t.Parallel()
 
 		authServer, err := jwks.NewServer(t)
@@ -647,12 +647,13 @@ func TestAuthentication(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
-			require.NoError(t, err)
-			defer res.Body.Close()
-			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, testutils.JwksName, res.Header.Get(xAuthenticatedByHeader))
-			data, err := io.ReadAll(res.Body)
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: header,
+				Query:  employeesQueryRequiringClaims,
+			})
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, testutils.JwksName, res.Response.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Response.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
 		})

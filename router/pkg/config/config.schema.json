@@ -2110,7 +2110,7 @@
             },
             "scope_claim": {
               "type": "string",
-              "description": "The JWT claim to use when reading scopes for authorization. The default value is 'scope'.",
+              "description": "The JWT claim to use when reading scopes for authorization. Only top level claims are supported. The default value is 'scope'.",
               "default": "scope",
               "minLength": 1
             },
