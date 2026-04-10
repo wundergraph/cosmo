@@ -328,7 +328,50 @@
             "fieldName": "isLeadAvailable",
             "selectionSet": "lead { isAvailable }"
           }
-        ]
+        ],
+        "costConfiguration": {
+          "fieldWeights": [
+            {
+              "typeName": "Query",
+              "fieldName": "employee",
+              "weight": 5,
+              "argumentWeights": {
+                "id": 2
+              }
+            },
+            {
+              "typeName": "FindEmployeeCriteria",
+              "fieldName": "department",
+              "weight": 17
+            },
+            {
+              "typeName": "FindEmployeeCriteria",
+              "fieldName": "title",
+              "weight": -3
+            }
+          ],
+          "listSizes": [
+            {
+              "typeName": "Query",
+              "fieldName": "employees",
+              "assumedSize": 50,
+              "requireOneSlicingArgument": true
+            },
+            {
+              "typeName": "Employee",
+              "fieldName": "role",
+              "assumedSize": 3,
+              "sizedFields": [
+                "departments"
+              ],
+              "requireOneSlicingArgument": true
+            }
+          ],
+          "typeWeights": {
+            "Department": 1,
+            "Cosmo": 5
+          }
+        }
       },
       {
         "kind": "GRAPHQL",
@@ -726,7 +769,38 @@
             "typeName": "Cosmo",
             "selectionSet": "upc"
           }
-        ]
+        ],
+        "costConfiguration": {
+          "listSizes": [
+            {
+              "typeName": "Query",
+              "fieldName": "productTypes",
+              "assumedSize": 50,
+              "requireOneSlicingArgument": true
+            },
+            {
+              "typeName": "Query",
+              "fieldName": "sharedThings",
+              "slicingArguments": [
+                "numOfA"
+              ],
+              "requireOneSlicingArgument": true
+            },
+            {
+              "typeName": "Query",
+              "fieldName": "slicedThings",
+              "slicingArguments": [
+                "first",
+                "last"
+              ],
+              "requireOneSlicingArgument": true
+            }
+          ],
+          "typeWeights": {
+            "FactContent": 10,
+            "Cosmo": 8
+          }
+        }
       },
       {
         "kind": "GRAPHQL",
@@ -2929,7 +3003,50 @@
                   "fieldName": "isLeadAvailable",
                   "selectionSet": "lead { isAvailable }"
                 }
-              ]
+              ],
+              "costConfiguration": {
+                "fieldWeights": [
+                  {
+                    "typeName": "Query",
+                    "fieldName": "employee",
+                    "weight": 5,
+                    "argumentWeights": {
+                      "id": 2
+                    }
+                  },
+                  {
+                    "typeName": "FindEmployeeCriteria",
+                    "fieldName": "department",
+                    "weight": 17
+                  },
+                  {
+                    "typeName": "FindEmployeeCriteria",
+                    "fieldName": "title",
+                    "weight": -3
+                  }
+                ],
+                "listSizes": [
+                  {
+                    "typeName": "Query",
+                    "fieldName": "employees",
+                    "assumedSize": 50,
+                    "requireOneSlicingArgument": true
+                  },
+                  {
+                    "typeName": "Employee",
+                    "fieldName": "role",
+                    "assumedSize": 3,
+                    "sizedFields": [
+                      "departments"
+                    ],
+                    "requireOneSlicingArgument": true
+                  }
+                ],
+                "typeWeights": {
+                  "Department": 1,
+                  "Cosmo": 5
+                }
+              }
             },
             {
               "kind": "GRAPHQL",
