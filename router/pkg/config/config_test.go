@@ -1764,22 +1764,6 @@ security:
 		require.Equal(t, ComplexityLimitsModeMeasure, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
 	})
 
-	t.Run("mode env var requires YAML expansion", func(t *testing.T) {
-		t.Setenv("SECURITY_COMPLEXITY_MODE", "measure")
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-security:
-  complexity_limits:
-    depth:
-      enabled: true
-      limit: 5
-`)
-		cfg, err := LoadConfig([]string{f})
-		require.NoError(t, err)
-		require.Equal(t, ComplexityLimitsModeUnset, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
-	})
 }
 
 func TestCostControlConfig(t *testing.T) {

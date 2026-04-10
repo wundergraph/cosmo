@@ -509,7 +509,7 @@ type ComplexityLimits struct {
 	// Mode controls complexity limits behavior:
 	// - "measure": calculates complexity without rejecting operations (for monitoring)
 	// - "enforce": calculates complexity and rejects operations exceeding limits
-	Mode ComplexityLimitsMode `yaml:"mode,omitempty" envDefault:"enforce" env:"SECURITY_COMPLEXITY_MODE"`
+	Mode ComplexityLimitsMode `yaml:"mode,omitempty"`
 
 	Depth            *ComplexityLimit `yaml:"depth"`
 	TotalFields      *ComplexityLimit `yaml:"total_fields"`
