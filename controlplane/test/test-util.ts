@@ -826,38 +826,6 @@ export async function createNamespace(client: Client<typeof PlatformService>, na
   return normalizedName;
 }
 
-export async function createSlackIntegration(
-  client: Client<typeof PlatformService>,
-  graphId: string,
-  name = 'test-slack',
-) {
-  const eventsMeta = [
-    {
-      eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-      meta: {
-        case: 'federatedGraphSchemaUpdated' as const,
-        value: {
-          graphIds: [graphId],
-        },
-      },
-    },
-  ];
-
-  const response = await client.createIntegration({
-    name,
-    code: 'test-code',
-    events: [OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]],
-    eventsMeta,
-    type: 'slack',
-  });
-  expect(response.response?.code).toBe(EnumStatusCode.OK);
-
-  const integrations = await client.getOrganizationIntegrations({});
-  const created = integrations.integrations.find((i) => i.name === name);
-  expect(created?.name).toBe(name);
-  return created!.id;
-}
-
 export async function createFeatureFlag(
   client: Client<typeof PlatformService>,
   name: string,
