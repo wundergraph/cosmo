@@ -3722,7 +3722,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -3761,7 +3761,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -3804,7 +3804,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -3842,7 +3842,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -3886,7 +3886,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -3945,7 +3945,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -3993,7 +3993,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4040,7 +4040,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4390,7 +4390,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4502,7 +4502,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4542,7 +4542,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4585,7 +4585,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4624,7 +4624,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4668,7 +4668,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4725,7 +4725,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4769,7 +4769,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("process.pid"))
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4810,7 +4810,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("process.pid"))
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -4867,7 +4867,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
+			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.43.0"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -4997,7 +4997,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
+			require.NotEmpty(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.43.0"))
 			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -5032,7 +5032,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
+			require.NotEmpty(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.43.0"))
 			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -5071,7 +5071,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
+			require.NotEmpty(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.43.0"))
 			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -5105,7 +5105,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
+			require.NotEmpty(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.43.0"))
 			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -5145,7 +5145,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.True(t, rs.HasValue("os.type"))
 			require.True(t, rs.HasValue("process.pid"))
 
-			require.NotEmpty(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.42.0"))
+			require.NotEmpty(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.43.0"))
 			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
 			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
 			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
@@ -5200,7 +5200,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -5246,7 +5246,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -5289,7 +5289,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -5609,7 +5609,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -5968,7 +5968,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -6314,7 +6314,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			)
 
 			asssertAttributesEqual(t, rs,
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -6751,7 +6751,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			asssertAttributesEqual(t, rs,
 				attribute.String("custom.resource", "value"),
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
@@ -7184,7 +7184,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			asssertAttributesEqual(t, rs,
 				attribute.String("custom.resource", "value"),
-				attribute.String("telemetry.sdk.version", "1.42.0"),
+				attribute.String("telemetry.sdk.version", "1.43.0"),
 				attribute.String("service.instance.id", "test-instance"),
 				attribute.String("telemetry.sdk.name", "opentelemetry"),
 				attribute.String("telemetry.sdk.language", "go"),
