@@ -22,7 +22,11 @@ type PlainField<F> =
       ? U extends Message<any>
         ? PlainMessage<U>[]
         : F
-      : F;
+      : F extends { [key: string]: Message<any> }
+        ? { [K in keyof F]: PlainMessage<F[K]> }
+        : F extends { value: Message<any>; case: string }
+          ? { value: PlainMessage<F['value']>; case: F['case'] }
+          : F;
 
 export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
 

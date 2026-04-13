@@ -9,7 +9,7 @@ import type { RouterOptions } from '../routes.js';
 import { enrichLogger, getLogger, handleError } from '../util.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeService>> {
-  const registrationInfoCache = lru<RegistrationInfo>(1000, 300_000);
+  const registrationInfoCache = lru<PlainMessage<RegistrationInfo>>(1000, 300_000);
   return {
     selfRegister: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
