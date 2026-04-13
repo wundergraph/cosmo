@@ -152,7 +152,7 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		retryRequest, cloneErr := cloneRequest(req)
 		if cloneErr != nil {
 			requestLogger.Error("Failed to clone request for retry", zap.Error(err))
-			return resp, err
+			return resp, cloneErr
 		}
 
 		// Retry the request
