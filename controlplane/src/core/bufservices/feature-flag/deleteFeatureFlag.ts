@@ -149,6 +149,7 @@ export function deleteFeatureFlag(
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
         federatedGraphs,
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       compositionErrors.push(...composition.compositionErrors);

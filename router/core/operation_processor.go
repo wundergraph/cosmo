@@ -1413,11 +1413,11 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 
 			// Validate that variables/arguments are correct for the requirements in listSize
 			var sliceReport operationreport.Report
-			costCalc.ValidateSliceArguments(opCtx.planConfig, opCtx.variables, &sliceReport)
+			costCalc.ValidateSliceArguments(opCtx.variables, &sliceReport)
 			if sliceReport.HasErrors() {
 				return &reportError{report: &sliceReport}
 			}
-			opCtx.costEstimated = costCalc.EstimateCost(opCtx.planConfig, opCtx.variables)
+			opCtx.costEstimated = costCalc.EstimateCost(opCtx.variables)
 			opCtx.costEstimatedSet = true
 		}
 	}
