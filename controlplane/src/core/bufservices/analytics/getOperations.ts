@@ -1,4 +1,4 @@
-import { create } from '@bufbuild/protobuf';
+import { create, type MessageInitShape } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -208,50 +208,43 @@ export function getOperations(
 
     const computedOperations: GetOperationsResponse_Operation[] = [];
     for (const operation of operations) {
-      // Build operation with only the relevant metric based on fetchBasedOn
-      const operationData: any = {
-        name: operation.operationName,
-        hash: operation.operationHash,
-        type:
-          operation.operationType === 'query'
-            ? GetOperationsResponse_OperationType.QUERY
-            : operation.operationType === 'mutation'
-              ? GetOperationsResponse_OperationType.MUTATION
-              : GetOperationsResponse_OperationType.SUBSCRIPTION,
-      };
-
-      // Only set content when includeContent is true
-      if (shouldIncludeContent) {
-        const operationContent = operationContentMap.get(operation.operationHash) || '';
-        operationData.content = operationContent;
-      }
-
-      // Only set hasDeprecatedFields when includeHasDeprecatedFields is true
-      // hasDeprecatedFields is set by getOperationsWithDeprecatedFields when deprecatedFields are provided
-      if (shouldIncludeHasDeprecatedFields) {
-        operationData.hasDeprecatedFields = operation.hasDeprecatedFields || false;
-      }
-
-      // Set only the relevant metric based on fetchBasedOn using oneof structure
+      // Determine the metric based on fetchBasedOn
+      let metric: MessageInitShape<typeof GetOperationsResponse_OperationSchema>['metric'];
       if (fetchBasedOn === OperationsFetchBasedOn.REQUESTS) {
-        operationData.metric = {
+        metric = {
           case: 'requestCount',
           value: BigInt(operation.requestCount || 0),
         };
       } else if (fetchBasedOn === OperationsFetchBasedOn.ERRORS) {
-        operationData.metric = {
+        metric = {
           case: 'errorPercentage',
           value: operation.errorPercentage || 0,
         };
       } else {
         // Default to latency
-        operationData.metric = {
+        metric = {
           case: 'latency',
           value: operation.latency,
         };
       }
 
-      computedOperations.push(create(GetOperationsResponse_OperationSchema, operationData));
+      computedOperations.push(
+        create(GetOperationsResponse_OperationSchema, {
+          name: operation.operationName,
+          hash: operation.operationHash,
+          type:
+            operation.operationType === 'query'
+              ? GetOperationsResponse_OperationType.QUERY
+              : operation.operationType === 'mutation'
+                ? GetOperationsResponse_OperationType.MUTATION
+                : GetOperationsResponse_OperationType.SUBSCRIPTION,
+          content: shouldIncludeContent ? operationContentMap.get(operation.operationHash) || '' : undefined,
+          hasDeprecatedFields: shouldIncludeHasDeprecatedFields
+            ? operation.hasDeprecatedFields || false
+            : undefined,
+          metric,
+        }),
+      );
     }
 
     let totalCount: number | undefined;

@@ -1,4 +1,4 @@
-import { fromJson, type JsonObject } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
@@ -7,9 +7,7 @@ import {
   GetWorkspaceResponse,
   WorkspaceNamespaceSchema,
   WorkspaceFederatedGraphSchema,
-  type WorkspaceSubgraph,
-  type WorkspaceNamespace,
-  type WorkspaceFederatedGraph,
+  WorkspaceSubgraphSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -44,11 +42,11 @@ export function getWorkspace(
     // Initialize the response
     const result = namespaces
       .map((ns) =>
-        fromJson(WorkspaceNamespaceSchema, {
+        create(WorkspaceNamespaceSchema, {
           id: ns.id,
           name: ns.name,
           graphs: [],
-        } as JsonObject),
+        }),
       )
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
@@ -86,19 +84,21 @@ export function getWorkspace(
 
         //
         namespace.graphs.push(
-          fromJson(WorkspaceFederatedGraphSchema, {
+          create(WorkspaceFederatedGraphSchema, {
             id: graph.id,
             targetId: graph.targetId,
             name: graph.name,
             isContract: !!graph.contract?.id,
             subgraphs: subgraphsForFederatedGraph
-              .map((subgraph) => ({
-                id: subgraph.id,
-                targetId: subgraph.targetId,
-                name: subgraph.name,
-              }))
+              .map((subgraph) =>
+                create(WorkspaceSubgraphSchema, {
+                  id: subgraph.id,
+                  targetId: subgraph.targetId,
+                  name: subgraph.name,
+                }),
+              )
               .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })),
-          } as JsonObject),
+          }),
         );
       }),
     );
