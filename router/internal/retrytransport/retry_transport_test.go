@@ -511,6 +511,7 @@ func TestOnRetryCallbackInvoked(t *testing.T) {
 }
 
 func TestRetryOn429WithDelaySeconds(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 2
@@ -574,6 +575,7 @@ func TestRetryOn429WithDelaySeconds(t *testing.T) {
 }
 
 func TestRetryOn429WithDelaySecondsLargerThanMaxDuration(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 2
@@ -638,6 +640,7 @@ func TestRetryOn429WithDelaySecondsLargerThanMaxDuration(t *testing.T) {
 }
 
 func TestRetryOn429WithoutRetryAfter(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 2
@@ -684,6 +687,7 @@ func TestRetryOn429WithoutRetryAfter(t *testing.T) {
 }
 
 func TestRetryOn429WithHTTPDate(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 2
@@ -751,6 +755,7 @@ func TestRetryOn429WithHTTPDate(t *testing.T) {
 }
 
 func TestRetryOn429WithInvalidRetryAfterHeader(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 2
@@ -848,6 +853,7 @@ func TestRetryOn429WithNegativeDelaySeconds(t *testing.T) {
 }
 
 func TestRetryMixed429AndOtherErrors(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 4
@@ -935,6 +941,7 @@ func TestRetryMixed429AndOtherErrors(t *testing.T) {
 }
 
 func TestNoRetryOn429WhenShouldRetryReturnsFalse(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 
@@ -984,6 +991,7 @@ func TestNoRetryOn429WhenShouldRetryReturnsFalse(t *testing.T) {
 
 // Test unit functions directly
 func TestParseRetryAfterHeader(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		header   string
@@ -1028,6 +1036,7 @@ func TestParseRetryAfterHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := parseRetryAfterHeader(zap.NewNop(), tt.header)
 			if tt.name == "HTTP date in future" {
 				// For HTTP date tests, allow reasonable tolerance for timing variations
@@ -1041,6 +1050,7 @@ func TestParseRetryAfterHeader(t *testing.T) {
 }
 
 func TestShouldUseRetryAfter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		resp        *http.Response
@@ -1129,6 +1139,7 @@ func TestShouldUseRetryAfter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			maxDuration := defaultMaxDuration
 			if tt.maxDuration > 0 {
 				maxDuration = tt.maxDuration

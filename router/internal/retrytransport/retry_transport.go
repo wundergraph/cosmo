@@ -149,14 +149,14 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		rt.drainBody(resp, requestLogger)
 
 		// Clone the request as it is not safe the reuse the original request after RoundTrip
-		r, err := cloneRequest(req)
-		if err != nil {
+		retryRequest, cloneErr := cloneRequest(req)
+		if cloneErr != nil {
 			requestLogger.Error("Failed to clone request for retry", zap.Error(err))
 			return resp, err
 		}
 
 		// Retry the request
-		resp, err = rt.RoundTripper.RoundTrip(r)
+		resp, err = rt.RoundTripper.RoundTrip(retryRequest)
 
 		// Short circuit if the request was successful
 		if err == nil && isResponseOK(resp) {
