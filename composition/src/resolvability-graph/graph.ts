@@ -339,7 +339,7 @@ export class Graph {
   validateSharedRootFieldEntities({ rootFieldData, walker }: ValidateEntitiesParams): ValidationResult {
     const resolvedPaths = new Set<SelectionPath>();
     for (const [pathFromRoot, entityNodeNames] of walker.entityNodeNamesByPath) {
-      if (walker.unresolvablePaths.size < 0) {
+      if (walker.unresolvablePaths.size < 1) {
         return {
           success: true,
         };
