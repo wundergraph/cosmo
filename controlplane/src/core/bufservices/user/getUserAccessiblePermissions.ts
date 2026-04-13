@@ -26,7 +26,7 @@ export function getUserAccessiblePermissions(
     if (!authContext.rbac.isOrganizationAdmin) {
       return {
         response: {
-          code: EnumStatusCode.OK,
+          code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
         },
         permissions: [],
       };
