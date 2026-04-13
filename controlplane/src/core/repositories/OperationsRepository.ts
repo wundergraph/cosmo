@@ -297,7 +297,7 @@ export class OperationsRepository {
   }
 
   public createOperationOverrides(data: {
-    changes: OverrideChange[];
+    changes: Pick<OverrideChange, 'changeType' | 'path'>[];
     namespaceId: string;
     operationHash: string;
     operationName: string;
@@ -331,7 +331,11 @@ export class OperationsRepository {
       .returning();
   }
 
-  public removeOperationOverrides(data: { operationHash: string; namespaceId: string; changes: OverrideChange[] }) {
+  public removeOperationOverrides(data: {
+    operationHash: string;
+    namespaceId: string;
+    changes: Pick<OverrideChange, 'changeType' | 'path'>[];
+  }) {
     return this.db.transaction(async (tx) => {
       const affectedRows = [];
       for (const change of data.changes) {

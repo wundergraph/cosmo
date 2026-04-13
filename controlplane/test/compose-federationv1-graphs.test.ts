@@ -114,12 +114,12 @@ describe('ComposeFederationV1Graphs', (ctx) => {
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = (await client.publishFederatedSubgraph({
+    publishResp = await client.publishFederatedSubgraph({
       name: 'inventory',
       namespace: 'default',
       schema: inventorySchema,
-    })) as any;
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    });
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 
     const graph = await client.getFederatedGraphByName({
       name: federatedGraphName,

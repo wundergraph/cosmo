@@ -11,7 +11,7 @@
  * is safe for local modules. Value imports from npm packages are fine.
  */
 import { randomUUID } from 'node:crypto';
-import { create, fromJson, toJson } from '@bufbuild/protobuf';
+import { create, fromJson, toJson, type JsonValue } from '@bufbuild/protobuf';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   federateSubgraphsContract,
@@ -139,7 +139,7 @@ function serializeComposedGraphArtifact(
   const shouldIncludeClientSchema = result.success ? (result.shouldIncludeClientSchema ?? false) : false;
   const fieldConfigurations = result.success ? result.fieldConfigurations : [];
 
-  let routerExecutionConfigJson: any | undefined;
+  let routerExecutionConfigJson: JsonValue | undefined;
   if (includeRouterExecutionConfig && result.success && composedSchema) {
     const routerSubgraphs = subgraphDTOsToRouterSubgraphs(organizationId, subgraphs, result);
     const routerExecutionConfig = buildRouterConfig({

@@ -11,6 +11,7 @@ import {
   Unit,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
+import type { PlainMessage } from '../../../types/index.js';
 import {
   BaseFilters,
   ColumnMetaData,
@@ -795,7 +796,7 @@ export class AnalyticsRequestViewRepository {
     const filters = buildAnalyticsViewFilters(result[0], columnFilters);
 
     const rows = result.map((row) => {
-      const viewRow: Record<string, any> = {};
+      const viewRow: Record<string, PlainMessage<AnalyticsViewRowValue>> = {};
 
       /**
        * JSON to protobuf conversion

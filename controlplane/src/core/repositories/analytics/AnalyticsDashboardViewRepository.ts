@@ -8,6 +8,7 @@ import { ClickHouseClient } from '../../clickhouse/index.js';
 import {
   DateRange,
   FederatedGraphRequestRateResult,
+  PlainMessage,
   SubgraphDTO,
   SubgraphLatencyResult,
   SubgraphRequestRateResult,
@@ -314,7 +315,7 @@ export class AnalyticsDashboardViewRepository {
     subgraphs: SubgraphDTO[],
     rangeInHours: number,
   ) {
-    const metrics: any[] = [];
+    const metrics: PlainMessage<SubgraphMetrics>[] = [];
 
     if (subgraphs.length === 0) {
       return metrics;
@@ -328,7 +329,7 @@ export class AnalyticsDashboardViewRepository {
     for (const subgraph of subgraphs) {
       const rate = requestRates.find((r) => r.subgraphID === subgraph.id);
       const lat = latency.find((l) => l.subgraphID === subgraph.id);
-      const metric: any = {
+      const metric: PlainMessage<SubgraphMetrics> = {
         subgraphID: subgraph.id,
         requestRate: 0,
         errorRate: 0,

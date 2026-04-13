@@ -42,7 +42,7 @@ describe('Subgraph', (ctx) => {
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
 
-    let resp = await client.createFederatedSubgraph({
+    const resp = await client.createFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       labels: [label],
@@ -51,13 +51,13 @@ describe('Subgraph', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = (await client.publishFederatedSubgraph({
+    const publishResp = await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: 'type Query { hello: String! }',
-    })) as any;
+    });
 
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
   });
 
   test('Should create a subgraph when subgraph did not exist before on publish', async (testContext) => {

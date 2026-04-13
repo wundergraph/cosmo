@@ -9,7 +9,7 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { availableParallelism } from 'node:os';
-import { fromJson } from '@bufbuild/protobuf';
+import { fromJson, type JsonValue } from '@bufbuild/protobuf';
 import { Warning } from '@wundergraph/composition';
 import { RouterConfigSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import type { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
@@ -105,7 +105,7 @@ export function deserializeComposedGraphArtifact(
   };
 }
 
-export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: any) {
+export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: JsonValue) {
   if (!routerExecutionConfigJson) {
     return;
   }

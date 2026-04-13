@@ -248,7 +248,7 @@ describe('Graph Pruning Tests', (ctx) => {
     });
     expect(createFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
 
-    let resp = await client.createFederatedSubgraph({
+    const resp = await client.createFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       labels: [label],
@@ -257,13 +257,13 @@ describe('Graph Pruning Tests', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = (await client.publishFederatedSubgraph({
+    const publishResp = await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: initSchema,
-    })) as any;
+    });
 
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 
     const response = await client.enableGraphPruning({
       enableGraphPruning: true,
@@ -409,7 +409,7 @@ describe('Graph Pruning Tests', (ctx) => {
     });
     expect(createFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
 
-    let resp = await client.createFederatedSubgraph({
+    const resp = await client.createFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       labels: [label],
@@ -418,13 +418,13 @@ describe('Graph Pruning Tests', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = (await client.publishFederatedSubgraph({
+    const initPublishResp = await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
       schema: initSchema,
-    })) as any;
+    });
 
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(initPublishResp.response?.code).toBe(EnumStatusCode.OK);
     const response = await client.enableGraphPruning({
       enableGraphPruning: true,
       namespace: 'default',

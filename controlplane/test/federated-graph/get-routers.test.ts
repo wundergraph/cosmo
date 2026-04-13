@@ -46,7 +46,7 @@ describe('GetRouters', () => {
     await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
 
     // Mock clickhouse to return empty router list
-    (chClient.queryPromise as any).mockResolvedValue([]);
+    vi.mocked(chClient.queryPromise).mockResolvedValue([]);
 
     const response = await client.getRouters({
       fedGraphName: graphName,
@@ -95,7 +95,7 @@ describe('GetRouters', () => {
     await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
 
     // Mock clickhouse to return some routers
-    (chClient.queryPromise as any).mockResolvedValue([
+    vi.mocked(chClient.queryPromise).mockResolvedValue([
       {
         hostname: 'router-1',
         clusterName: 'test-cluster',
@@ -134,7 +134,7 @@ describe('GetRouters', () => {
       });
       expect(getGraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
-      (chClient.queryPromise as any).mockResolvedValue([]);
+      vi.mocked(chClient.queryPromise).mockResolvedValue([]);
 
       authenticator.changeUserWithSuppliedContext({
         ...users.adminAliceCompanyA,
@@ -175,7 +175,7 @@ describe('GetRouters', () => {
       });
       expect(otherGraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
-      (chClient.queryPromise as any).mockResolvedValue([]);
+      vi.mocked(chClient.queryPromise).mockResolvedValue([]);
 
       // Scope the role only to the OTHER graph, not the target
       authenticator.changeUserWithSuppliedContext({

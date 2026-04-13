@@ -4,6 +4,7 @@ import { NodeService, RegistrationInfo, SelfRegisterResponse } from '@wundergrap
 import { lru } from 'tiny-lru';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import type { PlainMessage } from '../../types/index.js';
 import type { RouterOptions } from '../routes.js';
 import { enrichLogger, getLogger, handleError } from '../util.js';
 
@@ -48,7 +49,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           organizationID: authContext.organizationId,
         });
 
-        const registrationInfo: any = {
+        const registrationInfo: PlainMessage<RegistrationInfo> = {
           accountLimits: {
             traceSamplingRate: (features['trace-sampling-rate'] as number) ?? 0.1,
           },

@@ -68,12 +68,12 @@ describe('ComposeFederationV2Graphs', (ctx) => {
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = (await client.publishFederatedSubgraph({
+    let publishResp = await client.publishFederatedSubgraph({
       name: 'pandas',
       namespace: 'default',
       schema: pandasSchema,
-    })) as any;
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    });
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 
     resp = await client.createFederatedSubgraph({
       name: 'products',
@@ -83,12 +83,12 @@ describe('ComposeFederationV2Graphs', (ctx) => {
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = (await client.publishFederatedSubgraph({
+    publishResp = await client.publishFederatedSubgraph({
       name: 'products',
       namespace: 'default',
       schema: productsSchema,
-    })) as any;
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    });
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 
     resp = await client.createFederatedSubgraph({
       name: 'reviews',
@@ -98,12 +98,12 @@ describe('ComposeFederationV2Graphs', (ctx) => {
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = (await client.publishFederatedSubgraph({
+    publishResp = await client.publishFederatedSubgraph({
       name: 'reviews',
       namespace: 'default',
       schema: reviewsSchema,
-    })) as any;
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    });
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 
     resp = await client.createFederatedSubgraph({
       name: 'users',
@@ -113,12 +113,12 @@ describe('ComposeFederationV2Graphs', (ctx) => {
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = (await client.publishFederatedSubgraph({
+    publishResp = await client.publishFederatedSubgraph({
       name: 'users',
       namespace: 'default',
       schema: usersSchema,
-    })) as any;
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    });
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
 
     const graph = await client.getFederatedGraphByName({
       name: federatedGraphName,

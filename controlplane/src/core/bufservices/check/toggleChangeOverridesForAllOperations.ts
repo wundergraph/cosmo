@@ -79,7 +79,7 @@ export function toggleChangeOverridesForAllOperations(
             namespaceId: graph.namespaceId,
             operationHash: affectedOperation.hash,
             operationName: affectedOperation.name,
-            changes: impactingChanges as any,
+            changes: impactingChanges,
             actorId: authContext.userId,
           });
           affectedRows.push(...res);
@@ -87,7 +87,7 @@ export function toggleChangeOverridesForAllOperations(
           const res = await operationsRepo.removeOperationOverrides({
             operationHash: affectedOperation.hash,
             namespaceId: graph.namespaceId,
-            changes: impactingChanges as any,
+            changes: impactingChanges,
           });
           affectedRows.push(...res);
         }

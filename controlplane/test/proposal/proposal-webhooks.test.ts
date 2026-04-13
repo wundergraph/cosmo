@@ -1,6 +1,11 @@
+import { Client } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import { ProposalNamingConvention, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  PlatformService,
+  ProposalNamingConvention,
+  ProposalOrigin,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { addMinutes, formatISO, subDays } from 'date-fns';
 import { http, HttpResponse } from 'msw';
@@ -8,6 +13,7 @@ import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
+import type { PlainMessage } from '../../src/types/index.js';
 import {
   createFederatedGraph,
   createThenPublishSubgraph,
@@ -29,7 +35,7 @@ vi.mock('../../src/core/clickhouse/index.js', () => {
 });
 
 // Helper function to enable proposals for namespace
-async function enableProposalsForNamespace(client: any, namespace = DEFAULT_NAMESPACE) {
+async function enableProposalsForNamespace(client: Client<typeof PlatformService>, namespace = DEFAULT_NAMESPACE) {
   const enableResponse = await client.enableProposalsForNamespace({
     namespace,
     enableProposals: true,
@@ -42,17 +48,17 @@ describe('Schema updated webhook tests', () => {
   let chClient: ClickHouseClient;
 
   // Store captured webhook payloads
-  let capturedWebhooks: Array<{ url: string; payload: any }> = [];
+  let capturedWebhooks: Array<{ url: string; payload: Record<string, any> }> = [];
 
   // Setup msw mock server to capture webhook calls
   const mockServer = setupServer(
     http.post('http://webhook-fedgraph1.test', async ({ request }) => {
-      const payload = await request.json();
+      const payload = (await request.json()) as Record<string, any>;
       capturedWebhooks.push({ url: 'http://webhook-fedgraph1.test', payload });
       return HttpResponse.json({ success: true });
     }),
     http.post('http://webhook-fedgraph2.test', async ({ request }) => {
-      const payload = await request.json();
+      const payload = (await request.json()) as Record<string, any>;
       capturedWebhooks.push({ url: 'http://webhook-fedgraph2.test', payload });
       return HttpResponse.json({ success: true });
     }),
@@ -159,7 +165,7 @@ describe('Schema updated webhook tests', () => {
     const fedGraph2Id = fedGraph2Res.graph!.id;
 
     // Create webhook configs for each federated graph with different endpoints
-    const eventsMeta1: any[] = [
+    const eventsMeta1: PlainMessage<EventMeta>[] = [
       {
         eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
         meta: {
@@ -190,7 +196,7 @@ describe('Schema updated webhook tests', () => {
     });
     expect(webhook1Res.response?.code).toBe(EnumStatusCode.OK);
 
-    const eventsMeta2: any[] = [
+    const eventsMeta2: PlainMessage<EventMeta>[] = [
       {
         eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
         meta: {
