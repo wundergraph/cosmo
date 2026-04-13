@@ -148,13 +148,15 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		// drain the previous response before retrying
 		rt.drainBody(resp, requestLogger)
 
-		if err := cloneRequestBody(req); err != nil {
-			requestLogger.Error("Failed to restore request body for retry", zap.Error(err))
+		// Clone the request as it is not safe the reuse the original request after RoundTrip
+		r, err := cloneRequest(req)
+		if err != nil {
+			requestLogger.Error("Failed to clone request for retry", zap.Error(err))
 			return resp, err
 		}
 
 		// Retry the request
-		resp, err = rt.RoundTripper.RoundTrip(req)
+		resp, err = rt.RoundTripper.RoundTrip(r)
 
 		// Short circuit if the request was successful
 		if err == nil && isResponseOK(resp) {
@@ -186,25 +188,30 @@ func (rt *RetryHTTPTransport) drainBody(resp *http.Response, logger *zap.Logger)
 	}
 }
 
-// cloneRequestBody restores the request body for the retry. The body was consumed by the
-// previous attempt (otelhttp v0.67.0 clones the request per RoundTrip,
-// but the clone's body derives from the original which is at EOF).
-func cloneRequestBody(req *http.Request) error {
+// cloneRequest clones the request and returns a new request with the same context.
+// Reusing a request after RoundTrip is possible but not recommended as it is not safe.
+// Other clients that implement retry logic will clone the request and manually rewind
+// the body. Rewinding the body is generally only done by the standard library when
+// the reader is known to the net/http package. If any round tripper implementation
+// wraps the request body, it will not be rewound.
+func cloneRequest(req *http.Request) (*http.Request, error) {
+	r := req.Clone(req.Context())
+
 	if req.Body == nil || req.Body == http.NoBody {
-		return nil
+		return r, nil
 	}
 
 	if req.GetBody == nil {
-		return nil
+		return r, nil
 	}
 
 	clonedBody, err := req.GetBody()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	req.Body = clonedBody
-	return nil
+	r.Body = clonedBody
+	return r, nil
 }
 
 func isResponseOK(resp *http.Response) bool {
