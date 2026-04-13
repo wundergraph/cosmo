@@ -142,42 +142,40 @@ describe('AddReadme', () => {
     expect(addReadmeResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
   });
 
-  test.each([
-    'organization-admin',
-    'organization-developer',
-    'subgraph-admin',
-    'subgraph-publisher',
-  ])('%s should be able to add a readme to a subgraph', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname });
-    onTestFinished(() => server.close());
+  test.each(['organization-admin', 'organization-developer', 'subgraph-admin', 'subgraph-publisher'])(
+    '%s should be able to add a readme to a subgraph',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
-    const subgraphName = genID('subgraph');
-    await createSubgraph(client, subgraphName, 'http://localhost:4001');
+      const subgraphName = genID('subgraph');
+      await createSubgraph(client, subgraphName, 'http://localhost:4001');
 
-    const getSubgraphResponse = await client.getSubgraphByName({
-      name: subgraphName,
-      namespace: DEFAULT_NAMESPACE,
-    });
-    expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+      const getSubgraphResponse = await client.getSubgraphByName({
+        name: subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+      });
+      expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(
-        createTestGroup({
-          role,
-          resources: [getSubgraphResponse.graph!.targetId],
-        }),
-      ),
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            resources: [getSubgraphResponse.graph!.targetId],
+          }),
+        ),
+      });
 
-    const addReadmeResponse = await client.addReadme({
-      targetName: subgraphName,
-      namespace: DEFAULT_NAMESPACE,
-      readme: 'Test readme',
-    });
+      const addReadmeResponse = await client.addReadme({
+        targetName: subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        readme: 'Test readme',
+      });
 
-    expect(addReadmeResponse.response?.code).toBe(EnumStatusCode.OK);
-  });
+      expect(addReadmeResponse.response?.code).toBe(EnumStatusCode.OK);
+    },
+  );
 
   test.each(['organization-viewer', 'namespace-viewer', 'subgraph-viewer', 'graph-viewer'])(
     '%s should NOT be able to add a readme',

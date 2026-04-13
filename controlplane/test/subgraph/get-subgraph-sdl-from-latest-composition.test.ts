@@ -155,51 +155,48 @@ describe('GetSubgraphSDLFromLatestComposition', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
   });
 
-  test.each([
-    'namespace-admin',
-    'namespace-viewer',
-    'graph-admin',
-    'graph-viewer',
-    'organization-apikey-manager',
-  ])('%s should not be able to get SDL from latest composition', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname });
-    onTestFinished(() => server.close());
+  test.each(['namespace-admin', 'namespace-viewer', 'graph-admin', 'graph-viewer', 'organization-apikey-manager'])(
+    '%s should not be able to get SDL from latest composition',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
-    const graphName = genID('fedgraph');
-    await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
+      const graphName = genID('fedgraph');
+      await createFederatedGraph(client, graphName, DEFAULT_NAMESPACE, [], 'http://localhost:8080');
 
-    const subgraphName = genID('subgraph');
-    await createThenPublishSubgraph(
-      client,
-      subgraphName,
-      DEFAULT_NAMESPACE,
-      'type Query { hello: String }',
-      [],
-      'http://localhost:4001',
-    );
+      const subgraphName = genID('subgraph');
+      await createThenPublishSubgraph(
+        client,
+        subgraphName,
+        DEFAULT_NAMESPACE,
+        'type Query { hello: String }',
+        [],
+        'http://localhost:4001',
+      );
 
-    const getSubgraphResponse = await client.getSubgraphByName({
-      name: subgraphName,
-      namespace: DEFAULT_NAMESPACE,
-    });
-    expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+      const getSubgraphResponse = await client.getSubgraphByName({
+        name: subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+      });
+      expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(
-        createTestGroup({
-          role,
-          resources: [getSubgraphResponse.graph!.targetId],
-        }),
-      ),
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            resources: [getSubgraphResponse.graph!.targetId],
+          }),
+        ),
+      });
 
-    const response = await client.getSubgraphSDLFromLatestComposition({
-      name: subgraphName,
-      fedGraphName: graphName,
-      namespace: DEFAULT_NAMESPACE,
-    });
+      const response = await client.getSubgraphSDLFromLatestComposition({
+        name: subgraphName,
+        fedGraphName: graphName,
+        namespace: DEFAULT_NAMESPACE,
+      });
 
-    expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-  });
+      expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+    },
+  );
 });

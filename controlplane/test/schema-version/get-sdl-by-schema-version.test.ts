@@ -8,7 +8,13 @@ import {
   createTestRBACEvaluator,
   genID,
 } from '../../src/core/test-util.js';
-import { DEFAULT_NAMESPACE, createFederatedGraph, createSubgraph, createThenPublishSubgraph, SetupTest } from '../test-util.js';
+import {
+  DEFAULT_NAMESPACE,
+  createFederatedGraph,
+  createSubgraph,
+  createThenPublishSubgraph,
+  SetupTest,
+} from '../test-util.js';
 
 let dbname = '';
 
