@@ -1,7 +1,7 @@
 import type { ConnectRouterOptions } from '@connectrpc/connect';
 import { ConnectRouter } from '@connectrpc/connect';
-import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import { App } from 'octokit';
@@ -56,7 +56,7 @@ export interface RouterOptions {
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 80_000,
   jsonOptions: {
-    emitDefaultValues: true,
+    alwaysEmitImplicit: true,
   },
 };
 

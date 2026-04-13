@@ -1,16 +1,17 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetProposalRequest,
   GetProposalResponse,
-  Proposal,
+  ProposalSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, fromProposalOriginEnum, getLogger, handleError } from '../../util.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getProposal(
   opts: RouterOptions,
@@ -72,7 +73,7 @@ export function getProposal(
       response: {
         code: EnumStatusCode.OK,
       },
-      proposal: new Proposal({
+      proposal: create(ProposalSchema, {
         id: proposal.proposal.id,
         name: proposal.proposal.name,
         createdAt: proposal.proposal.createdAt,

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -10,7 +9,12 @@ import type { RouterOptions } from '../../routes.js';
 import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { AuthContext, COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, FederatedGraphDTO } from '../../../types/index.js';
+import {
+  PlainMessage,
+  AuthContext,
+  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+  FederatedGraphDTO,
+} from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { maxRowLimitForChecks } from '../../constants.js';
 

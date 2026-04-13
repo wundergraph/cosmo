@@ -1,4 +1,4 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -6,7 +6,7 @@ import {
   CreateProposalResponse,
   Label,
   ProposalNamingConvention,
-  ProposalSubgraph,
+  ProposalSubgraphSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Composer } from '../../composition/composer.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -25,6 +25,7 @@ import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficIn
 import { enrichLogger, getLogger, handleError, toProposalOriginEnum } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function createProposal(
   opts: RouterOptions,
@@ -426,15 +427,14 @@ export function createProposal(
       proposalRepo,
       trafficInspector,
       composer,
-      subgraphs: proposalSubgraphs.map(
-        (subgraph) =>
-          new ProposalSubgraph({
-            name: subgraph.subgraphName,
-            schemaSDL: subgraph.schemaSDL,
-            labels: subgraph.labels,
-            isDeleted: subgraph.isDeleted,
-            isNew: subgraph.isNew,
-          }),
+      subgraphs: proposalSubgraphs.map((subgraph) =>
+        create(ProposalSubgraphSchema, {
+          name: subgraph.subgraphName,
+          schemaSDL: subgraph.schemaSDL,
+          labels: subgraph.labels,
+          isDeleted: subgraph.isDeleted,
+          isNew: subgraph.isNew,
+        }),
       ),
       namespace,
       logger,

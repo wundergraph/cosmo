@@ -1,8 +1,8 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { App } from 'octokit';
 import { eq } from 'drizzle-orm';
-import { CompositionError, GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { PlainMessage } from '@bufbuild/protobuf';
+import type { CompositionError, GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { PlainMessage } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
 
 export class GitHubRepository {

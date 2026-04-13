@@ -1,17 +1,20 @@
 import crypto from 'node:crypto';
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import pLimit from 'p-limit';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
-  PublishedOperation,
+  PublishedOperationSchema,
   PublishedOperationStatus,
   PublishPersistedOperationsRequest,
   PublishPersistedOperationsResponse,
   PersistedOperation,
+  type PublishedOperation,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate } from 'graphql';
-import { PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
+import { PlainMessage, PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { MAX_MANIFEST_OPERATIONS, OperationsRepository } from '../../repositories/OperationsRepository.js';
@@ -189,7 +192,7 @@ export function publishPersistedOperations(
       if (prev !== undefined && prev.hash !== operationHash) {
         // We're trying to update an operation with the same ID but different hash
         return {
-          publishedOperation: new PublishedOperation({
+          publishedOperation: create(PublishedOperationSchema, {
             id: operationId,
             hash: prev.hash,
             status: PublishedOperationStatus.CONFLICT,
@@ -238,7 +241,7 @@ export function publishPersistedOperations(
           };
         }
         return {
-          publishedOperation: new PublishedOperation({
+          publishedOperation: create(PublishedOperationSchema, {
             id: operationId,
             hash: operationHash,
             status: PublishedOperationStatus.CREATED,
@@ -250,7 +253,7 @@ export function publishPersistedOperations(
       }
 
       return {
-        publishedOperation: new PublishedOperation({
+        publishedOperation: create(PublishedOperationSchema, {
           id: operationId,
           hash: operationHash,
           status: PublishedOperationStatus.UP_TO_DATE,

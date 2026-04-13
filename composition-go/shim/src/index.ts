@@ -1,3 +1,4 @@
+import { toJsonString } from '@bufbuild/protobuf';
 import {
   federateSubgraphs as realFederateSubgraphs,
   FieldConfiguration,
@@ -10,6 +11,7 @@ import {
   SubscriptionProtocol,
   WebsocketSubprotocol,
 } from '@wundergraph/cosmo-shared';
+import { RouterConfigSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { DocumentNode, parse, print, printSchema } from 'graphql';
 
 export type Subgraph = {
@@ -80,5 +82,5 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
       };
     }),
   });
-  return config.toJsonString();
+  return toJsonString(RouterConfigSchema, config);
 }

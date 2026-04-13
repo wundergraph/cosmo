@@ -1,18 +1,21 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
   GetWorkspaceRequest,
   GetWorkspaceResponse,
-  WorkspaceNamespace,
-  WorkspaceFederatedGraph,
-  type WorkspaceSubgraph,
+  WorkspaceNamespaceSchema,
+  WorkspaceFederatedGraphSchema,
+  WorkspaceSubgraphSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
+import type { PlainMessage } from '../../../types/index.js';
 
 export function getWorkspace(
   opts: RouterOptions,
@@ -39,11 +42,11 @@ export function getWorkspace(
     // Initialize the response
     const result = namespaces
       .map((ns) =>
-        WorkspaceNamespace.fromJson({
+        create(WorkspaceNamespaceSchema, {
           id: ns.id,
           name: ns.name,
           graphs: [],
-        } satisfies PlainMessage<WorkspaceNamespace>),
+        }),
       )
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
@@ -81,22 +84,21 @@ export function getWorkspace(
 
         //
         namespace.graphs.push(
-          WorkspaceFederatedGraph.fromJson({
+          create(WorkspaceFederatedGraphSchema, {
             id: graph.id,
             targetId: graph.targetId,
             name: graph.name,
             isContract: !!graph.contract?.id,
             subgraphs: subgraphsForFederatedGraph
-              .map(
-                (subgraph) =>
-                  ({
-                    id: subgraph.id,
-                    targetId: subgraph.targetId,
-                    name: subgraph.name,
-                  }) satisfies PlainMessage<WorkspaceSubgraph>,
+              .map((subgraph) =>
+                create(WorkspaceSubgraphSchema, {
+                  id: subgraph.id,
+                  targetId: subgraph.targetId,
+                  name: subgraph.name,
+                }),
               )
               .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })),
-          } satisfies PlainMessage<WorkspaceFederatedGraph>),
+          }),
         );
       }),
     );

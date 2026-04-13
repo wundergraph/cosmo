@@ -1,12 +1,13 @@
 import { randomUUID, UUID } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import fs from 'node:fs';
-import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
+import { createClient, Client } from '@connectrpc/connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectTransport } from '@connectrpc/connect-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import Fastify from 'fastify';
@@ -394,8 +395,8 @@ export const SetupTest = async function ({
     ],
   });
 
-  const platformClient = createPromiseClient(PlatformService, transport);
-  const nodeClient = createPromiseClient(NodeService, transport);
+  const platformClient = createClient(PlatformService, transport);
+  const nodeClient = createClient(NodeService, transport);
 
   return {
     client: platformClient,
@@ -452,7 +453,7 @@ export const SetupKeycloak = async ({
 };
 
 export async function createOrganizationGroup(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   ...rules: { role: OrganizationRole; namespaces?: string[]; resources?: string[] }[]
 ) {
@@ -552,7 +553,7 @@ export const removeKeycloakSetup = async ({
 };
 
 export const createThenPublishSubgraph = async (
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   namespace: string,
   schemaSDL: string,
@@ -577,7 +578,7 @@ export const createThenPublishSubgraph = async (
 };
 
 export const createAndPublishSubgraph = async (
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   namespace: string,
   schemaSDL: string,
@@ -597,7 +598,7 @@ export const createAndPublishSubgraph = async (
 };
 
 export const createThenPublishFeatureSubgraph = async (
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   baseSubgraphName: string,
   namespace: string,
@@ -625,7 +626,7 @@ export const createThenPublishFeatureSubgraph = async (
 };
 
 export const createFederatedGraph = async (
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   namespace: string,
   labelMatchers: string[],
@@ -695,7 +696,7 @@ export class InMemoryBlobStorage implements BlobStorage {
   }
 }
 
-export async function createEventDrivenGraph(client: PromiseClient<typeof PlatformService>, name: string) {
+export async function createEventDrivenGraph(client: Client<typeof PlatformService>, name: string) {
   const response = await client.createFederatedSubgraph({
     name,
     namespace: DEFAULT_NAMESPACE,
@@ -706,21 +707,23 @@ export async function createEventDrivenGraph(client: PromiseClient<typeof Platfo
 }
 
 export async function createSubgraph(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   routingUrl: string,
   namespace = DEFAULT_NAMESPACE,
+  labels: Label[] = [],
 ) {
   const response = await client.createFederatedSubgraph({
     name,
     namespace,
     routingUrl,
+    labels,
   });
   expect(response.response?.code).toBe(EnumStatusCode.OK);
 }
 
 export async function createBaseAndFeatureSubgraph(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   baseSubgraphName: string,
   featureSubgraphName: string,
   baseSubgraphRoutingUrl: string,
@@ -769,7 +772,7 @@ type IntegrationSubgraph = {
   hasFeatureSubgraph: boolean;
 };
 export async function featureFlagIntegrationTestSetUp(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   subgraphNames: Array<IntegrationSubgraph>,
   federatedGraphName: string,
   labels: Array<Label> = [],
@@ -812,15 +815,19 @@ export async function featureFlagIntegrationTestSetUp(
   return federatedGraphResponse;
 }
 
-export async function createNamespace(client: PromiseClient<typeof PlatformService>, name: string) {
+export async function createNamespace(client: Client<typeof PlatformService>, name: string) {
+  // The server enforces lowercase namespace names, so normalize once here
+  // and return the normalized name for callers to use in subsequent queries.
+  const normalizedName = name.toLowerCase();
   const createNamespaceResponse = await client.createNamespace({
-    name,
+    name: normalizedName,
   });
   expect(createNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+  return normalizedName;
 }
 
 export async function createFeatureFlag(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   labels: Array<Label>,
   featureSubgraphNames: Array<string>,
@@ -838,7 +845,7 @@ export async function createFeatureFlag(
 }
 
 export async function assertNumberOfCompositions(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   federatedGraphName: string,
   numberOfCompositions: number,
   namespace = DEFAULT_NAMESPACE,
@@ -890,7 +897,7 @@ export async function assertExecutionConfigSubgraphNames(
 }
 
 export async function toggleFeatureFlag(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   enabled: boolean,
   namespace = DEFAULT_NAMESPACE,
@@ -904,7 +911,7 @@ export async function toggleFeatureFlag(
 }
 
 export async function deleteFeatureFlag(
-  client: PromiseClient<typeof PlatformService>,
+  client: Client<typeof PlatformService>,
   name: string,
   namespace = DEFAULT_NAMESPACE,
 ) {

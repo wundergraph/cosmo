@@ -11,6 +11,7 @@
  * is safe for local modules. Value imports from npm packages are fine.
  */
 import { randomUUID } from 'node:crypto';
+import { create, fromJson, toJson, type JsonValue } from '@bufbuild/protobuf';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   federateSubgraphsContract,
@@ -18,7 +19,14 @@ import {
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
 import { buildRouterConfig, SubgraphKind } from '@wundergraph/cosmo-shared';
-import { GRPCMapping, ImageReference, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import {
+  GRPCMappingSchema,
+  ImageReferenceSchema,
+  RouterConfigSchema,
+  type GRPCMapping,
+  type ImageReference,
+  type RouterConfig,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { parse } from 'graphql';
 import type { FederationResult, FederationResultWithContracts } from '@wundergraph/composition';
 import type { RouterSubgraph } from '@wundergraph/cosmo-shared';
@@ -32,7 +40,7 @@ import type {
 
 function parseGRPCMapping(mappings: string): GRPCMapping {
   try {
-    return GRPCMapping.fromJson(JSON.parse(mappings));
+    return fromJson(GRPCMappingSchema, JSON.parse(mappings));
   } catch (error) {
     throw new Error(`Failed to parse gRPC mappings: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
@@ -70,7 +78,7 @@ function subgraphDTOsToRouterSubgraphs(
         costs,
         protoSchema: subgraph.proto.schema,
         mapping: parseGRPCMapping(subgraph.proto.mappings),
-        imageReference: new ImageReference({
+        imageReference: create(ImageReferenceSchema, {
           repository: `${organizationId}/${subgraph.id}`,
           reference: subgraph.proto.pluginData.version,
         }),
@@ -131,7 +139,7 @@ function serializeComposedGraphArtifact(
   const shouldIncludeClientSchema = result.success ? (result.shouldIncludeClientSchema ?? false) : false;
   const fieldConfigurations = result.success ? result.fieldConfigurations : [];
 
-  let routerExecutionConfigJson: ReturnType<RouterConfig['toJson']> | undefined;
+  let routerExecutionConfigJson: JsonValue | undefined;
   if (includeRouterExecutionConfig && result.success && composedSchema) {
     const routerSubgraphs = subgraphDTOsToRouterSubgraphs(organizationId, subgraphs, result);
     const routerExecutionConfig = buildRouterConfig({
@@ -142,7 +150,7 @@ function serializeComposedGraphArtifact(
       subgraphs: routerSubgraphs,
       schemaVersionId: randomUUID(),
     });
-    routerExecutionConfigJson = routerExecutionConfig.toJson();
+    routerExecutionConfigJson = toJson(RouterConfigSchema, routerExecutionConfig);
   }
 
   return {

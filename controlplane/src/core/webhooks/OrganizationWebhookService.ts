@@ -1,5 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
-import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
+import { create } from '@bufbuild/protobuf';
+import {
+  EventMeta,
+  GraphSchemaUpdatedMetaSchema,
+  OrganizationEventName,
+  ProposalStateUpdatedMetaSchema,
+} from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { eq } from 'drizzle-orm';
@@ -117,7 +122,7 @@ type Config = {
   url?: string;
   key?: string;
   allowedUserEvents?: string[];
-  meta: PlainMessage<EventMeta>['meta'];
+  meta: EventMeta['meta'];
   type: 'webhook' | 'slack';
 };
 
@@ -197,33 +202,33 @@ export class OrganizationWebhookService {
     });
 
     for (const config of orgConfigs) {
-      let meta: PlainMessage<EventMeta>['meta'];
+      let meta: Config['meta'];
 
       switch (eventName) {
         case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED: {
           meta = {
             case: 'federatedGraphSchemaUpdated',
-            value: {
+            value: create(GraphSchemaUpdatedMetaSchema, {
               graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
-            },
+            }),
           };
           break;
         }
         case OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED: {
           meta = {
             case: 'monographSchemaUpdated',
-            value: {
+            value: create(GraphSchemaUpdatedMetaSchema, {
               graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
-            },
+            }),
           };
           break;
         }
         case OrganizationEventName.PROPOSAL_STATE_UPDATED: {
           meta = {
             case: 'proposalStateUpdated',
-            value: {
+            value: create(ProposalStateUpdatedMetaSchema, {
               graphIds: config.webhookProposalStateUpdate.map((wu) => wu.federatedGraphId),
-            },
+            }),
           };
           break;
         }

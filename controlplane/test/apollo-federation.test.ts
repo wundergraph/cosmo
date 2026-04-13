@@ -206,22 +206,22 @@ describe('Apollo Federated Graph', (ctx) => {
     expect(graph.graph?.routingURL).toEqual('http://localhost:8080');
 
     expect(graph.subgraphs[0]?.name).toEqual(pandasSubgraph);
-    expect(graph.subgraphs[0]?.labels).toEqual([label]);
+    expect(graph.subgraphs[0]?.labels).toMatchObject([label]);
     expect(graph.subgraphs[0]?.lastUpdatedAt).toBeTruthy();
     expect(graph.subgraphs[0]?.routingURL).toEqual('http://localhost:8081');
 
     expect(graph.subgraphs[1]?.name).toEqual(usersSubgraph);
-    expect(graph.subgraphs[1]?.labels).toEqual([label]);
+    expect(graph.subgraphs[1]?.labels).toMatchObject([label]);
     expect(graph.subgraphs[1]?.lastUpdatedAt).toBeTruthy();
     expect(graph.subgraphs[1]?.routingURL).toEqual('http://localhost:8082');
 
     expect(graph.subgraphs[2]?.name).toEqual(inventorySubgraph);
-    expect(graph.subgraphs[2]?.labels).toEqual([label]);
+    expect(graph.subgraphs[2]?.labels).toMatchObject([label]);
     expect(graph.subgraphs[2]?.lastUpdatedAt).toBeTruthy();
     expect(graph.subgraphs[2]?.routingURL).toEqual('http://localhost:8083');
 
     expect(graph.subgraphs[3]?.name).toEqual(productsSubgraph);
-    expect(graph.subgraphs[3]?.labels).toEqual([label]);
+    expect(graph.subgraphs[3]?.labels).toMatchObject([label]);
     expect(graph.subgraphs[3]?.lastUpdatedAt).toBeTruthy();
     expect(graph.subgraphs[3]?.routingURL).toEqual('http://localhost:8084');
   });

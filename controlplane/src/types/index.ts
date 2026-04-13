@@ -1,7 +1,32 @@
+import type { Message } from '@bufbuild/protobuf';
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
 import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, ProposalOrigin } from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
+
+/**
+ * Utility type that strips protobuf-es V2 message metadata ($typeName, $unknown)
+ * from a message type, making it compatible with plain object literals.
+ * This is the V2 equivalent of protobuf-es V1's PlainMessage<T>.
+ * It recursively strips metadata from nested message types as well.
+ */
+export type PlainMessage<T> =
+  T extends Message<any>
+    ? { [P in keyof T as P extends '$typeName' | '$unknown' ? never : P]: PlainField<T[P]> }
+    : { [P in keyof T as P extends '$typeName' | '$unknown' ? never : P]: PlainField<T[P]> };
+
+type PlainField<F> =
+  F extends Message<any>
+    ? PlainMessage<F>
+    : F extends Array<infer U>
+      ? U extends Message<any>
+        ? PlainMessage<U>[]
+        : F
+      : F extends { [key: string]: Message<any> }
+        ? { [K in keyof F]: PlainMessage<F[K]> }
+        : F extends { value: Message<any>; case: string }
+          ? { value: PlainMessage<F['value']>; case: F['case'] }
+          : F;
 
 export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
 

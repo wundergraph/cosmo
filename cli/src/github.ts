@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { PartialMessage } from '@bufbuild/protobuf';
-import { GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { create } from '@bufbuild/protobuf';
+import { GitInfoSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import envCi from 'env-ci';
 import { Client } from './core/client/client.js';
 import { getBaseHeaders } from './core/config.js';
@@ -44,16 +45,16 @@ export function useGitHub() {
 }
 
 export const verifyGitHubIntegration = async (client: Client) => {
-  let gitInfo: PartialMessage<GitInfo> | undefined;
+  let gitInfo: GitInfo | undefined;
   const { isPr, commit: commitSha, repository, accountId } = useGitHub();
   if (isPr && commitSha && repository && accountId) {
     const [ownerSlug, repositorySlug] = repository?.split('/');
-    gitInfo = {
+    gitInfo = create(GitInfoSchema, {
       commitSha,
       accountId,
       ownerSlug,
       repositorySlug,
-    };
+    });
   }
 
   let ignoreErrorsDueToGitHubIntegration = false;

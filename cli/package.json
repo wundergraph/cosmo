@@ -41,9 +41,9 @@
   ],
   "license": "Apache-2.0",
   "dependencies": {
-    "@bufbuild/protobuf": "1.9.0",
-    "@connectrpc/connect": "1.4.0",
-    "@connectrpc/connect-node": "1.4.0",
+    "@bufbuild/protobuf": "^2.2.2",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-node": "^2.0.0",
     "@graphql-tools/utils": "11.0.0",
     "@modelcontextprotocol/sdk": "1.26.0",
     "@octokit/rest": "22.0.0",

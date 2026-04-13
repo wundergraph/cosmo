@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { aliasedTable, and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { FastifyBaseLogger } from 'fastify';
 import { DBSchemaChangeType } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
@@ -298,7 +297,7 @@ export class OperationsRepository {
   }
 
   public createOperationOverrides(data: {
-    changes: PlainMessage<OverrideChange>[];
+    changes: Pick<OverrideChange, 'changeType' | 'path'>[];
     namespaceId: string;
     operationHash: string;
     operationName: string;
@@ -335,7 +334,7 @@ export class OperationsRepository {
   public removeOperationOverrides(data: {
     operationHash: string;
     namespaceId: string;
-    changes: PlainMessage<OverrideChange>[];
+    changes: Pick<OverrideChange, 'changeType' | 'path'>[];
   }) {
     return this.db.transaction(async (tx) => {
       const affectedRows = [];
