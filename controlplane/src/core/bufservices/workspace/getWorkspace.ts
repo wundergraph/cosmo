@@ -1,4 +1,4 @@
-import { fromJson } from '@bufbuild/protobuf';
+import { fromJson, type JsonObject } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
@@ -48,7 +48,7 @@ export function getWorkspace(
           id: ns.id,
           name: ns.name,
           graphs: [],
-        } as any),
+        } as JsonObject),
       )
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
@@ -92,16 +92,13 @@ export function getWorkspace(
             name: graph.name,
             isContract: !!graph.contract?.id,
             subgraphs: subgraphsForFederatedGraph
-              .map(
-                (subgraph) =>
-                  ({
-                    id: subgraph.id,
-                    targetId: subgraph.targetId,
-                    name: subgraph.name,
-                  }) as any,
-              )
+              .map((subgraph) => ({
+                id: subgraph.id,
+                targetId: subgraph.targetId,
+                name: subgraph.name,
+              }))
               .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })),
-          } as any),
+          } as JsonObject),
         );
       }),
     );
