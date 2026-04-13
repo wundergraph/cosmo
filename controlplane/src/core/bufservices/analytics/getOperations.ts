@@ -239,9 +239,7 @@ export function getOperations(
                 ? GetOperationsResponse_OperationType.MUTATION
                 : GetOperationsResponse_OperationType.SUBSCRIPTION,
           content: shouldIncludeContent ? operationContentMap.get(operation.operationHash) || '' : undefined,
-          hasDeprecatedFields: shouldIncludeHasDeprecatedFields
-            ? operation.hasDeprecatedFields || false
-            : undefined,
+          hasDeprecatedFields: shouldIncludeHasDeprecatedFields ? operation.hasDeprecatedFields || false : undefined,
           metric,
         }),
       );
