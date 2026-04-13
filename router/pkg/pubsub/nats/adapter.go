@@ -165,7 +165,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 		return nil
 	}
 
-	msgChan := make(chan *nats.Msg)
+	msgChan := make(chan *nats.Msg, 1024)
 	subscriptions := make([]*nats.Subscription, len(subConf.Subjects))
 	for i, subject := range subConf.Subjects {
 		subscription, err := p.client.ChanSubscribe(subject, msgChan)
