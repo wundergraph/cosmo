@@ -202,9 +202,9 @@ export const Step3 = () => {
       <OnboardingNavigation
         className="pt-2"
         onSkip={setSkipped}
-        backHref="/onboarding/2"
+        backHref="/onboarding/1"
         forward={{
-          onClick: () => router.push('/onboarding/4'),
+          onClick: () => router.push('/onboarding/3'),
           disabled: status !== 'ok',
         }}
       />

@@ -20,21 +20,23 @@ const OnboardingStep: NextPageWithLayout = () => {
           <Step1 />
         </OnboardingLayout>
       );
+    /*
     case 2:
       return (
         <OnboardingLayout title={title}>
           <Step2 />
         </OnboardingLayout>
       );
-    case 3:
+        */
+    case 2:
       return (
         <OnboardingLayout title={title}>
           <Step3 />
         </OnboardingLayout>
       );
-    case 4:
+    case 3:
       return (
-        <OnboardingLayout title={title}>
+        <OnboardingLayout title={title} bare>
           <Step4 />
         </OnboardingLayout>
       );

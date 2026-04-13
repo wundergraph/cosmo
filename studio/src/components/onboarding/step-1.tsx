@@ -9,22 +9,13 @@ import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { useToast } from '../ui/use-toast';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
-import { Controller, useFieldArray } from 'react-hook-form';
+import { Controller } from 'react-hook-form';
 import { z } from 'zod';
-import { emailSchema, organizationNameSchema } from '@/lib/schemas';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
+import { Form } from '../ui/form';
 import { Checkbox } from '../ui/checkbox';
-import { Cross1Icon, PlusIcon } from '@radix-ui/react-icons';
+import { TrafficAnimation } from './traffic-animation';
 
 const onboardingSchema = z.object({
-  organizationName: organizationNameSchema,
-  members: z.array(
-    z.object({
-      email: emailSchema.or(z.literal('')),
-    }),
-  ),
   channels: z.object({
     slack: z.boolean(),
     email: z.boolean(),
@@ -32,6 +23,27 @@ const onboardingSchema = z.object({
 });
 
 type OnboardingFormValues = z.infer<typeof onboardingSchema>;
+
+const WHY_BULLETS = [
+  'See how the products and reviews subgraphs compose into one supergraph, giving your client a single endpoint to resolve the data it needs.',
+  'Run the same router stack you would run in production, locally.',
+  'Watch real request metrics flow through the router.',
+];
+
+const JOURNEY_STEPS = [
+  {
+    title: 'Create your first graph',
+    description: 'Composed from the products and reviews subgraphs.',
+  },
+  {
+    title: 'Run your services',
+    description: 'Router + plugins in one command via npx wgc demo.',
+  },
+  {
+    title: 'Send a query',
+    description: 'See live metrics light up in Cosmo.',
+  },
+];
 
 export const Step1 = () => {
   const router = useRouter();
@@ -43,15 +55,8 @@ export const Step1 = () => {
     mode: 'onChange',
     schema: onboardingSchema,
     defaultValues: {
-      organizationName: organization?.name ?? '',
-      members: [{ email: '' }],
       channels: { slack: onboarding?.slack ?? false, email: onboarding?.email ?? false },
     },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'members',
   });
 
   const { mutate, isPending } = useMutation(createOnboarding, {
@@ -64,7 +69,6 @@ export const Step1 = () => {
         return;
       }
 
-      // TODO: read slack + email from CreateOnboarding response once proto is updated
       const formValues = form.getValues();
       setOnboarding({
         federatedGraphsCount: d.federatedGraphsCount,
@@ -83,13 +87,10 @@ export const Step1 = () => {
   });
 
   const onSubmit: SubmitHandler<OnboardingFormValues> = (data) => {
-    const emails = data.members.map((m) => m.email).filter((e) => e.length > 0);
-
     mutate({
-      organizationName: data.organizationName,
+      organizationName: organization?.name,
       slack: data.channels.slack,
       email: data.channels.email,
-      invititationEmails: emails,
     });
   };
 
@@ -99,89 +100,73 @@ export const Step1 = () => {
 
   return (
     <OnboardingContainer>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-8 text-left">
-          <FormField
-            control={form.control}
-            name="organizationName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Organization Name</FormLabel>
-                <FormDescription>This is your organization name. You can always change it later.</FormDescription>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      <div className="flex w-full flex-col gap-8 text-left">
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            In ~<span className="font-medium text-foreground">3 minutes</span> you will have a federated GraphQL graph
+            running locally and serving live traffic into Cosmo Cloud platform.
+          </p>
+        </div>
 
-          <div className="space-y-3 pt-4">
-            <FormLabel>Invite Members</FormLabel>
-            <FormDescription>Add team members by email.</FormDescription>
-            <div className="space-y-2">
-              {fields.map((field, index) => (
-                <div key={field.id}>
-                  <div className="flex items-center gap-2">
-                    <Input placeholder="janedoe@example.com" {...form.register(`members.${index}.email`)} />
-                    {fields.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon-sm" onClick={() => remove(index)}>
-                        <Cross1Icon />
-                      </Button>
-                    )}
-                  </div>
-                  {form.formState.errors.members?.[index]?.email && (
-                    <p className="mt-1 text-sm text-destructive">
-                      {form.formState.errors.members[index].email.message}
-                    </p>
-                  )}
+        <TrafficAnimation />
+
+        <div className="space-y-3">
+          <p className="text-sm font-semibold">What you will do</p>
+          <ul className="flex flex-col gap-3">
+            {JOURNEY_STEPS.map((step, index) => (
+              <li key={step.title} className="flex gap-2">
+                <span className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{step.title}</span>
+                  <span className="text-sm text-muted-foreground">{WHY_BULLETS[index]}</span>
                 </div>
-              ))}
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ email: '' })}>
-              <PlusIcon className="mr-2" /> Add another
-            </Button>
-          </div>
+              </li>
+            ))}
+          </ul>
+        </div>
 
-          <div className="space-y-3 pt-4">
-            <FormLabel>Preferred way for us to reach you?</FormLabel>
-            <FormDescription>If you get stuck with your Cosmo setup, we want to be able to help you.</FormDescription>
-            <div className="space-y-4">
-              <Controller
-                control={form.control}
-                name="channels.slack"
-                render={({ field }) => (
-                  <label className="flex items-start gap-3">
-                    <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} />
-                    <div className="flex flex-col gap-y-1">
-                      <span className="text-sm font-medium leading-none">Slack</span>
-                      <span className="text-[0.8rem] text-muted-foreground">
-                        We automatically create a Slack channel for you
-                      </span>
-                    </div>
-                  </label>
-                )}
-              />
-              <Controller
-                control={form.control}
-                name="channels.email"
-                render={({ field }) => (
-                  <label className="flex items-start gap-3">
-                    <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} />
-                    <div className="flex flex-col gap-y-1">
-                      <span className="text-sm font-medium leading-none">Email</span>
-                      <span className="text-[0.8rem] text-muted-foreground">Receive updates via email</span>
-                    </div>
-                  </label>
-                )}
-              />
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+            <div className="rounded-md border border-dashed p-4">
+              <p className="text-sm font-medium">If you get stuck, how can we reach you?</p>
+              <div className="mt-3 flex flex-col gap-3">
+                <Controller
+                  control={form.control}
+                  name="channels.slack"
+                  render={({ field }) => (
+                    <label className="flex items-start gap-3">
+                      <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} />
+                      <div className="flex flex-col gap-y-1">
+                        <span className="text-sm font-medium leading-none">Slack</span>
+                        <span className="text-[0.8rem] text-muted-foreground">
+                          We automatically create a Slack channel for you.
+                        </span>
+                      </div>
+                    </label>
+                  )}
+                />
+                <Controller
+                  control={form.control}
+                  name="channels.email"
+                  render={({ field }) => (
+                    <label className="flex items-start gap-3">
+                      <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} />
+                      <div className="flex flex-col gap-y-1">
+                        <span className="text-sm font-medium leading-none">Email</span>
+                        <span className="text-[0.8rem] text-muted-foreground">Receive updates via email.</span>
+                      </div>
+                    </label>
+                  )}
+                />
+              </div>
             </div>
-          </div>
-        </form>
-      </Form>
+          </form>
+        </Form>
+      </div>
 
       <OnboardingNavigation
         onSkip={setSkipped}
+        forwardLabel="Start the tour"
         forward={{
           onClick: form.handleSubmit(onSubmit),
           isLoading: isPending,

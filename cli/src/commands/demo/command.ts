@@ -3,6 +3,7 @@ import { program } from 'commander';
 import type { FederatedGraph, Subgraph, WhoAmIResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { config } from '../../core/config.js';
 import { createRouterToken, deleteRouterToken } from '../../core/router-token.js';
+import { openUrl } from '../../core/launcher.js';
 import { BaseCommandOptions } from '../../core/types/types.js';
 import { waitForKeyPress, rainbow } from '../../utils.js';
 import type { UserInfo } from './types.js';
@@ -403,11 +404,20 @@ export default function (opts: BaseCommandOptions) {
       const userInfo = await getUserInfo(opts.client);
       updateScreenWithUserInfo(userInfo);
 
+      const onboardingUrl = `${config.webURL}/onboarding`;
+      const openOnboarding = async () => {
+        const { error } = await openUrl(onboardingUrl);
+        if (error) {
+          console.log(pc.yellow(`\nCouldn't open browser: ${error.message}`));
+        }
+      };
       await waitForKeyPress(
         {
           Enter: () => undefined,
+          s: { callback: openOnboarding, persistent: true },
+          S: { callback: openOnboarding, persistent: true },
         },
-        `It is recommended you run this command along the onboarding wizard at ${config.baseURL}/onboarding with the same account.\nPress ENTER to continue…`,
+        `It is recommended you run this command along the onboarding wizard at ${onboardingUrl} with the same account.\nPress [s] to open it in your browser, or ENTER to continue…`,
       );
 
       resetScreen(userInfo);

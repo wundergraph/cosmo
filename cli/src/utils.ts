@@ -302,16 +302,20 @@ type PrintTruncationWarningParams = {
   totalErrorCounts?: SubgraphPublishStats;
 };
 
+type KeyPressCallback = () => unknown | Promise<unknown>;
+type KeyPressHandler = KeyPressCallback | { callback: KeyPressCallback; persistent: boolean };
+
 /**
  * Waits for a single keypress matching one of the keys in the provided map.
  * Keys are case-sensitive strings. Use 'Enter' for the enter key.
  * For non-Enter keys, the callback fires immediately on keypress (no Enter required).
  * Ctrl+C always exits the process.
+ *
+ * Each entry is either a callback function or a descriptor `{ callback, persistent }`.
+ * When `persistent` is true the callback fires but the prompt keeps listening,
+ * useful for side-effect actions (e.g. opening a URL) alongside a terminating key.
  */
-export function waitForKeyPress(
-  keyMap: Record<string, (() => unknown | Promise<unknown>) | undefined>,
-  message?: string,
-): Promise<void> {
+export function waitForKeyPress(keyMap: Record<string, KeyPressHandler | undefined>, message?: string): Promise<void> {
   const { promise, resolve } = Promise.withResolvers<void>();
 
   if (message) {
@@ -335,14 +339,30 @@ export function waitForKeyPress(
     // Normalize Enter (\r or \n)
     const normalized = key === '\r' || key === '\n' ? 'Enter' : key;
 
-    if (normalized in keyMap) {
-      process.stdin.removeListener('data', onData);
-      process.stdin.setRawMode(false);
-      process.stdin.pause();
-      process.stdout.write('\n');
-      await keyMap[normalized]?.();
-      resolve();
+    if (!(normalized in keyMap)) {
+      return;
     }
+
+    const entry = keyMap[normalized];
+    if (!entry) {
+      return;
+    }
+
+    const isDescriptor = typeof entry !== 'function';
+    const callback = isDescriptor ? entry.callback : entry;
+    const persistent = isDescriptor ? entry.persistent : false;
+
+    if (persistent) {
+      await callback();
+      return;
+    }
+
+    process.stdin.removeListener('data', onData);
+    process.stdin.setRawMode(false);
+    process.stdin.pause();
+    process.stdout.write('\n');
+    await callback();
+    resolve();
   };
 
   process.stdin.on('data', onData);
