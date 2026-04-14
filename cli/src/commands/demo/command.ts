@@ -1,5 +1,6 @@
 import pc from 'picocolors';
 import { program } from 'commander';
+import open from 'open';
 import type { FederatedGraph, Subgraph, WhoAmIResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { config } from '../../core/config.js';
 import { createRouterToken, deleteRouterToken } from '../../core/router-token.js';
@@ -404,11 +405,22 @@ export default function (opts: BaseCommandOptions) {
       const userInfo = await getUserInfo(opts.client);
       updateScreenWithUserInfo(userInfo);
 
+      const onboardingUrl = `${config.webURL}/onboarding`;
+
+      async function openOnboardingUrl() {
+        const process = await open(onboardingUrl);
+        process.on('error', (error) => {
+          console.log(pc.yellow(`\nCouldn't open browser: ${error.message}`));
+        });
+      }
+
       await waitForKeyPress(
         {
           Enter: () => undefined,
+          s: { callback: openOnboardingUrl, persistent: true },
+          S: { callback: openOnboardingUrl, persistent: true },
         },
-        `It is recommended you run this command along the onboarding wizard at ${config.baseURL}/onboarding with the same account.\nPress ENTER to continue…`,
+        `It is recommended you run this command along the onboarding wizard at ${onboardingUrl} with the same account.\nPress [s] to open it in your browser, or [ENTER] to continue…`,
       );
 
       resetScreen(userInfo);
