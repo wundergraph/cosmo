@@ -2,6 +2,7 @@ import { unresolvablePathError } from '../../errors/errors';
 import { getOrThrowError } from '../../utils/utils';
 import { type GraphFieldData } from '../../utils/types';
 import {
+  type FieldCoords,
   type FieldName,
   type RootFieldData,
   type SelectionPath,
@@ -12,6 +13,7 @@ import {
 import {
   type GenerateResolvabilityErrorReasonsParams,
   type GenerateSharedResolvabilityErrorReasonsParams,
+  type GetEntityReasonsParams,
   type GetMultipliedRelativeOriginPathsParams,
   type ResolvabilityErrorsParams,
   type RootResolvabilityErrorsParams,
@@ -124,12 +126,74 @@ export function generateResolvabilityErrorReasons({
   return reasons;
 }
 
+function getSelfEntityReasons({
+  entityAncestors: { subgraphNames, typeName },
+  fieldSets,
+  reasons,
+  targetSubgraphName,
+}: GetEntityReasonsParams) {
+  for (const fieldSet of fieldSets) {
+    const filteredSubgraphNames = subgraphNames.filter((subgraphName) => subgraphName !== targetSubgraphName);
+    if (filteredSubgraphNames.length < 1) {
+      continue;
+    }
+
+    const isSubsetPlural = filteredSubgraphNames.length > 1;
+    reasons.push(
+      `The entity ancestor${isSubsetPlural ? 's' : ''} "${typeName}" in` +
+        ` subgraph${isSubsetPlural ? `s` : ``} "${filteredSubgraphNames.join(QUOTATION_JOIN)}"` +
+        ` do${isSubsetPlural ? `` : `es`} not satisfy the key field set "${fieldSet}"` +
+        ` to access subgraph "${targetSubgraphName}".`,
+    );
+  }
+}
+
+function getAncestorEntityReasons({
+  coords,
+  entityAncestors: { sourceSubgraphNamesBySatisfiedFieldSet, subgraphNames, typeName },
+  fieldSets,
+  reasons,
+  targetSubgraphName,
+}: GetEntityReasonsParams) {
+  const unsatisfiedFieldSetReasons: Array<string> = [];
+  const satisfiedFieldSetReasons: Array<string> = [];
+  for (const fieldSet of fieldSets) {
+    const sourceSubgraphNames = sourceSubgraphNamesBySatisfiedFieldSet.get(fieldSet);
+    if (!sourceSubgraphNames) {
+      const filteredSubgraphNames = subgraphNames.filter((subgraphName) => subgraphName !== targetSubgraphName);
+      const isSubsetPlural = filteredSubgraphNames.length > 1;
+      unsatisfiedFieldSetReasons.push(
+        `The entity ancestor${isSubsetPlural ? 's' : ''} "${typeName}" in` +
+          ` subgraph${isSubsetPlural ? `s` : ``} "${filteredSubgraphNames.join(QUOTATION_JOIN)}" ` +
+          ` do${isSubsetPlural ? `` : `es`} not satisfy the key field set "${fieldSet}"` +
+          ` to access subgraph "${targetSubgraphName}".`,
+      );
+      continue;
+    }
+
+    const filteredSubgraphNames = sourceSubgraphNames.filter((subgraphName) => subgraphName !== targetSubgraphName);
+    if (filteredSubgraphNames.length < 1) {
+      continue;
+    }
+
+    const isSubsetPlural = filteredSubgraphNames.length > 1;
+    satisfiedFieldSetReasons.push(
+      `The entity ancestor "${typeName}" in subgraph${isSubsetPlural ? `s` : ``}` +
+        ` "${filteredSubgraphNames.join(QUOTATION_JOIN)}" ${isSubsetPlural ? 'are' : 'is'} able to satisfy at least` +
+        ` one key field set to access subgraph "${targetSubgraphName}", but this still does not provide a route` +
+        ` to resolve "${coords}".`,
+    );
+  }
+  reasons.push(...(satisfiedFieldSetReasons.length > 0 ? satisfiedFieldSetReasons : unsatisfiedFieldSetReasons));
+}
+
 export function generateSharedResolvabilityErrorReasons({
   entityAncestors,
   rootFieldData,
   unresolvableFieldData,
 }: GenerateSharedResolvabilityErrorReasonsParams): Array<string> {
   const { externalSubgraphNames, fieldName, typeName, subgraphNames } = unresolvableFieldData;
+  const coords: FieldCoords = `${typeName}.${fieldName}`;
   const reasons: Array<string> = [rootFieldData.message];
   if (externalSubgraphNames.size > 0) {
     const nonExternalSubgraphNames = subgraphNames.difference(externalSubgraphNames);
@@ -148,30 +212,38 @@ export function generateSharedResolvabilityErrorReasons({
         `: "${[...subgraphNames].join(QUOTATION_JOIN)}".`,
     );
   }
+  const isEntity = typeName === entityAncestors.typeName;
   let hasIntersectingTargetSubgraph = false;
   for (const [targetSubgraphName, fieldSets] of entityAncestors.fieldSetsByTargetSubgraphName) {
     if (!subgraphNames.has(targetSubgraphName)) {
       continue;
     }
-    const filteredSubgraphNames = entityAncestors.subgraphNames.filter(
-      (subgraphName) => subgraphName !== targetSubgraphName,
-    );
-    const isSubsetPlural = filteredSubgraphNames.length > 1;
+
     hasIntersectingTargetSubgraph = true;
-    for (const fieldSet of fieldSets) {
-      reasons.push(
-        `The entity ancestor "${entityAncestors.typeName}" in subgraph${isSubsetPlural ? `s` : ``}` +
-          ` "${filteredSubgraphNames.join(QUOTATION_JOIN)}" do${isSubsetPlural ? `` : `es`} not satisfy` +
-          ` the key field set "${fieldSet}" to access subgraph "${targetSubgraphName}".`,
-      );
+    if (isEntity) {
+      getSelfEntityReasons({
+        coords,
+        entityAncestors,
+        fieldSets,
+        reasons,
+        targetSubgraphName,
+      });
+    } else {
+      getAncestorEntityReasons({
+        coords,
+        entityAncestors,
+        fieldSets,
+        reasons,
+        targetSubgraphName,
+      });
     }
   }
   if (!hasIntersectingTargetSubgraph) {
     const isPlural = entityAncestors.subgraphNames.length > 1;
     reasons.push(
       `The entity ancestor "${entityAncestors.typeName}" in subgraph${isPlural ? `s` : ``}` +
-        ` "${entityAncestors.subgraphNames.join(QUOTATION_JOIN)}" ha${isPlural ? `ve` : `s`} no accessible target` +
-        ` entities (resolvable @key directives) in the subgraphs where "${typeName}.${fieldName}" is defined.`,
+        ` "${entityAncestors.subgraphNames.join(QUOTATION_JOIN)}" has no accessible target` +
+        ` entities (resolvable @key directives) in the subgraphs where "${coords}" is defined.`,
     );
   }
   reasons.push(
@@ -179,7 +251,8 @@ export function generateSharedResolvabilityErrorReasons({
   );
   if (typeName !== entityAncestors.typeName) {
     reasons.push(
-      `The type "${typeName}" has no accessible target entities (resolvable @key directives) in any other subgraph, so accessing other subgraphs is not possible.`,
+      `The type "${typeName}" has no accessible target entities (resolvable @key directives) in any` +
+        ` other subgraph, so accessing other subgraphs is not possible.`,
     );
   }
   return reasons;
