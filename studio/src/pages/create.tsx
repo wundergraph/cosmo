@@ -245,7 +245,12 @@ const OrganizationForm = () => {
                 </FormControl>
                 <FormDescription>
                   Looking for enterprise plans?{' '}
-                  <Link href={calURL} target="_blank" className="text-foreground hover:underline">
+                  <Link
+                    href={calURL}
+                    target="_blank"
+                    className="text-foreground hover:underline"
+                    rel="noopener noreferrer"
+                  >
                     Please contact sales
                   </Link>
                 </FormDescription>
