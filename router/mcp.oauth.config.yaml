@@ -1,28 +1,24 @@
-# MCP OAuth Scope Enforcement — Test Configuration
-# yaml-language-server: $schema=../../router/pkg/config/config.schema.json
+# MCP OAuth - Example Config
+# yaml-language-server: $schema=./pkg/config/config.schema.json
 #
-# This config is used by the E2E tests in McpOAuthScopes.test.ts.
-# It adds built-in tool scope requirements on top of the base MCP OAuth setup.
+# Example config for running the router's MCP server with OAuth 2.1 and
+# per-operation scope enforcement.
 #
-# Usage:
+# Before use, edit the fields marked EDIT ME to point at your own
+# execution config and MCP operations directory.
+#
+# Usage (from the router/ directory):
 #   1. Start the test OAuth server:
-#        go run ./router-tests/cmd/oauth-server
-#   2. Start the router with this config (from the repo root):
-#        go run ./router/cmd/router -config client-tests/mcp-ts/mcp.test.config.yaml
-#   3. Run the tests:
-#        cd client-tests/mcp-ts && pnpm test
+#        go run ../router-tests/cmd/oauth-server
+#   2. Start the router with this config:
+#        go run ./cmd/router -config mcp.oauth.config.yaml
+#   3. Point any MCP client at http://localhost:5025/mcp
 
 authentication:
   jwt:
     jwks:
       - url: 'http://localhost:9099/.well-known/jwks.json'
         refresh_interval: 1m
-
-execution_config:
-  file:
-    path: '../router-tests/testenv/testdata/config.json'
-    watch: true
-    watch_interval: 20s
 
 mcp:
   enabled: true
@@ -31,6 +27,7 @@ mcp:
 
   server:
     listen_addr: 'localhost:5025'
+    # port 5026 is for the published MCP server (proxy) endpoint
     base_url: 'http://localhost:5026'
 
   oauth:
@@ -40,6 +37,8 @@ mcp:
       - url: 'http://localhost:9099/.well-known/jwks.json'
         refresh_interval: 1m
         algorithms: ['RS256']
+    # Include the token's existing scopes in 403 insufficient_scope challenges.
+    # Workaround for MCP client SDKs that replace rather than accumulate scopes.
     scope_challenge_include_token_scopes: true
     scopes:
       initialize: ['mcp:connect']
@@ -64,4 +63,5 @@ mcp:
 storage_providers:
   file_system:
     - id: 'mcp-operations'
-      path: './../../connectrpc-tutorial/services'
+      # EDIT ME: directory containing your persisted MCP operations.
+      path: '../connectrpc-tutorial/services'

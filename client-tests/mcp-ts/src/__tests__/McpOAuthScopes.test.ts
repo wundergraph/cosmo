@@ -55,8 +55,10 @@
  *
  *   1. Start the test OAuth server:
  *        go run ./router-tests/cmd/oauth-server
- *   2. Start the router with the test config (from repo root):
- *        go run ./router/cmd/router -config client-tests/mcp-ts/mcp.test.config.yaml
+ *   2. Edit router/mcp.oauth.config.yaml to point at your own execution
+ *      config and MCP operations directory (see the EDIT ME markers), then
+ *      start the router (from the router/ directory):
+ *        go run ./cmd/router -config mcp.oauth.config.yaml
  *   3. Run the tests:
  *        cd client-tests/mcp-ts && pnpm test
  */
