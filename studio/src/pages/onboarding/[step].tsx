@@ -37,7 +37,7 @@ const OnboardingStep: NextPageWithLayout = () => {
       );
     case 3:
       return (
-        <OnboardingLayout title={title}>
+        <OnboardingLayout title={title} bare>
           <Step3 />
         </OnboardingLayout>
       );
