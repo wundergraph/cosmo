@@ -142,9 +142,6 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 			if eventSource.TLS.CertFile == "" || eventSource.TLS.KeyFile == "" {
 				return nil, fmt.Errorf("both cert_file and key_file must be provided for mTLS on NATS provider %q", eventSource.ID)
 			}
-			if eventSource.TLS.CaFile == "" {
-				return nil, fmt.Errorf("ca_file is required when mTLS credentials are configured for NATS provider %q", eventSource.ID)
-			}
 			cert, err := tls.LoadX509KeyPair(eventSource.TLS.CertFile, eventSource.TLS.KeyFile)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load mTLS certificate/key for NATS provider %q: %w", eventSource.ID, err)

@@ -2567,14 +2567,18 @@
                       },
                       "cert_file": {
                         "type": "string",
-                        "description": "Path to the client certificate file (PEM) for mTLS.",
+                        "description": "Path to the client certificate file (PEM) for mTLS. If set 'key_file' has to be set as well.",
                         "format": "file-path"
                       },
                       "key_file": {
                         "type": "string",
-                        "description": "Path to the client private key file (PEM) for mTLS.",
+                        "description": "Path to the client private key file (PEM) for mTLS. If set 'cert_file' has to be set as well.",
                         "format": "file-path"
                       }
+                    },
+                    "dependencies": {
+                      "cert_file": ["key_file"],
+                      "key_file": ["cert_file"]
                     }
                   },
                   "experiment_delete_durable_consumers_on_shutdown": {

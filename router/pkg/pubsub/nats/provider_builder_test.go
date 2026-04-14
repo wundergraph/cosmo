@@ -13,12 +13,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap/zaptest"
 )
+
+func applyNatsOptions(t *testing.T, opts []nats.Option) nats.Options {
+	t.Helper()
+	natsOpts := nats.GetDefaultOptions()
+	for _, opt := range opts {
+		require.NoError(t, opt(&natsOpts))
+	}
+	return natsOpts
+}
 
 func TestBuildNatsOptions(t *testing.T) {
 	t.Run("basic configuration", func(t *testing.T) {
@@ -77,7 +87,7 @@ func TestBuildNatsOptions(t *testing.T) {
 }
 
 func TestBuildNatsOptionsWithTLS(t *testing.T) {
-	t.Run("insecure skip verify", func(t *testing.T) {
+	t.Run("insecure skip verify is allowed", func(t *testing.T) {
 		cfg := config.NatsEventSource{
 			ID:  "test-nats",
 			URL: "nats://localhost:4222",
@@ -89,7 +99,11 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 
 		opts, err := buildNatsOptions(cfg, logger)
 		require.NoError(t, err)
-		require.Greater(t, len(opts), 7) // base options + TLS option
+
+		natsOpts := applyNatsOptions(t, opts)
+		require.True(t, natsOpts.Secure)
+		require.NotNil(t, natsOpts.TLSConfig)
+		require.True(t, natsOpts.TLSConfig.InsecureSkipVerify)
 	})
 
 	t.Run("missing ca file returns error", func(t *testing.T) {
@@ -134,19 +148,26 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		require.ErrorContains(t, err, "both cert_file and key_file must be provided")
 	})
 
-	t.Run("mtls without ca file returns error", func(t *testing.T) {
+	t.Run("mtls without ca file uses system trust store", func(t *testing.T) {
+		_, certFile, keyFile := generateTestCerts(t)
 		cfg := config.NatsEventSource{
 			ID:  "test-nats",
 			URL: "nats://localhost:4222",
 			TLS: &config.NatsTLSConfiguration{
-				CertFile: "/tmp/client.crt",
-				KeyFile:  "/tmp/client.key",
+				CertFile: certFile,
+				KeyFile:  keyFile,
 			},
 		}
 		logger := zaptest.NewLogger(t)
 
-		_, err := buildNatsOptions(cfg, logger)
-		require.ErrorContains(t, err, "ca_file is required when mTLS credentials are configured")
+		opts, err := buildNatsOptions(cfg, logger)
+		require.NoError(t, err)
+
+		natsOpts := applyNatsOptions(t, opts)
+		require.True(t, natsOpts.Secure)
+		require.NotNil(t, natsOpts.TLSConfig)
+		require.Nil(t, natsOpts.TLSConfig.RootCAs)
+		require.Len(t, natsOpts.TLSConfig.Certificates, 1)
 	})
 
 	t.Run("ca file only succeeds", func(t *testing.T) {
@@ -162,7 +183,13 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 
 		opts, err := buildNatsOptions(cfg, logger)
 		require.NoError(t, err)
-		require.Greater(t, len(opts), 7)
+
+		natsOpts := applyNatsOptions(t, opts)
+		require.True(t, natsOpts.Secure)
+		require.NotNil(t, natsOpts.TLSConfig)
+		require.False(t, natsOpts.TLSConfig.InsecureSkipVerify)
+		require.NotNil(t, natsOpts.TLSConfig.RootCAs)
+		require.Empty(t, natsOpts.TLSConfig.Certificates)
 	})
 
 	t.Run("mtls with ca file succeeds", func(t *testing.T) {
@@ -180,7 +207,13 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 
 		opts, err := buildNatsOptions(cfg, logger)
 		require.NoError(t, err)
-		require.Greater(t, len(opts), 7)
+
+		natsOpts := applyNatsOptions(t, opts)
+		require.True(t, natsOpts.Secure)
+		require.NotNil(t, natsOpts.TLSConfig)
+		require.False(t, natsOpts.TLSConfig.InsecureSkipVerify)
+		require.NotNil(t, natsOpts.TLSConfig.RootCAs)
+		require.Len(t, natsOpts.TLSConfig.Certificates, 1)
 	})
 }
 

@@ -152,6 +152,54 @@ events:
 	require.NoError(t, err)
 }
 
+func TestInvalidNatsTLSCertFileWithoutKeyFile(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+        tls:
+          cert_file: "/tmp/client.crt"
+
+`)
+
+	_, err := LoadConfig([]string{f})
+	require.ErrorContains(t, err, "router config validation error")
+	require.ErrorContains(t, err, "key_file")
+}
+
+func TestInvalidNatsTLSKeyFileWithoutCertFile(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+        tls:
+          key_file: "/tmp/client.key"
+
+`)
+
+	_, err := LoadConfig([]string{f})
+	require.ErrorContains(t, err, "router config validation error")
+	require.ErrorContains(t, err, "cert_file")
+}
+
 func TestInvalidNatsTLSUnknownField(t *testing.T) {
 	t.Parallel()
 
