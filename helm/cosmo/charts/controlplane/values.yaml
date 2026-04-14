@@ -295,5 +295,5 @@ jobs:
     enabled: true
     # -- Adds additional labels to the job
     additionalLabels: {}
-    # -- Cron schedule (default: 1st of every month at midnight UTC)
-    schedule: '0 0 1 * *'
+    # -- Cron schedule (default: 1st of every month at 2AM UTC)
+    schedule: '0 2 1 * *'
