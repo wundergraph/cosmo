@@ -37,17 +37,9 @@ type authCode struct {
 }
 
 // OAuthTestServer is a minimal OAuth 2.1 Authorization Server for integration tests.
-//
-// Supported endpoints:
-//   - GET  /.well-known/jwks.json                   — JWKS for token verification
-//   - GET  /.well-known/oauth-authorization-server   — AS metadata (RFC 8414)
-//   - POST /token                                    — Token endpoint (client_credentials + authorization_code)
-//   - POST /register                                 — Dynamic client registration (RFC 7591)
-//   - GET  /authorize                                — Authorization endpoint (auto-approves for testing)
-//
-// The server issues real signed JWTs that can be validated by any consumer
-// fetching the JWKS endpoint, making it suitable for end-to-end testing with
-// the official MCP TypeScript SDK's ClientCredentialsProvider.
+// It issues real signed JWTs that can be validated by any consumer fetching the
+// JWKS endpoint, making it suitable for end-to-end testing with the official MCP
+// TypeScript SDK's ClientCredentialsProvider.
 type OAuthTestServer struct {
 	t        *testing.T
 	provider jwks.Crypto
