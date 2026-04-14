@@ -145,7 +145,7 @@ func TestMCPOAuthPerToolScopes(t *testing.T) {
 			require.Error(t, err, "should fail without per-tool scopes")
 
 			authErr, ok := err.(*AuthError)
-			require.True(t, ok, "should return AuthError")
+			require.True(t, ok, "should return AuthError but got %T: %v", err, err)
 			assert.Equal(t, http.StatusForbidden, authErr.StatusCode, "should return HTTP 403")
 			assert.Equal(t, "insufficient_scope", authErr.ErrorCode)
 			assert.Contains(t, authErr.RequiredScopes, "mcp:tools:read")
@@ -188,29 +188,32 @@ func TestMCPOAuthPerToolScopes(t *testing.T) {
 			assert.Contains(t, authErr.RequiredScopes, "mcp:tools:write")
 		})
 
-		t.Run("Scope upgrade on same session works", func(t *testing.T) {
+		t.Run("Reconnecting with upgraded scopes works", func(t *testing.T) {
+			// The MCP SDK closes the session on HTTP 403, so clients must
+			// reconnect after re-authorizing for broader scopes (per OAuth spec).
 			readToken, err := oauthServer.CreateTokenWithScopes("test-user", []string{"mcp:connect", "mcp:tools:read"})
 			require.NoError(t, err)
 
-			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), readToken)
-			err = client.Connect(ctx)
-			require.NoError(t, err)
-			defer client.Close() //nolint:errcheck
+			readClient := NewMCPAuthClient(xEnv.GetMCPServerAddr(), readToken)
+			require.NoError(t, readClient.Connect(ctx))
 
-			_, err = client.CallTool(ctx, "execute_graphql", map[string]any{
+			_, err = readClient.CallTool(ctx, "execute_graphql", map[string]any{
 				"query": "query { __typename }",
 			})
 			require.Error(t, err, "should fail without write scopes")
+			readClient.Close() //nolint:errcheck
 
 			writeToken, err := oauthServer.CreateTokenWithScopes("test-user", []string{"mcp:connect", "mcp:tools:read", "mcp:tools:write"})
 			require.NoError(t, err)
 
-			client.SetToken(writeToken)
+			writeClient := NewMCPAuthClient(xEnv.GetMCPServerAddr(), writeToken)
+			require.NoError(t, writeClient.Connect(ctx))
+			defer writeClient.Close() //nolint:errcheck
 
-			result, err := client.CallTool(ctx, "execute_graphql", map[string]any{
+			result, err := writeClient.CallTool(ctx, "execute_graphql", map[string]any{
 				"query": "query { __typename }",
 			})
-			require.NoError(t, err, "should succeed after scope upgrade")
+			require.NoError(t, err, "should succeed after reconnecting with upgraded scopes")
 			require.NotNil(t, result)
 		})
 	})

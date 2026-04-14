@@ -28,8 +28,11 @@ func (a *authRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	}
 
 	resp, err := a.base.RoundTrip(req)
-	// Capture response for error analysis
-	a.lastResponse = resp
+	// Capture auth-error responses only; subsequent successful requests
+	// on the same session (e.g. SSE GETs) must not overwrite a prior 401/403.
+	if resp != nil && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) {
+		a.lastResponse = resp
+	}
 	return resp, err
 }
 
@@ -116,6 +119,8 @@ func (c *MCPAuthClient) CallTool(ctx context.Context, toolName string, arguments
 		Arguments: arguments,
 	}
 
+	// Reset so a prior 401/403 can't shadow this call's outcome.
+	c.roundTripper.lastResponse = nil
 	result, err := c.session.CallTool(ctx, params)
 	if err != nil {
 		if authErr := c.checkAuthError(); authErr != nil {
