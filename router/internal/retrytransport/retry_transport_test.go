@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"go.uber.org/zap/zapcore"
@@ -511,6 +512,7 @@ func TestOnRetryCallbackInvoked(t *testing.T) {
 }
 
 func TestRetryOn429WithDelaySeconds(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 2
@@ -574,6 +576,7 @@ func TestRetryOn429WithDelaySeconds(t *testing.T) {
 }
 
 func TestRetryOn429WithDelaySecondsLargerThanMaxDuration(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 2
@@ -638,6 +641,7 @@ func TestRetryOn429WithDelaySecondsLargerThanMaxDuration(t *testing.T) {
 }
 
 func TestRetryOn429WithoutRetryAfter(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 2
@@ -684,6 +688,7 @@ func TestRetryOn429WithoutRetryAfter(t *testing.T) {
 }
 
 func TestRetryOn429WithHTTPDate(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 2
@@ -751,6 +756,7 @@ func TestRetryOn429WithHTTPDate(t *testing.T) {
 }
 
 func TestRetryOn429WithInvalidRetryAfterHeader(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 2
@@ -848,6 +854,7 @@ func TestRetryOn429WithNegativeDelaySeconds(t *testing.T) {
 }
 
 func TestRetryMixed429AndOtherErrors(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 	maxRetries := 4
@@ -935,6 +942,7 @@ func TestRetryMixed429AndOtherErrors(t *testing.T) {
 }
 
 func TestNoRetryOn429WhenShouldRetryReturnsFalse(t *testing.T) {
+	t.Parallel()
 	retries := 0
 	attemptCount := 0
 
@@ -984,63 +992,64 @@ func TestNoRetryOn429WhenShouldRetryReturnsFalse(t *testing.T) {
 
 // Test unit functions directly
 func TestParseRetryAfterHeader(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
-		name     string
-		header   string
-		expected time.Duration
+		name           string
+		timeHeaderFunc func() string
+		expected       time.Duration
 	}{
 		{
-			name:     "valid delay seconds",
-			header:   "120",
-			expected: 120 * time.Second,
+			name:           "valid delay seconds",
+			timeHeaderFunc: func() string { return "120" },
+			expected:       120 * time.Second,
 		},
 		{
-			name:     "zero delay seconds",
-			header:   "0",
-			expected: 0,
+			name:           "zero delay seconds",
+			timeHeaderFunc: func() string { return "0" },
+			expected:       0,
 		},
 		{
-			name:     "negative delay seconds should return 0",
-			header:   "-1",
-			expected: 0,
+			name:           "negative delay seconds should return 0",
+			timeHeaderFunc: func() string { return "-1" },
+			expected:       0,
 		},
 		{
-			name:     "invalid string should return 0",
-			header:   "invalid",
-			expected: 0,
+			name:           "invalid string should return 0",
+			timeHeaderFunc: func() string { return "invalid" },
+			expected:       0,
 		},
 		{
-			name:     "empty string should return 0",
-			header:   "",
-			expected: 0,
+			name:           "empty string should return 0",
+			timeHeaderFunc: func() string { return "" },
+			expected:       0,
 		},
 		{
-			name:     "HTTP date in future",
-			header:   time.Now().UTC().Add(3 * time.Second).Format(http.TimeFormat),
-			expected: 3 * time.Second, // approximately
+			name:           "HTTP date in future",
+			timeHeaderFunc: func() string { return time.Now().UTC().Add(3 * time.Second).Format(http.TimeFormat) },
+			expected:       3 * time.Second,
 		},
 		{
-			name:     "HTTP date in past should return 0",
-			header:   time.Now().UTC().Add(-3 * time.Second).Format(http.TimeFormat),
-			expected: 0,
+			name:           "HTTP date in past should return 0",
+			timeHeaderFunc: func() string { return time.Now().UTC().Add(-3 * time.Second).Format(http.TimeFormat) },
+			expected:       0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseRetryAfterHeader(zap.NewNop(), tt.header)
-			if tt.name == "HTTP date in future" {
-				// For HTTP date tests, allow reasonable tolerance for timing variations
-				assert.True(t, result >= tt.expected-1*time.Second && result <= tt.expected+1*time.Second,
-					"Expected ~%v, got %v", tt.expected, result)
-			} else {
+			t.Parallel()
+
+			synctest.Test(t, func(t *testing.T) {
+				result := parseRetryAfterHeader(zap.NewNop(), tt.timeHeaderFunc())
 				assert.Equal(t, tt.expected, result)
-			}
+			})
 		})
 	}
 }
 
 func TestShouldUseRetryAfter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		resp        *http.Response
@@ -1129,6 +1138,7 @@ func TestShouldUseRetryAfter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			maxDuration := defaultMaxDuration
 			if tt.maxDuration > 0 {
 				maxDuration = tt.maxDuration

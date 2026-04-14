@@ -16,8 +16,8 @@ const (
 )
 
 const (
-	ExporterOLTPHTTP ExporterProtocolType = "http"
-	ExporterOLTPGRPC ExporterProtocolType = "grpc"
+	ExporterOTLPHTTP ExporterProtocolType = "http"
+	ExporterOTLPGRPC ExporterProtocolType = "grpc"
 )
 
 const (

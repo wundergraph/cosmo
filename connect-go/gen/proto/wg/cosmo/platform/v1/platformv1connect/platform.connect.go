@@ -570,189 +570,6 @@ const (
 	PlatformServiceRecomposeGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/RecomposeGraph"
 )
 
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	platformServiceServiceDescriptor                                     = v1.File_wg_cosmo_platform_v1_platform_proto.Services().ByName("PlatformService")
-	platformServiceCreatePlaygroundScriptMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("CreatePlaygroundScript")
-	platformServiceDeletePlaygroundScriptMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("DeletePlaygroundScript")
-	platformServiceUpdatePlaygroundScriptMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("UpdatePlaygroundScript")
-	platformServiceGetPlaygroundScriptsMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetPlaygroundScripts")
-	platformServiceCreateNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("CreateNamespace")
-	platformServiceDeleteNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("DeleteNamespace")
-	platformServiceRenameNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("RenameNamespace")
-	platformServiceGetNamespacesMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetNamespaces")
-	platformServiceGetNamespaceMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetNamespace")
-	platformServiceGetWorkspaceMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetWorkspace")
-	platformServiceCreateContractMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("CreateContract")
-	platformServiceUpdateContractMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateContract")
-	platformServiceMoveFederatedGraphMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("MoveFederatedGraph")
-	platformServiceMoveSubgraphMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("MoveSubgraph")
-	platformServiceMoveMonographMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("MoveMonograph")
-	platformServiceCreateMonographMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("CreateMonograph")
-	platformServicePublishMonographMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("PublishMonograph")
-	platformServiceDeleteMonographMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("DeleteMonograph")
-	platformServiceUpdateMonographMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("UpdateMonograph")
-	platformServiceMigrateMonographMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("MigrateMonograph")
-	platformServiceCreateFederatedSubgraphMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedSubgraph")
-	platformServicePublishFederatedSubgraphMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("PublishFederatedSubgraph")
-	platformServiceCreateFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedGraph")
-	platformServiceDeleteFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedGraph")
-	platformServiceDeleteFederatedSubgraphMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedSubgraph")
-	platformServiceCheckSubgraphSchemaMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("CheckSubgraphSchema")
-	platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("GetProposedSchemaOfCheckedSubgraph")
-	platformServiceFixSubgraphSchemaMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("FixSubgraphSchema")
-	platformServiceUpdateFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("UpdateFederatedGraph")
-	platformServiceUpdateSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateSubgraph")
-	platformServiceCheckFederatedGraphMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("CheckFederatedGraph")
-	platformServiceWhoAmIMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("WhoAmI")
-	platformServiceGenerateRouterTokenMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GenerateRouterToken")
-	platformServiceGetRouterTokensMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetRouterTokens")
-	platformServiceDeleteRouterTokenMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteRouterToken")
-	platformServicePublishPersistedOperationsMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("PublishPersistedOperations")
-	platformServiceCheckPersistedOperationTrafficMethodDescriptor        = platformServiceServiceDescriptor.Methods().ByName("CheckPersistedOperationTraffic")
-	platformServiceDeletePersistedOperationMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("DeletePersistedOperation")
-	platformServiceGetPersistedOperationsMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetPersistedOperations")
-	platformServiceGetAuditLogsMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetAuditLogs")
-	platformServiceInitializeCosmoUserMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("InitializeCosmoUser")
-	platformServiceListOrganizationsMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("ListOrganizations")
-	platformServiceGetFederatedGraphsMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphs")
-	platformServiceGetFederatedGraphsBySubgraphLabelsMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphsBySubgraphLabels")
-	platformServiceGetFederatedGraphByNameMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphByName")
-	platformServiceGetFederatedGraphSDLByNameMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphSDLByName")
-	platformServiceGetSubgraphsMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphs")
-	platformServiceGetSubgraphByNameMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphByName")
-	platformServiceGetSubgraphSDLFromLatestCompositionMethodDescriptor   = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphSDLFromLatestComposition")
-	platformServiceGetLatestSubgraphSDLMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetLatestSubgraphSDL")
-	platformServiceGetChecksByFederatedGraphNameMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetChecksByFederatedGraphName")
-	platformServiceGetCheckSummaryMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetCheckSummary")
-	platformServiceGetCheckOperationsMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetCheckOperations")
-	platformServiceForceCheckSuccessMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("ForceCheckSuccess")
-	platformServiceCreateOperationOverridesMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("CreateOperationOverrides")
-	platformServiceRemoveOperationOverridesMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("RemoveOperationOverrides")
-	platformServiceCreateOperationIgnoreAllOverrideMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("CreateOperationIgnoreAllOverride")
-	platformServiceRemoveOperationIgnoreAllOverrideMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("RemoveOperationIgnoreAllOverride")
-	platformServiceGetOperationOverridesMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetOperationOverrides")
-	platformServiceGetAllOverridesMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetAllOverrides")
-	platformServiceToggleChangeOverridesForAllOperationsMethodDescriptor = platformServiceServiceDescriptor.Methods().ByName("ToggleChangeOverridesForAllOperations")
-	platformServiceCreateIgnoreOverridesForAllOperationsMethodDescriptor = platformServiceServiceDescriptor.Methods().ByName("CreateIgnoreOverridesForAllOperations")
-	platformServiceGetOperationContentMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetOperationContent")
-	platformServiceGetFederatedGraphChangelogMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphChangelog")
-	platformServiceCreateFederatedGraphTokenMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedGraphToken")
-	platformServiceGetOrganizationBySlugMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationBySlug")
-	platformServiceGetOrganizationMembersMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationMembers")
-	platformServiceGetPendingOrganizationMembersMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetPendingOrganizationMembers")
-	platformServiceIsMemberLimitReachedMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("IsMemberLimitReached")
-	platformServiceInviteUserMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("InviteUser")
-	platformServiceGetAPIKeysMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetAPIKeys")
-	platformServiceCreateAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("CreateAPIKey")
-	platformServiceUpdateAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("UpdateAPIKey")
-	platformServiceDeleteAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("DeleteAPIKey")
-	platformServiceRemoveOrganizationMemberMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("RemoveOrganizationMember")
-	platformServiceRemoveInvitationMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("RemoveInvitation")
-	platformServiceMigrateFromApolloMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("MigrateFromApollo")
-	platformServiceCreateOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationGroup")
-	platformServiceGetOrganizationGroupsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationGroups")
-	platformServiceGetOrganizationGroupMembersMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationGroupMembers")
-	platformServiceUpdateOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationGroup")
-	platformServiceDeleteOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganizationGroup")
-	platformServiceCreateOrganizationWebhookConfigMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationWebhookConfig")
-	platformServiceGetOrganizationWebhookConfigsMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookConfigs")
-	platformServiceGetOrganizationWebhookMetaMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookMeta")
-	platformServiceUpdateOrganizationWebhookConfigMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationWebhookConfig")
-	platformServiceDeleteOrganizationWebhookConfigMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganizationWebhookConfig")
-	platformServiceGetOrganizationWebhookHistoryMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookHistory")
-	platformServiceGetWebhookDeliveryDetailsMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("GetWebhookDeliveryDetails")
-	platformServiceRedeliverWebhookMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("RedeliverWebhook")
-	platformServiceCreateIntegrationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("CreateIntegration")
-	platformServiceGetOrganizationIntegrationsMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationIntegrations")
-	platformServiceUpdateIntegrationConfigMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("UpdateIntegrationConfig")
-	platformServiceDeleteIntegrationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteIntegration")
-	platformServiceDeleteUserMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("DeleteUser")
-	platformServiceDeleteOrganizationMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganization")
-	platformServiceRestoreOrganizationMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("RestoreOrganization")
-	platformServiceLeaveOrganizationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("LeaveOrganization")
-	platformServiceUpdateOrganizationDetailsMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationDetails")
-	platformServiceUpdateOrgMemberGroupMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberGroup")
-	platformServiceIsGitHubAppInstalledMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("IsGitHubAppInstalled")
-	platformServiceCreateOIDCProviderMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("CreateOIDCProvider")
-	platformServiceGetOIDCProviderMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetOIDCProvider")
-	platformServiceDeleteOIDCProviderMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("DeleteOIDCProvider")
-	platformServiceUpdateIDPMappersMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("UpdateIDPMappers")
-	platformServiceGetClientsMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetClients")
-	platformServiceGetRoutersMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetRouters")
-	platformServiceGetInvitationsMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("GetInvitations")
-	platformServiceAcceptOrDeclineInvitationMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("AcceptOrDeclineInvitation")
-	platformServiceGetCompositionsMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetCompositions")
-	platformServiceGetCompositionDetailsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetCompositionDetails")
-	platformServiceGetSdlBySchemaVersionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetSdlBySchemaVersion")
-	platformServiceGetChangelogBySchemaVersionMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetChangelogBySchemaVersion")
-	platformServiceGetUserAccessibleResourcesMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessibleResources")
-	platformServiceUpdateFeatureSettingsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("UpdateFeatureSettings")
-	platformServiceGetSubgraphMembersMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMembers")
-	platformServiceAddReadmeMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("AddReadme")
-	platformServiceGetUserAccessiblePermissionsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessiblePermissions")
-	platformServiceCreateFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("CreateFeatureFlag")
-	platformServiceDeleteFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteFeatureFlag")
-	platformServiceUpdateFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("UpdateFeatureFlag")
-	platformServiceEnableFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("EnableFeatureFlag")
-	platformServiceGetAnalyticsViewMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("GetAnalyticsView")
-	platformServiceGetDashboardAnalyticsViewMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("GetDashboardAnalyticsView")
-	platformServiceGetTraceMethodDescriptor                              = platformServiceServiceDescriptor.Methods().ByName("GetTrace")
-	platformServiceGetGraphMetricsMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetGraphMetrics")
-	platformServiceGetMetricsErrorRateMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetMetricsErrorRate")
-	platformServiceGetSubgraphMetricsMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMetrics")
-	platformServiceGetSubgraphMetricsErrorRateMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMetricsErrorRate")
-	platformServiceGetFieldUsageMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetFieldUsage")
-	platformServiceGetOrganizationRequestsCountMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationRequestsCount")
-	platformServiceCreateOrganizationMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("CreateOrganization")
-	platformServiceEnableLintingForTheNamespaceMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("EnableLintingForTheNamespace")
-	platformServiceConfigureNamespaceLintConfigMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceLintConfig")
-	platformServiceGetNamespaceLintConfigMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceLintConfig")
-	platformServiceGetNamespaceChecksConfigMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceChecksConfig")
-	platformServiceUpdateNamespaceChecksConfigMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("UpdateNamespaceChecksConfig")
-	platformServiceEnableGraphPruningMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("EnableGraphPruning")
-	platformServiceConfigureNamespaceGraphPruningConfigMethodDescriptor  = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceGraphPruningConfig")
-	platformServiceGetNamespaceGraphPruningConfigMethodDescriptor        = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceGraphPruningConfig")
-	platformServiceGetFeatureFlagsMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlags")
-	platformServiceGetFeatureFlagByNameMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlagByName")
-	platformServiceGetFeatureSubgraphsByFeatureFlagMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphsByFeatureFlag")
-	platformServiceGetFeatureSubgraphsMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphs")
-	platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlagsByFederatedGraph")
-	platformServiceGetFederatedGraphByIdMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphById")
-	platformServiceGetSubgraphByIdMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphById")
-	platformServicePushCacheWarmerOperationMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("PushCacheWarmerOperation")
-	platformServiceGetCacheWarmerOperationsMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerOperations")
-	platformServiceComputeCacheWarmerOperationsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("ComputeCacheWarmerOperations")
-	platformServiceConfigureCacheWarmerMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("ConfigureCacheWarmer")
-	platformServiceGetCacheWarmerConfigMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerConfig")
-	platformServiceDeleteCacheWarmerOperationMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("DeleteCacheWarmerOperation")
-	platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphCheckExtensionsConfig")
-	platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("ConfigureSubgraphCheckExtensions")
-	platformServiceGetBillingPlansMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetBillingPlans")
-	platformServiceCreateCheckoutSessionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
-	platformServiceCreateBillingPortalSessionMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
-	platformServiceUpgradePlanMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("UpgradePlan")
-	platformServiceListRouterCompatibilityVersionsMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("ListRouterCompatibilityVersions")
-	platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("SetGraphRouterCompatibilityVersion")
-	platformServiceCreateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("CreateProposal")
-	platformServiceGetProposalMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("GetProposal")
-	platformServiceUpdateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateProposal")
-	platformServiceEnableProposalsForNamespaceMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("EnableProposalsForNamespace")
-	platformServiceConfigureNamespaceProposalConfigMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceProposalConfig")
-	platformServiceGetNamespaceProposalConfigMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceProposalConfig")
-	platformServiceGetProposalsByFederatedGraphMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
-	platformServiceGetProposalChecksMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
-	platformServiceGetOperationsMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetOperations")
-	platformServiceGetClientsFromAnalyticsMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetClientsFromAnalytics")
-	platformServiceGetOperationClientsMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetOperationClients")
-	platformServiceGetOperationDeprecatedFieldsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetOperationDeprecatedFields")
-	platformServiceValidateAndFetchPluginDataMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("ValidateAndFetchPluginData")
-	platformServiceLinkSubgraphMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("LinkSubgraph")
-	platformServiceUnlinkSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
-	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
-	platformServiceRecomposeGraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
-)
-
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceClient interface {
 	// PlaygroundScripts
@@ -1102,1080 +919,1081 @@ type PlatformServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) PlatformServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
+	platformServiceMethods := v1.File_wg_cosmo_platform_v1_platform_proto.Services().ByName("PlatformService").Methods()
 	return &platformServiceClient{
 		createPlaygroundScript: connect.NewClient[v1.CreatePlaygroundScriptRequest, v1.CreatePlaygroundScriptResponse](
 			httpClient,
 			baseURL+PlatformServiceCreatePlaygroundScriptProcedure,
-			connect.WithSchema(platformServiceCreatePlaygroundScriptMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreatePlaygroundScript")),
 			connect.WithClientOptions(opts...),
 		),
 		deletePlaygroundScript: connect.NewClient[v1.DeletePlaygroundScriptRequest, v1.DeletePlaygroundScriptResponse](
 			httpClient,
 			baseURL+PlatformServiceDeletePlaygroundScriptProcedure,
-			connect.WithSchema(platformServiceDeletePlaygroundScriptMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeletePlaygroundScript")),
 			connect.WithClientOptions(opts...),
 		),
 		updatePlaygroundScript: connect.NewClient[v1.UpdatePlaygroundScriptRequest, v1.UpdatePlaygroundScriptResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdatePlaygroundScriptProcedure,
-			connect.WithSchema(platformServiceUpdatePlaygroundScriptMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdatePlaygroundScript")),
 			connect.WithClientOptions(opts...),
 		),
 		getPlaygroundScripts: connect.NewClient[v1.GetPlaygroundScriptsRequest, v1.GetPlaygroundScriptsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetPlaygroundScriptsProcedure,
-			connect.WithSchema(platformServiceGetPlaygroundScriptsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundScripts")),
 			connect.WithClientOptions(opts...),
 		),
 		createNamespace: connect.NewClient[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateNamespaceProcedure,
-			connect.WithSchema(platformServiceCreateNamespaceMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateNamespace")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteNamespace: connect.NewClient[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteNamespaceProcedure,
-			connect.WithSchema(platformServiceDeleteNamespaceMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteNamespace")),
 			connect.WithClientOptions(opts...),
 		),
 		renameNamespace: connect.NewClient[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse](
 			httpClient,
 			baseURL+PlatformServiceRenameNamespaceProcedure,
-			connect.WithSchema(platformServiceRenameNamespaceMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("RenameNamespace")),
 			connect.WithClientOptions(opts...),
 		),
 		getNamespaces: connect.NewClient[v1.GetNamespacesRequest, v1.GetNamespacesResponse](
 			httpClient,
 			baseURL+PlatformServiceGetNamespacesProcedure,
-			connect.WithSchema(platformServiceGetNamespacesMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetNamespaces")),
 			connect.WithClientOptions(opts...),
 		),
 		getNamespace: connect.NewClient[v1.GetNamespaceRequest, v1.GetNamespaceResponse](
 			httpClient,
 			baseURL+PlatformServiceGetNamespaceProcedure,
-			connect.WithSchema(platformServiceGetNamespaceMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetNamespace")),
 			connect.WithClientOptions(opts...),
 		),
 		getWorkspace: connect.NewClient[v1.GetWorkspaceRequest, v1.GetWorkspaceResponse](
 			httpClient,
 			baseURL+PlatformServiceGetWorkspaceProcedure,
-			connect.WithSchema(platformServiceGetWorkspaceMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetWorkspace")),
 			connect.WithClientOptions(opts...),
 		),
 		createContract: connect.NewClient[v1.CreateContractRequest, v1.CreateContractResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateContractProcedure,
-			connect.WithSchema(platformServiceCreateContractMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateContract")),
 			connect.WithClientOptions(opts...),
 		),
 		updateContract: connect.NewClient[v1.UpdateContractRequest, v1.UpdateContractResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateContractProcedure,
-			connect.WithSchema(platformServiceUpdateContractMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateContract")),
 			connect.WithClientOptions(opts...),
 		),
 		moveFederatedGraph: connect.NewClient[v1.MoveGraphRequest, v1.MoveGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceMoveFederatedGraphProcedure,
-			connect.WithSchema(platformServiceMoveFederatedGraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("MoveFederatedGraph")),
 			connect.WithClientOptions(opts...),
 		),
 		moveSubgraph: connect.NewClient[v1.MoveGraphRequest, v1.MoveGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceMoveSubgraphProcedure,
-			connect.WithSchema(platformServiceMoveSubgraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("MoveSubgraph")),
 			connect.WithClientOptions(opts...),
 		),
 		moveMonograph: connect.NewClient[v1.MoveGraphRequest, v1.MoveGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceMoveMonographProcedure,
-			connect.WithSchema(platformServiceMoveMonographMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("MoveMonograph")),
 			connect.WithClientOptions(opts...),
 		),
 		createMonograph: connect.NewClient[v1.CreateMonographRequest, v1.CreateMonographResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateMonographProcedure,
-			connect.WithSchema(platformServiceCreateMonographMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateMonograph")),
 			connect.WithClientOptions(opts...),
 		),
 		publishMonograph: connect.NewClient[v1.PublishMonographRequest, v1.PublishMonographResponse](
 			httpClient,
 			baseURL+PlatformServicePublishMonographProcedure,
-			connect.WithSchema(platformServicePublishMonographMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("PublishMonograph")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteMonograph: connect.NewClient[v1.DeleteMonographRequest, v1.DeleteMonographResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteMonographProcedure,
-			connect.WithSchema(platformServiceDeleteMonographMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteMonograph")),
 			connect.WithClientOptions(opts...),
 		),
 		updateMonograph: connect.NewClient[v1.UpdateMonographRequest, v1.UpdateMonographResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateMonographProcedure,
-			connect.WithSchema(platformServiceUpdateMonographMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateMonograph")),
 			connect.WithClientOptions(opts...),
 		),
 		migrateMonograph: connect.NewClient[v1.MigrateMonographRequest, v1.MigrateMonographResponse](
 			httpClient,
 			baseURL+PlatformServiceMigrateMonographProcedure,
-			connect.WithSchema(platformServiceMigrateMonographMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("MigrateMonograph")),
 			connect.WithClientOptions(opts...),
 		),
 		createFederatedSubgraph: connect.NewClient[v1.CreateFederatedSubgraphRequest, v1.CreateFederatedSubgraphResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateFederatedSubgraphProcedure,
-			connect.WithSchema(platformServiceCreateFederatedSubgraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraph")),
 			connect.WithClientOptions(opts...),
 		),
 		publishFederatedSubgraph: connect.NewClient[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse](
 			httpClient,
 			baseURL+PlatformServicePublishFederatedSubgraphProcedure,
-			connect.WithSchema(platformServicePublishFederatedSubgraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraph")),
 			connect.WithClientOptions(opts...),
 		),
 		createFederatedGraph: connect.NewClient[v1.CreateFederatedGraphRequest, v1.CreateFederatedGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateFederatedGraphProcedure,
-			connect.WithSchema(platformServiceCreateFederatedGraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateFederatedGraph")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteFederatedGraph: connect.NewClient[v1.DeleteFederatedGraphRequest, v1.DeleteFederatedGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteFederatedGraphProcedure,
-			connect.WithSchema(platformServiceDeleteFederatedGraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteFederatedGraph")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteFederatedSubgraph: connect.NewClient[v1.DeleteFederatedSubgraphRequest, v1.DeleteFederatedSubgraphResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteFederatedSubgraphProcedure,
-			connect.WithSchema(platformServiceDeleteFederatedSubgraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteFederatedSubgraph")),
 			connect.WithClientOptions(opts...),
 		),
 		checkSubgraphSchema: connect.NewClient[v1.CheckSubgraphSchemaRequest, v1.CheckSubgraphSchemaResponse](
 			httpClient,
 			baseURL+PlatformServiceCheckSubgraphSchemaProcedure,
-			connect.WithSchema(platformServiceCheckSubgraphSchemaMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CheckSubgraphSchema")),
 			connect.WithClientOptions(opts...),
 		),
 		getProposedSchemaOfCheckedSubgraph: connect.NewClient[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse](
 			httpClient,
 			baseURL+PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure,
-			connect.WithSchema(platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetProposedSchemaOfCheckedSubgraph")),
 			connect.WithClientOptions(opts...),
 		),
 		fixSubgraphSchema: connect.NewClient[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse](
 			httpClient,
 			baseURL+PlatformServiceFixSubgraphSchemaProcedure,
-			connect.WithSchema(platformServiceFixSubgraphSchemaMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("FixSubgraphSchema")),
 			connect.WithClientOptions(opts...),
 		),
 		updateFederatedGraph: connect.NewClient[v1.UpdateFederatedGraphRequest, v1.UpdateFederatedGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateFederatedGraphProcedure,
-			connect.WithSchema(platformServiceUpdateFederatedGraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateFederatedGraph")),
 			connect.WithClientOptions(opts...),
 		),
 		updateSubgraph: connect.NewClient[v1.UpdateSubgraphRequest, v1.UpdateSubgraphResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateSubgraphProcedure,
-			connect.WithSchema(platformServiceUpdateSubgraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateSubgraph")),
 			connect.WithClientOptions(opts...),
 		),
 		checkFederatedGraph: connect.NewClient[v1.CheckFederatedGraphRequest, v1.CheckFederatedGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceCheckFederatedGraphProcedure,
-			connect.WithSchema(platformServiceCheckFederatedGraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CheckFederatedGraph")),
 			connect.WithClientOptions(opts...),
 		),
 		whoAmI: connect.NewClient[v1.WhoAmIRequest, v1.WhoAmIResponse](
 			httpClient,
 			baseURL+PlatformServiceWhoAmIProcedure,
-			connect.WithSchema(platformServiceWhoAmIMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("WhoAmI")),
 			connect.WithClientOptions(opts...),
 		),
 		generateRouterToken: connect.NewClient[v1.GenerateRouterTokenRequest, v1.GenerateRouterTokenResponse](
 			httpClient,
 			baseURL+PlatformServiceGenerateRouterTokenProcedure,
-			connect.WithSchema(platformServiceGenerateRouterTokenMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GenerateRouterToken")),
 			connect.WithClientOptions(opts...),
 		),
 		getRouterTokens: connect.NewClient[v1.GetRouterTokensRequest, v1.GetRouterTokensResponse](
 			httpClient,
 			baseURL+PlatformServiceGetRouterTokensProcedure,
-			connect.WithSchema(platformServiceGetRouterTokensMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetRouterTokens")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteRouterToken: connect.NewClient[v1.DeleteRouterTokenRequest, v1.DeleteRouterTokenResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteRouterTokenProcedure,
-			connect.WithSchema(platformServiceDeleteRouterTokenMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteRouterToken")),
 			connect.WithClientOptions(opts...),
 		),
 		publishPersistedOperations: connect.NewClient[v1.PublishPersistedOperationsRequest, v1.PublishPersistedOperationsResponse](
 			httpClient,
 			baseURL+PlatformServicePublishPersistedOperationsProcedure,
-			connect.WithSchema(platformServicePublishPersistedOperationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("PublishPersistedOperations")),
 			connect.WithClientOptions(opts...),
 		),
 		checkPersistedOperationTraffic: connect.NewClient[v1.CheckPersistedOperationTrafficRequest, v1.CheckPersistedOperationTrafficResponse](
 			httpClient,
 			baseURL+PlatformServiceCheckPersistedOperationTrafficProcedure,
-			connect.WithSchema(platformServiceCheckPersistedOperationTrafficMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CheckPersistedOperationTraffic")),
 			connect.WithClientOptions(opts...),
 		),
 		deletePersistedOperation: connect.NewClient[v1.DeletePersistedOperationRequest, v1.DeletePersistedOperationResponse](
 			httpClient,
 			baseURL+PlatformServiceDeletePersistedOperationProcedure,
-			connect.WithSchema(platformServiceDeletePersistedOperationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeletePersistedOperation")),
 			connect.WithClientOptions(opts...),
 		),
 		getPersistedOperations: connect.NewClient[v1.GetPersistedOperationsRequest, v1.GetPersistedOperationsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetPersistedOperationsProcedure,
-			connect.WithSchema(platformServiceGetPersistedOperationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetPersistedOperations")),
 			connect.WithClientOptions(opts...),
 		),
 		getAuditLogs: connect.NewClient[v1.GetAuditLogsRequest, v1.GetAuditLogsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetAuditLogsProcedure,
-			connect.WithSchema(platformServiceGetAuditLogsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetAuditLogs")),
 			connect.WithClientOptions(opts...),
 		),
 		initializeCosmoUser: connect.NewClient[v1.InitializeCosmoUserRequest, v1.InitializeCosmoUserResponse](
 			httpClient,
 			baseURL+PlatformServiceInitializeCosmoUserProcedure,
-			connect.WithSchema(platformServiceInitializeCosmoUserMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("InitializeCosmoUser")),
 			connect.WithClientOptions(opts...),
 		),
 		listOrganizations: connect.NewClient[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse](
 			httpClient,
 			baseURL+PlatformServiceListOrganizationsProcedure,
-			connect.WithSchema(platformServiceListOrganizationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ListOrganizations")),
 			connect.WithClientOptions(opts...),
 		),
 		getFederatedGraphs: connect.NewClient[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFederatedGraphsProcedure,
-			connect.WithSchema(platformServiceGetFederatedGraphsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphs")),
 			connect.WithClientOptions(opts...),
 		),
 		getFederatedGraphsBySubgraphLabels: connect.NewClient[v1.GetFederatedGraphsBySubgraphLabelsRequest, v1.GetFederatedGraphsBySubgraphLabelsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFederatedGraphsBySubgraphLabelsProcedure,
-			connect.WithSchema(platformServiceGetFederatedGraphsBySubgraphLabelsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphsBySubgraphLabels")),
 			connect.WithClientOptions(opts...),
 		),
 		getFederatedGraphByName: connect.NewClient[v1.GetFederatedGraphByNameRequest, v1.GetFederatedGraphByNameResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFederatedGraphByNameProcedure,
-			connect.WithSchema(platformServiceGetFederatedGraphByNameMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphByName")),
 			connect.WithClientOptions(opts...),
 		),
 		getFederatedGraphSDLByName: connect.NewClient[v1.GetFederatedGraphSDLByNameRequest, v1.GetFederatedGraphSDLByNameResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFederatedGraphSDLByNameProcedure,
-			connect.WithSchema(platformServiceGetFederatedGraphSDLByNameMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphSDLByName")),
 			connect.WithClientOptions(opts...),
 		),
 		getSubgraphs: connect.NewClient[v1.GetSubgraphsRequest, v1.GetSubgraphsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphsProcedure,
-			connect.WithSchema(platformServiceGetSubgraphsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetSubgraphs")),
 			connect.WithClientOptions(opts...),
 		),
 		getSubgraphByName: connect.NewClient[v1.GetSubgraphByNameRequest, v1.GetSubgraphByNameResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphByNameProcedure,
-			connect.WithSchema(platformServiceGetSubgraphByNameMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetSubgraphByName")),
 			connect.WithClientOptions(opts...),
 		),
 		getSubgraphSDLFromLatestComposition: connect.NewClient[v1.GetSubgraphSDLFromLatestCompositionRequest, v1.GetSubgraphSDLFromLatestCompositionResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphSDLFromLatestCompositionProcedure,
-			connect.WithSchema(platformServiceGetSubgraphSDLFromLatestCompositionMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetSubgraphSDLFromLatestComposition")),
 			connect.WithClientOptions(opts...),
 		),
 		getLatestSubgraphSDL: connect.NewClient[v1.GetLatestSubgraphSDLRequest, v1.GetLatestSubgraphSDLResponse](
 			httpClient,
 			baseURL+PlatformServiceGetLatestSubgraphSDLProcedure,
-			connect.WithSchema(platformServiceGetLatestSubgraphSDLMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetLatestSubgraphSDL")),
 			connect.WithClientOptions(opts...),
 		),
 		getChecksByFederatedGraphName: connect.NewClient[v1.GetChecksByFederatedGraphNameRequest, v1.GetChecksByFederatedGraphNameResponse](
 			httpClient,
 			baseURL+PlatformServiceGetChecksByFederatedGraphNameProcedure,
-			connect.WithSchema(platformServiceGetChecksByFederatedGraphNameMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetChecksByFederatedGraphName")),
 			connect.WithClientOptions(opts...),
 		),
 		getCheckSummary: connect.NewClient[v1.GetCheckSummaryRequest, v1.GetCheckSummaryResponse](
 			httpClient,
 			baseURL+PlatformServiceGetCheckSummaryProcedure,
-			connect.WithSchema(platformServiceGetCheckSummaryMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetCheckSummary")),
 			connect.WithClientOptions(opts...),
 		),
 		getCheckOperations: connect.NewClient[v1.GetCheckOperationsRequest, v1.GetCheckOperationsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetCheckOperationsProcedure,
-			connect.WithSchema(platformServiceGetCheckOperationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetCheckOperations")),
 			connect.WithClientOptions(opts...),
 		),
 		forceCheckSuccess: connect.NewClient[v1.ForceCheckSuccessRequest, v1.ForceCheckSuccessResponse](
 			httpClient,
 			baseURL+PlatformServiceForceCheckSuccessProcedure,
-			connect.WithSchema(platformServiceForceCheckSuccessMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ForceCheckSuccess")),
 			connect.WithClientOptions(opts...),
 		),
 		createOperationOverrides: connect.NewClient[v1.CreateOperationOverridesRequest, v1.CreateOperationOverridesResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateOperationOverridesProcedure,
-			connect.WithSchema(platformServiceCreateOperationOverridesMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateOperationOverrides")),
 			connect.WithClientOptions(opts...),
 		),
 		removeOperationOverrides: connect.NewClient[v1.RemoveOperationOverridesRequest, v1.RemoveOperationOverridesResponse](
 			httpClient,
 			baseURL+PlatformServiceRemoveOperationOverridesProcedure,
-			connect.WithSchema(platformServiceRemoveOperationOverridesMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("RemoveOperationOverrides")),
 			connect.WithClientOptions(opts...),
 		),
 		createOperationIgnoreAllOverride: connect.NewClient[v1.CreateOperationIgnoreAllOverrideRequest, v1.CreateOperationIgnoreAllOverrideResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateOperationIgnoreAllOverrideProcedure,
-			connect.WithSchema(platformServiceCreateOperationIgnoreAllOverrideMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateOperationIgnoreAllOverride")),
 			connect.WithClientOptions(opts...),
 		),
 		removeOperationIgnoreAllOverride: connect.NewClient[v1.RemoveOperationIgnoreAllOverrideRequest, v1.RemoveOperationIgnoreAllOverrideResponse](
 			httpClient,
 			baseURL+PlatformServiceRemoveOperationIgnoreAllOverrideProcedure,
-			connect.WithSchema(platformServiceRemoveOperationIgnoreAllOverrideMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("RemoveOperationIgnoreAllOverride")),
 			connect.WithClientOptions(opts...),
 		),
 		getOperationOverrides: connect.NewClient[v1.GetOperationOverridesRequest, v1.GetOperationOverridesResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOperationOverridesProcedure,
-			connect.WithSchema(platformServiceGetOperationOverridesMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOperationOverrides")),
 			connect.WithClientOptions(opts...),
 		),
 		getAllOverrides: connect.NewClient[v1.GetAllOverridesRequest, v1.GetAllOverridesResponse](
 			httpClient,
 			baseURL+PlatformServiceGetAllOverridesProcedure,
-			connect.WithSchema(platformServiceGetAllOverridesMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetAllOverrides")),
 			connect.WithClientOptions(opts...),
 		),
 		toggleChangeOverridesForAllOperations: connect.NewClient[v1.ToggleChangeOverridesForAllOperationsRequest, v1.ToggleChangeOverridesForAllOperationsResponse](
 			httpClient,
 			baseURL+PlatformServiceToggleChangeOverridesForAllOperationsProcedure,
-			connect.WithSchema(platformServiceToggleChangeOverridesForAllOperationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ToggleChangeOverridesForAllOperations")),
 			connect.WithClientOptions(opts...),
 		),
 		createIgnoreOverridesForAllOperations: connect.NewClient[v1.CreateIgnoreOverridesForAllOperationsRequest, v1.CreateIgnoreOverridesForAllOperationsResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateIgnoreOverridesForAllOperationsProcedure,
-			connect.WithSchema(platformServiceCreateIgnoreOverridesForAllOperationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateIgnoreOverridesForAllOperations")),
 			connect.WithClientOptions(opts...),
 		),
 		getOperationContent: connect.NewClient[v1.GetOperationContentRequest, v1.GetOperationContentResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOperationContentProcedure,
-			connect.WithSchema(platformServiceGetOperationContentMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOperationContent")),
 			connect.WithClientOptions(opts...),
 		),
 		getFederatedGraphChangelog: connect.NewClient[v1.GetFederatedGraphChangelogRequest, v1.GetFederatedGraphChangelogResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFederatedGraphChangelogProcedure,
-			connect.WithSchema(platformServiceGetFederatedGraphChangelogMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphChangelog")),
 			connect.WithClientOptions(opts...),
 		),
 		createFederatedGraphToken: connect.NewClient[v1.CreateFederatedGraphTokenRequest, v1.CreateFederatedGraphTokenResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateFederatedGraphTokenProcedure,
-			connect.WithSchema(platformServiceCreateFederatedGraphTokenMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateFederatedGraphToken")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationBySlug: connect.NewClient[v1.GetOrganizationBySlugRequest, v1.GetOrganizationBySlugResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationBySlugProcedure,
-			connect.WithSchema(platformServiceGetOrganizationBySlugMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationBySlug")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationMembers: connect.NewClient[v1.GetOrganizationMembersRequest, v1.GetOrganizationMembersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationMembersProcedure,
-			connect.WithSchema(platformServiceGetOrganizationMembersMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationMembers")),
 			connect.WithClientOptions(opts...),
 		),
 		getPendingOrganizationMembers: connect.NewClient[v1.GetPendingOrganizationMembersRequest, v1.GetPendingOrganizationMembersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetPendingOrganizationMembersProcedure,
-			connect.WithSchema(platformServiceGetPendingOrganizationMembersMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetPendingOrganizationMembers")),
 			connect.WithClientOptions(opts...),
 		),
 		isMemberLimitReached: connect.NewClient[v1.IsMemberLimitReachedRequest, v1.IsMemberLimitReachedResponse](
 			httpClient,
 			baseURL+PlatformServiceIsMemberLimitReachedProcedure,
-			connect.WithSchema(platformServiceIsMemberLimitReachedMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("IsMemberLimitReached")),
 			connect.WithClientOptions(opts...),
 		),
 		inviteUser: connect.NewClient[v1.InviteUserRequest, v1.InviteUserResponse](
 			httpClient,
 			baseURL+PlatformServiceInviteUserProcedure,
-			connect.WithSchema(platformServiceInviteUserMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("InviteUser")),
 			connect.WithClientOptions(opts...),
 		),
 		getAPIKeys: connect.NewClient[v1.GetAPIKeysRequest, v1.GetAPIKeysResponse](
 			httpClient,
 			baseURL+PlatformServiceGetAPIKeysProcedure,
-			connect.WithSchema(platformServiceGetAPIKeysMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetAPIKeys")),
 			connect.WithClientOptions(opts...),
 		),
 		createAPIKey: connect.NewClient[v1.CreateAPIKeyRequest, v1.CreateAPIKeyResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateAPIKeyProcedure,
-			connect.WithSchema(platformServiceCreateAPIKeyMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateAPIKey")),
 			connect.WithClientOptions(opts...),
 		),
 		updateAPIKey: connect.NewClient[v1.UpdateAPIKeyRequest, v1.UpdateAPIKeyResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateAPIKeyProcedure,
-			connect.WithSchema(platformServiceUpdateAPIKeyMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateAPIKey")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteAPIKey: connect.NewClient[v1.DeleteAPIKeyRequest, v1.DeleteAPIKeyResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteAPIKeyProcedure,
-			connect.WithSchema(platformServiceDeleteAPIKeyMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteAPIKey")),
 			connect.WithClientOptions(opts...),
 		),
 		removeOrganizationMember: connect.NewClient[v1.RemoveOrganizationMemberRequest, v1.RemoveOrganizationMemberResponse](
 			httpClient,
 			baseURL+PlatformServiceRemoveOrganizationMemberProcedure,
-			connect.WithSchema(platformServiceRemoveOrganizationMemberMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("RemoveOrganizationMember")),
 			connect.WithClientOptions(opts...),
 		),
 		removeInvitation: connect.NewClient[v1.RemoveInvitationRequest, v1.RemoveInvitationResponse](
 			httpClient,
 			baseURL+PlatformServiceRemoveInvitationProcedure,
-			connect.WithSchema(platformServiceRemoveInvitationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("RemoveInvitation")),
 			connect.WithClientOptions(opts...),
 		),
 		migrateFromApollo: connect.NewClient[v1.MigrateFromApolloRequest, v1.MigrateFromApolloResponse](
 			httpClient,
 			baseURL+PlatformServiceMigrateFromApolloProcedure,
-			connect.WithSchema(platformServiceMigrateFromApolloMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("MigrateFromApollo")),
 			connect.WithClientOptions(opts...),
 		),
 		createOrganizationGroup: connect.NewClient[v1.CreateOrganizationGroupRequest, v1.CreateOrganizationGroupResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateOrganizationGroupProcedure,
-			connect.WithSchema(platformServiceCreateOrganizationGroupMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateOrganizationGroup")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationGroups: connect.NewClient[v1.GetOrganizationGroupsRequest, v1.GetOrganizationGroupsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationGroupsProcedure,
-			connect.WithSchema(platformServiceGetOrganizationGroupsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationGroups")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationGroupMembers: connect.NewClient[v1.GetOrganizationGroupMembersRequest, v1.GetOrganizationGroupMembersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationGroupMembersProcedure,
-			connect.WithSchema(platformServiceGetOrganizationGroupMembersMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationGroupMembers")),
 			connect.WithClientOptions(opts...),
 		),
 		updateOrganizationGroup: connect.NewClient[v1.UpdateOrganizationGroupRequest, v1.UpdateOrganizationGroupResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateOrganizationGroupProcedure,
-			connect.WithSchema(platformServiceUpdateOrganizationGroupMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationGroup")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteOrganizationGroup: connect.NewClient[v1.DeleteOrganizationGroupRequest, v1.DeleteOrganizationGroupResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteOrganizationGroupProcedure,
-			connect.WithSchema(platformServiceDeleteOrganizationGroupMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteOrganizationGroup")),
 			connect.WithClientOptions(opts...),
 		),
 		createOrganizationWebhookConfig: connect.NewClient[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateOrganizationWebhookConfigProcedure,
-			connect.WithSchema(platformServiceCreateOrganizationWebhookConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateOrganizationWebhookConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationWebhookConfigs: connect.NewClient[v1.GetOrganizationWebhookConfigsRequest, v1.GetOrganizationWebhookConfigsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationWebhookConfigsProcedure,
-			connect.WithSchema(platformServiceGetOrganizationWebhookConfigsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationWebhookConfigs")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationWebhookMeta: connect.NewClient[v1.GetOrganizationWebhookMetaRequest, v1.GetOrganizationWebhookMetaResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationWebhookMetaProcedure,
-			connect.WithSchema(platformServiceGetOrganizationWebhookMetaMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationWebhookMeta")),
 			connect.WithClientOptions(opts...),
 		),
 		updateOrganizationWebhookConfig: connect.NewClient[v1.UpdateOrganizationWebhookConfigRequest, v1.UpdateOrganizationWebhookConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateOrganizationWebhookConfigProcedure,
-			connect.WithSchema(platformServiceUpdateOrganizationWebhookConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationWebhookConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteOrganizationWebhookConfig: connect.NewClient[v1.DeleteOrganizationWebhookConfigRequest, v1.DeleteOrganizationWebhookConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteOrganizationWebhookConfigProcedure,
-			connect.WithSchema(platformServiceDeleteOrganizationWebhookConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteOrganizationWebhookConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationWebhookHistory: connect.NewClient[v1.GetOrganizationWebhookHistoryRequest, v1.GetOrganizationWebhookHistoryResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationWebhookHistoryProcedure,
-			connect.WithSchema(platformServiceGetOrganizationWebhookHistoryMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationWebhookHistory")),
 			connect.WithClientOptions(opts...),
 		),
 		getWebhookDeliveryDetails: connect.NewClient[v1.GetWebhookDeliveryDetailsRequest, v1.GetWebhookDeliveryDetailsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetWebhookDeliveryDetailsProcedure,
-			connect.WithSchema(platformServiceGetWebhookDeliveryDetailsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetWebhookDeliveryDetails")),
 			connect.WithClientOptions(opts...),
 		),
 		redeliverWebhook: connect.NewClient[v1.RedeliverWebhookRequest, v1.RedeliverWebhookResponse](
 			httpClient,
 			baseURL+PlatformServiceRedeliverWebhookProcedure,
-			connect.WithSchema(platformServiceRedeliverWebhookMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("RedeliverWebhook")),
 			connect.WithClientOptions(opts...),
 		),
 		createIntegration: connect.NewClient[v1.CreateIntegrationRequest, v1.CreateIntegrationResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateIntegrationProcedure,
-			connect.WithSchema(platformServiceCreateIntegrationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateIntegration")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationIntegrations: connect.NewClient[v1.GetOrganizationIntegrationsRequest, v1.GetOrganizationIntegrationsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationIntegrationsProcedure,
-			connect.WithSchema(platformServiceGetOrganizationIntegrationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationIntegrations")),
 			connect.WithClientOptions(opts...),
 		),
 		updateIntegrationConfig: connect.NewClient[v1.UpdateIntegrationConfigRequest, v1.UpdateIntegrationConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateIntegrationConfigProcedure,
-			connect.WithSchema(platformServiceUpdateIntegrationConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateIntegrationConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteIntegration: connect.NewClient[v1.DeleteIntegrationRequest, v1.DeleteIntegrationResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteIntegrationProcedure,
-			connect.WithSchema(platformServiceDeleteIntegrationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteIntegration")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteUser: connect.NewClient[v1.DeleteUserRequest, v1.DeleteUserResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteUserProcedure,
-			connect.WithSchema(platformServiceDeleteUserMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteUser")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteOrganization: connect.NewClient[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteOrganizationProcedure,
-			connect.WithSchema(platformServiceDeleteOrganizationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteOrganization")),
 			connect.WithClientOptions(opts...),
 		),
 		restoreOrganization: connect.NewClient[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse](
 			httpClient,
 			baseURL+PlatformServiceRestoreOrganizationProcedure,
-			connect.WithSchema(platformServiceRestoreOrganizationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("RestoreOrganization")),
 			connect.WithClientOptions(opts...),
 		),
 		leaveOrganization: connect.NewClient[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse](
 			httpClient,
 			baseURL+PlatformServiceLeaveOrganizationProcedure,
-			connect.WithSchema(platformServiceLeaveOrganizationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("LeaveOrganization")),
 			connect.WithClientOptions(opts...),
 		),
 		updateOrganizationDetails: connect.NewClient[v1.UpdateOrganizationDetailsRequest, v1.UpdateOrganizationDetailsResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateOrganizationDetailsProcedure,
-			connect.WithSchema(platformServiceUpdateOrganizationDetailsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationDetails")),
 			connect.WithClientOptions(opts...),
 		),
 		updateOrgMemberGroup: connect.NewClient[v1.UpdateOrgMemberGroupRequest, v1.UpdateOrgMemberGroupResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateOrgMemberGroupProcedure,
-			connect.WithSchema(platformServiceUpdateOrgMemberGroupMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateOrgMemberGroup")),
 			connect.WithClientOptions(opts...),
 		),
 		isGitHubAppInstalled: connect.NewClient[v1.IsGitHubAppInstalledRequest, v1.IsGitHubAppInstalledResponse](
 			httpClient,
 			baseURL+PlatformServiceIsGitHubAppInstalledProcedure,
-			connect.WithSchema(platformServiceIsGitHubAppInstalledMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("IsGitHubAppInstalled")),
 			connect.WithClientOptions(opts...),
 		),
 		createOIDCProvider: connect.NewClient[v1.CreateOIDCProviderRequest, v1.CreateOIDCProviderResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateOIDCProviderProcedure,
-			connect.WithSchema(platformServiceCreateOIDCProviderMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateOIDCProvider")),
 			connect.WithClientOptions(opts...),
 		),
 		getOIDCProvider: connect.NewClient[v1.GetOIDCProviderRequest, v1.GetOIDCProviderResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOIDCProviderProcedure,
-			connect.WithSchema(platformServiceGetOIDCProviderMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOIDCProvider")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteOIDCProvider: connect.NewClient[v1.DeleteOIDCProviderRequest, v1.DeleteOIDCProviderResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteOIDCProviderProcedure,
-			connect.WithSchema(platformServiceDeleteOIDCProviderMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteOIDCProvider")),
 			connect.WithClientOptions(opts...),
 		),
 		updateIDPMappers: connect.NewClient[v1.UpdateIDPMappersRequest, v1.UpdateIDPMappersResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateIDPMappersProcedure,
-			connect.WithSchema(platformServiceUpdateIDPMappersMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateIDPMappers")),
 			connect.WithClientOptions(opts...),
 		),
 		getClients: connect.NewClient[v1.GetClientsRequest, v1.GetClientsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetClientsProcedure,
-			connect.WithSchema(platformServiceGetClientsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetClients")),
 			connect.WithClientOptions(opts...),
 		),
 		getRouters: connect.NewClient[v1.GetRoutersRequest, v1.GetRoutersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetRoutersProcedure,
-			connect.WithSchema(platformServiceGetRoutersMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetRouters")),
 			connect.WithClientOptions(opts...),
 		),
 		getInvitations: connect.NewClient[v1.GetInvitationsRequest, v1.GetInvitationsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetInvitationsProcedure,
-			connect.WithSchema(platformServiceGetInvitationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetInvitations")),
 			connect.WithClientOptions(opts...),
 		),
 		acceptOrDeclineInvitation: connect.NewClient[v1.AcceptOrDeclineInvitationRequest, v1.AcceptOrDeclineInvitationResponse](
 			httpClient,
 			baseURL+PlatformServiceAcceptOrDeclineInvitationProcedure,
-			connect.WithSchema(platformServiceAcceptOrDeclineInvitationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("AcceptOrDeclineInvitation")),
 			connect.WithClientOptions(opts...),
 		),
 		getCompositions: connect.NewClient[v1.GetCompositionsRequest, v1.GetCompositionsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetCompositionsProcedure,
-			connect.WithSchema(platformServiceGetCompositionsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetCompositions")),
 			connect.WithClientOptions(opts...),
 		),
 		getCompositionDetails: connect.NewClient[v1.GetCompositionDetailsRequest, v1.GetCompositionDetailsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetCompositionDetailsProcedure,
-			connect.WithSchema(platformServiceGetCompositionDetailsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetCompositionDetails")),
 			connect.WithClientOptions(opts...),
 		),
 		getSdlBySchemaVersion: connect.NewClient[v1.GetSdlBySchemaVersionRequest, v1.GetSdlBySchemaVersionResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSdlBySchemaVersionProcedure,
-			connect.WithSchema(platformServiceGetSdlBySchemaVersionMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetSdlBySchemaVersion")),
 			connect.WithClientOptions(opts...),
 		),
 		getChangelogBySchemaVersion: connect.NewClient[v1.GetChangelogBySchemaVersionRequest, v1.GetChangelogBySchemaVersionResponse](
 			httpClient,
 			baseURL+PlatformServiceGetChangelogBySchemaVersionProcedure,
-			connect.WithSchema(platformServiceGetChangelogBySchemaVersionMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetChangelogBySchemaVersion")),
 			connect.WithClientOptions(opts...),
 		),
 		getUserAccessibleResources: connect.NewClient[v1.GetUserAccessibleResourcesRequest, v1.GetUserAccessibleResourcesResponse](
 			httpClient,
 			baseURL+PlatformServiceGetUserAccessibleResourcesProcedure,
-			connect.WithSchema(platformServiceGetUserAccessibleResourcesMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetUserAccessibleResources")),
 			connect.WithClientOptions(opts...),
 		),
 		updateFeatureSettings: connect.NewClient[v1.UpdateFeatureSettingsRequest, v1.UpdateFeatureSettingsResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateFeatureSettingsProcedure,
-			connect.WithSchema(platformServiceUpdateFeatureSettingsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateFeatureSettings")),
 			connect.WithClientOptions(opts...),
 		),
 		getSubgraphMembers: connect.NewClient[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphMembersProcedure,
-			connect.WithSchema(platformServiceGetSubgraphMembersMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetSubgraphMembers")),
 			connect.WithClientOptions(opts...),
 		),
 		addReadme: connect.NewClient[v1.AddReadmeRequest, v1.AddReadmeResponse](
 			httpClient,
 			baseURL+PlatformServiceAddReadmeProcedure,
-			connect.WithSchema(platformServiceAddReadmeMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("AddReadme")),
 			connect.WithClientOptions(opts...),
 		),
 		getUserAccessiblePermissions: connect.NewClient[v1.GetUserAccessiblePermissionsRequest, v1.GetUserAccessiblePermissionsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetUserAccessiblePermissionsProcedure,
-			connect.WithSchema(platformServiceGetUserAccessiblePermissionsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetUserAccessiblePermissions")),
 			connect.WithClientOptions(opts...),
 		),
 		createFeatureFlag: connect.NewClient[v1.CreateFeatureFlagRequest, v1.CreateFeatureFlagResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateFeatureFlagProcedure,
-			connect.WithSchema(platformServiceCreateFeatureFlagMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateFeatureFlag")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteFeatureFlag: connect.NewClient[v1.DeleteFeatureFlagRequest, v1.DeleteFeatureFlagResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteFeatureFlagProcedure,
-			connect.WithSchema(platformServiceDeleteFeatureFlagMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteFeatureFlag")),
 			connect.WithClientOptions(opts...),
 		),
 		updateFeatureFlag: connect.NewClient[v1.UpdateFeatureFlagRequest, v1.UpdateFeatureFlagResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateFeatureFlagProcedure,
-			connect.WithSchema(platformServiceUpdateFeatureFlagMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateFeatureFlag")),
 			connect.WithClientOptions(opts...),
 		),
 		enableFeatureFlag: connect.NewClient[v1.EnableFeatureFlagRequest, v1.EnableFeatureFlagResponse](
 			httpClient,
 			baseURL+PlatformServiceEnableFeatureFlagProcedure,
-			connect.WithSchema(platformServiceEnableFeatureFlagMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("EnableFeatureFlag")),
 			connect.WithClientOptions(opts...),
 		),
 		getAnalyticsView: connect.NewClient[v1.GetAnalyticsViewRequest, v1.GetAnalyticsViewResponse](
 			httpClient,
 			baseURL+PlatformServiceGetAnalyticsViewProcedure,
-			connect.WithSchema(platformServiceGetAnalyticsViewMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetAnalyticsView")),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		getDashboardAnalyticsView: connect.NewClient[v1.GetDashboardAnalyticsViewRequest, v1.GetDashboardAnalyticsViewResponse](
 			httpClient,
 			baseURL+PlatformServiceGetDashboardAnalyticsViewProcedure,
-			connect.WithSchema(platformServiceGetDashboardAnalyticsViewMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetDashboardAnalyticsView")),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		getTrace: connect.NewClient[v1.GetTraceRequest, v1.GetTraceResponse](
 			httpClient,
 			baseURL+PlatformServiceGetTraceProcedure,
-			connect.WithSchema(platformServiceGetTraceMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetTrace")),
 			connect.WithClientOptions(opts...),
 		),
 		getGraphMetrics: connect.NewClient[v1.GetGraphMetricsRequest, v1.GetGraphMetricsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetGraphMetricsProcedure,
-			connect.WithSchema(platformServiceGetGraphMetricsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetGraphMetrics")),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		getMetricsErrorRate: connect.NewClient[v1.GetMetricsErrorRateRequest, v1.GetMetricsErrorRateResponse](
 			httpClient,
 			baseURL+PlatformServiceGetMetricsErrorRateProcedure,
-			connect.WithSchema(platformServiceGetMetricsErrorRateMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetMetricsErrorRate")),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		getSubgraphMetrics: connect.NewClient[v1.GetSubgraphMetricsRequest, v1.GetSubgraphMetricsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphMetricsProcedure,
-			connect.WithSchema(platformServiceGetSubgraphMetricsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetSubgraphMetrics")),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		getSubgraphMetricsErrorRate: connect.NewClient[v1.GetSubgraphMetricsErrorRateRequest, v1.GetSubgraphMetricsErrorRateResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphMetricsErrorRateProcedure,
-			connect.WithSchema(platformServiceGetSubgraphMetricsErrorRateMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetSubgraphMetricsErrorRate")),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		getFieldUsage: connect.NewClient[v1.GetFieldUsageRequest, v1.GetFieldUsageResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFieldUsageProcedure,
-			connect.WithSchema(platformServiceGetFieldUsageMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFieldUsage")),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationRequestsCount: connect.NewClient[v1.GetOrganizationRequestsCountRequest, v1.GetOrganizationRequestsCountResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationRequestsCountProcedure,
-			connect.WithSchema(platformServiceGetOrganizationRequestsCountMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationRequestsCount")),
 			connect.WithClientOptions(opts...),
 		),
 		createOrganization: connect.NewClient[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateOrganizationProcedure,
-			connect.WithSchema(platformServiceCreateOrganizationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateOrganization")),
 			connect.WithClientOptions(opts...),
 		),
 		enableLintingForTheNamespace: connect.NewClient[v1.EnableLintingForTheNamespaceRequest, v1.EnableLintingForTheNamespaceResponse](
 			httpClient,
 			baseURL+PlatformServiceEnableLintingForTheNamespaceProcedure,
-			connect.WithSchema(platformServiceEnableLintingForTheNamespaceMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("EnableLintingForTheNamespace")),
 			connect.WithClientOptions(opts...),
 		),
 		configureNamespaceLintConfig: connect.NewClient[v1.ConfigureNamespaceLintConfigRequest, v1.ConfigureNamespaceLintConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceConfigureNamespaceLintConfigProcedure,
-			connect.WithSchema(platformServiceConfigureNamespaceLintConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ConfigureNamespaceLintConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		getNamespaceLintConfig: connect.NewClient[v1.GetNamespaceLintConfigRequest, v1.GetNamespaceLintConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceGetNamespaceLintConfigProcedure,
-			connect.WithSchema(platformServiceGetNamespaceLintConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetNamespaceLintConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		getNamespaceChecksConfig: connect.NewClient[v1.GetNamespaceChecksConfigurationRequest, v1.GetNamespaceChecksConfigurationResponse](
 			httpClient,
 			baseURL+PlatformServiceGetNamespaceChecksConfigProcedure,
-			connect.WithSchema(platformServiceGetNamespaceChecksConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetNamespaceChecksConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		updateNamespaceChecksConfig: connect.NewClient[v1.UpdateNamespaceChecksConfigurationRequest, v1.UpdateNamespaceChecksConfigurationResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateNamespaceChecksConfigProcedure,
-			connect.WithSchema(platformServiceUpdateNamespaceChecksConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceChecksConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		enableGraphPruning: connect.NewClient[v1.EnableGraphPruningRequest, v1.EnableGraphPruningResponse](
 			httpClient,
 			baseURL+PlatformServiceEnableGraphPruningProcedure,
-			connect.WithSchema(platformServiceEnableGraphPruningMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("EnableGraphPruning")),
 			connect.WithClientOptions(opts...),
 		),
 		configureNamespaceGraphPruningConfig: connect.NewClient[v1.ConfigureNamespaceGraphPruningConfigRequest, v1.ConfigureNamespaceGraphPruningConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceConfigureNamespaceGraphPruningConfigProcedure,
-			connect.WithSchema(platformServiceConfigureNamespaceGraphPruningConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ConfigureNamespaceGraphPruningConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		getNamespaceGraphPruningConfig: connect.NewClient[v1.GetNamespaceGraphPruningConfigRequest, v1.GetNamespaceGraphPruningConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceGetNamespaceGraphPruningConfigProcedure,
-			connect.WithSchema(platformServiceGetNamespaceGraphPruningConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetNamespaceGraphPruningConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		getFeatureFlags: connect.NewClient[v1.GetFeatureFlagsRequest, v1.GetFeatureFlagsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFeatureFlagsProcedure,
-			connect.WithSchema(platformServiceGetFeatureFlagsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFeatureFlags")),
 			connect.WithClientOptions(opts...),
 		),
 		getFeatureFlagByName: connect.NewClient[v1.GetFeatureFlagByNameRequest, v1.GetFeatureFlagByNameResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFeatureFlagByNameProcedure,
-			connect.WithSchema(platformServiceGetFeatureFlagByNameMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFeatureFlagByName")),
 			connect.WithClientOptions(opts...),
 		),
 		getFeatureSubgraphsByFeatureFlag: connect.NewClient[v1.GetFeatureSubgraphsByFeatureFlagRequest, v1.GetFeatureSubgraphsByFeatureFlagResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFeatureSubgraphsByFeatureFlagProcedure,
-			connect.WithSchema(platformServiceGetFeatureSubgraphsByFeatureFlagMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFeatureSubgraphsByFeatureFlag")),
 			connect.WithClientOptions(opts...),
 		),
 		getFeatureSubgraphs: connect.NewClient[v1.GetFeatureSubgraphsRequest, v1.GetFeatureSubgraphsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFeatureSubgraphsProcedure,
-			connect.WithSchema(platformServiceGetFeatureSubgraphsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFeatureSubgraphs")),
 			connect.WithClientOptions(opts...),
 		),
 		getFeatureFlagsByFederatedGraph: connect.NewClient[v1.GetFeatureFlagsByFederatedGraphRequest, v1.GetFeatureFlagsByFederatedGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFeatureFlagsByFederatedGraphProcedure,
-			connect.WithSchema(platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFeatureFlagsByFederatedGraph")),
 			connect.WithClientOptions(opts...),
 		),
 		getFederatedGraphById: connect.NewClient[v1.GetFederatedGraphByIdRequest, v1.GetFederatedGraphByIdResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFederatedGraphByIdProcedure,
-			connect.WithSchema(platformServiceGetFederatedGraphByIdMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphById")),
 			connect.WithClientOptions(opts...),
 		),
 		getSubgraphById: connect.NewClient[v1.GetSubgraphByIdRequest, v1.GetSubgraphByIdResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphByIdProcedure,
-			connect.WithSchema(platformServiceGetSubgraphByIdMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetSubgraphById")),
 			connect.WithClientOptions(opts...),
 		),
 		pushCacheWarmerOperation: connect.NewClient[v1.PushCacheWarmerOperationRequest, v1.PushCacheWarmerOperationResponse](
 			httpClient,
 			baseURL+PlatformServicePushCacheWarmerOperationProcedure,
-			connect.WithSchema(platformServicePushCacheWarmerOperationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("PushCacheWarmerOperation")),
 			connect.WithClientOptions(opts...),
 		),
 		getCacheWarmerOperations: connect.NewClient[v1.GetCacheWarmerOperationsRequest, v1.GetCacheWarmerOperationsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetCacheWarmerOperationsProcedure,
-			connect.WithSchema(platformServiceGetCacheWarmerOperationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetCacheWarmerOperations")),
 			connect.WithClientOptions(opts...),
 		),
 		computeCacheWarmerOperations: connect.NewClient[v1.ComputeCacheWarmerOperationsRequest, v1.ComputeCacheWarmerOperationsResponse](
 			httpClient,
 			baseURL+PlatformServiceComputeCacheWarmerOperationsProcedure,
-			connect.WithSchema(platformServiceComputeCacheWarmerOperationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ComputeCacheWarmerOperations")),
 			connect.WithClientOptions(opts...),
 		),
 		configureCacheWarmer: connect.NewClient[v1.ConfigureCacheWarmerRequest, v1.ConfigureCacheWarmerResponse](
 			httpClient,
 			baseURL+PlatformServiceConfigureCacheWarmerProcedure,
-			connect.WithSchema(platformServiceConfigureCacheWarmerMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ConfigureCacheWarmer")),
 			connect.WithClientOptions(opts...),
 		),
 		getCacheWarmerConfig: connect.NewClient[v1.GetCacheWarmerConfigRequest, v1.GetCacheWarmerConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceGetCacheWarmerConfigProcedure,
-			connect.WithSchema(platformServiceGetCacheWarmerConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetCacheWarmerConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteCacheWarmerOperation: connect.NewClient[v1.DeleteCacheWarmerOperationRequest, v1.DeleteCacheWarmerOperationResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteCacheWarmerOperationProcedure,
-			connect.WithSchema(platformServiceDeleteCacheWarmerOperationMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("DeleteCacheWarmerOperation")),
 			connect.WithClientOptions(opts...),
 		),
 		getSubgraphCheckExtensionsConfig: connect.NewClient[v1.GetSubgraphCheckExtensionsConfigRequest, v1.GetSubgraphCheckExtensionsConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphCheckExtensionsConfigProcedure,
-			connect.WithSchema(platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetSubgraphCheckExtensionsConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		configureSubgraphCheckExtensions: connect.NewClient[v1.ConfigureSubgraphCheckExtensionsRequest, v1.ConfigureSubgraphCheckExtensionsResponse](
 			httpClient,
 			baseURL+PlatformServiceConfigureSubgraphCheckExtensionsProcedure,
-			connect.WithSchema(platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ConfigureSubgraphCheckExtensions")),
 			connect.WithClientOptions(opts...),
 		),
 		getBillingPlans: connect.NewClient[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse](
 			httpClient,
 			baseURL+PlatformServiceGetBillingPlansProcedure,
-			connect.WithSchema(platformServiceGetBillingPlansMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetBillingPlans")),
 			connect.WithClientOptions(opts...),
 		),
 		createCheckoutSession: connect.NewClient[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateCheckoutSessionProcedure,
-			connect.WithSchema(platformServiceCreateCheckoutSessionMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateCheckoutSession")),
 			connect.WithClientOptions(opts...),
 		),
 		createBillingPortalSession: connect.NewClient[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateBillingPortalSessionProcedure,
-			connect.WithSchema(platformServiceCreateBillingPortalSessionMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateBillingPortalSession")),
 			connect.WithClientOptions(opts...),
 		),
 		upgradePlan: connect.NewClient[v1.UpgradePlanRequest, v1.UpgradePlanResponse](
 			httpClient,
 			baseURL+PlatformServiceUpgradePlanProcedure,
-			connect.WithSchema(platformServiceUpgradePlanMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpgradePlan")),
 			connect.WithClientOptions(opts...),
 		),
 		listRouterCompatibilityVersions: connect.NewClient[v1.ListRouterCompatibilityVersionsRequest, v1.ListRouterCompatibilityVersionsResponse](
 			httpClient,
 			baseURL+PlatformServiceListRouterCompatibilityVersionsProcedure,
-			connect.WithSchema(platformServiceListRouterCompatibilityVersionsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ListRouterCompatibilityVersions")),
 			connect.WithClientOptions(opts...),
 		),
 		setGraphRouterCompatibilityVersion: connect.NewClient[v1.SetGraphRouterCompatibilityVersionRequest, v1.SetGraphRouterCompatibilityVersionResponse](
 			httpClient,
 			baseURL+PlatformServiceSetGraphRouterCompatibilityVersionProcedure,
-			connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("SetGraphRouterCompatibilityVersion")),
 			connect.WithClientOptions(opts...),
 		),
 		createProposal: connect.NewClient[v1.CreateProposalRequest, v1.CreateProposalResponse](
 			httpClient,
 			baseURL+PlatformServiceCreateProposalProcedure,
-			connect.WithSchema(platformServiceCreateProposalMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("CreateProposal")),
 			connect.WithClientOptions(opts...),
 		),
 		getProposal: connect.NewClient[v1.GetProposalRequest, v1.GetProposalResponse](
 			httpClient,
 			baseURL+PlatformServiceGetProposalProcedure,
-			connect.WithSchema(platformServiceGetProposalMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetProposal")),
 			connect.WithClientOptions(opts...),
 		),
 		updateProposal: connect.NewClient[v1.UpdateProposalRequest, v1.UpdateProposalResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateProposalProcedure,
-			connect.WithSchema(platformServiceUpdateProposalMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UpdateProposal")),
 			connect.WithClientOptions(opts...),
 		),
 		enableProposalsForNamespace: connect.NewClient[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse](
 			httpClient,
 			baseURL+PlatformServiceEnableProposalsForNamespaceProcedure,
-			connect.WithSchema(platformServiceEnableProposalsForNamespaceMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("EnableProposalsForNamespace")),
 			connect.WithClientOptions(opts...),
 		),
 		configureNamespaceProposalConfig: connect.NewClient[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceConfigureNamespaceProposalConfigProcedure,
-			connect.WithSchema(platformServiceConfigureNamespaceProposalConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ConfigureNamespaceProposalConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		getNamespaceProposalConfig: connect.NewClient[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse](
 			httpClient,
 			baseURL+PlatformServiceGetNamespaceProposalConfigProcedure,
-			connect.WithSchema(platformServiceGetNamespaceProposalConfigMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetNamespaceProposalConfig")),
 			connect.WithClientOptions(opts...),
 		),
 		getProposalsByFederatedGraph: connect.NewClient[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceGetProposalsByFederatedGraphProcedure,
-			connect.WithSchema(platformServiceGetProposalsByFederatedGraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetProposalsByFederatedGraph")),
 			connect.WithClientOptions(opts...),
 		),
 		getProposalChecks: connect.NewClient[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse](
 			httpClient,
 			baseURL+PlatformServiceGetProposalChecksProcedure,
-			connect.WithSchema(platformServiceGetProposalChecksMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetProposalChecks")),
 			connect.WithClientOptions(opts...),
 		),
 		getOperations: connect.NewClient[v1.GetOperationsRequest, v1.GetOperationsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOperationsProcedure,
-			connect.WithSchema(platformServiceGetOperationsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOperations")),
 			connect.WithClientOptions(opts...),
 		),
 		getClientsFromAnalytics: connect.NewClient[v1.GetClientsFromAnalyticsRequest, v1.GetClientsFromAnalyticsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetClientsFromAnalyticsProcedure,
-			connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetClientsFromAnalytics")),
 			connect.WithClientOptions(opts...),
 		),
 		getOperationClients: connect.NewClient[v1.GetOperationClientsRequest, v1.GetOperationClientsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOperationClientsProcedure,
-			connect.WithSchema(platformServiceGetOperationClientsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOperationClients")),
 			connect.WithClientOptions(opts...),
 		),
 		getOperationDeprecatedFields: connect.NewClient[v1.GetOperationDeprecatedFieldsRequest, v1.GetOperationDeprecatedFieldsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOperationDeprecatedFieldsProcedure,
-			connect.WithSchema(platformServiceGetOperationDeprecatedFieldsMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("GetOperationDeprecatedFields")),
 			connect.WithClientOptions(opts...),
 		),
 		validateAndFetchPluginData: connect.NewClient[v1.ValidateAndFetchPluginDataRequest, v1.ValidateAndFetchPluginDataResponse](
 			httpClient,
 			baseURL+PlatformServiceValidateAndFetchPluginDataProcedure,
-			connect.WithSchema(platformServiceValidateAndFetchPluginDataMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("ValidateAndFetchPluginData")),
 			connect.WithClientOptions(opts...),
 		),
 		linkSubgraph: connect.NewClient[v1.LinkSubgraphRequest, v1.LinkSubgraphResponse](
 			httpClient,
 			baseURL+PlatformServiceLinkSubgraphProcedure,
-			connect.WithSchema(platformServiceLinkSubgraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("LinkSubgraph")),
 			connect.WithClientOptions(opts...),
 		),
 		unlinkSubgraph: connect.NewClient[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse](
 			httpClient,
 			baseURL+PlatformServiceUnlinkSubgraphProcedure,
-			connect.WithSchema(platformServiceUnlinkSubgraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("UnlinkSubgraph")),
 			connect.WithClientOptions(opts...),
 		),
 		verifyAPIKeyGraphAccess: connect.NewClient[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse](
 			httpClient,
 			baseURL+PlatformServiceVerifyAPIKeyGraphAccessProcedure,
-			connect.WithSchema(platformServiceVerifyAPIKeyGraphAccessMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("VerifyAPIKeyGraphAccess")),
 			connect.WithClientOptions(opts...),
 		),
 		recomposeGraph: connect.NewClient[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceRecomposeGraphProcedure,
-			connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
+			connect.WithSchema(platformServiceMethods.ByName("RecomposeGraph")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -3636,1079 +3454,1080 @@ type PlatformServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	platformServiceMethods := v1.File_wg_cosmo_platform_v1_platform_proto.Services().ByName("PlatformService").Methods()
 	platformServiceCreatePlaygroundScriptHandler := connect.NewUnaryHandler(
 		PlatformServiceCreatePlaygroundScriptProcedure,
 		svc.CreatePlaygroundScript,
-		connect.WithSchema(platformServiceCreatePlaygroundScriptMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreatePlaygroundScript")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeletePlaygroundScriptHandler := connect.NewUnaryHandler(
 		PlatformServiceDeletePlaygroundScriptProcedure,
 		svc.DeletePlaygroundScript,
-		connect.WithSchema(platformServiceDeletePlaygroundScriptMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeletePlaygroundScript")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdatePlaygroundScriptHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdatePlaygroundScriptProcedure,
 		svc.UpdatePlaygroundScript,
-		connect.WithSchema(platformServiceUpdatePlaygroundScriptMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdatePlaygroundScript")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetPlaygroundScriptsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetPlaygroundScriptsProcedure,
 		svc.GetPlaygroundScripts,
-		connect.WithSchema(platformServiceGetPlaygroundScriptsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetPlaygroundScripts")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateNamespaceHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateNamespaceProcedure,
 		svc.CreateNamespace,
-		connect.WithSchema(platformServiceCreateNamespaceMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateNamespace")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteNamespaceHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteNamespaceProcedure,
 		svc.DeleteNamespace,
-		connect.WithSchema(platformServiceDeleteNamespaceMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteNamespace")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceRenameNamespaceHandler := connect.NewUnaryHandler(
 		PlatformServiceRenameNamespaceProcedure,
 		svc.RenameNamespace,
-		connect.WithSchema(platformServiceRenameNamespaceMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("RenameNamespace")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetNamespacesHandler := connect.NewUnaryHandler(
 		PlatformServiceGetNamespacesProcedure,
 		svc.GetNamespaces,
-		connect.WithSchema(platformServiceGetNamespacesMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetNamespaces")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetNamespaceHandler := connect.NewUnaryHandler(
 		PlatformServiceGetNamespaceProcedure,
 		svc.GetNamespace,
-		connect.WithSchema(platformServiceGetNamespaceMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetNamespace")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetWorkspaceHandler := connect.NewUnaryHandler(
 		PlatformServiceGetWorkspaceProcedure,
 		svc.GetWorkspace,
-		connect.WithSchema(platformServiceGetWorkspaceMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetWorkspace")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateContractHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateContractProcedure,
 		svc.CreateContract,
-		connect.WithSchema(platformServiceCreateContractMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateContract")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateContractHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateContractProcedure,
 		svc.UpdateContract,
-		connect.WithSchema(platformServiceUpdateContractMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateContract")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceMoveFederatedGraphHandler := connect.NewUnaryHandler(
 		PlatformServiceMoveFederatedGraphProcedure,
 		svc.MoveFederatedGraph,
-		connect.WithSchema(platformServiceMoveFederatedGraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("MoveFederatedGraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceMoveSubgraphHandler := connect.NewUnaryHandler(
 		PlatformServiceMoveSubgraphProcedure,
 		svc.MoveSubgraph,
-		connect.WithSchema(platformServiceMoveSubgraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("MoveSubgraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceMoveMonographHandler := connect.NewUnaryHandler(
 		PlatformServiceMoveMonographProcedure,
 		svc.MoveMonograph,
-		connect.WithSchema(platformServiceMoveMonographMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("MoveMonograph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateMonographHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateMonographProcedure,
 		svc.CreateMonograph,
-		connect.WithSchema(platformServiceCreateMonographMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateMonograph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServicePublishMonographHandler := connect.NewUnaryHandler(
 		PlatformServicePublishMonographProcedure,
 		svc.PublishMonograph,
-		connect.WithSchema(platformServicePublishMonographMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("PublishMonograph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteMonographHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteMonographProcedure,
 		svc.DeleteMonograph,
-		connect.WithSchema(platformServiceDeleteMonographMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteMonograph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateMonographHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateMonographProcedure,
 		svc.UpdateMonograph,
-		connect.WithSchema(platformServiceUpdateMonographMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateMonograph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceMigrateMonographHandler := connect.NewUnaryHandler(
 		PlatformServiceMigrateMonographProcedure,
 		svc.MigrateMonograph,
-		connect.WithSchema(platformServiceMigrateMonographMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("MigrateMonograph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateFederatedSubgraphHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateFederatedSubgraphProcedure,
 		svc.CreateFederatedSubgraph,
-		connect.WithSchema(platformServiceCreateFederatedSubgraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateFederatedSubgraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServicePublishFederatedSubgraphHandler := connect.NewUnaryHandler(
 		PlatformServicePublishFederatedSubgraphProcedure,
 		svc.PublishFederatedSubgraph,
-		connect.WithSchema(platformServicePublishFederatedSubgraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("PublishFederatedSubgraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateFederatedGraphHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateFederatedGraphProcedure,
 		svc.CreateFederatedGraph,
-		connect.WithSchema(platformServiceCreateFederatedGraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateFederatedGraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteFederatedGraphHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteFederatedGraphProcedure,
 		svc.DeleteFederatedGraph,
-		connect.WithSchema(platformServiceDeleteFederatedGraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteFederatedGraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteFederatedSubgraphHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteFederatedSubgraphProcedure,
 		svc.DeleteFederatedSubgraph,
-		connect.WithSchema(platformServiceDeleteFederatedSubgraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteFederatedSubgraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCheckSubgraphSchemaHandler := connect.NewUnaryHandler(
 		PlatformServiceCheckSubgraphSchemaProcedure,
 		svc.CheckSubgraphSchema,
-		connect.WithSchema(platformServiceCheckSubgraphSchemaMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CheckSubgraphSchema")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetProposedSchemaOfCheckedSubgraphHandler := connect.NewUnaryHandler(
 		PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure,
 		svc.GetProposedSchemaOfCheckedSubgraph,
-		connect.WithSchema(platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetProposedSchemaOfCheckedSubgraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceFixSubgraphSchemaHandler := connect.NewUnaryHandler(
 		PlatformServiceFixSubgraphSchemaProcedure,
 		svc.FixSubgraphSchema,
-		connect.WithSchema(platformServiceFixSubgraphSchemaMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("FixSubgraphSchema")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateFederatedGraphHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateFederatedGraphProcedure,
 		svc.UpdateFederatedGraph,
-		connect.WithSchema(platformServiceUpdateFederatedGraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateFederatedGraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateSubgraphHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateSubgraphProcedure,
 		svc.UpdateSubgraph,
-		connect.WithSchema(platformServiceUpdateSubgraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateSubgraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCheckFederatedGraphHandler := connect.NewUnaryHandler(
 		PlatformServiceCheckFederatedGraphProcedure,
 		svc.CheckFederatedGraph,
-		connect.WithSchema(platformServiceCheckFederatedGraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CheckFederatedGraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceWhoAmIHandler := connect.NewUnaryHandler(
 		PlatformServiceWhoAmIProcedure,
 		svc.WhoAmI,
-		connect.WithSchema(platformServiceWhoAmIMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("WhoAmI")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGenerateRouterTokenHandler := connect.NewUnaryHandler(
 		PlatformServiceGenerateRouterTokenProcedure,
 		svc.GenerateRouterToken,
-		connect.WithSchema(platformServiceGenerateRouterTokenMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GenerateRouterToken")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetRouterTokensHandler := connect.NewUnaryHandler(
 		PlatformServiceGetRouterTokensProcedure,
 		svc.GetRouterTokens,
-		connect.WithSchema(platformServiceGetRouterTokensMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetRouterTokens")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteRouterTokenHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteRouterTokenProcedure,
 		svc.DeleteRouterToken,
-		connect.WithSchema(platformServiceDeleteRouterTokenMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteRouterToken")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServicePublishPersistedOperationsHandler := connect.NewUnaryHandler(
 		PlatformServicePublishPersistedOperationsProcedure,
 		svc.PublishPersistedOperations,
-		connect.WithSchema(platformServicePublishPersistedOperationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("PublishPersistedOperations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCheckPersistedOperationTrafficHandler := connect.NewUnaryHandler(
 		PlatformServiceCheckPersistedOperationTrafficProcedure,
 		svc.CheckPersistedOperationTraffic,
-		connect.WithSchema(platformServiceCheckPersistedOperationTrafficMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CheckPersistedOperationTraffic")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeletePersistedOperationHandler := connect.NewUnaryHandler(
 		PlatformServiceDeletePersistedOperationProcedure,
 		svc.DeletePersistedOperation,
-		connect.WithSchema(platformServiceDeletePersistedOperationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeletePersistedOperation")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetPersistedOperationsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetPersistedOperationsProcedure,
 		svc.GetPersistedOperations,
-		connect.WithSchema(platformServiceGetPersistedOperationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetPersistedOperations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetAuditLogsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetAuditLogsProcedure,
 		svc.GetAuditLogs,
-		connect.WithSchema(platformServiceGetAuditLogsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetAuditLogs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceInitializeCosmoUserHandler := connect.NewUnaryHandler(
 		PlatformServiceInitializeCosmoUserProcedure,
 		svc.InitializeCosmoUser,
-		connect.WithSchema(platformServiceInitializeCosmoUserMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("InitializeCosmoUser")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceListOrganizationsHandler := connect.NewUnaryHandler(
 		PlatformServiceListOrganizationsProcedure,
 		svc.ListOrganizations,
-		connect.WithSchema(platformServiceListOrganizationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ListOrganizations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFederatedGraphsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFederatedGraphsProcedure,
 		svc.GetFederatedGraphs,
-		connect.WithSchema(platformServiceGetFederatedGraphsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFederatedGraphsBySubgraphLabelsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFederatedGraphsBySubgraphLabelsProcedure,
 		svc.GetFederatedGraphsBySubgraphLabels,
-		connect.WithSchema(platformServiceGetFederatedGraphsBySubgraphLabelsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphsBySubgraphLabels")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFederatedGraphByNameHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFederatedGraphByNameProcedure,
 		svc.GetFederatedGraphByName,
-		connect.WithSchema(platformServiceGetFederatedGraphByNameMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphByName")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFederatedGraphSDLByNameHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFederatedGraphSDLByNameProcedure,
 		svc.GetFederatedGraphSDLByName,
-		connect.WithSchema(platformServiceGetFederatedGraphSDLByNameMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphSDLByName")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetSubgraphsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphsProcedure,
 		svc.GetSubgraphs,
-		connect.WithSchema(platformServiceGetSubgraphsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetSubgraphs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetSubgraphByNameHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphByNameProcedure,
 		svc.GetSubgraphByName,
-		connect.WithSchema(platformServiceGetSubgraphByNameMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetSubgraphByName")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetSubgraphSDLFromLatestCompositionHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphSDLFromLatestCompositionProcedure,
 		svc.GetSubgraphSDLFromLatestComposition,
-		connect.WithSchema(platformServiceGetSubgraphSDLFromLatestCompositionMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetSubgraphSDLFromLatestComposition")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetLatestSubgraphSDLHandler := connect.NewUnaryHandler(
 		PlatformServiceGetLatestSubgraphSDLProcedure,
 		svc.GetLatestSubgraphSDL,
-		connect.WithSchema(platformServiceGetLatestSubgraphSDLMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetLatestSubgraphSDL")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetChecksByFederatedGraphNameHandler := connect.NewUnaryHandler(
 		PlatformServiceGetChecksByFederatedGraphNameProcedure,
 		svc.GetChecksByFederatedGraphName,
-		connect.WithSchema(platformServiceGetChecksByFederatedGraphNameMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetChecksByFederatedGraphName")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetCheckSummaryHandler := connect.NewUnaryHandler(
 		PlatformServiceGetCheckSummaryProcedure,
 		svc.GetCheckSummary,
-		connect.WithSchema(platformServiceGetCheckSummaryMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetCheckSummary")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetCheckOperationsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetCheckOperationsProcedure,
 		svc.GetCheckOperations,
-		connect.WithSchema(platformServiceGetCheckOperationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetCheckOperations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceForceCheckSuccessHandler := connect.NewUnaryHandler(
 		PlatformServiceForceCheckSuccessProcedure,
 		svc.ForceCheckSuccess,
-		connect.WithSchema(platformServiceForceCheckSuccessMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ForceCheckSuccess")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateOperationOverridesHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateOperationOverridesProcedure,
 		svc.CreateOperationOverrides,
-		connect.WithSchema(platformServiceCreateOperationOverridesMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateOperationOverrides")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceRemoveOperationOverridesHandler := connect.NewUnaryHandler(
 		PlatformServiceRemoveOperationOverridesProcedure,
 		svc.RemoveOperationOverrides,
-		connect.WithSchema(platformServiceRemoveOperationOverridesMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("RemoveOperationOverrides")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateOperationIgnoreAllOverrideHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateOperationIgnoreAllOverrideProcedure,
 		svc.CreateOperationIgnoreAllOverride,
-		connect.WithSchema(platformServiceCreateOperationIgnoreAllOverrideMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateOperationIgnoreAllOverride")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceRemoveOperationIgnoreAllOverrideHandler := connect.NewUnaryHandler(
 		PlatformServiceRemoveOperationIgnoreAllOverrideProcedure,
 		svc.RemoveOperationIgnoreAllOverride,
-		connect.WithSchema(platformServiceRemoveOperationIgnoreAllOverrideMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("RemoveOperationIgnoreAllOverride")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOperationOverridesHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOperationOverridesProcedure,
 		svc.GetOperationOverrides,
-		connect.WithSchema(platformServiceGetOperationOverridesMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOperationOverrides")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetAllOverridesHandler := connect.NewUnaryHandler(
 		PlatformServiceGetAllOverridesProcedure,
 		svc.GetAllOverrides,
-		connect.WithSchema(platformServiceGetAllOverridesMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetAllOverrides")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceToggleChangeOverridesForAllOperationsHandler := connect.NewUnaryHandler(
 		PlatformServiceToggleChangeOverridesForAllOperationsProcedure,
 		svc.ToggleChangeOverridesForAllOperations,
-		connect.WithSchema(platformServiceToggleChangeOverridesForAllOperationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ToggleChangeOverridesForAllOperations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateIgnoreOverridesForAllOperationsHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateIgnoreOverridesForAllOperationsProcedure,
 		svc.CreateIgnoreOverridesForAllOperations,
-		connect.WithSchema(platformServiceCreateIgnoreOverridesForAllOperationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateIgnoreOverridesForAllOperations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOperationContentHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOperationContentProcedure,
 		svc.GetOperationContent,
-		connect.WithSchema(platformServiceGetOperationContentMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOperationContent")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFederatedGraphChangelogHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFederatedGraphChangelogProcedure,
 		svc.GetFederatedGraphChangelog,
-		connect.WithSchema(platformServiceGetFederatedGraphChangelogMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphChangelog")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateFederatedGraphTokenHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateFederatedGraphTokenProcedure,
 		svc.CreateFederatedGraphToken,
-		connect.WithSchema(platformServiceCreateFederatedGraphTokenMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateFederatedGraphToken")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationBySlugHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOrganizationBySlugProcedure,
 		svc.GetOrganizationBySlug,
-		connect.WithSchema(platformServiceGetOrganizationBySlugMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationBySlug")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationMembersHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOrganizationMembersProcedure,
 		svc.GetOrganizationMembers,
-		connect.WithSchema(platformServiceGetOrganizationMembersMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationMembers")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetPendingOrganizationMembersHandler := connect.NewUnaryHandler(
 		PlatformServiceGetPendingOrganizationMembersProcedure,
 		svc.GetPendingOrganizationMembers,
-		connect.WithSchema(platformServiceGetPendingOrganizationMembersMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetPendingOrganizationMembers")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceIsMemberLimitReachedHandler := connect.NewUnaryHandler(
 		PlatformServiceIsMemberLimitReachedProcedure,
 		svc.IsMemberLimitReached,
-		connect.WithSchema(platformServiceIsMemberLimitReachedMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("IsMemberLimitReached")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceInviteUserHandler := connect.NewUnaryHandler(
 		PlatformServiceInviteUserProcedure,
 		svc.InviteUser,
-		connect.WithSchema(platformServiceInviteUserMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("InviteUser")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetAPIKeysHandler := connect.NewUnaryHandler(
 		PlatformServiceGetAPIKeysProcedure,
 		svc.GetAPIKeys,
-		connect.WithSchema(platformServiceGetAPIKeysMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetAPIKeys")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateAPIKeyHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateAPIKeyProcedure,
 		svc.CreateAPIKey,
-		connect.WithSchema(platformServiceCreateAPIKeyMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateAPIKey")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateAPIKeyHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateAPIKeyProcedure,
 		svc.UpdateAPIKey,
-		connect.WithSchema(platformServiceUpdateAPIKeyMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateAPIKey")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteAPIKeyHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteAPIKeyProcedure,
 		svc.DeleteAPIKey,
-		connect.WithSchema(platformServiceDeleteAPIKeyMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteAPIKey")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceRemoveOrganizationMemberHandler := connect.NewUnaryHandler(
 		PlatformServiceRemoveOrganizationMemberProcedure,
 		svc.RemoveOrganizationMember,
-		connect.WithSchema(platformServiceRemoveOrganizationMemberMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("RemoveOrganizationMember")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceRemoveInvitationHandler := connect.NewUnaryHandler(
 		PlatformServiceRemoveInvitationProcedure,
 		svc.RemoveInvitation,
-		connect.WithSchema(platformServiceRemoveInvitationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("RemoveInvitation")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceMigrateFromApolloHandler := connect.NewUnaryHandler(
 		PlatformServiceMigrateFromApolloProcedure,
 		svc.MigrateFromApollo,
-		connect.WithSchema(platformServiceMigrateFromApolloMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("MigrateFromApollo")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateOrganizationGroupHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateOrganizationGroupProcedure,
 		svc.CreateOrganizationGroup,
-		connect.WithSchema(platformServiceCreateOrganizationGroupMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateOrganizationGroup")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationGroupsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOrganizationGroupsProcedure,
 		svc.GetOrganizationGroups,
-		connect.WithSchema(platformServiceGetOrganizationGroupsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationGroups")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationGroupMembersHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOrganizationGroupMembersProcedure,
 		svc.GetOrganizationGroupMembers,
-		connect.WithSchema(platformServiceGetOrganizationGroupMembersMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationGroupMembers")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateOrganizationGroupHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateOrganizationGroupProcedure,
 		svc.UpdateOrganizationGroup,
-		connect.WithSchema(platformServiceUpdateOrganizationGroupMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationGroup")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteOrganizationGroupHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteOrganizationGroupProcedure,
 		svc.DeleteOrganizationGroup,
-		connect.WithSchema(platformServiceDeleteOrganizationGroupMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteOrganizationGroup")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateOrganizationWebhookConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateOrganizationWebhookConfigProcedure,
 		svc.CreateOrganizationWebhookConfig,
-		connect.WithSchema(platformServiceCreateOrganizationWebhookConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateOrganizationWebhookConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationWebhookConfigsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOrganizationWebhookConfigsProcedure,
 		svc.GetOrganizationWebhookConfigs,
-		connect.WithSchema(platformServiceGetOrganizationWebhookConfigsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationWebhookConfigs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationWebhookMetaHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOrganizationWebhookMetaProcedure,
 		svc.GetOrganizationWebhookMeta,
-		connect.WithSchema(platformServiceGetOrganizationWebhookMetaMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationWebhookMeta")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateOrganizationWebhookConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateOrganizationWebhookConfigProcedure,
 		svc.UpdateOrganizationWebhookConfig,
-		connect.WithSchema(platformServiceUpdateOrganizationWebhookConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationWebhookConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteOrganizationWebhookConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteOrganizationWebhookConfigProcedure,
 		svc.DeleteOrganizationWebhookConfig,
-		connect.WithSchema(platformServiceDeleteOrganizationWebhookConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteOrganizationWebhookConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationWebhookHistoryHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOrganizationWebhookHistoryProcedure,
 		svc.GetOrganizationWebhookHistory,
-		connect.WithSchema(platformServiceGetOrganizationWebhookHistoryMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationWebhookHistory")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetWebhookDeliveryDetailsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetWebhookDeliveryDetailsProcedure,
 		svc.GetWebhookDeliveryDetails,
-		connect.WithSchema(platformServiceGetWebhookDeliveryDetailsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetWebhookDeliveryDetails")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceRedeliverWebhookHandler := connect.NewUnaryHandler(
 		PlatformServiceRedeliverWebhookProcedure,
 		svc.RedeliverWebhook,
-		connect.WithSchema(platformServiceRedeliverWebhookMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("RedeliverWebhook")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateIntegrationHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateIntegrationProcedure,
 		svc.CreateIntegration,
-		connect.WithSchema(platformServiceCreateIntegrationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateIntegration")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationIntegrationsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOrganizationIntegrationsProcedure,
 		svc.GetOrganizationIntegrations,
-		connect.WithSchema(platformServiceGetOrganizationIntegrationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationIntegrations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateIntegrationConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateIntegrationConfigProcedure,
 		svc.UpdateIntegrationConfig,
-		connect.WithSchema(platformServiceUpdateIntegrationConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateIntegrationConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteIntegrationHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteIntegrationProcedure,
 		svc.DeleteIntegration,
-		connect.WithSchema(platformServiceDeleteIntegrationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteIntegration")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteUserHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteUserProcedure,
 		svc.DeleteUser,
-		connect.WithSchema(platformServiceDeleteUserMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteUser")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteOrganizationHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteOrganizationProcedure,
 		svc.DeleteOrganization,
-		connect.WithSchema(platformServiceDeleteOrganizationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceRestoreOrganizationHandler := connect.NewUnaryHandler(
 		PlatformServiceRestoreOrganizationProcedure,
 		svc.RestoreOrganization,
-		connect.WithSchema(platformServiceRestoreOrganizationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("RestoreOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceLeaveOrganizationHandler := connect.NewUnaryHandler(
 		PlatformServiceLeaveOrganizationProcedure,
 		svc.LeaveOrganization,
-		connect.WithSchema(platformServiceLeaveOrganizationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("LeaveOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateOrganizationDetailsHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateOrganizationDetailsProcedure,
 		svc.UpdateOrganizationDetails,
-		connect.WithSchema(platformServiceUpdateOrganizationDetailsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationDetails")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateOrgMemberGroupHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateOrgMemberGroupProcedure,
 		svc.UpdateOrgMemberGroup,
-		connect.WithSchema(platformServiceUpdateOrgMemberGroupMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateOrgMemberGroup")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceIsGitHubAppInstalledHandler := connect.NewUnaryHandler(
 		PlatformServiceIsGitHubAppInstalledProcedure,
 		svc.IsGitHubAppInstalled,
-		connect.WithSchema(platformServiceIsGitHubAppInstalledMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("IsGitHubAppInstalled")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateOIDCProviderHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateOIDCProviderProcedure,
 		svc.CreateOIDCProvider,
-		connect.WithSchema(platformServiceCreateOIDCProviderMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateOIDCProvider")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOIDCProviderHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOIDCProviderProcedure,
 		svc.GetOIDCProvider,
-		connect.WithSchema(platformServiceGetOIDCProviderMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOIDCProvider")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteOIDCProviderHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteOIDCProviderProcedure,
 		svc.DeleteOIDCProvider,
-		connect.WithSchema(platformServiceDeleteOIDCProviderMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteOIDCProvider")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateIDPMappersHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateIDPMappersProcedure,
 		svc.UpdateIDPMappers,
-		connect.WithSchema(platformServiceUpdateIDPMappersMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateIDPMappers")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetClientsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetClientsProcedure,
 		svc.GetClients,
-		connect.WithSchema(platformServiceGetClientsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetClients")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetRoutersHandler := connect.NewUnaryHandler(
 		PlatformServiceGetRoutersProcedure,
 		svc.GetRouters,
-		connect.WithSchema(platformServiceGetRoutersMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetRouters")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetInvitationsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetInvitationsProcedure,
 		svc.GetInvitations,
-		connect.WithSchema(platformServiceGetInvitationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetInvitations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceAcceptOrDeclineInvitationHandler := connect.NewUnaryHandler(
 		PlatformServiceAcceptOrDeclineInvitationProcedure,
 		svc.AcceptOrDeclineInvitation,
-		connect.WithSchema(platformServiceAcceptOrDeclineInvitationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("AcceptOrDeclineInvitation")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetCompositionsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetCompositionsProcedure,
 		svc.GetCompositions,
-		connect.WithSchema(platformServiceGetCompositionsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetCompositions")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetCompositionDetailsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetCompositionDetailsProcedure,
 		svc.GetCompositionDetails,
-		connect.WithSchema(platformServiceGetCompositionDetailsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetCompositionDetails")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetSdlBySchemaVersionHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSdlBySchemaVersionProcedure,
 		svc.GetSdlBySchemaVersion,
-		connect.WithSchema(platformServiceGetSdlBySchemaVersionMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetSdlBySchemaVersion")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetChangelogBySchemaVersionHandler := connect.NewUnaryHandler(
 		PlatformServiceGetChangelogBySchemaVersionProcedure,
 		svc.GetChangelogBySchemaVersion,
-		connect.WithSchema(platformServiceGetChangelogBySchemaVersionMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetChangelogBySchemaVersion")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetUserAccessibleResourcesHandler := connect.NewUnaryHandler(
 		PlatformServiceGetUserAccessibleResourcesProcedure,
 		svc.GetUserAccessibleResources,
-		connect.WithSchema(platformServiceGetUserAccessibleResourcesMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetUserAccessibleResources")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateFeatureSettingsHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateFeatureSettingsProcedure,
 		svc.UpdateFeatureSettings,
-		connect.WithSchema(platformServiceUpdateFeatureSettingsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateFeatureSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetSubgraphMembersHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphMembersProcedure,
 		svc.GetSubgraphMembers,
-		connect.WithSchema(platformServiceGetSubgraphMembersMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetSubgraphMembers")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceAddReadmeHandler := connect.NewUnaryHandler(
 		PlatformServiceAddReadmeProcedure,
 		svc.AddReadme,
-		connect.WithSchema(platformServiceAddReadmeMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("AddReadme")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetUserAccessiblePermissionsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetUserAccessiblePermissionsProcedure,
 		svc.GetUserAccessiblePermissions,
-		connect.WithSchema(platformServiceGetUserAccessiblePermissionsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetUserAccessiblePermissions")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateFeatureFlagHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateFeatureFlagProcedure,
 		svc.CreateFeatureFlag,
-		connect.WithSchema(platformServiceCreateFeatureFlagMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateFeatureFlag")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteFeatureFlagHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteFeatureFlagProcedure,
 		svc.DeleteFeatureFlag,
-		connect.WithSchema(platformServiceDeleteFeatureFlagMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteFeatureFlag")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateFeatureFlagHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateFeatureFlagProcedure,
 		svc.UpdateFeatureFlag,
-		connect.WithSchema(platformServiceUpdateFeatureFlagMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateFeatureFlag")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceEnableFeatureFlagHandler := connect.NewUnaryHandler(
 		PlatformServiceEnableFeatureFlagProcedure,
 		svc.EnableFeatureFlag,
-		connect.WithSchema(platformServiceEnableFeatureFlagMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("EnableFeatureFlag")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetAnalyticsViewHandler := connect.NewUnaryHandler(
 		PlatformServiceGetAnalyticsViewProcedure,
 		svc.GetAnalyticsView,
-		connect.WithSchema(platformServiceGetAnalyticsViewMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetAnalyticsView")),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetDashboardAnalyticsViewHandler := connect.NewUnaryHandler(
 		PlatformServiceGetDashboardAnalyticsViewProcedure,
 		svc.GetDashboardAnalyticsView,
-		connect.WithSchema(platformServiceGetDashboardAnalyticsViewMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetDashboardAnalyticsView")),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetTraceHandler := connect.NewUnaryHandler(
 		PlatformServiceGetTraceProcedure,
 		svc.GetTrace,
-		connect.WithSchema(platformServiceGetTraceMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetTrace")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetGraphMetricsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetGraphMetricsProcedure,
 		svc.GetGraphMetrics,
-		connect.WithSchema(platformServiceGetGraphMetricsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetGraphMetrics")),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetMetricsErrorRateHandler := connect.NewUnaryHandler(
 		PlatformServiceGetMetricsErrorRateProcedure,
 		svc.GetMetricsErrorRate,
-		connect.WithSchema(platformServiceGetMetricsErrorRateMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetMetricsErrorRate")),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetSubgraphMetricsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphMetricsProcedure,
 		svc.GetSubgraphMetrics,
-		connect.WithSchema(platformServiceGetSubgraphMetricsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetSubgraphMetrics")),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetSubgraphMetricsErrorRateHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphMetricsErrorRateProcedure,
 		svc.GetSubgraphMetricsErrorRate,
-		connect.WithSchema(platformServiceGetSubgraphMetricsErrorRateMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetSubgraphMetricsErrorRate")),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFieldUsageHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFieldUsageProcedure,
 		svc.GetFieldUsage,
-		connect.WithSchema(platformServiceGetFieldUsageMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFieldUsage")),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationRequestsCountHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOrganizationRequestsCountProcedure,
 		svc.GetOrganizationRequestsCount,
-		connect.WithSchema(platformServiceGetOrganizationRequestsCountMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationRequestsCount")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateOrganizationHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateOrganizationProcedure,
 		svc.CreateOrganization,
-		connect.WithSchema(platformServiceCreateOrganizationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceEnableLintingForTheNamespaceHandler := connect.NewUnaryHandler(
 		PlatformServiceEnableLintingForTheNamespaceProcedure,
 		svc.EnableLintingForTheNamespace,
-		connect.WithSchema(platformServiceEnableLintingForTheNamespaceMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("EnableLintingForTheNamespace")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceConfigureNamespaceLintConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceConfigureNamespaceLintConfigProcedure,
 		svc.ConfigureNamespaceLintConfig,
-		connect.WithSchema(platformServiceConfigureNamespaceLintConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ConfigureNamespaceLintConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetNamespaceLintConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceGetNamespaceLintConfigProcedure,
 		svc.GetNamespaceLintConfig,
-		connect.WithSchema(platformServiceGetNamespaceLintConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetNamespaceLintConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetNamespaceChecksConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceGetNamespaceChecksConfigProcedure,
 		svc.GetNamespaceChecksConfig,
-		connect.WithSchema(platformServiceGetNamespaceChecksConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetNamespaceChecksConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateNamespaceChecksConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateNamespaceChecksConfigProcedure,
 		svc.UpdateNamespaceChecksConfig,
-		connect.WithSchema(platformServiceUpdateNamespaceChecksConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceChecksConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceEnableGraphPruningHandler := connect.NewUnaryHandler(
 		PlatformServiceEnableGraphPruningProcedure,
 		svc.EnableGraphPruning,
-		connect.WithSchema(platformServiceEnableGraphPruningMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("EnableGraphPruning")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceConfigureNamespaceGraphPruningConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceConfigureNamespaceGraphPruningConfigProcedure,
 		svc.ConfigureNamespaceGraphPruningConfig,
-		connect.WithSchema(platformServiceConfigureNamespaceGraphPruningConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ConfigureNamespaceGraphPruningConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetNamespaceGraphPruningConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceGetNamespaceGraphPruningConfigProcedure,
 		svc.GetNamespaceGraphPruningConfig,
-		connect.WithSchema(platformServiceGetNamespaceGraphPruningConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetNamespaceGraphPruningConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFeatureFlagsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFeatureFlagsProcedure,
 		svc.GetFeatureFlags,
-		connect.WithSchema(platformServiceGetFeatureFlagsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFeatureFlags")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFeatureFlagByNameHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFeatureFlagByNameProcedure,
 		svc.GetFeatureFlagByName,
-		connect.WithSchema(platformServiceGetFeatureFlagByNameMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFeatureFlagByName")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFeatureSubgraphsByFeatureFlagHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFeatureSubgraphsByFeatureFlagProcedure,
 		svc.GetFeatureSubgraphsByFeatureFlag,
-		connect.WithSchema(platformServiceGetFeatureSubgraphsByFeatureFlagMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFeatureSubgraphsByFeatureFlag")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFeatureSubgraphsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFeatureSubgraphsProcedure,
 		svc.GetFeatureSubgraphs,
-		connect.WithSchema(platformServiceGetFeatureSubgraphsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFeatureSubgraphs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFeatureFlagsByFederatedGraphHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFeatureFlagsByFederatedGraphProcedure,
 		svc.GetFeatureFlagsByFederatedGraph,
-		connect.WithSchema(platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFeatureFlagsByFederatedGraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFederatedGraphByIdHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFederatedGraphByIdProcedure,
 		svc.GetFederatedGraphById,
-		connect.WithSchema(platformServiceGetFederatedGraphByIdMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetFederatedGraphById")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetSubgraphByIdHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphByIdProcedure,
 		svc.GetSubgraphById,
-		connect.WithSchema(platformServiceGetSubgraphByIdMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetSubgraphById")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServicePushCacheWarmerOperationHandler := connect.NewUnaryHandler(
 		PlatformServicePushCacheWarmerOperationProcedure,
 		svc.PushCacheWarmerOperation,
-		connect.WithSchema(platformServicePushCacheWarmerOperationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("PushCacheWarmerOperation")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetCacheWarmerOperationsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetCacheWarmerOperationsProcedure,
 		svc.GetCacheWarmerOperations,
-		connect.WithSchema(platformServiceGetCacheWarmerOperationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetCacheWarmerOperations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceComputeCacheWarmerOperationsHandler := connect.NewUnaryHandler(
 		PlatformServiceComputeCacheWarmerOperationsProcedure,
 		svc.ComputeCacheWarmerOperations,
-		connect.WithSchema(platformServiceComputeCacheWarmerOperationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ComputeCacheWarmerOperations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceConfigureCacheWarmerHandler := connect.NewUnaryHandler(
 		PlatformServiceConfigureCacheWarmerProcedure,
 		svc.ConfigureCacheWarmer,
-		connect.WithSchema(platformServiceConfigureCacheWarmerMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ConfigureCacheWarmer")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetCacheWarmerConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceGetCacheWarmerConfigProcedure,
 		svc.GetCacheWarmerConfig,
-		connect.WithSchema(platformServiceGetCacheWarmerConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetCacheWarmerConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteCacheWarmerOperationHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteCacheWarmerOperationProcedure,
 		svc.DeleteCacheWarmerOperation,
-		connect.WithSchema(platformServiceDeleteCacheWarmerOperationMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("DeleteCacheWarmerOperation")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetSubgraphCheckExtensionsConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphCheckExtensionsConfigProcedure,
 		svc.GetSubgraphCheckExtensionsConfig,
-		connect.WithSchema(platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetSubgraphCheckExtensionsConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceConfigureSubgraphCheckExtensionsHandler := connect.NewUnaryHandler(
 		PlatformServiceConfigureSubgraphCheckExtensionsProcedure,
 		svc.ConfigureSubgraphCheckExtensions,
-		connect.WithSchema(platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ConfigureSubgraphCheckExtensions")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetBillingPlansHandler := connect.NewUnaryHandler(
 		PlatformServiceGetBillingPlansProcedure,
 		svc.GetBillingPlans,
-		connect.WithSchema(platformServiceGetBillingPlansMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetBillingPlans")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateCheckoutSessionHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateCheckoutSessionProcedure,
 		svc.CreateCheckoutSession,
-		connect.WithSchema(platformServiceCreateCheckoutSessionMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateCheckoutSession")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateBillingPortalSessionHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateBillingPortalSessionProcedure,
 		svc.CreateBillingPortalSession,
-		connect.WithSchema(platformServiceCreateBillingPortalSessionMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateBillingPortalSession")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpgradePlanHandler := connect.NewUnaryHandler(
 		PlatformServiceUpgradePlanProcedure,
 		svc.UpgradePlan,
-		connect.WithSchema(platformServiceUpgradePlanMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpgradePlan")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceListRouterCompatibilityVersionsHandler := connect.NewUnaryHandler(
 		PlatformServiceListRouterCompatibilityVersionsProcedure,
 		svc.ListRouterCompatibilityVersions,
-		connect.WithSchema(platformServiceListRouterCompatibilityVersionsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ListRouterCompatibilityVersions")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceSetGraphRouterCompatibilityVersionHandler := connect.NewUnaryHandler(
 		PlatformServiceSetGraphRouterCompatibilityVersionProcedure,
 		svc.SetGraphRouterCompatibilityVersion,
-		connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("SetGraphRouterCompatibilityVersion")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateProposalHandler := connect.NewUnaryHandler(
 		PlatformServiceCreateProposalProcedure,
 		svc.CreateProposal,
-		connect.WithSchema(platformServiceCreateProposalMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("CreateProposal")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetProposalHandler := connect.NewUnaryHandler(
 		PlatformServiceGetProposalProcedure,
 		svc.GetProposal,
-		connect.WithSchema(platformServiceGetProposalMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetProposal")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateProposalHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateProposalProcedure,
 		svc.UpdateProposal,
-		connect.WithSchema(platformServiceUpdateProposalMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UpdateProposal")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceEnableProposalsForNamespaceHandler := connect.NewUnaryHandler(
 		PlatformServiceEnableProposalsForNamespaceProcedure,
 		svc.EnableProposalsForNamespace,
-		connect.WithSchema(platformServiceEnableProposalsForNamespaceMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("EnableProposalsForNamespace")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceConfigureNamespaceProposalConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceConfigureNamespaceProposalConfigProcedure,
 		svc.ConfigureNamespaceProposalConfig,
-		connect.WithSchema(platformServiceConfigureNamespaceProposalConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ConfigureNamespaceProposalConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetNamespaceProposalConfigHandler := connect.NewUnaryHandler(
 		PlatformServiceGetNamespaceProposalConfigProcedure,
 		svc.GetNamespaceProposalConfig,
-		connect.WithSchema(platformServiceGetNamespaceProposalConfigMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetNamespaceProposalConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetProposalsByFederatedGraphHandler := connect.NewUnaryHandler(
 		PlatformServiceGetProposalsByFederatedGraphProcedure,
 		svc.GetProposalsByFederatedGraph,
-		connect.WithSchema(platformServiceGetProposalsByFederatedGraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetProposalsByFederatedGraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetProposalChecksHandler := connect.NewUnaryHandler(
 		PlatformServiceGetProposalChecksProcedure,
 		svc.GetProposalChecks,
-		connect.WithSchema(platformServiceGetProposalChecksMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetProposalChecks")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOperationsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOperationsProcedure,
 		svc.GetOperations,
-		connect.WithSchema(platformServiceGetOperationsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOperations")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetClientsFromAnalyticsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetClientsFromAnalyticsProcedure,
 		svc.GetClientsFromAnalytics,
-		connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetClientsFromAnalytics")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOperationClientsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOperationClientsProcedure,
 		svc.GetOperationClients,
-		connect.WithSchema(platformServiceGetOperationClientsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOperationClients")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOperationDeprecatedFieldsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOperationDeprecatedFieldsProcedure,
 		svc.GetOperationDeprecatedFields,
-		connect.WithSchema(platformServiceGetOperationDeprecatedFieldsMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("GetOperationDeprecatedFields")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceValidateAndFetchPluginDataHandler := connect.NewUnaryHandler(
 		PlatformServiceValidateAndFetchPluginDataProcedure,
 		svc.ValidateAndFetchPluginData,
-		connect.WithSchema(platformServiceValidateAndFetchPluginDataMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("ValidateAndFetchPluginData")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceLinkSubgraphHandler := connect.NewUnaryHandler(
 		PlatformServiceLinkSubgraphProcedure,
 		svc.LinkSubgraph,
-		connect.WithSchema(platformServiceLinkSubgraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("LinkSubgraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUnlinkSubgraphHandler := connect.NewUnaryHandler(
 		PlatformServiceUnlinkSubgraphProcedure,
 		svc.UnlinkSubgraph,
-		connect.WithSchema(platformServiceUnlinkSubgraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("UnlinkSubgraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceVerifyAPIKeyGraphAccessHandler := connect.NewUnaryHandler(
 		PlatformServiceVerifyAPIKeyGraphAccessProcedure,
 		svc.VerifyAPIKeyGraphAccess,
-		connect.WithSchema(platformServiceVerifyAPIKeyGraphAccessMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("VerifyAPIKeyGraphAccess")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceRecomposeGraphHandler := connect.NewUnaryHandler(
 		PlatformServiceRecomposeGraphProcedure,
 		svc.RecomposeGraph,
-		connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
+		connect.WithSchema(platformServiceMethods.ByName("RecomposeGraph")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
