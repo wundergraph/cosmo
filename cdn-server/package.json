@@ -1,6 +1,6 @@
 {
   "name": "cdn",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "private": true,
   "author": {
     "name": "WunderGraph Maintainers",
@@ -24,10 +24,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.996.0",
-    "@hono/node-server": "1.13.7",
+    "@hono/node-server": "1.19.13",
     "@wundergraph/cosmo-cdn": "workspace:*",
     "dotenv": "^16.4.5",
-    "hono": "4.10.6"
+    "hono": "4.12.12"
   },
   "devDependencies": {
     "@types/node": "^20.9.0",
