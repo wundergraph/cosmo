@@ -288,7 +288,7 @@ func TestExtractScopesForOperation(t *testing.T) {
 			opDoc, opReport := astparser.ParseGraphqlDocumentString(tt.operation)
 			require.False(t, opReport.HasErrors(), "operation parse error: %s", opReport.Error())
 
-			extractor := NewScopeExtractor(fieldConfigs, &schemaDoc, 0)
+			extractor := NewScopeExtractor(fieldConfigs, &schemaDoc, 2048)
 			fieldReqs := extractor.ExtractScopesForOperation(&opDoc)
 
 			if tt.wantNoScopes {
@@ -307,7 +307,7 @@ func TestExtractScopesForOperation_FieldDetails(t *testing.T) {
 
 	schemaDoc := parseTestSchema(t)
 
-	extractor := NewScopeExtractor(fieldConfigs, &schemaDoc, 0)
+	extractor := NewScopeExtractor(fieldConfigs, &schemaDoc, 2048)
 
 	t.Run("root query field returns correct OR-of-AND scopes", func(t *testing.T) {
 		t.Parallel()
@@ -452,7 +452,7 @@ func TestComputeCombinedScopes(t *testing.T) {
 
 			schemaDoc := parseTestSchema(t)
 
-			extractor := NewScopeExtractor(testFieldConfigs(), &schemaDoc, 0)
+			extractor := NewScopeExtractor(testFieldConfigs(), &schemaDoc, 2048)
 			got, err := extractor.ComputeCombinedScopes(tt.fieldReqs)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got)
@@ -464,7 +464,7 @@ func TestComputeCombinedScopes_ExceedsLimit(t *testing.T) {
 	t.Parallel()
 
 	schemaDoc := parseTestSchema(t)
-	extractor := NewScopeExtractor(testFieldConfigs(), &schemaDoc, 0)
+	extractor := NewScopeExtractor(testFieldConfigs(), &schemaDoc, 2048)
 
 	// Build field requirements that will exceed MaxScopeCombinations (2048).
 	// 12 fields × 2 OR-groups each = 2^12 = 4096 combinations > 2048.

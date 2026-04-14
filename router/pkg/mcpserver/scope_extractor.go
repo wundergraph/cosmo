@@ -10,12 +10,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
-// DefaultMaxScopeCombinations is the default cap on the number of OR-group
-// combinations produced by the Cartesian product across scoped fields.
-// This can be overridden via the mcp.oauth.scopes.max_scope_combinations
-// config option for enterprises with complex RBAC configurations.
-const DefaultMaxScopeCombinations = 2048
-
 // FieldScopeRequirement represents the scope requirement for a single field.
 // OrScopes is a list of AND-groups — satisfy any one group to access the field.
 // e.g., [["a", "b"], ["c"]] means (a AND b) OR (c)
@@ -34,12 +28,8 @@ type ScopeExtractor struct {
 	maxScopeCombinations int
 }
 
-// NewScopeExtractor creates a new ScopeExtractor. If maxScopeCombinations is 0,
-// DefaultMaxScopeCombinations is used.
+// NewScopeExtractor creates a new ScopeExtractor.
 func NewScopeExtractor(fieldConfigs []*nodev1.FieldConfiguration, schemaDoc *ast.Document, maxScopeCombinations int) *ScopeExtractor {
-	if maxScopeCombinations <= 0 {
-		maxScopeCombinations = DefaultMaxScopeCombinations
-	}
 	index := make(map[string][][]string)
 	for _, fc := range fieldConfigs {
 		authConfig := fc.GetAuthorizationConfiguration()

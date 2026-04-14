@@ -223,7 +223,7 @@
         "GetSchema": null
       },
       "ScopeChallengeIncludeTokenScopes": false,
-      "MaxScopeCombinations": 0
+      "MaxScopeCombinations": 2048
     },
     "ResourceDocumentation": ""
   },

@@ -1145,8 +1145,8 @@ type MCPOAuthConfiguration struct {
 	ScopeChallengeIncludeTokenScopes bool `yaml:"scope_challenge_include_token_scopes" envDefault:"false" env:"SCOPE_CHALLENGE_INCLUDE_TOKEN_SCOPES"`
 	// MaxScopeCombinations sets the upper limit on the number of OR-group combinations
 	// produced when computing the Cartesian product of @requiresScopes across fields.
-	// Defaults to 2048 if not set. Increase for complex RBAC configurations.
-	MaxScopeCombinations int `yaml:"max_scope_combinations" envDefault:"0" env:"MAX_SCOPE_COMBINATIONS"`
+	// Increase for complex RBAC configurations.
+	MaxScopeCombinations int `yaml:"max_scope_combinations" envDefault:"2048" env:"MAX_SCOPE_COMBINATIONS"`
 }
 
 // MCPOAuthScopesConfiguration defines which scopes are required for different MCP operations.
