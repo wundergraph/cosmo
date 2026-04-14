@@ -1,63 +1,130 @@
 package testutil
 
-import (
-	"strings"
+import "strings"
+
+// ParseWWWAuthenticateParams parses the WWW-Authenticate header from HTTP
+// responses and returns its auth-params. The auth-scheme (e.g. "Bearer") is
+// discarded; callers in these tests only care about the parameters.
+//
+// Example input: `Bearer error="insufficient_scope", scope="read write"`
+// Example output: map[string]string{"error": "insufficient_scope", "scope": "read write"}
+//
+// The parser below is adapted from containers/image (Apache-2.0):
+// https://github.com/containers/image/blob/main/docker/wwwauthenticate.go
+// which itself was derived from docker/distribution. Inlined here rather
+// than pulled as a dependency — it's ~50 lines and only used by tests.
+//
+// NOTE: Not fully RFC 7235 compliant; in particular it only handles a single
+// challenge per header. Sufficient for asserting on router responses in tests.
+func ParseWWWAuthenticateParams(header string) map[string]string {
+	_, params := parseValueAndParams(header)
+	return params
+}
+
+type octetType byte
+
+const (
+	isToken octetType = 1 << iota
+	isSpace
 )
 
-// ParseWWWAuthenticateParams parses the WWW-Authenticate header from HTTP responses.
-// This is a simple parser for test validation only, not production use.
-//
-// NOTE: LLM-generated - there are no well-established Go libraries for parsing
-// WWW-Authenticate response headers (as of 2026). This parser handles the
-// common case of Bearer authentication with quoted parameter values.
-//
-// Example input: `Bearer error="insufficient_scope", scope="read write", resource_metadata="https://example.com"`
-// Example output: map[string]string{"error": "insufficient_scope", "scope": "read write", "resource_metadata": "https://example.com"}
-func ParseWWWAuthenticateParams(header string) map[string]string {
-	params := make(map[string]string)
+var octetTypes [256]octetType
 
-	// Remove "Bearer " prefix (case-insensitive)
-	if len(header) >= 7 && strings.EqualFold(header[:7], "Bearer ") {
-		header = header[7:]
+func init() {
+	for c := 0; c < 256; c++ {
+		var t octetType
+		isCtl := c <= 31 || c == 127
+		isChar := c <= 127
+		isSeparator := strings.ContainsRune(" \t\"(),/:;<=>?@[]\\{}", rune(c))
+		if strings.ContainsRune(" \t\r\n", rune(c)) {
+			t |= isSpace
+		}
+		if isChar && !isCtl && !isSeparator {
+			t |= isToken
+		}
+		octetTypes[c] = t
 	}
-	header = strings.TrimSpace(header)
+}
 
-	// Simple state machine to parse key="value" pairs
-	var key, value strings.Builder
-	inKey := true
-	inQuote := false
+func parseValueAndParams(header string) (value string, params map[string]string) {
+	params = make(map[string]string)
+	value, s := expectToken(header)
+	if value == "" {
+		return
+	}
+	value = strings.ToLower(value)
+	s = "," + skipSpace(s)
+	for strings.HasPrefix(s, ",") {
+		var pkey string
+		pkey, s = expectToken(skipSpace(s[1:]))
+		if pkey == "" {
+			return
+		}
+		if !strings.HasPrefix(s, "=") {
+			return
+		}
+		var pvalue string
+		pvalue, s = expectTokenOrQuoted(s[1:])
+		if pvalue == "" {
+			return
+		}
+		params[strings.ToLower(pkey)] = pvalue
+		s = skipSpace(s)
+	}
+	return
+}
 
-	for i := 0; i < len(header); i++ {
-		ch := header[i]
-
-		switch {
-		case ch == '=' && inKey:
-			inKey = false
-		case ch == '"' && !inKey:
-			// Track quote state but don't add quotes to value
-			inQuote = !inQuote
-		case ch == ',' && !inQuote:
-			if key.Len() > 0 {
-				params[strings.TrimSpace(key.String())] = strings.TrimSpace(value.String())
-			}
-			key.Reset()
-			value.Reset()
-			inKey = true
-		case inKey:
-			key.WriteByte(ch)
-		default:
-			// We're in a value (!inKey) and ch is not a quote (already handled above)
-			// Include everything (including spaces) when inside quotes
-			if inQuote || ch != ' ' || value.Len() > 0 {
-				value.WriteByte(ch)
-			}
+func skipSpace(s string) string {
+	i := 0
+	for ; i < len(s); i++ {
+		if octetTypes[s[i]]&isSpace == 0 {
+			break
 		}
 	}
+	return s[i:]
+}
 
-	// Add final pair
-	if key.Len() > 0 {
-		params[strings.TrimSpace(key.String())] = strings.TrimSpace(value.String())
+func expectToken(s string) (token, rest string) {
+	i := 0
+	for ; i < len(s); i++ {
+		if octetTypes[s[i]]&isToken == 0 {
+			break
+		}
 	}
+	return s[:i], s[i:]
+}
 
-	return params
+func expectTokenOrQuoted(s string) (value, rest string) {
+	if !strings.HasPrefix(s, "\"") {
+		return expectToken(s)
+	}
+	s = s[1:]
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '"':
+			return s[:i], s[i+1:]
+		case '\\':
+			p := make([]byte, len(s)-1)
+			j := copy(p, s[:i])
+			escape := true
+			for i++; i < len(s); i++ {
+				b := s[i]
+				switch {
+				case escape:
+					escape = false
+					p[j] = b
+					j++
+				case b == '\\':
+					escape = true
+				case b == '"':
+					return string(p[:j]), s[i+1:]
+				default:
+					p[j] = b
+					j++
+				}
+			}
+			return "", ""
+		}
+	}
+	return "", ""
 }
