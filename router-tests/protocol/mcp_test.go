@@ -291,8 +291,48 @@ func TestMCP(t *testing.T) {
 
 					assert.Equal(t, content.Type, "text")
 
-					// Set up expected text with the static endpoint
-					expectedContent := "Operation: MyEmployees\nType: query\nDescription: This is a GraphQL query that retrieves a list of employees.\n\nInput Schema:\n```json\n{\"additionalProperties\":false,\"description\":\"This is a GraphQL query that retrieves a list of employees.\",\"nullable\":true,\"properties\":{\"criteria\":{\"additionalProperties\":false,\"description\":\"Allows to filter employees by their details.\",\"nullable\":false,\"properties\":{\"hasPets\":{\"nullable\":true,\"type\":\"boolean\"},\"nationality\":{\"enum\":[\"AMERICAN\",\"DUTCH\",\"ENGLISH\",\"GERMAN\",\"INDIAN\",\"SPANISH\",\"UKRAINIAN\"],\"nullable\":true,\"type\":\"string\"},\"nested\":{\"additionalProperties\":false,\"nullable\":true,\"properties\":{\"hasChildren\":{\"nullable\":true,\"type\":\"boolean\"},\"maritalStatus\":{\"enum\":[\"ENGAGED\",\"MARRIED\"],\"nullable\":true,\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}},\"type\":\"object\"}\n```\n\nGraphQL Query:\n```\nquery MyEmployees($criteria: SearchInput) {\n    findEmployees(criteria: $criteria) {\n        id\n        isAvailable\n        currentMood\n        products\n        details {\n            forename\n            nationality\n        }\n    }\n}\n```\n\nUsage Instructions:\n1. Endpoint: https://api.example.com/graphql\n2. HTTP Method: POST\n3. Headers Required:\n   - Content-Type: application/json; charset=utf-8\n\nRequest Format:\n```json\n{\n  \"query\": \"<operation_query>\",\n  \"variables\": <your_variables_object>\n}\n```\nImportant Notes:\n1. Use the query string exactly as provided above\n2. Do not modify or reformat the query string"
+					bt := "```"
+					expectedContent := `Operation: MyEmployees
+Type: query
+Description: This is a GraphQL query that retrieves a list of employees.
+
+Input Schema:
+` + bt + `json
+{"additionalProperties":false,"description":"This is a GraphQL query that retrieves a list of employees.","nullable":true,"properties":{"criteria":{"additionalProperties":false,"description":"Allows to filter employees by their details.","nullable":false,"properties":{"hasPets":{"nullable":true,"type":"boolean"},"nationality":{"enum":["AMERICAN","DUTCH","ENGLISH","GERMAN","INDIAN","SPANISH","UKRAINIAN"],"nullable":true,"type":"string"},"nested":{"additionalProperties":false,"nullable":true,"properties":{"hasChildren":{"nullable":true,"type":"boolean"},"maritalStatus":{"enum":["ENGAGED","MARRIED"],"nullable":true,"type":"string"}},"type":"object"}},"type":"object"}},"type":"object"}
+` + bt + `
+
+GraphQL Query:
+` + bt + `
+query MyEmployees($criteria: SearchInput) {
+    findEmployees(criteria: $criteria) {
+        id
+        isAvailable
+        currentMood
+        products
+        details {
+            forename
+            nationality
+        }
+    }
+}
+` + bt + `
+
+Usage Instructions:
+1. Endpoint: https://api.example.com/graphql
+2. HTTP Method: POST
+3. Headers Required:
+   - Content-Type: application/json; charset=utf-8
+
+Request Format:
+` + bt + `json
+{
+  "query": "<operation_query>",
+  "variables": <your_variables_object>
+}
+` + bt + `
+Important Notes:
+1. Use the query string exactly as provided above
+2. Do not modify or reformat the query string`
 
 					assert.Equal(t, expectedContent, content.Text)
 				})
