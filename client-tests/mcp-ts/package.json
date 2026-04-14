@@ -9,7 +9,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "packageManager": "pnpm@9.12.3",
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
