@@ -155,6 +155,7 @@ import { getInvitations } from './user/getInvitations.js';
 import { getUserAccessiblePermissions } from './user/getUserAccessiblePermissions.js';
 import { getUserAccessibleResources } from './user/getUserAccessibleResources.js';
 import { inviteUser } from './user/inviteUser.js';
+import { inviteUsers } from './user/inviteUsers.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberGroup } from './user/updateOrgMemberGroup.js';
@@ -349,6 +350,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     inviteUser: (req, ctx) => {
       return inviteUser(opts, req, ctx);
+    },
+
+    inviteUsers: (req, ctx) => {
+      return inviteUsers(opts, req, ctx);
     },
 
     createAPIKey: (req, ctx) => {

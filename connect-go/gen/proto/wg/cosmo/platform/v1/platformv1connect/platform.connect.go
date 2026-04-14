@@ -244,6 +244,9 @@ const (
 	// PlatformServiceInviteUserProcedure is the fully-qualified name of the PlatformService's
 	// InviteUser RPC.
 	PlatformServiceInviteUserProcedure = "/wg.cosmo.platform.v1.PlatformService/InviteUser"
+	// PlatformServiceInviteUsersProcedure is the fully-qualified name of the PlatformService's
+	// InviteUsers RPC.
+	PlatformServiceInviteUsersProcedure = "/wg.cosmo.platform.v1.PlatformService/InviteUsers"
 	// PlatformServiceGetAPIKeysProcedure is the fully-qualified name of the PlatformService's
 	// GetAPIKeys RPC.
 	PlatformServiceGetAPIKeysProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAPIKeys"
@@ -658,6 +661,7 @@ var (
 	platformServiceGetPendingOrganizationMembersMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("GetPendingOrganizationMembers")
 	platformServiceIsMemberLimitReachedMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("IsMemberLimitReached")
 	platformServiceInviteUserMethodDescriptor                                         = platformServiceServiceDescriptor.Methods().ByName("InviteUser")
+	platformServiceInviteUsersMethodDescriptor                                        = platformServiceServiceDescriptor.Methods().ByName("InviteUsers")
 	platformServiceGetAPIKeysMethodDescriptor                                         = platformServiceServiceDescriptor.Methods().ByName("GetAPIKeys")
 	platformServiceCreateAPIKeyMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("CreateAPIKey")
 	platformServiceUpdateAPIKeyMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("UpdateAPIKey")
@@ -902,6 +906,8 @@ type PlatformServiceClient interface {
 	IsMemberLimitReached(context.Context, *connect.Request[v1.IsMemberLimitReachedRequest]) (*connect.Response[v1.IsMemberLimitReachedResponse], error)
 	// InviteUser invites an user to join the organization
 	InviteUser(context.Context, *connect.Request[v1.InviteUserRequest]) (*connect.Response[v1.InviteUserResponse], error)
+	// InviteUsers invites multiple users to join the organization
+	InviteUsers(context.Context, *connect.Request[v1.InviteUsersRequest]) (*connect.Response[v1.InviteUsersResponse], error)
 	// GetAPIKeys returns a list of API keys of the organization
 	GetAPIKeys(context.Context, *connect.Request[v1.GetAPIKeysRequest]) (*connect.Response[v1.GetAPIKeysResponse], error)
 	// CreateAPIKey creates an API key for the organization
@@ -1549,6 +1555,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceInviteUserProcedure,
 			connect.WithSchema(platformServiceInviteUserMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		inviteUsers: connect.NewClient[v1.InviteUsersRequest, v1.InviteUsersResponse](
+			httpClient,
+			baseURL+PlatformServiceInviteUsersProcedure,
+			connect.WithSchema(platformServiceInviteUsersMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getAPIKeys: connect.NewClient[v1.GetAPIKeysRequest, v1.GetAPIKeysResponse](
@@ -2311,6 +2323,7 @@ type platformServiceClient struct {
 	getPendingOrganizationMembers                      *connect.Client[v1.GetPendingOrganizationMembersRequest, v1.GetPendingOrganizationMembersResponse]
 	isMemberLimitReached                               *connect.Client[v1.IsMemberLimitReachedRequest, v1.IsMemberLimitReachedResponse]
 	inviteUser                                         *connect.Client[v1.InviteUserRequest, v1.InviteUserResponse]
+	inviteUsers                                        *connect.Client[v1.InviteUsersRequest, v1.InviteUsersResponse]
 	getAPIKeys                                         *connect.Client[v1.GetAPIKeysRequest, v1.GetAPIKeysResponse]
 	createAPIKey                                       *connect.Client[v1.CreateAPIKeyRequest, v1.CreateAPIKeyResponse]
 	updateAPIKey                                       *connect.Client[v1.UpdateAPIKeyRequest, v1.UpdateAPIKeyResponse]
@@ -2784,6 +2797,11 @@ func (c *platformServiceClient) IsMemberLimitReached(ctx context.Context, req *c
 // InviteUser calls wg.cosmo.platform.v1.PlatformService.InviteUser.
 func (c *platformServiceClient) InviteUser(ctx context.Context, req *connect.Request[v1.InviteUserRequest]) (*connect.Response[v1.InviteUserResponse], error) {
 	return c.inviteUser.CallUnary(ctx, req)
+}
+
+// InviteUsers calls wg.cosmo.platform.v1.PlatformService.InviteUsers.
+func (c *platformServiceClient) InviteUsers(ctx context.Context, req *connect.Request[v1.InviteUsersRequest]) (*connect.Response[v1.InviteUsersResponse], error) {
+	return c.inviteUsers.CallUnary(ctx, req)
 }
 
 // GetAPIKeys calls wg.cosmo.platform.v1.PlatformService.GetAPIKeys.
@@ -3509,6 +3527,8 @@ type PlatformServiceHandler interface {
 	IsMemberLimitReached(context.Context, *connect.Request[v1.IsMemberLimitReachedRequest]) (*connect.Response[v1.IsMemberLimitReachedResponse], error)
 	// InviteUser invites an user to join the organization
 	InviteUser(context.Context, *connect.Request[v1.InviteUserRequest]) (*connect.Response[v1.InviteUserResponse], error)
+	// InviteUsers invites multiple users to join the organization
+	InviteUsers(context.Context, *connect.Request[v1.InviteUsersRequest]) (*connect.Response[v1.InviteUsersResponse], error)
 	// GetAPIKeys returns a list of API keys of the organization
 	GetAPIKeys(context.Context, *connect.Request[v1.GetAPIKeysRequest]) (*connect.Response[v1.GetAPIKeysResponse], error)
 	// CreateAPIKey creates an API key for the organization
@@ -4152,6 +4172,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceInviteUserProcedure,
 		svc.InviteUser,
 		connect.WithSchema(platformServiceInviteUserMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceInviteUsersHandler := connect.NewUnaryHandler(
+		PlatformServiceInviteUsersProcedure,
+		svc.InviteUsers,
+		connect.WithSchema(platformServiceInviteUsersMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetAPIKeysHandler := connect.NewUnaryHandler(
@@ -4981,6 +5007,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceIsMemberLimitReachedHandler.ServeHTTP(w, r)
 		case PlatformServiceInviteUserProcedure:
 			platformServiceInviteUserHandler.ServeHTTP(w, r)
+		case PlatformServiceInviteUsersProcedure:
+			platformServiceInviteUsersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetAPIKeysProcedure:
 			platformServiceGetAPIKeysHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateAPIKeyProcedure:
@@ -5494,6 +5522,10 @@ func (UnimplementedPlatformServiceHandler) IsMemberLimitReached(context.Context,
 
 func (UnimplementedPlatformServiceHandler) InviteUser(context.Context, *connect.Request[v1.InviteUserRequest]) (*connect.Response[v1.InviteUserResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.InviteUser is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) InviteUsers(context.Context, *connect.Request[v1.InviteUsersRequest]) (*connect.Response[v1.InviteUsersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.InviteUsers is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetAPIKeys(context.Context, *connect.Request[v1.GetAPIKeysRequest]) (*connect.Response[v1.GetAPIKeysResponse], error) {

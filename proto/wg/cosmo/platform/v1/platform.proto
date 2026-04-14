@@ -1106,6 +1106,21 @@ message InviteUserResponse {
   Response response = 1;
 }
 
+message InviteUsersRequest {
+  repeated string emails = 1;
+  repeated string groups = 2;
+}
+
+message InviteUsersInvitationError {
+  string email = 1;
+  string error = 2;
+}
+
+message InviteUsersResponse {
+  Response response = 1;
+  repeated InviteUsersInvitationError invitationErrors = 2;
+}
+
 message APIKey{
   message Group {
     string id = 1;
@@ -3391,6 +3406,8 @@ service PlatformService {
   rpc IsMemberLimitReached(IsMemberLimitReachedRequest) returns (IsMemberLimitReachedResponse){}
   // InviteUser invites an user to join the organization
   rpc InviteUser(InviteUserRequest) returns (InviteUserResponse){}
+  // InviteUsers invites multiple users to join the organization
+  rpc InviteUsers(InviteUsersRequest) returns (InviteUsersResponse){}
   // GetAPIKeys returns a list of API keys of the organization
   rpc GetAPIKeys(GetAPIKeysRequest) returns (GetAPIKeysResponse){}
   // CreateAPIKey creates an API key for the organization

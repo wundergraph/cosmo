@@ -8291,6 +8291,135 @@ export class InviteUserResponse extends Message<InviteUserResponse> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.InviteUsersRequest
+ */
+export class InviteUsersRequest extends Message<InviteUsersRequest> {
+  /**
+   * @generated from field: repeated string emails = 1;
+   */
+  emails: string[] = [];
+
+  /**
+   * @generated from field: repeated string groups = 2;
+   */
+  groups: string[] = [];
+
+  constructor(data?: PartialMessage<InviteUsersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.InviteUsersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "emails", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InviteUsersRequest {
+    return new InviteUsersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): InviteUsersRequest {
+    return new InviteUsersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): InviteUsersRequest {
+    return new InviteUsersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: InviteUsersRequest | PlainMessage<InviteUsersRequest> | undefined, b: InviteUsersRequest | PlainMessage<InviteUsersRequest> | undefined): boolean {
+    return proto3.util.equals(InviteUsersRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.InviteUsersInvitationError
+ */
+export class InviteUsersInvitationError extends Message<InviteUsersInvitationError> {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email = "";
+
+  /**
+   * @generated from field: string error = 2;
+   */
+  error = "";
+
+  constructor(data?: PartialMessage<InviteUsersInvitationError>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.InviteUsersInvitationError";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InviteUsersInvitationError {
+    return new InviteUsersInvitationError().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): InviteUsersInvitationError {
+    return new InviteUsersInvitationError().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): InviteUsersInvitationError {
+    return new InviteUsersInvitationError().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: InviteUsersInvitationError | PlainMessage<InviteUsersInvitationError> | undefined, b: InviteUsersInvitationError | PlainMessage<InviteUsersInvitationError> | undefined): boolean {
+    return proto3.util.equals(InviteUsersInvitationError, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.InviteUsersResponse
+ */
+export class InviteUsersResponse extends Message<InviteUsersResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.InviteUsersInvitationError invitationErrors = 2;
+   */
+  invitationErrors: InviteUsersInvitationError[] = [];
+
+  constructor(data?: PartialMessage<InviteUsersResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.InviteUsersResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "invitationErrors", kind: "message", T: InviteUsersInvitationError, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InviteUsersResponse {
+    return new InviteUsersResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): InviteUsersResponse {
+    return new InviteUsersResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): InviteUsersResponse {
+    return new InviteUsersResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: InviteUsersResponse | PlainMessage<InviteUsersResponse> | undefined, b: InviteUsersResponse | PlainMessage<InviteUsersResponse> | undefined): boolean {
+    return proto3.util.equals(InviteUsersResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.APIKey
  */
 export class APIKey extends Message<APIKey> {
