@@ -455,7 +455,7 @@ export class NormalizationFactory {
   entityInterfaceDataByTypeName = new Map<string, EntityInterfaceSubgraphData>();
   eventsConfigurations = new Map<string, EventConfiguration[]>();
   fieldSetDataByTypeName = new Map<string, FieldSetData>();
-  interfaceImplementationTypeNamesByInterfaceTypeName = new Map<AbstractTypeName, Set<AbstractTypeName>>();
+  interfaceImplementationTypeNamesByInterfaceTypeName = new Map<InterfaceTypeName, Set<InterfaceTypeName>>();
   internalGraph: Graph;
   invalidConfigureDescriptionNodeDatas: Array<NodeData> = [];
   invalidORScopesCoords = new Set<string>();

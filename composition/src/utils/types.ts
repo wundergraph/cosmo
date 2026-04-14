@@ -1,4 +1,4 @@
-import { InterfaceTypeDefinitionNode, InterfaceTypeExtensionNode, type Kind } from 'graphql';
+import { type Kind } from 'graphql';
 import { type ArgumentName, type SubgraphName } from '../types/types';
 
 export type RootTypeName = 'Mutation' | 'Query' | 'Subscription';

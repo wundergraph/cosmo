@@ -42,7 +42,7 @@ export type NormalizationSuccess = {
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityDataByTypeName: Map<string, EntityData>;
   fieldCoordsByNamedTypeName: Map<string, Set<string>>;
-  interfaceImplementationTypeNamesByInterfaceTypeName: Map<AbstractTypeName, Set<AbstractTypeName>>;
+  interfaceImplementationTypeNamesByInterfaceTypeName: Map<InterfaceTypeName, Set<InterfaceTypeName>>;
   isEventDrivenGraph: boolean;
   isVersionTwo: boolean;
   originalTypeNameByRenamedTypeName: Map<string, string>;
