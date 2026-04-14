@@ -32,7 +32,8 @@ func TestMCPOAuthInvalidToken(t *testing.T) {
 				AuthorizationServerURL: oauthServer.Issuer(),
 			},
 		},
-		MCPAuthToken: validToken,
+		MCPAuthToken:      validToken,
+		MCPOperationsPath: "testdata/mcp_operations",
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		ctx := context.Background()
 
@@ -68,7 +69,8 @@ func TestMCPOAuthMissingToken(t *testing.T) {
 				AuthorizationServerURL: oauthServer.Issuer(),
 			},
 		},
-		MCPAuthToken: validToken,
+		MCPAuthToken:      validToken,
+		MCPOperationsPath: "testdata/mcp_operations",
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		ctx := context.Background()
 
@@ -105,13 +107,15 @@ func TestMCPOAuthPerToolScopes(t *testing.T) {
 				},
 				AuthorizationServerURL: oauthServer.Issuer(),
 				Scopes: config.MCPOAuthScopesConfiguration{
-					Initialize: []string{"mcp:connect"},
-					ToolsCall:  []string{"mcp:tools:write"},
+					Initialize:     []string{"mcp:connect"},
+					GetSchema:      []string{"mcp:tools:read"},
+					ExecuteGraphQL: []string{"mcp:tools:write"},
 				},
 				ScopeChallengeIncludeTokenScopes: true,
 			},
 		},
-		MCPAuthToken: initToken,
+		MCPAuthToken:      initToken,
+		MCPOperationsPath: "testdata/mcp_operations",
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		ctx := context.Background()
 

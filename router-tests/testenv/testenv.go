@@ -690,6 +690,9 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.MCP.Enabled {
 		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
+		if cfg.MCP.OAuth.Enabled && cfg.MCP.Server.BaseURL == "" {
+			cfg.MCP.Server.BaseURL = fmt.Sprintf("http://%s", cfg.MCP.Server.ListenAddr)
+		}
 	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
@@ -1130,6 +1133,9 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.MCP.Enabled {
 		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
+		if cfg.MCP.OAuth.Enabled && cfg.MCP.Server.BaseURL == "" {
+			cfg.MCP.Server.BaseURL = fmt.Sprintf("http://%s", cfg.MCP.Server.ListenAddr)
+		}
 	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
