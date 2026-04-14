@@ -1,4 +1,11 @@
-import type { ContractName, DirectiveName, FieldName, SubgraphName, TypeName } from '../../types/types';
+import type {
+  ContractName,
+  DirectiveName,
+  FieldName,
+  InterfaceTypeName,
+  SubgraphName,
+  TypeName,
+} from '../../types/types';
 import type {
   AuthorizationData,
   EntityData,
@@ -47,6 +54,7 @@ export type FederationFactoryParams = {
   entityDataByTypeName: Map<TypeName, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<TypeName, EntityInterfaceFederationData>;
   fieldCoordsByNamedTypeName: Map<TypeName, Set<string>>;
+  interfaceImplementationTypeNamesByInterfaceTypeName: Map<InterfaceTypeName, Set<InterfaceTypeName>>;
   internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<SubgraphName, InternalSubgraph>;
   warnings: Array<Warning>;
