@@ -58,7 +58,11 @@ import {
   getSubgraphSDLFromLatestComposition,
   publishPersistedOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { PersistedOperation, PublishedOperationStatus, GetFeatureFlagsInLatestCompositionByFederatedGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  PersistedOperation,
+  PublishedOperationStatus,
+  GetFeatureFlagsInLatestCompositionByFederatedGraphResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { sentenceCase } from 'change-case';
 import crypto from 'crypto';
 import { GraphiQL } from 'graphiql';
@@ -1166,12 +1170,13 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 };
 
-const CompositionFlagsContext = createContext<GetFeatureFlagsInLatestCompositionByFederatedGraphResponse | undefined>(undefined);
+const CompositionFlagsContext = createContext<GetFeatureFlagsInLatestCompositionByFederatedGraphResponse | undefined>(
+  undefined,
+);
 
 function useCompositionFlags() {
   return useContext(CompositionFlagsContext);
 }
-
 
 const CompositionFlagsProvider = ({ children }: PropsWithChildren) => {
   const graphContext = useContext(GraphContext);
@@ -1186,9 +1191,7 @@ const CompositionFlagsProvider = ({ children }: PropsWithChildren) => {
     },
   );
 
-  return (
-    <CompositionFlagsContext.Provider value={compositionFlagsData}>{children}</CompositionFlagsContext.Provider>
-  );
+  return <CompositionFlagsContext.Provider value={compositionFlagsData}>{children}</CompositionFlagsContext.Provider>;
 };
 
 PlaygroundPage.getLayout = (page: ReactNode) => {
