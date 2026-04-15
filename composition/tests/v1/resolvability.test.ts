@@ -19,11 +19,13 @@ import {
 import { describe, expect, test } from 'vitest';
 import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from './utils/utils';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
   schemaToSortedNormalizedString,
 } from '../utils/utils';
+import { type SubgraphName } from '../../src/resolvability-graph/types/types';
 
 describe('Field resolvability tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {
@@ -1483,7 +1485,14 @@ describe('Field resolvability tests', () => {
   test('that an error is returned if a field is inaccessible through a shared root field', () => {
     const fieldPath = 'query.entities.objectTwo';
     const entityAncestors: EntityAncestorCollection = {
-      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([[eaaa.name, new Set<string>(['id'])]]),
+      fieldSetsByTargetSubgraphName: new Map<SubgraphName, Set<string>>([
+        [eaaa.name, new Set<string>(['id'])],
+        [eaac.name, new Set<string>(['name'])],
+      ]),
+      sourceSubgraphNamesBySatisfiedFieldSet: new Map<string, Array<SubgraphName>>([
+        ['id', [eaaa.name]],
+        ['name', [eaac.name]],
+      ]),
       subgraphNames: [eaaa.name, eaac.name],
       typeName: 'Entity',
     };
@@ -1536,32 +1545,37 @@ describe('Field resolvability tests', () => {
 
   test('that an error is returned if a field is inaccessible through a shared root field nor an entity #1', () => {
     const entityAncestors: EntityAncestorCollection = {
-      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([
-        [eaaa.name, new Set<string>(['id'])],
-        [eaae.name, new Set<string>(['name'])],
+      fieldSetsByTargetSubgraphName: new Map<string, Set<SubgraphName>>([
+        [eaaa.name, new Set<SubgraphName>(['id'])],
+        [eaae.name, new Set<SubgraphName>(['name'])],
+        [eaac.name, new Set<SubgraphName>(['name'])],
+      ]),
+      sourceSubgraphNamesBySatisfiedFieldSet: new Map<string, Array<SubgraphName>>([
+        ['id', [eaaa.name]],
+        ['name', [eaae.name, eaac.name]],
       ]),
       subgraphNames: [eaac.name, eaae.name],
       typeName: 'Entity',
     };
-    const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([eaac.name, eaae.name]));
+    const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<SubgraphName>([eaac.name, eaae.name]));
     const unresolvableFieldDataOne: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>(),
+      externalSubgraphNames: new Set<SubgraphName>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.object'), {
         isLeaf: true,
         name: 'age',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([eaaf.name]),
+      subgraphNames: new Set<SubgraphName>([eaaf.name]),
       typeName: OBJECT,
     };
     const unresolvableFieldDataTwo: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>(),
+      externalSubgraphNames: new Set<SubgraphName>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.objectTwo'), {
         isLeaf: true,
         name: 'age',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([eaaf.name]),
+      subgraphNames: new Set<SubgraphName>([eaaf.name]),
       typeName: OBJECT,
     };
     const { errors } = federateSubgraphsFailure([eaac, eaae, eaaf], ROUTER_COMPATIBILITY_VERSION_ONE);
@@ -1588,43 +1602,47 @@ describe('Field resolvability tests', () => {
 
   test('that an error is returned if a field is inaccessible through a shared root field nor an entity #2', () => {
     const entityAncestors: EntityAncestorCollection = {
-      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([
-        [eaaa.name, new Set<string>(['id'])],
-        [eaae.name, new Set<string>(['name'])],
-        [eaag.name, new Set<string>(['age'])],
+      fieldSetsByTargetSubgraphName: new Map<string, Set<SubgraphName>>([
+        [eaac.name, new Set<SubgraphName>(['name'])],
+        [eaae.name, new Set<SubgraphName>(['id'])],
+        [eaag.name, new Set<SubgraphName>(['age'])],
       ]),
-      subgraphNames: [eaac.name, eaae.name, eaag.name],
+      sourceSubgraphNamesBySatisfiedFieldSet: new Map<string, Array<SubgraphName>>([
+        ['id', [eaae.name]],
+        ['name', [eaac.name]],
+      ]),
+      subgraphNames: [eaac.name, eaae.name],
       typeName: 'Entity',
     };
-    const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([eaac.name, eaae.name]));
+    const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<SubgraphName>([eaac.name, eaae.name]));
     const unresolvableFieldDataOne: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>(),
+      externalSubgraphNames: new Set<SubgraphName>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.object'), {
         isLeaf: true,
         name: 'age',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([eaag.name]),
+      subgraphNames: new Set<SubgraphName>([eaag.name]),
       typeName: OBJECT,
     };
     const unresolvableFieldDataTwo: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>(),
+      externalSubgraphNames: new Set<SubgraphName>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.objectTwo'), {
         isLeaf: true,
         name: 'age',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([eaag.name]),
+      subgraphNames: new Set<SubgraphName>([eaag.name]),
       typeName: OBJECT,
     };
     const unresolvableFieldDataThree: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>(),
+      externalSubgraphNames: new Set<SubgraphName>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities'), {
         isLeaf: true,
         name: 'age',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([eaag.name]),
+      subgraphNames: new Set<SubgraphName>([eaag.name]),
       typeName: 'Entity',
     };
     const { errors } = federateSubgraphsFailure([eaac, eaae, eaag], ROUTER_COMPATIBILITY_VERSION_ONE);
@@ -1659,15 +1677,15 @@ describe('Field resolvability tests', () => {
 
   test('that an error is returned if fields returning the same named type are unresolvable', () => {
     const fieldPath = 'query.object.nestedObjectTwo';
-    const rootFieldData = newRootFieldData(QUERY, 'object', new Set<string>([faaa.name, faab.name]));
+    const rootFieldData = newRootFieldData(QUERY, 'object', new Set<SubgraphName>([faaa.name, faab.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>(),
+      externalSubgraphNames: new Set<SubgraphName>(),
       fieldName: 'id',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
         name: 'id',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([faaa.name]),
+      subgraphNames: new Set<SubgraphName>([faaa.name]),
       typeName: 'NestedObject',
     };
     const { errors } = federateSubgraphsFailure([faaa, faab], ROUTER_COMPATIBILITY_VERSION_ONE);
@@ -1701,44 +1719,48 @@ describe('Field resolvability tests', () => {
   test('that errors are returned for unresolvable fields involving a shared root query field and unreachable nested entities', () => {
     const { errors } = federateSubgraphsFailure([haaa, haab, haac], ROUTER_COMPATIBILITY_VERSION_ONE);
     const entityAncestors: EntityAncestorCollection = {
-      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([
+      fieldSetsByTargetSubgraphName: new Map<string, Set<SubgraphName>>([
         [haaa.name, new Set<string>(['idB'])],
         [haab.name, new Set<string>(['idB'])],
         [haac.name, new Set<string>(['idA'])],
       ]),
+      sourceSubgraphNamesBySatisfiedFieldSet: new Map<SubgraphName, Array<SubgraphName>>([
+        ['idA', [haac.name]],
+        ['idB', [haaa.name, haab.name]],
+      ]),
       subgraphNames: [haaa.name, haab.name],
       typeName: 'EntityA',
     };
-    const rootFieldData = newRootFieldData(QUERY, 'a', new Set<string>([haaa.name, haab.name]));
+    const rootFieldData = newRootFieldData(QUERY, 'a', new Set<SubgraphName>([haaa.name, haab.name]));
 
     const unresolvableFieldDataOne: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>(),
+      externalSubgraphNames: new Set<SubgraphName>(),
       fieldName: 'createdAt',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
         isLeaf: true,
         name: 'createdAt',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([haaa.name]),
+      subgraphNames: new Set<SubgraphName>([haaa.name]),
       typeName: 'EntityA',
     };
     const unresolvableFieldDataTwo: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>(),
+      externalSubgraphNames: new Set<SubgraphName>(),
       fieldName: 'active',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
         isLeaf: true,
         name: 'active',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([haaa.name]),
+      subgraphNames: new Set<SubgraphName>([haaa.name]),
       typeName: 'EntityA',
     };
     const unresolvableFieldDataThree: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>(),
+      externalSubgraphNames: new Set<SubgraphName>(),
       fieldName: 'b',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
         isLeaf: false,
         name: 'b',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([haab.name]),
+      subgraphNames: new Set<SubgraphName>([haab.name]),
       typeName: 'EntityA',
     };
     expect(errors).toHaveLength(3);
@@ -1772,30 +1794,31 @@ describe('Field resolvability tests', () => {
 
   test('that an error is returned if a field is unreachable due a true @external entity key field', () => {
     const entityAncestors: EntityAncestorCollection = {
-      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([[iaab.name, new Set<string>(['id'])]]),
+      fieldSetsByTargetSubgraphName: new Map<SubgraphName, Set<string>>([[iaab.name, new Set<string>(['id'])]]),
+      sourceSubgraphNamesBySatisfiedFieldSet: new Map<string, Array<SubgraphName>>([['id', [iaaa.name, iaab.name]]]),
       subgraphNames: [iaaa.name, iaab.name],
       typeName: 'Entity',
     };
-    const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([iaaa.name]));
+    const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<SubgraphName>([iaaa.name]));
     const fieldPath = 'query.entities';
     const unresolvableFieldDataOne: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>([iaaa.name]),
+      externalSubgraphNames: new Set<SubgraphName>([iaaa.name]),
       fieldName: 'id',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
         name: 'id',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([iaab.name]),
+      subgraphNames: new Set<SubgraphName>([iaab.name]),
       typeName: 'Entity',
     };
     const unresolvableFieldDataTwo: UnresolvableFieldData = {
-      externalSubgraphNames: new Set<string>(),
+      externalSubgraphNames: new Set<SubgraphName>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
         name: 'name',
       } as GraphFieldData),
-      subgraphNames: new Set<string>([iaab.name]),
+      subgraphNames: new Set<SubgraphName>([iaab.name]),
       typeName: 'Entity',
     };
     const { errors } = federateSubgraphsFailure([iaaa, iaab], ROUTER_COMPATIBILITY_VERSION_ONE);
@@ -1858,6 +1881,43 @@ describe('Field resolvability tests', () => {
     `,
       ),
     );
+  });
+
+  test('that an error is returned for only fully-validated inaccessible selections from a shared root field', () => {
+    const unresolvableFieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'name',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entityAs.entityC'), {
+        isLeaf: true,
+        name: 'name',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([kaaa.name]),
+      typeName: 'EntityC',
+    };
+    const { errors, warnings } = federateSubgraphsFailure([kaaa, kaab, kaac], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([
+      unresolvablePathError(
+        unresolvableFieldDataOne,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors: {
+            fieldSetsByTargetSubgraphName: new Map<SubgraphName, Set<string>>([
+              [kaaa.name, new Set<string>(['id'])],
+              [kaab.name, new Set<string>(['id'])],
+              [kaac.name, new Set<string>(['id'])],
+            ]),
+            sourceSubgraphNamesBySatisfiedFieldSet: new Map<string, Array<SubgraphName>>([
+              ['id', [kaaa.name, kaab.name]],
+            ]),
+            subgraphNames: [kaaa.name, kaab.name],
+            typeName: 'EntityA',
+          },
+          rootFieldData: newRootFieldData(QUERY, 'entityAs', new Set<SubgraphName>([kaaa.name, kaab.name])),
+          unresolvableFieldData: unresolvableFieldDataOne,
+        }),
+      ),
+    ]);
+    expect(warnings).toHaveLength(0);
   });
 });
 
@@ -3667,3 +3727,66 @@ const jaab: Subgraph = {
     }
   `),
 };
+
+const kaaa = createSubgraph(
+  'kaaa',
+  `
+    type EntityC {
+      name: String!
+    }
+    
+    type EntityA @key(fields: "id") @shareable {
+      id: ID!
+      entityB: [EntityB!]!
+      entityBWrapper: EntityBWrapper!
+    }
+    
+    type EntityB @key(fields: "id") @shareable {
+      id: ID!
+      entityAs: [EntityA!]!
+      entityA: EntityA!
+    }
+    
+    type EntityBWrapper {
+      entityB: EntityB!
+    }
+    
+    type Query @shareable {
+      entityAs: [EntityA!]!
+    }
+  `,
+);
+
+const kaab = createSubgraph(
+  'kaab',
+  `
+    type EntityC @key(fields: "id") {
+      id: ID!
+    }
+    
+    type EntityA @key(fields: "id") @shareable {
+      id: ID!
+      entityC: EntityC!
+    }
+    
+    type EntityB @key(fields: "id") @shareable {
+      id: ID!
+      entityAs: [EntityA!]! 
+      entityA: EntityA!
+    }
+    
+    type Query @shareable {
+      entityAs: [EntityA!]!
+    }
+  `,
+);
+
+const kaac = createSubgraph(
+  'kaac',
+  `
+    type EntityA @key(fields: "id") @shareable {
+      id: ID!
+      name: String!
+    }
+  `,
+);
