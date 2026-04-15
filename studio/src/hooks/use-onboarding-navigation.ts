@@ -59,9 +59,12 @@ export const useOnboardingNavigation = () => {
         return;
       }
 
+      const params = new URLSearchParams(window.location.search);
+      const referrer = params.get('referrer');
       const path = currentStep ? `/onboarding/${currentStep}` : `/onboarding/1`;
+      const pathWithParams = referrer ? `${path}?${new URLSearchParams({ referrer }).toString()}` : path;
       initialRedirect.current = true;
-      Router.replace(path);
+      Router.replace(pathWithParams);
     },
     [data, enabled, initialLoadSuccess, skipped, currentStep],
   );

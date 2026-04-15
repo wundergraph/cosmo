@@ -7,6 +7,7 @@ import ora from 'ora';
 import pc from 'picocolors';
 import { z } from 'zod';
 import { config, cacheDir } from '../../core/config.js';
+import { capture } from '../../core/telemetry.js';
 import { getDefaultPlatforms, publishPluginPipeline, readPluginFiles } from '../../core/plugin-publish.js';
 import type { BaseCommandOptions } from '../../core/types/types.js';
 import { visibleLength } from '../../utils.js';
@@ -510,4 +511,22 @@ export async function publishAllPlugins({
   }
 
   return { error: null };
+}
+
+export function captureOnboardingEvent({
+  name,
+  properties,
+}: {
+  name: 'onboarding_step_completed';
+  properties: {
+    step_name:
+      | 'init'
+      | 'check_onboarding'
+      | 'create_federated_graph'
+      | 'delete_federated_graph'
+      | 'run_router_send_metrics';
+    entry_source: 'wgc';
+  };
+}): void {
+  capture(name, properties);
 }
