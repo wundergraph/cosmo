@@ -19,7 +19,6 @@ import {
   type TypeNode,
 } from 'graphql';
 import {
-  type ArgumentData,
   type AuthorizationData,
   type ChildData,
   type CompositeOutputData,
@@ -802,8 +801,4 @@ export function isInterfaceNode(node: ParentTypeNode): node is InterfaceTypeNode
 
 export function isEnumData(data: ParentDefinitionData): data is EnumDefinitionData {
   return data.kind === Kind.ENUM_TYPE_DEFINITION;
-}
-
-export function isInputValueData(data: ArgumentData | InputValueData): data is InputValueData {
-  return 'node' in data;
 }

@@ -236,7 +236,6 @@ import {
   isFieldData,
   isInputNodeKind,
   isInputObjectDefinitionData,
-  isInputValueData,
   isInterfaceNode,
   isNodeExternalOrShareable,
   isOutputNodeKind,
