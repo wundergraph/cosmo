@@ -40,7 +40,7 @@ export const OnboardingContext = createContext<OnboardingState>({
   resetSkipped: () => undefined,
 });
 
-const ONBOARDING_V1_LAST_STEP = 4;
+const ONBOARDING_V1_LAST_STEP = 3;
 
 export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   const { onboarding: onboardingFlag, status: featureFlagStatus } = useContext(PostHogFeatureFlagContext);

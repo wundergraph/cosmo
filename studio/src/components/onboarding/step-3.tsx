@@ -2,6 +2,8 @@ import { motion } from 'framer-motion';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { useFireworks } from '@/hooks/use-fireworks';
+import { usePostHog } from 'posthog-js/react';
+import { captureOnboardingEvent } from '@/lib/track';
 import { OnboardingContainer } from './onboarding-container';
 import { OnboardingNavigation } from './onboarding-navigation';
 import { StatusIcon, type OnboardingStatus } from './status-icon';
@@ -120,6 +122,7 @@ export const Step3 = () => {
   const { toast } = useToast();
   const { setStep, setSkipped, setOnboarding } = useOnboarding();
   const currentOrg = useCurrentOrganization();
+  const posthog = usePostHog();
 
   const [polling, dispatch] = useReducer(pollingReducer, {
     routerTimedOut: false,
@@ -208,6 +211,12 @@ export const Step3 = () => {
         email: Boolean(prev?.email),
       }));
 
+      captureOnboardingEvent(posthog, {
+        name: 'onboarding_step_completed',
+        options: {
+          step_name: 'run_router_send_metrics',
+        },
+      });
       setIsFinished(true);
     },
     onError: (error) => {
@@ -354,7 +363,15 @@ export const Step3 = () => {
 
             <OnboardingNavigation
               className="pt-2"
-              onSkip={setSkipped}
+              onSkip={() => {
+                captureOnboardingEvent(posthog, {
+                  name: 'onboarding_skipped',
+                  options: {
+                    step_name: 'run_router_send_metrics',
+                  },
+                });
+                setSkipped();
+              }}
               backHref="/onboarding/2"
               forward={{
                 onClick: () => mutate({}),

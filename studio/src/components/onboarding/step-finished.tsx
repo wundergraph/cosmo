@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router';
 import { z } from 'zod';
+import { useCallback } from 'react';
 import { useFieldArray } from 'react-hook-form';
 import { ArrowRightIcon, Cross1Icon, ExternalLinkIcon, PlusIcon } from '@radix-ui/react-icons';
 import { BookOpenIcon, UserPlusIcon } from '@heroicons/react/24/outline';
@@ -41,13 +42,24 @@ const inviteSchema = z.object({
 
 type InviteFormValues = z.infer<typeof inviteSchema>;
 
-const DocumentationLinkItem = ({ title, description, href }: { title: string; description: string; href: string }) => (
+const DocumentationLinkItem = ({
+  title,
+  description,
+  href,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  onClick: () => void;
+}) => (
   <li>
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="group flex items-start justify-between gap-3 rounded-md border border-border p-3 transition-colors hover:bg-muted/50"
+      onClick={onClick}
     >
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium">{title}</span>
@@ -88,6 +100,12 @@ export function StepFinished() {
   const { setStep } = useOnboarding();
 
   const handleFinish = () => {
+    captureOnboardingEvent(posthog, {
+      name: 'onboarding_completed',
+      options: {
+        step_name: 'onboarding_users_invited_opt'
+      }
+    })
     setStep(undefined);
     router.push('/');
   };
@@ -138,6 +156,13 @@ export function StepFinished() {
             description: `Invited ${emails.length} ${emails.length === 1 ? 'member' : 'members'}.`,
             duration: 3000,
           });
+          captureOnboardingEvent(posthog, {
+            name: 'onboarding_step_completed',
+            options: {
+              step_name: 'onboarding_users_invited_opt',
+              users_invited: emails.length,
+            },
+          });
           form.reset({ members: [{ email: '' }] });
         },
         onError: () => {
@@ -149,6 +174,15 @@ export function StepFinished() {
       },
     );
   };
+
+  const trackDocumentationLinkClick = useCallback(() => {
+    captureOnboardingEvent(posthog, {
+      name: 'onboarding_step_completed',
+      options: {
+        step_name: 'onboarding_docs_visit_opt',
+      },
+    });
+  }, [posthog]);
 
   return (
     <OnboardingContainer>
@@ -264,16 +298,19 @@ export function StepFinished() {
               title="Introduction to Cosmo"
               description="What Cosmo is, the moving parts, and how federation fits together."
               href={`${docsBaseURL}/overview`}
+              onClick={trackDocumentationLinkClick}
             />
             <DocumentationLinkItem
               title="CLI reference"
               description="Everything you can do with the wgc command-line tool."
               href={`${docsBaseURL}/cli/intro`}
+              onClick={trackDocumentationLinkClick}
             />
             <DocumentationLinkItem
               title="Tutorials"
               description="Hands-on guides covering common Cosmo use cases, end to end."
               href={`${docsBaseURL}/tutorial`}
+              onClick={trackDocumentationLinkClick}
             />
           </ul>
           <HubPromoLink />
