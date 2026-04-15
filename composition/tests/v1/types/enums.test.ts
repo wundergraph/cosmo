@@ -12,6 +12,7 @@ import {
 import { describe, expect, test } from 'vitest';
 import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from '../utils/utils';
 import {
+  createSubgraph,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -233,6 +234,91 @@ describe('Enum tests', () => {
       const { errors } = normalizeSubgraphFailure(subgraphP, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(duplicateEnumValueDefinitionError(ENUM, 'A'));
+    });
+
+    test('that a Directive argument that accepts an Enum can be passed as a String', () => {
+      const { schema, warnings } = normalizeSubgraphSuccess(subgraphAE, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toStrictEqual(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+        directive @a(enum: Enum!) on FIELD_DEFINITION
+        
+        enum Enum {
+          A
+        }
+        
+        type Query {
+          a: ID @a(enum: A)
+        }
+      `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that a Directive argument Enum default value can be passed as a String', () => {
+      const { schema, warnings } = normalizeSubgraphSuccess(subgraphAF, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toStrictEqual(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+        directive @a(enum: Enum! = A) on FIELD_DEFINITION
+        
+        enum Enum {
+          A
+          B
+        }
+        
+        type Query {
+          a: ID @a(enum: B)
+        }
+      `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that a field argument that accepts an Enum can use a String default value', () => {
+      const { schema, warnings } = normalizeSubgraphSuccess(subgraphAG, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toStrictEqual(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+        enum Enum {
+          A
+        }
+        
+        type Query {
+          a(a: Enum! = A): ID
+        }
+      `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that an Input value that accepts an Enum can use a String default value', () => {
+      const { schema, warnings } = normalizeSubgraphSuccess(subgraphAH, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toStrictEqual(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+        enum Enum {
+          A
+        }
+        
+        input Input {
+          a: Enum! = A
+        }
+        
+        type Query {
+          a(a: Input!): ID
+        }
+      `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
     });
   });
 
@@ -890,3 +976,64 @@ const subgraphAD: Subgraph = {
     }
   `),
 };
+
+const subgraphAE = createSubgraph(
+  'subgraph-ae',
+  `
+    directive @a(enum: Enum!) on FIELD_DEFINITION
+    
+    enum Enum {
+      A
+    }
+    
+    type Query {
+      a: ID @a(enum: "A")
+    }
+  `,
+);
+
+const subgraphAF = createSubgraph(
+  'subgraph-af',
+  `
+    directive @a(enum: Enum! = "A") on FIELD_DEFINITION
+    
+    enum Enum {
+      A
+      B
+    }
+    
+    type Query {
+      a: ID @a(enum: "B")
+    }
+  `,
+);
+
+const subgraphAG = createSubgraph(
+  'subgraph-ag',
+  `
+    enum Enum {
+      A
+    }
+    
+    type Query {
+      a(a: Enum! = "A"): ID
+    }
+  `,
+);
+
+const subgraphAH = createSubgraph(
+  'subgraph-ah',
+  `
+    enum Enum {
+      A
+    }
+    
+    input Input {
+      a: Enum! = "A"
+    }
+    
+    type Query {
+      a(a: Input!): ID
+    }
+  `,
+);
