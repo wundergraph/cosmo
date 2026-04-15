@@ -579,7 +579,7 @@ export default class Keycloak {
         switch (e.code) {
           case 'ECONNREFUSED': {
             message =
-              'The discovery endpoint could. Please, make sure that the discovery endpoint is correct and reachable.';
+              'The discovery endpoint could not be reached. Please, make sure that the discovery endpoint is correct and reachable.';
             break;
           }
           case 'ECONNABORTED': {
