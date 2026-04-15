@@ -29,6 +29,7 @@ export function whoAmI(
         },
         organizationName: '',
         organizationSlug: '',
+        organizationId: '',
       };
     }
 
@@ -36,6 +37,7 @@ export function whoAmI(
       response: {
         code: EnumStatusCode.OK,
       },
+      organizationId: organization.id,
       organizationName: organization.name,
       organizationSlug: organization.slug,
     };

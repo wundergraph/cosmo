@@ -49,15 +49,34 @@ const identify = ({
   });
 
   // Identify with PostHog
-  // We use the id posthog sets to identify the user. This way we do not lose cross domain tracking.
   const posthog = PostHogClient();
-  posthog.identify(posthog.get_distinct_id(), {
+  let distinctId = posthog.get_distinct_id();
+  if (distinctId == organizationSlug) {
+    // It was already identified with the old logic
+    // We try to alias it, so if the email was never used, we can link the data
+    posthog.alias(email);
+    // to be sure we also reset the session so that if alias fail, we abandon the old session and start a new one
+    // with the right data
+    posthog.reset();
+  } else if (distinctId === email) {
+    // This session has been already identified, just keep the organization synchronized!
+    posthog.group('cosmo_organization', organizationId, {
+      id: organizationId,
+      slug: organizationSlug,
+      name: organizationName,
+      plan: plan,
+    });
+    return;
+  }
+
+  posthog.identify(email, {
     id,
-    email,
-    organizationId,
-    organizationName,
-    organizationSlug,
-    plan,
+  });
+  posthog.group('cosmo_organization', organizationId, {
+    id: organizationId,
+    slug: organizationSlug,
+    name: organizationName,
+    plan: plan,
   });
 };
 
