@@ -232,9 +232,11 @@ import {
   areDefaultValuesCompatible,
   childMapToValueArray,
   getParentTypeName,
+  isEnumData,
   isFieldData,
   isInputNodeKind,
   isInputObjectDefinitionData,
+  isInputValueData,
   isInterfaceNode,
   isNodeExternalOrShareable,
   isOutputNodeKind,
@@ -259,6 +261,7 @@ import {
   getMutableUnionNode,
   getNamedTypeNode,
   getTypeNodeNamedTypeName,
+  type MutableInputValueNode,
   type MutableTypeNode,
 } from '../../schema-building/ast';
 import { type InvalidRootTypeFieldEventsDirectiveData } from '../../errors/types';
@@ -400,6 +403,7 @@ import {
   type NormalizationFactoryParams,
   type NormalizeSubgraphFromStringParams,
   type NormalizeSubgraphParams,
+  type SanitizeDefaultValueParams,
   type ValidateOneOfDirectiveParams,
 } from './params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
@@ -499,6 +503,31 @@ export class NormalizationFactory {
     };
   }
 
+  sanitizeDefaultValue({ data, namedTypeData, node }: SanitizeDefaultValueParams) {
+    if (!data.defaultValue) {
+      return;
+    }
+
+    if (!isEnumData(namedTypeData)) {
+      return;
+    }
+
+    data.defaultValue = visit(data.defaultValue, {
+      StringValue: {
+        enter(node) {
+          return {
+            kind: Kind.ENUM,
+            value: node.value,
+          };
+        },
+      },
+    });
+
+    if (node) {
+      node.defaultValue = data.defaultValue;
+    }
+  }
+
   validateArguments(fieldData: FieldData, parentKind: Kind) {
     for (const argumentData of fieldData.argumentDataByName.values()) {
       const namedTypeName = getTypeNodeNamedTypeName(argumentData.type);
@@ -513,6 +542,7 @@ export class NormalizationFactory {
       }
       if (isInputNodeKind(namedTypeData.kind)) {
         argumentData.namedTypeKind = namedTypeData.kind;
+        this.sanitizeDefaultValue({ data: argumentData, namedTypeData, node: argumentData.node });
         continue;
       }
       this.errors.push(
@@ -590,7 +620,7 @@ export class NormalizationFactory {
               return true;
             }
             if (parentData.kind === Kind.ENUM_TYPE_DEFINITION) {
-              if (argumentValue.kind !== Kind.ENUM) {
+              if (argumentValue.kind !== Kind.ENUM && argumentValue.kind !== Kind.STRING) {
                 return false;
               }
               const enumValue = parentData.enumValueDataByName.get(argumentValue.value);
@@ -845,6 +875,25 @@ export class NormalizationFactory {
         }
       }
       const requiredArgumentNames = [...definitionData.requiredArgumentNames];
+      for (const argumentNode of definitionData.node.arguments ?? []) {
+        if (!argumentNode.defaultValue) {
+          continue;
+        }
+
+        const argumentData = definitionData.argumentTypeNodeByName.get(argumentNode.name.value);
+        if (!argumentData) {
+          continue;
+        }
+
+        const namedTypeData = this.parentDefinitionDataByTypeName.get(getTypeNodeNamedTypeName(argumentData.typeNode));
+        // Undefined types are handled elsewhere
+        if (!namedTypeData) {
+          continue;
+        }
+
+        this.sanitizeDefaultValue({ data: argumentData, namedTypeData, node: argumentNode as MutableInputValueNode });
+      }
+
       for (let i = 0; i < directiveNodes.length; i++) {
         const errorMessages = this.validateDirective({
           data,
@@ -3937,9 +3986,10 @@ export class NormalizationFactory {
             }
             const namedTypeData = this.parentDefinitionDataByTypeName.get(valueData.namedTypeName);
             if (!namedTypeData) {
-              // undefined types are handled elsewhere
+              // Undefined types are handled elsewhere
               continue;
             }
+            this.sanitizeDefaultValue({ data: valueData, namedTypeData, node: valueData.node });
             if (!isInputNodeKind(namedTypeData.kind)) {
               this.errors.push(
                 invalidNamedTypeError({
