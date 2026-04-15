@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"net/http"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -53,7 +52,6 @@ func TestOperationCost(t *testing.T) {
 
 				// @listSize(assumedSize: 50) overrides EstimatedListSize; cost = 50 * 2 = 100
 				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
-				require.NotEmpty(t, estimated, "estimated cost header should be present")
 				require.Equal(t, "100", estimated)
 
 				// the actual cost should not be calculated nor exposed
@@ -153,7 +151,6 @@ func TestOperationCost(t *testing.T) {
 
 				// @listSize(assumedSize: 50) on employees overrides EstimatedListSize(200)
 				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
-				require.NotEmpty(t, estimated, "estimated cost header should be present")
 				require.Equal(t, "50", estimated)
 			})
 		})
@@ -277,11 +274,9 @@ func TestOperationCost(t *testing.T) {
 				// upc, repositoryURL, id: 0 (scalars)
 				// total: (10 + 13) × 10 = 230
 				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
-				require.NotEmpty(t, estimated, "estimated cost header should be present")
 				require.Equal(t, "230", estimated)
 
 				actual := res.Response.Header.Get(core.CostActualHeader)
-				require.NotEmpty(t, actual, "actual cost header should be present")
 				require.Equal(t, "45", actual)
 
 				// Query 2: only employees-subgraph fields — Cosmo @cost(weight: 5) from employees applies
@@ -294,8 +289,57 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "150", estimated2)
 
 				actual2 := res2.Response.Header.Get(core.CostActualHeader)
-				require.NotEmpty(t, actual2, "actual cost header should be present")
 				require.Equal(t, "21", actual2)
+			})
+		})
+
+		t.Run("input object field cost weight on department", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ findEmployeesBy(criteria: { department: ENGINEERING }) { id } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+
+				// 10*1 + 17
+				require.Equal(t, "27", res.Response.Header.Get(core.CostEstimatedHeader))
+				// 7*1 + 17
+				require.Equal(t, "24", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("input object field cost weight on title", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ findEmployeesBy(criteria: { title: "Founder" }) { id } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+
+				// 10 * 1 - 3
+				require.Equal(t, "7", res.Response.Header.Get(core.CostEstimatedHeader))
+				// 1 * 1 - 3
+				require.Equal(t, "0", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
@@ -714,27 +758,16 @@ func TestOperationCost(t *testing.T) {
 				// 1st request – plan cache MISS
 				res1 := xEnv.MakeGraphQLRequestOK(query)
 				require.Contains(t, res1.Body, `"data":`)
-
-				estimated1 := res1.Response.Header.Get(core.CostEstimatedHeader)
-				actual1 := res1.Response.Header.Get(core.CostActualHeader)
-				require.NotEmpty(t, estimated1, "first request should have estimated cost header")
-				require.NotEmpty(t, actual1, "first request should have actual cost header")
+				require.Equal(t, "MISS", res1.Response.Header.Get(core.ExecutionPlanCacheHeader))
+				require.Equal(t, "8", res1.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "8", res1.Response.Header.Get(core.CostActualHeader))
 
 				// 2nd request – plan cache HIT
 				res2 := xEnv.MakeGraphQLRequestOK(query)
 				require.Contains(t, res2.Body, `"data":`)
-
-				estimated2 := res2.Response.Header.Get(core.CostEstimatedHeader)
-				actual2 := res2.Response.Header.Get(core.CostActualHeader)
-				require.NotEmpty(t, estimated2, "second request should have estimated cost header")
-				require.NotEmpty(t, actual2, "second request should have actual cost header")
-
-				require.Equal(t, estimated1, estimated2,
-					"estimated cost differs between cache miss (%s) and cache hit (%s) ",
-					estimated1, estimated2)
-				require.Equal(t, actual1, actual2,
-					"actual cost differs between cache miss (%s) and cache hit (%s) ",
-					actual1, actual2)
+				require.Equal(t, "HIT", res2.Response.Header.Get(core.ExecutionPlanCacheHeader))
+				require.Equal(t, "8", res2.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "8", res2.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
@@ -759,8 +792,8 @@ func TestOperationCost(t *testing.T) {
 
 				estimated1 := res1.Response.Header.Get(core.CostEstimatedHeader)
 				actual1 := res1.Response.Header.Get(core.CostActualHeader)
-				require.NotEmpty(t, estimated1, "first request should have estimated cost header")
-				require.NotEmpty(t, actual1, "first request should have actual cost header")
+				require.Equal(t, "8", estimated1)
+				require.Equal(t, "8", actual1)
 
 				// 2nd request – plan cache HIT
 				query2 := testenv.GraphQLRequest{
@@ -771,15 +804,8 @@ func TestOperationCost(t *testing.T) {
 
 				estimated2 := res2.Response.Header.Get(core.CostEstimatedHeader)
 				actual2 := res2.Response.Header.Get(core.CostActualHeader)
-				require.NotEmpty(t, estimated2, "second request should have estimated cost header")
-				require.NotEmpty(t, actual2, "second request should have actual cost header")
-
-				require.Equal(t, estimated1, estimated2,
-					"estimated cost differs between cache miss (%s) and cache hit (%s) ",
-					estimated1, estimated2)
-				require.Equal(t, actual1, actual2,
-					"actual cost differs between cache miss (%s) and cache hit (%s) ",
-					actual1, actual2)
+				require.Equal(t, "8", estimated2)
+				require.Equal(t, "8", actual2)
 			})
 		})
 
@@ -885,6 +911,57 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, int64(24), totalSum, "total estimated cost sum should be 3×8=24")
 			})
 		})
+
+		t.Run("input object field costs are consistent across cache hits for different queries", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// 1st request – plan cache MISS
+				resDept1 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ findEmployeesBy(criteria: { department: ENGINEERING }) { id } }`,
+				})
+				require.Contains(t, resDept1.Body, `"data":`)
+				require.Equal(t, "MISS", resDept1.Response.Header.Get(core.ExecutionPlanCacheHeader))
+				require.Equal(t, "27", resDept1.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "24", resDept1.Response.Header.Get(core.CostActualHeader))
+
+				// 2nd request – plan cache HIT (same normalized query, different input field)
+				// Cost is recalculated per request based on actual input field values
+				resTitle1 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ findEmployeesBy(criteria: { title: "Founder" }) { id } }`,
+				})
+				require.Contains(t, resTitle1.Body, `"data":`)
+				require.Equal(t, "HIT", resTitle1.Response.Header.Get(core.ExecutionPlanCacheHeader))
+				require.Equal(t, "7", resTitle1.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "0", resTitle1.Response.Header.Get(core.CostActualHeader))
+
+				// 3rd request – cache HIT, same input field as 1st, different value
+				resDept2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ findEmployeesBy(criteria: { department: MARKETING }) { id } }`,
+				})
+				require.Contains(t, resDept2.Body, `"data":`)
+				require.Equal(t, "HIT", resDept2.Response.Header.Get(core.ExecutionPlanCacheHeader))
+				require.Equal(t, "27", resDept2.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "20", resDept2.Response.Header.Get(core.CostActualHeader))
+
+				// 4th request – cache HIT, same input field as 2nd, different value
+				resTitle2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ findEmployeesBy(criteria: { title: "Director" }) { id } }`,
+				})
+				require.Contains(t, resTitle2.Body, `"data":`)
+				require.Equal(t, "HIT", resTitle2.Response.Header.Get(core.ExecutionPlanCacheHeader))
+				require.Equal(t, "7", resTitle2.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "0", resTitle2.Response.Header.Get(core.CostActualHeader))
+			})
+		})
 	})
 
 	t.Run("negative weights", func(t *testing.T) {
@@ -972,12 +1049,7 @@ func TestOperationCost(t *testing.T) {
 				})
 				require.Contains(t, res.Body, `"data":`)
 
-				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
-				require.NotEmpty(t, estimated)
-				estimatedVal, err := strconv.Atoi(estimated)
-				require.NoError(t, err)
-				require.Equal(t, estimatedVal, 8, "estimated cost must not be negative")
-				require.Equal(t, estimatedVal, 8, "negative type weight should reduce cost below baseline of 18")
+				require.Equal(t, "8", res.Response.Header.Get(core.CostEstimatedHeader))
 			})
 		})
 

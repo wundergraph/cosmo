@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import os from 'node:os';
 import { PostHog } from 'posthog-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { config, getBaseHeaders, getLoginDetails } from './config.js';
+import { config, getBaseHeaders } from './config.js';
 import { CreateClient } from './client/client.js';
 
 // Environment variables to allow opting out of telemetry
@@ -28,6 +28,11 @@ type PostHogFetchResponse = {
   status: number;
   text: () => Promise<string>;
   json: () => Promise<any>;
+};
+
+type TelemetryIdentity = {
+  userEmail?: string;
+  organizationId: string;
 };
 
 const buildPostHogOkResponse = () => ({
@@ -116,19 +121,12 @@ export const initTelemetry = () => {
  * Generate a consistent distinct ID
  * Uses the platform API to get the organization slug if available
  */
-const getIdentity = async (): Promise<string> => {
+const getIdentity = async (): Promise<TelemetryIdentity> => {
   try {
-    // First try to get the identity from the config file
-    const loginDetails = getLoginDetails();
-    if (loginDetails?.organizationSlug) {
-      return loginDetails.organizationSlug;
-    }
-
-    // If not found, the user might be using an API key.
-    // Call the whoAmI API to get organization information
-
     if (!apiClient) {
-      return 'anonymous';
+      return {
+        organizationId: 'anonymous',
+      };
     }
 
     const resp = await apiClient.platform.whoAmI(
@@ -139,13 +137,20 @@ const getIdentity = async (): Promise<string> => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      return resp.organizationSlug;
+      return {
+        organizationId: resp.organizationId || 'anonymous',
+        userEmail: resp.userEmail || undefined,
+      };
     }
-
-    return 'anonymous';
-  } catch {
-    return 'anonymous';
+  } catch (err) {
+    // skip catch, returning anonymous identity if any error occurs (e.g. network issues, not logged in, etc.)
+    if (process.env.DEBUG) {
+      console.debug('Failed to get identity for telemetry, using anonymous.', err);
+    }
   }
+  return {
+    organizationId: 'anonymous',
+  };
 };
 
 /**
@@ -161,7 +166,10 @@ export const capture = async (eventName: string, properties: Record<string, any>
     const metadata = getMetadata();
 
     client.capture({
-      distinctId: identity,
+      distinctId: identity.userEmail ?? identity.organizationId,
+      groups: {
+        cosmo_organization: identity.organizationId ?? '',
+      },
       event: eventName,
       properties: {
         ...metadata,

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.139.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.138.0...@wundergraph/cosmo-connect@0.139.0) (2026-04-15)
+
+### Features
+
+* use email as main tracking field ([#2700](https://github.com/wundergraph/cosmo/issues/2700)) ([23fc31d](https://github.com/wundergraph/cosmo/commit/23fc31dd11c94fb242e6cec7b820b806a88d4cb6)) (@alepane21)
+
 # [0.138.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.137.0...@wundergraph/cosmo-connect@0.138.0) (2026-03-27)
 
 ### Features
