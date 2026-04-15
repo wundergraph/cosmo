@@ -219,7 +219,7 @@ message BusinessAccount {
 
 ### Required Fields (@requires)
 
-The `@requires` directive declares that a field depends on external fields from other subgraphs to be resolved. It is always defined on an entity (a type with `@key`). For each field with `@requires`, a dedicated RPC method is generated that receives the entity key and the required external fields, and returns the computed field value.
+The `@requires` directive declares that a field depends on external fields from other subgraphs to be resolved. It is only supported on object types with `@key` (interfaces are excluded, even when declared as interface objects). For each field with `@requires`, a dedicated RPC method is generated that receives the entity key and the required external fields, and returns the computed field value.
 
 This directive is part of Apollo Federation and enables a service to compute fields that depend on data owned by other services, without those services needing to know about the computed field.
 
