@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.56.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.55.1...@wundergraph/composition@0.56.0) (2026-04-15)
+
+### Features
+
+* allow string kind enum default values ([#2767](https://github.com/wundergraph/cosmo/issues/2767)) ([addfbc6](https://github.com/wundergraph/cosmo/commit/addfbc6747114b5afb8720426c30874a42ab7efa)) (@Aenimus)
+
 ## [0.55.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.55.0...@wundergraph/composition@0.55.1) (2026-04-14)
 
 ### Bug Fixes
