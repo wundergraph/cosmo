@@ -62,9 +62,18 @@ export const Step1 = () => {
   const { mutate, isPending } = useMutation(createOnboarding, {
     onSuccess: (d) => {
       if (d.response?.code !== EnumStatusCode.OK) {
+        const description = d.response?.details ?? 'We had issues with storing your data. Please try again.';
         toast({
-          description: d.response?.details ?? 'We had issues with storing your data. Please try again.',
+          description,
           duration: 3000,
+        });
+        captureOnboardingEvent(posthog, {
+          name: 'onboarding_step_failed',
+          options: {
+            step_name: 'welcome',
+            error_category: 'resource',
+            error_message: description,
+          },
         });
         return;
       }
@@ -88,9 +97,18 @@ export const Step1 = () => {
       router.push('/onboarding/2');
     },
     onError: (error) => {
+      const description = error.details.toString() ?? 'We had issues with storing your data. Please try again.';
       toast({
-        description: error.details.toString() ?? 'We had issues with storing your data. Please try again.',
+        description,
         duration: 3000,
+      });
+      captureOnboardingEvent(posthog, {
+        name: 'onboarding_step_failed',
+        options: {
+          step_name: 'welcome',
+          error_category: 'resource',
+          error_message: description,
+        },
       });
     },
   });

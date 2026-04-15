@@ -141,6 +141,19 @@ export const Step2 = () => {
 
   const status = getDemoGraphStatus({ data, isPolling: polling.active, isError });
 
+  useEffect(() => {
+    if (status !== 'fail' && status !== 'error') return;
+
+    captureOnboardingEvent(posthog, {
+      name: 'onboarding_step_failed',
+      options: {
+        step_name: 'create_graph',
+        error_category: 'resource',
+        error_message: status === 'error' ? 'Failed to fetch federated graph data' : 'Demo federated graph not created',
+      },
+    });
+  }, [status, posthog]);
+
   return (
     <OnboardingContainer>
       <div className="mt-4 flex w-full flex-col gap-6 text-left">

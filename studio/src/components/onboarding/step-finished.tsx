@@ -5,6 +5,7 @@ import { useFieldArray } from 'react-hook-form';
 import { ArrowRightIcon, Cross1Icon, ExternalLinkIcon, PlusIcon } from '@radix-ui/react-icons';
 import { BookOpenIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import { MdArrowOutward } from 'react-icons/md';
+import { usePostHog } from 'posthog-js/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import {
@@ -13,6 +14,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { captureOnboardingEvent } from '@/lib/track';
 import { cn } from '@/lib/utils';
 import { docsBaseURL } from '@/lib/constants';
 import { OnboardingContainer } from './onboarding-container';
@@ -96,6 +98,7 @@ const HubPromoLink = () => (
 
 export function StepFinished() {
   const router = useRouter();
+  const posthog = usePostHog();
   const { toast } = useToast();
   const { setStep } = useOnboarding();
 
@@ -136,18 +139,36 @@ export function StepFinished() {
       {
         onSuccess: (d) => {
           if (d.response?.code !== EnumStatusCode.OK) {
+            const description = d.response?.details ?? 'Could not invite members. Please try again.';
             toast({
-              description: d.response?.details ?? 'Could not invite members. Please try again.',
+              description,
               duration: 3000,
+            });
+            captureOnboardingEvent(posthog, {
+              name: 'onboarding_step_failed',
+              options: {
+                step_name: 'onboarding_users_invited_opt',
+                error_category: 'invites',
+                error_message: description,
+              },
             });
             return;
           }
 
           if (d.invitationErrors.length > 0) {
             const failed = d.invitationErrors.map((e) => e.email).join(', ');
+            const description = `Some invitations failed: ${failed}`;
             toast({
-              description: `Some invitations failed: ${failed}`,
+              description,
               duration: 5000,
+            });
+            captureOnboardingEvent(posthog, {
+              name: 'onboarding_step_failed',
+              options: {
+                step_name: 'onboarding_users_invited_opt',
+                error_category: 'invites',
+                error_message: description,
+              },
             });
             return;
           }
@@ -166,9 +187,18 @@ export function StepFinished() {
           form.reset({ members: [{ email: '' }] });
         },
         onError: () => {
+          const description = 'Could not invite members. Please try again.';
           toast({
-            description: 'Could not invite members. Please try again.',
+            description,
             duration: 3000,
+          });
+          captureOnboardingEvent(posthog, {
+            name: 'onboarding_step_failed',
+            options: {
+              step_name: 'onboarding_users_invited_opt',
+              error_category: 'invites',
+              error_message: description,
+            },
           });
         },
       },
