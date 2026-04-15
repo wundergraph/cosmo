@@ -1231,6 +1231,7 @@ message WhoAmIResponse {
   string organizationName = 2;
   optional string userEmail = 3;
   string organizationSlug = 4;
+  string organizationId = 5;
 }
 
 message RouterToken {
