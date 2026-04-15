@@ -64,7 +64,11 @@ function pollingReducer(
     case 'METRICS_TIMEOUT':
       return { ...state, metricsTimedOut: true };
     case 'RESTART_METRICS':
-      return { ...state, metricsTimedOut: false, metricsEpoch: state.metricsEpoch + 1 };
+      return {
+        ...state,
+        metricsTimedOut: false,
+        metricsEpoch: state.metricsEpoch + 1,
+      };
   }
 }
 
@@ -194,8 +198,32 @@ export const Step3 = () => {
   }, [setStep]);
 
   useEffect(() => {
-    setStep(3);
-  }, [setStep]);
+    if (!polling.routerTimedOut && !polling.metricsTimedOut) {
+      return;
+    }
+
+    if (polling.routerTimedOut) {
+      captureOnboardingEvent(posthog, {
+        name: 'onboarding_step_failed',
+        options: {
+          step_name: 'run_router_send_metrics',
+          error_category: 'router',
+          error_message: 'Router not detected within 5 minutes',
+        },
+      });
+
+      return;
+    }
+
+    captureOnboardingEvent(posthog, {
+      name: 'onboarding_step_failed',
+      options: {
+        step_name: 'run_router_send_metrics',
+        error_category: 'metrics',
+        error_message: 'Metrics not detected within 5 minutes',
+      },
+    });
+  }, [posthog, polling.routerTimedOut, polling.metricsTimedOut]);
 
   const { mutate, isPending } = useMutation(finishOnboarding, {
     onSuccess: (d) => {
@@ -224,9 +252,18 @@ export const Step3 = () => {
       setIsFinished(true);
     },
     onError: (error) => {
+      const description = error.details.toString() ?? 'We had issues with finishing the onboarding. Please try again.';
       toast({
-        description: error.details.toString() ?? 'We had issues with finishing the onboarding. Please try again.',
+        description,
         duration: 3000,
+      });
+      captureOnboardingEvent(posthog, {
+        name: 'onboarding_step_failed',
+        options: {
+          step_name: 'run_router_send_metrics',
+          error_category: 'resource',
+          error_message: description,
+        },
       });
     },
   });
