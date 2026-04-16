@@ -32,6 +32,7 @@ type Client struct {
 type Options struct {
 	AccessKeyID      string
 	SecretAccessKey  string
+	SessionToken     string
 	Region           string
 	UseSSL           bool
 	BucketName       string
@@ -58,6 +59,7 @@ func NewClient(endpoint string, options *Options) (*Client, error) {
 			Value: credentials.Value{
 				AccessKeyID:     options.AccessKeyID,
 				SecretAccessKey: options.SecretAccessKey,
+				SessionToken:    options.SessionToken,
 				SignerType:      credentials.SignatureV4,
 			},
 		},

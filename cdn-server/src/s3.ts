@@ -83,6 +83,7 @@ export const createS3BlobStorage = (storageUrl: string): BlobStorage => {
   const endpoint = url.searchParams.get('endpoint') ?? process.env.S3_ENDPOINT;
   const username = process.env.S3_ACCESS_KEY_ID || '';
   const password = process.env.S3_SECRET_ACCESS_KEY || '';
+  const sessionToken = process.env.S3_SESSION_TOKEN || '';
   const forcePathStyle = process.env.S3_FORCE_PATH_STYLE === 'true';
 
   const opts = {
@@ -91,6 +92,7 @@ export const createS3BlobStorage = (storageUrl: string): BlobStorage => {
     endpoint,
     username,
     password,
+    sessionToken,
     forcePathStyle,
   };
 

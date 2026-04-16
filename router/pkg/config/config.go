@@ -919,13 +919,14 @@ type AutomaticPersistedQueriesStorageConfig struct {
 }
 
 type S3StorageProvider struct {
-	ID        string `yaml:"id,omitempty" env:"ID"`
-	Endpoint  string `yaml:"endpoint,omitempty" env:"ENDPOINT"`
-	AccessKey string `yaml:"access_key,omitempty" env:"ACCESS_KEY"`
-	SecretKey string `yaml:"secret_key,omitempty" env:"SECRET_KEY"`
-	Bucket    string `yaml:"bucket,omitempty" env:"BUCKET"`
-	Region    string `yaml:"region,omitempty" env:"REGION"`
-	Secure    bool   `yaml:"secure,omitempty" env:"SECURE"`
+	ID           string `yaml:"id,omitempty" env:"ID"`
+	Endpoint     string `yaml:"endpoint,omitempty" env:"ENDPOINT"`
+	AccessKey    string `yaml:"access_key,omitempty" env:"ACCESS_KEY"`
+	SecretKey    string `yaml:"secret_key,omitempty" env:"SECRET_KEY"`
+	SessionToken string `yaml:"session_token,omitempty" env:"SESSION_TOKEN"`
+	Bucket       string `yaml:"bucket,omitempty" env:"BUCKET"`
+	Region       string `yaml:"region,omitempty" env:"REGION"`
+	Secure       bool   `yaml:"secure,omitempty" env:"SECURE"`
 }
 
 type CDNStorageProvider struct {

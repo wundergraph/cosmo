@@ -1205,6 +1205,7 @@ func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedo
 		c, err := s3.NewClient(provider.Endpoint, &s3.Options{
 			AccessKeyID:      provider.AccessKey,
 			SecretAccessKey:  provider.SecretKey,
+			SessionToken:     provider.SessionToken,
 			Region:           provider.Region,
 			UseSSL:           provider.Secure,
 			BucketName:       provider.Bucket,

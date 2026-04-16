@@ -394,30 +394,32 @@ export function isGoogleCloudStorageUrl(s: string): boolean {
 
 export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions): S3ClientConfig {
   const url = new URL(opts.url);
-  const { region, username, password } = opts;
+  const { region, username, password, sessionToken } = opts;
   const forcePathStyle = opts.forcePathStyle ?? !isVirtualHostStyleUrl(url);
   const endpoint = opts.endpoint || (forcePathStyle ? url.origin : url.origin.replace(`${bucketName}.`, ''));
 
   const accessKeyId = url.username || username || '';
   const secretAccessKey = url.password || password || '';
 
-  if (!accessKeyId || !secretAccessKey) {
-    throw new Error('Missing S3 credentials. Please provide access key ID and secret access key.');
-  }
-
   if (!region) {
     throw new Error('Missing region in S3 configuration.');
   }
 
-  return {
+  const config: S3ClientConfig = {
     region,
     endpoint,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
     forcePathStyle,
   };
+
+  if (accessKeyId && secretAccessKey) {
+    config.credentials = {
+      accessKeyId,
+      secretAccessKey,
+      ...(sessionToken ? { sessionToken } : {}),
+    };
+  }
+
+  return config;
 }
 
 export function extractS3BucketName(opts: S3StorageOptions) {

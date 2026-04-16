@@ -53,6 +53,7 @@ func getConfigClient(r *Router, registry *ProviderRegistry, providerID string, i
 		clientOptions := &configs3Provider.ClientOptions{
 			AccessKeyID:     provider.AccessKey,
 			SecretAccessKey: provider.SecretKey,
+			SessionToken:    provider.SessionToken,
 			BucketName:      provider.Bucket,
 			Region:          provider.Region,
 			ObjectPath:      r.routerConfigPollerConfig.Storage.ObjectPath,

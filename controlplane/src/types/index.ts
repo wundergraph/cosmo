@@ -767,6 +767,7 @@ export interface S3StorageOptions {
   endpoint?: string;
   username?: string;
   password?: string;
+  sessionToken?: string;
   forcePathStyle?: boolean;
 }
 

@@ -154,6 +154,90 @@ describe('S3 Utils', () => {
     });
   });
 
+  describe('createS3ClientConfig with session token', () => {
+    test('that it includes sessionToken in credentials when provided', () => {
+      const opts = {
+        url: 'https://cosmo-controlplane-bucket.provider.com/cosmo',
+        region: 'us-east-1',
+        endpoint: '',
+        username: 'testUser',
+        password: 'testPass',
+        sessionToken: 'testSessionToken',
+        forcePathStyle: true,
+      };
+
+      const bucketName = extractS3BucketName(opts);
+      const config = createS3ClientConfig(bucketName, opts);
+
+      expect(config).toEqual({
+        region: 'us-east-1',
+        endpoint: 'https://cosmo-controlplane-bucket.provider.com',
+        credentials: {
+          accessKeyId: 'testUser',
+          secretAccessKey: 'testPass',
+          sessionToken: 'testSessionToken',
+        },
+        forcePathStyle: true,
+      });
+    });
+
+    test('that it omits sessionToken from credentials when not provided', () => {
+      const opts = {
+        url: 'https://cosmo-controlplane-bucket.provider.com/cosmo',
+        region: 'us-east-1',
+        endpoint: '',
+        username: 'testUser',
+        password: 'testPass',
+        forcePathStyle: true,
+      };
+
+      const bucketName = extractS3BucketName(opts);
+      const config = createS3ClientConfig(bucketName, opts);
+
+      expect(config.credentials).toEqual({
+        accessKeyId: 'testUser',
+        secretAccessKey: 'testPass',
+      });
+      expect(config.credentials).not.toHaveProperty('sessionToken');
+    });
+  });
+
+  describe('createS3ClientConfig with default credential chain', () => {
+    test('that it omits credentials when accessKeyId and secretAccessKey are empty', () => {
+      const opts = {
+        url: 'https://cosmo-controlplane-bucket.provider.com/cosmo',
+        region: 'us-east-1',
+        endpoint: '',
+        username: '',
+        password: '',
+        forcePathStyle: true,
+      };
+
+      const bucketName = extractS3BucketName(opts);
+      const config = createS3ClientConfig(bucketName, opts);
+
+      expect(config).toEqual({
+        region: 'us-east-1',
+        endpoint: 'https://cosmo-controlplane-bucket.provider.com',
+        forcePathStyle: true,
+      });
+      expect(config).not.toHaveProperty('credentials');
+    });
+
+    test('that it omits credentials when no username/password in URL or opts', () => {
+      const opts = {
+        url: 'https://cosmo-controlplane-bucket.provider.com/cosmo',
+        region: 'us-east-1',
+        forcePathStyle: true,
+      };
+
+      const bucketName = extractS3BucketName(opts);
+      const config = createS3ClientConfig(bucketName, opts);
+
+      expect(config).not.toHaveProperty('credentials');
+    });
+  });
+
   describe('isVirtualHostStyleUrl tests', () => {
     test('that it returns true for a virtual-hosted-style URL', () => {
       const url = new URL('https://cosmo-controlplane-bucket.s3.amazonaws.com');

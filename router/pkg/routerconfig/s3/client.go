@@ -30,6 +30,7 @@ type Client struct {
 type ClientOptions struct {
 	AccessKeyID     string
 	SecretAccessKey string
+	SessionToken    string
 	Region          string
 	Secure          bool
 	BucketName      string
@@ -48,6 +49,7 @@ func NewClient(endpoint string, options *ClientOptions) (routerconfig.Client, er
 			Value: credentials.Value{
 				AccessKeyID:     options.AccessKeyID,
 				SecretAccessKey: options.SecretAccessKey,
+				SessionToken:    options.SessionToken,
 				SignerType:      credentials.SignatureV4,
 			},
 		},

@@ -102,6 +102,10 @@
                 "type": "string",
                 "description": "The secret key of the S3 bucket. The secret key is used to authenticate with the S3 bucket."
               },
+              "session_token": {
+                "type": "string",
+                "description": "The session token for temporary AWS credentials (STS). Required when using AssumeRole, IRSA, or credential injection sidecars."
+              },
               "bucket": {
                 "type": "string",
                 "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
