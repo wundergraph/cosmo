@@ -595,6 +595,128 @@ execution_config:
 	})
 }
 
+func TestS3StorageProviderFromEnv(t *testing.T) {
+	// First S3 provider
+	t.Setenv("STORAGE_PROVIDER_S3_0_ID", "s3-one")
+	t.Setenv("STORAGE_PROVIDER_S3_0_ENDPOINT", "s3-one.example.com:9000")
+	t.Setenv("STORAGE_PROVIDER_S3_0_BUCKET", "bucket-one")
+	t.Setenv("STORAGE_PROVIDER_S3_0_ACCESS_KEY", "accessKey1")
+	t.Setenv("STORAGE_PROVIDER_S3_0_SECRET_KEY", "secretKey1")
+	t.Setenv("STORAGE_PROVIDER_S3_0_REGION", "us-east-1")
+	t.Setenv("STORAGE_PROVIDER_S3_0_SECURE", "true")
+
+	// Second S3 provider
+	t.Setenv("STORAGE_PROVIDER_S3_1_ID", "s3-two")
+	t.Setenv("STORAGE_PROVIDER_S3_1_ENDPOINT", "s3-two.example.com:9000")
+	t.Setenv("STORAGE_PROVIDER_S3_1_BUCKET", "bucket-two")
+	t.Setenv("STORAGE_PROVIDER_S3_1_ACCESS_KEY", "accessKey2")
+	t.Setenv("STORAGE_PROVIDER_S3_1_SECRET_KEY", "secretKey2")
+	t.Setenv("STORAGE_PROVIDER_S3_1_REGION", "eu-west-1")
+	t.Setenv("STORAGE_PROVIDER_S3_1_SECURE", "false")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Len(t, cfg.Config.StorageProviders.S3, 2)
+
+	s3One := cfg.Config.StorageProviders.S3[0]
+	require.Equal(t, "s3-one", s3One.ID)
+	require.Equal(t, "s3-one.example.com:9000", s3One.Endpoint)
+	require.Equal(t, "bucket-one", s3One.Bucket)
+	require.Equal(t, "accessKey1", s3One.AccessKey)
+	require.Equal(t, "secretKey1", s3One.SecretKey)
+	require.Equal(t, "us-east-1", s3One.Region)
+	require.True(t, s3One.Secure)
+
+	s3Two := cfg.Config.StorageProviders.S3[1]
+	require.Equal(t, "s3-two", s3Two.ID)
+	require.Equal(t, "s3-two.example.com:9000", s3Two.Endpoint)
+	require.Equal(t, "bucket-two", s3Two.Bucket)
+	require.Equal(t, "accessKey2", s3Two.AccessKey)
+	require.Equal(t, "secretKey2", s3Two.SecretKey)
+	require.Equal(t, "eu-west-1", s3Two.Region)
+	require.False(t, s3Two.Secure)
+}
+
+func TestCDNStorageProviderFromEnv(t *testing.T) {
+	t.Setenv("STORAGE_PROVIDER_CDN_0_ID", "cdn-one")
+	t.Setenv("STORAGE_PROVIDER_CDN_0_URL", "https://cdn-one.example.com")
+
+	t.Setenv("STORAGE_PROVIDER_CDN_1_ID", "cdn-two")
+	t.Setenv("STORAGE_PROVIDER_CDN_1_URL", "https://cdn-two.example.com")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Len(t, cfg.Config.StorageProviders.CDN, 2)
+
+	cdnOne := cfg.Config.StorageProviders.CDN[0]
+	require.Equal(t, "cdn-one", cdnOne.ID)
+	require.Equal(t, "https://cdn-one.example.com", cdnOne.URL)
+
+	cdnTwo := cfg.Config.StorageProviders.CDN[1]
+	require.Equal(t, "cdn-two", cdnTwo.ID)
+	require.Equal(t, "https://cdn-two.example.com", cdnTwo.URL)
+}
+
+func TestRedisStorageProviderFromEnv(t *testing.T) {
+	t.Setenv("STORAGE_PROVIDER_REDIS_0_ID", "redis-one")
+	t.Setenv("STORAGE_PROVIDER_REDIS_0_URLS", "redis://localhost:6379,redis://localhost:6380")
+	t.Setenv("STORAGE_PROVIDER_REDIS_0_CLUSTER_ENABLED", "true")
+
+	t.Setenv("STORAGE_PROVIDER_REDIS_1_ID", "redis-two")
+	t.Setenv("STORAGE_PROVIDER_REDIS_1_URLS", "redis://localhost:7379")
+	t.Setenv("STORAGE_PROVIDER_REDIS_1_CLUSTER_ENABLED", "false")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Len(t, cfg.Config.StorageProviders.Redis, 2)
+
+	redisOne := cfg.Config.StorageProviders.Redis[0]
+	require.Equal(t, "redis-one", redisOne.ID)
+	require.Equal(t, []string{"redis://localhost:6379", "redis://localhost:6380"}, redisOne.URLs)
+	require.True(t, redisOne.ClusterEnabled)
+
+	redisTwo := cfg.Config.StorageProviders.Redis[1]
+	require.Equal(t, "redis-two", redisTwo.ID)
+	require.Equal(t, []string{"redis://localhost:7379"}, redisTwo.URLs)
+	require.False(t, redisTwo.ClusterEnabled)
+}
+
+func TestFileSystemStorageProviderFromEnv(t *testing.T) {
+	t.Setenv("STORAGE_PROVIDER_FS_0_ID", "fs-one")
+	t.Setenv("STORAGE_PROVIDER_FS_0_PATH", "/data/configs")
+
+	t.Setenv("STORAGE_PROVIDER_FS_1_ID", "fs-two")
+	t.Setenv("STORAGE_PROVIDER_FS_1_PATH", "/data/backups")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	require.Len(t, cfg.Config.StorageProviders.FileSystem, 2)
+
+	fsOne := cfg.Config.StorageProviders.FileSystem[0]
+	require.Equal(t, "fs-one", fsOne.ID)
+	require.Equal(t, "/data/configs", fsOne.Path)
+
+	fsTwo := cfg.Config.StorageProviders.FileSystem[1]
+	require.Equal(t, "fs-two", fsTwo.ID)
+	require.Equal(t, "/data/backups", fsTwo.Path)
+}
+
 func TestInvalidExecutionConfig(t *testing.T) {
 	t.Parallel()
 
