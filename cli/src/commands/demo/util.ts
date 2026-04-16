@@ -340,13 +340,11 @@ export async function runRouterContainer({
   routerBaseUrl,
   signal,
   logPath,
-  onReady,
 }: {
   routerToken: string;
   routerBaseUrl: string;
   signal: AbortSignal;
   logPath: string;
-  onReady?: () => void;
 }): Promise<{ error: Error | null }> {
   await removeRouterContainer();
 
@@ -405,16 +403,20 @@ export async function runRouterContainer({
     pipeToLog(logStream, proc);
 
     // Poll readiness in parallel with the long-running docker process
-    waitForRouterReady({ routerBaseUrl, signal }).then((ready) => {
-      if (ready) {
-        spinner.succeed(`Router is ready on ${pc.bold(routerBaseUrl)}.`);
-        console.log(pc.dim(`(logs: ${logPath})`));
-        onReady?.();
-      } else if (!signal.aborted) {
-        spinner.warn('Router started but readiness check timed out. It may still be starting.');
-        console.log(pc.dim(`(logs: ${logPath})`));
-      }
-    });
+    const ready = await waitForRouterReady({ routerBaseUrl, signal });
+
+    if (ready) {
+      spinner.succeed(`Router is ready on ${pc.bold(routerBaseUrl)}.`);
+      console.log(pc.dim(`(logs: ${logPath})`));
+
+      return { error: null };
+    } else if (!signal.aborted) {
+      const warnMessage = 'Router started but readiness check timed out. It may still be starting.';
+      spinner.warn(warnMessage);
+      console.log(pc.dim(`(logs: ${logPath})`));
+
+      return { error: new Error(warnMessage) };
+    }
 
     await proc;
   } catch (error) {
