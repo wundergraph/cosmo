@@ -24,6 +24,7 @@ import {
   type CompositeOutputData,
   type ConditionalFieldData,
   type DefinitionData,
+  type EnumDefinitionData,
   ExtensionType,
   type ExternalFieldData,
   type FieldData,
@@ -796,4 +797,8 @@ export function isOutputNodeKind(kind: Kind): kind is OutputNodeKind {
 
 export function isInterfaceNode(node: ParentTypeNode): node is InterfaceTypeNode {
   return INTERFACE_NODE_KINDS.has(node.kind);
+}
+
+export function isEnumData(data: ParentDefinitionData): data is EnumDefinitionData {
+  return data.kind === Kind.ENUM_TYPE_DEFINITION;
 }
