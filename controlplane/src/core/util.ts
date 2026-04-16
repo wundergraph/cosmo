@@ -97,7 +97,12 @@ export const enrichLogger = (
 
   ctx.values.set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: newLogger }, newLogger);
 
-  const sentryContext = Object.fromEntries(
+  Sentry.setUser({
+    id: authContext.userId,
+    username: authContext.userDisplayName,
+  });
+
+  const spanAttributes = Object.fromEntries(
     Object.entries({
       'user.id': authContext.userId,
       'user.displayName': authContext.userDisplayName,
@@ -106,10 +111,9 @@ export const enrichLogger = (
     }).filter(([, v]) => v),
   );
 
-  Sentry.setUser(sentryContext);
   const activeSpan = Sentry.getActiveSpan();
   if (activeSpan) {
-    Sentry.getRootSpan(activeSpan).setAttributes(sentryContext);
+    Sentry.getRootSpan(activeSpan).setAttributes(spanAttributes);
   }
 
   return newLogger;
