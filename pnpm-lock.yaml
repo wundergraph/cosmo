@@ -693,6 +693,9 @@ importers:
       eslint-config-unjs:
         specifier: ^0.2.1
         version: 0.2.1(eslint@8.57.1)(typescript@5.5.2)
+      eslint-plugin-local-rules:
+        specifier: ^3.0.2
+        version: 3.0.2
       eslint-plugin-require-extensions:
         specifier: ^0.1.3
         version: 0.1.3(eslint@8.57.1)
@@ -9896,6 +9899,9 @@ packages:
     peerDependencies:
       eslint: ^3 || ^4 || ^5 || ^6 || ^7 || ^8
 
+  eslint-plugin-local-rules@3.0.2:
+    resolution: {integrity: sha512-IWME7GIYHXogTkFsToLdBCQVJ0U4kbSuVyDT+nKoR4UgtnVrrVeNWuAZkdEu1nxkvi9nsPccGehEEF6dgA28IQ==}
+
   eslint-plugin-n@16.6.2:
     resolution: {integrity: sha512-6TyDmZ1HXoFQXnhCTUjVFULReoBPOAjpuiKELMkeP40yffI/1ZRO+d9ug/VC6fqISo2WkuIBk3cvuRPALaWlOQ==}
     engines: {node: '>=16.0.0'}
@@ -15689,10 +15695,10 @@ snapshots:
       '@babel/helper-compilation-targets': 7.27.2
       '@babel/helper-module-transforms': 7.27.3(@babel/core@7.24.5)
       '@babel/helpers': 7.28.2
-      '@babel/parser': 7.28.0
+      '@babel/parser': 7.29.2
       '@babel/template': 7.27.2
       '@babel/traverse': 7.28.0
-      '@babel/types': 7.28.2
+      '@babel/types': 7.29.0
       convert-source-map: 2.0.0
       debug: 4.4.1
       gensync: 1.0.0-beta.2
@@ -15710,8 +15716,8 @@ snapshots:
 
   '@babel/generator@7.28.0':
     dependencies:
-      '@babel/parser': 7.28.0
-      '@babel/types': 7.28.2
+      '@babel/parser': 7.29.2
+      '@babel/types': 7.29.0
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
       jsesc: 3.1.0
@@ -15740,7 +15746,7 @@ snapshots:
   '@babel/helper-module-imports@7.27.1':
     dependencies:
       '@babel/traverse': 7.28.0
-      '@babel/types': 7.28.2
+      '@babel/types': 7.29.0
     transitivePeerDependencies:
       - supports-color
 
@@ -15748,7 +15754,7 @@ snapshots:
     dependencies:
       '@babel/core': 7.24.5
       '@babel/helper-module-imports': 7.27.1
-      '@babel/helper-validator-identifier': 7.27.1
+      '@babel/helper-validator-identifier': 7.28.5
       '@babel/traverse': 7.28.0
     transitivePeerDependencies:
       - supports-color
@@ -15778,7 +15784,7 @@ snapshots:
   '@babel/helpers@7.28.2':
     dependencies:
       '@babel/template': 7.27.2
-      '@babel/types': 7.28.2
+      '@babel/types': 7.29.0
 
   '@babel/highlight@7.23.4':
     dependencies:
@@ -15847,8 +15853,8 @@ snapshots:
   '@babel/template@7.27.2':
     dependencies:
       '@babel/code-frame': 7.27.1
-      '@babel/parser': 7.28.0
-      '@babel/types': 7.28.2
+      '@babel/parser': 7.29.2
+      '@babel/types': 7.29.0
 
   '@babel/traverse@7.23.7':
     dependencies:
@@ -15882,9 +15888,9 @@ snapshots:
       '@babel/code-frame': 7.27.1
       '@babel/generator': 7.28.0
       '@babel/helper-globals': 7.28.0
-      '@babel/parser': 7.28.0
+      '@babel/parser': 7.29.2
       '@babel/template': 7.27.2
-      '@babel/types': 7.28.2
+      '@babel/types': 7.29.0
       debug: 4.4.1
     transitivePeerDependencies:
       - supports-color
@@ -23860,7 +23866,7 @@ snapshots:
 
   bun-types@1.2.12:
     dependencies:
-      '@types/node': 20.12.12
+      '@types/node': 18.19.21
     optional: true
 
   bun-types@1.2.3:
@@ -25382,6 +25388,8 @@ snapshots:
       object.entries: 1.1.6
       object.fromentries: 2.0.6
       semver: 6.3.1
+
+  eslint-plugin-local-rules@3.0.2: {}
 
   eslint-plugin-n@16.6.2(eslint@8.57.1):
     dependencies:

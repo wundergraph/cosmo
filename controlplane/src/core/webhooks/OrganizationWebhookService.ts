@@ -592,8 +592,7 @@ export class OrganizationWebhookService {
       await this.sendEvent(eventData, configs, actorId);
     } catch (e: any) {
       const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
-      logger.child({ message: e.message });
-      logger.error(`Could not send webhook event`);
+      logger.error(e, 'Could not send webhook event');
     }
   }
 

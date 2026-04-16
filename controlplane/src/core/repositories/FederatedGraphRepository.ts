@@ -1503,7 +1503,7 @@ export class FederatedGraphRepository {
   /**
    * This method recomposes and deploys federated graphs and their respective contract graphs.
    */
-  public composeAndDeployGraphs = ({
+  public composeAndDeployGraphs({
     actorId,
     admissionConfig,
     compositionOptions,
@@ -1522,7 +1522,7 @@ export class FederatedGraphRepository {
     federatedGraphs: FederatedGraphDTO[];
     compositionOptions?: CompositionOptions;
     webhookProxyUrl?: string;
-  }) => {
+  }) {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
@@ -1862,7 +1862,7 @@ export class FederatedGraphRepository {
         compositionWarnings: allCompositionWarnings,
       };
     });
-  };
+  }
 
   public updateRouterCompatibilityVersion(id: string, version: string) {
     return this.db

@@ -45,36 +45,6 @@ describe('traced decorator', () => {
     expect(startSpanMock).toHaveBeenCalledWith({ name: 'MyRepo.findById' }, expect.any(Function));
   });
 
-  test('wraps arrow-function class fields', () => {
-    @traced
-    class MyLinter {
-      getRules = (input: string) => {
-        return `rules for ${input}`;
-      };
-    }
-
-    const linter = new MyLinter();
-    const result = linter.getRules('schema');
-
-    expect(result).toBe('rules for schema');
-    expect(startSpanMock).toHaveBeenCalledWith({ name: 'MyLinter.getRules' }, expect.any(Function));
-  });
-
-  test('wraps async arrow-function class fields', async () => {
-    @traced
-    class MyBilling {
-      cancelSubscription = (orgId: string) => {
-        return Promise.resolve({ orgId, canceled: true });
-      };
-    }
-
-    const billing = new MyBilling();
-    const result = await billing.cancelSubscription('org-1');
-
-    expect(result).toEqual({ orgId: 'org-1', canceled: true });
-    expect(startSpanMock).toHaveBeenCalledWith({ name: 'MyBilling.cancelSubscription' }, expect.any(Function));
-  });
-
   test('preserves this context for prototype methods', () => {
     @traced
     class Counter {
@@ -84,22 +54,6 @@ describe('traced decorator', () => {
         this.count += 1;
         return this.count;
       }
-    }
-
-    const counter = new Counter();
-    expect(counter.increment()).toBe(1);
-    expect(counter.increment()).toBe(2);
-  });
-
-  test('preserves this context for arrow-function fields', () => {
-    @traced
-    class Counter {
-      count = 0;
-
-      increment = () => {
-        this.count += 1;
-        return this.count;
-      };
     }
 
     const counter = new Counter();

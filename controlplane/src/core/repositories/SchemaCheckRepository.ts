@@ -286,7 +286,7 @@ export class SchemaCheckRepository {
     await Promise.all(promises);
   }
 
-  private mapChangesFromDriverValue = (val: any) => {
+  private mapChangesFromDriverValue(val: any) {
     if (typeof val === 'string' && val.length > 0 && val !== '{}') {
       const pairs = val.slice(2, -2).split('","');
 
@@ -296,7 +296,7 @@ export class SchemaCheckRepository {
       });
     }
     return [];
-  };
+  }
 
   public async checkClientTrafficAgainstOverrides(data: {
     changes: { id: string; changeType: string | null; path: string | null }[];

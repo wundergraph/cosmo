@@ -557,7 +557,7 @@ export class AnalyticsRequestViewRepository {
     return httpStatusCodes;
   }
 
-  private getBaseFiltersForGroup = (name: AnalyticsViewGroupName) => {
+  private getBaseFiltersForGroup(name: AnalyticsViewGroupName) {
     const filters = { ...this.baseFilters };
 
     let baseFiltersForGroup: BaseFilters = {};
@@ -608,7 +608,7 @@ export class AnalyticsRequestViewRepository {
     }
 
     return baseFiltersForGroup;
-  };
+  }
 
   private getFilters(
     name: AnalyticsViewGroupName,
@@ -679,13 +679,13 @@ export class AnalyticsRequestViewRepository {
     return filters.filter((f) => allowedColumnNames.has(f.field));
   }
 
-  private getSortOrder = (id?: string, desc?: boolean) => {
+  private getSortOrder(id?: string, desc?: boolean) {
     const allowedColumns = Object.keys(this.columnMetadata);
 
     if (id && allowedColumns.includes(id)) {
       return `ORDER BY ${id} ${desc ? 'DESC' : 'ASC'}`;
     }
-  };
+  }
 
   public async getView(
     organizationId: string,
