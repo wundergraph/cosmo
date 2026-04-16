@@ -601,7 +601,7 @@ export class GraphQLToProtoTextVisitor {
         continue;
       }
 
-      // Skip non-object types
+      // Skip non-entity types
       if (!isObjectType(type) && !isInterfaceType(type)) {
         continue;
       }
