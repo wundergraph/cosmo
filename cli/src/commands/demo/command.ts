@@ -334,8 +334,9 @@ async function handleStep3(
     routerBaseUrl,
     signal,
     logPath,
-    onReady: showQueryPrompt,
   });
+
+  showQueryPrompt();
 
   if (routerResult.error) {
     console.error(`\nRouter exited with error: ${routerResult.error.message}`);
