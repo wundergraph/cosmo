@@ -147,6 +147,9 @@ func NewDefaultFactoryResolver(
 		if subscriptionClientOptions.ReadLimit > 0 {
 			options = append(options, graphql_datasource.WithReadLimit(subscriptionClientOptions.ReadLimit))
 		}
+		if subscriptionClientOptions.DefaultErrorExtensionCode != "" {
+			options = append(options, graphql_datasource.WithDefaultErrorExtensionCode(subscriptionClientOptions.DefaultErrorExtensionCode))
+		}
 	}
 
 	return &DefaultFactoryResolver{

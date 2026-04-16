@@ -215,11 +215,12 @@ type TransportOptions struct {
 }
 
 type SubscriptionClientOptions struct {
-	PingInterval time.Duration
-	PingTimeout  time.Duration
-	WriteTimeout time.Duration
-	AckTimeout   time.Duration
-	ReadLimit    int64
+	PingInterval              time.Duration
+	PingTimeout               time.Duration
+	WriteTimeout              time.Duration
+	AckTimeout                time.Duration
+	ReadLimit                 int64
+	DefaultErrorExtensionCode string
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {

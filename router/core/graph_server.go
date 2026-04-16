@@ -1305,11 +1305,12 @@ func (s *graphServer) buildGraphMux(
 		logger:           s.logger,
 		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
-			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
-			PingTimeout:  s.engineExecutionConfiguration.WebSocketClientPingTimeout,
-			WriteTimeout: s.engineExecutionConfiguration.WebSocketClientWriteTimeout,
-			AckTimeout:   s.engineExecutionConfiguration.WebSocketClientAckTimeout,
-			ReadLimit:    int64(s.engineExecutionConfiguration.WebSocketClientReadLimit),
+			PingInterval:              s.engineExecutionConfiguration.WebSocketClientPingInterval,
+			PingTimeout:               s.engineExecutionConfiguration.WebSocketClientPingTimeout,
+			WriteTimeout:              s.engineExecutionConfiguration.WebSocketClientWriteTimeout,
+			AckTimeout:                s.engineExecutionConfiguration.WebSocketClientAckTimeout,
+			ReadLimit:                 int64(s.engineExecutionConfiguration.WebSocketClientReadLimit),
+			DefaultErrorExtensionCode: s.subgraphErrorPropagation.DefaultExtensionCode,
 		},
 		transportOptions: &TransportOptions{
 			SubgraphTransportOptions:      s.subgraphTransportOptions,
