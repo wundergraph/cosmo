@@ -10,6 +10,7 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 import { AuthenticationError, PublicError } from '../errors/errors.js';
+import { isValidLocalhostOrSecureEndpoint } from '../util.js';
 
 interface ParsedOpenIdConfiguration {
   issuer?: string;
@@ -298,7 +299,13 @@ export default class Keycloak {
     abortSignal?: AbortSignal;
   }) {
     const openIdConfiguration = await this.#fetchOpenIdConfiguration(discoveryEndpoint, abortSignal);
-    if (!openIdConfiguration.token_endpoint || !openIdConfiguration.authorization_endpoint) {
+    if (
+      typeof openIdConfiguration !== 'object' ||
+      typeof openIdConfiguration?.token_endpoint !== 'string' ||
+      !isValidLocalhostOrSecureEndpoint(openIdConfiguration.token_endpoint) ||
+      typeof openIdConfiguration.authorization_endpoint !== 'string' ||
+      !isValidLocalhostOrSecureEndpoint(openIdConfiguration.authorization_endpoint)
+    ) {
       throw new PublicError(
         EnumStatusCode.ERR,
         'The provided OpenID configuration does not contain a valid token or authorization endpoint.',
@@ -536,6 +543,7 @@ export default class Keycloak {
       const response = await this.#httpClient.get(discoveryEndpoint, {
         signal,
         timeout: 10_000,
+        maxBodyLength: 3 * 1024 * 1024, // ~3mb
         validateStatus: (_) => true,
       });
 
