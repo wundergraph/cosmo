@@ -7,7 +7,9 @@ import { decodeJwt } from 'jose';
 import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 import { AuthenticationError } from '../errors/errors.js';
+import { traced } from '../tracing.js';
 
+@traced
 export default class Keycloak {
   client: KeycloakAdminClient;
   adminUser = '';

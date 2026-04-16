@@ -12,6 +12,7 @@ import {
   Unit,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
+import { traced } from '../../tracing.js';
 import {
   BaseFilters,
   ColumnMetaData,
@@ -28,6 +29,7 @@ import {
 /**
  * Repository for clickhouse analytics data
  */
+@traced
 export class AnalyticsRequestViewRepository {
   constructor(private client: ClickHouseClient) {}
 

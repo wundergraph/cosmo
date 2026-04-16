@@ -56,6 +56,7 @@ import {
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { defaultRetentionLimitInDays } from '../constants.js';
+import { traced } from '../tracing.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { ProposalRepository } from './ProposalRepository.js';
@@ -64,6 +65,7 @@ import { SchemaLintRepository } from './SchemaLintRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { NamespaceRepository } from './NamespaceRepository.js';
 
+@traced
 export class SchemaCheckRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 

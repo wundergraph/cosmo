@@ -10,7 +10,9 @@ import {
   SchemaLintDTO,
   SchemaLintIssues,
 } from '../../types/index.js';
+import { traced } from '../tracing.js';
 
+@traced
 export default class SchemaLinter {
   linter: Linter;
   constructor() {

@@ -6,10 +6,12 @@ import { toISODateTime } from '../webhooks/utils.js';
 import { NewBillingSubscription } from '../../db/models.js';
 import { BillingRepository } from '../repositories/BillingRepository.js';
 import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
+import { traced } from '../tracing.js';
 
 /**
  * BillingService for billing related operations.
  */
+@traced
 export class BillingService {
   public stripe: Stripe;
 

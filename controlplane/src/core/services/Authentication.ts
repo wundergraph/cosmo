@@ -4,6 +4,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { AuthContext, UserInfoEndpointResponse } from '../../types/index.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { traced } from '../tracing.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
@@ -19,6 +20,7 @@ export interface Authenticator {
   getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined>;
 }
 
+@traced
 export class Authentication implements Authenticator {
   #cache = lru<AuthContext>(1000, maxAuthCacheTtl);
 

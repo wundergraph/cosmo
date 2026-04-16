@@ -17,7 +17,9 @@ import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { buildSchema } from '../composition/composition.js';
 import { getFederatedGraphRouterCompatibilityVersion } from '../util.js';
+import { traced } from '../tracing.js';
 
+@traced
 export default class SchemaGraphPruner {
   constructor(
     private federatedGraphRepo: FederatedGraphRepository,
