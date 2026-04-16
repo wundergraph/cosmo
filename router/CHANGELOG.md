@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.306.0](https://github.com/wundergraph/cosmo/compare/router@0.305.0...router@0.306.0) (2026-04-16)
+
+### Features
+
+* make storage providers configurable via envars ([#2740](https://github.com/wundergraph/cosmo/issues/2740)) ([21ca34a](https://github.com/wundergraph/cosmo/commit/21ca34adfc31b14532b238d02ac4730d616e3654)) (@SkArchon)
+
 # [0.305.0](https://github.com/wundergraph/cosmo/compare/router@0.304.0...router@0.305.0) (2026-04-15)
 
 ### Features
