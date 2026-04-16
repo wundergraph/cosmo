@@ -14,10 +14,14 @@ import { Loader } from '../ui/loader';
 import { TitleLayoutProps } from './graph-layout';
 import { PageHeader } from './head';
 import { LayoutProps } from './layout';
-import { NavLink, SideNav } from './sidenav';
+import { NavChild, NavLink, SideNav } from './sidenav';
 import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import Link from 'next/link';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import { buildGraphSideNavLinks } from './graph-sidenav-links';
+import { useFeature } from '@/hooks/use-feature';
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse['graph'];
@@ -34,6 +38,8 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
   const slug = router.query.subgraphSlug as string;
+  const graphName = router.query.graph as string | undefined;
+  const proposalsFeature = useFeature('proposals');
 
   const { data, isLoading, error, refetch } = useQuery(getSubgraphByName, {
     name: slug,
@@ -53,6 +59,21 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
 
   const links: NavLink[] = useMemo(() => {
     const basePath = `/${organizationSlug}/${namespace}/subgraph/${slug}`;
+
+    // If we have graph context, render the SAME graph sidebar.
+    if (graphName) {
+      const graphBasePath = `/${organizationSlug}/${namespace}/graph/${graphName}`;
+      const subgraphChildren: NavChild[] = [
+        { title: 'All subgraphs', href: graphBasePath + '/subgraphs' },
+        { title: 'Featured', href: graphBasePath + '/subgraphs?tab=featureSubgraphs' },
+      ];
+
+      return buildGraphSideNavLinks({
+        basePath: graphBasePath,
+        proposalsEnabled: Boolean(proposalsFeature?.enabled),
+        subgraphChildren,
+      });
+    }
 
     return [
       {
@@ -77,7 +98,7 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
         icon: <ChartBarIcon className="h-4 w-4" />,
       },
     ];
-  }, [organizationSlug, namespace, slug]);
+  }, [organizationSlug, namespace, slug, graphName, proposalsFeature]);
 
   let render: React.ReactNode;
 
@@ -138,9 +159,27 @@ export const SubgraphPageLayout = ({
     </>
   );
 
+  const router = useRouter();
+  const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
+  const subgraphSlug = router.query.subgraphSlug as string;
+  const graphName = router.query.graph as string | undefined;
+
+  const baseSubgraphPath = `/${organizationSlug}/${namespace}/subgraph/${subgraphSlug}`;
+  const querySuffix = graphName ? `?graph=${encodeURIComponent(graphName)}` : '';
+  const pathname = router.asPath.split('?')[0] ?? '';
+  const activeTab =
+    pathname.endsWith('/schema')
+      ? 'schema'
+      : pathname.endsWith('/graphs')
+        ? 'graphs'
+        : pathname.includes('/analytics')
+          ? 'analytics'
+          : 'overview';
+
   return (
     <div className="flex h-[calc(100vh_-_104px)] flex-col lg:h-screen">
-      <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b bg-background py-4">
+      <div className="flex w-full flex-col gap-2 border-b bg-background py-4">
         <div
           className={cn(
             'flex w-full flex-col justify-between gap-y-4 px-4 md:w-auto lg:flex-row lg:items-center lg:px-6 xl:px-8',
@@ -149,7 +188,37 @@ export const SubgraphPageLayout = ({
           <WorkspaceSelector truncateNamespace={false}>{breadcrumb}</WorkspaceSelector>
           {items}
         </div>
-        {toolbar}
+        <div className="flex w-full flex-wrap items-center justify-between gap-4 px-4 lg:px-6 xl:px-8">
+          <Tabs value={activeTab} className="w-full md:w-auto">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview" asChild>
+                <Link href={`${baseSubgraphPath}${querySuffix}`} className="flex items-center gap-x-2">
+                  <HomeIcon className="h-4 w-4" />
+                  Overview
+                </Link>
+              </TabsTrigger>
+              <TabsTrigger value="schema" asChild>
+                <Link href={`${baseSubgraphPath}/schema${querySuffix}`} className="flex items-center gap-x-2">
+                  <FileTextIcon className="h-4 w-4" />
+                  Schema
+                </Link>
+              </TabsTrigger>
+              <TabsTrigger value="graphs" asChild>
+                <Link href={`${baseSubgraphPath}/graphs${querySuffix}`} className="flex items-center gap-x-2">
+                  <PiGraphLight className="size-4" />
+                  Graphs
+                </Link>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" asChild>
+                <Link href={`${baseSubgraphPath}/analytics${querySuffix}`} className="flex items-center gap-x-2">
+                  <ChartBarIcon className="h-4 w-4" />
+                  Analytics
+                </Link>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {toolbar}
+        </div>
       </div>
       <div
         ref={scrollRef}

@@ -51,6 +51,45 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/components/ui/use-toast';
 import { calculateUrlLength, checkFilterLimits, MAX_URL_LENGTH } from './metrics';
 
+function getStatusCategory(row: Row<any>): string {
+  const httpStatusCode = (row.getValue('httpStatusCode') as string | undefined) ?? '';
+  const statusMessage = ((row.getValue('statusMessage') as string | undefined) ?? '').toLowerCase();
+
+  if (httpStatusCode.startsWith('4')) return 'Validation';
+  if (httpStatusCode.startsWith('5')) return 'Server';
+
+  if (
+    statusMessage.includes('deadline exceeded') ||
+    statusMessage.includes('timeout') ||
+    statusMessage.includes('timed out') ||
+    statusMessage.includes('context deadline')
+  ) {
+    return 'Timeout';
+  }
+
+  if (
+    statusMessage.includes('connection') ||
+    statusMessage.includes('connect') ||
+    statusMessage.includes('unavailable') ||
+    statusMessage.includes('econnrefused') ||
+    statusMessage.includes('econnreset') ||
+    statusMessage.includes('socket hang up') ||
+    statusMessage.includes('network')
+  ) {
+    return 'Connection';
+  }
+
+  if (
+    statusMessage.includes('unauthorized') ||
+    statusMessage.includes('forbidden') ||
+    statusMessage.includes('permission')
+  ) {
+    return 'Auth';
+  }
+
+  return 'Error';
+}
+
 export function AnalyticsDataTable<T>({
   tableRef,
   data,
@@ -531,8 +570,12 @@ export function AnalyticsDataTable<T>({
                               </Tooltip>
                             </TooltipProvider>
                           );
+                          text = (
+                            <span className="text-xs font-medium text-destructive/90">{getStatusCategory(row)}</span>
+                          );
                         } else {
                           icon = <HiOutlineCheck className="h-5 w-5" />;
+                          text = <span className="text-xs text-muted-foreground">OK</span>;
                         }
                       } else {
                         text = flexRender(cell.column.columnDef.cell, cell.getContext());

@@ -283,6 +283,10 @@ export const SubgraphsTable = ({
           <TableBody>
             {subgraphs.map(({ id, name, routingURL, lastUpdatedAt, labels, namespace, baseSubgraphName, type }) => {
               const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
+              const graphQuery =
+                router.asPath.split('/')[3] === 'graph' && typeof router.query.slug === 'string'
+                  ? `?graph=${encodeURIComponent(router.query.slug)}`
+                  : '';
               let analyticsPath = `${path}/analytics`;
               if (router.asPath.split('/')[3] === 'graph') {
                 const query = [
@@ -303,7 +307,7 @@ export const SubgraphsTable = ({
                 <TableRow
                   key={name}
                   className=" group cursor-pointer py-1 hover:bg-secondary/30"
-                  onClick={() => router.push(path)}
+                  onClick={() => router.push(`${path}${graphQuery}`)}
                 >
                   <TableCell className="px-4 font-medium">
                     <Tooltip delayDuration={200}>

@@ -297,6 +297,16 @@ function GraphVisualization({
   const [nodeStates, setNodeStates, onNodesChange] = useNodesState(nodes);
   const [edgeStates, setEdgeStates, onEdgesChange] = useEdgesState(edges);
 
+  const handleNodesChange = useCallback(
+    (changes: any[]) => {
+      // Keep the selected node highlighted even when clicking on the pane.
+      // ReactFlow emits `select` changes on pane click; we ignore them if we already have a selected node.
+      const nextChanges = selectedNodeId ? changes.filter((c) => c.type !== 'select') : changes;
+      onNodesChange(nextChanges);
+    },
+    [onNodesChange, selectedNodeId],
+  );
+
   const onConnect = useCallback(
     (params: Edge) =>
       setEdges((eds) => addEdge({ ...params, type: ConnectionLineType.SmoothStep, animated: true }, eds)),
@@ -316,7 +326,14 @@ function GraphVisualization({
     if (!graphWrapperRef.current) return;
 
     const duration = 500;
-    const padding = 0.45;
+    const padding = isDrawerOpen ? 0.45 : defaultZoom.padding;
+
+    // When closing, behave like clicking \"Re-center\" (fit container again).
+    if (!isDrawerOpen) {
+      reactFlowInstance.fitView({ ...defaultZoom, padding, duration });
+      return;
+    }
+
     const wrapperWidth = graphWrapperRef.current.clientWidth;
     const wrapperHeight = graphWrapperRef.current.clientHeight;
     const drawerWidth = Math.min(wrapperWidth * 0.4, 460);
@@ -331,7 +348,7 @@ function GraphVisualization({
       padding,
     });
 
-    const targetVp = isDrawerOpen ? { ...baseVp, x: baseVp.x - drawerWidth / 2 } : baseVp;
+    const targetVp = { ...baseVp, x: baseVp.x - drawerWidth / 2 };
     reactFlowInstance.setViewport(targetVp, { duration });
   }, [isDrawerOpen, nodesInitialized, reactFlowInstance, nodeStates]);
 
@@ -345,11 +362,24 @@ function GraphVisualization({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isDrawerOpen]);
 
+  // When drawer closes, clear node selection highlight.
   useEffect(() => {
-    setNodeStates(nodes);
+    if (!isDrawerOpen) {
+      setSelectedNodeId(null);
+    }
+  }, [isDrawerOpen]);
+
+  useEffect(() => {
+    // When layout updates, preserve the selected node highlight.
+    setNodeStates(
+      nodes.map((n) => ({
+        ...n,
+        selected: selectedNodeId ? n.id === selectedNodeId : false,
+      })),
+    );
     setEdgeStates(edges);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges]);
+  }, [nodes, edges, selectedNodeId]);
 
   useEffect(() => {
     if (nodesInitialized) {
@@ -409,7 +439,7 @@ function GraphVisualization({
         <ReactFlow
           nodes={nodeStates}
           edges={edgeStates}
-          onNodesChange={onNodesChange}
+          onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={(_, node) => {
             if (node?.data?.kind !== 'subgraph') return;
