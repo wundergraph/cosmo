@@ -323,7 +323,19 @@ async function waitForRouterReady({
     } catch {
       // not up yet
     }
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    // Plain setTimeout ignores the abort signal, so CTRL+C during the
+    // sleep would leave the loop hanging until the timer fires.
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, intervalMs);
+      signal.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true },
+      );
+    });
   }
 
   return false;
@@ -394,6 +406,16 @@ export async function runRouterContainer({
   const logStream = createWriteStream(logPath, { flags: 'a' });
   const spinner = demoSpinner(`Starting router on ${pc.bold(routerBaseUrl)}…`).start();
 
+  // During polling there is no waitForKeyPress active, so CTRL+C sends
+  // SIGINT instead of being handled manually. Without this the active
+  // spinner + docker process prevent clean exit and the spinner re-renders
+  // on each CTRL+C press.
+  function onSigint() {
+    spinner.stop();
+    process.exit(0);
+  }
+  process.on('SIGINT', onSigint);
+
   try {
     const proc = execa('docker', args, {
       stdio: 'pipe',
@@ -427,6 +449,7 @@ export async function runRouterContainer({
     spinner.fail('Router failed to start.');
     return { error: error instanceof Error ? error : new Error(String(error)) };
   } finally {
+    process.removeListener('SIGINT', onSigint);
     logStream.end();
   }
 

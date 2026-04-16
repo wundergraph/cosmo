@@ -336,11 +336,11 @@ async function handleStep3(
     logPath,
   });
 
-  showQueryPrompt();
-
   if (routerResult.error) {
     console.error(`\nRouter exited with error: ${routerResult.error.message}`);
     await waitForKeyPress({ r: retryFn, R: retryFn }, 'Hit [r] to retry. CTRL+C to quit.');
+  } else {
+    showQueryPrompt();
   }
 }
 
