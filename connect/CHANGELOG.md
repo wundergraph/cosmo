@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.140.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.139.0...@wundergraph/cosmo-connect@0.140.0) (2026-04-16)
+
+### Features
+
+* add new endpoints for fetching feature flags and feature subgraphs by federated graph ([#2729](https://github.com/wundergraph/cosmo/issues/2729)) ([74f44a1](https://github.com/wundergraph/cosmo/commit/74f44a1614ef0976231b143b52203c5a9dd2034e)) (@JivusAyrus)
+
+# [0.139.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.138.0...@wundergraph/cosmo-connect@0.139.0) (2026-04-15)
+
+### Features
+
+* use email as main tracking field ([#2700](https://github.com/wundergraph/cosmo/issues/2700)) ([23fc31d](https://github.com/wundergraph/cosmo/commit/23fc31dd11c94fb242e6cec7b820b806a88d4cb6)) (@alepane21)
+
 # [0.138.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.137.0...@wundergraph/cosmo-connect@0.138.0) (2026-03-27)
 
 ### Features

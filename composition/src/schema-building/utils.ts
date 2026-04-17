@@ -24,6 +24,7 @@ import {
   type CompositeOutputData,
   type ConditionalFieldData,
   type DefinitionData,
+  type EnumDefinitionData,
   ExtensionType,
   type ExternalFieldData,
   type FieldData,
@@ -38,7 +39,13 @@ import {
   type SchemaData,
 } from './types';
 import { type MutableDefinitionNode, type MutableFieldNode, type MutableInputValueNode } from './ast';
-import { type ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
+import {
+  type InterfaceTypeNode,
+  type ObjectTypeNode,
+  type ParentTypeNode,
+  setToNameNodeArray,
+  stringToNameNode,
+} from '../ast/utils';
 import {
   incompatibleInputValueDefaultValuesError,
   invalidRepeatedFederatedDirectiveErrorMessage,
@@ -58,6 +65,7 @@ import {
   INPUT_FIELD,
   INPUT_NODE_KINDS,
   INT_SCALAR,
+  INTERFACE_NODE_KINDS,
   MUTATION,
   OUTPUT_NODE_KINDS,
   PERSISTED_CLIENT_DIRECTIVES,
@@ -80,6 +88,7 @@ import {
 import { type InputNodeKind, type InvalidRequiredInputValueData, type OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
 import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
+import { type IsTypeValidImplementationParams } from './params';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -620,19 +629,30 @@ export enum MergeMethod {
   CONSISTENT,
 }
 
-export function isTypeValidImplementation(
-  originalType: TypeNode,
-  implementationType: TypeNode,
-  concreteTypeNamesByAbstractTypeName: Map<TypeName, Set<TypeName>>,
-): boolean {
+export function isTypeValidImplementation({
+  concreteTypeNamesByAbstractTypeName,
+  implementationType,
+  interfaceImplementationTypeNamesByInterfaceTypeName,
+  originalType,
+}: IsTypeValidImplementationParams): boolean {
   if (originalType.kind === Kind.NON_NULL_TYPE) {
     if (implementationType.kind !== Kind.NON_NULL_TYPE) {
       return false;
     }
-    return isTypeValidImplementation(originalType.type, implementationType.type, concreteTypeNamesByAbstractTypeName);
+    return isTypeValidImplementation({
+      concreteTypeNamesByAbstractTypeName,
+      implementationType: implementationType.type,
+      interfaceImplementationTypeNamesByInterfaceTypeName,
+      originalType: originalType.type,
+    });
   }
   if (implementationType.kind === Kind.NON_NULL_TYPE) {
-    return isTypeValidImplementation(originalType, implementationType.type, concreteTypeNamesByAbstractTypeName);
+    return isTypeValidImplementation({
+      concreteTypeNamesByAbstractTypeName,
+      implementationType: implementationType.type,
+      interfaceImplementationTypeNamesByInterfaceTypeName,
+      originalType,
+    });
   }
   switch (originalType.kind) {
     case Kind.NAMED_TYPE:
@@ -642,20 +662,19 @@ export function isTypeValidImplementation(
         if (originalTypeName === implementationTypeName) {
           return true;
         }
+        const abstractTypes = interfaceImplementationTypeNamesByInterfaceTypeName.get(originalTypeName);
         const concreteTypes = concreteTypeNamesByAbstractTypeName.get(originalTypeName);
-        if (!concreteTypes) {
-          return false;
-        }
-        return concreteTypes.has(implementationTypeName);
+        return !!(concreteTypes?.has(implementationTypeName) || abstractTypes?.has(implementationTypeName));
       }
       return false;
     default:
       if (implementationType.kind === Kind.LIST_TYPE) {
-        return isTypeValidImplementation(
-          originalType.type,
-          implementationType.type,
+        return isTypeValidImplementation({
           concreteTypeNamesByAbstractTypeName,
-        );
+          implementationType: implementationType.type,
+          interfaceImplementationTypeNamesByInterfaceTypeName,
+          originalType: originalType.type,
+        });
       }
       return false;
   }
@@ -774,4 +793,12 @@ export function isInputNodeKind(kind: Kind): kind is InputNodeKind {
 
 export function isOutputNodeKind(kind: Kind): kind is OutputNodeKind {
   return OUTPUT_NODE_KINDS.has(kind);
+}
+
+export function isInterfaceNode(node: ParentTypeNode): node is InterfaceTypeNode {
+  return INTERFACE_NODE_KINDS.has(node.kind);
+}
+
+export function isEnumData(data: ParentDefinitionData): data is EnumDefinitionData {
+  return data.kind === Kind.ENUM_TYPE_DEFINITION;
 }

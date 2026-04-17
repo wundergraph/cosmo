@@ -4,7 +4,9 @@ import { eq } from 'drizzle-orm';
 import { CompositionError, GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PlainMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
+import { traced } from '../tracing.js';
 
+@traced
 export class GitHubRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
