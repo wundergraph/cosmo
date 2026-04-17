@@ -31,6 +31,7 @@ import {
 } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
+import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { UserRepository } from './UserRepository.js';
@@ -62,6 +63,7 @@ export type CheckConstituentFeatureSubgraphsResult = {
   featureSubgraphIds: Array<string>;
 };
 
+@traced
 export class FeatureFlagRepository {
   constructor(
     private logger: FastifyBaseLogger,
