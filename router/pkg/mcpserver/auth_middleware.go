@@ -136,8 +136,7 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 		// Parse JSON-RPC body for method-level scope checks (SSE/GET requests have no body)
 		var body []byte
 		if r.Method == http.MethodPost && r.Body != nil {
-			limitedReader := io.LimitReader(r.Body, maxBodyBytes+1)
-			body, err = io.ReadAll(limitedReader)
+			body, err = io.ReadAll(io.LimitReader(r.Body, maxBodyBytes+1))
 			if err != nil {
 				m.sendUnauthorizedResponse(w, fmt.Errorf("failed to read request body"))
 				return
