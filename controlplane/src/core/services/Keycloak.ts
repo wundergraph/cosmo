@@ -11,6 +11,7 @@ import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 import { AuthenticationError, PublicError } from '../errors/errors.js';
 import { isValidLocalhostOrSecureEndpoint } from '../util.js';
+import { traced } from '../tracing.js';
 
 interface ParsedOpenIdConfiguration {
   issuer?: string;
@@ -21,6 +22,7 @@ interface ParsedOpenIdConfiguration {
   jwks_uri?: string;
 }
 
+@traced
 export default class Keycloak {
   client: KeycloakAdminClient;
   adminUser = '';

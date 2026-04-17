@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.217.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.216.0...controlplane@0.217.0) (2026-04-17)
+
+### Features
+
+* **controlplane:** add service-level tracing spans to Connect-RPC handlers ([#2771](https://github.com/wundergraph/cosmo/issues/2771)) ([9cf421a](https://github.com/wundergraph/cosmo/commit/9cf421a2540323b617edd8036e3a213fc426e03d)) (@thisisnithin)
+
 # [0.216.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.215.0...controlplane@0.216.0) (2026-04-16)
 
 ### Features

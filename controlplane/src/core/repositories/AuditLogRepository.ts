@@ -2,6 +2,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { desc, eq, gt, lt, and, sql, count } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction, AuditTargetType } from '../../db/models.js';
+import { traced } from '../tracing.js';
 
 export type AddAuditLogInput = {
   organizationId: string;
@@ -25,6 +26,7 @@ export type AddAuditLogInput = {
 /**
  * Repository for audit log related operations.
  */
+@traced
 export class AuditLogRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
