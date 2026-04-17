@@ -73,10 +73,10 @@ importers:
         version: 19.8.0
       '@connectrpc/connect-query':
         specifier: ^1.4.1
-        version: 1.4.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.10.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 1.4.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@connectrpc/protoc-gen-connect-es':
         specifier: ^1.4.0
-        version: 1.4.0(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.10.0))
+        version: 1.4.0(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))
       '@connectrpc/protoc-gen-connect-query':
         specifier: ^1.4.1
         version: 1.4.1(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))
@@ -459,7 +459,7 @@ importers:
         version: 1.9.0
       '@connectrpc/connect-query':
         specifier: ^1.4.1
-        version: 1.4.1(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 1.4.1(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     devDependencies:
       del-cli:
         specifier: ^5.0.0
@@ -477,14 +477,14 @@ importers:
         specifier: ^1.32.2
         version: 1.32.2
       '@connectrpc/connect':
-        specifier: ^1.4.0
-        version: 1.4.0(@bufbuild/protobuf@1.9.0)
+        specifier: 1.5.0
+        version: 1.5.0(@bufbuild/protobuf@1.9.0)
       '@connectrpc/connect-fastify':
-        specifier: ^1.4.0
-        version: 1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect-node@1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0)))(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))(fastify@4.28.1)
+        specifier: 1.5.0
+        version: 1.5.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect-node@1.5.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0)))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0))(fastify@4.28.1)
       '@connectrpc/connect-node':
-        specifier: ^1.4.0
-        version: 1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))
+        specifier: 1.5.0
+        version: 1.5.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0))
       '@fastify/cors':
         specifier: ^9.0.1
         version: 9.0.1
@@ -653,7 +653,7 @@ importers:
         version: 1.9.0(@bufbuild/protobuf@1.9.0)
       '@connectrpc/protoc-gen-connect-es':
         specifier: ^1.4.0
-        version: 1.4.0(@bufbuild/protoc-gen-es@1.9.0(@bufbuild/protobuf@1.9.0))(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))
+        version: 1.4.0(@bufbuild/protoc-gen-es@1.9.0(@bufbuild/protobuf@1.9.0))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0))
       '@spotlightjs/spotlight':
         specifier: ^4.10.0
         version: 4.11.3(hono-rate-limiter@0.4.2(hono@4.12.12))
@@ -2438,13 +2438,13 @@ packages:
     resolution: {integrity: sha512-/yCrWGCoA1SVKOks25EGadP9Pnj0oAIHGpl2wH2M2Y46dPM2ueb8wyCVOD7O3WCTkaJ0IkKvzhl1JY7+uCT2Dw==}
     engines: {node: '>=v18'}
 
-  '@connectrpc/connect-fastify@1.4.0':
-    resolution: {integrity: sha512-TYiaunbO96KYMjCzMUZ5NDB2txdDLfiJPLEJMRdw3paoZRnW/GSFYXHCseUP34Rh3ICClYvhfRkDLwW1PFx04Q==}
+  '@connectrpc/connect-fastify@1.5.0':
+    resolution: {integrity: sha512-7VeJe7Luth0ypiO2U9Tn3vgYwPTNr1Ef3oYcxbHEBvZpTd2NLGUDn4hWLlmxZi+QoRZigubPbNen2VnBe5istA==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
-      '@bufbuild/protobuf': ^1.4.2
-      '@connectrpc/connect': 1.4.0
-      '@connectrpc/connect-node': 1.4.0
+      '@bufbuild/protobuf': ^1.10.0
+      '@connectrpc/connect': 1.5.0
+      '@connectrpc/connect-node': 1.5.0
       fastify: ^4.22.1
 
   '@connectrpc/connect-node@1.4.0':
@@ -2453,6 +2453,13 @@ packages:
     peerDependencies:
       '@bufbuild/protobuf': ^1.4.2
       '@connectrpc/connect': 1.4.0
+
+  '@connectrpc/connect-node@1.5.0':
+    resolution: {integrity: sha512-go27+V6c6/YOGMXUs7d1NbXnGpMJl5fKYfMtbBKDs9azZTg/tW9q5S0iw9upZs43bOPV8YnJAWmTW9n1Te9NAw==}
+    engines: {node: '>=16.0.0'}
+    peerDependencies:
+      '@bufbuild/protobuf': ^1.10.0
+      '@connectrpc/connect': 1.5.0
 
   '@connectrpc/connect-query@1.4.1':
     resolution: {integrity: sha512-kRv0ka+kSBpnG/56H/vLbQEHkcaFkVb2tZ4fo5m6V3AxKMFvrl35i2nO7+9cmPjhzzbTbE8W/zJqYZkO4YE+FA==}
@@ -2473,6 +2480,11 @@ packages:
     resolution: {integrity: sha512-vZeOkKaAjyV4+RH3+rJZIfDFJAfr+7fyYr6sLDKbYX3uuTVszhFe9/YKf5DNqrDb5cKdKVlYkGn6DTDqMitAnA==}
     peerDependencies:
       '@bufbuild/protobuf': ^1.4.2
+
+  '@connectrpc/connect@1.5.0':
+    resolution: {integrity: sha512-1gGg0M6c2Y3lnr5itis9dNj9r8hbOIuBMqoGSbUy7L7Vjw4MAttjJzJfj9HCDgytGCJkGanYEYI6MQVDijdVQw==}
+    peerDependencies:
+      '@bufbuild/protobuf': ^1.10.0
 
   '@connectrpc/protoc-gen-connect-es@1.4.0':
     resolution: {integrity: sha512-/7vQ8Q7mEBhV8qEVh/eifRQlQnf8EJ6weMwCD2DljVAQRlZYcW9SLxjYZhV1uM1ZZqQC7Cw2vvgXRg2XQswHBg==}
@@ -16851,11 +16863,11 @@ snapshots:
       '@types/conventional-commits-parser': 5.0.0
       chalk: 5.3.0
 
-  '@connectrpc/connect-fastify@1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect-node@1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0)))(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))(fastify@4.28.1)':
+  '@connectrpc/connect-fastify@1.5.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect-node@1.5.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0)))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0))(fastify@4.28.1)':
     dependencies:
       '@bufbuild/protobuf': 1.9.0
-      '@connectrpc/connect': 1.4.0(@bufbuild/protobuf@1.9.0)
-      '@connectrpc/connect-node': 1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))
+      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.9.0)
+      '@connectrpc/connect-node': 1.5.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0))
       fastify: 4.28.1
 
   '@connectrpc/connect-node@1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))':
@@ -16864,10 +16876,16 @@ snapshots:
       '@connectrpc/connect': 1.4.0(@bufbuild/protobuf@1.9.0)
       undici: 5.28.4
 
-  '@connectrpc/connect-query@1.4.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.10.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@connectrpc/connect-node@1.5.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0))':
+    dependencies:
+      '@bufbuild/protobuf': 1.9.0
+      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.9.0)
+      undici: 5.28.4
+
+  '@connectrpc/connect-query@1.4.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@bufbuild/protobuf': 1.10.0
-      '@connectrpc/connect': 1.4.0(@bufbuild/protobuf@1.10.0)
+      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.10.0)
       '@tanstack/react-query': 5.37.1(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
@@ -16882,36 +16900,49 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       stable-hash: 0.0.4
 
+  '@connectrpc/connect-query@1.4.1(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0))(@tanstack/react-query@5.37.1(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@bufbuild/protobuf': 1.9.0
+      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.9.0)
+      '@tanstack/react-query': 5.37.1(react@18.3.1)
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      stable-hash: 0.0.4
+
   '@connectrpc/connect-web@1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))':
     dependencies:
       '@bufbuild/protobuf': 1.9.0
       '@connectrpc/connect': 1.4.0(@bufbuild/protobuf@1.9.0)
 
-  '@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.10.0)':
-    dependencies:
-      '@bufbuild/protobuf': 1.10.0
-
   '@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0)':
     dependencies:
       '@bufbuild/protobuf': 1.9.0
 
-  '@connectrpc/protoc-gen-connect-es@1.4.0(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.10.0))':
+  '@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0)':
+    dependencies:
+      '@bufbuild/protobuf': 1.10.0
+
+  '@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0)':
+    dependencies:
+      '@bufbuild/protobuf': 1.9.0
+
+  '@connectrpc/protoc-gen-connect-es@1.4.0(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.10.0))':
     dependencies:
       '@bufbuild/protobuf': 1.9.0
       '@bufbuild/protoplugin': 1.9.0
     optionalDependencies:
       '@bufbuild/protoc-gen-es': 1.10.0(@bufbuild/protobuf@1.10.0)
-      '@connectrpc/connect': 1.4.0(@bufbuild/protobuf@1.10.0)
+      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.10.0)
     transitivePeerDependencies:
       - supports-color
 
-  '@connectrpc/protoc-gen-connect-es@1.4.0(@bufbuild/protoc-gen-es@1.9.0(@bufbuild/protobuf@1.9.0))(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))':
+  '@connectrpc/protoc-gen-connect-es@1.4.0(@bufbuild/protoc-gen-es@1.9.0(@bufbuild/protobuf@1.9.0))(@connectrpc/connect@1.5.0(@bufbuild/protobuf@1.9.0))':
     dependencies:
       '@bufbuild/protobuf': 1.9.0
       '@bufbuild/protoplugin': 1.9.0
     optionalDependencies:
       '@bufbuild/protoc-gen-es': 1.9.0(@bufbuild/protobuf@1.9.0)
-      '@connectrpc/connect': 1.4.0(@bufbuild/protobuf@1.9.0)
+      '@connectrpc/connect': 1.5.0(@bufbuild/protobuf@1.9.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -23866,7 +23897,7 @@ snapshots:
 
   bun-types@1.2.12:
     dependencies:
-      '@types/node': 18.19.21
+      '@types/node': 20.12.12
     optional: true
 
   bun-types@1.2.3:
