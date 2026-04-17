@@ -46,9 +46,9 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.996.0",
     "@bufbuild/buf": "^1.32.2",
-    "@connectrpc/connect": "^1.4.0",
-    "@connectrpc/connect-fastify": "^1.4.0",
-    "@connectrpc/connect-node": "^1.4.0",
+    "@connectrpc/connect": "1.5.0",
+    "@connectrpc/connect-fastify": "1.5.0",
+    "@connectrpc/connect-node": "1.5.0",
     "@fastify/cors": "^9.0.1",
     "@graphql-eslint/eslint-plugin": "^3.20.1",
     "@graphql-inspector/core": "^6.2.1",
