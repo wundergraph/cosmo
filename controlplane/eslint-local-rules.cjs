@@ -5,12 +5,18 @@ function isTraced(node) {
     return true;
   }
 
-  const parent = node.parent;
-  if (!parent || !parent.body) {
+  let container = node.parent;
+  let classNode = node;
+  // export default class wraps the ClassDeclaration in ExportDefaultDeclaration
+  if (container && container.type === 'ExportDefaultDeclaration') {
+    classNode = container;
+    container = container.parent;
+  }
+  if (!container || !container.body) {
     return false;
   }
-  const siblings = parent.body;
-  const idx = siblings.indexOf(node);
+  const siblings = container.body;
+  const idx = siblings.indexOf(classNode);
   for (let i = idx + 1; i < siblings.length; i++) {
     const sibling = siblings[i];
     if (
