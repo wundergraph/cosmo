@@ -496,7 +496,21 @@ type ComplexityCalculationCache struct {
 	CacheSize int64 `yaml:"size,omitempty" envDefault:"1024" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
 }
 
+// ComplexityLimitsMode defines how complexity limits behave.
+type ComplexityLimitsMode string
+
+const (
+	ComplexityLimitsModeUnset   ComplexityLimitsMode = ""
+	ComplexityLimitsModeMeasure ComplexityLimitsMode = "measure"
+	ComplexityLimitsModeEnforce ComplexityLimitsMode = "enforce"
+)
+
 type ComplexityLimits struct {
+	// Mode controls complexity limits behavior:
+	// - "measure": calculates complexity without rejecting operations (for monitoring)
+	// - "enforce": calculates complexity and rejects operations exceeding limits
+	Mode ComplexityLimitsMode `yaml:"mode,omitempty"`
+
 	Depth            *ComplexityLimit `yaml:"depth"`
 	TotalFields      *ComplexityLimit `yaml:"total_fields"`
 	RootFields       *ComplexityLimit `yaml:"root_fields"`
