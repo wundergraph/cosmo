@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.20.3...@wundergraph/protographic@0.21.0) (2026-04-16)
+
+### Features
+
+* **protographic:** add support for interface objects ([#2761](https://github.com/wundergraph/cosmo/issues/2761)) ([7da075d](https://github.com/wundergraph/cosmo/commit/7da075df10f77c6e0c114df92c75683d9233e31c)) (@Noroth)
+
 ## [0.20.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.20.2...@wundergraph/protographic@0.20.3) (2026-04-15)
 
 **Note:** Version bump only for package @wundergraph/protographic
