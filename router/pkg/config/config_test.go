@@ -1377,18 +1377,18 @@ listen_addr: "localhost:3007"
 		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
 version: "1"
 
-execution_config: 
-  file: 
+execution_config:
+  file:
     path: 'somePath'
 `)
 
 		override1 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
 version: "1"
 
-execution_config: 
-  storage: 
+execution_config:
+  storage:
     provider_id: 'id'
-    object_path: 'there' 
+    object_path: 'there'
 
 `)
 
@@ -1808,6 +1808,84 @@ access_logs:
 			require.Equal(t, tc.mode, c.Config.AccessLogs.Output.File.Mode, "Pattern '%s' should parse to mode %o but got %o", tc.pattern, tc.mode, c.Config.AccessLogs.Output.File.Mode)
 		}
 	})
+}
+
+func TestComplexityLimitsModeConfig(t *testing.T) {
+	t.Run("valid mode values are accepted", func(t *testing.T) {
+		t.Parallel()
+
+		for _, mode := range []string{"measure", "enforce"} {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  complexity_limits:
+    mode: `+mode+`
+    depth:
+      enabled: true
+      limit: 5
+`)
+			_, err := LoadConfig([]string{f})
+			require.NoError(t, err, "mode %q should be valid", mode)
+		}
+	})
+
+	t.Run("invalid mode is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  complexity_limits:
+    mode: invalid
+    depth:
+      enabled: true
+      limit: 5
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/security/complexity_limits/mode'")
+		require.ErrorContains(t, err, "value must be one of")
+	})
+
+	t.Run("mode is unset when omitted from YAML", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  complexity_limits:
+    depth:
+      enabled: true
+      limit: 5
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		// When mode is omitted, it remains unset. The runtime check in
+		// ValidateQueryComplexity only skips enforcement for explicit "measure",
+		// so unset is treated as enforce
+		require.Equal(t, ComplexityLimitsModeUnset, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
+	})
+
+	t.Run("measure mode is set correctly", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  complexity_limits:
+    mode: measure
+    depth:
+      enabled: true
+      limit: 5
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, ComplexityLimitsModeMeasure, cfg.Config.SecurityConfiguration.ComplexityLimits.Mode)
+	})
+
 }
 
 func TestCostControlConfig(t *testing.T) {

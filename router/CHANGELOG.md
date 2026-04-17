@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.307.0](https://github.com/wundergraph/cosmo/compare/router@0.306.0...router@0.307.0) (2026-04-17)
+
+### Features
+
+* **router:** add security complexity mode ([#2753](https://github.com/wundergraph/cosmo/issues/2753)) ([20dd212](https://github.com/wundergraph/cosmo/commit/20dd2121adfd5d8b7e4be1b50d045dd333fdcda0)) (@AdrienPoupa)
+
 # [0.306.0](https://github.com/wundergraph/cosmo/compare/router@0.305.0...router@0.306.0) (2026-04-16)
 
 ### Features
