@@ -21,7 +21,7 @@ type contextKey string
 const (
 	userClaimsContextKey contextKey = "mcp_user_claims"
 	// maxBodyBytes prevents memory exhaustion from oversized payloads.
-	maxBodyBytes int64 = 10 << 20 // 10 MB
+	maxBodyBytes int64 = 10 << 20 // 10 MiB
 )
 
 // mcpAuthProvider adapts MCP headers to the authentication.Provider interface
