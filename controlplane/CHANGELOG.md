@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.218.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.218.0...controlplane@0.218.1) (2026-04-17)
+
+### Bug Fixes
+
+* **controlplane:** populate userEmail in whoAmI response ([#2774](https://github.com/wundergraph/cosmo/issues/2774)) ([13a70dc](https://github.com/wundergraph/cosmo/commit/13a70dca3edd187856232d2746b33c434e1e12ff)) (@thisisnithin)
+
 # [0.218.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.217.0...controlplane@0.218.0) (2026-04-17)
 
 ### Features
