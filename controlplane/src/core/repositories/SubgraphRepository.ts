@@ -66,6 +66,7 @@ import {
   sanitizeReadme,
 } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { traced } from '../tracing.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -82,6 +83,7 @@ type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 /**
  * Repository for managing subgraphs.
  */
+@traced
 export class SubgraphRepository {
   constructor(
     private logger: FastifyBaseLogger,

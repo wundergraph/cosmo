@@ -10,8 +10,10 @@ import * as schema from '../../db/schema.js';
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { traced } from '../tracing.js';
 import { RBACEvaluator } from './RBACEvaluator.js';
 
+@traced
 export class WorkspaceService {
   constructor(
     private organizationId: string,
