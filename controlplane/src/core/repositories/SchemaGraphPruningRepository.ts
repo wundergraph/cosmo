@@ -19,10 +19,12 @@ import {
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { GetDiffBetweenGraphsSuccess } from '../composition/schemaCheck.js';
 import SchemaGraphPruner from '../services/SchemaGraphPruner.js';
+import { traced } from '../tracing.js';
 import { UsageRepository } from './analytics/UsageRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 
+@traced
 export class SchemaGraphPruningRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
