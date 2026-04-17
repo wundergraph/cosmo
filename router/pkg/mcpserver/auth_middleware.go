@@ -40,7 +40,7 @@ type MCPAuthMiddleware struct {
 	scopes                           config.MCPOAuthScopesConfiguration
 	scopeChallengeIncludeTokenScopes bool
 	toolScopesMu                     sync.RWMutex
-	toolScopes                       map[string][][]string // toolName → OR-of-AND scope groups
+	toolScopes                       map[string][][]string // toolName -> OR-of-AND scope groups
 	scopeExtractorMu                 sync.RWMutex
 	scopeExtractor                   *ScopeExtractor
 }
