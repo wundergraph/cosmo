@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.218.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.217.0...controlplane@0.218.0) (2026-04-17)
+
+### Features
+
+* improve OpenId Configuration fetching to prevent DoS ([#2748](https://github.com/wundergraph/cosmo/issues/2748)) ([07de56d](https://github.com/wundergraph/cosmo/commit/07de56dd31dd35ad09214d98086eecd8d77fce98)) (@wilsonrivera)
+
 # [0.217.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.216.0...controlplane@0.217.0) (2026-04-17)
 
 ### Features
