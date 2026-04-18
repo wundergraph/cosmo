@@ -2936,6 +2936,12 @@
           "description": "The configuration for complexity limits for queries",
           "additionalProperties": false,
           "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["measure", "enforce"],
+              "default": "enforce",
+              "description": "Controls complexity limits behavior: 'measure' calculates complexity without rejecting operations; 'enforce' rejects operations exceeding limits."
+            },
             "depth": {
               "type": "object",
               "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied.",

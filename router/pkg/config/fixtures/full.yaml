@@ -467,6 +467,7 @@ security:
     enabled: true
     size: 1024
   complexity_limits:
+    mode: enforce
     depth:
       enabled: true
       limit: 5

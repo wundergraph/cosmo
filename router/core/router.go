@@ -539,7 +539,9 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 
 		if r.securityConfiguration.ComplexityLimits == nil {
-			r.securityConfiguration.ComplexityLimits = &config.ComplexityLimits{}
+			r.securityConfiguration.ComplexityLimits = &config.ComplexityLimits{
+				Mode: config.ComplexityLimitsModeEnforce,
+			}
 		}
 		if r.securityConfiguration.ComplexityLimits.Depth == nil {
 			r.securityConfiguration.ComplexityLimits.Depth = &config.ComplexityLimit{
