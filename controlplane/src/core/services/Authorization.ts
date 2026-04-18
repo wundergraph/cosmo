@@ -8,7 +8,9 @@ import { FederatedGraphRepository } from '../repositories/FederatedGraphReposito
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { AuthContext } from '../../types/index.js';
+import { traced } from '../tracing.js';
 
+@traced
 export class Authorization {
   constructor(
     private logger: FastifyBaseLogger,

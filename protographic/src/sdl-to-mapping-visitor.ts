@@ -3,11 +3,13 @@ import {
   GraphQLEnumType,
   GraphQLField,
   GraphQLInputObjectType,
+  GraphQLInterfaceType,
   GraphQLNamedType,
   GraphQLObjectType,
   GraphQLSchema,
   isEnumType,
   isInputObjectType,
+  isInterfaceType,
   isObjectType,
   Kind,
 } from 'graphql';
@@ -123,21 +125,25 @@ export class GraphQLToMappingVisitor {
       }
 
       // Check if this is an entity type (has @key directive)
+      if (!isObjectType(type) && !isInterfaceType(type)) {
+        continue;
+      }
+
+      const keyDirectives = this.getKeyDirectives(type);
+      if (keyDirectives.length === 0) {
+        continue;
+      }
+
+      // Process each @key directive separately
+      for (const keyDirective of keyDirectives) {
+        const key = this.getKeyFromDirective(keyDirective);
+        if (key) {
+          // Create entity mapping for each key combination
+          this.createEntityMapping(typeName, key);
+        }
+      }
+
       if (isObjectType(type)) {
-        const keyDirectives = this.getKeyDirectives(type);
-        if (keyDirectives.length === 0) {
-          continue;
-        }
-
-        // Process each @key directive separately
-        for (const keyDirective of keyDirectives) {
-          const key = this.getKeyFromDirective(keyDirective);
-          if (key) {
-            // Create entity mapping for each key combination
-            this.createEntityMapping(typeName, key);
-          }
-        }
-
         this.createRequiredFieldsMapping(type);
       }
     }
@@ -214,7 +220,7 @@ export class GraphQLToMappingVisitor {
    * @param type - The GraphQL object type to check for key directives
    * @returns Array of all key directives found
    */
-  private getKeyDirectives(type: GraphQLObjectType): DirectiveNode[] {
+  private getKeyDirectives(type: GraphQLObjectType | GraphQLInterfaceType): DirectiveNode[] {
     return type.astNode?.directives?.filter((d) => d.name.value === 'key') || [];
   }
 

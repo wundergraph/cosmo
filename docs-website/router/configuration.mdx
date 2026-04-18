@@ -1091,53 +1091,49 @@ storage_providers:
 
 ### Storage Provider Types
 
-#### File System Storage Provider
-
-This provider allows you to load files from the local file system. This is particularly useful for the MCP server to load GraphQL operations.
-
-| Environment Variable     | YAML | Required                                      | Description                                                   | Default Value |
-| ------------------------ | ---- | --------------------------------------------- | ------------------------------------------------------------- | ------------- |
-| STORAGE_PROVIDER_FS_ID   | id   | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations   |               |
-| STORAGE_PROVIDER_FS_PATH | path | <Icon icon="square-check" iconType="solid" /> | The path on the file system where files should be loaded from |               |
-
-<Note>
-  The file system storage provider is **currently only supported by the MCP
-  feature**. It cannot be used for persisted operations or execution
-  configurations.
-</Note>
-
-#### Redis Storage Provider
-
-Used for distributed caching like automatic persisted queries.
-
-| Environment Variable                   | YAML            | Required                                      | Description                                                                                               | Default Value |
-| -------------------------------------- | --------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------- |
-| STORAGE_PROVIDER_REDIS_ID              | id              | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations                                               |               |
-| STORAGE_PROVIDER_REDIS_URLS            | urls            | <Icon icon="square-check" iconType="solid" /> | List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster |               |
-| STORAGE_PROVIDER_REDIS_CLUSTER_ENABLED | cluster_enabled | <Icon icon="square" />                        | Whether to use the Redis Cluster client                                                                   | false         |
+Storage providers are configured as arrays, so environment variables use indexed notation: `STORAGE_PROVIDER_{TYPE}_{INDEX}_{FIELD}`. Indexes must start from `0` and be sequential. If an index is skipped, all indexes after the gap are ignored. See [Storage Providers](/router/storage-providers) for more details.
 
 #### S3 Storage Provider
 
 For storing operations and configs in S3-compatible storage.
 
-| Environment Variable | YAML       | Required                                      | Description                                                 | Default Value |
-| -------------------- | ---------- | --------------------------------------------- | ----------------------------------------------------------- | ------------- |
-|                      | id         | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations |               |
-|                      | endpoint   | <Icon icon="square-check" iconType="solid" /> | The endpoint of the S3 service                              |               |
-|                      | access_key | <Icon icon="square-check" iconType="solid" /> | The access key for the S3 service                           |               |
-|                      | secret_key | <Icon icon="square-check" iconType="solid" /> | The secret key for the S3 service                           |               |
-|                      | bucket     | <Icon icon="square-check" iconType="solid" /> | The bucket where objects will be stored                     |               |
-|                      | region     | <Icon icon="square" />                        | The region of the S3 bucket                                 |               |
-|                      | secure     | <Icon icon="square" />                        | Whether to use HTTPS for S3 connections                     | true          |
+| Environment Variable              | YAML       | Required                                      | Description                                                 | Default Value |
+| --------------------------------- | ---------- | --------------------------------------------- | ----------------------------------------------------------- | ------------- |
+| STORAGE_PROVIDER_S3_\{n\}_ID        | id         | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations |               |
+| STORAGE_PROVIDER_S3_\{n\}_ENDPOINT  | endpoint   | <Icon icon="square-check" iconType="solid" /> | The endpoint of the S3 service                              |               |
+| STORAGE_PROVIDER_S3_\{n\}_ACCESS_KEY| access_key | <Icon icon="square-check" iconType="solid" /> | The access key for the S3 service                           |               |
+| STORAGE_PROVIDER_S3_\{n\}_SECRET_KEY| secret_key | <Icon icon="square-check" iconType="solid" /> | The secret key for the S3 service                           |               |
+| STORAGE_PROVIDER_S3_\{n\}_BUCKET    | bucket     | <Icon icon="square-check" iconType="solid" /> | The bucket where objects will be stored                     |               |
+| STORAGE_PROVIDER_S3_\{n\}_REGION    | region     | <Icon icon="square" />                        | The region of the S3 bucket                                 |               |
+| STORAGE_PROVIDER_S3_\{n\}_SECURE    | secure     | <Icon icon="square" />                        | Whether to use HTTPS for S3 connections                     | false         |
 
-#### CDN Provider
+#### CDN Storage Provider
 
 For connecting to the Cosmo CDN.
 
-| Environment Variable | YAML | Required                                      | Description                                                 | Default Value                     |
-| -------------------- | ---- | --------------------------------------------- | ----------------------------------------------------------- | --------------------------------- |
-|                      | id   | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations |                                   |
-|                      | url  | <Icon icon="square-check" iconType="solid" /> | The URL of the CDN                                          | https://cosmo-cdn.wundergraph.com |
+| Environment Variable           | YAML | Required                                      | Description                                                 | Default Value                     |
+| ------------------------------ | ---- | --------------------------------------------- | ----------------------------------------------------------- | --------------------------------- |
+| STORAGE_PROVIDER_CDN_\{n\}_ID    | id   | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations |                                   |
+| STORAGE_PROVIDER_CDN_\{n\}_URL   | url  | <Icon icon="square" />                        | The URL of the CDN                                          | https://cosmo-cdn.wundergraph.com |
+
+#### Redis Storage Provider
+
+Used for distributed caching like automatic persisted queries.
+
+| Environment Variable                    | YAML            | Required                                      | Description                                                                                               | Default Value |
+| --------------------------------------- | --------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------- |
+| STORAGE_PROVIDER_REDIS_\{n\}_ID              | id              | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations                                               |               |
+| STORAGE_PROVIDER_REDIS_\{n\}_URLS            | urls            | <Icon icon="square-check" iconType="solid" /> | List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster |               |
+| STORAGE_PROVIDER_REDIS_\{n\}_CLUSTER_ENABLED | cluster_enabled | <Icon icon="square" />                        | Whether to use the Redis Cluster client                                                                   | false         |
+
+#### File System Storage Provider
+
+This provider allows you to load files from the local file system.
+
+| Environment Variable        | YAML | Required                                      | Description                                                   | Default Value |
+| --------------------------- | ---- | --------------------------------------------- | ------------------------------------------------------------- | ------------- |
+| STORAGE_PROVIDER_FS_\{n\}_ID   | id   | <Icon icon="square-check" iconType="solid" /> | The ID of the provider to reference in other configurations   |               |
+| STORAGE_PROVIDER_FS_\{n\}_PATH | path | <Icon icon="square-check" iconType="solid" /> | The path on the file system where files should be loaded from |               |
 
 ## Persisted Operations
 
@@ -2050,6 +2046,7 @@ The configuration for the security. The security is used to configure the securi
 | SECURITY_BLOCK_PERSISTED_OPERATIONS_CONDITION     | block_persisted_operations.condition     | <Icon icon="square" /> | The [expression](/router/configuration/template-expressions) to evaluate if the operation should be blocked.                       |               |
 |                                                   | complexity_calculation_cache             | <Icon icon="square" /> | Complexity Cache configuration                                                                                                     |               |
 |                                                   | complexity_limits                        | <Icon icon="square" /> | Complexity limits configuration                                                                                                    |               |
+|                                                   | complexity_limits.mode                   | <Icon icon="square" /> | `measure` calculates complexity without rejecting; `enforce` rejects operations exceeding limits.                                  | enforce       |
 |                                                   | parser_limits.approximate_depth_limit    | <Icon icon="square" /> | The approximate cumulative depth limit of a query, including fragments. Set to 0 to disable.                                       | 200           |
 |                                                   | parser_limits.total_fields_limit         | <Icon icon="square" /> | The total number of fields the parser will allow. Set to 0 to disable.                                                             | 3500          |
 | SECURITY_OPERATION_NAME_LENGTH_LIMIT              | operation_name_length_limit              | <Icon icon="square" /> | The maximum allowed length for the operation name. Set to 0 to disable.                                                            | 512           |
@@ -2074,7 +2071,8 @@ security:
     enabled: true
     size: 1024
   complexity_limits:
-    depth: # the equivalent of `security.depth_limit` prevoiusly
+    mode: enforce # 'measure' calculates complexity without rejecting; 'enforce' rejects operations exceeding limits
+    depth: # the equivalent of `security.depth_limit` previously
       enabled: true
       limit: 7
       ignore_persisted_operations: true
@@ -2145,13 +2143,19 @@ The configuration for adding a complexity limits for queries. We currently expos
 - **Root Fields in Query**
 - **Root Field Aliases in Query**
 
-For all of the limits, if the limit is 0, or `enabled` isn't true, the limit isn't applied. All of them have the same configuration fields:
+A limit is not applied when its value is 0 or `enabled` is not true.
 
-| Environment Variable | YAML                        | Required               | Description                                                                                                                                                                           | Default Value |
-| -------------------- | --------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|                      | enabled                     | <Icon icon="square" /> | Enable the specific limit. If the value is true (default: false), and a valid limit value is set, the limit will be applied                                                           | false         |
-|                      | limit                       | <Icon icon="square" /> | The limit amount for query. If the limit is 0, this limit isn't applied                                                                                                               | 0             |
-|                      | ignore_persisted_operations | <Icon icon="square" /> | Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations | false         |
+The `mode` field controls enforcement versus measurement:
+
+- `measure`: calculates complexity and reports it via telemetry but does not reject requests.
+- `enforce` (default): rejects requests that exceed limits.
+
+| Environment Variable     | YAML                        | Required               | Description                                                                                                                                                                            | Default Value |
+| ------------------------ | --------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+|                          | mode                        | <Icon icon="square" /> | `measure` calculates complexity without rejecting; `enforce` rejects operations exceeding limits.                                                                                      | enforce       |
+|                          | enabled                     | <Icon icon="square" /> | Enable the specific limit. If the value is true (default: false), and a valid limit value is set, the limit will be applied.                                                           | false         |
+|                          | limit                       | <Icon icon="square" /> | The limit amount for query. If the limit is 0, this limit is not applied.                                                                                                              | 0             |
+|                          | ignore_persisted_operations | <Icon icon="square" /> | Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations. | false         |
 
 ## File Upload
 
