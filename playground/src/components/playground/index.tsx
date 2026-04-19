@@ -1,5 +1,9 @@
 import { BoltIcon } from '@heroicons/react/24/solid';
+import { LuActivity } from 'react-icons/lu';
 import { TraceContext, TraceView } from '@/components/playground/trace-view';
+import { CacheExplorerView } from './cache-explorer-view';
+import { cacheExplorerController } from './cache-explorer-controller';
+import type { CacheExplorerConfig } from './cache-explorer-runner';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
@@ -156,6 +160,7 @@ const graphiQLFetch = async (
   url: URL,
   init: RequestInit,
   cacheMode?: CacheMode,
+  view?: PlaygroundView,
 ) => {
   try {
     const initialHeaders = init.headers as Record<string, string>;
@@ -178,6 +183,35 @@ const graphiQLFetch = async (
     headers = substituteHeadersFromEnv(headers, '0');
 
     validateHeaders(headers);
+
+    // Cache Explorer intercept: if we're in cache-explorer view AND the user
+    // explicitly clicked the play button (trigger gate), dispatch to the
+    // explorer controller. Without the gate, GraphiQL's auto-refetch on
+    // header/query edits would re-launch the benchmark unintentionally.
+    if (view === 'cache-explorer') {
+      const trigger = (window as any).__cacheExplorerTrigger;
+      if (trigger) {
+        (window as any).__cacheExplorerTrigger = false;
+        const body = JSON.parse(init.body as string);
+        const explorerConfig: CacheExplorerConfig = {
+          url: url.toString(),
+          query: body.query,
+          variables: body.variables ? JSON.stringify(body.variables) : undefined,
+          operationName: body.operationName,
+          headers,
+          iterations: (window as any).__cacheExplorerConfig?.iterations ?? 10,
+          cacheMode: cacheMode || 'enabled',
+        };
+        // Fire and forget — the controller emits state via its subscription
+        cacheExplorerController.start(explorerConfig);
+      }
+      const synthetic = new Response(
+        JSON.stringify({ data: null, extensions: { cacheExplorer: { status: 'running' } } }),
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+      onFetch(await synthetic.clone().json(), 200, 'OK');
+      return synthetic;
+    }
 
     if (schema && clientValidationEnabled) {
       const query = JSON.parse(init.body as string)?.query as string;
@@ -355,39 +389,40 @@ const ResponseToolbar = () => {
 
   const onValueChange = (val: PlaygroundView) => {
     const response = document.getElementsByClassName('graphiql-response')[0] as HTMLDivElement;
-
     const art = document.getElementById('art-visualization') as HTMLDivElement;
-
     const plan = document.getElementById('planner-visualization') as HTMLDivElement;
+    const explorer = document.getElementById('cache-explorer-visualization') as HTMLDivElement;
 
-    if (!response || !art || !plan) {
+    if (!response || !art || !plan || !explorer) {
       return;
     }
 
+    const hide = (el: HTMLDivElement) => {
+      el.classList.add('invisible');
+      el.classList.add('-z-50');
+    };
+    const show = (el: HTMLDivElement) => {
+      el.classList.remove('invisible');
+      el.classList.remove('-z-50');
+    };
+
+    // Hide all first
+    hide(art);
+    hide(plan);
+    hide(explorer);
+    response.classList.add('invisible');
+    response.classList.add('-z-50');
+
+    // Then show the chosen one
     if (val === 'request-trace') {
-      response.classList.add('invisible');
-      response.classList.add('-z-50');
-      plan.classList.add('invisible');
-      plan.classList.add('-z-50');
-
-      art.classList.remove('invisible');
-      art.classList.remove('-z-50');
+      show(art);
     } else if (val === 'query-plan') {
-      response.classList.add('invisible');
-      response.classList.add('-z-50');
-      art.classList.add('invisible');
-      art.classList.add('-z-50');
-
-      plan.classList.remove('invisible');
-      plan.classList.remove('-z-50');
+      show(plan);
+    } else if (val === 'cache-explorer') {
+      show(explorer);
     } else {
       response.classList.remove('invisible');
       response.classList.remove('-z-50');
-
-      art.classList.add('invisible');
-      art.classList.add('-z-50');
-      plan.classList.add('invisible');
-      plan.classList.add('-z-50');
     }
 
     setView(val);
@@ -398,6 +433,8 @@ const ResponseToolbar = () => {
       return <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />;
     } else if (val === 'request-trace') {
       return <FaNetworkWired className="h-4 w-4 flex-shrink-0" />;
+    } else if (val === 'cache-explorer') {
+      return <LuActivity className="h-4 w-4 flex-shrink-0" />;
     } else {
       return <LuLayoutDashboard className="h-4 w-4 flex-shrink-0" />;
     }
@@ -459,6 +496,12 @@ const ResponseToolbar = () => {
               Query Plan
             </div>
           </SelectItem>
+          <SelectItem value="cache-explorer">
+            <div className="flex items-center gap-x-2">
+              {getIcon('cache-explorer')}
+              Cache Explorer
+            </div>
+          </SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -495,6 +538,7 @@ const PlaygroundPortal = () => {
   const responseToolbar = document.getElementById('response-toolbar');
   const artDiv = document.getElementById('art-visualization');
   const plannerDiv = document.getElementById('planner-visualization');
+  const cacheExplorerDiv = document.getElementById('cache-explorer-visualization');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
   const logo = document.getElementById('graphiql-wg-logo');
   const scriptsSection = document.getElementById('scripts-section');
@@ -504,6 +548,7 @@ const PlaygroundPortal = () => {
     !responseToolbar ||
     !artDiv ||
     !plannerDiv ||
+    !cacheExplorerDiv ||
     !toggleClientValidation ||
     !logo ||
     !scriptsSection ||
@@ -517,6 +562,7 @@ const PlaygroundPortal = () => {
       {createPortal(<ResponseToolbar />, responseToolbar)}
       {createPortal(<PlanView />, plannerDiv)}
       {createPortal(<TraceView />, artDiv)}
+      {createPortal(<CacheExplorerView />, cacheExplorerDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
       {createPortal(<CustomScripts />, scriptsSection)}
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
@@ -576,6 +622,8 @@ export const Playground = (input: {
 
   const [isMounted, setIsMounted] = useState(false);
   const [view, setView] = useState<PlaygroundView>('response');
+  const viewRef = useRef<PlaygroundView>(view);
+  viewRef.current = view;
   const [cacheMode, setCacheMode] = useState<CacheMode>('enabled');
   const cacheModeRef = useRef<CacheMode>(cacheMode);
   cacheModeRef.current = cacheMode;
@@ -742,8 +790,13 @@ export const Playground = (input: {
         plannerWrapper.id = 'planner-visualization';
         plannerWrapper.className = 'flex flex-1 h-full w-full absolute invisible -z-50';
 
+        const cacheExplorerWrapper = document.createElement('div');
+        cacheExplorerWrapper.id = 'cache-explorer-visualization';
+        cacheExplorerWrapper.className = 'flex flex-1 absolute inset-0 invisible -z-50 overflow-hidden';
+
         responseSectionParent.append(artWrapper);
         responseSectionParent.append(plannerWrapper);
+        responseSectionParent.append(cacheExplorerWrapper);
       }
     }
 
@@ -795,7 +848,16 @@ export const Playground = (input: {
       url: url,
       subscriptionUrl: url.replace('http', 'ws'),
       fetch: (...args) =>
-        graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit, cacheModeRef.current),
+        graphiQLFetch(
+          schema,
+          clientValidationEnabled,
+          input.scripts,
+          onFetch,
+          args[0] as URL,
+          args[1] as RequestInit,
+          cacheModeRef.current,
+          viewRef.current,
+        ),
     });
   }, [schema, clientValidationEnabled]);
 

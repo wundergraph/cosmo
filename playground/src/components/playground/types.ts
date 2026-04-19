@@ -16,7 +16,7 @@ export type TabsState = {
   activeTabIndex: number;
 };
 
-export type PlaygroundView = 'response' | 'request-trace' | 'query-plan';
+export type PlaygroundView = 'response' | 'request-trace' | 'query-plan' | 'cache-explorer';
 
 export type CacheMode = 'enabled' | 'no-l1' | 'no-l2' | 'disabled';
 
