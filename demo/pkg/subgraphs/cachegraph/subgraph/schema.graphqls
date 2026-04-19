@@ -1,0 +1,137 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: ["@key"]
+  )
+
+directive @entityCache(
+  maxAge: Int!
+  includeHeaders: Boolean = false
+  partialCacheLoad: Boolean = false
+  shadowMode: Boolean = false
+) on OBJECT
+
+directive @queryCache(
+  maxAge: Int!
+  includeHeaders: Boolean = false
+  shadowMode: Boolean = false
+) on FIELD_DEFINITION
+
+directive @cacheInvalidate on FIELD_DEFINITION
+
+directive @cachePopulate(maxAge: Int) on FIELD_DEFINITION
+
+directive @is(fields: String!) on ARGUMENT_DEFINITION
+
+type Query {
+  """Simple key lookup"""
+  article(id: ID!): Article @queryCache(maxAge: 120)
+  """List query"""
+  articles: [Article!]! @queryCache(maxAge: 120)
+  """Batch lookup with @is"""
+  articlesByIds(ids: [ID!]! @is(fields: "id")): [Article!]! @queryCache(maxAge: 120)
+  """Argument remapping via @is"""
+  articleBySlug(slug: ID! @is(fields: "id")): Article @queryCache(maxAge: 120)
+
+  """Composite key lookup via input object with @is"""
+  listing(key: ListingKey! @is(fields: "sellerId sku")): Listing @queryCache(maxAge: 60)
+  """List of all listings"""
+  listings: [Listing!]! @queryCache(maxAge: 60)
+
+  """Nested key lookup with @is and input object"""
+  venue(location: VenueLocationKey! @is(fields: "address { id }")): Venue @queryCache(maxAge: 180)
+  """List of all venues"""
+  venues: [Venue!]! @queryCache(maxAge: 180)
+
+  """Per-user profile (cache varies by Authorization header)"""
+  userProfile(id: ID!): UserProfile @queryCache(maxAge: 60, includeHeaders: true)
+
+  """Single catalog entry"""
+  catalog(id: ID!): Catalog @queryCache(maxAge: 120)
+  """All catalog entries (for partial cache load testing)"""
+  catalogs: [Catalog!]! @queryCache(maxAge: 120)
+
+  """Single metric (shadow mode - always fetches from subgraph, compares with cache)"""
+  metric(id: ID!): Metric @queryCache(maxAge: 300, shadowMode: true)
+}
+
+type Mutation {
+  updateArticle(id: ID!, title: String!): Article @cacheInvalidate
+  createArticle(title: String!, body: String!, authorName: String!): Article! @cachePopulate(maxAge: 30)
+  deleteListing(key: ListingKey!): Listing @cacheInvalidate
+}
+
+"""Per-user caching: includeHeaders makes the cache key include a hash of forwarded headers (e.g. Authorization)"""
+type UserProfile @key(fields: "id") @entityCache(maxAge: 60, includeHeaders: true) {
+  id: ID!
+  username: String!
+  email: String!
+  role: String!
+}
+
+"""Partial cache load: when some entities are cached and others aren't, only the missing ones are fetched"""
+type Catalog @key(fields: "id") @entityCache(maxAge: 120, partialCacheLoad: true) {
+  id: ID!
+  name: String!
+  category: String!
+  itemCount: Int!
+}
+
+"""Shadow mode: always fetches from subgraph but compares with cache for staleness detection"""
+type Metric @key(fields: "id") @entityCache(maxAge: 300, shadowMode: true) {
+  id: ID!
+  name: String!
+  value: Float!
+  unit: String!
+}
+
+input ListingKey {
+  sellerId: ID!
+  sku: String!
+}
+
+input VenueLocationKey {
+  address: VenueAddressKey!
+}
+
+input VenueAddressKey {
+  id: ID!
+}
+
+interface Personalized @key(fields: "id") {
+  id: ID!
+}
+
+type Viewer @key(fields: "id") {
+  id: ID!
+  recommendedArticles: [Article!]!
+}
+
+type Article implements Personalized @key(fields: "id") @entityCache(maxAge: 120) {
+  id: ID!
+  title: String!
+  body: String!
+  authorName: String!
+  publishedAt: String!
+  tags: [String!]!
+}
+
+type Listing @key(fields: "sellerId sku") @entityCache(maxAge: 60) {
+  sellerId: ID!
+  sku: String!
+  title: String!
+  price: Float!
+  currency: String!
+  inStock: Boolean!
+}
+
+type Address {
+  id: ID!
+}
+
+type Venue @key(fields: "address { id }") @entityCache(maxAge: 180) {
+  address: Address!
+  name: String!
+  capacity: Int!
+  city: String!
+}
