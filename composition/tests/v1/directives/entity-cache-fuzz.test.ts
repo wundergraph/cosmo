@@ -20,10 +20,7 @@ import {
   requestScopedSingleFieldWarning,
 } from '../../../src';
 import { batchNormalize } from '../../../src/v1/normalization/normalization-factory';
-import {
-  normalizeSubgraphFailure,
-  normalizeSubgraphSuccess,
-} from '../../utils/utils';
+import { normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
 
 const version = ROUTER_COMPATIBILITY_VERSION_ONE;
 
@@ -320,8 +317,8 @@ describe('Entity caching fuzz tests', () => {
       const fullMappings = rfcs[0].entityKeyMappings.filter((m) => m.fieldMappings.length > 0);
       expect(fullMappings).toHaveLength(1);
       // At least one mapping should map "id" to "id"
-      const hasIdMapping = fullMappings.some(
-        (m) => m.fieldMappings.some((f) => f.entityKeyField === 'id' && f.argumentPath[0] === 'id'),
+      const hasIdMapping = fullMappings.some((m) =>
+        m.fieldMappings.some((f) => f.entityKeyField === 'id' && f.argumentPath[0] === 'id'),
       );
       expect(hasIdMapping).toBe(true);
     });

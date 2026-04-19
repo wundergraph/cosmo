@@ -226,8 +226,7 @@ export function autoMappingTypeMismatchWarning({
   keyFieldType,
 }: AutoMappingTypeMismatchWarningParams): Warning {
   return new Warning({
-    message:
-      `Argument "${argumentName}" on field "${fieldCoords}" has type "${argumentType}" but @key field "${keyField}" on entity "${entityType}" has type "${keyFieldType}". Auto-mapping skipped due to type mismatch.`,
+    message: `Argument "${argumentName}" on field "${fieldCoords}" has type "${argumentType}" but @key field "${keyField}" on entity "${entityType}" has type "${keyFieldType}". Auto-mapping skipped due to type mismatch.`,
     subgraph: {
       name: subgraphName,
     },
@@ -243,8 +242,7 @@ export function autoMappingAdditionalNonKeyArgumentWarning({
   extraArgument,
 }: AutoMappingAdditionalNonKeyArgumentWarningParams): Warning {
   return new Warning({
-    message:
-      `Argument "${argumentName}" on field "${fieldCoords}" matches @key field "${keyField}" on entity "${entityType}", but field has additional argument "${extraArgument}" which is not mapped to a key field. Auto-mapping skipped — all arguments must be key arguments because additional arguments may filter the response, making the cache key incomplete.`,
+    message: `Argument "${argumentName}" on field "${fieldCoords}" matches @key field "${keyField}" on entity "${entityType}", but field has additional argument "${extraArgument}" which is not mapped to a key field. Auto-mapping skipped — all arguments must be key arguments because additional arguments may filter the response, making the cache key incomplete.`,
     subgraph: {
       name: subgraphName,
     },
@@ -260,8 +258,7 @@ export function autoBatchAdditionalNonKeyArgumentWarning({
   extraArgument,
 }: AutoBatchAdditionalNonKeyArgumentWarningParams): Warning {
   return new Warning({
-    message:
-      `Field "${fieldCoords}" returns a list of entities, so cache lookup is a batch lookup and requires a single key input that determines the returned entities. Argument "${argumentName}" matches @key field "${keyField}" on entity "${entityType}", but additional argument "${extraArgument}" is not mapped to a key field and may filter the response, so auto-mapping is skipped because the batch key would be incomplete.`,
+    message: `Field "${fieldCoords}" returns a list of entities, so cache lookup is a batch lookup and requires a single key input that determines the returned entities. Argument "${argumentName}" matches @key field "${keyField}" on entity "${entityType}", but additional argument "${extraArgument}" is not mapped to a key field and may filter the response, so auto-mapping is skipped because the batch key would be incomplete.`,
     subgraph: {
       name: subgraphName,
     },

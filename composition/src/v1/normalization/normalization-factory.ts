@@ -3610,10 +3610,7 @@ export class NormalizationFactory {
     const keyToCoordsList = new Map<string, Array<string>>();
 
     for (const [, parentData] of this.parentDefinitionDataByTypeName) {
-      if (
-        parentData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
-        parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION
-      ) {
+      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
         continue;
       }
       const typeName = getParentTypeName(parentData);
@@ -3842,7 +3839,9 @@ export class NormalizationFactory {
     const fieldCoords = `${parentTypeName}.${fieldName}`;
     if (operationType !== OperationTypeNode.QUERY) {
       this.errors.push(
-        invalidDirectiveError(QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [queryCacheOnNonQueryFieldErrorMessage(fieldCoords)]),
+        invalidDirectiveError(QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+          queryCacheOnNonQueryFieldErrorMessage(fieldCoords),
+        ]),
       );
       return;
     }
@@ -3874,13 +3873,7 @@ export class NormalizationFactory {
     if (hasEntityCache) {
       const isListReturn = isTypeNodeListType(fieldData.node.type);
       const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
-      mappings = this.buildArgumentKeyMappings(
-        fieldData,
-        fieldCoords,
-        returnTypeName,
-        keyFieldSets,
-        isListReturn,
-      );
+      mappings = this.buildArgumentKeyMappings(fieldData, fieldCoords, returnTypeName, keyFieldSets, isListReturn);
     }
 
     const configData = this.getCacheConfigurationData(parentTypeName, false);
@@ -3913,10 +3906,7 @@ export class NormalizationFactory {
       return;
     }
     const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-    if (
-      !this.keyFieldSetDatasByTypeName.has(returnTypeName) ||
-      !this.entityCacheConfigByTypeName.has(returnTypeName)
-    ) {
+    if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
       this.errors.push(
         invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
           cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
@@ -3951,10 +3941,7 @@ export class NormalizationFactory {
       return;
     }
     const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-    if (
-      !this.keyFieldSetDatasByTypeName.has(returnTypeName) ||
-      !this.entityCacheConfigByTypeName.has(returnTypeName)
-    ) {
+    if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
       this.errors.push(
         invalidDirectiveError(CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
           cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
@@ -4021,11 +4008,7 @@ export class NormalizationFactory {
       return result;
     }
 
-    const walkSelections = (
-      selections: readonly any[],
-      currentTypeName: string,
-      pathPrefix: string,
-    ) => {
+    const walkSelections = (selections: readonly any[], currentTypeName: string, pathPrefix: string) => {
       for (const selection of selections) {
         if (selection.kind !== Kind.FIELD) {
           continue;
@@ -4151,7 +4134,12 @@ export class NormalizationFactory {
           this.errors.push(
             invalidDirectiveError(QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
               nestedInputObjectMissingFieldErrorMessage(
-                argumentName, fieldCoords, normalizedFieldSet, entityTypeName, inputTypeName, topField,
+                argumentName,
+                fieldCoords,
+                normalizedFieldSet,
+                entityTypeName,
+                inputTypeName,
+                topField,
               ),
             ]),
           );
@@ -4159,7 +4147,12 @@ export class NormalizationFactory {
           this.errors.push(
             invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, FIRST_ORDINAL, [
               inputObjectCompositeMissingFieldErrorMessage(
-                argumentName, fieldCoords, normalizedFieldSet, entityTypeName, inputTypeName, topField,
+                argumentName,
+                fieldCoords,
+                normalizedFieldSet,
+                entityTypeName,
+                inputTypeName,
+                topField,
               ),
             ]),
           );
@@ -4168,14 +4161,22 @@ export class NormalizationFactory {
       }
 
       const fullEntityKeyPath = entityKeyPathPrefix ? `${entityKeyPathPrefix}.${topField}` : topField;
-      const hasNestedFields = infos.some(i => i.restPath !== '');
+      const hasNestedFields = infos.some((i) => i.restPath !== '');
       if (hasNestedFields) {
         // Recurse into nested input object
-        const nestedInfos = infos.map(i => ({ path: i.restPath, typeNode: i.typeNode }));
+        const nestedInfos = infos.map((i) => ({ path: i.restPath, typeNode: i.typeNode }));
         const nestedInputTypeName = this.getNamedTypeName(inputFieldData.type);
         const nestedMappings = this.validateNestedInputObjectMapping(
-          argumentName, fieldCoords, entityTypeName, nestedInfos, normalizedFieldSet,
-          nestedInputTypeName, [...argumentPathPrefix, topField], isBatch, true, fullEntityKeyPath,
+          argumentName,
+          fieldCoords,
+          entityTypeName,
+          nestedInfos,
+          normalizedFieldSet,
+          nestedInputTypeName,
+          [...argumentPathPrefix, topField],
+          isBatch,
+          true,
+          fullEntityKeyPath,
         );
         if (!nestedMappings) {
           return null;
@@ -4204,8 +4205,15 @@ export class NormalizationFactory {
             this.errors.push(
               invalidDirectiveError(QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
                 nestedInputObjectTypeMismatchErrorMessage(
-                  argumentName, fieldCoords, normalizedFieldSet, entityTypeName, inputTypeName,
-                  topField, printTypeNode(inputFieldData.node.type), entityFieldCoords, printTypeNode(keyTypeNode),
+                  argumentName,
+                  fieldCoords,
+                  normalizedFieldSet,
+                  entityTypeName,
+                  inputTypeName,
+                  topField,
+                  printTypeNode(inputFieldData.node.type),
+                  entityFieldCoords,
+                  printTypeNode(keyTypeNode),
                 ),
               ]),
             );
@@ -4213,8 +4221,15 @@ export class NormalizationFactory {
             this.errors.push(
               invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, FIRST_ORDINAL, [
                 inputObjectCompositeTypeMismatchErrorMessage(
-                  argumentName, fieldCoords, normalizedFieldSet, entityTypeName, inputTypeName,
-                  topField, printTypeNode(inputFieldData.node.type), entityFieldCoords, printTypeNode(keyTypeNode),
+                  argumentName,
+                  fieldCoords,
+                  normalizedFieldSet,
+                  entityTypeName,
+                  inputTypeName,
+                  topField,
+                  printTypeNode(inputFieldData.node.type),
+                  entityFieldCoords,
+                  printTypeNode(keyTypeNode),
                 ),
               ]),
             );
@@ -4320,7 +4335,11 @@ export class NormalizationFactory {
     }
 
     // Process each argument with @openfed__is
-    const explicitMappings: Array<{ argumentName: string; isFieldValue: string; argumentInfo: typeof argumentInfos[0] }> = [];
+    const explicitMappings: Array<{
+      argumentName: string;
+      isFieldValue: string;
+      argumentInfo: (typeof argumentInfos)[0];
+    }> = [];
     const mappedKeyFields = new Set<string>();
 
     for (const argInfo of argumentInfos) {
@@ -4334,9 +4353,7 @@ export class NormalizationFactory {
       const isCompositeIsSpec = isFieldValue.includes(LITERAL_SPACE);
 
       if (isCompositeIsSpec) {
-        return this.buildCompositeIsMapping(
-          fieldCoords, entityTypeName, keyFieldSets, isListReturn, argInfo,
-        );
+        return this.buildCompositeIsMapping(fieldCoords, entityTypeName, keyFieldSets, isListReturn, argInfo);
       }
 
       // Check if the field exists on the entity at all but is not a key field
@@ -4382,7 +4399,9 @@ export class NormalizationFactory {
             this.errors.push(
               invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
                 batchListValuedKeyRequiresNestedListsErrorMessage(
-                  fieldCoords, isFieldValue, entityTypeName,
+                  fieldCoords,
+                  isFieldValue,
+                  entityTypeName,
                   `a scalar tag of type "${printTypeNode(argTypeNode)}"`,
                 ),
               ]),
@@ -4396,7 +4415,9 @@ export class NormalizationFactory {
             this.errors.push(
               invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
                 batchListValuedKeyRequiresNestedListsErrorMessage(
-                  fieldCoords, isFieldValue, entityTypeName,
+                  fieldCoords,
+                  isFieldValue,
+                  entityTypeName,
                   `a single tag list of type "${printTypeNode(argTypeNode)}"`,
                 ),
               ]),
@@ -4409,7 +4430,11 @@ export class NormalizationFactory {
             this.errors.push(
               invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
                 explicitTypeMismatchErrorMessage(
-                  argInfo.name, fieldCoords, printTypeNode(argTypeNode), isFieldValue, entityTypeName,
+                  argInfo.name,
+                  fieldCoords,
+                  printTypeNode(argTypeNode),
+                  isFieldValue,
+                  entityTypeName,
                   printTypeNode(keyFieldTypeNode),
                 ),
               ]),
@@ -4425,7 +4450,11 @@ export class NormalizationFactory {
               this.errors.push(
                 invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
                   explicitTypeMismatchErrorMessage(
-                    argInfo.name, fieldCoords, printTypeNode(argTypeNode), isFieldValue, entityTypeName,
+                    argInfo.name,
+                    fieldCoords,
+                    printTypeNode(argTypeNode),
+                    isFieldValue,
+                    entityTypeName,
                     printTypeNode(keyFieldTypeNode),
                   ),
                 ]),
@@ -4446,7 +4475,11 @@ export class NormalizationFactory {
           this.errors.push(
             invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
               listArgumentToScalarKeySpecErrorMessage(
-                argInfo.name, fieldCoords, printTypeNode(argTypeNode), isFieldValue, entityTypeName,
+                argInfo.name,
+                fieldCoords,
+                printTypeNode(argTypeNode),
+                isFieldValue,
+                entityTypeName,
                 printTypeNode(keyFieldTypeNode),
               ),
             ]),
@@ -4459,7 +4492,11 @@ export class NormalizationFactory {
           this.errors.push(
             invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
               scalarArgumentToListKeySpecErrorMessage(
-                argInfo.name, fieldCoords, printTypeNode(argTypeNode), isFieldValue, entityTypeName,
+                argInfo.name,
+                fieldCoords,
+                printTypeNode(argTypeNode),
+                isFieldValue,
+                entityTypeName,
                 printTypeNode(keyFieldTypeNode),
               ),
             ]),
@@ -4472,7 +4509,11 @@ export class NormalizationFactory {
           this.errors.push(
             invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
               explicitTypeMismatchErrorMessage(
-                argInfo.name, fieldCoords, printTypeNode(argTypeNode), isFieldValue, entityTypeName,
+                argInfo.name,
+                fieldCoords,
+                printTypeNode(argTypeNode),
+                isFieldValue,
+                entityTypeName,
                 printTypeNode(keyFieldTypeNode),
               ),
             ]),
@@ -4497,9 +4538,12 @@ export class NormalizationFactory {
       if (mappedKeyFields.has(argInfo.name)) {
         // This argument would auto-map to a key field that's already explicitly mapped
         this.errors.push(
-          invalidDirectiveError(IS, `${fieldCoords}(${argumentInfos.find(a => a.isFieldValue === argInfo.name)!.name}: ...)`, FIRST_ORDINAL, [
-            duplicateKeyFieldMappingErrorMessage(fieldCoords, argInfo.name),
-          ]),
+          invalidDirectiveError(
+            IS,
+            `${fieldCoords}(${argumentInfos.find((a) => a.isFieldValue === argInfo.name)!.name}: ...)`,
+            FIRST_ORDINAL,
+            [duplicateKeyFieldMappingErrorMessage(fieldCoords, argInfo.name)],
+          ),
         );
         return [];
       }
@@ -4508,13 +4552,17 @@ export class NormalizationFactory {
     // Check for batch mode: all explicit mappings on list return
     if (isListReturn) {
       // Check for extra non-key arguments FIRST (not @openfed__is and not a key field in any key)
-      const extraArgs = argumentInfos.filter(a => !a.isFieldValue && !allKeyFieldPaths.has(a.name));
+      const extraArgs = argumentInfos.filter((a) => !a.isFieldValue && !allKeyFieldPaths.has(a.name));
       if (extraArgs.length > 0) {
         const firstExplicit = explicitMappings[0];
         this.errors.push(
           invalidDirectiveError(IS, `${fieldCoords}(${firstExplicit.argumentName}: ...)`, FIRST_ORDINAL, [
             explicitBatchAdditionalNonKeyArgumentErrorMessage(
-              fieldCoords, firstExplicit.argumentName, firstExplicit.isFieldValue, entityTypeName, extraArgs[0].name,
+              fieldCoords,
+              firstExplicit.argumentName,
+              firstExplicit.isFieldValue,
+              entityTypeName,
+              extraArgs[0].name,
             ),
           ]),
         );
@@ -4522,8 +4570,8 @@ export class NormalizationFactory {
       }
 
       // Check if all explicit args are scalars
-      const allScalar = explicitMappings.every(m => !m.argumentInfo.isList);
-      const listMappings = explicitMappings.filter(m => m.argumentInfo.isList);
+      const allScalar = explicitMappings.every((m) => !m.argumentInfo.isList);
+      const listMappings = explicitMappings.filter((m) => m.argumentInfo.isList);
 
       if (allScalar) {
         this.errors.push(
@@ -4545,15 +4593,15 @@ export class NormalizationFactory {
     }
 
     // Check for extra non-key arguments globally (args not @openfed__is and not a key field in any key)
-    const globalExtraArgs = argumentInfos.filter(a => !a.isFieldValue && !allKeyFieldPaths.has(a.name));
+    const globalExtraArgs = argumentInfos.filter((a) => !a.isFieldValue && !allKeyFieldPaths.has(a.name));
     if (globalExtraArgs.length > 0) {
       if (!isListReturn) {
         // Find which key the explicit mappings target
         let targetKeyNormalized: string | undefined;
         for (const [normalizedFieldSet] of keyFieldSets) {
           const keyInfos = allKeyFieldInfosByKey.get(normalizedFieldSet)!;
-          const keyPaths = new Set(keyInfos.map(i => i.path));
-          if (explicitMappings.every(m => keyPaths.has(m.isFieldValue))) {
+          const keyPaths = new Set(keyInfos.map((i) => i.path));
+          if (explicitMappings.every((m) => keyPaths.has(m.isFieldValue))) {
             targetKeyNormalized = normalizedFieldSet;
             break;
           }
@@ -4563,18 +4611,25 @@ export class NormalizationFactory {
           this.errors.push(
             invalidDirectiveError(IS, `${fieldCoords}(${explicitMappings[0].argumentName}: ...)`, FIRST_ORDINAL, [
               explicitSingularAdditionalNonKeyArgumentErrorMessage(
-                fieldCoords, explicitMappings[0].argumentName, explicitMappings[0].isFieldValue,
-                entityTypeName, globalExtraArgs[0].name,
+                fieldCoords,
+                explicitMappings[0].argumentName,
+                explicitMappings[0].isFieldValue,
+                entityTypeName,
+                globalExtraArgs[0].name,
               ),
             ]),
           );
         } else if (targetKeyNormalized) {
-          const isArgNames = explicitMappings.map(m => m.argumentName);
+          const isArgNames = explicitMappings.map((m) => m.argumentName);
           this.errors.push(
             invalidDirectiveError(IS, `${fieldCoords}(${isArgNames[0]}: ...)`, FIRST_ORDINAL, [
               explicitCompositeAdditionalNonKeyArgumentErrorMessage(
-                fieldCoords, isArgNames[0], isArgNames[1] || isArgNames[0], targetKeyNormalized,
-                entityTypeName, globalExtraArgs[0].name,
+                fieldCoords,
+                isArgNames[0],
+                isArgNames[1] || isArgNames[0],
+                targetKeyNormalized,
+                entityTypeName,
+                globalExtraArgs[0].name,
               ),
             ]),
           );
@@ -4585,7 +4640,11 @@ export class NormalizationFactory {
         this.errors.push(
           invalidDirectiveError(IS, `${fieldCoords}(${firstExplicit.argumentName}: ...)`, FIRST_ORDINAL, [
             explicitBatchAdditionalNonKeyArgumentErrorMessage(
-              fieldCoords, firstExplicit.argumentName, firstExplicit.isFieldValue, entityTypeName, globalExtraArgs[0].name,
+              fieldCoords,
+              firstExplicit.argumentName,
+              firstExplicit.isFieldValue,
+              entityTypeName,
+              globalExtraArgs[0].name,
             ),
           ]),
         );
@@ -4597,25 +4656,28 @@ export class NormalizationFactory {
     const results: EntityKeyMappingConfig[] = [];
     for (const normalizedFieldSet of keyFieldSets.keys()) {
       const keyInfos = allKeyFieldInfosByKey.get(normalizedFieldSet)!;
-      const keyPaths = new Set(keyInfos.map(i => i.path));
+      const keyPaths = new Set(keyInfos.map((i) => i.path));
 
       // Check which explicit mappings target this key
-      const explicitForThisKey = explicitMappings.filter(m => keyPaths.has(m.isFieldValue));
+      const explicitForThisKey = explicitMappings.filter((m) => keyPaths.has(m.isFieldValue));
 
       // Check that ALL fields of this key are mapped (explicit or auto)
-      const autoMappedForKey: Array<{ argumentName: string; keyPath: string; argInfo: typeof argumentInfos[0] }> = [];
+      const autoMappedForKey: Array<{ argumentName: string; keyPath: string; argInfo: (typeof argumentInfos)[0] }> = [];
       const unmappedFields: string[] = [];
       let keyFullySatisfied = true;
 
       for (const info of keyInfos) {
         // Is it covered by an explicit mapping?
-        if (explicitForThisKey.some(m => m.isFieldValue === info.path)) {
+        if (explicitForThisKey.some((m) => m.isFieldValue === info.path)) {
           continue;
         }
         // Try auto-mapping
-        const autoMapped = argumentInfos.find(a => !a.isFieldValue && a.name === info.path);
-        if (autoMapped && this.namedTypesMatch(autoMapped.typeNode, info.typeNode) &&
-            isTypeNodeListType(autoMapped.typeNode) === isTypeNodeListType(info.typeNode)) {
+        const autoMapped = argumentInfos.find((a) => !a.isFieldValue && a.name === info.path);
+        if (
+          autoMapped &&
+          this.namedTypesMatch(autoMapped.typeNode, info.typeNode) &&
+          isTypeNodeListType(autoMapped.typeNode) === isTypeNodeListType(info.typeNode)
+        ) {
           autoMappedForKey.push({ argumentName: autoMapped.name, keyPath: info.path, argInfo: autoMapped });
         } else {
           unmappedFields.push(info.path);
@@ -4629,8 +4691,12 @@ export class NormalizationFactory {
           this.errors.push(
             invalidDirectiveError(IS, `${fieldCoords}(${explicitForThisKey[0].argumentName}: ...)`, FIRST_ORDINAL, [
               explicitIncompleteCompositeKeyErrorMessage(
-                fieldCoords, explicitForThisKey[0].argumentName, explicitForThisKey[0].isFieldValue,
-                entityTypeName, normalizedFieldSet, unmappedFields[0],
+                fieldCoords,
+                explicitForThisKey[0].argumentName,
+                explicitForThisKey[0].isFieldValue,
+                entityTypeName,
+                normalizedFieldSet,
+                unmappedFields[0],
               ),
             ]),
           );
@@ -4642,7 +4708,7 @@ export class NormalizationFactory {
       // Build field mappings in key field info order
       const fieldMappings: FieldMappingConfig[] = [];
       for (const info of keyInfos) {
-        const explicitMatch = explicitForThisKey.find(m => m.isFieldValue === info.path);
+        const explicitMatch = explicitForThisKey.find((m) => m.isFieldValue === info.path);
         if (explicitMatch) {
           const mapping: FieldMappingConfig = {
             entityKeyField: explicitMatch.isFieldValue,
@@ -4654,7 +4720,7 @@ export class NormalizationFactory {
           fieldMappings.push(mapping);
           continue;
         }
-        const autoMatch = autoMappedForKey.find(a => a.keyPath === info.path);
+        const autoMatch = autoMappedForKey.find((a) => a.keyPath === info.path);
         if (autoMatch) {
           const mapping: FieldMappingConfig = {
             entityKeyField: autoMatch.keyPath,
@@ -4708,7 +4774,11 @@ export class NormalizationFactory {
         this.errors.push(
           invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
             nonInputArgumentCannotTargetCompositeKeyErrorMessage(
-              argInfo.name, fieldCoords, isFieldValue, entityTypeName, printTypeNode(argInfo.typeNode),
+              argInfo.name,
+              fieldCoords,
+              isFieldValue,
+              entityTypeName,
+              printTypeNode(argInfo.typeNode),
             ),
           ]),
         );
@@ -4719,8 +4789,15 @@ export class NormalizationFactory {
       const isNestedKey = normalizedFieldSet.includes(LITERAL_OPEN_BRACE);
 
       const fieldMappings = this.validateNestedInputObjectMapping(
-        argInfo.name, fieldCoords, entityTypeName, keyInfos, normalizedFieldSet,
-        argTypeName, [argInfo.name], isBatch, isNestedKey,
+        argInfo.name,
+        fieldCoords,
+        entityTypeName,
+        keyInfos,
+        normalizedFieldSet,
+        argTypeName,
+        [argInfo.name],
+        isBatch,
+        isNestedKey,
       );
 
       if (!fieldMappings) {
@@ -4787,21 +4864,29 @@ export class NormalizationFactory {
       // If there's exactly one top-level field and an argument with that name
       if (topFields.size === 1) {
         const topFieldName = [...topFields][0];
-        const matchingArg = argumentInfos.find(a => a.name === topFieldName);
+        const matchingArg = argumentInfos.find((a) => a.name === topFieldName);
         if (matchingArg) {
           const argTypeName = this.getNamedTypeName(matchingArg.typeNode);
           const inputData = this.parentDefinitionDataByTypeName.get(argTypeName);
           if (inputData && inputData.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION) {
             // Re-root key infos relative to the top field
-            const nestedInfos = keyInfos.map(info => ({
+            const nestedInfos = keyInfos.map((info) => ({
               path: info.path.substring(topFieldName.length + 1),
               typeNode: info.typeNode,
             }));
 
             const isBatch = isListReturn && matchingArg.isList;
             const fieldMappings = this.validateNestedInputObjectMapping(
-              matchingArg.name, fieldCoords, entityTypeName, nestedInfos, normalizedFieldSet,
-              argTypeName, [matchingArg.name], isBatch, true, topFieldName,
+              matchingArg.name,
+              fieldCoords,
+              entityTypeName,
+              nestedInfos,
+              normalizedFieldSet,
+              argTypeName,
+              [matchingArg.name],
+              isBatch,
+              true,
+              topFieldName,
             );
 
             if (fieldMappings) {
@@ -4830,7 +4915,7 @@ export class NormalizationFactory {
 
       for (const keyInfo of keyInfos) {
         const fieldName = keyInfo.path;
-        const matchingArg = argumentInfos.find(a => a.name === fieldName);
+        const matchingArg = argumentInfos.find((a) => a.name === fieldName);
 
         if (!matchingArg) {
           keyFullyMapped = false;
@@ -4893,10 +4978,16 @@ export class NormalizationFactory {
       }
 
       // Check for extra non-key arguments (args not in ANY key across all keys)
-      const extraArgs = argumentInfos.filter(a => !allKeyFieldPaths.has(a.name));
+      const extraArgs = argumentInfos.filter((a) => !allKeyFieldPaths.has(a.name));
 
       // On list return, if a scalar matched but was skipped and there are extra args, warn
-      if (isListReturn && scalarMatchedOnListReturn && extraArgs.length > 0 && firstMatchedArg && firstMatchedKeyField) {
+      if (
+        isListReturn &&
+        scalarMatchedOnListReturn &&
+        extraArgs.length > 0 &&
+        firstMatchedArg &&
+        firstMatchedKeyField
+      ) {
         this.warnings.push(
           autoBatchAdditionalNonKeyArgumentWarning({
             subgraphName: this.subgraphName,

@@ -1896,10 +1896,7 @@ export function explicitScalarArgumentsCannotEstablishBatchMappingErrorMessage(
   return `Field "${fieldCoords}" returns a list of entities, so cache lookup is a batch lookup and requires one key value per entity. Scalar arguments with @openfed__is mapping to @key fields on entity "${entityType}" cannot provide a batch of keys, so they cannot establish cache key mappings for this field. Use list arguments for batch cache lookups.`;
 }
 
-export function multipleListArgumentsBatchFactoryMessage(
-  fieldCoords: string,
-  entityType: string,
-): string {
+export function multipleListArgumentsBatchFactoryMessage(fieldCoords: string, entityType: string): string {
   return (
     `Field "${fieldCoords}" has multiple list arguments mapping to @key fields on entity "${entityType}".` +
     ' Batch cache lookups require a single list argument.' +

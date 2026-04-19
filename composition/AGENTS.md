@@ -29,6 +29,7 @@ Each `@key` is evaluated independently. `validateKeyFieldSets()` produces dot-no
 ### Key Rule: Alternative Keys Are Independent
 
 Entity types can have multiple @key directives representing ALTERNATIVE keys (not combined keys):
+
 ```graphql
 type Product @key(fields: "id") @key(fields: "sku region") { ... }
 ```
@@ -41,34 +42,35 @@ These are independent — a resolver only needs to satisfy ONE key. Each key is 
 
 ### Where Key Data Lives
 
-| Stage | Location | What It Holds |
-|-------|----------|---------------|
-| Per-subgraph | `keyFieldSetDatasByTypeName` | Full AST + metadata per key |
-| Cross-subgraph | `entityDataByTypeName[t].keyFieldSetDatasBySubgraphName` | Keys grouped by subgraph |
-| Router config | `configurationData.keys` | `RequiredFieldConfiguration[]` with selection set strings |
-| Cache config | `configurationData.rootFieldCacheConfigurations[].entityKeyMappings` | Argument→key field mappings |
+| Stage          | Location                                                             | What It Holds                                             |
+| -------------- | -------------------------------------------------------------------- | --------------------------------------------------------- |
+| Per-subgraph   | `keyFieldSetDatasByTypeName`                                         | Full AST + metadata per key                               |
+| Cross-subgraph | `entityDataByTypeName[t].keyFieldSetDatasBySubgraphName`             | Keys grouped by subgraph                                  |
+| Router config  | `configurationData.keys`                                             | `RequiredFieldConfiguration[]` with selection set strings |
+| Cache config   | `configurationData.rootFieldCacheConfigurations[].entityKeyMappings` | Argument→key field mappings                               |
 
 ### Entity Caching Validation Rules
 
-| Rule | What | Where |
-|------|------|-------|
-| 1 | @openfed__entityCache requires @key | Phase 1 |
-| 3 | maxAge must be positive | Phase 1 |
-| 4 | @openfed__queryCache only on Query fields | Phase 2 |
-| 5 | @openfed__queryCache return type must have @key | Phase 2 |
-| 6 | @openfed__queryCache return type must have @openfed__entityCache | Phase 2 |
-| 7 | Warning: incomplete key mapping (non-list only) | Phase 2 |
-| 9 | @openfed__queryCache maxAge must be positive | Phase 2 |
-| 10 | @openfed__is only with @openfed__queryCache | Phase 2 |
-| 11 | `@openfed__is(fields: "...")` must reference an existing `@key` field path | buildArgumentKeyMappings |
-| 12 | No duplicate key field mappings | buildArgumentKeyMappings |
-| 13 | Warning: redundant @openfed__is when arg name matches key field | buildArgumentKeyMappings |
-| 14 | @openfed__cacheInvalidate only on Mutation/Subscription | Phase 2 |
-| 16 | @openfed__cacheInvalidate and @openfed__cachePopulate are mutually exclusive | Phase 2 |
+| Rule | What                                                                         | Where                    |
+| ---- | ---------------------------------------------------------------------------- | ------------------------ |
+| 1    | @openfed\_\_entityCache requires @key                                        | Phase 1                  |
+| 3    | maxAge must be positive                                                      | Phase 1                  |
+| 4    | @openfed\_\_queryCache only on Query fields                                  | Phase 2                  |
+| 5    | @openfed\_\_queryCache return type must have @key                            | Phase 2                  |
+| 6    | @openfed**queryCache return type must have @openfed**entityCache             | Phase 2                  |
+| 7    | Warning: incomplete key mapping (non-list only)                              | Phase 2                  |
+| 9    | @openfed\_\_queryCache maxAge must be positive                               | Phase 2                  |
+| 10   | @openfed**is only with @openfed**queryCache                                  | Phase 2                  |
+| 11   | `@openfed__is(fields: "...")` must reference an existing `@key` field path   | buildArgumentKeyMappings |
+| 12   | No duplicate key field mappings                                              | buildArgumentKeyMappings |
+| 13   | Warning: redundant @openfed\_\_is when arg name matches key field            | buildArgumentKeyMappings |
+| 14   | @openfed\_\_cacheInvalidate only on Mutation/Subscription                    | Phase 2                  |
+| 16   | @openfed**cacheInvalidate and @openfed**cachePopulate are mutually exclusive | Phase 2                  |
 
 ### Protobuf Mapping
 
 TypeScript types serialize to proto messages in `shared/src/router-config/graphql-configuration.ts`:
+
 - `EntityCacheConfig` → `EntityCacheConfiguration`
 - `RootFieldCacheConfig` → `RootFieldCacheConfiguration`
 - `FieldMappingConfig` → `EntityCacheFieldMapping`

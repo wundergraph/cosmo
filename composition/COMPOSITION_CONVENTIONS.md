@@ -104,11 +104,11 @@ PR #2307 #2330 #2338 expanded adoption).
 
 ```ts
 // good
-const keyFieldNamesByParentTypeName: Map<TypeName, Set<FieldName>>
-function invalidSubgraph(name: SubgraphName): string
+const keyFieldNamesByParentTypeName: Map<TypeName, Set<FieldName>>;
+function invalidSubgraph(name: SubgraphName): string;
 
 // bad — untyped strings
-const keyFieldNamesByParentTypeName: Map<string, Set<string>>
+const keyFieldNamesByParentTypeName: Map<string, Set<string>>;
 ```
 
 **Exception:** when the value is semantically not one of those entities (e.g. an
@@ -139,7 +139,7 @@ Live in:
 **Gotcha:** the `@openfed__is` directive argument is **`fields`** (plural) —
 constant name is `FIELDS`.
 A past bug used `FIELD` (singular) and silently broke extraction (see
-`CLAUDE.md` §"@openfed__is Directive").
+`CLAUDE.md` §"@openfed\_\_is Directive").
 
 ### 3.4 Test constants must match source constants
 
@@ -174,7 +174,7 @@ single registry.
 - Every argument declared in `argumentTypeNodeByName` must also appear in either
   `requiredArgumentNames` or `optionalArgumentNames` — missing entries were flagged
   in review as an incomplete definition (PR #2290: NATS_SUBSCRIBE example).
-- Directive-definition *shapes* were consolidated to `DirectiveDefinitionNode`
+- Directive-definition _shapes_ were consolidated to `DirectiveDefinitionNode`
   (PR #2307).
   Don't invent parallel representations.
 - Persisted-directive extraction is **centralized** — route new persisted
@@ -251,6 +251,7 @@ as **factory functions**.
   // bad — shared reference
   nullLevelsBySubgraphName: src.nullLevelsBySubgraphName,
   ```
+
 - When introducing a new error, flag the `README.md §Contributing` note:
   "GraphQL types begin with a capital letter for clarity" (Enum, Input Object,
   Interface, Object, Scalar, Union) — apply this to **all** error messages you
@@ -475,13 +476,13 @@ Observed patterns from the 20-PR sample:
 
 Triggers that require a doc edit in the same PR:
 
-| Change | Update |
-|---|---|
-| Public API signature (`federateSubgraphs`, result types) | `README.md` |
-| Pipeline structure, new stage, new directive family | `ARCHITECTURE.md` |
-| Entity-caching behavior | `CLAUDE.md` + `AGENTS.md` |
-| New convention surfaced in review | this file (`COMPOSITION_CONVENTIONS.md`) |
-| New error message | `README.md §Contributing` capitalization check |
+| Change                                                   | Update                                         |
+| -------------------------------------------------------- | ---------------------------------------------- |
+| Public API signature (`federateSubgraphs`, result types) | `README.md`                                    |
+| Pipeline structure, new stage, new directive family      | `ARCHITECTURE.md`                              |
+| Entity-caching behavior                                  | `CLAUDE.md` + `AGENTS.md`                      |
+| New convention surfaced in review                        | this file (`COMPOSITION_CONVENTIONS.md`)       |
+| New error message                                        | `README.md §Contributing` capitalization check |
 
 ## 13. Quick reference — things reviewers will block on
 

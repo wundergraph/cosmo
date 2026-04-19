@@ -68,7 +68,12 @@ function explicitTypeMismatchErrorMessage(
   return `Argument "${argumentName}" on field "${fieldCoords}" has type "${argumentType}" but @openfed__is(fields: "${isField}") targets @key field "${isField}" of type "${keyFieldType}" on entity "${entityType}".`;
 }
 
-function unknownKeyFieldSpecErrorMessage(argumentName: string, fieldCoords: string, isField: string, entityType: string) {
+function unknownKeyFieldSpecErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  isField: string,
+  entityType: string,
+) {
   return `Argument "${argumentName}" on field "${fieldCoords}" uses @openfed__is(fields: "${isField}") but "${isField}" is not a field in any @key on entity "${entityType}".`;
 }
 
@@ -468,7 +473,9 @@ describe('Entity cache mapping rules tests', () => {
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0].subgraph.name).toBe('subgraph-a');
-      expect(warnings[0].message).toBe(autoMappingTypeMismatchWarningMessage('id', 'Query.product', 'String!', 'id', 'Product', 'ID!'));
+      expect(warnings[0].message).toBe(
+        autoMappingTypeMismatchWarningMessage('id', 'Query.product', 'String!', 'id', 'Product', 'ID!'),
+      );
     });
 
     test('rule 3: Int argument for an ID key field is skipped with an auto-mapping warning', () => {
@@ -487,7 +494,9 @@ describe('Entity cache mapping rules tests', () => {
       );
 
       expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(autoMappingTypeMismatchWarningMessage('id', 'Query.product', 'Int!', 'id', 'Product', 'ID!'));
+      expect(warnings[0].message).toBe(
+        autoMappingTypeMismatchWarningMessage('id', 'Query.product', 'Int!', 'id', 'Product', 'ID!'),
+      );
     });
 
     test('rule 4: Int argument for a String key field is skipped with an auto-mapping warning', () => {
@@ -506,7 +515,9 @@ describe('Entity cache mapping rules tests', () => {
       );
 
       expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(autoMappingTypeMismatchWarningMessage('sku', 'Query.product', 'Int!', 'sku', 'Product', 'String!'));
+      expect(warnings[0].message).toBe(
+        autoMappingTypeMismatchWarningMessage('sku', 'Query.product', 'Int!', 'sku', 'Product', 'String!'),
+      );
     });
 
     test('rule 5: exact enum type match emits a composite key mapping', () => {
@@ -643,7 +654,9 @@ describe('Entity cache mapping rules tests', () => {
       );
 
       expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(autoMappingTypeMismatchWarningMessage('uid', 'Query.product', 'GUID!', 'uid', 'Product', 'UUID!'));
+      expect(warnings[0].message).toBe(
+        autoMappingTypeMismatchWarningMessage('uid', 'Query.product', 'GUID!', 'uid', 'Product', 'UUID!'),
+      );
     });
 
     test('rule 10: custom-scalar-vs-built-in-scalar auto-mapping mismatch is skipped with a warning', () => {
@@ -664,7 +677,9 @@ describe('Entity cache mapping rules tests', () => {
       );
 
       expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(autoMappingTypeMismatchWarningMessage('uid', 'Query.product', 'String!', 'uid', 'Product', 'UUID!'));
+      expect(warnings[0].message).toBe(
+        autoMappingTypeMismatchWarningMessage('uid', 'Query.product', 'String!', 'uid', 'Product', 'UUID!'),
+      );
     });
 
     test('rule 11: a nullable argument can map to a non-null key field when the named type matches', () => {
@@ -729,7 +744,9 @@ describe('Entity cache mapping rules tests', () => {
       );
 
       expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(autoMappingTypeMismatchWarningMessage('id', 'Query.product', '[ID!]!', 'id', 'Product', 'ID!'));
+      expect(warnings[0].message).toBe(
+        autoMappingTypeMismatchWarningMessage('id', 'Query.product', '[ID!]!', 'id', 'Product', 'ID!'),
+      );
     });
 
     test('rule 13b: a list argument can auto-map to a list-valued key field on a singular return', () => {
@@ -1207,7 +1224,9 @@ describe('Entity cache mapping rules tests', () => {
       );
 
       expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(autoMappingTypeMismatchWarningMessage('id', 'Query.product', 'Int!', 'id', 'Product', 'ID!'));
+      expect(warnings[0].message).toBe(
+        autoMappingTypeMismatchWarningMessage('id', 'Query.product', 'Int!', 'id', 'Product', 'ID!'),
+      );
     });
 
     test('rule 19b: implicit composite-key mapping is skipped when one required key field is missing', () => {
@@ -1476,7 +1495,9 @@ describe('Entity cache mapping rules tests', () => {
       );
 
       expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe(autoMappingTypeMismatchWarningMessage('id', 'Query.product', 'String!', 'id', 'Product', 'ID!'));
+      expect(warnings[0].message).toBe(
+        autoMappingTypeMismatchWarningMessage('id', 'Query.product', 'String!', 'id', 'Product', 'ID!'),
+      );
 
       const rootFieldConfig = getSingleQueryRootFieldConfig(
         `

@@ -12,14 +12,6 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph_ext/subgraph/model"
 )
 
-// PersonalizedRecommendation is the resolver for the personalizedRecommendation field.
-func (r *articleResolver) PersonalizedRecommendation(ctx context.Context, obj *model.Article) (string, error) {
-	if obj.CurrentViewer == nil {
-		return "Sign in to get personalized recommendations.", nil
-	}
-	return fmt.Sprintf("Hey %s, based on your interests you'll love this article!", obj.CurrentViewer.Name), nil
-}
-
 // RelatedArticles is the resolver for the relatedArticles field.
 func (r *articleResolver) RelatedArticles(ctx context.Context, obj *model.Article) ([]*model.Article, error) {
 	ext := articleExtensions[obj.ID]
@@ -36,6 +28,14 @@ func (r *articleResolver) RelatedArticles(ctx context.Context, obj *model.Articl
 		related[i] = toArticle(rid, relatedExt)
 	}
 	return related, nil
+}
+
+// PersonalizedRecommendation is the resolver for the personalizedRecommendation field.
+func (r *articleResolver) PersonalizedRecommendation(ctx context.Context, obj *model.Article) (string, error) {
+	if obj.CurrentViewer == nil {
+		return "Sign in to get personalized recommendations.", nil
+	}
+	return fmt.Sprintf("Hey %s, based on your interests you'll love this article!", obj.CurrentViewer.Name), nil
 }
 
 // Article returns generated.ArticleResolver implementation.

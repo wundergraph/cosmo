@@ -23,13 +23,13 @@ The composition library normalizes and validates GraphQL subgraph schemas for fe
 
 ~4,900 lines. The `NormalizationFactory` class holds all state for a normalization pass. Key properties:
 
-| Property | Type | Purpose |
-|----------|------|---------|
-| `parentDefinitionDataByTypeName` | `Map<string, ParentDefinitionData>` | Central type registry — all objects, interfaces, scalars, enums, unions, input objects |
-| `keyFieldSetDatasByTypeName` | `Map<TypeName, Map<normalizedFieldSet, KeyFieldSetData>>` | Entity type → (normalized field set string → parsed key metadata) |
-| `keyFieldNamesByParentTypeName` | `Map<TypeName, Set<FieldName>>` | Entity type → top-level field names participating in any @key |
-| `entityCacheConfigByTypeName` | `Map<TypeName, {...}>` | @openfed__entityCache directives (lookup during cache validation) |
-| `configurationDataByTypeName` | `Map<TypeName, ConfigurationData>` | Final router configuration output |
+| Property                         | Type                                                      | Purpose                                                                                |
+| -------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `parentDefinitionDataByTypeName` | `Map<string, ParentDefinitionData>`                       | Central type registry — all objects, interfaces, scalars, enums, unions, input objects |
+| `keyFieldSetDatasByTypeName`     | `Map<TypeName, Map<normalizedFieldSet, KeyFieldSetData>>` | Entity type → (normalized field set string → parsed key metadata)                      |
+| `keyFieldNamesByParentTypeName`  | `Map<TypeName, Set<FieldName>>`                           | Entity type → top-level field names participating in any @key                          |
+| `entityCacheConfigByTypeName`    | `Map<TypeName, {...}>`                                    | @openfed\_\_entityCache directives (lookup during cache validation)                    |
+| `configurationDataByTypeName`    | `Map<TypeName, ConfigurationData>`                        | Final router configuration output                                                      |
 
 ### Normalization Pipeline
 
@@ -47,10 +47,10 @@ The composition library normalizes and validates GraphQL subgraph schemas for fe
 ```typescript
 // src/v1/normalization/types.ts
 type KeyFieldSetData = {
-  documentNode: DocumentNode;     // Parsed GraphQL AST of the selection set
-  isUnresolvable: boolean;        // true when @key(resolvable: false)
-  normalizedFieldSet: string;     // Canonical form: "id" or "id region" or "store { id }"
-  rawFieldSet: string;            // Original string from SDL
+  documentNode: DocumentNode; // Parsed GraphQL AST of the selection set
+  isUnresolvable: boolean; // true when @key(resolvable: false)
+  normalizedFieldSet: string; // Canonical form: "id" or "id region" or "store { id }"
+  rawFieldSet: string; // Original string from SDL
 };
 ```
 
@@ -61,6 +61,7 @@ type KeyFieldSetData = {
 Raw `@key(fields: "...")` string → `safeParse('{' + rawFieldSet + '}')` → `DocumentNode` → `getNormalizedFieldSet()` which lexicographically sorts, prints, normalizes whitespace, and strips outer braces.
 
 Examples:
+
 - `"id"` → `"id"`
 - `"name id"` → `"id name"` (sorted)
 - `"store { id }"` → `"store { id }"`
@@ -69,14 +70,14 @@ The `documentNode` preserves the full nested AST structure. The `normalizedField
 
 ### Key Shapes
 
-| Shape | Example | How It's Stored |
-|-------|---------|-----------------|
-| Single field | `@key(fields: "id")` | normalizedFieldSet: `"id"` |
-| Composite | `@key(fields: "id region")` | normalizedFieldSet: `"id region"` |
-| Nested | `@key(fields: "store { id }")` | normalizedFieldSet: `"store { id }"` |
-| Deep nested | `@key(fields: "a { b { c } }")` | normalizedFieldSet: `"a { b { c } }"` |
-| Mixed | `@key(fields: "id store { id }")` | normalizedFieldSet: `"id store { id }"` |
-| Unresolvable | `@key(fields: "id", resolvable: false)` | isUnresolvable: true |
+| Shape        | Example                                 | How It's Stored                         |
+| ------------ | --------------------------------------- | --------------------------------------- |
+| Single field | `@key(fields: "id")`                    | normalizedFieldSet: `"id"`              |
+| Composite    | `@key(fields: "id region")`             | normalizedFieldSet: `"id region"`       |
+| Nested       | `@key(fields: "store { id }")`          | normalizedFieldSet: `"store { id }"`    |
+| Deep nested  | `@key(fields: "a { b { c } }")`         | normalizedFieldSet: `"a { b { c } }"`   |
+| Mixed        | `@key(fields: "id store { id }")`       | normalizedFieldSet: `"id store { id }"` |
+| Unresolvable | `@key(fields: "id", resolvable: false)` | isUnresolvable: true                    |
 
 ### Key Validation Rules (in `utils.ts:validateKeyFieldSets`)
 
@@ -90,6 +91,7 @@ The `documentNode` preserves the full nested AST structure. The `normalizedField
 ### Router Configuration Output
 
 Each validated @key becomes a `RequiredFieldConfiguration`:
+
 ```typescript
 { fieldName: "", selectionSet: "id", disableEntityResolver?: true }
 ```
@@ -112,7 +114,7 @@ Stored in `configurationData.keys` array — one entry per @key directive.
 
 The entry method delegates to two helpers:
 
-- `extractEntityCacheDirectives` — reads @openfed__entityCache off object types.
+- `extractEntityCacheDirectives` — reads @openfed\_\_entityCache off object types.
   Must run first because the root-field helpers look entity types up in `entityCacheConfigByTypeName`.
 - `processRootFieldCacheDirectives` — walks root types (Query/Mutation/Subscription) and dispatches
   to `extractQueryCacheConfig`, `extractCacheInvalidateConfig`, `extractCachePopulateConfig`, and
@@ -136,6 +138,7 @@ the pipeline attempts argument mapping against each key separately.
 ALL fully-satisfiable keys are emitted as separate `EntityKeyMappingConfig` entries.
 
 **Type checking:**
+
 - Auto-mapping compares named types (unwrapping NonNull).
   Mismatch → warning, mapping skipped.
 - Explicit `@openfed__is` compares strictly.
@@ -160,18 +163,18 @@ Multiple list arguments on the same field are rejected.
 Arguments not mapped to any key field → error for explicit `@openfed__is`, warning for auto-mapping.
 All mappings for that key are discarded (cache key would be incomplete).
 
-### @openfed__is Directive
+### @openfed\_\_is Directive
 
 `@openfed__is(fields: String!)` — note the argument name is `fields` (plural), matching the `FIELDS` constant.
 The `IS_DEFINITION` in `directive-definitions.ts` and `IS_DEFINITION_DATA` in `directive-definition-data.ts`
 must both use `FIELDS`.
-The `buildArgumentKeyMappingsV2` reads `arg.name.value === FIELDS` to extract @openfed__is values.
+The `buildArgumentKeyMappingsV2` reads `arg.name.value === FIELDS` to extract @openfed\_\_is values.
 
 **Gotcha**: A previous bug used `FIELD` (singular) instead of `FIELDS` (plural),
-silently breaking all @openfed__is extraction.
+silently breaking all @openfed\_\_is extraction.
 Always verify the constant name matches the directive definition.
 
-### @openfed__requestScoped Directive
+### @openfed\_\_requestScoped Directive
 
 `@openfed__requestScoped(key: String!)` on `FIELD_DEFINITION` — single mandatory argument.
 Extracted by `extractRequestScopedFields()` in `normalization-factory.ts`.
@@ -183,6 +186,7 @@ entry under `l1Key = "{subgraphName}.X"`. Whichever field resolves first populat
 L1; subsequent fields with the same key inject from L1 and may skip their fetch.
 
 **Validation**:
+
 - `key` is mandatory (enforced by `REQUEST_SCOPED_DEFINITION_DATA.requiredArgumentNames`)
 - Composition emits a `requestScopedSingleFieldWarning` when a key is used on only
   one field in the subgraph — the directive is meaningless without a second reader
@@ -190,6 +194,7 @@ L1; subsequent fields with the same key inject from L1 and may skip their fetch.
 ### Pipeline: Composition → Router
 
 Changes to `FieldMappingConfig` (like adding `isBatch`) must be wired through:
+
 1. `composition/src/router-configuration/types.ts` — TypeScript type
 2. `proto/wg/cosmo/node/v1/node.proto` — Protobuf message
 3. `connect/src/wg/cosmo/node/v1/node_pb.ts` — Generated TS proto class
@@ -205,12 +210,14 @@ check shared package serialization first.
 
 The `router-tests/entity_caching/testdata/config.json` is generated by a Go tool using the
 composition-go bundle:
+
 ```
 cd router-tests/entity_caching && make compose
 ```
 
 This reads subgraph schemas from `subgraphs/*/subgraph/schema.graphqls` and writes the config
 via `composition.BuildRouterConfiguration`. After changing shared/composition code, you must:
+
 1. Rebuild composition: `cd composition && pnpm build`
 2. Rebuild shared: `cd shared && pnpm build`
 3. Regenerate composition-go bundle: `cd composition-go && bash generate.sh`
@@ -220,6 +227,7 @@ via `composition.BuildRouterConfiguration`. After changing shared/composition co
 
 The playground is embedded in the router binary via `//go:embed graphiql.html`.
 To update it:
+
 ```
 cd playground && pnpm build:router
 ```
@@ -233,21 +241,21 @@ to avoid re-creating the fetcher and resetting the response state on mode change
 
 ## File Map
 
-| File | Purpose |
-|------|---------|
-| `src/v1/normalization/normalization-factory.ts` | Main normalization class (~4900 lines) |
-| `src/v1/normalization/walkers.ts` | AST visitor entry points |
-| `src/v1/normalization/utils.ts` | `validateKeyFieldSets()` and field set validation |
-| `src/v1/normalization/types.ts` | `KeyFieldSetData`, `FieldSetData`, etc. |
-| `src/v1/constants/directive-definitions.ts` | Directive AST definitions (@key, @openfed__entityCache, @openfed__queryCache, @openfed__is, etc.) |
-| `src/router-configuration/types.ts` | Output types: `ConfigurationData`, `EntityCacheConfig`, `FieldMappingConfig`, etc. |
-| `src/errors/errors.ts` | Error message factories |
-| `src/v1/warnings/warnings.ts` | Warning message factories |
-| `src/utils/string-constants.ts` | Shared string constants (KEY, ENTITY_CACHE, QUERY_CACHE, IS, etc.) |
-| `tests/v1/directives/entity-caching.test.ts` | Entity caching tests (45 tests) |
-| `tests/v1/directives/entity-cache-mapping-rules.test.ts` | Type-aware mapping rules (76 tests) |
-| `tests/v1/entities.test.ts` | Entity and @key tests (~1945 lines) |
-| `tests/v1/directives/fieldset-directives.test.ts` | @key field set validation tests |
+| File                                                     | Purpose                                                                                             |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `src/v1/normalization/normalization-factory.ts`          | Main normalization class (~4900 lines)                                                              |
+| `src/v1/normalization/walkers.ts`                        | AST visitor entry points                                                                            |
+| `src/v1/normalization/utils.ts`                          | `validateKeyFieldSets()` and field set validation                                                   |
+| `src/v1/normalization/types.ts`                          | `KeyFieldSetData`, `FieldSetData`, etc.                                                             |
+| `src/v1/constants/directive-definitions.ts`              | Directive AST definitions (@key, @openfed**entityCache, @openfed**queryCache, @openfed\_\_is, etc.) |
+| `src/router-configuration/types.ts`                      | Output types: `ConfigurationData`, `EntityCacheConfig`, `FieldMappingConfig`, etc.                  |
+| `src/errors/errors.ts`                                   | Error message factories                                                                             |
+| `src/v1/warnings/warnings.ts`                            | Warning message factories                                                                           |
+| `src/utils/string-constants.ts`                          | Shared string constants (KEY, ENTITY_CACHE, QUERY_CACHE, IS, etc.)                                  |
+| `tests/v1/directives/entity-caching.test.ts`             | Entity caching tests (45 tests)                                                                     |
+| `tests/v1/directives/entity-cache-mapping-rules.test.ts` | Type-aware mapping rules (76 tests)                                                                 |
+| `tests/v1/entities.test.ts`                              | Entity and @key tests (~1945 lines)                                                                 |
+| `tests/v1/directives/fieldset-directives.test.ts`        | @key field set validation tests                                                                     |
 
 ## Test Patterns and Commands
 
