@@ -195,6 +195,27 @@ demo:
 	cd demo && go run cmd/all/main.go & \
 	sleep 2 && cd router && go run cmd/router/main.go --config ../demo/router-cache.yaml
 
+benchmark-cache-demo:
+	pnpm dlx tsx benchmark/scripts/run_suite.ts --all \
+		$(if $(VUS),--vus $(VUS),) \
+		$(if $(DURATION),--duration $(DURATION),) \
+		$(if $(RAMP_UP),--ramp-up $(RAMP_UP),) \
+		$(if $(RAMP_DOWN),--ramp-down $(RAMP_DOWN),)
+
+benchmark-cache-demo-scenario:
+	@if [ -z "$(SCENARIO)" ]; then \
+		echo "Usage: make benchmark-cache-demo-scenario SCENARIO=<scenario_name>"; \
+		exit 1; \
+	fi
+	pnpm dlx tsx benchmark/scripts/run_suite.ts --scenario $(SCENARIO) \
+		$(if $(VUS),--vus $(VUS),) \
+		$(if $(DURATION),--duration $(DURATION),) \
+		$(if $(RAMP_UP),--ramp-up $(RAMP_UP),) \
+		$(if $(RAMP_DOWN),--ramp-down $(RAMP_DOWN),)
+
+benchmark-cache-demo-validate:
+	pnpm dlx tsx benchmark/scripts/run_suite.ts validate
+
 run-subgraphs-local:
 	cd demo && go run cmd/all/main.go
 
