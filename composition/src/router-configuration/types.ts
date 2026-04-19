@@ -86,6 +86,17 @@ export type RequiredFieldConfiguration = {
   disableEntityResolver?: boolean;
 };
 
+export type RequestScopedFieldConfig = {
+  fieldName: FieldName;
+  typeName: TypeName;
+  // L1 cache key used to store/lookup this field's value for the duration of a request.
+  // Format: "{subgraphName}.{key}" where `key` is the @requestScoped(key:) argument.
+  // All fields in the same subgraph declaring @requestScoped with the same key share
+  // the same L1 entry — the first one to resolve populates it, subsequent ones inject
+  // from it (subject to widening checks and alias-aware normalization).
+  l1Key: string;
+};
+
 export type ConfigurationData = {
   fieldNames: Set<FieldName>;
   isRootNode: boolean;
@@ -97,6 +108,7 @@ export type ConfigurationData = {
   provides?: RequiredFieldConfiguration[];
   keys?: RequiredFieldConfiguration[];
   requireFetchReasonsFieldNames?: Array<FieldName>;
+  requestScopedFields?: Array<RequestScopedFieldConfig>;
   requires?: RequiredFieldConfiguration[];
   // Entity caching configuration — attached during composition when subgraph schemas
   // use entity caching directives. These are serialized into the router configuration
@@ -106,16 +118,16 @@ export type ConfigurationData = {
   // rootFieldCacheConfigurations: attached to the Query type's ConfigurationData
   // cachePopulateConfigurations: attached to the Mutation/Subscription type's ConfigurationData
   // cacheInvalidateConfigurations: attached to the Mutation/Subscription type's ConfigurationData
-  entityCacheConfigurations?: EntityCacheConfig[];
-  rootFieldCacheConfigurations?: RootFieldCacheConfig[];
-  cachePopulateConfigurations?: CachePopulateConfig[];
-  cacheInvalidateConfigurations?: CacheInvalidateConfig[];
+  entityCacheConfigurations?: Array<EntityCacheConfig>;
+  rootFieldCacheConfigurations?: Array<RootFieldCacheConfig>;
+  cachePopulateConfigurations?: Array<CachePopulateConfig>;
+  cacheInvalidateConfigurations?: Array<CacheInvalidateConfig>;
 };
 
 // Extracted from @entityCache(maxAge: Int!, includeHeaders: Boolean, partialCacheLoad: Boolean, shadowMode: Boolean)
 // on OBJECT types. Defines per-entity cache TTL and behavior.
 export type EntityCacheConfig = {
-  typeName: string;
+  typeName: TypeName;
   maxAgeSeconds: number;
   // When true, request headers are included in the cache key (useful for user-specific entities)
   includeHeaders: boolean;
@@ -129,47 +141,51 @@ export type EntityCacheConfig = {
 // Extracted from @queryCache(maxAge: Int!, includeHeaders: Boolean, shadowMode: Boolean)
 // on Query fields. Tells the router which query fields can serve entities from cache.
 export type RootFieldCacheConfig = {
-  fieldName: string;
+  fieldName: FieldName;
   maxAgeSeconds: number;
   includeHeaders: boolean;
   shadowMode: boolean;
   // The entity type this query field returns (must have @entityCache)
-  entityTypeName: string;
+  entityTypeName: TypeName;
   // Maps query arguments to entity @key fields so the router can construct cache keys from query arguments.
   // Empty for list-returning fields (cache reads are skipped; only cache writes/population apply).
-  entityKeyMappings: EntityKeyMappingConfig[];
+  entityKeyMappings: Array<EntityKeyMappingConfig>;
 };
 
 // Groups field mappings for a single entity type returned by a @queryCache field.
 export type EntityKeyMappingConfig = {
-  entityTypeName: string;
-  fieldMappings: FieldMappingConfig[];
+  entityTypeName: TypeName;
+  fieldMappings: Array<FieldMappingConfig>;
 };
 
 // Maps a single query argument to an entity's @key field.
-// Example: query { product(productId: ID!) @queryCache } with @is(field: "id") on productId
+// Example: query { product(productId: ID!) @queryCache } with @is(fields: "id") on productId
 //   → entityKeyField: "id", argumentPath: ["productId"]
 // When the argument name matches the @key field name, auto-mapping occurs without @is.
 export type FieldMappingConfig = {
-  entityKeyField: string;
-  argumentPath: string[];
+  entityKeyField: FieldName;
+  argumentPath: Array<string>;
+  isBatch?: boolean;
 };
 
 // Extracted from @cachePopulate(maxAge: Int) on Mutation/Subscription fields.
 // Tells the router to populate the entity cache with the mutation's return value.
 // maxAgeSeconds overrides the entity's default TTL when provided.
+// entityTypeName identifies which cached entity this populate targets — derived from
+// the field's return type, which composition validates must be an @entityCache-marked entity.
 export type CachePopulateConfig = {
-  fieldName: string;
+  fieldName: FieldName;
   operationType: string;
+  entityTypeName: TypeName;
   maxAgeSeconds?: number;
 };
 
 // Extracted from @cacheInvalidate on Mutation/Subscription fields.
 // Tells the router to evict the returned entity from the cache after the operation completes.
 export type CacheInvalidateConfig = {
-  fieldName: string;
+  fieldName: FieldName;
   operationType: string;
-  entityTypeName: string;
+  entityTypeName: TypeName;
 };
 
 export type Costs = {

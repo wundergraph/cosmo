@@ -179,7 +179,6 @@ import {
   entityCacheWithoutKeyErrorMessage,
   queryCacheOnNonQueryFieldErrorMessage,
   queryCacheOnNonEntityReturnTypeErrorMessage,
-  queryCacheReturnTypeWithoutEntityCacheErrorMessage,
   maxAgeNotPositiveIntegerErrorMessage,
   isWithoutQueryCacheErrorMessage,
   isReferencesUnknownKeyFieldErrorMessage,
@@ -189,6 +188,22 @@ import {
   cachePopulateOnNonMutationSubscriptionFieldErrorMessage,
   cachePopulateOnNonEntityReturnTypeErrorMessage,
   cacheInvalidateAndPopulateMutualExclusionErrorMessage,
+  explicitTypeMismatchErrorMessage,
+  nonKeyFieldSpecErrorMessage,
+  listArgumentToScalarKeySpecErrorMessage,
+  scalarArgumentToListKeySpecErrorMessage,
+  explicitIncompleteCompositeKeyErrorMessage,
+  explicitSingularAdditionalNonKeyArgumentErrorMessage,
+  explicitCompositeAdditionalNonKeyArgumentErrorMessage,
+  batchListValuedKeyRequiresNestedListsErrorMessage,
+  explicitBatchAdditionalNonKeyArgumentErrorMessage,
+  explicitScalarArgumentsCannotEstablishBatchMappingErrorMessage,
+  multipleListArgumentsBatchFactoryMessage,
+  inputObjectCompositeTypeMismatchErrorMessage,
+  inputObjectCompositeMissingFieldErrorMessage,
+  nestedInputObjectTypeMismatchErrorMessage,
+  nestedInputObjectMissingFieldErrorMessage,
+  nonInputArgumentCannotTargetCompositeKeyErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -198,8 +213,6 @@ import {
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
-  type CacheInvalidateConfig,
-  type CachePopulateConfig,
   type ConfigurationData,
   type Costs,
   type EntityCacheConfig,
@@ -209,8 +222,8 @@ import {
   type FieldMappingConfig,
   type FieldWeightConfiguration,
   type NatsEventType,
+  type RequestScopedFieldConfig,
   type RequiredFieldConfiguration,
-  type RootFieldCacheConfig,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import { recordSubgraphName } from '../subgraph/subgraph';
@@ -222,8 +235,11 @@ import {
   invalidExternalFieldWarning,
   invalidOverrideTargetSubgraphNameWarning,
   incompleteQueryCacheKeyMappingWarning,
-  redundantIsDirectiveWarning,
+  autoMappingTypeMismatchWarning,
+  autoMappingAdditionalNonKeyArgumentWarning,
+  autoBatchAdditionalNonKeyArgumentWarning,
   nonExternalConditionalFieldWarning,
+  requestScopedSingleFieldWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
 } from '../warnings/warnings';
@@ -322,10 +338,10 @@ import {
   EXTERNAL,
   FIELD_SET_SCALAR,
   FIELDS,
+  FIRST_ORDINAL,
   FLOAT_SCALAR,
   HYPHEN_JOIN,
   ID_SCALAR,
-  FIELD,
   INACCESSIBLE,
   INCLUDE_HEADERS,
   INHERITABLE_DIRECTIVE_NAMES,
@@ -338,6 +354,9 @@ import {
   LINK_IMPORT,
   LINK_PURPOSE,
   LIST_SIZE,
+  LITERAL_OPEN_BRACE,
+  LITERAL_PERIOD,
+  LITERAL_SPACE,
   MAX_AGE,
   MUTATION,
   NON_NULLABLE_BOOLEAN,
@@ -360,6 +379,7 @@ import {
   REQUEST,
   REQUIRE_FETCH_REASONS,
   REQUIRE_ONE_SLICING_ARGUMENT,
+  REQUEST_SCOPED,
   REQUIRES_SCOPES,
   RESOLVABLE,
   ROOT_TYPE_NAMES,
@@ -480,7 +500,7 @@ export class NormalizationFactory {
   // Used as a lookup in Phase 2 to verify that @queryCache/@cacheInvalidate/@cachePopulate
   // fields return entity types that have opted into caching.
   entityCacheConfigByTypeName = new Map<
-    string,
+    TypeName,
     { maxAgeSeconds: number; includeHeaders: boolean; partialCacheLoad: boolean; shadowMode: boolean }
   >();
   errors = new Array<Error>();
@@ -1209,7 +1229,7 @@ export class NormalizationFactory {
         if (weightArg.value.kind !== Kind.INT) {
           const directiveCoords = `@${directiveName}(${argNode.name.value}: ...)`;
           this.errors.push(
-            invalidDirectiveError(COST, directiveCoords, '1st', [
+            invalidDirectiveError(COST, directiveCoords, FIRST_ORDINAL, [
               invalidArgumentValueErrorMessage(print(weightArg.value), `@${COST}`, WEIGHT, 'Int!'),
             ]),
           );
@@ -3510,6 +3530,137 @@ export class NormalizationFactory {
     }
   }
 
+  extractRequestScopedFields() {
+    // Gather fields annotated with @requestScoped across all types in this subgraph.
+    // A field is both a reader and writer of the coordinate L1 — no receiver/provider.
+    // Fields with the same `key` share the same L1 entry: whichever is resolved first
+    // populates it, subsequent ones inject from it.
+    type Collected = {
+      typeName: string;
+      fieldName: string;
+      fieldCoords: string;
+      key: string;
+      l1Key: string;
+    };
+    const collected: Collected[] = [];
+    const keyToCoordsList = new Map<string, string[]>();
+
+    for (const [, parentData] of this.parentDefinitionDataByTypeName) {
+      if (
+        parentData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+        parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION
+      ) {
+        continue;
+      }
+      const typeName = getParentTypeName(parentData);
+      for (const [fieldName, fieldData] of parentData.fieldDataByName) {
+        const directives = fieldData.directivesByName.get(REQUEST_SCOPED);
+        if (!directives || directives.length < 1) {
+          continue;
+        }
+        const directive = directives[0];
+        const fieldCoords = `${typeName}.${fieldName}`;
+        // `key` is mandatory (enforced by directive definition validation upstream),
+        // but defend against malformed AST just in case.
+        let key: string | undefined;
+        if (directive.arguments) {
+          for (const arg of directive.arguments) {
+            if (arg.name.value === KEY && arg.value.kind === Kind.STRING) {
+              key = (arg.value as StringValueNode).value;
+            }
+          }
+        }
+        if (!key) {
+          continue;
+        }
+        const l1Key = `${this.subgraphName}.${key}`;
+        collected.push({ typeName, fieldName, fieldCoords, key, l1Key });
+        const list = keyToCoordsList.get(key);
+        if (list) {
+          list.push(fieldCoords);
+        } else {
+          keyToCoordsList.set(key, [fieldCoords]);
+        }
+      }
+    }
+
+    if (collected.length === 0) {
+      return;
+    }
+
+    // Warn when a key is used on only one field — @requestScoped is meaningless
+    // unless ≥ 2 fields share the key (there'd be no second reader to benefit).
+    for (const [key, coordsList] of keyToCoordsList) {
+      if (coordsList.length < 2) {
+        this.warnings.push(
+          requestScopedSingleFieldWarning({
+            subgraphName: this.subgraphName,
+            key,
+            fieldCoords: coordsList[0],
+          }),
+        );
+      }
+    }
+
+    // Group by type and attach to configurationData.
+    const byType = new Map<string, RequestScopedFieldConfig[]>();
+    for (const c of collected) {
+      const list = byType.get(c.typeName) ?? [];
+      list.push({
+        fieldName: c.fieldName,
+        typeName: c.typeName,
+        l1Key: c.l1Key,
+      });
+      byType.set(c.typeName, list);
+    }
+    for (const [typeName, fields] of byType) {
+      const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
+        newConfigurationData(false, typeName),
+      );
+      configurationData.requestScopedFields = fields;
+    }
+  }
+
+  // Reads an INT-typed argument off a directive node; returns undefined when the argument
+  // is absent or not an INT literal. Narrowing via `arg.value.kind === Kind.INT` is required
+  // before accessing `.value` — otherwise variables and other AST nodes silently coerce to NaN.
+  private extractCacheIntArg(directive: ConstDirectiveNode, argName: string): number | undefined {
+    if (!directive.arguments) {
+      return undefined;
+    }
+    for (const arg of directive.arguments) {
+      if (arg.name.value === argName && arg.value.kind === Kind.INT) {
+        return parseInt(arg.value.value, 10);
+      }
+    }
+    return undefined;
+  }
+
+  // Reads a BOOLEAN-typed argument off a directive node; returns false when absent or non-boolean.
+  // The directive definitions default these flags to false, matching this fallback.
+  private extractCacheBoolArg(directive: ConstDirectiveNode, argName: string): boolean {
+    if (!directive.arguments) {
+      return false;
+    }
+    for (const arg of directive.arguments) {
+      if (arg.name.value === argName && arg.value.kind === Kind.BOOLEAN) {
+        return arg.value.value;
+      }
+    }
+    return false;
+  }
+
+  // Returns the ConfigurationData entry for a type, creating it if missing.
+  // Cache attachment must never silently drop — if the entry doesn't exist yet it's because
+  // the type contributes nothing else to the router config (e.g., a Mutation type with only
+  // a single @cacheInvalidate field). Creating it on demand is the same pattern used by
+  // addValidKeyFieldSetConfigurations and extractRequestScopedFields.
+  private getCacheConfigurationData(typeName: string, isEntity: boolean): ConfigurationData {
+    return getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
+      newConfigurationData(isEntity, typeName),
+    );
+  }
+
   /*
    * Validates and extracts entity caching directive configurations from the subgraph schema.
    *
@@ -3522,82 +3673,64 @@ export class NormalizationFactory {
    *   @queryCache(maxAge: Int!)        — on Query fields: enables cache reads for a query that returns a cached entity
    *   @cacheInvalidate                 — on Mutation/Subscription fields: evicts the returned entity from cache
    *   @cachePopulate(maxAge: Int)      — on Mutation/Subscription fields: writes the returned entity into cache
-   *   @is(field: String!)             — on arguments: maps a query argument to an entity @key field for cache key construction
+   *   @is(fields: String!)             — on arguments: maps a query argument to an entity @key field for cache key construction
    *
-   * Processing happens in three phases:
-   *   Phase 1: Collect @entityCache from entity types → populates entityCacheConfigByTypeName lookup
-   *   Phase 2: Process root type fields (Query/Mutation/Subscription) for @queryCache, @cacheInvalidate, @cachePopulate, @is
-   *   Phase 3: Attach validated configs to their respective ConfigurationData entries for serialization
+   * Validation behavior is encoded in the entity-caching test suite:
+   * `tests/v1/directives/entity-caching.test.ts` and
+   * `tests/v1/directives/entity-cache-mapping-rules.test.ts`.
+   *
+   * @entityCache must be extracted first because the root-field directives validate that the
+   * return entity type has @entityCache via the entityCacheConfigByTypeName lookup.
+   *
+   * All ConfigurationData attachments are keyed by the renamed root type name from the iteration
+   * (e.g., "MyQuery" when the schema declares `schema { query: MyQuery }`) — never by the literal
+   * "Query"/"Mutation"/"Subscription" — to preserve renamed-root-type semantics. Attachment is
+   * direct (no buffer-then-attach step) so renamed types can't drift and configs can't silently drop.
    */
   validateAndExtractEntityCachingConfigs() {
-    const entityCacheConfigs: EntityCacheConfig[] = [];
-    const rootFieldCacheConfigs: RootFieldCacheConfig[] = [];
-    const cachePopulateConfigs: CachePopulateConfig[] = [];
-    const cacheInvalidateConfigs: CacheInvalidateConfig[] = [];
+    this.extractEntityCacheDirectives();
+    this.processRootFieldCacheDirectives();
+  }
 
-    // Phase 1: Extract @entityCache from object types.
-    // This must run before Phase 2 because @queryCache/@cacheInvalidate/@cachePopulate validate
-    // that the return entity type has @entityCache via the entityCacheConfigByTypeName lookup.
+  extractEntityCacheDirectives() {
     for (const [typeName, parentData] of this.parentDefinitionDataByTypeName) {
       if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
         continue;
       }
       const entityCacheDirectives = parentData.directivesByName.get(ENTITY_CACHE);
-      if (!entityCacheDirectives || entityCacheDirectives.length < 1) {
+      if (!entityCacheDirectives) {
         continue;
       }
-      // Rule 1: Must have @key
       if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
         this.errors.push(
-          invalidDirectiveError(ENTITY_CACHE, typeName, '1st', [entityCacheWithoutKeyErrorMessage(typeName)]),
+          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [entityCacheWithoutKeyErrorMessage(typeName)]),
         );
         continue;
       }
-      // Extract arguments from the first directive node
       const directive = entityCacheDirectives[0];
-      let maxAgeSeconds = 0;
-      let includeHeaders = false;
-      let partialCacheLoad = false;
-      let shadowMode = false;
-      if (directive.arguments) {
-        for (const arg of directive.arguments) {
-          switch (arg.name.value) {
-            case MAX_AGE:
-              maxAgeSeconds =
-                (arg.value as IntValueNode).kind === Kind.INT ? parseInt((arg.value as IntValueNode).value, 10) : 0;
-              break;
-            case INCLUDE_HEADERS:
-              includeHeaders = arg.value.kind === Kind.BOOLEAN && arg.value.value;
-              break;
-            case PARTIAL_CACHE_LOAD:
-              partialCacheLoad = arg.value.kind === Kind.BOOLEAN && arg.value.value;
-              break;
-            case SHADOW_MODE:
-              shadowMode = arg.value.kind === Kind.BOOLEAN && arg.value.value;
-              break;
-          }
-        }
-      }
-      // Rule 3: maxAge must be positive
+      const maxAgeSeconds = this.extractCacheIntArg(directive, MAX_AGE) ?? 0;
+      const includeHeaders = this.extractCacheBoolArg(directive, INCLUDE_HEADERS);
+      const partialCacheLoad = this.extractCacheBoolArg(directive, PARTIAL_CACHE_LOAD);
+      const shadowMode = this.extractCacheBoolArg(directive, SHADOW_MODE);
       if (maxAgeSeconds <= 0) {
         this.errors.push(
-          invalidDirectiveError(ENTITY_CACHE, typeName, '1st', [
+          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [
             maxAgeNotPositiveIntegerErrorMessage(ENTITY_CACHE, maxAgeSeconds),
           ]),
         );
         continue;
       }
       const config: EntityCacheConfig = { typeName, maxAgeSeconds, includeHeaders, partialCacheLoad, shadowMode };
-      entityCacheConfigs.push(config);
       this.entityCacheConfigByTypeName.set(typeName, config);
+      const configData = this.getCacheConfigurationData(typeName, true);
+      if (!configData.entityCacheConfigurations) {
+        configData.entityCacheConfigurations = [];
+      }
+      configData.entityCacheConfigurations.push(config);
     }
+  }
 
-    // Phase 2: Process root type fields for @queryCache, @cacheInvalidate, @cachePopulate, and @is.
-    // Each directive has placement constraints:
-    //   @queryCache → Query fields only (return type must be a cached entity)
-    //   @cacheInvalidate → Mutation/Subscription fields only (return type must be a cached entity)
-    //   @cachePopulate → Mutation/Subscription fields only (return type must be a cached entity)
-    //   @cacheInvalidate and @cachePopulate are mutually exclusive on the same field.
+  processRootFieldCacheDirectives() {
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
         continue;
@@ -3606,10 +3739,6 @@ export class NormalizationFactory {
       if (!operationType) {
         continue;
       }
-      const isQuery = operationType === OperationTypeNode.QUERY;
-      const isMutationOrSubscription =
-        operationType === OperationTypeNode.MUTATION || operationType === OperationTypeNode.SUBSCRIPTION;
-      const operationTypeString = operationType === OperationTypeNode.MUTATION ? 'Mutation' : 'Subscription';
 
       for (const [fieldName, fieldData] of parentData.fieldDataByName) {
         const fieldCoords = `${parentTypeName}.${fieldName}`;
@@ -3617,268 +3746,202 @@ export class NormalizationFactory {
         const hasCacheInvalidate = fieldData.directivesByName.has(CACHE_INVALIDATE);
         const hasCachePopulate = fieldData.directivesByName.has(CACHE_POPULATE);
 
-        // Rule 16/19: Mutual exclusion
         if (hasCacheInvalidate && hasCachePopulate) {
           this.errors.push(
-            invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, '1st', [
+            invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
               cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords),
             ]),
           );
           continue;
         }
 
-        // Process @queryCache
         if (hasQueryCache) {
-          // Rule 4: Only on Query fields
-          if (!isQuery) {
-            this.errors.push(
-              invalidDirectiveError(QUERY_CACHE, fieldCoords, '1st', [
-                queryCacheOnNonQueryFieldErrorMessage(fieldCoords),
-              ]),
-            );
-            continue;
-          }
-          const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-          // Rule 5: Return type must be entity
-          if (!this.keyFieldSetDatasByTypeName.has(returnTypeName)) {
-            this.errors.push(
-              invalidDirectiveError(QUERY_CACHE, fieldCoords, '1st', [
-                queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
-              ]),
-            );
-            continue;
-          }
-          // Rule 6: Return entity must have @entityCache
-          if (!this.entityCacheConfigByTypeName.has(returnTypeName)) {
-            this.errors.push(
-              invalidDirectiveError(QUERY_CACHE, fieldCoords, '1st', [
-                queryCacheReturnTypeWithoutEntityCacheErrorMessage(fieldCoords, returnTypeName),
-              ]),
-            );
-            continue;
-          }
-          // Extract @queryCache arguments
-          const queryCacheDirectives = fieldData.directivesByName.get(QUERY_CACHE)!;
-          let maxAgeSeconds = 0;
-          let includeHeaders = false;
-          let shadowModeValue = false;
-          if (queryCacheDirectives[0].arguments) {
-            for (const arg of queryCacheDirectives[0].arguments) {
-              switch (arg.name.value) {
-                case MAX_AGE:
-                  maxAgeSeconds = arg.value.kind === Kind.INT ? parseInt((arg.value as IntValueNode).value, 10) : 0;
-                  break;
-                case INCLUDE_HEADERS:
-                  includeHeaders = arg.value.kind === Kind.BOOLEAN && arg.value.value;
-                  break;
-                case SHADOW_MODE:
-                  shadowModeValue = arg.value.kind === Kind.BOOLEAN && arg.value.value;
-                  break;
-              }
-            }
-          }
-          // Rule 9: maxAge must be positive
-          if (maxAgeSeconds <= 0) {
-            this.errors.push(
-              invalidDirectiveError(QUERY_CACHE, fieldCoords, '1st', [
-                maxAgeNotPositiveIntegerErrorMessage(QUERY_CACHE, maxAgeSeconds),
-              ]),
-            );
-            continue;
-          }
-
-          // Build argument-to-key mappings for cache key construction.
-          // The router needs to know how to derive cache keys from query arguments.
-          // For example: query { product(id: ID!) @queryCache } → cache key includes the "id" argument value.
-          // Mappings are built by matching arguments to @key fields either by name (auto-mapping)
-          // or explicitly via @is(field: "keyFieldName") on the argument.
-          // List-returning fields skip mapping entirely — they can only populate the cache, not read from it.
-          const isListReturn = this.isListType(fieldData.node.type);
-          const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
-          const keyFields = this.extractKeyFieldNames(keyFieldSets);
-          const { mappings, unmappedKeyField } = this.buildArgumentKeyMappings(
-            fieldData,
-            fieldCoords,
-            returnTypeName,
-            keyFields,
-            isListReturn,
-          );
-
-          // Rule 7: Incomplete mapping warning (non-list only)
-          if (unmappedKeyField && !isListReturn) {
-            this.warnings.push(
-              incompleteQueryCacheKeyMappingWarning(this.subgraphName, fieldCoords, returnTypeName, unmappedKeyField),
-            );
-          }
-
-          rootFieldCacheConfigs.push({
-            fieldName,
-            maxAgeSeconds,
-            includeHeaders,
-            shadowMode: shadowModeValue,
-            entityTypeName: returnTypeName,
-            entityKeyMappings: mappings,
-          });
+          this.extractQueryCacheConfig(parentTypeName, fieldName, fieldData, operationType);
         }
-
-        // Process @cacheInvalidate
         if (hasCacheInvalidate) {
-          // Rule 14: Only on Mutation/Subscription
-          if (!isMutationOrSubscription) {
-            this.errors.push(
-              invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, '1st', [
-                cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
-              ]),
-            );
-            continue;
-          }
-          const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-          // Rule 15: Return type must be entity with @entityCache
-          if (
-            !this.keyFieldSetDatasByTypeName.has(returnTypeName) ||
-            !this.entityCacheConfigByTypeName.has(returnTypeName)
-          ) {
-            this.errors.push(
-              invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, '1st', [
-                cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
-              ]),
-            );
-            continue;
-          }
-          cacheInvalidateConfigs.push({
-            fieldName,
-            operationType: operationTypeString,
-            entityTypeName: returnTypeName,
-          });
+          this.extractCacheInvalidateConfig(parentTypeName, fieldName, fieldData, operationType);
         }
-
-        // Process @cachePopulate
         if (hasCachePopulate) {
-          // Rule 17: Only on Mutation/Subscription
-          if (!isMutationOrSubscription) {
-            this.errors.push(
-              invalidDirectiveError(CACHE_POPULATE, fieldCoords, '1st', [
-                cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
-              ]),
-            );
-            continue;
-          }
-          const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-          // Rule 18: Return type must be entity with @entityCache
-          if (
-            !this.keyFieldSetDatasByTypeName.has(returnTypeName) ||
-            !this.entityCacheConfigByTypeName.has(returnTypeName)
-          ) {
-            this.errors.push(
-              invalidDirectiveError(CACHE_POPULATE, fieldCoords, '1st', [
-                cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
-              ]),
-            );
-            continue;
-          }
-          // Extract optional maxAge argument
-          let maxAgeSeconds: number | undefined;
-          let hasMaxAgeError = false;
-          const cachePopulateDirectives = fieldData.directivesByName.get(CACHE_POPULATE)!;
-          if (cachePopulateDirectives[0].arguments) {
-            for (const arg of cachePopulateDirectives[0].arguments) {
-              if (arg.name.value === MAX_AGE && arg.value.kind === Kind.INT) {
-                const parsed = parseInt((arg.value as IntValueNode).value, 10);
-                // Rule 20: maxAge must be positive if provided
-                if (parsed <= 0) {
-                  this.errors.push(
-                    invalidDirectiveError(CACHE_POPULATE, fieldCoords, '1st', [
-                      maxAgeNotPositiveIntegerErrorMessage(CACHE_POPULATE, parsed),
-                    ]),
-                  );
-                  hasMaxAgeError = true;
-                } else {
-                  maxAgeSeconds = parsed;
-                }
-              }
-            }
-          }
-          if (!hasMaxAgeError) {
-            cachePopulateConfigs.push({
-              fieldName,
-              operationType: operationTypeString,
-              maxAgeSeconds,
-            });
-          }
+          this.extractCachePopulateConfig(parentTypeName, fieldName, fieldData, operationType);
         }
-
-        // Validate @is on arguments (Rules 10-13)
-        for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
-          const isDirectives = argumentData.directivesByName.get(IS);
-          if (!isDirectives || isDirectives.length < 1) {
-            continue;
-          }
-          // Rule 10: @is only makes sense with @queryCache
-          if (!hasQueryCache) {
-            this.errors.push(
-              invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, '1st', [
-                isWithoutQueryCacheErrorMessage(argumentName, fieldCoords),
-              ]),
-            );
-          }
-        }
+        this.validateIsDirectivePlacement(fieldCoords, fieldData, hasQueryCache);
       }
     }
+  }
 
-    // Phase 3: Attach validated configs to their respective ConfigurationData entries.
-    // The router deserializes ConfigurationData per subgraph type, so each config must be placed
-    // on the correct type's entry:
-    //   - entityCacheConfigs → on the entity type itself (e.g., "Product")
-    //   - rootFieldCacheConfigs → on the Query type
-    //   - cachePopulateConfigs → on the Mutation or Subscription type
-    //   - cacheInvalidateConfigs → on the Mutation or Subscription type
+  extractQueryCacheConfig(
+    parentTypeName: string,
+    fieldName: string,
+    fieldData: FieldData,
+    operationType: OperationTypeNode,
+  ) {
+    const fieldCoords = `${parentTypeName}.${fieldName}`;
+    if (operationType !== OperationTypeNode.QUERY) {
+      this.errors.push(
+        invalidDirectiveError(QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [queryCacheOnNonQueryFieldErrorMessage(fieldCoords)]),
+      );
+      return;
+    }
+    const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+    if (!this.keyFieldSetDatasByTypeName.has(returnTypeName)) {
+      this.errors.push(
+        invalidDirectiveError(QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+          queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+        ]),
+      );
+      return;
+    }
+    // Return entity without @entityCache — still emit root-field config but skip entity key mappings.
+    const hasEntityCache = this.entityCacheConfigByTypeName.has(returnTypeName);
+    const queryCacheDirective = fieldData.directivesByName.get(QUERY_CACHE)![0];
+    const maxAgeSeconds = this.extractCacheIntArg(queryCacheDirective, MAX_AGE) ?? 0;
+    const includeHeaders = this.extractCacheBoolArg(queryCacheDirective, INCLUDE_HEADERS);
+    const shadowModeValue = this.extractCacheBoolArg(queryCacheDirective, SHADOW_MODE);
+    if (maxAgeSeconds <= 0) {
+      this.errors.push(
+        invalidDirectiveError(QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+          maxAgeNotPositiveIntegerErrorMessage(QUERY_CACHE, maxAgeSeconds),
+        ]),
+      );
+      return;
+    }
+
+    let mappings: EntityKeyMappingConfig[] = [];
+    if (hasEntityCache) {
+      const isListReturn = this.isListType(fieldData.node.type);
+      const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
+      mappings = this.buildArgumentKeyMappings(
+        fieldData,
+        fieldCoords,
+        returnTypeName,
+        keyFieldSets,
+        isListReturn,
+      );
+    }
+
+    const configData = this.getCacheConfigurationData(parentTypeName, false);
+    if (!configData.rootFieldCacheConfigurations) {
+      configData.rootFieldCacheConfigurations = [];
+    }
+    configData.rootFieldCacheConfigurations.push({
+      fieldName,
+      maxAgeSeconds,
+      includeHeaders,
+      shadowMode: shadowModeValue,
+      entityTypeName: returnTypeName,
+      entityKeyMappings: mappings,
+    });
+  }
+
+  extractCacheInvalidateConfig(
+    parentTypeName: string,
+    fieldName: string,
+    fieldData: FieldData,
+    operationType: OperationTypeNode,
+  ) {
+    const fieldCoords = `${parentTypeName}.${fieldName}`;
+    if (operationType !== OperationTypeNode.MUTATION && operationType !== OperationTypeNode.SUBSCRIPTION) {
+      this.errors.push(
+        invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+          cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
+        ]),
+      );
+      return;
+    }
+    const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
     if (
-      entityCacheConfigs.length > 0 ||
-      rootFieldCacheConfigs.length > 0 ||
-      cachePopulateConfigs.length > 0 ||
-      cacheInvalidateConfigs.length > 0
+      !this.keyFieldSetDatasByTypeName.has(returnTypeName) ||
+      !this.entityCacheConfigByTypeName.has(returnTypeName)
     ) {
-      // Attach to the first available root type configuration data
-      // Entity cache configs go to the type they're defined on
-      for (const ec of entityCacheConfigs) {
-        const configData = this.configurationDataByTypeName.get(ec.typeName);
-        if (configData) {
-          if (!configData.entityCacheConfigurations) {
-            configData.entityCacheConfigurations = [];
-          }
-          configData.entityCacheConfigurations.push(ec);
-        }
+      this.errors.push(
+        invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, FIRST_ORDINAL, [
+          cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+        ]),
+      );
+      return;
+    }
+    const configData = this.getCacheConfigurationData(parentTypeName, false);
+    if (!configData.cacheInvalidateConfigurations) {
+      configData.cacheInvalidateConfigurations = [];
+    }
+    configData.cacheInvalidateConfigurations.push({
+      fieldName,
+      operationType: operationType === OperationTypeNode.MUTATION ? MUTATION : SUBSCRIPTION,
+      entityTypeName: returnTypeName,
+    });
+  }
+
+  extractCachePopulateConfig(
+    parentTypeName: string,
+    fieldName: string,
+    fieldData: FieldData,
+    operationType: OperationTypeNode,
+  ) {
+    const fieldCoords = `${parentTypeName}.${fieldName}`;
+    if (operationType !== OperationTypeNode.MUTATION && operationType !== OperationTypeNode.SUBSCRIPTION) {
+      this.errors.push(
+        invalidDirectiveError(CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+          cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
+        ]),
+      );
+      return;
+    }
+    const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+    if (
+      !this.keyFieldSetDatasByTypeName.has(returnTypeName) ||
+      !this.entityCacheConfigByTypeName.has(returnTypeName)
+    ) {
+      this.errors.push(
+        invalidDirectiveError(CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+          cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+        ]),
+      );
+      return;
+    }
+    // maxAge is optional for @cachePopulate; when absent the router falls back to the entity's
+    // @entityCache TTL. When provided, it must be positive.
+    const cachePopulateDirective = fieldData.directivesByName.get(CACHE_POPULATE)![0];
+    const maxAgeRaw = this.extractCacheIntArg(cachePopulateDirective, MAX_AGE);
+    let maxAgeSeconds: number | undefined;
+    if (maxAgeRaw !== undefined) {
+      if (maxAgeRaw <= 0) {
+        this.errors.push(
+          invalidDirectiveError(CACHE_POPULATE, fieldCoords, FIRST_ORDINAL, [
+            maxAgeNotPositiveIntegerErrorMessage(CACHE_POPULATE, maxAgeRaw),
+          ]),
+        );
+        return;
       }
-      // Root field, populate, and invalidate configs go to the root type (Query/Mutation/Subscription)
-      for (const rfc of rootFieldCacheConfigs) {
-        const configData = this.configurationDataByTypeName.get(QUERY);
-        if (configData) {
-          if (!configData.rootFieldCacheConfigurations) {
-            configData.rootFieldCacheConfigurations = [];
-          }
-          configData.rootFieldCacheConfigurations.push(rfc);
-        }
+      maxAgeSeconds = maxAgeRaw;
+    }
+    const configData = this.getCacheConfigurationData(parentTypeName, false);
+    if (!configData.cachePopulateConfigurations) {
+      configData.cachePopulateConfigurations = [];
+    }
+    configData.cachePopulateConfigurations.push({
+      fieldName,
+      operationType: operationType === OperationTypeNode.MUTATION ? MUTATION : SUBSCRIPTION,
+      entityTypeName: returnTypeName,
+      maxAgeSeconds,
+    });
+  }
+
+  // Enforces the top-level placement rule for @is: the field must also declare @queryCache.
+  // Deeper @is validation (path resolution, composite decomposition, type checking) lives in
+  // buildArgumentKeyMappings.
+  validateIsDirectivePlacement(fieldCoords: string, fieldData: FieldData, hasQueryCache: boolean) {
+    if (hasQueryCache) {
+      return;
+    }
+    for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
+      if (!argumentData.directivesByName.has(IS)) {
+        continue;
       }
-      for (const cp of cachePopulateConfigs) {
-        const parentType = cp.operationType;
-        const configData = this.configurationDataByTypeName.get(parentType);
-        if (configData) {
-          if (!configData.cachePopulateConfigurations) {
-            configData.cachePopulateConfigurations = [];
-          }
-          configData.cachePopulateConfigurations.push(cp);
-        }
-      }
-      for (const ci of cacheInvalidateConfigs) {
-        const parentType = ci.operationType;
-        const configData = this.configurationDataByTypeName.get(parentType);
-        if (configData) {
-          if (!configData.cacheInvalidateConfigurations) {
-            configData.cacheInvalidateConfigurations = [];
-          }
-          configData.cacheInvalidateConfigurations.push(ci);
-        }
-      }
+      this.errors.push(
+        invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, FIRST_ORDINAL, [
+          isWithoutQueryCacheErrorMessage(argumentName, fieldCoords),
+        ]),
+      );
     }
   }
 
@@ -3895,117 +3958,971 @@ export class NormalizationFactory {
     return false;
   }
 
-  // Collects the top-level field names from all @key(fields: "...") directives on an entity type.
-  // Only simple (non-nested) field names are extracted — compound keys like @key(fields: "store { id }")
-  // are filtered out because nested fields cannot be directly mapped to query arguments.
-  extractKeyFieldNames(keyFieldSets: Map<string, KeyFieldSetData> | undefined): Set<string> {
-    const keyFields = new Set<string>();
-    if (!keyFieldSets) {
-      return keyFields;
+  // Extracts key field info from a key's DocumentNode AST.
+  // Returns an array of { path: "store.id", typeNode: TypeNode } for each leaf field.
+  extractKeyFieldInfos(
+    documentNode: DocumentNode,
+    entityTypeName: string,
+  ): Array<{ path: string; typeNode: TypeNode }> {
+    const result: Array<{ path: string; typeNode: TypeNode }> = [];
+    const operationDef = documentNode.definitions[0];
+    if (!operationDef || !('selectionSet' in operationDef) || !operationDef.selectionSet) {
+      return result;
     }
-    // Extract top-level field names from @key(fields: "...") selection sets
-    for (const { normalizedFieldSet } of keyFieldSets.values()) {
-      // normalizedFieldSet is like "id" or "id name" (space-separated top-level fields)
-      for (const field of normalizedFieldSet.split(/\s+/)) {
-        if (field && !field.includes('{')) {
-          keyFields.add(field);
+
+    const walkSelections = (
+      selections: readonly any[],
+      currentTypeName: string,
+      pathPrefix: string,
+    ) => {
+      for (const selection of selections) {
+        if (selection.kind !== Kind.FIELD) {
+          continue;
+        }
+        const fieldName = selection.name.value;
+        const fieldPath = pathPrefix ? `${pathPrefix}.${fieldName}` : fieldName;
+
+        // Look up the field type on the current parent type
+        const parentData = this.parentDefinitionDataByTypeName.get(currentTypeName);
+        if (!parentData || !('fieldDataByName' in parentData)) {
+          continue;
+        }
+        const fieldData = parentData.fieldDataByName.get(fieldName);
+        if (!fieldData) {
+          continue;
+        }
+
+        if (selection.selectionSet && selection.selectionSet.selections.length > 0) {
+          // Nested: recurse into the named type
+          const nestedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+          walkSelections(selection.selectionSet.selections, nestedTypeName, fieldPath);
+        } else {
+          // Leaf field
+          result.push({ path: fieldPath, typeNode: fieldData.node.type });
+        }
+      }
+    };
+
+    walkSelections(operationDef.selectionSet.selections, entityTypeName, '');
+    return result;
+  }
+
+  // Returns the named type name after stripping NonNull and List wrappers.
+  getNamedTypeName(typeNode: TypeNode): string {
+    if (typeNode.kind === Kind.NAMED_TYPE) {
+      return typeNode.name.value;
+    }
+    return this.getNamedTypeName(typeNode.type);
+  }
+
+  // Checks if a type is a list (unwrapping NonNull).
+  isListTypeNode(typeNode: TypeNode): boolean {
+    if (typeNode.kind === Kind.LIST_TYPE) {
+      return true;
+    }
+    if (typeNode.kind === Kind.NON_NULL_TYPE) {
+      return this.isListTypeNode(typeNode.type);
+    }
+    return false;
+  }
+
+  // Unwraps one layer of list: [T!]! -> T!, [[T!]!]! -> [T!]!
+  unwrapListType(typeNode: TypeNode): TypeNode {
+    if (typeNode.kind === Kind.LIST_TYPE) {
+      return typeNode.type;
+    }
+    if (typeNode.kind === Kind.NON_NULL_TYPE) {
+      const inner = this.unwrapListType(typeNode.type);
+      // If inner changed (was a list), return the unwrapped version without non-null wrapper
+      if (inner !== typeNode.type) {
+        return inner;
+      }
+    }
+    return typeNode;
+  }
+
+  // Compare named types (unwrapping NonNull wrappers only, not list wrappers).
+  namedTypesMatch(a: TypeNode, b: TypeNode): boolean {
+    return this.getNamedTypeName(a) === this.getNamedTypeName(b);
+  }
+
+  // Check if both types have matching list structure.
+  listStructureMatches(a: TypeNode, b: TypeNode): boolean {
+    const aIsList = this.isListTypeNode(a);
+    const bIsList = this.isListTypeNode(b);
+    return aIsList === bIsList;
+  }
+
+  // Get @is field value from an argument's directives.
+  getIsFieldValue(argumentData: InputValueData): string | undefined {
+    const isDirectives = argumentData.directivesByName.get(IS);
+    if (!isDirectives || isDirectives.length < 1) {
+      return undefined;
+    }
+    const isDirective = isDirectives[0];
+    if (isDirective.arguments) {
+      for (const arg of isDirective.arguments) {
+        if (arg.name.value === FIELDS && arg.value.kind === Kind.STRING) {
+          return (arg.value as StringValueNode).value;
         }
       }
     }
-    return keyFields;
+    return undefined;
   }
 
-  // Builds mappings between a @queryCache field's arguments and the returned entity's @key fields.
-  // These mappings tell the router how to construct cache keys from query arguments at runtime.
-  //
-  // Two mapping strategies are supported:
-  //   1. Explicit: argument has @is(field: "keyFieldName") → maps argument to the named @key field
-  //   2. Auto-mapping: argument name matches a @key field name → implicitly mapped
-  //
-  // Returns the mappings and optionally the first unmapped @key field (for a warning).
-  // For list-returning fields, returns empty mappings — the router cannot do key-based cache
-  // lookups for lists, but can still populate the cache with individual entities from the response.
+  // Validates and builds nested input object mappings against key field infos.
+  // Returns field mappings or null on error (errors already pushed).
+  validateNestedInputObjectMapping(
+    argumentName: string,
+    fieldCoords: string,
+    entityTypeName: string,
+    keyFieldInfos: Array<{ path: string; typeNode: TypeNode }>,
+    normalizedFieldSet: string,
+    inputTypeName: string,
+    argumentPathPrefix: string[],
+    isBatch: boolean,
+    isNested: boolean,
+    entityKeyPathPrefix: string = '',
+  ): FieldMappingConfig[] | null {
+    const inputData = this.parentDefinitionDataByTypeName.get(inputTypeName);
+    if (!inputData || inputData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+      return null;
+    }
+
+    // Group key field infos by top-level field name for the current level
+    const topLevelGroups = new Map<string, Array<{ path: string; typeNode: TypeNode; restPath: string }>>();
+    for (const info of keyFieldInfos) {
+      const dotIndex = info.path.indexOf(LITERAL_PERIOD);
+      const topField = dotIndex >= 0 ? info.path.substring(0, dotIndex) : info.path;
+      const restPath = dotIndex >= 0 ? info.path.substring(dotIndex + 1) : '';
+      if (!topLevelGroups.has(topField)) {
+        topLevelGroups.set(topField, []);
+      }
+      topLevelGroups.get(topField)!.push({ ...info, restPath });
+    }
+
+    const fieldMappings: FieldMappingConfig[] = [];
+
+    for (const [topField, infos] of topLevelGroups) {
+      const inputFieldData = inputData.inputValueDataByName.get(topField);
+      if (!inputFieldData) {
+        // Missing field in input type
+        if (isNested) {
+          this.errors.push(
+            invalidDirectiveError(QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+              nestedInputObjectMissingFieldErrorMessage(
+                argumentName, fieldCoords, normalizedFieldSet, entityTypeName, inputTypeName, topField,
+              ),
+            ]),
+          );
+        } else {
+          this.errors.push(
+            invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, FIRST_ORDINAL, [
+              inputObjectCompositeMissingFieldErrorMessage(
+                argumentName, fieldCoords, normalizedFieldSet, entityTypeName, inputTypeName, topField,
+              ),
+            ]),
+          );
+        }
+        return null;
+      }
+
+      const fullEntityKeyPath = entityKeyPathPrefix ? `${entityKeyPathPrefix}.${topField}` : topField;
+      const hasNestedFields = infos.some(i => i.restPath !== '');
+      if (hasNestedFields) {
+        // Recurse into nested input object
+        const nestedInfos = infos.map(i => ({ path: i.restPath, typeNode: i.typeNode }));
+        const nestedInputTypeName = this.getNamedTypeName(inputFieldData.type);
+        const nestedMappings = this.validateNestedInputObjectMapping(
+          argumentName, fieldCoords, entityTypeName, nestedInfos, normalizedFieldSet,
+          nestedInputTypeName, [...argumentPathPrefix, topField], isBatch, true, fullEntityKeyPath,
+        );
+        if (!nestedMappings) {
+          return null;
+        }
+        fieldMappings.push(...nestedMappings);
+      } else {
+        // Leaf: check type match
+        const keyTypeNode = infos[0].typeNode;
+        if (!this.namedTypesMatch(inputFieldData.type, keyTypeNode)) {
+          // Resolve the entity field's parent type for the error message
+          // We need to walk the full entity key path to find the parent of the leaf
+          const fullPath = entityKeyPathPrefix ? `${entityKeyPathPrefix}.${topField}` : topField;
+          const pathParts = fullPath.split(LITERAL_PERIOD);
+          let currentType = entityTypeName;
+          for (let i = 0; i < pathParts.length - 1; i++) {
+            const pd = this.parentDefinitionDataByTypeName.get(currentType);
+            if (pd && 'fieldDataByName' in pd) {
+              const fd = pd.fieldDataByName.get(pathParts[i]);
+              if (fd) {
+                currentType = getTypeNodeNamedTypeName(fd.node.type);
+              }
+            }
+          }
+          const entityFieldCoords = `${currentType}.${pathParts[pathParts.length - 1]}`;
+          if (isNested) {
+            this.errors.push(
+              invalidDirectiveError(QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+                nestedInputObjectTypeMismatchErrorMessage(
+                  argumentName, fieldCoords, normalizedFieldSet, entityTypeName, inputTypeName,
+                  topField, printTypeNode(inputFieldData.node.type), entityFieldCoords, printTypeNode(keyTypeNode),
+                ),
+              ]),
+            );
+          } else {
+            this.errors.push(
+              invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, FIRST_ORDINAL, [
+                inputObjectCompositeTypeMismatchErrorMessage(
+                  argumentName, fieldCoords, normalizedFieldSet, entityTypeName, inputTypeName,
+                  topField, printTypeNode(inputFieldData.node.type), entityFieldCoords, printTypeNode(keyTypeNode),
+                ),
+              ]),
+            );
+          }
+          return null;
+        }
+        const mapping: FieldMappingConfig = {
+          entityKeyField: fullEntityKeyPath,
+          argumentPath: [...argumentPathPrefix, topField],
+        };
+        if (isBatch) {
+          mapping.isBatch = true;
+        }
+        fieldMappings.push(mapping);
+      }
+    }
+
+    return fieldMappings;
+  }
+
+  // The main mapping builder. Evaluates each @key independently and emits all satisfiable keys.
   buildArgumentKeyMappings(
     fieldData: FieldData,
     fieldCoords: string,
     entityTypeName: string,
-    keyFields: Set<string>,
+    keyFieldSets: Map<string, KeyFieldSetData> | undefined,
     isListReturn: boolean,
-  ): { mappings: EntityKeyMappingConfig[]; unmappedKeyField: string | undefined } {
-    // List-returning fields skip mapping — cache reads require a single entity key
-    if (isListReturn || keyFields.size === 0) {
-      return { mappings: [], unmappedKeyField: undefined };
+  ): EntityKeyMappingConfig[] {
+    if (!keyFieldSets || keyFieldSets.size === 0) {
+      return [];
     }
 
-    const fieldMappings: FieldMappingConfig[] = [];
-    const mappedKeyFields = new Set<string>();
+    type ArgumentInfo = {
+      name: string;
+      data: InputValueData;
+      isFieldValue: string | undefined; // @is(fields: "...") value
+      isList: boolean;
+      typeNode: TypeNode;
+    };
 
+    const argumentInfos: ArgumentInfo[] = [];
     for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
+      argumentInfos.push({
+        name: argumentName,
+        data: argumentData,
+        isFieldValue: this.getIsFieldValue(argumentData),
+        isList: this.isListTypeNode(argumentData.type),
+        typeNode: argumentData.type,
+      });
+    }
+
+    if (this.hasAnyExplicitIs(fieldData)) {
+      return this.buildExplicitMappings(fieldCoords, entityTypeName, keyFieldSets, isListReturn, argumentInfos);
+    }
+    return this.buildAutoMappings(fieldCoords, entityTypeName, keyFieldSets, isListReturn, argumentInfos);
+  }
+
+  hasAnyExplicitIs(fieldData: FieldData): boolean {
+    for (const [, argumentData] of fieldData.argumentDataByName) {
       const isDirectives = argumentData.directivesByName.get(IS);
       if (isDirectives && isDirectives.length > 0) {
-        // Extract @is(field: "...") value
-        const isDirective = isDirectives[0];
-        let isFieldValue: string | undefined;
-        if (isDirective.arguments) {
-          for (const arg of isDirective.arguments) {
-            if (arg.name.value === FIELD && arg.value.kind === Kind.STRING) {
-              isFieldValue = (arg.value as StringValueNode).value;
-            }
-          }
-        }
-        if (isFieldValue) {
-          // Rule 13: Redundant @is if argument name matches key field (warning, not error)
-          if (isFieldValue === argumentName) {
-            this.warnings.push(redundantIsDirectiveWarning(this.subgraphName, argumentName, fieldCoords));
-          }
-          // Rule 11: @is field must reference a @key field
-          if (!keyFields.has(isFieldValue)) {
-            this.errors.push(
-              invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, '1st', [
-                isReferencesUnknownKeyFieldErrorMessage(isFieldValue, argumentName, fieldCoords, entityTypeName),
-              ]),
-            );
-            continue;
-          }
-          // Rule 12: Duplicate key field mapping
-          if (mappedKeyFields.has(isFieldValue)) {
-            this.errors.push(
-              invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, '1st', [
-                duplicateKeyFieldMappingErrorMessage(fieldCoords, isFieldValue),
-              ]),
-            );
-            continue;
-          }
-          mappedKeyFields.add(isFieldValue);
-          fieldMappings.push({ entityKeyField: isFieldValue, argumentPath: [argumentName] });
-        }
-      } else if (keyFields.has(argumentName)) {
-        // Auto-mapping: argument name matches a @key field
-        if (mappedKeyFields.has(argumentName)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  buildExplicitMappings(
+    fieldCoords: string,
+    entityTypeName: string,
+    keyFieldSets: Map<string, KeyFieldSetData>,
+    isListReturn: boolean,
+    argumentInfos: Array<{
+      name: string;
+      data: InputValueData;
+      isFieldValue: string | undefined;
+      isList: boolean;
+      typeNode: TypeNode;
+    }>,
+  ): EntityKeyMappingConfig[] {
+    // Collect all @is field values and their infos across ALL keys
+    const allKeyFieldInfosByKey = new Map<string, Array<{ path: string; typeNode: TypeNode }>>();
+    // Build a set of ALL key field paths across all keys
+    const allKeyFieldPaths = new Set<string>();
+    // Also build a map from field path -> key field info for type lookups
+    const fieldInfoByPath = new Map<string, { typeNode: TypeNode }>();
+    // Track which fields exist on the entity (not necessarily key fields)
+    const entityFieldNames = new Set<string>();
+    const entityParentData = this.parentDefinitionDataByTypeName.get(entityTypeName);
+    if (entityParentData && 'fieldDataByName' in entityParentData) {
+      for (const fname of entityParentData.fieldDataByName.keys()) {
+        entityFieldNames.add(fname);
+      }
+    }
+
+    for (const [normalizedFieldSet, keyData] of keyFieldSets) {
+      const infos = this.extractKeyFieldInfos(keyData.documentNode, entityTypeName);
+      allKeyFieldInfosByKey.set(normalizedFieldSet, infos);
+      for (const info of infos) {
+        allKeyFieldPaths.add(info.path);
+        fieldInfoByPath.set(info.path, { typeNode: info.typeNode });
+      }
+    }
+
+    // Process each argument with @is
+    const explicitMappings: Array<{ argumentName: string; isFieldValue: string; argumentInfo: typeof argumentInfos[0] }> = [];
+    const mappedKeyFields = new Set<string>();
+
+    for (const argInfo of argumentInfos) {
+      if (!argInfo.isFieldValue) {
+        continue;
+      }
+
+      const isFieldValue = argInfo.isFieldValue;
+
+      // Check if @is targets multiple fields (composite key via input object)
+      const isCompositeIsSpec = isFieldValue.includes(LITERAL_SPACE);
+
+      if (isCompositeIsSpec) {
+        return this.buildCompositeIsMapping(
+          fieldCoords, entityTypeName, keyFieldSets, isListReturn, argInfo,
+        );
+      }
+
+      // Check if the field exists on the entity at all but is not a key field
+      const topLevelFieldName = isFieldValue.split(LITERAL_PERIOD)[0];
+      if (!allKeyFieldPaths.has(isFieldValue)) {
+        if (entityFieldNames.has(topLevelFieldName) && !isFieldValue.includes(LITERAL_PERIOD)) {
+          // Field exists but is not a key field
           this.errors.push(
-            invalidDirectiveError(QUERY_CACHE, fieldCoords, '1st', [
-              duplicateKeyFieldMappingErrorMessage(fieldCoords, argumentName),
+            invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+              nonKeyFieldSpecErrorMessage(argInfo.name, fieldCoords, isFieldValue, entityTypeName),
             ]),
           );
+        } else {
+          this.errors.push(
+            invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+              isReferencesUnknownKeyFieldErrorMessage(isFieldValue, argInfo.name, fieldCoords, entityTypeName),
+            ]),
+          );
+        }
+        return [];
+      }
+
+      // Duplicate check
+      if (mappedKeyFields.has(isFieldValue)) {
+        this.errors.push(
+          invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+            duplicateKeyFieldMappingErrorMessage(fieldCoords, isFieldValue),
+          ]),
+        );
+        return [];
+      }
+
+      const keyFieldTypeNode = fieldInfoByPath.get(isFieldValue)!.typeNode;
+      const argTypeNode = argInfo.typeNode;
+
+      // Type checking
+      if (isListReturn) {
+        // Batch mode
+        if (this.isListTypeNode(keyFieldTypeNode)) {
+          // Key field is a list - need list-of-lists argument
+          if (!argInfo.isList) {
+            // Scalar arg to list key in batch
+            this.errors.push(
+              invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+                batchListValuedKeyRequiresNestedListsErrorMessage(
+                  fieldCoords, isFieldValue, entityTypeName,
+                  `a scalar tag of type "${printTypeNode(argTypeNode)}"`,
+                ),
+              ]),
+            );
+            return [];
+          }
+          // List arg but is it list-of-lists?
+          const unwrapped = this.unwrapListType(argTypeNode);
+          if (!this.isListTypeNode(unwrapped)) {
+            // Single list, not list of lists
+            this.errors.push(
+              invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+                batchListValuedKeyRequiresNestedListsErrorMessage(
+                  fieldCoords, isFieldValue, entityTypeName,
+                  `a single tag list of type "${printTypeNode(argTypeNode)}"`,
+                ),
+              ]),
+            );
+            return [];
+          }
+          // List of lists - check inner type matches
+          const innerType = this.unwrapListType(unwrapped);
+          if (!this.namedTypesMatch(innerType, keyFieldTypeNode)) {
+            this.errors.push(
+              invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+                explicitTypeMismatchErrorMessage(
+                  argInfo.name, fieldCoords, printTypeNode(argTypeNode), isFieldValue, entityTypeName,
+                  printTypeNode(keyFieldTypeNode),
+                ),
+              ]),
+            );
+            return [];
+          }
+        } else {
+          // Key field is scalar - need list argument with matching element type
+          if (argInfo.isList) {
+            // Check element type
+            const unwrapped = this.unwrapListType(argTypeNode);
+            if (!this.namedTypesMatch(unwrapped, keyFieldTypeNode)) {
+              this.errors.push(
+                invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+                  explicitTypeMismatchErrorMessage(
+                    argInfo.name, fieldCoords, printTypeNode(argTypeNode), isFieldValue, entityTypeName,
+                    printTypeNode(keyFieldTypeNode),
+                  ),
+                ]),
+              );
+              return [];
+            }
+          } else {
+            // Scalar arg in batch mode - could still be valid as a scalar @is, we'll check later
+          }
+        }
+      } else {
+        // Singular mode
+        const argIsList = argInfo.isList;
+        const keyIsList = this.isListTypeNode(keyFieldTypeNode);
+
+        if (argIsList && !keyIsList) {
+          // List arg to scalar key on singular return
+          this.errors.push(
+            invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+              listArgumentToScalarKeySpecErrorMessage(
+                argInfo.name, fieldCoords, printTypeNode(argTypeNode), isFieldValue, entityTypeName,
+                printTypeNode(keyFieldTypeNode),
+              ),
+            ]),
+          );
+          return [];
+        }
+
+        if (!argIsList && keyIsList) {
+          // Scalar arg to list key on singular return
+          this.errors.push(
+            invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+              scalarArgumentToListKeySpecErrorMessage(
+                argInfo.name, fieldCoords, printTypeNode(argTypeNode), isFieldValue, entityTypeName,
+                printTypeNode(keyFieldTypeNode),
+              ),
+            ]),
+          );
+          return [];
+        }
+
+        // Named type comparison (handles both scalar-scalar and list-list)
+        if (!this.namedTypesMatch(argTypeNode, keyFieldTypeNode)) {
+          this.errors.push(
+            invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+              explicitTypeMismatchErrorMessage(
+                argInfo.name, fieldCoords, printTypeNode(argTypeNode), isFieldValue, entityTypeName,
+                printTypeNode(keyFieldTypeNode),
+              ),
+            ]),
+          );
+          return [];
+        }
+      }
+
+      mappedKeyFields.add(isFieldValue);
+      explicitMappings.push({ argumentName: argInfo.name, isFieldValue, argumentInfo: argInfo });
+    }
+
+    if (explicitMappings.length === 0) {
+      return [];
+    }
+
+    // Check for duplicate: argument name matches a key field that's already explicitly mapped
+    for (const argInfo of argumentInfos) {
+      if (argInfo.isFieldValue) {
+        continue; // Skip @is arguments
+      }
+      if (mappedKeyFields.has(argInfo.name)) {
+        // This argument would auto-map to a key field that's already explicitly mapped
+        this.errors.push(
+          invalidDirectiveError(IS, `${fieldCoords}(${argumentInfos.find(a => a.isFieldValue === argInfo.name)!.name}: ...)`, FIRST_ORDINAL, [
+            duplicateKeyFieldMappingErrorMessage(fieldCoords, argInfo.name),
+          ]),
+        );
+        return [];
+      }
+    }
+
+    // Check for batch mode: all explicit mappings on list return
+    if (isListReturn) {
+      // Check for extra non-key arguments FIRST (not @is and not a key field in any key)
+      const extraArgs = argumentInfos.filter(a => !a.isFieldValue && !allKeyFieldPaths.has(a.name));
+      if (extraArgs.length > 0) {
+        const firstExplicit = explicitMappings[0];
+        this.errors.push(
+          invalidDirectiveError(IS, `${fieldCoords}(${firstExplicit.argumentName}: ...)`, FIRST_ORDINAL, [
+            explicitBatchAdditionalNonKeyArgumentErrorMessage(
+              fieldCoords, firstExplicit.argumentName, firstExplicit.isFieldValue, entityTypeName, extraArgs[0].name,
+            ),
+          ]),
+        );
+        return [];
+      }
+
+      // Check if all explicit args are scalars
+      const allScalar = explicitMappings.every(m => !m.argumentInfo.isList);
+      const listMappings = explicitMappings.filter(m => m.argumentInfo.isList);
+
+      if (allScalar) {
+        this.errors.push(
+          invalidDirectiveError(IS, `${fieldCoords}(${explicitMappings[0].argumentName}: ...)`, FIRST_ORDINAL, [
+            explicitScalarArgumentsCannotEstablishBatchMappingErrorMessage(fieldCoords, entityTypeName),
+          ]),
+        );
+        return [];
+      }
+
+      if (listMappings.length > 1) {
+        this.errors.push(
+          invalidDirectiveError(QUERY_CACHE, fieldCoords, FIRST_ORDINAL, [
+            multipleListArgumentsBatchFactoryMessage(fieldCoords, entityTypeName),
+          ]),
+        );
+        return [];
+      }
+    }
+
+    // Check for extra non-key arguments globally (args not @is and not a key field in any key)
+    const globalExtraArgs = argumentInfos.filter(a => !a.isFieldValue && !allKeyFieldPaths.has(a.name));
+    if (globalExtraArgs.length > 0) {
+      if (!isListReturn) {
+        // Find which key the explicit mappings target
+        let targetKeyNormalized: string | undefined;
+        for (const [normalizedFieldSet] of keyFieldSets) {
+          const keyInfos = allKeyFieldInfosByKey.get(normalizedFieldSet)!;
+          const keyPaths = new Set(keyInfos.map(i => i.path));
+          if (explicitMappings.every(m => keyPaths.has(m.isFieldValue))) {
+            targetKeyNormalized = normalizedFieldSet;
+            break;
+          }
+        }
+
+        if (explicitMappings.length === 1 && targetKeyNormalized && !targetKeyNormalized.includes(LITERAL_SPACE)) {
+          this.errors.push(
+            invalidDirectiveError(IS, `${fieldCoords}(${explicitMappings[0].argumentName}: ...)`, FIRST_ORDINAL, [
+              explicitSingularAdditionalNonKeyArgumentErrorMessage(
+                fieldCoords, explicitMappings[0].argumentName, explicitMappings[0].isFieldValue,
+                entityTypeName, globalExtraArgs[0].name,
+              ),
+            ]),
+          );
+        } else if (targetKeyNormalized) {
+          const isArgNames = explicitMappings.map(m => m.argumentName);
+          this.errors.push(
+            invalidDirectiveError(IS, `${fieldCoords}(${isArgNames[0]}: ...)`, FIRST_ORDINAL, [
+              explicitCompositeAdditionalNonKeyArgumentErrorMessage(
+                fieldCoords, isArgNames[0], isArgNames[1] || isArgNames[0], targetKeyNormalized,
+                entityTypeName, globalExtraArgs[0].name,
+              ),
+            ]),
+          );
+        }
+        return [];
+      } else {
+        const firstExplicit = explicitMappings[0];
+        this.errors.push(
+          invalidDirectiveError(IS, `${fieldCoords}(${firstExplicit.argumentName}: ...)`, FIRST_ORDINAL, [
+            explicitBatchAdditionalNonKeyArgumentErrorMessage(
+              fieldCoords, firstExplicit.argumentName, firstExplicit.isFieldValue, entityTypeName, globalExtraArgs[0].name,
+            ),
+          ]),
+        );
+        return [];
+      }
+    }
+
+    // Now try to find satisfiable keys
+    const results: EntityKeyMappingConfig[] = [];
+    for (const normalizedFieldSet of keyFieldSets.keys()) {
+      const keyInfos = allKeyFieldInfosByKey.get(normalizedFieldSet)!;
+      const keyPaths = new Set(keyInfos.map(i => i.path));
+
+      // Check which explicit mappings target this key
+      const explicitForThisKey = explicitMappings.filter(m => keyPaths.has(m.isFieldValue));
+
+      // Check that ALL fields of this key are mapped (explicit or auto)
+      const autoMappedForKey: Array<{ argumentName: string; keyPath: string; argInfo: typeof argumentInfos[0] }> = [];
+      const unmappedFields: string[] = [];
+      let keyFullySatisfied = true;
+
+      for (const info of keyInfos) {
+        // Is it covered by an explicit mapping?
+        if (explicitForThisKey.some(m => m.isFieldValue === info.path)) {
           continue;
         }
-        mappedKeyFields.add(argumentName);
-        fieldMappings.push({ entityKeyField: argumentName, argumentPath: [argumentName] });
+        // Try auto-mapping
+        const autoMapped = argumentInfos.find(a => !a.isFieldValue && a.name === info.path);
+        if (autoMapped && this.namedTypesMatch(autoMapped.typeNode, info.typeNode) &&
+            this.isListTypeNode(autoMapped.typeNode) === this.isListTypeNode(info.typeNode)) {
+          autoMappedForKey.push({ argumentName: autoMapped.name, keyPath: info.path, argInfo: autoMapped });
+        } else {
+          unmappedFields.push(info.path);
+          keyFullySatisfied = false;
+        }
+      }
+
+      if (!keyFullySatisfied) {
+        // If this key has explicit mappings targeting it but is incomplete, error
+        if (explicitForThisKey.length > 0 && unmappedFields.length > 0) {
+          this.errors.push(
+            invalidDirectiveError(IS, `${fieldCoords}(${explicitForThisKey[0].argumentName}: ...)`, FIRST_ORDINAL, [
+              explicitIncompleteCompositeKeyErrorMessage(
+                fieldCoords, explicitForThisKey[0].argumentName, explicitForThisKey[0].isFieldValue,
+                entityTypeName, normalizedFieldSet, unmappedFields[0],
+              ),
+            ]),
+          );
+          return [];
+        }
+        continue;
+      }
+
+      // Build field mappings in key field info order
+      const fieldMappings: FieldMappingConfig[] = [];
+      for (const info of keyInfos) {
+        const explicitMatch = explicitForThisKey.find(m => m.isFieldValue === info.path);
+        if (explicitMatch) {
+          const mapping: FieldMappingConfig = {
+            entityKeyField: explicitMatch.isFieldValue,
+            argumentPath: [explicitMatch.argumentName],
+          };
+          if (isListReturn && explicitMatch.argumentInfo.isList) {
+            mapping.isBatch = true;
+          }
+          fieldMappings.push(mapping);
+          continue;
+        }
+        const autoMatch = autoMappedForKey.find(a => a.keyPath === info.path);
+        if (autoMatch) {
+          const mapping: FieldMappingConfig = {
+            entityKeyField: autoMatch.keyPath,
+            argumentPath: [autoMatch.argumentName],
+          };
+          if (isListReturn && autoMatch.argInfo.isList) {
+            mapping.isBatch = true;
+          }
+          fieldMappings.push(mapping);
+        }
+      }
+
+      if (fieldMappings.length > 0) {
+        results.push({ entityTypeName, fieldMappings });
       }
     }
 
-    // Check for unmapped key fields
-    let unmappedKeyField: string | undefined;
-    for (const keyField of keyFields) {
-      if (!mappedKeyFields.has(keyField)) {
-        unmappedKeyField = keyField;
-        break;
+    // Each key remains its own EntityKeyMappingConfig — the router evaluates them
+    // independently (OR semantics). Do NOT merge single-field results.
+    return results;
+  }
+
+  buildCompositeIsMapping(
+    fieldCoords: string,
+    entityTypeName: string,
+    keyFieldSets: Map<string, KeyFieldSetData>,
+    isListReturn: boolean,
+    argInfo: {
+      name: string;
+      data: InputValueData;
+      isFieldValue: string | undefined;
+      isList: boolean;
+      typeNode: TypeNode;
+    },
+  ): EntityKeyMappingConfig[] {
+    const isFieldValue = argInfo.isFieldValue!;
+
+    // Find the matching key
+    for (const [normalizedFieldSet, keyData] of keyFieldSets) {
+      if (normalizedFieldSet !== isFieldValue) {
+        continue;
+      }
+
+      const keyInfos = this.extractKeyFieldInfos(keyData.documentNode, entityTypeName);
+      const argTypeName = this.getNamedTypeName(argInfo.typeNode);
+
+      // Check if argument is an input object type
+      const inputData = this.parentDefinitionDataByTypeName.get(argTypeName);
+      if (!inputData || inputData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+        // Non-input argument targeting composite key
+        this.errors.push(
+          invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+            nonInputArgumentCannotTargetCompositeKeyErrorMessage(
+              argInfo.name, fieldCoords, isFieldValue, entityTypeName, printTypeNode(argInfo.typeNode),
+            ),
+          ]),
+        );
+        return [];
+      }
+
+      const isBatch = isListReturn && argInfo.isList;
+      const isNestedKey = normalizedFieldSet.includes(LITERAL_OPEN_BRACE);
+
+      const fieldMappings = this.validateNestedInputObjectMapping(
+        argInfo.name, fieldCoords, entityTypeName, keyInfos, normalizedFieldSet,
+        argTypeName, [argInfo.name], isBatch, isNestedKey,
+      );
+
+      if (!fieldMappings) {
+        return [];
+      }
+
+      return [{ entityTypeName, fieldMappings }];
+    }
+
+    // Key not found
+    this.errors.push(
+      invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
+        isReferencesUnknownKeyFieldErrorMessage(isFieldValue, argInfo.name, fieldCoords, entityTypeName),
+      ]),
+    );
+    return [];
+  }
+
+  buildAutoMappings(
+    fieldCoords: string,
+    entityTypeName: string,
+    keyFieldSets: Map<string, KeyFieldSetData>,
+    isListReturn: boolean,
+    argumentInfos: Array<{
+      name: string;
+      data: InputValueData;
+      isFieldValue: string | undefined;
+      isList: boolean;
+      typeNode: TypeNode;
+    }>,
+  ): EntityKeyMappingConfig[] {
+    const results: EntityKeyMappingConfig[] = [];
+    let typeMismatchWarningEmitted = false;
+
+    // Gather ALL key field paths across all keys to determine which args are "non-key"
+    const allKeyFieldPaths = new Set<string>();
+    for (const [, keyData] of keyFieldSets) {
+      const infos = this.extractKeyFieldInfos(keyData.documentNode, entityTypeName);
+      for (const info of infos) {
+        allKeyFieldPaths.add(info.path);
       }
     }
 
-    const mappings: EntityKeyMappingConfig[] = fieldMappings.length > 0 ? [{ entityTypeName, fieldMappings }] : [];
+    // Try nested input object auto-mapping first:
+    // arguments whose named type is an input object matching a nested key structure.
+    for (const [normalizedFieldSet, keyData] of keyFieldSets) {
+      if (!normalizedFieldSet.includes(LITERAL_OPEN_BRACE)) {
+        continue; // Only for nested keys
+      }
 
-    return { mappings, unmappedKeyField };
+      const keyInfos = this.extractKeyFieldInfos(keyData.documentNode, entityTypeName);
+      if (keyInfos.length === 0) {
+        continue;
+      }
+
+      // Check if there's an argument whose name matches the top-level field of the key
+      // and whose type is an input object
+      const topFields = new Set<string>();
+      for (const info of keyInfos) {
+        const topField = info.path.split(LITERAL_PERIOD)[0];
+        topFields.add(topField);
+      }
+
+      // If there's exactly one top-level field and an argument with that name
+      if (topFields.size === 1) {
+        const topFieldName = [...topFields][0];
+        const matchingArg = argumentInfos.find(a => a.name === topFieldName);
+        if (matchingArg) {
+          const argTypeName = this.getNamedTypeName(matchingArg.typeNode);
+          const inputData = this.parentDefinitionDataByTypeName.get(argTypeName);
+          if (inputData && inputData.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION) {
+            // Re-root key infos relative to the top field
+            const nestedInfos = keyInfos.map(info => ({
+              path: info.path.substring(topFieldName.length + 1),
+              typeNode: info.typeNode,
+            }));
+
+            const fieldMappings = this.validateNestedInputObjectMapping(
+              matchingArg.name, fieldCoords, entityTypeName, nestedInfos, normalizedFieldSet,
+              argTypeName, [matchingArg.name], false, true, topFieldName,
+            );
+
+            if (fieldMappings) {
+              results.push({ entityTypeName, fieldMappings });
+            }
+            // Whether it succeeded or failed, we handled this key
+            continue;
+          }
+        }
+      }
+    }
+
+    // If we already got results from nested mapping, return them
+    if (results.length > 0) {
+      return results;
+    }
+
+    // Per-key independent evaluation for flat keys
+    for (const keyData of keyFieldSets.values()) {
+      const keyInfos = this.extractKeyFieldInfos(keyData.documentNode, entityTypeName);
+      if (keyInfos.length === 0) {
+        continue;
+      }
+
+      const fieldMappings: FieldMappingConfig[] = [];
+      let keyFullyMapped = true;
+      let firstMatchedArg: string | undefined;
+      let firstMatchedKeyField: string | undefined;
+      let unmappedField: string | undefined;
+      let scalarMatchedOnListReturn = false;
+
+      for (const keyInfo of keyInfos) {
+        const fieldName = keyInfo.path;
+        const matchingArg = argumentInfos.find(a => a.name === fieldName);
+
+        if (!matchingArg) {
+          keyFullyMapped = false;
+          unmappedField = fieldName;
+          continue;
+        }
+
+        const argTypeNode = matchingArg.typeNode;
+        const keyTypeNode = keyInfo.typeNode;
+        const argIsList = matchingArg.isList;
+        const keyIsList = this.isListTypeNode(keyTypeNode);
+
+        if (!this.namedTypesMatch(argTypeNode, keyTypeNode) || (argIsList !== keyIsList && !isListReturn)) {
+          if (!typeMismatchWarningEmitted) {
+            this.warnings.push(
+              autoMappingTypeMismatchWarning({
+                subgraphName: this.subgraphName,
+                argumentName: matchingArg.name,
+                fieldCoords,
+                argumentType: printTypeNode(argTypeNode),
+                keyField: fieldName,
+                entityType: entityTypeName,
+                keyFieldType: printTypeNode(keyTypeNode),
+              }),
+            );
+            typeMismatchWarningEmitted = true;
+          }
+          keyFullyMapped = false;
+          return [];
+        }
+
+        if (!firstMatchedArg) {
+          firstMatchedArg = matchingArg.name;
+          firstMatchedKeyField = fieldName;
+        }
+
+        if (isListReturn) {
+          if (argIsList) {
+            if (keyIsList) {
+              keyFullyMapped = false;
+              continue;
+            }
+            fieldMappings.push({
+              entityKeyField: fieldName,
+              argumentPath: [matchingArg.name],
+              isBatch: true,
+            });
+          } else {
+            // Scalar arg on list return - skip auto-mapping (no batch)
+            scalarMatchedOnListReturn = true;
+            keyFullyMapped = false;
+            continue;
+          }
+        } else {
+          fieldMappings.push({
+            entityKeyField: fieldName,
+            argumentPath: [matchingArg.name],
+          });
+        }
+      }
+
+      // Check for extra non-key arguments (args not in ANY key across all keys)
+      const extraArgs = argumentInfos.filter(a => !allKeyFieldPaths.has(a.name));
+
+      // On list return, if a scalar matched but was skipped and there are extra args, warn
+      if (isListReturn && scalarMatchedOnListReturn && extraArgs.length > 0 && firstMatchedArg && firstMatchedKeyField) {
+        this.warnings.push(
+          autoBatchAdditionalNonKeyArgumentWarning({
+            subgraphName: this.subgraphName,
+            fieldCoords,
+            argumentName: firstMatchedArg,
+            keyField: firstMatchedKeyField,
+            entityType: entityTypeName,
+            extraArgument: extraArgs[0].name,
+          }),
+        );
+        return [];
+      }
+
+      if (!keyFullyMapped && fieldMappings.length > 0 && unmappedField) {
+        if (!isListReturn) {
+          this.warnings.push(
+            incompleteQueryCacheKeyMappingWarning({
+              subgraphName: this.subgraphName,
+              fieldCoords,
+              entityType: entityTypeName,
+              unmappedKeyField: unmappedField,
+            }),
+          );
+        }
+        continue;
+      }
+
+      if (keyFullyMapped && fieldMappings.length > 0) {
+        if (extraArgs.length > 0 && firstMatchedArg && firstMatchedKeyField) {
+          if (isListReturn) {
+            this.warnings.push(
+              autoBatchAdditionalNonKeyArgumentWarning({
+                subgraphName: this.subgraphName,
+                fieldCoords,
+                argumentName: firstMatchedArg,
+                keyField: firstMatchedKeyField,
+                entityType: entityTypeName,
+                extraArgument: extraArgs[0].name,
+              }),
+            );
+          } else {
+            this.warnings.push(
+              autoMappingAdditionalNonKeyArgumentWarning({
+                subgraphName: this.subgraphName,
+                argumentName: firstMatchedArg,
+                fieldCoords,
+                keyField: firstMatchedKeyField,
+                entityType: entityTypeName,
+                extraArgument: extraArgs[0].name,
+              }),
+            );
+          }
+          return [];
+        }
+
+        results.push({ entityTypeName, fieldMappings });
+      }
+    }
+
+    // Each key remains its own EntityKeyMappingConfig — the router evaluates them
+    // independently (OR semantics). Do NOT merge single-field results.
+    return results;
   }
 
   getValidFlattenedDirectiveArray(
@@ -4031,7 +4948,7 @@ export class NormalizationFactory {
         if (!handledDirectiveNames.has(directiveName)) {
           handledDirectiveNames.add(directiveName);
           this.errors.push(
-            invalidDirectiveError(directiveName, directiveCoords, '1st', [
+            invalidDirectiveError(directiveName, directiveCoords, FIRST_ORDINAL, [
               invalidRepeatedDirectiveErrorMessage(directiveName),
             ]),
           );
@@ -4592,6 +5509,8 @@ export class NormalizationFactory {
     this.addValidConditionalFieldSetConfigurations();
     // this is where @key configurations are added to the ConfigurationData
     this.addValidKeyFieldSetConfigurations();
+    // this is where @requestScoped configurations are added to the ConfigurationData
+    this.extractRequestScopedFields();
     // Extract and validate entity caching directives
     this.validateAndExtractEntityCachingConfigs();
     // Check that explicitly defined operations types are valid objects and that their fields are also valid

@@ -15,22 +15,22 @@ import {
   isWithoutQueryCacheErrorMessage,
   duplicateKeyFieldMappingErrorMessage,
   maxAgeNotPositiveIntegerErrorMessage,
+  MUTATION,
   parse,
+  QUERY,
   QUERY_CACHE,
   queryCacheOnNonEntityReturnTypeErrorMessage,
   queryCacheOnNonQueryFieldErrorMessage,
-  queryCacheReturnTypeWithoutEntityCacheErrorMessage,
   RootFieldCacheConfig,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
+  SUBSCRIPTION,
   TypeName,
   cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
   cacheInvalidateOnNonEntityReturnTypeErrorMessage,
   cachePopulateOnNonMutationSubscriptionFieldErrorMessage,
   cachePopulateOnNonEntityReturnTypeErrorMessage,
   cacheInvalidateAndPopulateMutualExclusionErrorMessage,
-  incompleteQueryCacheKeyMappingWarning,
-  redundantIsDirectiveWarning,
 } from '../../../src';
 import { SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import { batchNormalize } from '../../../src/v1/normalization/normalization-factory';
@@ -53,7 +53,7 @@ function subgraph(sdl: string, name = 'subgraph-a'): Subgraph {
 // Helper: runs batchNormalize and returns the ConfigurationData for a given type.
 // Used by config-extraction tests that need to inspect the generated router configuration.
 function getConfigForType(sg: Subgraph, typeName: string) {
-  const result = batchNormalize({ subgraphs: [sg] }) as BatchNormalizationSuccess;
+  const result = batchNormalize({ subgraphs: [sg], version }) as BatchNormalizationSuccess;
   expect(result.success).toBe(true);
   const internal = result.internalSubgraphBySubgraphName.get(sg.name);
   expect(internal).toBeDefined();
@@ -237,26 +237,30 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('error: return entity exists but has no @entityCache — must opt in explicitly', () => {
-      const { errors } = normalizeSubgraphFailure(
+    test('success: return entity can omit @entityCache and still keep root-field caching without mappings', () => {
+      const config = getConfigForType(
         subgraph(`
           type Query {
             product(id: ID!): Product @queryCache(maxAge: 60)
           }
-          # Product is an entity (@key) but hasn't opted into caching (@entityCache)
           type Product @key(fields: "id") {
             id: ID!
             name: String!
           }
         `),
-        version,
+        QUERY,
       );
-      expect(errors).toHaveLength(1);
-      expect(errors[0]).toStrictEqual(
-        invalidDirectiveError(QUERY_CACHE, 'Query.product', FIRST_ORDINAL, [
-          queryCacheReturnTypeWithoutEntityCacheErrorMessage('Query.product', 'Product'),
-        ]),
-      );
+      expect(config).toBeDefined();
+      expect(config!.rootFieldCacheConfigurations).toStrictEqual([
+        {
+          fieldName: 'product',
+          maxAgeSeconds: 60,
+          includeHeaders: false,
+          shadowMode: false,
+          entityTypeName: 'Product',
+          entityKeyMappings: [],
+        },
+      ] satisfies RootFieldCacheConfig[]);
     });
 
     test('error: maxAge of zero', () => {
@@ -280,9 +284,8 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test("warning: argument name doesn't match any @key field — cache reads disabled", () => {
-      // The argument "name" doesn't match the @key field "id", so the router can't
-      // construct a cache key from the query arguments. Cache writes still work.
+    test("success: argument name doesn't match any @key field — no mappings and no warning", () => {
+      // No argument can satisfy the @key, so composition emits no cache-key mappings and stays silent.
       const { warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
@@ -295,10 +298,7 @@ describe('Entity caching directive tests', () => {
         `),
         version,
       );
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toStrictEqual(
-        incompleteQueryCacheKeyMappingWarning('subgraph-a', 'Query.product', 'Product', 'id'),
-      );
+      expect(warnings).toHaveLength(0);
     });
 
     test('no warning for list return type — lists skip key mapping entirely', () => {
@@ -349,7 +349,7 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
-        'Query',
+        QUERY,
       );
       expect(config).toBeDefined();
       expect(config!.rootFieldCacheConfigurations).toStrictEqual([
@@ -380,7 +380,7 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
-        'Query',
+        QUERY,
       );
       expect(config).toBeDefined();
       expect(config!.rootFieldCacheConfigurations).toStrictEqual([
@@ -412,7 +412,7 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
-        'Query',
+        QUERY,
       );
       expect(config).toBeDefined();
       expect(config!.rootFieldCacheConfigurations).toStrictEqual([
@@ -439,7 +439,7 @@ describe('Entity caching directive tests', () => {
       const config = getConfigForType(
         subgraph(`
           type Query {
-            product(id: ID!, loc: String! @is(field: "region")): Product @queryCache(maxAge: 30)
+            product(id: ID!, loc: String! @is(fields: "region")): Product @queryCache(maxAge: 30)
           }
           type Product @key(fields: "id region") @entityCache(maxAge: 60) {
             id: ID!
@@ -447,28 +447,30 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
-        'Query',
+        QUERY,
       );
       expect(config).toBeDefined();
       const mappings = config!.rootFieldCacheConfigurations![0].entityKeyMappings[0].fieldMappings;
-      // Both key fields should be mapped - order depends on argument iteration
-      expect(mappings).toHaveLength(2);
-      expect(mappings).toContainEqual({ entityKeyField: 'id', argumentPath: ['id'] });
-      expect(mappings).toContainEqual({ entityKeyField: 'region', argumentPath: ['loc'] });
+      // Sort by entityKeyField so the assertion is order-independent without losing exhaustiveness.
+      const sorted = [...mappings].sort((a, b) => a.entityKeyField.localeCompare(b.entityKeyField));
+      expect(sorted).toStrictEqual([
+        { entityKeyField: 'id', argumentPath: ['id'] },
+        { entityKeyField: 'region', argumentPath: ['loc'] },
+      ]);
     });
   });
 
   // ─── @is ──────────────────────────────────────────────────────────────────────
-  // @is(field: "keyField") on a query argument explicitly maps it to a @key field.
+  // @is(fields: "keyField") on a query argument explicitly maps it to a @key field.
   // Useful when the argument name differs from the key field name,
-  // e.g., product(pid: ID! @is(field: "id")) maps "pid" to the @key field "id".
+  // e.g., product(pid: ID! @is(fields: "id")) maps "pid" to the @key field "id".
 
   describe('@is', () => {
     test('error: @is without @queryCache on the field — @is only makes sense for cache key construction', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query {
-            product(pid: ID! @is(field: "id")): Product
+            product(pid: ID! @is(fields: "id")): Product
           }
           type Product @key(fields: "id") @entityCache(maxAge: 60) {
             id: ID!
@@ -489,7 +491,7 @@ describe('Entity caching directive tests', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query {
-            product(pid: ID! @is(field: "unknown")): Product @queryCache(maxAge: 30)
+            product(pid: ID! @is(fields: "unknown")): Product @queryCache(maxAge: 30)
           }
           type Product @key(fields: "id") @entityCache(maxAge: 60) {
             id: ID!
@@ -511,7 +513,7 @@ describe('Entity caching directive tests', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query {
-            product(id: ID!, otherId: ID! @is(field: "id")): Product @queryCache(maxAge: 30)
+            product(id: ID!, otherId: ID! @is(fields: "id")): Product @queryCache(maxAge: 30)
           }
           type Product @key(fields: "id") @entityCache(maxAge: 60) {
             id: ID!
@@ -528,11 +530,11 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('warning: @is(field: "id") on argument named "id" — auto-mapping already handles this', () => {
+    test('success: redundant @is(fields: "id") on argument named "id" is accepted silently', () => {
       const { warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
-            product(id: ID! @is(field: "id")): Product @queryCache(maxAge: 30)
+            product(id: ID! @is(fields: "id")): Product @queryCache(maxAge: 30)
           }
           type Product @key(fields: "id") @entityCache(maxAge: 60) {
             id: ID!
@@ -541,16 +543,15 @@ describe('Entity caching directive tests', () => {
         `),
         version,
       );
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toStrictEqual(redundantIsDirectiveWarning('subgraph-a', 'id', 'Query.product'));
+      expect(warnings).toHaveLength(0);
     });
 
     test('success: @is maps differently-named argument to @key field', () => {
-      // "pid" doesn't match @key field "id", so @is(field: "id") is required
+      // "pid" doesn't match @key field "id", so @is(fields: "id") is required
       const { schema, warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
-            product(pid: ID! @is(field: "id")): Product @queryCache(maxAge: 30)
+            product(pid: ID! @is(fields: "id")): Product @queryCache(maxAge: 30)
           }
           type Product @key(fields: "id") @entityCache(maxAge: 60) {
             id: ID!
@@ -564,18 +565,18 @@ describe('Entity caching directive tests', () => {
     });
 
     test('config: @is mapping produces argumentPath with the original argument name', () => {
-      // product(pid: ID! @is(field: "id")) → entityKeyField: "id", argumentPath: ["pid"]
+      // product(pid: ID! @is(fields: "id")) → entityKeyField: "id", argumentPath: ["pid"]
       const config = getConfigForType(
         subgraph(`
           type Query {
-            product(pid: ID! @is(field: "id")): Product @queryCache(maxAge: 30)
+            product(pid: ID! @is(fields: "id")): Product @queryCache(maxAge: 30)
           }
           type Product @key(fields: "id") @entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
         `),
-        'Query',
+        QUERY,
       );
       expect(config).toBeDefined();
       expect(config!.rootFieldCacheConfigurations).toStrictEqual([
@@ -599,7 +600,7 @@ describe('Entity caching directive tests', () => {
       const config = getConfigForType(
         subgraph(`
           type Query {
-            product(pid: ID! @is(field: "id"), loc: String! @is(field: "region")): Product @queryCache(maxAge: 30)
+            product(pid: ID! @is(fields: "id"), loc: String! @is(fields: "region")): Product @queryCache(maxAge: 30)
           }
           type Product @key(fields: "id region") @entityCache(maxAge: 60) {
             id: ID!
@@ -607,16 +608,18 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
-        'Query',
+        QUERY,
       );
       expect(config).toBeDefined();
       const mappings = config!.rootFieldCacheConfigurations![0].entityKeyMappings[0].fieldMappings;
-      expect(mappings).toHaveLength(2);
-      expect(mappings).toContainEqual({ entityKeyField: 'id', argumentPath: ['pid'] });
-      expect(mappings).toContainEqual({ entityKeyField: 'region', argumentPath: ['loc'] });
+      const sorted = [...mappings].sort((a, b) => a.entityKeyField.localeCompare(b.entityKeyField));
+      expect(sorted).toStrictEqual([
+        { entityKeyField: 'id', argumentPath: ['pid'] },
+        { entityKeyField: 'region', argumentPath: ['loc'] },
+      ]);
     });
 
-    test('warning: nested @key field excluded from argument mapping — compound keys filtered', () => {
+    test('success: nested @key fields do not auto-map from unrelated flat arguments and emit no warning', () => {
       const { warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
@@ -632,13 +635,7 @@ describe('Entity caching directive tests', () => {
         `),
         version,
       );
-      // "store { id }" splits into tokens ["store", "{", "id", "}"].
-      // extractKeyFieldNames() keeps "store", "id", "}" (only "{" is filtered).
-      // None of these match argument "storeId" → incomplete mapping warning for "store".
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toStrictEqual(
-        incompleteQueryCacheKeyMappingWarning('subgraph-a', 'Query.product', 'Product', 'store'),
-      );
+      expect(warnings).toHaveLength(0);
     });
   });
 
@@ -743,13 +740,13 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
-        'Mutation',
+        MUTATION,
       );
       expect(config).toBeDefined();
       expect(config!.cacheInvalidateConfigurations).toStrictEqual([
         {
           fieldName: 'updateProduct',
-          operationType: 'Mutation',
+          operationType: MUTATION,
           entityTypeName: 'Product',
         },
       ] satisfies CacheInvalidateConfig[]);
@@ -784,13 +781,13 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
-        'Subscription',
+        SUBSCRIPTION,
       );
       expect(config).toBeDefined();
       expect(config!.cacheInvalidateConfigurations).toStrictEqual([
         {
           fieldName: 'itemUpdated',
-          operationType: 'Subscription',
+          operationType: SUBSCRIPTION,
           entityTypeName: 'Product',
         },
       ] satisfies CacheInvalidateConfig[]);
@@ -910,7 +907,7 @@ describe('Entity caching directive tests', () => {
       if (result.success) {
         const internal = (result as BatchNormalizationSuccess).internalSubgraphBySubgraphName.get('subgraph-a');
         if (internal) {
-          const mutationConfig = internal.configurationDataByTypeName.get('Mutation' as TypeName);
+          const mutationConfig = internal.configurationDataByTypeName.get(MUTATION as TypeName);
           if (mutationConfig) {
             expect(mutationConfig.cachePopulateConfigurations).toBeUndefined();
           }
@@ -964,13 +961,14 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
-        'Mutation',
+        MUTATION,
       );
       expect(config).toBeDefined();
       expect(config!.cachePopulateConfigurations).toStrictEqual([
         {
           fieldName: 'createProduct',
-          operationType: 'Mutation',
+          operationType: MUTATION,
+          entityTypeName: 'Product',
           maxAgeSeconds: undefined,
         },
       ] satisfies CachePopulateConfig[]);
@@ -988,13 +986,14 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
-        'Mutation',
+        MUTATION,
       );
       expect(config).toBeDefined();
       expect(config!.cachePopulateConfigurations).toStrictEqual([
         {
           fieldName: 'createProduct',
-          operationType: 'Mutation',
+          operationType: MUTATION,
+          entityTypeName: 'Product',
           maxAgeSeconds: 120,
         },
       ] satisfies CachePopulateConfig[]);
@@ -1029,13 +1028,14 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
-        'Subscription',
+        SUBSCRIPTION,
       );
       expect(config).toBeDefined();
       expect(config!.cachePopulateConfigurations).toStrictEqual([
         {
           fieldName: 'itemCreated',
-          operationType: 'Subscription',
+          operationType: SUBSCRIPTION,
+          entityTypeName: 'Product',
           maxAgeSeconds: undefined,
         },
       ] satisfies CachePopulateConfig[]);
@@ -1069,7 +1069,8 @@ describe('Entity caching directive tests', () => {
         'subgraph-b',
       );
 
-      const { federatedGraphSchema } = federateSubgraphsSuccess([cachingSubgraph, reviewsSubgraph], version);
+      const { federatedGraphSchema, success } = federateSubgraphsSuccess([cachingSubgraph, reviewsSubgraph], version);
+      expect(success).toBe(true);
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
@@ -1107,7 +1108,8 @@ describe('Entity caching directive tests', () => {
         'subgraph-b',
       );
 
-      const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphA, subgraphB], version);
+      const { federatedGraphSchema, success } = federateSubgraphsSuccess([subgraphA, subgraphB], version);
+      expect(success).toBe(true);
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
@@ -1125,6 +1127,158 @@ describe('Entity caching directive tests', () => {
         `,
         ),
       );
+    });
+  });
+
+  // ─── edge cases ───────────────────────────────────────────────────────────────
+  // Pin behavior for schema shapes that don't fit the happy-path assumptions in the
+  // validation method: renamed root types, @inaccessible entities, @key(resolvable: false),
+  // and @interfaceObject. These regressions are easy to introduce because they look like
+  // valid OBJECT_TYPE_DEFINITIONs at the AST level.
+
+  describe('edge cases', () => {
+    // Composition supports `schema { query: MyQuery, mutation: MyMutation, subscription: MySubscription }`.
+    // Phase 2 captures parentTypeName from the iteration (which is the renamed name) and Phase 1/2
+    // attach configs via parentTypeName — never via literal "Query"/"Mutation"/"Subscription".
+    // A regression here would silently drop every cache config when the schema renames a root type.
+
+    test('config: @queryCache on a renamed Query root type attaches to the renamed type', () => {
+      const config = getConfigForType(
+        subgraph(`
+          schema { query: MyQuery }
+          type MyQuery {
+            product(id: ID!): Product @queryCache(maxAge: 30)
+          }
+          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+        `),
+        'MyQuery',
+      );
+      expect(config).toBeDefined();
+      expect(config!.rootFieldCacheConfigurations).toStrictEqual([
+        {
+          fieldName: 'product',
+          maxAgeSeconds: 30,
+          includeHeaders: false,
+          shadowMode: false,
+          entityTypeName: 'Product',
+          entityKeyMappings: [
+            {
+              entityTypeName: 'Product',
+              fieldMappings: [{ entityKeyField: 'id', argumentPath: ['id'] }],
+            },
+          ],
+        },
+      ]);
+    });
+
+    test('config: @cachePopulate on a renamed Mutation root type attaches to the renamed type', () => {
+      const config = getConfigForType(
+        subgraph(`
+          schema { query: MyQuery, mutation: MyMutation }
+          type MyQuery { product(id: ID!): Product }
+          type MyMutation {
+            updateProduct(id: ID!, name: String!): Product @cachePopulate(maxAge: 120)
+          }
+          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+        `),
+        'MyMutation',
+      );
+      expect(config).toBeDefined();
+      expect(config!.cachePopulateConfigurations).toStrictEqual([
+        {
+          fieldName: 'updateProduct',
+          operationType: MUTATION,
+          entityTypeName: 'Product',
+          maxAgeSeconds: 120,
+        },
+      ]);
+    });
+
+    test('config: @cacheInvalidate on a renamed Subscription root type attaches to the renamed type', () => {
+      const config = getConfigForType(
+        subgraph(`
+          schema { query: MyQuery, subscription: MySubscription }
+          type MyQuery { product(id: ID!): Product }
+          type MySubscription {
+            productDeleted: Product! @cacheInvalidate
+          }
+          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+        `),
+        'MySubscription',
+      );
+      expect(config).toBeDefined();
+      expect(config!.cacheInvalidateConfigurations).toStrictEqual([
+        {
+          fieldName: 'productDeleted',
+          operationType: SUBSCRIPTION,
+          entityTypeName: 'Product',
+        },
+      ]);
+    });
+
+    // @key(resolvable: false) means "this subgraph references the entity but cannot resolve it
+    // by key from the entities federation field." @entityCache currently still applies because
+    // the @key is present — the router can still construct a cache key from the SDL. If we ever
+    // want to forbid this combination, change Phase 1's `keyFieldSetDatasByTypeName.has(typeName)`
+    // check to also require at least one resolvable key.
+
+    test('config: @entityCache on a type with only @key(resolvable: false) is currently accepted', () => {
+      const config = getConfigForType(
+        subgraph(`
+          type Query { product(id: ID!): Product }
+          type Product @key(fields: "id", resolvable: false) @entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+        `),
+        'Product',
+      );
+      expect(config).toBeDefined();
+      expect(config!.entityCacheConfigurations).toStrictEqual([
+        {
+          typeName: 'Product',
+          maxAgeSeconds: 60,
+          includeHeaders: false,
+          partialCacheLoad: false,
+          shadowMode: false,
+        },
+      ]);
+    });
+
+    // @interfaceObject types are OBJECT_TYPE_DEFINITIONs at the AST level (so Phase 1's filter
+    // accepts them) but the router treats them as interface representations. Their cache semantics
+    // aren't defined by the spec yet — pin the current behavior so a future change is intentional.
+
+    test('config: @entityCache on an @interfaceObject type is currently accepted', () => {
+      const config = getConfigForType(
+        subgraph(`
+          type Query { product(id: ID!): Product }
+          type Product @key(fields: "id") @interfaceObject @entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+        `),
+        'Product',
+      );
+      expect(config).toBeDefined();
+      expect(config!.entityCacheConfigurations).toStrictEqual([
+        {
+          typeName: 'Product',
+          maxAgeSeconds: 60,
+          includeHeaders: false,
+          partialCacheLoad: false,
+          shadowMode: false,
+        },
+      ]);
     });
   });
 });

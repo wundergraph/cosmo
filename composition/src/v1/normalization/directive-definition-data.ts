@@ -34,7 +34,6 @@ import {
   ENUM_VALUE_UPPER,
   EXTENDS,
   EXTERNAL,
-  FIELD,
   FIELD_DEFINITION_UPPER,
   FIELDS,
   FOR,
@@ -65,6 +64,7 @@ import {
   PROVIDES,
   QUERY_CACHE,
   REASON,
+  REQUEST_SCOPED,
   REQUIRE_FETCH_REASONS,
   REQUIRE_ONE_SLICING_ARGUMENT,
   REQUIRES,
@@ -123,6 +123,7 @@ import {
   OVERRIDE_DEFINITION,
   PROVIDES_DEFINITION,
   QUERY_CACHE_DEFINITION,
+  REQUEST_SCOPED_DEFINITION,
   REQUIRE_FETCH_REASONS_DEFINITION,
   REQUIRES_DEFINITION,
   REQUIRES_SCOPES_DEFINITION,
@@ -779,6 +780,24 @@ export const REDIS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
   requiredArgumentNames: new Set<string>([CHANNELS]),
 };
 
+export const REQUEST_SCOPED_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      KEY,
+      {
+        name: KEY,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: REQUEST_SCOPED,
+  node: REQUEST_SCOPED_DEFINITION,
+  optionalArgumentNames: new Set<string>(),
+  requiredArgumentNames: new Set<string>([KEY]),
+};
+
 export const REQUIRE_FETCH_REASONS_DEFINITION_DATA: DirectiveDefinitionData = {
   argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: true,
@@ -1009,9 +1028,9 @@ export const ENTITY_CACHE_DEFINITION_DATA: DirectiveDefinitionData = {
 export const IS_DEFINITION_DATA: DirectiveDefinitionData = {
   argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
-      FIELD,
+      FIELDS,
       {
-        name: FIELD,
+        name: FIELDS,
         typeNode: REQUIRED_STRING_TYPE_NODE,
       },
     ],
@@ -1021,7 +1040,7 @@ export const IS_DEFINITION_DATA: DirectiveDefinitionData = {
   name: IS,
   node: IS_DEFINITION,
   optionalArgumentNames: new Set<string>(),
-  requiredArgumentNames: new Set<string>([FIELD]),
+  requiredArgumentNames: new Set<string>([FIELDS]),
 };
 
 export const QUERY_CACHE_DEFINITION_DATA: DirectiveDefinitionData = {

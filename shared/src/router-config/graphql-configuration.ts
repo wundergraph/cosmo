@@ -19,6 +19,7 @@ import {
   NatsEventConfiguration,
   NatsStreamConfiguration,
   RedisEventConfiguration,
+  RequestScopedFieldConfiguration,
   RequiredField,
   RootFieldCacheConfiguration,
   Scopes,
@@ -33,6 +34,7 @@ import {
   PROVIDER_TYPE_KAFKA,
   PROVIDER_TYPE_NATS,
   PROVIDER_TYPE_REDIS,
+  RequestScopedFieldConfig,
   RequiredFieldConfiguration,
   SubscriptionCondition,
   TypeName,
@@ -47,6 +49,7 @@ export type DataSourceConfiguration = {
   requires: RequiredField[];
   entityInterfaces: EntityInterfaceConfiguration[];
   interfaceObjects: EntityInterfaceConfiguration[];
+  requestScopedFields: RequestScopedFieldConfiguration[];
   entityCacheConfigurations: EntityCacheConfiguration[];
   rootFieldCacheConfigurations: RootFieldCacheConfiguration[];
   cachePopulateConfigurations: CachePopulateConfiguration[];
@@ -132,6 +135,7 @@ export function configurationDatasToDataSourceConfiguration(
     requires: [],
     entityInterfaces: [],
     interfaceObjects: [],
+    requestScopedFields: [],
     entityCacheConfigurations: [],
     rootFieldCacheConfigurations: [],
     cachePopulateConfigurations: [],
@@ -259,6 +263,7 @@ export function configurationDatasToDataSourceConfiguration(
                       new EntityCacheFieldMapping({
                         entityKeyField: fm.entityKeyField,
                         argumentPath: fm.argumentPath,
+                        isBatch: fm.isBatch || false,
                       }),
                   ),
                 }),
@@ -273,6 +278,7 @@ export function configurationDatasToDataSourceConfiguration(
           new CachePopulateConfiguration({
             fieldName: cp.fieldName,
             operationType: cp.operationType,
+            entityTypeName: cp.entityTypeName,
             maxAgeSeconds: cp.maxAgeSeconds == null ? undefined : BigInt(cp.maxAgeSeconds),
           }),
         );
@@ -285,6 +291,17 @@ export function configurationDatasToDataSourceConfiguration(
             fieldName: ci.fieldName,
             operationType: ci.operationType,
             entityTypeName: ci.entityTypeName,
+          }),
+        );
+      }
+    }
+    if (data.requestScopedFields) {
+      for (const field of data.requestScopedFields) {
+        output.requestScopedFields.push(
+          new RequestScopedFieldConfiguration({
+            fieldName: field.fieldName,
+            typeName: field.typeName,
+            l1Key: field.l1Key,
           }),
         );
       }

@@ -36,7 +36,6 @@ import {
   ENUM_VALUE_UPPER,
   EXTENDS,
   EXTERNAL,
-  FIELD,
   FIELD_DEFINITION_UPPER,
   FIELDS,
   FOR,
@@ -67,6 +66,7 @@ import {
   PROVIDES,
   QUERY_CACHE,
   REASON,
+  REQUEST_SCOPED,
   REQUIRE_FETCH_REASONS,
   REQUIRE_ONE_SLICING_ARGUMENT,
   REQUIRES,
@@ -567,12 +567,12 @@ export const INTERFACE_OBJECT_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// @is(field: String!) on ARGUMENT_DEFINITION
+// @is(fields: String!) on ARGUMENT_DEFINITION
 export const IS_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(FIELD),
+      name: stringToNameNode(FIELDS),
       type: REQUIRED_STRING_TYPE_NODE,
     },
   ],
@@ -760,6 +760,31 @@ export const QUERY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
   name: stringToNameNode(QUERY_CACHE),
+  repeatable: false,
+};
+
+// directive @requestScoped(key: String!) on FIELD_DEFINITION
+//
+// Marks a field as resolving to the same value for the entire request, shared with
+// all other fields in the same subgraph that use the same `key`. Purely symmetric:
+// every field that participates declares itself with the directive. There is no
+// receiver/provider distinction. Whichever field is resolved first populates the
+// per-request L1 cache under `{subgraphName}.{key}`; subsequent fields with the
+// same key are served from L1 (and can skip the subgraph fetch when possible).
+export const REQUEST_SCOPED_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(KEY),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(REQUEST_SCOPED),
   repeatable: false,
 };
 

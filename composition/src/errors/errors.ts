@@ -1727,11 +1727,6 @@ export function queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords: string,
   );
 }
 
-// The entity type must explicitly opt in to caching via @entityCache — @queryCache alone is insufficient
-export function queryCacheReturnTypeWithoutEntityCacheErrorMessage(fieldCoords: string, returnType: string): string {
-  return `Field "${fieldCoords}" returns entity type "${returnType}" which does not have @entityCache.`;
-}
-
 // Shared validation for maxAge across @entityCache, @queryCache, and @cachePopulate
 export function maxAgeNotPositiveIntegerErrorMessage(directiveName: string, value: number): string {
   return `@${directiveName} maxAge must be a positive integer, got "${value}".`;
@@ -1742,7 +1737,7 @@ export function isWithoutQueryCacheErrorMessage(argumentName: string, fieldCoord
   return `@is on argument "${argumentName}" of field "${fieldCoords}" has no effect without @queryCache.`;
 }
 
-// @is(field: "...") must reference a field that appears in the entity's @key directive
+// @is(fields: "...") must reference a field that appears in the entity's @key directive
 export function isReferencesUnknownKeyFieldErrorMessage(
   isField: string,
   argumentName: string,
@@ -1750,7 +1745,7 @@ export function isReferencesUnknownKeyFieldErrorMessage(
   entityType: string,
 ): string {
   return (
-    `@is(field: "${isField}") on argument "${argumentName}" of field "${fieldCoords}"` +
+    `@is(fields: "${isField}") on argument "${argumentName}" of field "${fieldCoords}"` +
     ` references unknown @key field "${isField}" on type "${entityType}".`
   );
 }
@@ -1785,6 +1780,201 @@ export function cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoord
   return (
     `Field "${fieldCoords}" has both @cacheInvalidate and @cachePopulate.` +
     ` A field must use one or the other, not both.`
+  );
+}
+
+export function explicitTypeMismatchErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  argumentType: string,
+  isField: string,
+  entityType: string,
+  keyFieldType: string,
+): string {
+  return `Argument "${argumentName}" on field "${fieldCoords}" has type "${argumentType}" but @is(fields: "${isField}") targets @key field "${isField}" of type "${keyFieldType}" on entity "${entityType}".`;
+}
+
+export function nonKeyFieldSpecErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  isField: string,
+  entityType: string,
+): string {
+  return `Argument "${argumentName}" on field "${fieldCoords}" uses @is(fields: "${isField}"), but "${isField}" is not a @key field on entity "${entityType}". @is can only target fields that are part of a @key.`;
+}
+
+export function listArgumentToScalarKeySpecErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  argumentType: string,
+  isField: string,
+  entityType: string,
+  keyFieldType: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" has type "${argumentType}" but @is(fields: "${isField}") targets @key field "${isField}" of type "${keyFieldType}" on entity "${entityType}".` +
+    ' List arguments can only map to scalar key fields when the field returns a list of entities, or to list key fields when the key field itself is a list type.'
+  );
+}
+
+export function scalarArgumentToListKeySpecErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  argumentType: string,
+  isField: string,
+  entityType: string,
+  keyFieldType: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" has type "${argumentType}" but @is(fields: "${isField}") targets @key field "${isField}" of type "${keyFieldType}" on entity "${entityType}".` +
+    ' A scalar argument cannot map to a list key field.'
+  );
+}
+
+export function explicitIncompleteCompositeKeyErrorMessage(
+  fieldCoords: string,
+  argumentName: string,
+  mappedField: string,
+  entityType: string,
+  compositeKey: string,
+  missingField: string,
+): string {
+  return `Field "${fieldCoords}" has argument "${argumentName}" with @is mapping to @key field "${mappedField}" on entity "${entityType}", but composite @key "${compositeKey}" is incomplete because no argument maps to required key field "${missingField}".`;
+}
+
+export function explicitSingularAdditionalNonKeyArgumentErrorMessage(
+  fieldCoords: string,
+  argumentName: string,
+  keyField: string,
+  entityType: string,
+  extraArgument: string,
+): string {
+  return `Field "${fieldCoords}" has argument "${argumentName}" with @is mapping to @key field "${keyField}" on entity "${entityType}", but also has additional argument "${extraArgument}" which is not mapped to a key field. All arguments must be key arguments — additional arguments may filter the response, making the cache key incomplete.`;
+}
+
+export function explicitCompositeAdditionalNonKeyArgumentErrorMessage(
+  fieldCoords: string,
+  firstArgument: string,
+  secondArgument: string,
+  compositeKey: string,
+  entityType: string,
+  extraArgument: string,
+): string {
+  return `Field "${fieldCoords}" has arguments "${firstArgument}" and "${secondArgument}" with @is mappings covering composite @key "${compositeKey}" on entity "${entityType}", but also has additional argument "${extraArgument}" which is not mapped to a key field. All arguments must be key arguments — additional arguments may filter the response, making the cache key incomplete.`;
+}
+
+export function batchListValuedKeyRequiresNestedListsErrorMessage(
+  fieldCoords: string,
+  isField: string,
+  entityType: string,
+  actualType: string,
+): string {
+  return `Field "${fieldCoords}" returns a list of entities, so cache lookup is a batch lookup and requires one key value per entity. Because @is(fields: "${isField}") targets list-valued @key field "${isField}" on entity "${entityType}", the argument must provide a list of tag lists (e.g., "[[String!]!]!"), not ${actualType}.`;
+}
+
+export function explicitBatchAdditionalNonKeyArgumentErrorMessage(
+  fieldCoords: string,
+  argumentName: string,
+  keyField: string,
+  entityType: string,
+  extraArgument: string,
+): string {
+  return `Field "${fieldCoords}" returns a list of entities, so cache lookup is a batch lookup and requires a single key input that determines the returned entities. Argument "${argumentName}" uses @is to map to @key field "${keyField}" on entity "${entityType}", but additional argument "${extraArgument}" is not mapped to a key field and may filter the response, so the batch key would be incomplete.`;
+}
+
+export function explicitScalarArgumentsCannotEstablishBatchMappingErrorMessage(
+  fieldCoords: string,
+  entityType: string,
+): string {
+  return `Field "${fieldCoords}" returns a list of entities, so cache lookup is a batch lookup and requires one key value per entity. Scalar arguments with @is mapping to @key fields on entity "${entityType}" cannot provide a batch of keys, so they cannot establish cache key mappings for this field. Use list arguments for batch cache lookups.`;
+}
+
+export function multipleListArgumentsBatchFactoryMessage(
+  fieldCoords: string,
+  entityType: string,
+): string {
+  return (
+    `Field "${fieldCoords}" has multiple list arguments mapping to @key fields on entity "${entityType}".` +
+    ' Batch cache lookups require a single list argument.' +
+    ' For composite keys, use a single list of input objects instead.'
+  );
+}
+
+export function inputObjectCompositeTypeMismatchErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  keyFields: string,
+  entityType: string,
+  inputType: string,
+  inputFieldName: string,
+  inputFieldType: string,
+  entityFieldPath: string,
+  entityFieldType: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" uses @is(fields: "${keyFields}") mapping to composite @key on entity "${entityType}",` +
+    ` but input type "${inputType}" field "${inputFieldName}" has type "${inputFieldType}"` +
+    ` which does not match key field "${entityFieldPath}" of type "${entityFieldType}".`
+  );
+}
+
+export function inputObjectCompositeMissingFieldErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  keyFields: string,
+  entityType: string,
+  inputType: string,
+  missingFieldName: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" uses @is(fields: "${keyFields}") mapping to composite @key on entity "${entityType}",` +
+    ` but input type "${inputType}" is missing required key field "${missingFieldName}".`
+  );
+}
+
+export function nestedInputObjectTypeMismatchErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  keyFields: string,
+  entityType: string,
+  inputType: string,
+  inputFieldName: string,
+  inputFieldType: string,
+  entityFieldPath: string,
+  entityFieldType: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" maps to nested @key "${keyFields}" on entity "${entityType}",` +
+    ` but input type "${inputType}" field "${inputFieldName}" has type "${inputFieldType}"` +
+    ` which does not match key field "${entityFieldPath}" of type "${entityFieldType}".`
+  );
+}
+
+export function nestedInputObjectMissingFieldErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  keyFields: string,
+  entityType: string,
+  inputType: string,
+  missingFieldName: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" maps to nested @key "${keyFields}" on entity "${entityType}",` +
+    ` but input type "${inputType}" is missing required key field "${missingFieldName}".`
+  );
+}
+
+export function nonInputArgumentCannotTargetCompositeKeyErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  keyFields: string,
+  entityType: string,
+  argumentType: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" uses @is(fields: "${keyFields}") targeting composite @key on entity "${entityType}",` +
+    ` but argument type "${argumentType}" does not provide nested fields for each key field.` +
+    ' Use separate arguments or an input object that matches the composite key shape.'
   );
 }
 
