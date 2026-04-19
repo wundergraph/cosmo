@@ -10,11 +10,44 @@ type Item struct {
 
 func (Item) IsEntity() {}
 
+type Location struct {
+	ID string `json:"id"`
+}
+
 type Mutation struct {
+}
+
+type Product struct {
+	ID     string `json:"id"`
+	Region string `json:"region"`
+	Sku    string `json:"sku"`
+	Name   string `json:"name"`
+}
+
+func (Product) IsEntity() {}
+
+type ProductKeyInput struct {
+	ID     string `json:"id"`
+	Region string `json:"region"`
 }
 
 type Query struct {
 }
 
 type Subscription struct {
+}
+
+type Warehouse struct {
+	Location *Location `json:"location"`
+	Name     string    `json:"name"`
+}
+
+func (Warehouse) IsEntity() {}
+
+type WarehouseLocationInput struct {
+	Location *WarehouseLocationKeyInput `json:"location"`
+}
+
+type WarehouseLocationKeyInput struct {
+	ID string `json:"id"`
 }

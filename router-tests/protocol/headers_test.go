@@ -298,11 +298,12 @@ func TestForwardHeaders(t *testing.T) {
 			for _, c := range cases {
 				c := c
 				t.Run(c.testName, func(t *testing.T) {
+					subEnv := xEnv.WithT(t)
 
 					header := http.Header{
 						c.headerName: []string{headerValue},
 					}
-					conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+					conn := subEnv.InitGraphQLWebSocketConnection(header, nil, nil)
 					err := conn.WriteJSON(&testenv.WebSocketMessage{
 						ID:      "1",
 						Type:    "subscribe",
@@ -366,14 +367,15 @@ func TestForwardHeaders(t *testing.T) {
 			for _, c := range cases {
 				c := c
 				t.Run(c.testName, func(t *testing.T) {
+					subEnv := xEnv.WithT(t)
 					header1 := http.Header{
 						c.headerName: []string{headerValue},
 					}
 					header2 := http.Header{
 						c.headerName: []string{headerValue2},
 					}
-					conn1 := xEnv.InitGraphQLWebSocketConnection(header1, nil, nil)
-					conn2 := xEnv.InitGraphQLWebSocketConnection(header2, nil, nil)
+					conn1 := subEnv.InitGraphQLWebSocketConnection(header1, nil, nil)
+					conn2 := subEnv.InitGraphQLWebSocketConnection(header2, nil, nil)
 
 					var err error
 					err = conn1.WriteJSON(testenv.WebSocketMessage{
@@ -656,11 +658,12 @@ func TestForwardRenamedHeaders(t *testing.T) {
 			for _, c := range cases {
 				c := c
 				t.Run(c.testName, func(t *testing.T) {
+					subEnv := xEnv.WithT(t)
 
 					header := http.Header{
 						c.headerName: []string{headerValue},
 					}
-					conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+					conn := subEnv.InitGraphQLWebSocketConnection(header, nil, nil)
 					err := conn.WriteJSON(&testenv.WebSocketMessage{
 						ID:      "1",
 						Type:    "subscribe",
@@ -724,14 +727,15 @@ func TestForwardRenamedHeaders(t *testing.T) {
 			for _, c := range cases {
 				c := c
 				t.Run(c.testName, func(t *testing.T) {
+					subEnv := xEnv.WithT(t)
 					header1 := http.Header{
 						c.headerName: []string{headerValue},
 					}
 					header2 := http.Header{
 						c.headerName: []string{headerValue2},
 					}
-					conn1 := xEnv.InitGraphQLWebSocketConnection(header1, nil, nil)
-					conn2 := xEnv.InitGraphQLWebSocketConnection(header2, nil, nil)
+					conn1 := subEnv.InitGraphQLWebSocketConnection(header1, nil, nil)
+					conn2 := subEnv.InitGraphQLWebSocketConnection(header2, nil, nil)
 
 					var err error
 					err = conn1.WriteJSON(testenv.WebSocketMessage{

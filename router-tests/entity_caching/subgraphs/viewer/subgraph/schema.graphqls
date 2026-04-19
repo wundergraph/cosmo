@@ -1,0 +1,24 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: ["@key", "@interfaceObject", "@inaccessible"]
+  )
+
+directive @requestScoped(key: String!) on FIELD_DEFINITION
+
+type Viewer @key(fields: "id") {
+  id: ID!
+  name: String!
+  email: String!
+}
+
+# Symmetric @requestScoped: Query.currentViewer and Personalized.currentViewer
+# share key "currentViewer" so they read/write the same L1 coordinate cache entry.
+type Personalized @key(fields: "id") @interfaceObject {
+  id: ID!
+  currentViewer: Viewer @inaccessible @requestScoped(key: "currentViewer")
+}
+
+type Query {
+  currentViewer: Viewer @requestScoped(key: "currentViewer")
+}

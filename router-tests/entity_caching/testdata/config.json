@@ -10,7 +10,14 @@
             "fieldNames": [
               "item",
               "itemByPid",
-              "items"
+              "items",
+              "itemsByIds",
+              "product",
+              "productBySku",
+              "productByName",
+              "productByKey",
+              "warehouse",
+              "warehouseByInput"
             ]
           },
           {
@@ -18,7 +25,8 @@
             "fieldNames": [
               "updateItem",
               "deleteItem",
-              "createItem"
+              "createItem",
+              "deleteProduct"
             ]
           },
           {
@@ -34,6 +42,30 @@
               "id",
               "name",
               "category"
+            ]
+          },
+          {
+            "typeName": "Product",
+            "fieldNames": [
+              "id",
+              "region",
+              "sku",
+              "name"
+            ]
+          },
+          {
+            "typeName": "Warehouse",
+            "fieldNames": [
+              "location",
+              "name"
+            ]
+          }
+        ],
+        "childNodes": [
+          {
+            "typeName": "Location",
+            "fieldNames": [
+              "id"
             ]
           }
         ],
@@ -58,10 +90,10 @@
           },
           "federation": {
             "enabled": true,
-            "serviceSdl": "extend schema\n  @link(\n    url: \"https://specs.apollo.dev/federation/v2.5\"\n    import: [\"@key\"]\n  )\n\ndirective @entityCache(\n  maxAge: Int!\n  includeHeaders: Boolean = false\n  partialCacheLoad: Boolean = false\n  shadowMode: Boolean = false\n) on OBJECT\n\ndirective @queryCache(\n  maxAge: Int!\n  includeHeaders: Boolean = false\n  shadowMode: Boolean = false\n) on FIELD_DEFINITION\n\ndirective @cacheInvalidate on FIELD_DEFINITION\n\ndirective @cachePopulate(maxAge: Int) on FIELD_DEFINITION\n\ndirective @is(field: String!) on ARGUMENT_DEFINITION\n\ntype Query {\n  item(id: ID!): Item @queryCache(maxAge: 300)\n  itemByPid(pid: ID! @is(field: \"id\")): Item @queryCache(maxAge: 300)\n  items: [Item!]! @queryCache(maxAge: 300)\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item @cacheInvalidate\n  deleteItem(id: ID!): Item @cacheInvalidate\n  createItem(name: String!, category: String!): Item! @cachePopulate(maxAge: 60)\n}\n\ntype Subscription {\n  itemUpdated: Item @cacheInvalidate\n  itemCreated: Item @cachePopulate\n}\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  id: ID!\n  name: String!\n  category: String!\n}\n"
+            "serviceSdl": "extend schema\n  @link(\n    url: \"https://specs.apollo.dev/federation/v2.5\"\n    import: [\"@key\"]\n  )\n\ndirective @entityCache(\n  maxAge: Int!\n  includeHeaders: Boolean = false\n  partialCacheLoad: Boolean = false\n  shadowMode: Boolean = false\n) on OBJECT\n\ndirective @queryCache(\n  maxAge: Int!\n  includeHeaders: Boolean = false\n  shadowMode: Boolean = false\n) on FIELD_DEFINITION\n\ndirective @cacheInvalidate on FIELD_DEFINITION\n\ndirective @cachePopulate(maxAge: Int) on FIELD_DEFINITION\n\ndirective @is(fields: String!) on ARGUMENT_DEFINITION\n\ntype Query {\n  item(id: ID!): Item @queryCache(maxAge: 300)\n  itemByPid(pid: ID! @is(fields: \"id\")): Item @queryCache(maxAge: 300)\n  items: [Item!]! @queryCache(maxAge: 300)\n  itemsByIds(ids: [ID!]! @is(fields: \"id\")): [Item!]! @queryCache(maxAge: 300)\n  product(id: ID!, region: String!): Product @queryCache(maxAge: 300)\n  productBySku(sku: String!): Product @queryCache(maxAge: 300)\n  productByName(name: String!): Product @queryCache(maxAge: 300)\n  productByKey(key: ProductKeyInput! @is(fields: \"id region\")): Product @queryCache(maxAge: 300)\n  warehouse(locationId: ID! @is(fields: \"location.id\")): Warehouse @queryCache(maxAge: 300)\n  # warehouseByInput exercises the same nested @key as `warehouse` but reaches it\n  # via an input object using GraphQL selection syntax in @is. This produces the\n  # multi-hop argumentPath [\"input\",\"location\",\"id\"] instead of the scalar\n  # [\"locationId\"]. Captures the red state where input-object → nested-key\n  # cache writes don't persist (cache lookup uses correct key but never hits).\n  warehouseByInput(input: WarehouseLocationInput! @is(fields: \"location { id }\")): Warehouse @queryCache(maxAge: 300)\n}\n\ninput ProductKeyInput {\n  id: ID!\n  region: String!\n}\n\ninput WarehouseLocationInput {\n  location: WarehouseLocationKeyInput!\n}\n\ninput WarehouseLocationKeyInput {\n  id: ID!\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item @cacheInvalidate\n  deleteItem(id: ID!): Item @cacheInvalidate\n  createItem(name: String!, category: String!): Item! @cachePopulate(maxAge: 60)\n  # deleteProduct invalidates a composite-key entity (Product @key(\"id region\")).\n  # Used to pin behavior for cache invalidation when the entity uses a composite\n  # @key — a separate code path from the simple id-only key in deleteItem.\n  deleteProduct(id: ID!, region: String!): Product @cacheInvalidate\n}\n\ntype Subscription {\n  itemUpdated: Item @cacheInvalidate\n  itemCreated: Item @cachePopulate\n}\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  id: ID!\n  name: String!\n  category: String!\n}\n\ntype Product @key(fields: \"id region\") @key(fields: \"sku\") @entityCache(maxAge: 300) {\n  id: ID!\n  region: String!\n  sku: String!\n  name: String!\n}\n\ntype Location {\n  id: ID!\n}\n\ntype Warehouse @key(fields: \"location { id }\") @entityCache(maxAge: 300) {\n  location: Location!\n  name: String!\n}\n"
           },
           "upstreamSchema": {
-            "key": "e10cbe748d7769562d213e67e31453c628ac25d0"
+            "key": "ef089dfaaa281a4069e91d684306b7d8d3227a12"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -70,11 +102,31 @@
           {
             "typeName": "Item",
             "selectionSet": "id"
+          },
+          {
+            "typeName": "Product",
+            "selectionSet": "id region"
+          },
+          {
+            "typeName": "Product",
+            "selectionSet": "sku"
+          },
+          {
+            "typeName": "Warehouse",
+            "selectionSet": "location { id }"
           }
         ],
         "entityCacheConfigurations": [
           {
             "typeName": "Item",
+            "maxAgeSeconds": "300"
+          },
+          {
+            "typeName": "Product",
+            "maxAgeSeconds": "300"
+          },
+          {
+            "typeName": "Warehouse",
             "maxAgeSeconds": "300"
           }
         ],
@@ -119,17 +171,149 @@
             "fieldName": "items",
             "maxAgeSeconds": "300",
             "entityTypeName": "Item"
+          },
+          {
+            "fieldName": "itemsByIds",
+            "maxAgeSeconds": "300",
+            "entityTypeName": "Item",
+            "entityKeyMappings": [
+              {
+                "entityTypeName": "Item",
+                "fieldMappings": [
+                  {
+                    "entityKeyField": "id",
+                    "argumentPath": [
+                      "ids"
+                    ],
+                    "isBatch": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "fieldName": "product",
+            "maxAgeSeconds": "300",
+            "entityTypeName": "Product",
+            "entityKeyMappings": [
+              {
+                "entityTypeName": "Product",
+                "fieldMappings": [
+                  {
+                    "entityKeyField": "id",
+                    "argumentPath": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "entityKeyField": "region",
+                    "argumentPath": [
+                      "region"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "fieldName": "productBySku",
+            "maxAgeSeconds": "300",
+            "entityTypeName": "Product",
+            "entityKeyMappings": [
+              {
+                "entityTypeName": "Product",
+                "fieldMappings": [
+                  {
+                    "entityKeyField": "sku",
+                    "argumentPath": [
+                      "sku"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "fieldName": "productByName",
+            "maxAgeSeconds": "300",
+            "entityTypeName": "Product"
+          },
+          {
+            "fieldName": "productByKey",
+            "maxAgeSeconds": "300",
+            "entityTypeName": "Product",
+            "entityKeyMappings": [
+              {
+                "entityTypeName": "Product",
+                "fieldMappings": [
+                  {
+                    "entityKeyField": "id",
+                    "argumentPath": [
+                      "key",
+                      "id"
+                    ]
+                  },
+                  {
+                    "entityKeyField": "region",
+                    "argumentPath": [
+                      "key",
+                      "region"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "fieldName": "warehouse",
+            "maxAgeSeconds": "300",
+            "entityTypeName": "Warehouse",
+            "entityKeyMappings": [
+              {
+                "entityTypeName": "Warehouse",
+                "fieldMappings": [
+                  {
+                    "entityKeyField": "location.id",
+                    "argumentPath": [
+                      "locationId"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "fieldName": "warehouseByInput",
+            "maxAgeSeconds": "300",
+            "entityTypeName": "Warehouse",
+            "entityKeyMappings": [
+              {
+                "entityTypeName": "Warehouse",
+                "fieldMappings": [
+                  {
+                    "entityKeyField": "location.id",
+                    "argumentPath": [
+                      "input",
+                      "location",
+                      "id"
+                    ]
+                  }
+                ]
+              }
+            ]
           }
         ],
         "cachePopulateConfigurations": [
           {
             "fieldName": "createItem",
             "operationType": "Mutation",
-            "maxAgeSeconds": "60"
+            "maxAgeSeconds": "60",
+            "entityTypeName": "Item"
           },
           {
             "fieldName": "itemCreated",
-            "operationType": "Subscription"
+            "operationType": "Subscription",
+            "entityTypeName": "Item"
           }
         ],
         "cacheInvalidateConfigurations": [
@@ -142,6 +326,11 @@
             "fieldName": "deleteItem",
             "operationType": "Mutation",
             "entityTypeName": "Item"
+          },
+          {
+            "fieldName": "deleteProduct",
+            "operationType": "Mutation",
+            "entityTypeName": "Product"
           },
           {
             "fieldName": "itemUpdated",
@@ -160,6 +349,29 @@
               "description",
               "rating",
               "tags"
+            ]
+          },
+          {
+            "typeName": "Product",
+            "fieldNames": [
+              "id",
+              "region",
+              "info"
+            ]
+          },
+          {
+            "typeName": "Warehouse",
+            "fieldNames": [
+              "location",
+              "capacity"
+            ]
+          }
+        ],
+        "childNodes": [
+          {
+            "typeName": "Location",
+            "fieldNames": [
+              "id"
             ]
           }
         ],
@@ -184,10 +396,10 @@
           },
           "federation": {
             "enabled": true,
-            "serviceSdl": "extend schema\n  @link(\n    url: \"https://specs.apollo.dev/federation/v2.5\"\n    import: [\"@key\"]\n  )\n\ndirective @entityCache(\n  maxAge: Int!\n  includeHeaders: Boolean = false\n  partialCacheLoad: Boolean = false\n  shadowMode: Boolean = false\n) on OBJECT\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  id: ID!\n  description: String!\n  rating: Float!\n  tags: [String!]!\n}\n"
+            "serviceSdl": "extend schema\n  @link(\n    url: \"https://specs.apollo.dev/federation/v2.5\"\n    import: [\"@key\"]\n  )\n\ndirective @entityCache(\n  maxAge: Int!\n  includeHeaders: Boolean = false\n  partialCacheLoad: Boolean = false\n  shadowMode: Boolean = false\n) on OBJECT\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  id: ID!\n  description: String!\n  rating: Float!\n  tags: [String!]!\n}\n\ntype Product @key(fields: \"id region\") @entityCache(maxAge: 300) {\n  id: ID!\n  region: String!\n  info: String!\n}\n\ntype Location {\n  id: ID!\n}\n\ntype Warehouse @key(fields: \"location { id }\") @entityCache(maxAge: 300) {\n  location: Location!\n  capacity: Int!\n}\n"
           },
           "upstreamSchema": {
-            "key": "9921646fcc093d4481ef27c3336d513404e35323"
+            "key": "d41a9cba403103760b379b07f1c52a18cfe39cfc"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -196,11 +408,27 @@
           {
             "typeName": "Item",
             "selectionSet": "id"
+          },
+          {
+            "typeName": "Product",
+            "selectionSet": "id region"
+          },
+          {
+            "typeName": "Warehouse",
+            "selectionSet": "location { id }"
           }
         ],
         "entityCacheConfigurations": [
           {
             "typeName": "Item",
+            "maxAgeSeconds": "300"
+          },
+          {
+            "typeName": "Product",
+            "maxAgeSeconds": "300"
+          },
+          {
+            "typeName": "Warehouse",
             "maxAgeSeconds": "300"
           }
         ]
@@ -258,6 +486,251 @@
             "maxAgeSeconds": "300"
           }
         ]
+      },
+      {
+        "kind": "GRAPHQL",
+        "rootNodes": [
+          {
+            "typeName": "Viewer",
+            "fieldNames": [
+              "id",
+              "name",
+              "email"
+            ]
+          },
+          {
+            "typeName": "Personalized",
+            "fieldNames": [
+              "id",
+              "currentViewer"
+            ]
+          },
+          {
+            "typeName": "Query",
+            "fieldNames": [
+              "currentViewer"
+            ]
+          },
+          {
+            "typeName": "Article",
+            "fieldNames": [
+              "id",
+              "currentViewer"
+            ]
+          }
+        ],
+        "overrideFieldPathFromAlias": true,
+        "customGraphql": {
+          "fetch": {
+            "url": {
+              "staticVariableContent": "http://viewer.entity-cache-test.local/graphql"
+            },
+            "method": "POST",
+            "body": {},
+            "baseUrl": {},
+            "path": {}
+          },
+          "subscription": {
+            "enabled": true,
+            "url": {
+              "staticVariableContent": "http://viewer.entity-cache-test.local/graphql"
+            },
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
+          },
+          "federation": {
+            "enabled": true,
+            "serviceSdl": "extend schema\n  @link(\n    url: \"https://specs.apollo.dev/federation/v2.5\"\n    import: [\"@key\", \"@interfaceObject\", \"@inaccessible\"]\n  )\n\ndirective @requestScoped(key: String!) on FIELD_DEFINITION\n\ntype Viewer @key(fields: \"id\") {\n  id: ID!\n  name: String!\n  email: String!\n}\n\n# Symmetric @requestScoped: Query.currentViewer and Personalized.currentViewer\n# share key \"currentViewer\" so they read/write the same L1 coordinate cache entry.\ntype Personalized @key(fields: \"id\") @interfaceObject {\n  id: ID!\n  currentViewer: Viewer @inaccessible @requestScoped(key: \"currentViewer\")\n}\n\ntype Query {\n  currentViewer: Viewer @requestScoped(key: \"currentViewer\")\n}\n"
+          },
+          "upstreamSchema": {
+            "key": "d34cc9dbc04217bb06cec3e6cf8e37e84078d268"
+          }
+        },
+        "requestTimeoutSeconds": "10",
+        "id": "3",
+        "keys": [
+          {
+            "typeName": "Viewer",
+            "selectionSet": "id"
+          },
+          {
+            "typeName": "Personalized",
+            "selectionSet": "id"
+          },
+          {
+            "typeName": "Article",
+            "selectionSet": "id"
+          }
+        ],
+        "interfaceObjects": [
+          {
+            "interfaceTypeName": "Personalized",
+            "concreteTypeNames": [
+              "Article"
+            ]
+          }
+        ],
+        "requestScopedFields": [
+          {
+            "fieldName": "currentViewer",
+            "typeName": "Personalized",
+            "l1Key": "viewer.currentViewer"
+          },
+          {
+            "fieldName": "currentViewer",
+            "typeName": "Query",
+            "l1Key": "viewer.currentViewer"
+          }
+        ]
+      },
+      {
+        "kind": "GRAPHQL",
+        "rootNodes": [
+          {
+            "typeName": "Query",
+            "fieldNames": [
+              "articles"
+            ]
+          },
+          {
+            "typeName": "Personalized",
+            "fieldNames": [
+              "id"
+            ]
+          },
+          {
+            "typeName": "Viewer",
+            "fieldNames": [
+              "id",
+              "recommendedArticles"
+            ],
+            "externalFieldNames": [
+              "name",
+              "email"
+            ]
+          },
+          {
+            "typeName": "Article",
+            "fieldNames": [
+              "id",
+              "title",
+              "body",
+              "tags",
+              "personalizedRecommendation",
+              "relatedArticles"
+            ],
+            "externalFieldNames": [
+              "currentViewer"
+            ]
+          }
+        ],
+        "overrideFieldPathFromAlias": true,
+        "customGraphql": {
+          "fetch": {
+            "url": {
+              "staticVariableContent": "http://articles.entity-cache-test.local/graphql"
+            },
+            "method": "POST",
+            "body": {},
+            "baseUrl": {},
+            "path": {}
+          },
+          "subscription": {
+            "enabled": true,
+            "url": {
+              "staticVariableContent": "http://articles.entity-cache-test.local/graphql"
+            },
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
+          },
+          "federation": {
+            "enabled": true,
+            "serviceSdl": "extend schema\n  @link(\n    url: \"https://specs.apollo.dev/federation/v2.5\"\n    import: [\"@key\", \"@external\", \"@requires\"]\n  )\n\ntype Query {\n  articles: [Article!]!\n}\n\ninterface Personalized @key(fields: \"id\") {\n  id: ID!\n}\n\n# Extends Viewer with an edge back into articles land.\n# The @key forces sequencing: the articles _entities fetch for\n# recommendedArticles needs viewer.id from the prior viewer fetch, so the\n# planner cannot parallelize it with the root Query.currentViewer call.\n#\n# name and email are declared @external because Article.personalizedRecommendation\n# @requires references them. Composition fails without these declarations.\ntype Viewer @key(fields: \"id\") {\n  id: ID!\n  name: String! @external\n  email: String! @external\n  recommendedArticles: [Article!]!\n}\n\ntype Article implements Personalized @key(fields: \"id\") {\n  id: ID!\n  title: String!\n  body: String!\n  tags: [String!]!\n  # Article.currentViewer is provided by the viewer subgraph via the\n  # Personalized @interfaceObject. It is @external here so @requires can\n  # reference it.\n  currentViewer: Viewer @external\n  # @requires a WIDER selection ({id, name, email}) than the root query\n  # will ask for ({id, name}). This is the widening-miss trigger that the\n  # test asserts: the coordinate L1 was populated with {id, name}, so the\n  # follow-up _entities(Personalized) fetch fails the widening check and\n  # refetches the viewer subgraph.\n  personalizedRecommendation: String!\n    @requires(fields: \"currentViewer { id name email }\")\n  # relatedArticles enables nested selection of Article entities so tests\n  # can exercise @requestScoped deduplication across multiple nesting\n  # levels (Article.currentViewer selected inline at more than one depth).\n  relatedArticles: [Article!]!\n}\n"
+          },
+          "upstreamSchema": {
+            "key": "cf1e444bb26e20ccce317dd20e2f8da88671c87d"
+          }
+        },
+        "requestTimeoutSeconds": "10",
+        "id": "4",
+        "keys": [
+          {
+            "typeName": "Personalized",
+            "selectionSet": "id"
+          },
+          {
+            "typeName": "Viewer",
+            "selectionSet": "id"
+          },
+          {
+            "typeName": "Article",
+            "selectionSet": "id"
+          }
+        ],
+        "requires": [
+          {
+            "typeName": "Article",
+            "fieldName": "personalizedRecommendation",
+            "selectionSet": "currentViewer { email id name }"
+          }
+        ],
+        "entityInterfaces": [
+          {
+            "interfaceTypeName": "Personalized",
+            "concreteTypeNames": [
+              "Article"
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "GRAPHQL",
+        "rootNodes": [
+          {
+            "typeName": "Article",
+            "fieldNames": [
+              "id",
+              "viewCount",
+              "rating",
+              "reviewSummary"
+            ]
+          }
+        ],
+        "overrideFieldPathFromAlias": true,
+        "customGraphql": {
+          "fetch": {
+            "url": {
+              "staticVariableContent": "http://articlesmeta.entity-cache-test.local/graphql"
+            },
+            "method": "POST",
+            "body": {},
+            "baseUrl": {},
+            "path": {}
+          },
+          "subscription": {
+            "enabled": true,
+            "url": {
+              "staticVariableContent": "http://articlesmeta.entity-cache-test.local/graphql"
+            },
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
+          },
+          "federation": {
+            "enabled": true,
+            "serviceSdl": "extend schema\n  @link(\n    url: \"https://specs.apollo.dev/federation/v2.5\"\n    import: [\"@key\"]\n  )\n\ntype Article @key(fields: \"id\") {\n  id: ID!\n  viewCount: Int!\n  rating: Float!\n  reviewSummary: String!\n}\n"
+          },
+          "upstreamSchema": {
+            "key": "26317d3464ef1d47aa8354694ea00cc787b1caef"
+          }
+        },
+        "requestTimeoutSeconds": "10",
+        "id": "5",
+        "keys": [
+          {
+            "typeName": "Article",
+            "selectionSet": "id"
+          }
+        ]
       }
     ],
     "fieldConfigurations": [
@@ -277,6 +750,80 @@
         "argumentsConfiguration": [
           {
             "name": "pid",
+            "sourceType": "FIELD_ARGUMENT"
+          }
+        ]
+      },
+      {
+        "typeName": "Query",
+        "fieldName": "itemsByIds",
+        "argumentsConfiguration": [
+          {
+            "name": "ids",
+            "sourceType": "FIELD_ARGUMENT"
+          }
+        ]
+      },
+      {
+        "typeName": "Query",
+        "fieldName": "product",
+        "argumentsConfiguration": [
+          {
+            "name": "id",
+            "sourceType": "FIELD_ARGUMENT"
+          },
+          {
+            "name": "region",
+            "sourceType": "FIELD_ARGUMENT"
+          }
+        ]
+      },
+      {
+        "typeName": "Query",
+        "fieldName": "productBySku",
+        "argumentsConfiguration": [
+          {
+            "name": "sku",
+            "sourceType": "FIELD_ARGUMENT"
+          }
+        ]
+      },
+      {
+        "typeName": "Query",
+        "fieldName": "productByName",
+        "argumentsConfiguration": [
+          {
+            "name": "name",
+            "sourceType": "FIELD_ARGUMENT"
+          }
+        ]
+      },
+      {
+        "typeName": "Query",
+        "fieldName": "productByKey",
+        "argumentsConfiguration": [
+          {
+            "name": "key",
+            "sourceType": "FIELD_ARGUMENT"
+          }
+        ]
+      },
+      {
+        "typeName": "Query",
+        "fieldName": "warehouse",
+        "argumentsConfiguration": [
+          {
+            "name": "locationId",
+            "sourceType": "FIELD_ARGUMENT"
+          }
+        ]
+      },
+      {
+        "typeName": "Query",
+        "fieldName": "warehouseByInput",
+        "argumentsConfiguration": [
+          {
+            "name": "input",
             "sourceType": "FIELD_ARGUMENT"
           }
         ]
@@ -318,15 +865,32 @@
             "sourceType": "FIELD_ARGUMENT"
           }
         ]
+      },
+      {
+        "typeName": "Mutation",
+        "fieldName": "deleteProduct",
+        "argumentsConfiguration": [
+          {
+            "name": "id",
+            "sourceType": "FIELD_ARGUMENT"
+          },
+          {
+            "name": "region",
+            "sourceType": "FIELD_ARGUMENT"
+          }
+        ]
       }
     ],
-    "graphqlSchema": "type Query {\n  item(id: ID!): Item\n  itemByPid(pid: ID!): Item\n  items: [Item!]!\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item\n  deleteItem(id: ID!): Item\n  createItem(name: String!, category: String!): Item!\n}\n\ntype Subscription {\n  itemUpdated: Item\n  itemCreated: Item\n}\n\ntype Item {\n  id: ID!\n  name: String!\n  category: String!\n  description: String!\n  rating: Float!\n  tags: [String!]!\n  available: Boolean!\n  count: Int!\n}",
+    "graphqlSchema": "directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ntype Query {\n  item(id: ID!): Item\n  itemByPid(pid: ID!): Item\n  items: [Item!]!\n  itemsByIds(ids: [ID!]!): [Item!]!\n  product(id: ID!, region: String!): Product\n  productBySku(sku: String!): Product\n  productByName(name: String!): Product\n  productByKey(key: ProductKeyInput!): Product\n  warehouse(locationId: ID!): Warehouse\n  warehouseByInput(input: WarehouseLocationInput!): Warehouse\n  currentViewer: Viewer\n  articles: [Article!]!\n}\n\ninput ProductKeyInput {\n  id: ID!\n  region: String!\n}\n\ninput WarehouseLocationInput {\n  location: WarehouseLocationKeyInput!\n}\n\ninput WarehouseLocationKeyInput {\n  id: ID!\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item\n  deleteItem(id: ID!): Item\n  createItem(name: String!, category: String!): Item!\n  deleteProduct(id: ID!, region: String!): Product\n}\n\ntype Subscription {\n  itemUpdated: Item\n  itemCreated: Item\n}\n\ntype Item {\n  id: ID!\n  name: String!\n  category: String!\n  description: String!\n  rating: Float!\n  tags: [String!]!\n  available: Boolean!\n  count: Int!\n}\n\ntype Product {\n  id: ID!\n  region: String!\n  sku: String!\n  name: String!\n  info: String!\n}\n\ntype Location {\n  id: ID!\n}\n\ntype Warehouse {\n  location: Location!\n  name: String!\n  capacity: Int!\n}\n\ntype Viewer {\n  id: ID!\n  name: String!\n  email: String!\n  recommendedArticles: [Article!]!\n}\n\ninterface Personalized {\n  id: ID!\n  currentViewer: Viewer\n}\n\ntype Article implements Personalized {\n  id: ID!\n  title: String!\n  body: String!\n  tags: [String!]!\n  currentViewer: Viewer\n  personalizedRecommendation: String!\n  relatedArticles: [Article!]!\n  viewCount: Int!\n  rating: Float!\n  reviewSummary: String!\n}",
     "stringStorage": {
-      "e10cbe748d7769562d213e67e31453c628ac25d0": "schema {\n  query: Query\n  mutation: Mutation\n  subscription: Subscription\n}\n\ndirective @cacheInvalidate on FIELD_DEFINITION\n\ndirective @cachePopulate(maxAge: Int) on FIELD_DEFINITION\n\ndirective @entityCache(includeHeaders: Boolean = false, maxAge: Int!, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT\n\ndirective @is(field: String!) on ARGUMENT_DEFINITION\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ndirective @queryCache(includeHeaders: Boolean = false, maxAge: Int!, shadowMode: Boolean = false) on FIELD_DEFINITION\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  category: String!\n  id: ID!\n  name: String!\n}\n\ntype Mutation {\n  createItem(category: String!, name: String!): Item! @cachePopulate(maxAge: 60)\n  deleteItem(id: ID!): Item @cacheInvalidate\n  updateItem(id: ID!, name: String!): Item @cacheInvalidate\n}\n\ntype Query {\n  item(id: ID!): Item @queryCache(maxAge: 300)\n  itemByPid(pid: ID! @is(field: \"id\")): Item @queryCache(maxAge: 300)\n  items: [Item!]! @queryCache(maxAge: 300)\n}\n\ntype Subscription {\n  itemCreated: Item @cachePopulate\n  itemUpdated: Item @cacheInvalidate\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
-      "9921646fcc093d4481ef27c3336d513404e35323": "directive @entityCache(includeHeaders: Boolean = false, maxAge: Int!, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  description: String!\n  id: ID!\n  rating: Float!\n  tags: [String!]!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
-      "1b1e0779b2386e60fa2359ba40523fac98cd810c": "directive @entityCache(includeHeaders: Boolean = false, maxAge: Int!, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  available: Boolean!\n  count: Int!\n  id: ID!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet"
+      "ef089dfaaa281a4069e91d684306b7d8d3227a12": "schema {\n  query: Query\n  mutation: Mutation\n  subscription: Subscription\n}\n\ndirective @cacheInvalidate on FIELD_DEFINITION\n\ndirective @cachePopulate(maxAge: Int) on FIELD_DEFINITION\n\ndirective @entityCache(includeHeaders: Boolean = false, maxAge: Int!, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT\n\ndirective @is(fields: String!) on ARGUMENT_DEFINITION\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ndirective @queryCache(includeHeaders: Boolean = false, maxAge: Int!, shadowMode: Boolean = false) on FIELD_DEFINITION\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  category: String!\n  id: ID!\n  name: String!\n}\n\ntype Location {\n  id: ID!\n}\n\ntype Mutation {\n  createItem(category: String!, name: String!): Item! @cachePopulate(maxAge: 60)\n  deleteItem(id: ID!): Item @cacheInvalidate\n  deleteProduct(id: ID!, region: String!): Product @cacheInvalidate\n  updateItem(id: ID!, name: String!): Item @cacheInvalidate\n}\n\ntype Product @key(fields: \"id region\") @key(fields: \"sku\") @entityCache(maxAge: 300) {\n  id: ID!\n  name: String!\n  region: String!\n  sku: String!\n}\n\ninput ProductKeyInput {\n  id: ID!\n  region: String!\n}\n\ntype Query {\n  item(id: ID!): Item @queryCache(maxAge: 300)\n  itemByPid(pid: ID! @is(fields: \"id\")): Item @queryCache(maxAge: 300)\n  items: [Item!]! @queryCache(maxAge: 300)\n  itemsByIds(ids: [ID!]! @is(fields: \"id\")): [Item!]! @queryCache(maxAge: 300)\n  product(id: ID!, region: String!): Product @queryCache(maxAge: 300)\n  productByKey(key: ProductKeyInput! @is(fields: \"id region\")): Product @queryCache(maxAge: 300)\n  productByName(name: String!): Product @queryCache(maxAge: 300)\n  productBySku(sku: String!): Product @queryCache(maxAge: 300)\n  warehouse(locationId: ID! @is(fields: \"location.id\")): Warehouse @queryCache(maxAge: 300)\n  warehouseByInput(input: WarehouseLocationInput! @is(fields: \"location { id }\")): Warehouse @queryCache(maxAge: 300)\n}\n\ntype Subscription {\n  itemCreated: Item @cachePopulate\n  itemUpdated: Item @cacheInvalidate\n}\n\ntype Warehouse @key(fields: \"location { id }\") @entityCache(maxAge: 300) {\n  location: Location!\n  name: String!\n}\n\ninput WarehouseLocationInput {\n  location: WarehouseLocationKeyInput!\n}\n\ninput WarehouseLocationKeyInput {\n  id: ID!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
+      "d41a9cba403103760b379b07f1c52a18cfe39cfc": "directive @entityCache(includeHeaders: Boolean = false, maxAge: Int!, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  description: String!\n  id: ID!\n  rating: Float!\n  tags: [String!]!\n}\n\ntype Location {\n  id: ID!\n}\n\ntype Product @key(fields: \"id region\") @entityCache(maxAge: 300) {\n  id: ID!\n  info: String!\n  region: String!\n}\n\ntype Warehouse @key(fields: \"location { id }\") @entityCache(maxAge: 300) {\n  capacity: Int!\n  location: Location!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
+      "1b1e0779b2386e60fa2359ba40523fac98cd810c": "directive @entityCache(includeHeaders: Boolean = false, maxAge: Int!, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  available: Boolean!\n  count: Int!\n  id: ID!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
+      "d34cc9dbc04217bb06cec3e6cf8e37e84078d268": "schema {\n  query: Query\n}\n\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\n\ndirective @interfaceObject on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ndirective @requestScoped(key: String!) on FIELD_DEFINITION\n\ntype Personalized @key(fields: \"id\") @interfaceObject {\n  currentViewer: Viewer @inaccessible @requestScoped(key: \"currentViewer\")\n  id: ID!\n}\n\ntype Query {\n  currentViewer: Viewer @requestScoped(key: \"currentViewer\")\n}\n\ntype Viewer @key(fields: \"id\") {\n  email: String!\n  id: ID!\n  name: String!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
+      "cf1e444bb26e20ccce317dd20e2f8da88671c87d": "schema {\n  query: Query\n}\n\ndirective @external on FIELD_DEFINITION | OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\n\ntype Article implements Personalized @key(fields: \"id\") {\n  body: String!\n  currentViewer: Viewer @external\n  id: ID!\n  personalizedRecommendation: String! @requires(fields: \"currentViewer { id name email }\")\n  relatedArticles: [Article!]!\n  tags: [String!]!\n  title: String!\n}\n\ninterface Personalized @key(fields: \"id\") {\n  id: ID!\n}\n\ntype Query {\n  articles: [Article!]!\n}\n\ntype Viewer @key(fields: \"id\") {\n  email: String! @external\n  id: ID!\n  name: String! @external\n  recommendedArticles: [Article!]!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
+      "26317d3464ef1d47aa8354694ea00cc787b1caef": "directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ntype Article @key(fields: \"id\") {\n  id: ID!\n  rating: Float!\n  reviewSummary: String!\n  viewCount: Int!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet"
     },
-    "graphqlClientSchema": "type Query {\n  item(id: ID!): Item\n  itemByPid(pid: ID!): Item\n  items: [Item!]!\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item\n  deleteItem(id: ID!): Item\n  createItem(name: String!, category: String!): Item!\n}\n\ntype Subscription {\n  itemUpdated: Item\n  itemCreated: Item\n}\n\ntype Item {\n  id: ID!\n  name: String!\n  category: String!\n  description: String!\n  rating: Float!\n  tags: [String!]!\n  available: Boolean!\n  count: Int!\n}"
+    "graphqlClientSchema": "type Query {\n  item(id: ID!): Item\n  itemByPid(pid: ID!): Item\n  items: [Item!]!\n  itemsByIds(ids: [ID!]!): [Item!]!\n  product(id: ID!, region: String!): Product\n  productBySku(sku: String!): Product\n  productByName(name: String!): Product\n  productByKey(key: ProductKeyInput!): Product\n  warehouse(locationId: ID!): Warehouse\n  warehouseByInput(input: WarehouseLocationInput!): Warehouse\n  currentViewer: Viewer\n  articles: [Article!]!\n}\n\ninput ProductKeyInput {\n  id: ID!\n  region: String!\n}\n\ninput WarehouseLocationInput {\n  location: WarehouseLocationKeyInput!\n}\n\ninput WarehouseLocationKeyInput {\n  id: ID!\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item\n  deleteItem(id: ID!): Item\n  createItem(name: String!, category: String!): Item!\n  deleteProduct(id: ID!, region: String!): Product\n}\n\ntype Subscription {\n  itemUpdated: Item\n  itemCreated: Item\n}\n\ntype Item {\n  id: ID!\n  name: String!\n  category: String!\n  description: String!\n  rating: Float!\n  tags: [String!]!\n  available: Boolean!\n  count: Int!\n}\n\ntype Product {\n  id: ID!\n  region: String!\n  sku: String!\n  name: String!\n  info: String!\n}\n\ntype Location {\n  id: ID!\n}\n\ntype Warehouse {\n  location: Location!\n  name: String!\n  capacity: Int!\n}\n\ntype Viewer {\n  id: ID!\n  name: String!\n  email: String!\n  recommendedArticles: [Article!]!\n}\n\ninterface Personalized {\n  id: ID!\n}\n\ntype Article implements Personalized {\n  id: ID!\n  title: String!\n  body: String!\n  tags: [String!]!\n  currentViewer: Viewer\n  personalizedRecommendation: String!\n  relatedArticles: [Article!]!\n  viewCount: Int!\n  rating: Float!\n  reviewSummary: String!\n}"
   },
   "subgraphs": [
     {
@@ -343,6 +907,21 @@
       "id": "2",
       "name": "inventory",
       "routingUrl": "http://inventory.entity-cache-test.local/graphql"
+    },
+    {
+      "id": "3",
+      "name": "viewer",
+      "routingUrl": "http://viewer.entity-cache-test.local/graphql"
+    },
+    {
+      "id": "4",
+      "name": "articles",
+      "routingUrl": "http://articles.entity-cache-test.local/graphql"
+    },
+    {
+      "id": "5",
+      "name": "articlesmeta",
+      "routingUrl": "http://articlesmeta.entity-cache-test.local/graphql"
     }
   ],
   "compatibilityVersion": "1:{{$COMPOSITION__VERSION}}"

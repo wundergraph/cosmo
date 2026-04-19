@@ -21,6 +21,36 @@ func (r *entityResolver) FindItemByID(ctx context.Context, id string) (*model.It
 	return nil, nil
 }
 
+// FindProductByIDAndRegion is the resolver for the findProductByIDAndRegion field.
+func (r *entityResolver) FindProductByIDAndRegion(ctx context.Context, id string, region string) (*model.Product, error) {
+	for _, p := range Products {
+		if p.ID == id && p.Region == region {
+			return p, nil
+		}
+	}
+	return nil, nil
+}
+
+// FindProductBySku is the resolver for the findProductBySku field.
+func (r *entityResolver) FindProductBySku(ctx context.Context, sku string) (*model.Product, error) {
+	for _, p := range Products {
+		if p.Sku == sku {
+			return p, nil
+		}
+	}
+	return nil, nil
+}
+
+// FindWarehouseByLocationID is the resolver for the findWarehouseByLocationID field.
+func (r *entityResolver) FindWarehouseByLocationID(ctx context.Context, locationID string) (*model.Warehouse, error) {
+	for _, w := range Warehouses {
+		if w.Location.ID == locationID {
+			return w, nil
+		}
+	}
+	return nil, nil
+}
+
 // Entity returns generated.EntityResolver implementation.
 func (r *Resolver) Entity() generated.EntityResolver { return &entityResolver{r} }
 

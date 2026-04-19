@@ -1,6 +1,8 @@
 package entity_caching
 
 import (
+	"encoding/json"
+	"net/http"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -472,8 +474,8 @@ func TestEntityCaching(t *testing.T) {
 			detailsAfterFirst := counters.details.Load()
 			require.Equal(t, int64(1), detailsAfterFirst)
 
-			// Cache should have entries (5 items in dataset)
-			require.Equal(t, 5, cache.Len())
+			// Cache should have entries: 5 entity entries (one per item) + 1 root field L2 entry
+			require.Equal(t, 6, cache.Len())
 
 			// Same query — entity cache hit
 			res2 := xEnv.MakeGraphQLRequestOK(req)
@@ -745,14 +747,6 @@ func TestEntityCaching(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
-			ModifyRouterConfig: func(rc *nodev1.RouterConfig) {
-				// Remove @cachePopulate subscription configs to avoid a FindByTypeName
-				// conflict: both populate (itemCreated) and invalidate (itemUpdated) create
-				// SubscriptionEntityPopulation entries for TypeName "Item", and FindByTypeName
-				// returns the first match. Removing populate ensures the invalidation config
-				// is found.
-				removeSubscriptionPopulateConfigs(rc)
-			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
@@ -799,6 +793,43 @@ func TestEntityCaching(t *testing.T) {
 			// After invalidation, cache miss → details subgraph called again
 			xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, detailsAfterWarm+1, counters.details.Load())
+		})
+	})
+
+	t.Run("subscription_populate_config_carries_entity_type_name", func(t *testing.T) {
+		// Regression test for the composition->router pipeline carrying entityTypeName
+		// end-to-end on @cachePopulate configs. Before this was wired:
+		//   - composition wrote CachePopulateConfig without entityTypeName
+		//   - router compensated by expanding subscription populate across every
+		//     cached entity in the subgraph (semantically ambiguous, wrong config)
+		// Now the field carries the specific target entity — router looks it up directly.
+		//
+		// If composition is reverted, entityTypeName is empty, the router skips the
+		// populate setup, and the follow-up subscription_populates_cache test goes red.
+		t.Parallel()
+
+		servers, _ := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		var itemCreatedPopulate *nodev1.CachePopulateConfiguration
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+			ModifyRouterConfig: func(rc *nodev1.RouterConfig) {
+				for _, ds := range rc.EngineConfig.DatasourceConfigurations {
+					for _, cp := range ds.CachePopulateConfigurations {
+						if cp.OperationType == "Subscription" && cp.FieldName == "itemCreated" {
+							itemCreatedPopulate = cp
+						}
+					}
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			require.NotNil(t, itemCreatedPopulate,
+				"expected a CachePopulateConfiguration for subscription itemCreated")
+			require.Equal(t, "Item", itemCreatedPopulate.EntityTypeName,
+				"@cachePopulate must carry the target entity type name through the pipeline")
 		})
 	})
 
@@ -1187,4 +1218,1098 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
+	// --- Mapping rule coverage tests ---
+
+	t.Run("batch_list_argument_cache_keys", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// itemsByIds uses @is(fields: "id") with a list argument → batch cache lookup.
+			// Each element in the ids list maps to one entity cache key.
+			req := testenv.GraphQLRequest{
+				Query: `{ itemsByIds(ids: ["1", "2"]) { id name description } }`,
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Contains(t, res.Body, `"Widget"`)
+			require.Contains(t, res.Body, `"Gadget"`)
+			require.Contains(t, res.Body, `"description"`)
+
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			// Two entities fetched → two cache entries
+			require.Equal(t, 2, cache.Len())
+
+			// Same query again → all entities served from cache
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, res.Body, res2.Body)
+			require.Equal(t, detailsAfterFirst, counters.details.Load())
+		})
+	})
+
+	t.Run("batch_list_partial_cache_hit", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Warm cache for id:"1" only
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id name description } }`,
+			})
+			detailsAfterWarm := counters.details.Load()
+			require.Equal(t, 1, cache.Len())
+
+			// Batch query for ids ["1", "3"] — id:"1" is cached, id:"3" is not
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ itemsByIds(ids: ["1", "3"]) { id name description } }`,
+			})
+			require.Contains(t, res.Body, `"Widget"`)
+			require.Contains(t, res.Body, `"Gizmo"`)
+
+			// Details subgraph should be called again for the uncached entity
+			require.Greater(t, counters.details.Load(), detailsAfterWarm)
+		})
+	})
+
+	t.Run("composite_key_auto_mapping", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// product(id, region) auto-maps both args to @key(fields: "id region").
+			// The cache key includes both id AND region.
+			req := testenv.GraphQLRequest{
+				Query: `{ product(id: "p1", region: "US") { id region name info } }`,
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, `{"data":{"product":{"id":"p1","region":"US","name":"Alpha","info":"Alpha product details for US market"}}}`, res.Body)
+
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			// Same composite key → cache hit
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, res.Body, res2.Body)
+			require.Equal(t, detailsAfterFirst, counters.details.Load())
+
+			// Same id, different region → cache miss (different composite key)
+			res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ product(id: "p3", region: "EU") { id region name info } }`,
+			})
+			require.Contains(t, res3.Body, `"Gamma"`)
+			require.Equal(t, detailsAfterFirst+1, counters.details.Load())
+		})
+	})
+
+	t.Run("multiple_keys_one_satisfiable", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Product has @key(fields: "id region") and @key(fields: "sku").
+			// productBySku only provides sku → only the sku key is satisfiable.
+			req := testenv.GraphQLRequest{
+				Query: `{ productBySku(sku: "SKU-001") { id region sku name info } }`,
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Contains(t, res.Body, `"Alpha"`)
+			require.Contains(t, res.Body, `"SKU-001"`)
+			require.Contains(t, res.Body, `"info"`)
+
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			// Same sku → cache hit
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, res.Body, res2.Body)
+			require.Equal(t, detailsAfterFirst, counters.details.Load())
+
+			// Different sku → cache miss
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ productBySku(sku: "SKU-003") { id region sku name info } }`,
+			})
+			require.Equal(t, detailsAfterFirst+1, counters.details.Load())
+		})
+	})
+
+	t.Run("no_key_match_root_field_only", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// productByName(name) — "name" doesn't match any @key field.
+			// No entity key mapping is emitted, so no per-entity cache keys
+			// are constructed from the argument. Entity caching via _entities
+			// still works (the details subgraph result is cached by entity key),
+			// but the root field itself does not produce a query cache mapping.
+			req := testenv.GraphQLRequest{
+				Query: `{ productByName(name: "Alpha") { id region name info } }`,
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Contains(t, res.Body, `"Alpha"`)
+			require.Contains(t, res.Body, `"info"`)
+
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			// Entity caching from _entities still works — details cached
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, res.Body, res2.Body)
+			require.Equal(t, detailsAfterFirst, counters.details.Load())
+		})
+	})
+
+	t.Run("composite_key_input_object_via_is", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// productByKey uses an input object argument with @is(fields: "id region").
+			// The composition decomposes this into argumentPath ["key","id"] and ["key","region"],
+			// mapping input object fields to the composite @key(fields: "id region").
+			req := testenv.GraphQLRequest{
+				Query:     `query($k: ProductKeyInput!) { productByKey(key: $k) { id region name info } }`,
+				Variables: []byte(`{"k": {"id": "p1", "region": "US"}}`),
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, `{"data":{"productByKey":{"id":"p1","region":"US","name":"Alpha","info":"Alpha product details for US market"}}}`, res.Body)
+
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			// Same input object → cache hit
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, res.Body, res2.Body)
+			require.Equal(t, detailsAfterFirst, counters.details.Load())
+
+			// Different input object → cache miss
+			req2 := testenv.GraphQLRequest{
+				Query:     `query($k: ProductKeyInput!) { productByKey(key: $k) { id region name info } }`,
+				Variables: []byte(`{"k": {"id": "p3", "region": "EU"}}`),
+			}
+			res3 := xEnv.MakeGraphQLRequestOK(req2)
+			require.Contains(t, res3.Body, `"Gamma"`)
+			require.Equal(t, detailsAfterFirst+1, counters.details.Load())
+		})
+	})
+
+	t.Run("nested_key_via_is_directive", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// warehouse(locationId) uses @is(fields: "location.id") to map a scalar
+			// argument to the nested key path @key(fields: "location { id }").
+			req := testenv.GraphQLRequest{
+				Query: `{ warehouse(locationId: "w1") { location { id } name capacity } }`,
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Contains(t, res.Body, `"Main Depot"`)
+			require.Contains(t, res.Body, `"capacity"`)
+
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			// Same nested key → cache hit
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, res.Body, res2.Body)
+			require.Equal(t, detailsAfterFirst, counters.details.Load())
+
+			// Different location → cache miss
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ warehouse(locationId: "w2") { location { id } name capacity } }`,
+			})
+			require.Equal(t, detailsAfterFirst+1, counters.details.Load())
+		})
+	})
+
+	t.Run("single_subgraph_composite_key_input_object", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// productByKey uses an input object argument with @is(fields: "id region").
+			// Querying only items-subgraph fields (id, region, name) verifies that
+			// RemapVariables correctly handles nested argument paths in a single-subgraph
+			// setup where no entity fetch is needed.
+			req := testenv.GraphQLRequest{
+				Query:     `query($k: ProductKeyInput!) { productByKey(key: $k) { id region name } }`,
+				Variables: []byte(`{"k": {"id": "p1", "region": "US"}}`),
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, `{"data":{"productByKey":{"id":"p1","region":"US","name":"Alpha"}}}`, res.Body)
+
+			itemsAfterFirst := counters.items.Load()
+			require.Equal(t, int64(1), itemsAfterFirst)
+
+			// Same input object → cache hit, items subgraph NOT called again
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, res.Body, res2.Body)
+			require.Equal(t, itemsAfterFirst, counters.items.Load())
+		})
+	})
+
+	// request_scoped_field_deduplication establishes the baseline behavior for
+	// entity resolution deduplication. Without @requestScoped, the details
+	// subgraph is called exactly once for a list query (all entities are
+	// batched into a single _entities call). The L2 cache then serves
+	// subsequent identical requests without calling the subgraph again.
+	//
+	// When @requestScoped support is added (subgraph schemas declare
+	// @requestScoped, composition produces requestScopedFields in config.json,
+	// and the planner generates RequestScopedExports/Hints), this test should
+	// be extended to verify that the details subgraph is called fewer times
+	// across multiple entity batches within a single request.
+	t.Run("request_scoped_field_deduplication", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Query a list of items. Each item triggers entity resolution to
+			// the details subgraph for description. Without @requestScoped,
+			// all entities are batched into one _entities call.
+			req := testenv.GraphQLRequest{
+				Query: `{ items { id name description } }`,
+			}
+
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Contains(t, res.Body, `"description"`)
+			require.Contains(t, res.Body, `"Widget"`)
+
+			// Baseline: details subgraph called exactly once (one batch)
+			require.Equal(t, int64(1), counters.details.Load(),
+				"details should be called once for the entity batch")
+
+			// Second identical request: L2 cache hit, no subgraph calls
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, res.Body, res2.Body)
+			require.Equal(t, int64(1), counters.details.Load(),
+				"details should not be called again (L2 cache hit)")
+		})
+	})
+
+	// field_widening_across_requests verifies that when a cached entity has
+	// a subset of fields (e.g., description only), a subsequent request
+	// asking for additional fields from the same subgraph (e.g., description
+	// + rating) correctly fetches the wider field set from the subgraph.
+	t.Run("field_widening_across_requests", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Request 1: fetch only description from details subgraph
+			res1 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id name description } }`,
+			})
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res1.Body)
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			// Request 2: fetch description + rating (wider field set from same subgraph).
+			// The cache key includes the field selection, so this is a cache miss
+			// for the entity resolution to details. The subgraph must be called again.
+			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id name description rating } }`,
+			})
+			require.Contains(t, res2.Body, `"description"`)
+			require.Contains(t, res2.Body, `"rating"`)
+			require.Contains(t, res2.Body, `"Widget"`)
+
+			// Details subgraph called again because wider field set is a different cache key
+			require.Equal(t, detailsAfterFirst+1, counters.details.Load(),
+				"details should be called again for the wider field set")
+
+			// Request 3: repeat the wider query — should now be a cache hit
+			res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id name description rating } }`,
+			})
+			require.Equal(t, res2.Body, res3.Body)
+			require.Equal(t, detailsAfterFirst+1, counters.details.Load(),
+				"wider field set should be cached after second fetch")
+		})
+	})
+
+	// batch_partial_hit_with_extension_fields verifies that batch queries
+	// correctly handle partial cache hits when entity extension fields
+	// (from the details subgraph) are involved. Entities with cached
+	// extension data are served from cache; uncached entities trigger a
+	// subgraph fetch only for the missing ones.
+	t.Run("batch_partial_hit_with_extension_fields", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Warm cache: fetch extension fields for entity 1 and entity 2
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ itemsByIds(ids: ["1", "2"]) { id name description } }`,
+			})
+			detailsAfterWarm := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterWarm)
+			require.Equal(t, 2, cache.Len())
+
+			// Batch query for entities [1, 2, 3]: entities 1 and 2 have cached
+			// extension data from details, entity 3 does not.
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ itemsByIds(ids: ["1", "2", "3"]) { id name description } }`,
+			})
+			require.Contains(t, res.Body, `"Widget"`)
+			require.Contains(t, res.Body, `"Gadget"`)
+			require.Contains(t, res.Body, `"Gizmo"`)
+			require.Contains(t, res.Body, `"description"`)
+
+			// Details subgraph called again for the uncached entity (id:"3")
+			require.Greater(t, counters.details.Load(), detailsAfterWarm,
+				"details should be called for uncached entity 3")
+
+			// All three entities now cached
+			require.Equal(t, 3, cache.Len())
+
+			// Repeat the batch query — all entities cached, no more subgraph calls
+			detailsBeforeRepeat := counters.details.Load()
+			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ itemsByIds(ids: ["1", "2", "3"]) { id name description } }`,
+			})
+			require.Equal(t, res.Body, res2.Body)
+			require.Equal(t, detailsBeforeRepeat, counters.details.Load(),
+				"all entities should be served from cache")
+		})
+	})
+
+	t.Run("batch_entity_key_per_element_caching", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req := testenv.GraphQLRequest{
+				Query: `{ itemsByIds(ids: ["1", "2"]) { id name description } }`,
+			}
+
+			// Request 1: both subgraphs called (items for root field, details for entity)
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Contains(t, res.Body, `"Widget"`)
+			require.Contains(t, res.Body, `"Gadget"`)
+			require.Contains(t, res.Body, `"description"`)
+
+			itemsAfterFirst := counters.items.Load()
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), itemsAfterFirst)
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			// Per-element cache entries: 2 entity keys (one per id)
+			require.Equal(t, 2, cache.Len())
+
+			// Request 2: identical query — batch entity keys hit, no subgraph calls
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, res.Body, res2.Body)
+
+			// Items subgraph should NOT be called again (batch entity key cache hit)
+			require.Equal(t, itemsAfterFirst, counters.items.Load())
+			// Details subgraph should NOT be called again (entity cache hit)
+			require.Equal(t, detailsAfterFirst, counters.details.Load())
+		})
+	})
+
+	// request_scoped_widening_refetch asserts the TARGET behavior for
+	// @requestScoped coordinate L1 caching: no matter how many sites within a
+	// single request read a @requestScoped field with the same key, the
+	// underlying subgraph should be fetched EXACTLY ONCE.
+	//
+	// This test is currently expected to FAIL. Under the present implementation
+	// the planner writes L1 with the narrow root selection ({id, name}) and a
+	// later sequentially-dependent read needs the wider selection
+	// ({id, name, email}) via @requires. The widening check in
+	// validateItemHasRequiredData sees that email is missing and triggers a
+	// refetch against the viewer subgraph, so counters.viewer is 2, not 1.
+	//
+	// The fix will either (a) teach the planner to pre-plan the wider union of
+	// selections up-front so the root fetch already carries {id, name, email},
+	// or (b) teach the L1 layer to widen its stored entry when a later read
+	// asks for a superset of fields. Either way, once the fix lands this test
+	// should pass unchanged.
+	//
+	// Schema setup (see subgraphs/viewer + subgraphs/articles):
+	//
+	//   viewer subgraph:
+	//     Query.currentViewer                 @requestScoped(key: "currentViewer")
+	//     Personalized.currentViewer          @requestScoped(key: "currentViewer")
+	//     Viewer { id, name, email }
+	//
+	//   articles subgraph:
+	//     Viewer { recommendedArticles }     (extends viewer entity)
+	//     Article implements Personalized {
+	//       personalizedRecommendation: String!
+	//         @requires(fields: "currentViewer { id name email }")
+	//     }
+	//
+	// Query under test:
+	//
+	//   {
+	//     currentViewer { id name
+	//       recommendedArticles {
+	//         id title
+	//         personalizedRecommendation
+	//       }
+	//     }
+	//   }
+	t.Run("request_scoped_widening_refetch", func(t *testing.T) {
+		t.Parallel()
+		t.Skip("pending functionality: widening refetch across @requires-driven fetches")
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req := testenv.GraphQLRequest{
+				Query: `{
+					currentViewer {
+						id
+						name
+						recommendedArticles {
+							id
+							title
+							personalizedRecommendation
+						}
+					}
+				}`,
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			// personalizedRecommendation formats "for <name> <<email>>" — asserting the
+			// email shows up proves the wider {id,name,email} selection actually
+			// reached the articles subgraph via @requires, i.e. the widening
+			// refetch really happened.
+			require.Equal(t,
+				`{"data":{"currentViewer":{"id":"v1","name":"Alice","recommendedArticles":[`+
+					`{"id":"a1","title":"The Rise of Federated GraphQL","personalizedRecommendation":"The Rise of Federated GraphQL, recommended for Alice <alice@example.com>"},`+
+					`{"id":"a2","title":"Caching Strategies for Modern APIs","personalizedRecommendation":"Caching Strategies for Modern APIs, recommended for Alice <alice@example.com>"},`+
+					`{"id":"a3","title":"A Practical Guide to @requestScoped","personalizedRecommendation":"A Practical Guide to @requestScoped, recommended for Alice <alice@example.com>"}`+
+					`]}}}`,
+				res.Body)
+
+			// Target behavior: viewer should be fetched EXACTLY ONCE no matter
+			// how many @requestScoped reads happen within the request.
+			//
+			// Currently fails (actual == 2) because the root fetch carries only
+			// {id, name} and the later @requires-driven Personalized._entities
+			// fetch needs {id, name, email} — the widening check misses and
+			// refetches the viewer subgraph. See the test's header comment.
+			require.Equal(t, int64(1), counters.viewer.Load(),
+				"viewer must be fetched exactly once per request regardless of "+
+					"how many @requestScoped reads share the same key")
+
+			require.Equal(t, int64(2), counters.articles.Load(),
+				"articles is called twice: once for Viewer._entities (recommendedArticles), "+
+					"once for Article._entities (personalizedRecommendation after @requires)")
+		})
+	})
+
+	// request_scoped_nested_dedup asserts that @requestScoped coordinate L1 caching
+	// deduplicates across MULTIPLE nesting levels. Unlike request_scoped_widening_refetch
+	// (which tests the narrow-root / wide-@requires widening-miss scenario), this test
+	// holds the viewer selection CONSTANT at every site — {id, name, email} everywhere.
+	// The only variable is the number of nesting depths at which Article.currentViewer
+	// is selected inline.
+	//
+	// The query selects currentViewer at THREE sites with the same key "currentViewer":
+	//   1. Root: Query.currentViewer
+	//   2. Nested: recommendedArticles[].currentViewer
+	//   3. Deeply nested: recommendedArticles[].relatedArticles[].currentViewer
+	//
+	// All three sites ask for the same field set {id, name, email}. No @requires is
+	// involved (personalizedRecommendation is not selected), so widening is not a
+	// factor. With correct @requestScoped dedup, the viewer subgraph should be
+	// fetched EXACTLY ONCE — the second and third sites should read from the L1
+	// coordinate cache populated by the first.
+	//
+	// Currently expected to FAIL: the planner launches the BatchEntity viewer fetch
+	// for deeper Article.currentViewer sites in parallel with the L1 injection check,
+	// so additional HTTP calls are made even though @requestScoped would serve them.
+	// Reproduced from the cache explorer playground tool — the demo showed 3 viewer
+	// fetches for a query with 2 article nesting levels plus the root currentViewer.
+	t.Run("request_scoped_nested_dedup", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req := testenv.GraphQLRequest{
+				Query: `{
+					currentViewer {
+						id
+						name
+						email
+						recommendedArticles {
+							id
+							title
+							currentViewer {
+								id
+								name
+								email
+							}
+							relatedArticles {
+								id
+								title
+								currentViewer {
+									id
+									name
+									email
+								}
+							}
+						}
+					}
+				}`,
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			// Sanity: the query resolved successfully and the viewer data is
+			// identical at every site (proves the @requestScoped dedup is at
+			// least returning consistent data, even if it made too many fetches).
+			require.Contains(t, res.Body, `"currentViewer":{"id":"v1","name":"Alice","email":"alice@example.com"}`)
+			require.Contains(t, res.Body, `"recommendedArticles"`)
+			require.Contains(t, res.Body, `"relatedArticles"`)
+
+			// Target behavior: the viewer subgraph is hit EXACTLY ONCE regardless
+			// of how many Article.currentViewer sites exist in the query. The root
+			// Query.currentViewer fetch populates the L1 coordinate cache under
+			// key "currentViewer", and every subsequent read at any nesting depth
+			// must inject from L1 without launching a new subgraph fetch.
+			require.Equal(t, int64(1), counters.viewer.Load(),
+				"viewer must be fetched exactly once per request regardless of "+
+					"how many nesting levels select Article.currentViewer inline "+
+					"(currently fails: the planner launches BatchEntity viewer fetches "+
+					"for deeper Article.currentViewer sites in parallel with the L1 "+
+					"injection check, paying the subgraph round-trip unnecessarily)")
+		})
+	})
+
+	t.Run("complex_viewer_articles_query_shape_no_errors", func(t *testing.T) {
+		t.Parallel()
+
+		servers, _ := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req := testenv.GraphQLRequest{
+				Query: `query ViewerArticles {
+					articles {
+						id
+						title
+						body
+						relatedArticles {
+							...ArticleFields
+							relatedArticles {
+								...ArticleFields
+								relatedArticles {
+									...ArticleFields
+								}
+							}
+						}
+					}
+					currentViewer {
+						id
+						name
+						email
+						recommendedArticles {
+							...ArticleFields
+							relatedArticles {
+								...ArticleFields
+								relatedArticles {
+									...ArticleFields
+								}
+							}
+						}
+					}
+				}
+
+				fragment ArticleFields on Article {
+					id
+					title
+					tags
+					viewCount
+					rating
+					reviewSummary
+					personalizedRecommendation
+					currentViewer {
+						id
+						name
+						email
+					}
+				}`,
+			}
+
+			for i := range 3 {
+				res := xEnv.MakeGraphQLRequestOK(req)
+				require.NotContains(t, res.Body, `"errors"`, "iteration %d: expected query to execute without GraphQL errors", i)
+				require.Contains(t, res.Body, `"articles"`, "iteration %d: expected articles payload", i)
+				require.Contains(t, res.Body, `"currentViewer"`, "iteration %d: expected currentViewer payload", i)
+			}
+		})
+	})
+
+	t.Run("complex_viewer_articles_cached_matches_uncached", func(t *testing.T) {
+		t.Parallel()
+
+		servers, _ := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req := testenv.GraphQLRequest{
+				Query: `query ViewerArticles {
+					articles {
+						id
+						title
+						body
+						relatedArticles {
+							...ArticleFields
+							relatedArticles {
+								...ArticleFields
+								relatedArticles {
+									...ArticleFields
+								}
+							}
+						}
+					}
+					currentViewer {
+						id
+						name
+						email
+						recommendedArticles {
+							...ArticleFields
+							relatedArticles {
+								...ArticleFields
+								relatedArticles {
+									...ArticleFields
+								}
+							}
+						}
+					}
+				}
+
+				fragment ArticleFields on Article {
+					id
+					title
+					tags
+					viewCount
+					rating
+					reviewSummary
+					personalizedRecommendation
+					currentViewer {
+						id
+						name
+						email
+					}
+				}`,
+			}
+
+			// Warm cache.
+			xEnv.MakeGraphQLRequestOK(req)
+
+			cachedRes := xEnv.MakeGraphQLRequestOK(req)
+			require.NotContains(t, cachedRes.Body, `"errors"`)
+
+			uncachedReq := req
+			uncachedReq.Header = http.Header{
+				"X-WG-Disable-Entity-Cache": []string{"true"},
+			}
+			uncachedRes := xEnv.MakeGraphQLRequestOK(uncachedReq)
+			require.NotContains(t, uncachedRes.Body, `"errors"`)
+
+			require.Equal(t, uncachedRes.Body, cachedRes.Body)
+		})
+	})
+
+	// Regression test for the arena pointer bug: exportRequestScopedFields must
+	// copy values before storing in requestScopedL1. Without the copy, stored
+	// pointers become dangling when the goroutine arena is reused on subsequent
+	// requests, causing crashes or corrupted data.
+	t.Run("repeated_complex_query_no_panic", func(t *testing.T) {
+		t.Parallel()
+
+		servers, _ := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// A query that exercises entity fetching across multiple subgraphs
+			// (items + details + inventory). Repeated execution triggers arena
+			// reuse which would crash if exported values were not copied.
+			req := testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id name description rating tags available count } }`,
+			}
+			for i := range 5 {
+				res := xEnv.MakeGraphQLRequestOK(req)
+				require.Contains(t, res.Body, `"Widget"`, "iteration %d: expected Widget in response", i)
+				require.Contains(t, res.Body, `"description"`, "iteration %d: expected description in response", i)
+				require.Contains(t, res.Body, `"available"`, "iteration %d: expected available in response", i)
+			}
+		})
+	})
+
+	// RED test: @cachePopulate on a Mutation must write the returned entity to L2 so the
+	// next read by id is a cache hit. The existing `mutation_populates_cache` /
+	// `mutation_populate_writes_to_cache` tests only verify the mutation responds — they
+	// don't actually verify the populate side-effect.
+	//
+	// Cache-demo trace shows the mutation runs with `l2_enabled: false` and the
+	// subsequent `item(id: <new>)` query L2-misses, then re-fetches from the items
+	// subgraph. This pin captures that gap so the loader fix can land with coverage.
+	t.Run("cache_populate_writes_entity_for_subsequent_read_RED", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// createItem has @cachePopulate(maxAge: 60). The mutation must populate L2
+			// with the returned Item entity under its @key("id") cache key.
+			createRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { createItem(name: "PopulatedItem", category: "populate") { id name category } }`,
+			})
+			require.Contains(t, createRes.Body, `"PopulatedItem"`)
+
+			// Extract the new id from the response — `nextID` is shared across the
+			// parallel test suite, so we can't predict it.
+			var idMatch struct {
+				Data struct {
+					CreateItem struct {
+						ID       string `json:"id"`
+						Name     string `json:"name"`
+						Category string `json:"category"`
+					} `json:"createItem"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(createRes.Body), &idMatch))
+			newID := idMatch.Data.CreateItem.ID
+			require.NotEmpty(t, newID, "createItem must return a non-empty id")
+
+			itemsAfterCreate := counters.items.Load()
+
+			// Read the just-created entity by its key. If @cachePopulate wrote to L2,
+			// the items subgraph must NOT be called again. The items subgraph's `item(id:)`
+			// resolver does NOT persist new items (createItem returns a fresh struct only),
+			// so without cache the read returns null. Cache hit means we get the populated
+			// entity back exactly as the mutation returned it.
+			readRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "` + newID + `") { id name category } }`,
+			})
+			require.Equal(t,
+				`{"data":{"item":{"id":"`+newID+`","name":"PopulatedItem","category":"populate"}}}`,
+				readRes.Body)
+			require.Equal(t, itemsAfterCreate, counters.items.Load(),
+				"@cachePopulate must write the entity to L2 so the read-by-id is served from cache")
+		})
+	})
+
+	// Regression test: @cacheInvalidate clears an entity cached under a composite @key.
+	//
+	// `delete_mutation_invalidates_cache` already covers the simple id-only case
+	// (Item @key("id")). This test pins the composite-key path via Product
+	// @key("id region") + deleteProduct(id, region) @cacheInvalidate.
+	//
+	// The cache-demo failure of an apparently equivalent scenario turned out to be
+	// a test-script artifact (mutable subgraph state caused warm-up to return null,
+	// which prevented the cache write). The router-side composite-key invalidate
+	// path itself works correctly — this test pins that contract.
+	t.Run("cache_invalidate_composite_key", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			warmReq := testenv.GraphQLRequest{
+				Query: `{ product(id: "p1", region: "US") { id region sku name } }`,
+			}
+			// 1. Warm the cache for product (id=p1, region=US)
+			xEnv.MakeGraphQLRequestOK(warmReq)
+			itemsAfterWarm := counters.items.Load()
+
+			// 2. Re-read — must be a cache hit
+			xEnv.MakeGraphQLRequestOK(warmReq)
+			require.Equal(t, itemsAfterWarm, counters.items.Load(),
+				"composite-key entity must be cached after warm-up")
+
+			// 3. Invalidate via deleteProduct. The mutation itself hits the items subgraph
+			// to execute the resolver — so we capture the counter AFTER the mutation and
+			// only assert on the delta from the subsequent read.
+			delRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { deleteProduct(id: "p1", region: "US") { id region } }`,
+			})
+			require.Contains(t, delRes.Body, `"deleteProduct"`)
+			itemsAfterMutation := counters.items.Load()
+
+			// 4. Read again — composite-key cache MUST be cleared, items subgraph
+			// MUST be hit one more time. Currently fails: counter unchanged → @cacheInvalidate
+			// did not evict the composite-key entity, so the read is still a cache hit.
+			xEnv.MakeGraphQLRequestOK(warmReq)
+			require.Equal(t, itemsAfterMutation+1, counters.items.Load(),
+				"@cacheInvalidate on Mutation returning composite-key entity must clear the L2 entry; the post-invalidate read must re-fetch from subgraph")
+		})
+	})
+
+	// RED test: nested @key reached via input object @is(fields: "location { id }")
+	//
+	// `warehouse(locationId: ID! @is(fields: "location.id"))` (scalar arg with dot notation)
+	// already passes — see "nested_key_via_is_directive" above.
+	//
+	// `warehouseByInput(input: WarehouseLocationInput! @is(fields: "location { id }"))` is
+	// the same nested @key reached via a multi-hop argument path. Composition produces
+	// the same `entityKeyField: "location.id"` plus `argumentPath: ["input","location","id"]`.
+	// The router's loader must walk the input-object path to construct the cache key.
+	//
+	// Discovered in cache-demo manual testing: cache lookup fires with the right key but
+	// every call shows l2_miss and the entity is never written. Pinning the failure here
+	// so the loader fix can land with a regression test.
+	t.Run("nested_key_via_input_object_is_directive_RED", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// IMPORTANT: this query does NOT select the @key field (`location { id }`).
+			// Reproduces the cache-demo Venue failure where queries that omit the
+			// key field from the selection set prevent the cache write — the router's
+			// entity write path derives the cache key from the response payload
+			// instead of from the argument values that were already used to build
+			// the lookup key.
+			//
+			// Compare to "nested_key_via_is_directive" above, which selects
+			// `location { id }` and passes — that test masks this bug because the
+			// key value happens to be in the response payload.
+			req := testenv.GraphQLRequest{
+				Query: `{ warehouseByInput(input: { location: { id: "w1" } }) { name } }`,
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, `{"data":{"warehouseByInput":{"name":"Main Depot"}}}`, res.Body)
+
+			itemsAfterFirst := counters.items.Load()
+			require.Equal(t, int64(1), itemsAfterFirst, "first call must hit the items subgraph")
+
+			// Same nested key via input object → MUST be a cache hit. Currently fails:
+			// the items subgraph is called a second time despite the L2 lookup running
+			// with the structurally correct key, because the cache write path can't
+			// reconstruct the entity key from a response that doesn't contain the
+			// key field.
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, res.Body, res2.Body)
+			require.Equal(t, itemsAfterFirst, counters.items.Load(),
+				"input-object → nested-key cache write must persist when @key field is not selected; second call must NOT re-hit subgraph")
+		})
+	})
+
+	// REGRESSION: a SingleFetch served entirely from L2 cache must report
+	// `load_skipped: true` in the request trace. Previously the resolveSingle
+	// path didn't set LoadSkipped on cache-hit branches even though the bulk
+	// parallel path already did, so observability reported `false` on fetches
+	// that demonstrably never called the subgraph.
+	t.Run("root_field_cache_hit_reports_load_skipped_in_trace", func(t *testing.T) {
+		t.Parallel()
+
+		servers, _ := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Warm the cache.
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id description } }`,
+			})
+
+			// Second call with tracing enabled — assert load_skipped == true on the fetch.
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `{ item(id: "1") { id description } }`,
+				Header: map[string][]string{"X-WG-Trace": {"true"}},
+			})
+			var body struct {
+				Extensions struct {
+					Trace struct {
+						Fetches map[string]any `json:"fetches"`
+					} `json:"trace"`
+				} `json:"extensions"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(res.Body), &body))
+
+			// Walk the fetch tree and find any Single fetch with load_skipped=true.
+			var anyLoadSkipped bool
+			var visit func(node any)
+			visit = func(node any) {
+				m, ok := node.(map[string]any)
+				if !ok {
+					return
+				}
+				if m["kind"] == "Single" {
+					if fetch, ok := m["fetch"].(map[string]any); ok {
+						if trace, ok := fetch["trace"].(map[string]any); ok {
+							if ls, _ := trace["load_skipped"].(bool); ls {
+								anyLoadSkipped = true
+							}
+						}
+					}
+				}
+				if children, ok := m["children"].([]any); ok {
+					for _, c := range children {
+						visit(c)
+					}
+				}
+			}
+			visit(map[string]any(body.Extensions.Trace.Fetches))
+			require.True(t, anyLoadSkipped,
+				"trace must report load_skipped=true on the cache-hit fetch")
+		})
+	})
+
+	// REGRESSION: includeHeaders=true with NO header forwarded must still produce a
+	// stable cache key — write and read paths must agree on the prefix. Previously
+	// the WRITE path dropped the prefix when headerHash==0 while the READ path
+	// always built "0:..." → every read missed.
+	t.Run("include_headers_with_no_header_forwarded_caches", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions: append(
+				entityCachingOptions(cache),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "X-Tenant",
+							},
+						},
+					},
+				}),
+			),
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				setEntityCacheIncludeHeaders(routerConfig, true)
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req := testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id description } }`,
+				// No X-Tenant header sent — SubgraphHeadersBuilder returns hash=0.
+			}
+
+			// First call: cache miss → subgraph fetch.
+			xEnv.MakeGraphQLRequestOK(req)
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			// Second call (same query, still no header): MUST be a cache hit. Counter
+			// stays at 1. Previously failed because write key {json} ≠ read key 0:{json}.
+			xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, detailsAfterFirst, counters.details.Load(),
+				"includeHeaders=true with no header forwarded must produce a stable cache key; second call must hit cache")
+		})
+	})
 }

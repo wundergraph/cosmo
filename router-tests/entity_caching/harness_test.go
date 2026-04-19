@@ -17,10 +17,13 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
+	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/articles"
+	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/articlesmeta"
 	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/details"
 	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/inventory"
 	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/items"
 	itemsModel "github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/items/subgraph/model"
+	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/viewer"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -29,9 +32,12 @@ import (
 )
 
 type requestCounters struct {
-	items     atomic.Int64
-	details   atomic.Int64
-	inventory atomic.Int64
+	items        atomic.Int64
+	details      atomic.Int64
+	inventory    atomic.Int64
+	viewer       atomic.Int64
+	articles     atomic.Int64
+	articlesMeta atomic.Int64
 }
 
 func countingMiddleware(counter *atomic.Int64, next http.Handler) http.Handler {
@@ -42,9 +48,12 @@ func countingMiddleware(counter *atomic.Int64, next http.Handler) http.Handler {
 }
 
 type subgraphServers struct {
-	items     *httptest.Server
-	details   *httptest.Server
-	inventory *httptest.Server
+	items        *httptest.Server
+	details      *httptest.Server
+	inventory    *httptest.Server
+	viewer       *httptest.Server
+	articles     *httptest.Server
+	articlesMeta *httptest.Server
 	// Subscription channels for the items subgraph.
 	itemUpdatedCh chan *itemsModel.Item
 	itemCreatedCh chan *itemsModel.Item
@@ -72,6 +81,18 @@ func startSubgraphServers(t *testing.T) (*subgraphServers, *requestCounters) {
 	inventoryHandler := handler.New(inventorySchema)
 	inventoryHandler.AddTransport(transport.POST{})
 
+	viewerSchema := viewer.NewSchema()
+	viewerHandler := handler.New(viewerSchema)
+	viewerHandler.AddTransport(transport.POST{})
+
+	articlesSchema := articles.NewSchema()
+	articlesHandler := handler.New(articlesSchema)
+	articlesHandler.AddTransport(transport.POST{})
+
+	articlesMetaSchema := articlesmeta.NewSchema()
+	articlesMetaHandler := handler.New(articlesMetaSchema)
+	articlesMetaHandler.AddTransport(transport.POST{})
+
 	itemsSrv := httptest.NewServer(countingMiddleware(&counters.items, itemsHandler))
 	t.Cleanup(itemsSrv.Close)
 
@@ -81,10 +102,22 @@ func startSubgraphServers(t *testing.T) (*subgraphServers, *requestCounters) {
 	inventorySrv := httptest.NewServer(countingMiddleware(&counters.inventory, inventoryHandler))
 	t.Cleanup(inventorySrv.Close)
 
+	viewerSrv := httptest.NewServer(countingMiddleware(&counters.viewer, viewerHandler))
+	t.Cleanup(viewerSrv.Close)
+
+	articlesSrv := httptest.NewServer(countingMiddleware(&counters.articles, articlesHandler))
+	t.Cleanup(articlesSrv.Close)
+
+	articlesMetaSrv := httptest.NewServer(countingMiddleware(&counters.articlesMeta, articlesMetaHandler))
+	t.Cleanup(articlesMetaSrv.Close)
+
 	return &subgraphServers{
 		items:         itemsSrv,
 		details:       detailsSrv,
 		inventory:     inventorySrv,
+		viewer:        viewerSrv,
+		articles:      articlesSrv,
+		articlesMeta:  articlesMetaSrv,
 		itemUpdatedCh: itemUpdatedCh,
 		itemCreatedCh: itemCreatedCh,
 	}, counters
@@ -112,6 +145,18 @@ func startSubgraphServersWithMiddleware(t *testing.T, mw func(http.Handler) http
 	inventoryHandler := handler.New(inventorySchema)
 	inventoryHandler.AddTransport(transport.POST{})
 
+	viewerSchema := viewer.NewSchema()
+	viewerHandler := handler.New(viewerSchema)
+	viewerHandler.AddTransport(transport.POST{})
+
+	articlesSchema := articles.NewSchema()
+	articlesHandler := handler.New(articlesSchema)
+	articlesHandler.AddTransport(transport.POST{})
+
+	articlesMetaSchema := articlesmeta.NewSchema()
+	articlesMetaHandler := handler.New(articlesMetaSchema)
+	articlesMetaHandler.AddTransport(transport.POST{})
+
 	var detailsWrapped http.Handler = detailsHandler
 	if mw != nil {
 		detailsWrapped = mw(detailsHandler)
@@ -126,13 +171,35 @@ func startSubgraphServersWithMiddleware(t *testing.T, mw func(http.Handler) http
 	inventorySrv := httptest.NewServer(countingMiddleware(&counters.inventory, inventoryHandler))
 	t.Cleanup(inventorySrv.Close)
 
+	viewerSrv := httptest.NewServer(countingMiddleware(&counters.viewer, viewerHandler))
+	t.Cleanup(viewerSrv.Close)
+
+	articlesSrv := httptest.NewServer(countingMiddleware(&counters.articles, articlesHandler))
+	t.Cleanup(articlesSrv.Close)
+
+	articlesMetaSrv := httptest.NewServer(countingMiddleware(&counters.articlesMeta, articlesMetaHandler))
+	t.Cleanup(articlesMetaSrv.Close)
+
 	return &subgraphServers{
 		items:         itemsSrv,
 		details:       detailsSrv,
 		inventory:     inventorySrv,
+		viewer:        viewerSrv,
+		articles:      articlesSrv,
+		articlesMeta:  articlesMetaSrv,
 		itemUpdatedCh: itemUpdatedCh,
 		itemCreatedCh: itemCreatedCh,
 	}, counters
+}
+
+func TestStartSubgraphServersWithMiddlewareBuildsCompleteConfig(t *testing.T) {
+	t.Parallel()
+
+	servers, _ := startSubgraphServersWithMiddleware(t, nil)
+	require.NotNil(t, servers.articlesMeta)
+	require.NotPanics(t, func() {
+		_ = buildConfigJSON(servers)
+	})
 }
 
 func buildConfigJSON(servers *subgraphServers) string {
@@ -140,6 +207,9 @@ func buildConfigJSON(servers *subgraphServers) string {
 	replaced = strings.ReplaceAll(replaced, itemsPlaceholderURL, servers.items.URL)
 	replaced = strings.ReplaceAll(replaced, detailsPlaceholderURL, servers.details.URL)
 	replaced = strings.ReplaceAll(replaced, inventoryPlaceholderURL, servers.inventory.URL)
+	replaced = strings.ReplaceAll(replaced, viewerPlaceholderURL, servers.viewer.URL)
+	replaced = strings.ReplaceAll(replaced, articlesPlaceholderURL, servers.articles.URL)
+	replaced = strings.ReplaceAll(replaced, articlesMetaPlaceholderURL, servers.articlesMeta.URL)
 	return replaced
 }
 
@@ -212,22 +282,6 @@ func setNegativeCacheTTL(rc *nodev1.RouterConfig, ttl int64) {
 		for _, ec := range ds.EntityCacheConfigurations {
 			ec.NegativeCacheTtlSeconds = ttl
 		}
-	}
-}
-
-// removeSubscriptionPopulateConfigs removes @cachePopulate subscription configs.
-// This avoids a FindByTypeName conflict when both @cachePopulate and @cacheInvalidate
-// exist for the same entity type on different subscription fields: the planner
-// returns the first match by TypeName, which can shadow the invalidation config.
-func removeSubscriptionPopulateConfigs(rc *nodev1.RouterConfig) {
-	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
-		filtered := ds.CachePopulateConfigurations[:0]
-		for _, cp := range ds.CachePopulateConfigurations {
-			if cp.OperationType != "Subscription" {
-				filtered = append(filtered, cp)
-			}
-		}
-		ds.CachePopulateConfigurations = filtered
 	}
 }
 

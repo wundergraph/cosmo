@@ -11,5 +11,24 @@ type Item struct {
 
 func (Item) IsEntity() {}
 
+type Location struct {
+	ID string `json:"id"`
+}
+
+type Product struct {
+	ID     string `json:"id"`
+	Region string `json:"region"`
+	Info   string `json:"info"`
+}
+
+func (Product) IsEntity() {}
+
 type Query struct {
 }
+
+type Warehouse struct {
+	Location *Location `json:"location"`
+	Capacity int       `json:"capacity"`
+}
+
+func (Warehouse) IsEntity() {}

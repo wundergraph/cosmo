@@ -21,18 +21,47 @@ directive @cacheInvalidate on FIELD_DEFINITION
 
 directive @cachePopulate(maxAge: Int) on FIELD_DEFINITION
 
-directive @is(field: String!) on ARGUMENT_DEFINITION
+directive @is(fields: String!) on ARGUMENT_DEFINITION
 
 type Query {
   item(id: ID!): Item @queryCache(maxAge: 300)
-  itemByPid(pid: ID! @is(field: "id")): Item @queryCache(maxAge: 300)
+  itemByPid(pid: ID! @is(fields: "id")): Item @queryCache(maxAge: 300)
   items: [Item!]! @queryCache(maxAge: 300)
+  itemsByIds(ids: [ID!]! @is(fields: "id")): [Item!]! @queryCache(maxAge: 300)
+  product(id: ID!, region: String!): Product @queryCache(maxAge: 300)
+  productBySku(sku: String!): Product @queryCache(maxAge: 300)
+  productByName(name: String!): Product @queryCache(maxAge: 300)
+  productByKey(key: ProductKeyInput! @is(fields: "id region")): Product @queryCache(maxAge: 300)
+  warehouse(locationId: ID! @is(fields: "location.id")): Warehouse @queryCache(maxAge: 300)
+  # warehouseByInput exercises the same nested @key as `warehouse` but reaches it
+  # via an input object using GraphQL selection syntax in @is. This produces the
+  # multi-hop argumentPath ["input","location","id"] instead of the scalar
+  # ["locationId"]. Captures the red state where input-object → nested-key
+  # cache writes don't persist (cache lookup uses correct key but never hits).
+  warehouseByInput(input: WarehouseLocationInput! @is(fields: "location { id }")): Warehouse @queryCache(maxAge: 300)
+}
+
+input ProductKeyInput {
+  id: ID!
+  region: String!
+}
+
+input WarehouseLocationInput {
+  location: WarehouseLocationKeyInput!
+}
+
+input WarehouseLocationKeyInput {
+  id: ID!
 }
 
 type Mutation {
   updateItem(id: ID!, name: String!): Item @cacheInvalidate
   deleteItem(id: ID!): Item @cacheInvalidate
   createItem(name: String!, category: String!): Item! @cachePopulate(maxAge: 60)
+  # deleteProduct invalidates a composite-key entity (Product @key("id region")).
+  # Used to pin behavior for cache invalidation when the entity uses a composite
+  # @key — a separate code path from the simple id-only key in deleteItem.
+  deleteProduct(id: ID!, region: String!): Product @cacheInvalidate
 }
 
 type Subscription {
@@ -44,4 +73,20 @@ type Item @key(fields: "id") @entityCache(maxAge: 300) {
   id: ID!
   name: String!
   category: String!
+}
+
+type Product @key(fields: "id region") @key(fields: "sku") @entityCache(maxAge: 300) {
+  id: ID!
+  region: String!
+  sku: String!
+  name: String!
+}
+
+type Location {
+  id: ID!
+}
+
+type Warehouse @key(fields: "location { id }") @entityCache(maxAge: 300) {
+  location: Location!
+  name: String!
 }

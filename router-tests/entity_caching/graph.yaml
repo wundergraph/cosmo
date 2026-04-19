@@ -12,3 +12,15 @@ subgraphs:
     routing_url: http://inventory.entity-cache-test.local/graphql
     schema:
       file: ./subgraphs/inventory/subgraph/schema.graphqls
+  - name: viewer
+    routing_url: http://viewer.entity-cache-test.local/graphql
+    schema:
+      file: ./subgraphs/viewer/subgraph/schema.graphqls
+  - name: articles
+    routing_url: http://articles.entity-cache-test.local/graphql
+    schema:
+      file: ./subgraphs/articles/subgraph/schema.graphqls
+  - name: articlesmeta
+    routing_url: http://articlesmeta.entity-cache-test.local/graphql
+    schema:
+      file: ./subgraphs/articlesmeta/subgraph/schema.graphqls

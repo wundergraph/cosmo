@@ -7,17 +7,10 @@ package subgraph
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 
 	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/items/subgraph/generated"
 	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/items/subgraph/model"
 )
-
-var nextID atomic.Int64
-
-func init() {
-	nextID.Store(5)
-}
 
 // UpdateItem is the resolver for the updateItem field.
 func (r *mutationResolver) UpdateItem(ctx context.Context, id string, name string) (*model.Item, error) {
@@ -45,6 +38,19 @@ func (r *mutationResolver) CreateItem(ctx context.Context, name string, category
 	return &model.Item{ID: id, Name: name, Category: category}, nil
 }
 
+// DeleteProduct is the resolver for the deleteProduct field.
+// Returns the matching Product without removing it from the in-memory data, so
+// tests can verify @cacheInvalidate clears the cache without simulating durable
+// deletion in the subgraph.
+func (r *mutationResolver) DeleteProduct(ctx context.Context, id string, region string) (*model.Product, error) {
+	for _, p := range Products {
+		if p.ID == id && p.Region == region {
+			return p, nil
+		}
+	}
+	return nil, fmt.Errorf("product %s/%s not found", id, region)
+}
+
 // Item is the resolver for the item field.
 func (r *queryResolver) Item(ctx context.Context, id string) (*model.Item, error) {
 	for _, item := range Items {
@@ -68,6 +74,80 @@ func (r *queryResolver) ItemByPid(ctx context.Context, pid string) (*model.Item,
 // Items is the resolver for the items field.
 func (r *queryResolver) Items(ctx context.Context) ([]*model.Item, error) {
 	return Items, nil
+}
+
+// ItemsByIds is the resolver for the itemsByIds field.
+func (r *queryResolver) ItemsByIds(ctx context.Context, ids []string) ([]*model.Item, error) {
+	var result []*model.Item
+	for _, id := range ids {
+		for _, item := range Items {
+			if item.ID == id {
+				result = append(result, item)
+				break
+			}
+		}
+	}
+	return result, nil
+}
+
+// Product is the resolver for the product field.
+func (r *queryResolver) Product(ctx context.Context, id string, region string) (*model.Product, error) {
+	for _, p := range Products {
+		if p.ID == id && p.Region == region {
+			return p, nil
+		}
+	}
+	return nil, nil
+}
+
+// ProductBySku is the resolver for the productBySku field.
+func (r *queryResolver) ProductBySku(ctx context.Context, sku string) (*model.Product, error) {
+	for _, p := range Products {
+		if p.Sku == sku {
+			return p, nil
+		}
+	}
+	return nil, nil
+}
+
+// ProductByName is the resolver for the productByName field.
+func (r *queryResolver) ProductByName(ctx context.Context, name string) (*model.Product, error) {
+	for _, p := range Products {
+		if p.Name == name {
+			return p, nil
+		}
+	}
+	return nil, nil
+}
+
+// ProductByKey is the resolver for the productByKey field.
+func (r *queryResolver) ProductByKey(ctx context.Context, key model.ProductKeyInput) (*model.Product, error) {
+	for _, p := range Products {
+		if p.ID == key.ID && p.Region == key.Region {
+			return p, nil
+		}
+	}
+	return nil, nil
+}
+
+// Warehouse is the resolver for the warehouse field.
+func (r *queryResolver) Warehouse(ctx context.Context, locationID string) (*model.Warehouse, error) {
+	for _, w := range Warehouses {
+		if w.Location.ID == locationID {
+			return w, nil
+		}
+	}
+	return nil, nil
+}
+
+// WarehouseByInput is the resolver for the warehouseByInput field.
+func (r *queryResolver) WarehouseByInput(ctx context.Context, input model.WarehouseLocationInput) (*model.Warehouse, error) {
+	for _, w := range Warehouses {
+		if w.Location.ID == input.Location.ID {
+			return w, nil
+		}
+	}
+	return nil, nil
 }
 
 // ItemUpdated is the resolver for the itemUpdated field.

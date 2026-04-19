@@ -172,6 +172,59 @@ func (ec *executionContext) resolveEntity(
 
 			return entity, nil
 		}
+	case "Product":
+		resolverName, err := entityResolverNameForProduct(ctx, rep)
+		if err != nil {
+			return nil, fmt.Errorf(`finding resolver for Entity "Product": %w`, err)
+		}
+		switch resolverName {
+
+		case "findProductByIDAndRegion":
+			id0, err := ec.unmarshalNID2string(ctx, rep["id"])
+			if err != nil {
+				return nil, fmt.Errorf(`unmarshalling param 0 for findProductByIDAndRegion(): %w`, err)
+			}
+			id1, err := ec.unmarshalNString2string(ctx, rep["region"])
+			if err != nil {
+				return nil, fmt.Errorf(`unmarshalling param 1 for findProductByIDAndRegion(): %w`, err)
+			}
+			entity, err := ec.resolvers.Entity().FindProductByIDAndRegion(ctx, id0, id1)
+			if err != nil {
+				return nil, fmt.Errorf(`resolving Entity "Product": %w`, err)
+			}
+
+			return entity, nil
+		case "findProductBySku":
+			id0, err := ec.unmarshalNString2string(ctx, rep["sku"])
+			if err != nil {
+				return nil, fmt.Errorf(`unmarshalling param 0 for findProductBySku(): %w`, err)
+			}
+			entity, err := ec.resolvers.Entity().FindProductBySku(ctx, id0)
+			if err != nil {
+				return nil, fmt.Errorf(`resolving Entity "Product": %w`, err)
+			}
+
+			return entity, nil
+		}
+	case "Warehouse":
+		resolverName, err := entityResolverNameForWarehouse(ctx, rep)
+		if err != nil {
+			return nil, fmt.Errorf(`finding resolver for Entity "Warehouse": %w`, err)
+		}
+		switch resolverName {
+
+		case "findWarehouseByLocationID":
+			id0, err := ec.unmarshalNID2string(ctx, rep["location"].(map[string]any)["id"])
+			if err != nil {
+				return nil, fmt.Errorf(`unmarshalling param 0 for findWarehouseByLocationID(): %w`, err)
+			}
+			entity, err := ec.resolvers.Entity().FindWarehouseByLocationID(ctx, id0)
+			if err != nil {
+				return nil, fmt.Errorf(`resolving Entity "Warehouse": %w`, err)
+			}
+
+			return entity, nil
+		}
 
 	}
 	return nil, fmt.Errorf("%w: %s", ErrUnknownType, typeName)
@@ -230,5 +283,124 @@ func entityResolverNameForItem(ctx context.Context, rep EntityRepresentation) (s
 		return "findItemByID", nil
 	}
 	return "", fmt.Errorf("%w for Item due to %v", ErrTypeNotFound,
+		errors.Join(entityResolverErrs...).Error())
+}
+
+func entityResolverNameForProduct(ctx context.Context, rep EntityRepresentation) (string, error) {
+	// we collect errors because a later entity resolver may work fine
+	// when an entity has multiple keys
+	entityResolverErrs := []error{}
+	for {
+		var (
+			m   EntityRepresentation
+			val any
+			ok  bool
+		)
+		_ = val
+		// if all of the KeyFields values for this resolver are null,
+		// we shouldn't use use it
+		allNull := true
+		m = rep
+		val, ok = m["id"]
+		if !ok {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to missing Key Field \"id\" for Product", ErrTypeNotFound))
+			break
+		}
+		if allNull {
+			allNull = val == nil
+		}
+		m = rep
+		val, ok = m["region"]
+		if !ok {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to missing Key Field \"region\" for Product", ErrTypeNotFound))
+			break
+		}
+		if allNull {
+			allNull = val == nil
+		}
+		if allNull {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to all null value KeyFields for Product", ErrTypeNotFound))
+			break
+		}
+		return "findProductByIDAndRegion", nil
+	}
+	for {
+		var (
+			m   EntityRepresentation
+			val any
+			ok  bool
+		)
+		_ = val
+		// if all of the KeyFields values for this resolver are null,
+		// we shouldn't use use it
+		allNull := true
+		m = rep
+		val, ok = m["sku"]
+		if !ok {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to missing Key Field \"sku\" for Product", ErrTypeNotFound))
+			break
+		}
+		if allNull {
+			allNull = val == nil
+		}
+		if allNull {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to all null value KeyFields for Product", ErrTypeNotFound))
+			break
+		}
+		return "findProductBySku", nil
+	}
+	return "", fmt.Errorf("%w for Product due to %v", ErrTypeNotFound,
+		errors.Join(entityResolverErrs...).Error())
+}
+
+func entityResolverNameForWarehouse(ctx context.Context, rep EntityRepresentation) (string, error) {
+	// we collect errors because a later entity resolver may work fine
+	// when an entity has multiple keys
+	entityResolverErrs := []error{}
+	for {
+		var (
+			m   EntityRepresentation
+			val any
+			ok  bool
+		)
+		_ = val
+		// if all of the KeyFields values for this resolver are null,
+		// we shouldn't use use it
+		allNull := true
+		m = rep
+		val, ok = m["location"]
+		if !ok {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to missing Key Field \"location\" for Warehouse", ErrTypeNotFound))
+			break
+		}
+		if m, ok = val.(map[string]any); !ok {
+			// nested field value is not a map[string]interface so don't use it
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to nested Key Field \"location\" value not matching map[string]any for Warehouse", ErrTypeNotFound))
+			break
+		}
+		val, ok = m["id"]
+		if !ok {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to missing Key Field \"id\" for Warehouse", ErrTypeNotFound))
+			break
+		}
+		if allNull {
+			allNull = val == nil
+		}
+		if allNull {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to all null value KeyFields for Warehouse", ErrTypeNotFound))
+			break
+		}
+		return "findWarehouseByLocationID", nil
+	}
+	return "", fmt.Errorf("%w for Warehouse due to %v", ErrTypeNotFound,
 		errors.Join(entityResolverErrs...).Error())
 }

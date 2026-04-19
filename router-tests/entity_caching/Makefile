@@ -6,6 +6,9 @@ generate:
 	cd subgraphs/items && go run github.com/99designs/gqlgen generate
 	cd subgraphs/details && go run github.com/99designs/gqlgen generate
 	cd subgraphs/inventory && go run github.com/99designs/gqlgen generate
+	cd subgraphs/viewer && go run github.com/99designs/gqlgen generate
+	cd subgraphs/articles && go run github.com/99designs/gqlgen generate
+	cd subgraphs/articlesmeta && go run github.com/99designs/gqlgen generate
 
 compose:
 	go run ./cmd/compose

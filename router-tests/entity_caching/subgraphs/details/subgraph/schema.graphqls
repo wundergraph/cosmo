@@ -17,3 +17,18 @@ type Item @key(fields: "id") @entityCache(maxAge: 300) {
   rating: Float!
   tags: [String!]!
 }
+
+type Product @key(fields: "id region") @entityCache(maxAge: 300) {
+  id: ID!
+  region: String!
+  info: String!
+}
+
+type Location {
+  id: ID!
+}
+
+type Warehouse @key(fields: "location { id }") @entityCache(maxAge: 300) {
+  location: Location!
+  capacity: Int!
+}

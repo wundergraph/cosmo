@@ -1,0 +1,49 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: ["@key", "@external", "@requires"]
+  )
+
+type Query {
+  articles: [Article!]!
+}
+
+interface Personalized @key(fields: "id") {
+  id: ID!
+}
+
+# Extends Viewer with an edge back into articles land.
+# The @key forces sequencing: the articles _entities fetch for
+# recommendedArticles needs viewer.id from the prior viewer fetch, so the
+# planner cannot parallelize it with the root Query.currentViewer call.
+#
+# name and email are declared @external because Article.personalizedRecommendation
+# @requires references them. Composition fails without these declarations.
+type Viewer @key(fields: "id") {
+  id: ID!
+  name: String! @external
+  email: String! @external
+  recommendedArticles: [Article!]!
+}
+
+type Article implements Personalized @key(fields: "id") {
+  id: ID!
+  title: String!
+  body: String!
+  tags: [String!]!
+  # Article.currentViewer is provided by the viewer subgraph via the
+  # Personalized @interfaceObject. It is @external here so @requires can
+  # reference it.
+  currentViewer: Viewer @external
+  # @requires a WIDER selection ({id, name, email}) than the root query
+  # will ask for ({id, name}). This is the widening-miss trigger that the
+  # test asserts: the coordinate L1 was populated with {id, name}, so the
+  # follow-up _entities(Personalized) fetch fails the widening check and
+  # refetches the viewer subgraph.
+  personalizedRecommendation: String!
+    @requires(fields: "currentViewer { id name email }")
+  # relatedArticles enables nested selection of Article entities so tests
+  # can exercise @requestScoped deduplication across multiple nesting
+  # levels (Article.currentViewer selected inline at more than one depth).
+  relatedArticles: [Article!]!
+}

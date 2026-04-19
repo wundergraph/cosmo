@@ -26,13 +26,13 @@ require (
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.30
-	github.com/wundergraph/astjson v1.1.0
+	github.com/wundergraph/astjson v1.1.1-0.20260419105127-f600d161463f
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20250820135159-bf8852195d3f
 	github.com/wundergraph/cosmo/demo v0.0.0-20260319123623-f186a0f724f6
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
 	github.com/wundergraph/cosmo/router v0.0.0-20260319123623-f186a0f724f6
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.265.0.20260323083647-fd7e4633b488
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.270.0.20260419191814-26c33b9b063a
 	go.opentelemetry.io/otel v1.39.0
 	go.opentelemetry.io/otel/sdk v1.39.0
 	go.opentelemetry.io/otel/sdk/metric v1.39.0
@@ -159,7 +159,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.7 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
-	github.com/wundergraph/go-arena v1.1.0 // indirect
+	github.com/wundergraph/go-arena v1.2.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect

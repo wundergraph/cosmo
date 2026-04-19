@@ -23,6 +23,21 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error reading inventory schema: %v\n", err)
 		os.Exit(1)
 	}
+	viewerSchema, err := os.ReadFile("subgraphs/viewer/subgraph/schema.graphqls")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error reading viewer schema: %v\n", err)
+		os.Exit(1)
+	}
+	articlesSchema, err := os.ReadFile("subgraphs/articles/subgraph/schema.graphqls")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error reading articles schema: %v\n", err)
+		os.Exit(1)
+	}
+	articlesMetaSchema, err := os.ReadFile("subgraphs/articlesmeta/subgraph/schema.graphqls")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error reading articlesmeta schema: %v\n", err)
+		os.Exit(1)
+	}
 
 	result, err := composition.BuildRouterConfiguration(
 		&composition.Subgraph{
@@ -39,6 +54,21 @@ func main() {
 			Name:   "inventory",
 			Schema: string(inventorySchema),
 			URL:    "http://inventory.entity-cache-test.local/graphql",
+		},
+		&composition.Subgraph{
+			Name:   "viewer",
+			Schema: string(viewerSchema),
+			URL:    "http://viewer.entity-cache-test.local/graphql",
+		},
+		&composition.Subgraph{
+			Name:   "articles",
+			Schema: string(articlesSchema),
+			URL:    "http://articles.entity-cache-test.local/graphql",
+		},
+		&composition.Subgraph{
+			Name:   "articlesmeta",
+			Schema: string(articlesMetaSchema),
+			URL:    "http://articlesmeta.entity-cache-test.local/graphql",
 		},
 	)
 	if err != nil {
