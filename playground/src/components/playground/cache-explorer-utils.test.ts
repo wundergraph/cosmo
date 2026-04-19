@@ -1,5 +1,5 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'vitest';
 
 import {
   collectFetchPairs,
@@ -51,16 +51,10 @@ const container = (...children: FetchPlanNode[]): FetchPlanNode => ({
 
 test('formatCacheKey strips synthetic cache explorer prefixes from displayed keys', () => {
   const raw = 'cache-explorer-abc123{"__typename":"Article","key":{"id":"2"}}';
-  assert.equal(
-    formatCacheKey(raw),
-    '{\n  "__typename": "Article",\n  "key": {\n    "id": "2"\n  }\n}',
-  );
+  assert.equal(formatCacheKey(raw), '{\n  "__typename": "Article",\n  "key": {\n    "id": "2"\n  }\n}');
 
   const legacyRaw = 'explorer-legacy{"__typename":"Article","key":{"id":"3"}}';
-  assert.equal(
-    formatCacheKey(legacyRaw),
-    '{\n  "__typename": "Article",\n  "key": {\n    "id": "3"\n  }\n}',
-  );
+  assert.equal(formatCacheKey(legacyRaw), '{\n  "__typename": "Article",\n  "key": {\n    "id": "3"\n  }\n}');
 });
 
 test('dedupeCacheKeysForDisplay removes duplicate entity keys while preserving first-seen order', () => {
@@ -109,16 +103,12 @@ test('collectFetchPairs matches fetches by stable entity identity instead of chi
   const pairs = collectFetchPairs(cachedPlan, uncachedPlan);
   assert.equal(pairs.length, 2);
 
-  assert.deepEqual(pairs[0].pair.cached?.cacheKeys, [
-    'cache-explorer-run{"__typename":"Article","key":{"id":"2"}}',
-  ]);
+  assert.deepEqual(pairs[0].pair.cached?.cacheKeys, ['cache-explorer-run{"__typename":"Article","key":{"id":"2"}}']);
   assert.deepEqual(pairs[0].pair.uncached?.responseData, {
     _entities: [{ __typename: 'Article', id: '2', title: 'Advanced Federation Patterns' }],
   });
 
-  assert.deepEqual(pairs[1].pair.cached?.cacheKeys, [
-    'cache-explorer-run{"__typename":"Article","key":{"id":"3"}}',
-  ]);
+  assert.deepEqual(pairs[1].pair.cached?.cacheKeys, ['cache-explorer-run{"__typename":"Article","key":{"id":"3"}}']);
   assert.deepEqual(pairs[1].pair.uncached?.responseData, {
     _entities: [{ __typename: 'Article', id: '3', title: 'Cache Invalidation Strategies' }],
   });
@@ -150,9 +140,7 @@ test('collectFetchPairs matches semantically identical fetches even when query s
 
   const pairs = collectFetchPairs(cachedPlan, uncachedPlan);
   assert.equal(pairs.length, 1);
-  assert.deepEqual(pairs[0].pair.cached?.cacheKeys, [
-    'cache-explorer-run{"__typename":"Article","key":{"id":"2"}}',
-  ]);
+  assert.deepEqual(pairs[0].pair.cached?.cacheKeys, ['cache-explorer-run{"__typename":"Article","key":{"id":"2"}}']);
   assert.deepEqual(pairs[0].pair.uncached?.responseData, {
     _entities: [{ __typename: 'Article', id: '2', title: 'Advanced Federation Patterns' }],
   });

@@ -13,8 +13,9 @@ import (
 var _ resolve.LoaderCache = (*MemoryEntityCache)(nil)
 
 type MemoryEntityCache struct {
-	cache *ristretto.Cache[string, []byte]
-	len   atomic.Int64
+	cache        *ristretto.Cache[string, []byte]
+	len          atomic.Int64
+	maxSizeBytes int64
 }
 
 func NewMemoryEntityCache(maxSizeBytes int64) (*MemoryEntityCache, error) {
@@ -24,7 +25,7 @@ func NewMemoryEntityCache(maxSizeBytes int64) (*MemoryEntityCache, error) {
 	// NumCounters should be ~10x the expected number of items.
 	// Assuming an average entry size of ~1KB.
 	numCounters := max((maxSizeBytes/1024)*10, 1000)
-	m := &MemoryEntityCache{}
+	m := &MemoryEntityCache{maxSizeBytes: maxSizeBytes}
 	cache, err := ristretto.NewCache(&ristretto.Config[string, []byte]{
 		NumCounters:        numCounters,
 		MaxCost:            maxSizeBytes,
@@ -109,6 +110,10 @@ func (c *MemoryEntityCache) Len() int {
 // Exposes hits, misses, keys added/updated/evicted, cost added/evicted.
 func (c *MemoryEntityCache) Metrics() *ristretto.Metrics {
 	return c.cache.Metrics
+}
+
+func (c *MemoryEntityCache) MaxSizeBytes() int64 {
+	return c.maxSizeBytes
 }
 
 func (c *MemoryEntityCache) Close() error {

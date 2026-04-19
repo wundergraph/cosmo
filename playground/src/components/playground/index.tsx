@@ -152,6 +152,27 @@ type GraphiQLScripts = {
   transformHeaders?: (headers: Record<string, string>) => Record<string, string>;
 };
 
+export const applyCacheModeHeaders = (headersJson: string | undefined, cacheMode: CacheMode): string => {
+  try {
+    const parsed = JSON.parse(headersJson || '{}');
+    delete parsed['X-WG-Disable-Entity-Cache'];
+    delete parsed['X-WG-Disable-Entity-Cache-L1'];
+    delete parsed['X-WG-Disable-Entity-Cache-L2'];
+
+    if (cacheMode === 'disabled') {
+      parsed['X-WG-Disable-Entity-Cache'] = 'true';
+    } else if (cacheMode === 'no-l1') {
+      parsed['X-WG-Disable-Entity-Cache-L1'] = 'true';
+    } else if (cacheMode === 'no-l2') {
+      parsed['X-WG-Disable-Entity-Cache-L2'] = 'true';
+    }
+
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return headersJson ?? '';
+  }
+};
+
 const graphiQLFetch = async (
   schema: GraphQLSchema | null,
   clientValidationEnabled: boolean,
@@ -337,7 +358,9 @@ const CacheBadge = ({ hits, total }: { hits: number; total: number }) => {
             }
           >
             <BoltIcon className={cn('h-3.5 w-3.5', noneHit ? 'text-muted-foreground' : 'text-current')} />
-            <span>{hits}/{total} Cached</span>
+            <span>
+              {hits}/{total} Cached
+            </span>
           </div>
         </TooltipTrigger>
         <TooltipContent>
@@ -663,33 +686,15 @@ export const Playground = (input: {
 
   // Sync cache mode into the visible headers JSON editor.
   // Uses suppressSchemaRefetch to prevent the schema re-fetch that would reset stats.
-  const cacheHeaderKeys = [
-    'X-WG-Disable-Entity-Cache',
-    'X-WG-Disable-Entity-Cache-L1',
-    'X-WG-Disable-Entity-Cache-L2',
-  ];
+  const cacheHeaderKeys = ['X-WG-Disable-Entity-Cache', 'X-WG-Disable-Entity-Cache-L1', 'X-WG-Disable-Entity-Cache-L2'];
   useEffect(() => {
     setHeaders((prev) => {
-      try {
-        const parsed = JSON.parse(prev || '{}');
-        for (const key of cacheHeaderKeys) delete parsed[key];
-        if (cacheMode === 'disabled') {
-          parsed['X-WG-Disable-Entity-Cache'] = 'true';
-        } else if (cacheMode === 'no-l1') {
-          parsed['X-WG-Disable-Entity-Cache-L1'] = 'true';
-        } else if (cacheMode === 'no-l2') {
-          parsed['X-WG-Disable-Entity-Cache-L2'] = 'true';
-        }
-        const newHeaders = JSON.stringify(parsed, null, 2);
-        if (newHeaders !== prev) {
-          suppressSchemaRefetch.current = true;
-          return newHeaders;
-        }
-        return prev;
-      } catch {
-        // Headers aren't valid JSON — don't interfere
-        return prev;
+      const nextHeaders = applyCacheModeHeaders(prev, cacheMode);
+      if (nextHeaders !== prev) {
+        suppressSchemaRefetch.current = true;
+        return nextHeaders;
       }
+      return prev;
     });
   }, [cacheMode]);
 

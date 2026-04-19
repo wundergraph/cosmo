@@ -2,11 +2,14 @@ package core
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	ristretto "github.com/dgraph-io/ristretto/v2"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/entitycache"
 )
 
 // TestBuildEntityCacheInstances_ReusesDefaultCacheForSameProviderID verifies
@@ -93,4 +96,75 @@ func TestBuildEntityCacheInstances_DistinctProviderIDs(t *testing.T) {
 		"distinct provider ids must yield distinct cache instances")
 	require.Same(t, caches["default"], caches["memory-1"],
 		"default alias must point at the memory-1 instance")
+}
+
+func TestBuildEntityCacheInstances_DisabledReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	r := &Router{
+		Config: Config{
+			logger: zap.NewNop(),
+			entityCachingConfig: config.EntityCachingConfiguration{
+				Enabled: false,
+			},
+		},
+	}
+
+	caches, err := r.buildEntityCacheInstances()
+	require.NoError(t, err)
+	require.Nil(t, caches)
+}
+
+func TestBuildSingleEntityCache_WrapsMemoryProviderWithCircuitBreaker(t *testing.T) {
+	t.Parallel()
+
+	r := &Router{
+		Config: Config{
+			logger: zap.NewNop(),
+			storageProviders: config.StorageProviders{
+				Memory: []config.MemoryStorageProvider{
+					{ID: "memory-1", MaxSize: config.BytesString(2048)},
+				},
+			},
+		},
+	}
+
+	cache, err := r.buildSingleEntityCache("memory-1", config.EntityCachingL2Configuration{
+		CircuitBreaker: config.EntityCachingCircuitBreakerConfig{
+			Enabled:          true,
+			FailureThreshold: 3,
+			CooldownPeriod:   time.Second,
+		},
+	})
+	require.NoError(t, err)
+
+	breaker, ok := cache.(*entitycache.CircuitBreakerCache)
+	require.True(t, ok, "expected circuit breaker wrapper")
+
+	metricsProvider, ok := any(breaker).(interface {
+		Metrics() *ristretto.Metrics
+		MaxSizeBytes() int64
+	})
+	require.True(t, ok, "wrapped cache should expose metrics accessors")
+	require.NotNil(t, metricsProvider.Metrics())
+	require.EqualValues(t, 2048, metricsProvider.MaxSizeBytes())
+}
+
+func TestFindMemoryProvider_ReturnsFalseForUnknownProvider(t *testing.T) {
+	t.Parallel()
+
+	r := &Router{
+		Config: Config{
+			logger: zap.NewNop(),
+			storageProviders: config.StorageProviders{
+				Memory: []config.MemoryStorageProvider{
+					{ID: "memory-1", MaxSize: config.BytesString(1024)},
+				},
+			},
+		},
+	}
+
+	provider, ok := r.findMemoryProvider("missing")
+	require.False(t, ok)
+	require.Nil(t, provider)
 }

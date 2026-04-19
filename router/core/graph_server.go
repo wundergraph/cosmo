@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -662,6 +664,65 @@ type graphMux struct {
 	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
 }
 
+type cacheMetricSource interface {
+	Metrics() *ristretto.Metrics
+	MaxSizeBytes() int64
+}
+
+type cacheMetricRegistration struct {
+	cacheType string
+	maxCost   int64
+	metrics   *ristretto.Metrics
+}
+
+func entityCacheMetricRegistrations(caches map[string]cacheMetricSource) []cacheMetricRegistration {
+	if len(caches) == 0 {
+		return nil
+	}
+
+	type cacheGroup struct {
+		source cacheMetricSource
+		names  []string
+	}
+
+	grouped := make(map[uintptr]*cacheGroup, len(caches))
+	for name, source := range caches {
+		if source == nil || source.Metrics() == nil || source.MaxSizeBytes() <= 0 {
+			continue
+		}
+		id := reflect.ValueOf(source).Pointer()
+		group := grouped[id]
+		if group == nil {
+			group = &cacheGroup{source: source}
+			grouped[id] = group
+		}
+		group.names = append(group.names, name)
+	}
+
+	registrations := make([]cacheMetricRegistration, 0, len(grouped))
+	for _, group := range grouped {
+		sort.Strings(group.names)
+		name := group.names[0]
+		for _, candidate := range group.names {
+			if candidate != "default" {
+				name = candidate
+				break
+			}
+		}
+		registrations = append(registrations, cacheMetricRegistration{
+			cacheType: "entity_" + name,
+			maxCost:   group.source.MaxSizeBytes(),
+			metrics:   group.source.Metrics(),
+		})
+	}
+
+	sort.Slice(registrations, func(i, j int) bool {
+		return registrations[i].cacheType < registrations[j].cacheType
+	})
+
+	return registrations
+}
+
 // buildOperationCaches creates the caches for the graph mux.
 // The caches are created based on the engine configuration.
 func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, err error) {
@@ -877,6 +938,18 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 	if s.operationHashCache != nil {
 		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_hash", srv.engineExecutionConfiguration.OperationHashCacheSize, s.operationHashCache.Metrics))
+	}
+
+	entityMetricSources := make(map[string]cacheMetricSource)
+	for name, cache := range srv.entityCacheInstances {
+		source, ok := cache.(cacheMetricSource)
+		if !ok {
+			continue
+		}
+		entityMetricSources[name] = source
+	}
+	for _, registration := range entityCacheMetricRegistrations(entityMetricSources) {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo(registration.cacheType, registration.maxCost, registration.metrics))
 	}
 
 	if s.otelCacheMetrics != nil {

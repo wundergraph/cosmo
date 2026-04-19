@@ -16,6 +16,8 @@ import { ARTFetchNode, CacheTrace, LoadStats, QueryPlan } from './types';
 
 const initialPaneWidth = 360;
 
+export const minimumVisibleDurationNs = (durationNs?: number) => Math.max(durationNs ?? 0, 1000);
+
 export const TraceContext = createContext<{
   query?: string;
   subgraphs: { id: string; name: string }[];
@@ -321,7 +323,7 @@ const Trace = ({
       if (!fetchNode.durationSinceStart && fetchNode.cacheTrace) {
         const ct = fetch.trace?.cache_trace;
         fetchNode.durationSinceStart = ct?.duration_since_start_nanoseconds ?? plannerEndNs;
-        fetchNode.durationLoad = Math.max(ct?.duration_nanoseconds ?? 0, 1000); // minimum 1µs so the bar is visible
+        fetchNode.durationLoad = minimumVisibleDurationNs(ct?.duration_nanoseconds); // minimum 1µs so the bar is visible
       }
 
       const fetchOutputTrace = fetch.trace?.output?.extensions?.trace;

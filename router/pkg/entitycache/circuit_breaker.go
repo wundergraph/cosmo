@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	ristretto "github.com/dgraph-io/ristretto/v2"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -142,4 +143,20 @@ func (cb *CircuitBreakerCache) Close() error {
 		return closer.Close()
 	}
 	return nil
+}
+
+func (cb *CircuitBreakerCache) Metrics() *ristretto.Metrics {
+	provider, ok := cb.cache.(interface{ Metrics() *ristretto.Metrics })
+	if !ok {
+		return nil
+	}
+	return provider.Metrics()
+}
+
+func (cb *CircuitBreakerCache) MaxSizeBytes() int64 {
+	provider, ok := cb.cache.(interface{ MaxSizeBytes() int64 })
+	if !ok {
+		return 0
+	}
+	return provider.MaxSizeBytes()
 }

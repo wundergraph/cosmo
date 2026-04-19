@@ -20,7 +20,7 @@ import (
 func TestEntityCaching(t *testing.T) {
 	t.Parallel()
 
-	t.Run("basic_L2_miss_then_hit", func(t *testing.T) {
+	t.Run("L2/basic miss then hit", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -48,7 +48,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("different_entities_separate_entries", func(t *testing.T) {
+	t.Run("L2/different entities use separate entries", func(t *testing.T) {
 		t.Parallel()
 
 		servers, _ := startSubgraphServers(t)
@@ -79,7 +79,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("list_query_caching", func(t *testing.T) {
+	t.Run("L2/list query caching", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -106,7 +106,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("cache_entries_written_to_L2", func(t *testing.T) {
+	t.Run("L2/cache entries are written", func(t *testing.T) {
 		t.Parallel()
 
 		servers, _ := startSubgraphServers(t)
@@ -127,7 +127,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("disabled_caching_does_not_cache", func(t *testing.T) {
+	t.Run("L2/disabled caching does not cache", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -152,7 +152,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("multi_subgraph_caching", func(t *testing.T) {
+	t.Run("L2/multi-subgraph caching", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -190,7 +190,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("cross_subgraph_combined_query", func(t *testing.T) {
+	t.Run("L2/cross-subgraph combined query", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -218,7 +218,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("shadow_mode_always_fetches", func(t *testing.T) {
+	t.Run("Shadow/always fetches", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -245,7 +245,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("partial_cache_load", func(t *testing.T) {
+	t.Run("L2/partial cache load", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -293,7 +293,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("ttl_expiry", func(t *testing.T) {
+	t.Run("L2/TTL expiry", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -326,7 +326,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("per_subgraph_cache_name", func(t *testing.T) {
+	t.Run("L2/per-subgraph cache name", func(t *testing.T) {
 		t.Parallel()
 
 		servers, _ := startSubgraphServers(t)
@@ -359,7 +359,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("include_headers_varies_cache_key", func(t *testing.T) {
+	t.Run("L2/include headers varies cache key", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -409,7 +409,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("negative_cache_caches_null", func(t *testing.T) {
+	t.Run("L2/negative cache stores null", func(t *testing.T) {
 		// Exercises the entity-level not-found cache: items subgraph has an id
 		// that details subgraph does NOT have. On first fetch, details'
 		// _entities resolver returns null for that key. With notFoundCacheTtl
@@ -466,7 +466,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("root_field_caching_with_key_mapping", func(t *testing.T) {
+	t.Run("L2/root field caching with key mapping", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -503,7 +503,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("root_field_list_caching", func(t *testing.T) {
+	t.Run("L2/root field list caching", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -543,7 +543,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("root_field_different_args", func(t *testing.T) {
+	t.Run("L2/root field different args use different cache keys", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -579,7 +579,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("query_cache_shadow_mode", func(t *testing.T) {
+	t.Run("Shadow/query cache always fetches", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -611,7 +611,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("mutation_invalidates_cache", func(t *testing.T) {
+	t.Run("L2/mutation invalidates cache", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -644,7 +644,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("mutation_populates_cache", func(t *testing.T) {
+	t.Run("L2/mutation populates cache", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -695,7 +695,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("l1_deduplication", func(t *testing.T) {
+	t.Run("L1/deduplicates repeated entity loads", func(t *testing.T) {
 		// This test was originally `a: item(id:"1") b: item(id:"1")` asserting
 		// "L1 dedupes the details fetch to one call". SkArchon (review comment
 		// 2987855765) correctly pointed out that the engine planner merges
@@ -765,7 +765,7 @@ func TestEntityCaching(t *testing.T) {
 	// At every phase, GraphQL queries must return correct data. The subgraph call
 	// counter proves whether the response came from cache (counter unchanged) or
 	// from a subgraph fetch (counter incremented).
-	t.Run("circuit_breaker_degrades_gracefully_on_cache_failure", func(t *testing.T) {
+	t.Run("L2/circuit breaker degrades gracefully on cache failure", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -829,7 +829,7 @@ func TestEntityCaching(t *testing.T) {
 	// Focused test for the half-open → closed transition.
 	// Trips the breaker, waits for cooldown, then verifies that one successful
 	// probe closes the breaker and the cache resumes normal operation.
-	t.Run("circuit_breaker_recovery_after_cooldown", func(t *testing.T) {
+	t.Run("L2/circuit breaker recovers after cooldown", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -872,7 +872,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("subscription_invalidates_cache", func(t *testing.T) {
+	t.Run("L2/subscription invalidates cache", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -931,7 +931,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("subscription_populate_config_carries_entity_type_name", func(t *testing.T) {
+	t.Run("L2/subscription populate config carries entity type name", func(t *testing.T) {
 		// Regression test for the composition->router pipeline carrying entityTypeName
 		// end-to-end on @cachePopulate configs. Before this was wired:
 		//   - composition wrote CachePopulateConfig without entityTypeName
@@ -968,7 +968,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("subscription_populates_cache", func(t *testing.T) {
+	t.Run("L2/subscription populates cache", func(t *testing.T) {
 		t.Parallel()
 
 		servers, _ := startSubgraphServers(t)
@@ -1012,7 +1012,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("extension_invalidates_cache", func(t *testing.T) {
+	t.Run("L2/extensions invalidate cache", func(t *testing.T) {
 		t.Parallel()
 
 		var extensionFlag atomic.Bool
@@ -1058,7 +1058,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("mutation_populate_writes_to_cache", func(t *testing.T) {
+	t.Run("L2/mutation populate writes to cache", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1104,7 +1104,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("delete_mutation_invalidates_cache", func(t *testing.T) {
+	t.Run("L2/delete mutation invalidates cache", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1158,7 +1158,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("l1_deduplication_with_l2", func(t *testing.T) {
+	t.Run("L1/deduplicates with warm L2", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1187,7 +1187,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("is_directive_cache_key_mapping", func(t *testing.T) {
+	t.Run("L2/@is directive cache key mapping", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1223,7 +1223,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("shadow_mode_with_failing_cache", func(t *testing.T) {
+	t.Run("Shadow/with failing cache", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1259,7 +1259,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("negative_cache_ttl_expiry", func(t *testing.T) {
+	t.Run("L2/negative cache TTL expiry", func(t *testing.T) {
 		// Companion to negative_cache_caches_null: asserts the not-found entity
 		// cache also EXPIRES after its configured TTL. Like the sister test, the
 		// signal is counters.details (the entity-hydration subgraph) because
@@ -1319,7 +1319,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("partial_cache_load_multiple_warm", func(t *testing.T) {
+	t.Run("L2/partial cache load with multiple warm entities", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1355,7 +1355,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("query_cache_include_headers", func(t *testing.T) {
+	t.Run("L2/query cache include headers", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1408,7 +1408,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("cache_populate_maxage_override", func(t *testing.T) {
+	t.Run("L2/cache populate maxAge override", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1474,7 +1474,7 @@ func TestEntityCaching(t *testing.T) {
 
 	// --- Mapping rule coverage tests ---
 
-	t.Run("batch_list_argument_cache_keys", func(t *testing.T) {
+	t.Run("L2/batch list argument cache keys", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1508,7 +1508,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("batch_list_partial_cache_hit", func(t *testing.T) {
+	t.Run("L2/batch list partial cache hit", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1538,7 +1538,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("composite_key_auto_mapping", func(t *testing.T) {
+	t.Run("L2/composite key auto mapping", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1574,7 +1574,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("multiple_keys_one_satisfiable", func(t *testing.T) {
+	t.Run("L2/multiple keys with one satisfiable", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1611,7 +1611,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("no_key_match_root_field_only", func(t *testing.T) {
+	t.Run("L2/no key match leaves root field uncached", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1644,7 +1644,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("composite_key_input_object_via_is", func(t *testing.T) {
+	t.Run("L2/composite key input object via @is", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1684,7 +1684,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("nested_key_via_is_directive", func(t *testing.T) {
+	t.Run("L2/nested key via @is directive", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1720,7 +1720,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("single_subgraph_composite_key_input_object", func(t *testing.T) {
+	t.Run("L2/single-subgraph composite key input object", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1763,7 +1763,7 @@ func TestEntityCaching(t *testing.T) {
 	// and the planner generates RequestScopedExports/Hints), this test should
 	// be extended to verify that the details subgraph is called fewer times
 	// across multiple entity batches within a single request.
-	t.Run("request_scoped_field_deduplication", func(t *testing.T) {
+	t.Run("L1/request-scoped field deduplication", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1801,7 +1801,7 @@ func TestEntityCaching(t *testing.T) {
 	// a subset of fields (e.g., description only), a subsequent request
 	// asking for additional fields from the same subgraph (e.g., description
 	// + rating) correctly fetches the wider field set from the subgraph.
-	t.Run("field_widening_across_requests", func(t *testing.T) {
+	t.Run("L1/field widening across requests", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1849,7 +1849,7 @@ func TestEntityCaching(t *testing.T) {
 	// (from the details subgraph) are involved. Entities with cached
 	// extension data are served from cache; uncached entities trigger a
 	// subgraph fetch only for the missing ones.
-	t.Run("batch_partial_hit_with_extension_fields", func(t *testing.T) {
+	t.Run("L2/batch partial hit with extension fields", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1896,7 +1896,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("batch_entity_key_per_element_caching", func(t *testing.T) {
+	t.Run("L2/batch entity key per-element caching", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1978,7 +1978,7 @@ func TestEntityCaching(t *testing.T) {
 	//       }
 	//     }
 	//   }
-	t.Run("request_scoped_widening_refetch", func(t *testing.T) {
+	t.Run("L1/request-scoped widening refetch", func(t *testing.T) {
 		t.Parallel()
 		t.Skip("pending functionality: widening refetch across @requires-driven fetches")
 
@@ -2056,7 +2056,7 @@ func TestEntityCaching(t *testing.T) {
 	// so additional HTTP calls are made even though @requestScoped would serve them.
 	// Reproduced from the cache explorer playground tool — the demo showed 3 viewer
 	// fetches for a query with 2 article nesting levels plus the root currentViewer.
-	t.Run("request_scoped_nested_dedup", func(t *testing.T) {
+	t.Run("L1/request-scoped nested dedup", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -2116,7 +2116,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("complex_viewer_articles_query_shape_no_errors", func(t *testing.T) {
+	t.Run("Regression/complex viewer/articles query shape has no errors", func(t *testing.T) {
 		t.Parallel()
 
 		servers, _ := startSubgraphServers(t)
@@ -2184,7 +2184,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("complex_viewer_articles_cached_matches_uncached", func(t *testing.T) {
+	t.Run("Regression/complex viewer/articles cached matches uncached", func(t *testing.T) {
 		t.Parallel()
 
 		servers, _ := startSubgraphServers(t)
@@ -2264,7 +2264,7 @@ func TestEntityCaching(t *testing.T) {
 	// copy values before storing in requestScopedL1. Without the copy, stored
 	// pointers become dangling when the goroutine arena is reused on subsequent
 	// requests, causing crashes or corrupted data.
-	t.Run("repeated_complex_query_no_panic", func(t *testing.T) {
+	t.Run("Regression/repeated complex query does not panic", func(t *testing.T) {
 		t.Parallel()
 
 		servers, _ := startSubgraphServers(t)
@@ -2300,7 +2300,7 @@ func TestEntityCaching(t *testing.T) {
 	//
 	// Historically the mutation_populate_* tests only verified the mutation
 	// responded; the read-path effect was added after review round 1.
-	t.Run("cache_populate_writes_entity_for_subsequent_read_RED", func(t *testing.T) {
+	t.Run("L2/cache populate writes entity for subsequent read", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -2361,7 +2361,7 @@ func TestEntityCaching(t *testing.T) {
 	// a test-script artifact (mutable subgraph state caused warm-up to return null,
 	// which prevented the cache write). The router-side composite-key invalidate
 	// path itself works correctly — this test pins that contract.
-	t.Run("cache_invalidate_composite_key", func(t *testing.T) {
+	t.Run("L2/cache invalidates composite key", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -2415,7 +2415,7 @@ func TestEntityCaching(t *testing.T) {
 	// Discovered in cache-demo manual testing: cache lookup fires with the right key but
 	// every call shows l2_miss and the entity is never written. Pinning the failure here
 	// so the loader fix can land with a regression test.
-	t.Run("nested_key_via_input_object_is_directive_RED", func(t *testing.T) {
+	t.Run("L2/nested key via input object @is directive", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -2462,7 +2462,7 @@ func TestEntityCaching(t *testing.T) {
 	// path didn't set LoadSkipped on cache-hit branches even though the bulk
 	// parallel path already did, so observability reported `false` on fetches
 	// that demonstrably never called the subgraph.
-	t.Run("root_field_cache_hit_reports_load_skipped_in_trace", func(t *testing.T) {
+	t.Run("Trace/root field cache hit reports load_skipped", func(t *testing.T) {
 		t.Parallel()
 
 		servers, _ := startSubgraphServers(t)
@@ -2525,7 +2525,7 @@ func TestEntityCaching(t *testing.T) {
 	// stable cache key — write and read paths must agree on the prefix. Previously
 	// the WRITE path dropped the prefix when headerHash==0 while the READ path
 	// always built "0:..." → every read missed.
-	t.Run("include_headers_with_no_header_forwarded_caches", func(t *testing.T) {
+	t.Run("L2/include headers still caches when no header is forwarded", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
