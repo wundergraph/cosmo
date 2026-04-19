@@ -5,7 +5,9 @@ import { FederatedGraphDTO, MigrationSubgraph } from '../../types/index.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { sanitizeMigratedGraphName } from '../util.js';
+import { traced } from '../tracing.js';
 
+@traced
 export default class ApolloMigrator {
   apiKey = '';
   organizationSlug = '';

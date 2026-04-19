@@ -457,9 +457,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// and enrich the context to make it available in the request context as well for metrics etc.
 		next.ServeHTTP(ww, r)
 
-		// Mark the root span of the router as failed, so we can easily identify failed requests
+		// Mark the root span of the router as failed, so we can easily identify failed requests.
+		// Client disconnections are not server-side errors and should not mark the root span as ERROR.
 		if requestContext.error != nil {
-			rtrace.AttachErrToSpan(trace.SpanFromContext(r.Context()), requestContext.error)
+			contextSpan := trace.SpanFromContext(r.Context())
+
+			if errors.Is(requestContext.error, context.Canceled) {
+				// For disconnects just record the error but don't set the status
+				contextSpan.RecordError(requestContext.error)
+			} else {
+				rtrace.AttachErrToSpan(contextSpan, requestContext.error)
+			}
 		}
 	})
 }
@@ -621,11 +629,16 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
 				requestContext.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
-				if h.operationBlocker.safelistEnabled {
-					span.End()
-					return err
+				// When log_unknown is enabled, ad-hoc queries whose hash doesn't match a
+				// persisted operation are logged above. We only allow execution to continue
+				// when the request includes a query body (the ad-hoc query to run) and
+				// safelist is not enforced. Hash-only requests without a body have nothing
+				// to execute, so we always return the not-found error in that case.
+				if !h.operationBlocker.safelistEnabled && operationKit.parsedOperation.Request.Query != "" {
+					err = nil
 				}
-			} else {
+			}
+			if err != nil {
 				span.End()
 				return err
 			}
@@ -964,6 +977,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	requestContext.expressionContext.Request.Operation.Hash = operationHash
 	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketHash)
+
+	requestContext.expressionContext.Request.Operation.QueryPlanHash = strconv.FormatUint(requestContext.operation.internalHash, 10)
+	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketQueryPlanHash)
 
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 		httpOperation.traceTimings.EndNormalize()

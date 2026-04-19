@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
+	ristretto "github.com/dgraph-io/ristretto/v2"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	ristretto "github.com/dgraph-io/ristretto/v2"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/entitycache"

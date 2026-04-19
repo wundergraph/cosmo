@@ -10,14 +10,16 @@ import {
   SchemaLintDTO,
   SchemaLintIssues,
 } from '../../types/index.js';
+import { traced } from '../tracing.js';
 
+@traced
 export default class SchemaLinter {
   linter: Linter;
   constructor() {
     this.linter = new Linter();
   }
 
-  getRuleModule = (rule: LintRule) => {
+  getRuleModule(rule: LintRule) {
     switch (rule) {
       case 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE':
       case 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE':
@@ -53,9 +55,9 @@ export default class SchemaLinter {
         throw new Error(`Rule ${rule} doesnt exist`);
       }
     }
-  };
+  }
 
-  createRulesConfig = (rules: SchemaLintDTO[]) => {
+  createRulesConfig(rules: SchemaLintDTO[]) {
     const rulesConfig: RulesConfig = {};
     for (const rule of rules) {
       const ruleName = rule.ruleName;
@@ -227,9 +229,9 @@ export default class SchemaLinter {
       }
     }
     return rulesConfig;
-  };
+  }
 
-  schemaLintCheck = ({ schema, rulesInput }: { schema: string; rulesInput: SchemaLintDTO[] }): SchemaLintIssues => {
+  schemaLintCheck({ schema, rulesInput }: { schema: string; rulesInput: SchemaLintDTO[] }): SchemaLintIssues {
     const rulesConfig: RulesConfig = this.createRulesConfig(rulesInput);
 
     this.linter.defineParser('@graphql-eslint/eslint-plugin', {
@@ -289,7 +291,7 @@ export default class SchemaLinter {
       warnings: lintWarnings,
       errors: lintErrors,
     };
-  };
+  }
 
   static createIgnorePatternFromReservedDefinitionList(list: Set<string>): string {
     return `^(${[...list].join('|')})$`;

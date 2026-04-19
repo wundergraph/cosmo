@@ -141,7 +141,8 @@
                   },
                   "router/gRPC/grpc-services",
                   "router/gRPC/graphql-support",
-                  "router/gRPC/field-resolvers"
+                  "router/gRPC/field-resolvers",
+                  "router/gRPC/requires"
                 ]
               },
               "router/authentication-and-authorization",
@@ -173,7 +174,8 @@
                   "router/open-telemetry",
                   "router/open-telemetry/custom-attributes",
                   "router/open-telemetry/prometheus-otlp-ingestion",
-                  "router/open-telemetry/setup-opentelemetry-collector"
+                  "router/open-telemetry/setup-opentelemetry-collector",
+                  "router/open-telemetry/dynatrace"
                 ]
               },
               {
@@ -181,6 +183,7 @@
                 "icon": "projector",
                 "pages": [
                   "router/metrics-and-monitoring",
+                  "router/metrics-and-monitoring/span-error-status",
                   "router/metrics-and-monitoring/prometheus-metric-reference",
                   "router/metrics-and-monitoring/grafana"
                 ]
@@ -408,11 +411,19 @@
                 "icon": "sign-post",
                 "pages": [
                   "federation/federation-directives-index",
+                  "federation/directives/deprecated",
+                  "federation/directives/specifiedby",
+                  "federation/directives/key",
+                  "federation/directives/external",
+                  "federation/directives/provides",
+                  "federation/directives/requires",
                   "federation/directives/shareable",
                   "federation/directives/authenticated",
                   "federation/directives/requiresscopes",
+                  "federation/directives/connect__fieldresolver",
                   "federation/directives/openfed__subscriptionfilter",
-                  "federation/directives/openfed__configuredescription"
+                  "federation/directives/openfed__configuredescription",
+                  "federation/directives/openfed__requirefetchreasons"
                 ]
               },
               {

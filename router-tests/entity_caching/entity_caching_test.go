@@ -1104,6 +1104,62 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
+	t.Run("Regression/mutation cache populate does not write when L2 is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions: []core.Option{
+				core.WithEntityCaching(config.EntityCachingConfiguration{
+					Enabled: true,
+					L1: config.EntityCachingL1Configuration{
+						Enabled: true,
+					},
+					L2: config.EntityCachingL2Configuration{
+						Enabled: false,
+					},
+				}),
+				core.WithEntityCacheInstances(map[string]resolve.LoaderCache{
+					"default": cache,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			lenBefore := cache.Len()
+
+			createRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { createItem(name: "NoL2Populate", category: "disabled") { id name category } }`,
+			})
+			require.Contains(t, createRes.Body, `"NoL2Populate"`)
+
+			var created struct {
+				Data struct {
+					CreateItem struct {
+						ID string `json:"id"`
+					} `json:"createItem"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(createRes.Body), &created))
+			require.NotEmpty(t, created.Data.CreateItem.ID)
+
+			require.Equal(t, lenBefore, cache.Len(),
+				"@cachePopulate must not write to L2 when router L2 caching is disabled")
+
+			itemsAfterCreate := counters.items.Load()
+			readRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "` + created.Data.CreateItem.ID + `") { id name category } }`,
+			})
+			require.Equal(t,
+				`{"data":{"item":{"id":"`+created.Data.CreateItem.ID+`","name":"NoL2Populate","category":"disabled"}}}`,
+				readRes.Body)
+			require.Equal(t, itemsAfterCreate+1, counters.items.Load(),
+				"with L2 disabled, the follow-up read must miss cache and refetch from the items subgraph")
+		})
+	})
+
 	t.Run("L2/delete mutation invalidates cache", func(t *testing.T) {
 		t.Parallel()
 

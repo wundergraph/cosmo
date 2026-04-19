@@ -47,6 +47,7 @@ export function updateMonograph(
         authContext.organizationId,
         opts.logger,
         opts.billingDefaultPlanId,
+        opts.webhookProxyUrl,
       );
 
       if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
@@ -150,6 +151,7 @@ export function updateMonograph(
         admissionWebhookURL: req.admissionWebhookURL,
         admissionWebhookSecret: req.admissionWebhookSecret,
         chClient: opts.chClient!,
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       await subgraphRepo.update(
@@ -173,6 +175,8 @@ export function updateMonograph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
+        undefined,
+        opts.webhookProxyUrl,
       );
 
       await auditLogRepo.addAuditLog({

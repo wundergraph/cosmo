@@ -1,6 +1,6 @@
 {
   "extends": ["eslint-config-unjs", "plugin:require-extensions/recommended"],
-  "plugins": ["require-extensions"],
+  "plugins": ["require-extensions", "local-rules"],
   "rules": {
     "space-before-function-paren": 0,
     "arrow-parens": 0,
@@ -25,5 +25,6 @@
     "no-useless-constructor": 0,
     "unicorn/prefer-ternary": 0,
     "unicorn/no-nested-ternary": 0,
+    "local-rules/no-arrow-in-traced": "error",
   },
 }

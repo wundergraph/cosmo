@@ -1,3 +1,5 @@
 vulnerabilities:
   - id: CVE-2026-24051
     statement: Intended to be fixed in `ENG-9057`. The vulnerability happens on macOS/Darwin, as most images are used on Linux machines, we're ok with making this compromise. This was discussed with the team and OK'ed.
+  - id: CVE-2026-39883
+    statement: Being fixed in https://github.com/wundergraph/cosmo/pull/2714 which upgrades opentelemetry-go dependencies.

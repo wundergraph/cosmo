@@ -109,8 +109,8 @@ const (
 	EntityCacheTypeEntity    = "entity"
 	EntityCacheTypeRootField = "root_field"
 
-	EntityCacheOperationGet    = "get"
-	EntityCacheOperationAdded  = "added"
+	EntityCacheOperationGet   = "get"
+	EntityCacheOperationAdded = "added"
 )
 
 var (

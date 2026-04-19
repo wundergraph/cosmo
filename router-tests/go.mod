@@ -7,7 +7,7 @@ require (
 	github.com/99designs/gqlgen v0.17.76
 	github.com/MicahParks/jwkset v0.11.0
 	github.com/alicebob/miniredis/v2 v2.34.0
-	github.com/buger/jsonparser v1.1.1
+	github.com/buger/jsonparser v1.1.2
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/go-containerregistry v0.20.3

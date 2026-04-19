@@ -9,13 +9,10 @@ import {
   type FieldDefinitionNode,
   type InputValueDefinitionNode,
   type InterfaceTypeDefinitionNode,
-  type InterfaceTypeExtensionNode,
   type IntValueNode,
   Kind,
   type ListValueNode,
   type NamedTypeNode,
-  type ObjectTypeDefinitionNode,
-  type ObjectTypeExtensionNode,
   type OperationTypeDefinitionNode,
   OperationTypeNode,
   print,
@@ -272,9 +269,11 @@ import {
   areDefaultValuesCompatible,
   childMapToValueArray,
   getParentTypeName,
+  isEnumData,
   isFieldData,
   isInputNodeKind,
   isInputObjectDefinitionData,
+  isInterfaceNode,
   isNodeExternalOrShareable,
   isOutputNodeKind,
   isParentDataCompositeOutputType,
@@ -298,6 +297,7 @@ import {
   getMutableUnionNode,
   getNamedTypeNode,
   getTypeNodeNamedTypeName,
+  type MutableInputValueNode,
   type MutableTypeNode,
 } from '../../schema-building/ast';
 import { type InvalidRootTypeFieldEventsDirectiveData } from '../../errors/types';
@@ -438,7 +438,14 @@ import {
 } from './types';
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
 import { type ImplementationErrors, type InvalidFieldImplementation } from '../../utils/types';
-import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../../types/types';
+import {
+  type AbstractTypeName,
+  type DirectiveName,
+  type FieldName,
+  type InterfaceTypeName,
+  type SubgraphName,
+  type TypeName,
+} from '../../types/types';
 import {
   type BatchNormalizeParams,
   type HandleFieldInheritableDirectivesParams,
@@ -446,6 +453,7 @@ import {
   type NormalizationFactoryParams,
   type NormalizeSubgraphFromStringParams,
   type NormalizeSubgraphParams,
+  type SanitizeDefaultValueParams,
   type ValidateOneOfDirectiveParams,
 } from './params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
@@ -481,7 +489,7 @@ export function normalizeSubgraph({
 export class NormalizationFactory {
   argumentName = '';
   authorizationDataByParentTypeName = new Map<TypeName, AuthorizationData>();
-  concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
+  concreteTypeNamesByAbstractTypeName = new Map<AbstractTypeName, Set<TypeName>>();
   conditionalFieldDataByCoords = new Map<string, ConditionalFieldData>();
   configurationDataByTypeName = new Map<TypeName, ConfigurationData>();
   costs: Costs = {
@@ -508,6 +516,7 @@ export class NormalizationFactory {
   entityInterfaceDataByTypeName = new Map<TypeName, EntityInterfaceSubgraphData>();
   eventsConfigurations = new Map<string, EventConfiguration[]>();
   fieldSetDataByTypeName = new Map<string, FieldSetData>();
+  interfaceImplementationTypeNamesByInterfaceTypeName = new Map<InterfaceTypeName, Set<InterfaceTypeName>>();
   internalGraph: Graph;
   invalidConfigureDescriptionNodeDatas: Array<NodeData> = [];
   invalidORScopesCoords = new Set<string>();
@@ -551,6 +560,31 @@ export class NormalizationFactory {
     };
   }
 
+  sanitizeDefaultValue({ data, namedTypeData, node }: SanitizeDefaultValueParams) {
+    if (!data.defaultValue) {
+      return;
+    }
+
+    if (!isEnumData(namedTypeData)) {
+      return;
+    }
+
+    data.defaultValue = visit(data.defaultValue, {
+      StringValue: {
+        enter(node) {
+          return {
+            kind: Kind.ENUM,
+            value: node.value,
+          };
+        },
+      },
+    });
+
+    if (node) {
+      node.defaultValue = data.defaultValue;
+    }
+  }
+
   validateArguments(fieldData: FieldData, parentKind: Kind) {
     for (const argumentData of fieldData.argumentDataByName.values()) {
       const namedTypeName = getTypeNodeNamedTypeName(argumentData.type);
@@ -565,6 +599,7 @@ export class NormalizationFactory {
       }
       if (isInputNodeKind(namedTypeData.kind)) {
         argumentData.namedTypeKind = namedTypeData.kind;
+        this.sanitizeDefaultValue({ data: argumentData, namedTypeData, node: argumentData.node });
         continue;
       }
       this.errors.push(
@@ -642,7 +677,7 @@ export class NormalizationFactory {
               return true;
             }
             if (parentData.kind === Kind.ENUM_TYPE_DEFINITION) {
-              if (argumentValue.kind !== Kind.ENUM) {
+              if (argumentValue.kind !== Kind.ENUM && argumentValue.kind !== Kind.STRING) {
                 return false;
               }
               const enumValue = parentData.enumValueDataByName.get(argumentValue.value);
@@ -897,6 +932,25 @@ export class NormalizationFactory {
         }
       }
       const requiredArgumentNames = [...definitionData.requiredArgumentNames];
+      for (const argumentNode of definitionData.node.arguments ?? []) {
+        if (!argumentNode.defaultValue) {
+          continue;
+        }
+
+        const argumentData = definitionData.argumentTypeNodeByName.get(argumentNode.name.value);
+        if (!argumentData) {
+          continue;
+        }
+
+        const namedTypeData = this.parentDefinitionDataByTypeName.get(getTypeNodeNamedTypeName(argumentData.typeNode));
+        // Undefined types are handled elsewhere
+        if (!namedTypeData) {
+          continue;
+        }
+
+        this.sanitizeDefaultValue({ data: argumentData, namedTypeData, node: argumentNode as MutableInputValueNode });
+      }
+
       for (let i = 0; i < directiveNodes.length; i++) {
         const errorMessages = this.validateDirective({
           data,
@@ -1043,12 +1097,13 @@ export class NormalizationFactory {
   }
 
   extractImplementedInterfaceTypeNames(
-    node: InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
-    implementedInterfaceTypeNames: Set<string>,
-  ): Set<string> {
+    node: InterfaceTypeNode | ObjectTypeNode,
+    implementedInterfaceTypeNames: Set<AbstractTypeName>,
+  ): Set<AbstractTypeName> {
     if (!node.interfaces) {
       return implementedInterfaceTypeNames;
     }
+    const isInterface = isInterfaceNode(node);
     const parentTypeName = node.name.value;
     for (const implementedInterface of node.interfaces) {
       const interfaceTypeName = implementedInterface.name.value;
@@ -1057,6 +1112,13 @@ export class NormalizationFactory {
           duplicateImplementedInterfaceError(kindToConvertedTypeString(node.kind), parentTypeName, interfaceTypeName),
         );
         continue;
+      }
+      if (isInterface) {
+        getValueOrDefault(
+          this.interfaceImplementationTypeNamesByInterfaceTypeName,
+          interfaceTypeName,
+          () => new Set<AbstractTypeName>(),
+        ).add(parentTypeName);
       }
       implementedInterfaceTypeNames.add(interfaceTypeName);
     }
@@ -1073,9 +1135,9 @@ export class NormalizationFactory {
     data.subgraphNames.add(this.subgraphName);
   }
 
-  addConcreteTypeNamesForImplementedInterfaces(interfaceTypeNames: Set<string>, concreteTypeName: string) {
+  addConcreteTypeNamesForImplementedInterfaces(interfaceTypeNames: Set<AbstractTypeName>, concreteTypeName: TypeName) {
     for (const interfaceName of interfaceTypeNames) {
-      getValueOrDefault(this.concreteTypeNamesByAbstractTypeName, interfaceName, () => new Set<string>()).add(
+      getValueOrDefault(this.concreteTypeNamesByAbstractTypeName, interfaceName, () => new Set<TypeName>()).add(
         concreteTypeName,
       );
       this.internalGraph.addEdge(
@@ -1387,7 +1449,7 @@ export class NormalizationFactory {
     const parentData = this.parentDefinitionDataByTypeName.get(typeName);
     const directivesByName = this.extractDirectives(
       node,
-      parentData?.directivesByName || new Map<string, ConstDirectiveNode[]>(),
+      parentData?.directivesByName || new Map<DirectiveName, ConstDirectiveNode[]>(),
     );
     const extensionType = this.getNodeExtensionType(isRealExtension, directivesByName);
     const entityInterfaceData = this.entityInterfaceDataByTypeName.get(typeName);
@@ -1415,7 +1477,7 @@ export class NormalizationFactory {
       directivesByName: directivesByName,
       extensionType,
       fieldDataByName: new Map<string, FieldData>(),
-      implementedInterfaceTypeNames: this.extractImplementedInterfaceTypeNames(node, new Set<string>()),
+      implementedInterfaceTypeNames: this.extractImplementedInterfaceTypeNames(node, new Set<AbstractTypeName>()),
       isEntity: directivesByName.has(KEY),
       isInaccessible: directivesByName.has(INACCESSIBLE),
       kind: Kind.INTERFACE_TYPE_DEFINITION,
@@ -1483,15 +1545,15 @@ export class NormalizationFactory {
       }
       return;
     }
-    const implementedInterfaceTypeNames = this.extractImplementedInterfaceTypeNames(node, new Set<string>());
+    const implementedInterfaceTypeNames = this.extractImplementedInterfaceTypeNames(node, new Set<AbstractTypeName>());
     if (!directivesByName.has(INTERFACE_OBJECT)) {
       this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
     }
     const newParentData: ObjectDefinitionData = {
-      configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
+      configureDescriptionDataBySubgraphName: new Map<SubgraphName, ConfigureDescriptionData>(),
       directivesByName: directivesByName,
       extensionType,
-      fieldDataByName: new Map<string, FieldData>(),
+      fieldDataByName: new Map<FieldName, FieldData>(),
       implementedInterfaceTypeNames,
       isEntity: directivesByName.has(KEY),
       isInaccessible: directivesByName.has(INACCESSIBLE),
@@ -2308,11 +2370,13 @@ export class NormalizationFactory {
         };
         // The implemented field type must be equally or more restrictive than the original interface field type
         if (
-          !isTypeValidImplementation(
-            interfaceField.node.type,
-            fieldData.node.type,
-            this.concreteTypeNamesByAbstractTypeName,
-          )
+          !isTypeValidImplementation({
+            concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
+            implementationType: fieldData.node.type,
+            interfaceImplementationTypeNamesByInterfaceTypeName:
+              this.interfaceImplementationTypeNamesByInterfaceTypeName,
+            originalType: interfaceField.node.type,
+          })
         ) {
           hasErrors = true;
           hasNestedErrors = true;
@@ -5346,9 +5410,10 @@ export class NormalizationFactory {
             }
             const namedTypeData = this.parentDefinitionDataByTypeName.get(valueData.namedTypeName);
             if (!namedTypeData) {
-              // undefined types are handled elsewhere
+              // Undefined types are handled elsewhere
               continue;
             }
+            this.sanitizeDefaultValue({ data: valueData, namedTypeData, node: valueData.node });
             if (!isInputNodeKind(namedTypeData.kind)) {
               this.errors.push(
                 invalidNamedTypeError({
@@ -5583,6 +5648,7 @@ export class NormalizationFactory {
       entityDataByTypeName: this.entityDataByTypeName,
       entityInterfaces: this.entityInterfaceDataByTypeName,
       fieldCoordsByNamedTypeName: this.fieldCoordsByNamedTypeName,
+      interfaceImplementationTypeNamesByInterfaceTypeName: this.interfaceImplementationTypeNamesByInterfaceTypeName,
       isEventDrivenGraph: this.isSubgraphEventDrivenGraph,
       isVersionTwo: this.isSubgraphVersionTwo,
       keyFieldNamesByParentTypeName: this.keyFieldNamesByParentTypeName,
@@ -5604,8 +5670,9 @@ export class NormalizationFactory {
 
 export function batchNormalize({ options, subgraphs }: BatchNormalizeParams): BatchNormalizationResult {
   const authorizationDataByParentTypeName = new Map<TypeName, AuthorizationData>();
-  const concreteTypeNamesByAbstractTypeName = new Map<TypeName, Set<TypeName>>();
+  const concreteTypeNamesByAbstractTypeName = new Map<AbstractTypeName, Set<TypeName>>();
   const entityDataByTypeName = new Map<TypeName, EntityData>();
+  const interfaceImplementationTypeNamesByInterfaceTypeName = new Map<InterfaceTypeName, Set<InterfaceTypeName>>();
   const internalSubgraphBySubgraphName = new Map<SubgraphName, InternalSubgraph>();
   const allOverridesByTargetSubgraphName = new Map<SubgraphName, Map<TypeName, Set<FieldName>>>();
   const overrideSourceSubgraphNamesByFieldPath = new Map<string, Array<SubgraphName>>();
@@ -5666,12 +5733,29 @@ export function batchNormalize({ options, subgraphs }: BatchNormalizeParams): Ba
     ] of normalizationResult.concreteTypeNamesByAbstractTypeName) {
       const existingConcreteTypeNames = concreteTypeNamesByAbstractTypeName.get(abstractTypeName);
       if (!existingConcreteTypeNames) {
-        concreteTypeNamesByAbstractTypeName.set(abstractTypeName, new Set<string>(incomingConcreteTypeNames));
+        concreteTypeNamesByAbstractTypeName.set(abstractTypeName, new Set<TypeName>(incomingConcreteTypeNames));
         continue;
       }
       addIterableToSet({
         source: incomingConcreteTypeNames,
         target: existingConcreteTypeNames,
+      });
+    }
+    for (const [
+      interfaceTypeName,
+      incomingInterfaceTypeNames,
+    ] of normalizationResult.interfaceImplementationTypeNamesByInterfaceTypeName) {
+      const existingInterfaceTypeNames = interfaceImplementationTypeNamesByInterfaceTypeName.get(interfaceTypeName);
+      if (!existingInterfaceTypeNames) {
+        interfaceImplementationTypeNamesByInterfaceTypeName.set(
+          interfaceTypeName,
+          new Set<InterfaceTypeName>(incomingInterfaceTypeNames),
+        );
+        continue;
+      }
+      addIterableToSet({
+        source: incomingInterfaceTypeNames,
+        target: existingInterfaceTypeNames,
       });
     }
     for (const [typeName, entityData] of normalizationResult.entityDataByTypeName) {
@@ -5806,6 +5890,7 @@ export function batchNormalize({ options, subgraphs }: BatchNormalizeParams): Ba
     concreteTypeNamesByAbstractTypeName,
     entityDataByTypeName,
     fieldCoordsByNamedTypeName,
+    interfaceImplementationTypeNamesByInterfaceTypeName,
     internalSubgraphBySubgraphName: internalSubgraphBySubgraphName,
     internalGraph,
     success: true,

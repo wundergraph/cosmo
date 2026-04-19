@@ -510,6 +510,88 @@ func TestRouterPluginRequests(t *testing.T) {
 			query:    `{ employee(id: 999) { id taggedProjectSummary } }`,
 			expected: `{"data":{"employee":null}}`,
 		},
+		{
+			name:     "query employee @requires field with argument resolved with expertise",
+			query:    `{ employee(id: 1) { id filteredProjectSummary(tag: "cloud") } }`,
+			expected: `{"data":{"employee":{"id":1,"filteredProjectSummary":"expertise: Backend Architecture, filtered tags (tag=cloud): [cloud]"}}}`,
+		},
+		{
+			name:     "query employee @requires field with argument — no matching tags",
+			query:    `{ employee(id: 1) { id filteredProjectSummary(tag: "nonexistent") } }`,
+			expected: `{"data":{"employee":{"id":1,"filteredProjectSummary":"expertise: Backend Architecture, no tags matched (tag=nonexistent)"}}}`,
+		},
+		// Pattern 1: Flat abstract — interface
+		{
+			name:     "query employee @requires flat interface (technical)",
+			query:    `{ employee(id: 1) { id workItemInfo } }`,
+			expected: `{"data":{"employee":{"id":1,"workItemInfo":"Technical: API Development (count: 15000)"}}}`,
+		},
+		{
+			name:     "query employee @requires flat interface (management)",
+			query:    `{ employee(id: 2) { id workItemInfo } }`,
+			expected: `{"data":{"employee":{"id":2,"workItemInfo":"Management: Sprint Planning (size: medium)"}}}`,
+		},
+		// Pattern 2: Flat abstract — union
+		{
+			name:     "query employee @requires flat union (approval)",
+			query:    `{ employee(id: 1) { id reviewReport } }`,
+			expected: `{"data":{"employee":{"id":1,"reviewReport":"Approved: Excellent work on the API at 2024-01-15"}}}`,
+		},
+		{
+			name:     "query employee @requires flat union (rejection)",
+			query:    `{ employee(id: 2) { id reviewReport } }`,
+			expected: `{"data":{"employee":{"id":2,"reviewReport":"Rejected: Needs more documentation (code: DOC_001)"}}}`,
+		},
+		// Pattern 3: Concrete wrapping abstract
+		{
+			name:     "query employee @requires concrete wrapping abstract (technical)",
+			query:    `{ employee(id: 1) { id workSetupSummary } }`,
+			expected: `{"data":{"employee":{"id":1,"workSetupSummary":"[high] Technical: API Development (count: 15000)"}}}`,
+		},
+		{
+			name:     "query employee @requires concrete wrapping abstract (management)",
+			query:    `{ employee(id: 2) { id workSetupSummary } }`,
+			expected: `{"data":{"employee":{"id":2,"workSetupSummary":"[medium] Management: Sprint Planning (size: medium)"}}}`,
+		},
+		// Pattern 4: Concrete message inside fragment
+		{
+			name:     "query employee @requires concrete inside fragment (technical handler)",
+			query:    `{ employee(id: 1) { id workItemHandlerInfo } }`,
+			expected: `{"data":{"employee":{"id":1,"workItemHandlerInfo":"TechnicalHandler: Alice Manager"}}}`,
+		},
+		{
+			name:     "query employee @requires concrete inside fragment (management handler)",
+			query:    `{ employee(id: 2) { id workItemHandlerInfo } }`,
+			expected: `{"data":{"employee":{"id":2,"workItemHandlerInfo":"ManagementHandler: Bob Lead"}}}`,
+		},
+		// Pattern 5: Deep concrete nesting (specs → metrics)
+		{
+			name:     "query employee @requires deep concrete nesting (technical specs)",
+			query:    `{ employee(id: 1) { id workItemSpecsInfo } }`,
+			expected: `{"data":{"employee":{"id":1,"workItemSpecsInfo":"TechnicalSpecs: Backend Specs (95.5x0.9)"}}}`,
+		},
+		{
+			name:     "query employee @requires deep concrete nesting (management specs)",
+			query:    `{ employee(id: 2) { id workItemSpecsInfo } }`,
+			expected: `{"data":{"employee":{"id":2,"workItemSpecsInfo":"ManagementSpecs: Leadership Specs (88.0x0.9)"}}}`,
+		},
+		// Pattern 6: Nested abstract through concrete intermediary
+		{
+			name:     "query employee @requires nested abstract through concrete (technical deep)",
+			query:    `{ employee(id: 1) { id deepWorkItemInfo } }`,
+			expected: `{"data":{"employee":{"id":1,"deepWorkItemInfo":"TechnicalHandler->Management: Team Planning (size: large)"}}}`,
+		},
+		{
+			name:     "query employee @requires nested abstract through concrete (management deep)",
+			query:    `{ employee(id: 2) { id deepWorkItemInfo } }`,
+			expected: `{"data":{"employee":{"id":2,"deepWorkItemInfo":"ManagementHandler: Bob Lead"}}}`,
+		},
+		// Non-existent employee with composite @requires fields
+		{
+			name:     "query non-existent employee with @requires composite fields returns null",
+			query:    `{ employee(id: 999) { id workItemInfo reviewReport } }`,
+			expected: `{"data":{"employee":null}}`,
+		},
 	}
 	testenv.Run(t, &testenv.Config{
 		RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,

@@ -7,8 +7,10 @@ import {
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import { DateRange, Field, TimeFilters } from '../../../types/index.js';
 import { flipDateRangeValuesIfNeeded } from '../../util.js';
+import { traced } from '../../tracing.js';
 import { parseTimeFilters } from './util.js';
 
+@traced
 export class UsageRepository {
   constructor(private client: ClickHouseClient) {}
 
@@ -212,6 +214,10 @@ export class UsageRepository {
     rangeInHours: number;
     fields: Field[];
   }): Promise<{ name: string; typeName: string }[]> {
+    if (fields.length === 0) {
+      return [];
+    }
+
     // Escape single quotes in field names and type names
     const arrayJoinFields = fields
       .map((field) => {
@@ -301,6 +307,10 @@ export class UsageRepository {
     range: number;
     fields: Field[];
   }): Promise<{ name: string; typeName: string }[]> {
+    if (fields.length === 0) {
+      return [];
+    }
+
     // Escape single quotes in field names and type names
     const arrayJoinFields = fields
       .map((field) => {
