@@ -1399,7 +1399,7 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 	// Compute and cache estimated cost once after planning
 	if opCtx.preparedPlan != nil && opCtx.preparedPlan.preparedPlan != nil {
 		if costCalc := opCtx.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-			opCtx.costEstimated = costCalc.EstimateCost(opCtx.planConfig, opCtx.variables)
+			opCtx.costEstimated = costCalc.EstimateCost(opCtx.variables)
 			opCtx.costEstimatedSet = true
 		}
 	}

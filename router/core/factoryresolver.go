@@ -684,6 +684,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 			TypeName:                    ec.TypeName,
 			CacheName:                   cacheName,
 			TTL:                         time.Duration(ec.MaxAgeSeconds) * time.Second,
+			NegativeCacheTTL:            time.Duration(ec.NegativeCacheTtlSeconds) * time.Second,
 			IncludeSubgraphHeaderPrefix: ec.IncludeHeaders,
 			EnablePartialCacheLoad:      ec.PartialCacheLoad,
 			ShadowMode:                  ec.ShadowMode,
@@ -698,8 +699,9 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 			var fieldMappings []plan.FieldMapping
 			for _, fm := range m.FieldMappings {
 				fieldMappings = append(fieldMappings, plan.FieldMapping{
-					EntityKeyField: fm.EntityKeyField,
-					ArgumentPath:   fm.ArgumentPath,
+					EntityKeyField:      fm.EntityKeyField,
+					ArgumentPath:        fm.ArgumentPath,
+					ArgumentIsEntityKey: fm.IsBatch,
 				})
 			}
 			mappings = append(mappings, plan.EntityKeyMapping{
@@ -707,8 +709,9 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 				FieldMappings:  fieldMappings,
 			})
 		}
+		rootTypeName := rootTypeNameForField(in.RootNodes, rfc.FieldName)
 		out.FederationMetaData.RootFieldCaching = append(out.FederationMetaData.RootFieldCaching, plan.RootFieldCacheConfiguration{
-			TypeName:                    rfc.EntityTypeName,
+			TypeName:                    rootTypeName,
 			FieldName:                   rfc.FieldName,
 			CacheName:                   cacheName,
 			TTL:                         time.Duration(rfc.MaxAgeSeconds) * time.Second,
@@ -721,26 +724,43 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	// Mutation/subscription cache populate
 	for _, cp := range in.CachePopulateConfigurations {
 		if cp.OperationType == protoOperationTypeSubscription {
+			var targetEntity *nodev1.EntityCacheConfiguration
 			for _, ec := range in.EntityCacheConfigurations {
-				ttl := time.Duration(ec.MaxAgeSeconds) * time.Second
-				if cp.MaxAgeSeconds != nil {
-					ttl = time.Duration(*cp.MaxAgeSeconds) * time.Second
+				if ec.TypeName == cp.EntityTypeName {
+					targetEntity = ec
+					break
 				}
-				cacheName := l.resolveEntityCacheProviderID(subgraphName, ec.TypeName)
-				out.FederationMetaData.SubscriptionEntityPopulation = append(
-					out.FederationMetaData.SubscriptionEntityPopulation,
-					plan.SubscriptionEntityPopulationConfiguration{
-						TypeName:                    ec.TypeName,
-						CacheName:                   cacheName,
-						TTL:                         ttl,
-						IncludeSubgraphHeaderPrefix: ec.IncludeHeaders,
-					},
-				)
 			}
+			if targetEntity == nil {
+				continue
+			}
+			ttl := time.Duration(targetEntity.MaxAgeSeconds) * time.Second
+			if cp.MaxAgeSeconds != nil {
+				ttl = time.Duration(*cp.MaxAgeSeconds) * time.Second
+			}
+			cacheName := l.resolveEntityCacheProviderID(subgraphName, targetEntity.TypeName)
+			out.FederationMetaData.SubscriptionEntityPopulation = append(
+				out.FederationMetaData.SubscriptionEntityPopulation,
+				plan.SubscriptionEntityPopulationConfiguration{
+					TypeName:                    targetEntity.TypeName,
+					FieldName:                   cp.FieldName,
+					CacheName:                   cacheName,
+					TTL:                         ttl,
+					IncludeSubgraphHeaderPrefix: targetEntity.IncludeHeaders,
+				},
+			)
 		} else {
+			// @cachePopulate(maxAge:) — when set, override the entity's default TTL on
+			// mutation-time writes. Without this, the populate path falls back to the
+			// cache implementation's default TTL.
+			var mutationTTL time.Duration
+			if cp.MaxAgeSeconds != nil {
+				mutationTTL = time.Duration(*cp.MaxAgeSeconds) * time.Second
+			}
 			out.FederationMetaData.MutationFieldCaching = append(out.FederationMetaData.MutationFieldCaching, plan.MutationFieldCacheConfiguration{
 				FieldName:                     cp.FieldName,
 				EnableEntityL2CachePopulation: true,
+				TTL:                           mutationTTL,
 			})
 		}
 	}
@@ -760,6 +780,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 				out.FederationMetaData.SubscriptionEntityPopulation,
 				plan.SubscriptionEntityPopulationConfiguration{
 					TypeName:                    ci.EntityTypeName,
+					FieldName:                   ci.FieldName,
 					CacheName:                   cacheName,
 					IncludeSubgraphHeaderPrefix: includeHeaders,
 					EnableInvalidationOnKeyOnly: true,
@@ -771,6 +792,17 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 				EntityTypeName: ci.EntityTypeName,
 			})
 		}
+	}
+
+	// Request-scoped field configurations. Every field annotated with @requestScoped
+	// in the subgraph is both a potential reader and writer of the coordinate L1 under
+	// its L1Key. The planner emits both a hint (read) and an export (write) for each.
+	for _, rsf := range in.RequestScopedFields {
+		out.FederationMetaData.RequestScopedFields = append(out.FederationMetaData.RequestScopedFields, plan.RequestScopedField{
+			FieldName: rsf.FieldName,
+			TypeName:  rsf.TypeName,
+			L1Key:     rsf.L1Key,
+		})
 	}
 
 	// Costs
@@ -816,6 +848,17 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	// Directives with argument weights are TBD.
 
 	return out
+}
+
+func rootTypeNameForField(rootNodes []*nodev1.TypeField, fieldName string) string {
+	for _, node := range rootNodes {
+		for _, fn := range node.FieldNames {
+			if fn == fieldName {
+				return node.TypeName
+			}
+		}
+	}
+	return ""
 }
 
 func (l *Loader) resolveEntityCacheProviderID(subgraphName, typeName string) string {

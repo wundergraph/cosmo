@@ -249,7 +249,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					pw.writer.Header().Set(CostEstimatedHeader, strconv.Itoa(reqCtx.operation.costEstimated))
 					if actualListSizes != nil {
 						if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-							actual := costCalc.ActualCost(reqCtx.operation.planConfig, actualListSizes)
+							actual := costCalc.ActualCost(reqCtx.operation.variables,actualListSizes)
 							reqCtx.operation.costActual = actual
 							reqCtx.operation.costActualSet = true
 							pw.writer.Header().Set(CostActualHeader, strconv.Itoa(actual))
@@ -259,7 +259,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
+		info, err := h.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, hpw)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
@@ -271,7 +271,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !reqCtx.operation.costActualSet && resolveCtx.ActualListSizes != nil &&
 			reqCtx.operation.preparedPlan != nil && reqCtx.operation.preparedPlan.preparedPlan != nil {
 			if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-				reqCtx.operation.costActual = costCalc.ActualCost(reqCtx.operation.planConfig, resolveCtx.ActualListSizes)
+				reqCtx.operation.costActual = costCalc.ActualCost(reqCtx.operation.variables,resolveCtx.ActualListSizes)
 				reqCtx.operation.costActualSet = true
 			}
 		}
@@ -584,12 +584,46 @@ func (h *GraphQLHandler) recordEntityCacheMetrics(resolveCtx *resolve.Context) {
 	}
 }
 
+const (
+	disableEntityCacheHeader   = "X-WG-Disable-Entity-Cache"
+	disableEntityCacheL1Header = "X-WG-Disable-Entity-Cache-L1"
+	disableEntityCacheL2Header = "X-WG-Disable-Entity-Cache-L2"
+	cacheKeyPrefixHeader       = "X-WG-Cache-Key-Prefix"
+)
+
 func (h *GraphQLHandler) cachingOptions(reqCtx *requestContext) resolve.CachingOptions {
+	enableL1 := h.entityCaching.L1Enabled
+	enableL2 := h.entityCaching.L2Enabled
+	globalKeyPrefix := h.entityCaching.GlobalKeyPrefix
+
+	// Allow per-request cache control headers only when tracing is authorized
+	// (dev mode or valid studio request token). This prevents production abuse.
+	if reqCtx.operation.traceOptions.Enable {
+		if reqCtx.request.Header.Get(disableEntityCacheHeader) == "true" {
+			enableL1 = false
+			enableL2 = false
+		} else {
+			if reqCtx.request.Header.Get(disableEntityCacheL1Header) == "true" {
+				enableL1 = false
+			}
+			if reqCtx.request.Header.Get(disableEntityCacheL2Header) == "true" {
+				enableL2 = false
+			}
+		}
+		if prefix := reqCtx.request.Header.Get(cacheKeyPrefixHeader); prefix != "" {
+			if globalKeyPrefix != "" {
+				globalKeyPrefix = prefix + ":" + globalKeyPrefix
+			} else {
+				globalKeyPrefix = prefix
+			}
+		}
+	}
+
 	return resolve.CachingOptions{
-		EnableL1Cache:         h.entityCaching.L1Enabled,
-		EnableL2Cache:         h.entityCaching.L2Enabled,
+		EnableL1Cache:         enableL1,
+		EnableL2Cache:         enableL2,
 		EnableCacheAnalytics:  len(h.entityCaching.Metrics) > 0,
-		GlobalCacheKeyPrefix:  h.entityCaching.GlobalKeyPrefix,
+		GlobalCacheKeyPrefix:  globalKeyPrefix,
 		L2CacheKeyInterceptor: h.buildL2CacheKeyInterceptor(reqCtx),
 	}
 }

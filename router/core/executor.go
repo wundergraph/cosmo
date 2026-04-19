@@ -295,6 +295,9 @@ func subgraphNameByID(subgraphs []*nodev1.Subgraph, id string) string {
 }
 
 func resolveEntityCacheProviderID(cfg *config.EntityCachingConfiguration, subgraphName, typeName string) string {
+	if cfg == nil {
+		return "default"
+	}
 	for _, sg := range cfg.SubgraphCacheOverrides {
 		if sg.Name == subgraphName {
 			// Tier 1: entity-level override

@@ -840,21 +840,45 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.traceConfig.Enabled {
-		tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
-			Logger:            r.logger,
-			Config:            r.traceConfig,
-			ServiceInstanceID: r.instanceID,
-			IPAnonymization: &attributeprocessor.IPAnonymizationConfig{
-				Enabled: r.ipAnonymization.Enabled,
-				Method:  attributeprocessor.IPAnonymizationMethod(r.ipAnonymization.Method),
-			},
-			SanitizeUTF8:   r.traceConfig.SanitizeUTF8,
-			MemoryExporter: r.traceConfig.TestMemoryExporter,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to start trace agent: %w", err)
+		// Skip installing a real (recording + exporting) tracer provider when there is
+		// no realistic export destination. Without this, the router records 100%-sampled
+		// spans in memory, runs the BatchSpanProcessor, and attempts to export — work
+		// that's pure overhead when nothing listens on the other end. Observed at 50
+		// sustained VUs on the cache demo: ~60% of all router allocations are OTel span
+		// attribute/snapshot work, which inflates GC pressure and produces p99 tails far
+		// beyond p95. Keeping the NeverSample provider installed at router.go:250 (the
+		// initial placeholder) means `IsRecording()` returns false on every span, and
+		// all the middleware-side `SetAttributes` / span creation short-circuits cheaply.
+		//
+		// "Realistic export destination" = at least one of:
+		//   - a graph API token is set (so the default Cosmo Cloud exporter can ship spans), OR
+		//   - the user has explicitly configured a trace exporter (env or YAML) whose
+		//     endpoint is different from the Cosmo Cloud default.
+		//
+		// A user who self-hosts an OTLP collector at the Cosmo Cloud endpoint URL is an
+		// edge case; they can force recording by setting any exporter explicitly.
+		hasRealExporter := r.graphApiToken != "" ||
+			r.traceConfig.TestMemoryExporter != nil ||
+			rtrace.HasNonDefaultExporter(r.traceConfig)
+		if !hasRealExporter {
+			r.logger.Info("Tracing is enabled but no graph token and no custom exporter are configured; installing no-op tracer provider to avoid span-recording overhead. Configure a trace exporter or set a graph token to enable tracing.")
+		} else {
+			tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
+				Logger:            r.logger,
+				Config:            r.traceConfig,
+				ServiceInstanceID: r.instanceID,
+				IPAnonymization: &attributeprocessor.IPAnonymizationConfig{
+					Enabled: r.ipAnonymization.Enabled,
+					Method:  attributeprocessor.IPAnonymizationMethod(r.ipAnonymization.Method),
+				},
+				SanitizeUTF8:   r.traceConfig.SanitizeUTF8,
+				MemoryExporter: r.traceConfig.TestMemoryExporter,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to start trace agent: %w", err)
+			}
+			r.tracerProvider = tp
 		}
-		r.tracerProvider = tp
 	}
 
 	// Prometheus metrics rely on OTLP metrics
