@@ -27,3 +27,4 @@ go.work.sum
 
 # Serena
 .serena/
+/.playwright-mcp
