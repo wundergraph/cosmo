@@ -39,7 +39,7 @@ The result: dramatically reduced subgraph load, lower latency, lower infrastruct
 
 **L1 (per-request deduplication):** Within a single GraphQL request, the same entity is often resolved multiple times -- through aliases, nested references, or list items pointing to the same object. L1 is an in-memory `sync.Map` scoped to the request. It deduplicates these calls so each entity is fetched from a subgraph at most once per request, even without L2 enabled.
 
-**L2 (cross-request shared cache):** The persistent cache layer, backed by Redis or in-process memory (ristretto). When a user queries `Product(id: "123")` and the next user queries a different page that also needs `Product(id: "123")`, L2 serves it without touching the subgraph. TTLs are set per-entity via `@entityCache(maxAge)`.
+**L2 (cross-request shared cache):** The persistent cache layer, backed by Redis or in-process memory (ristretto). When a user queries `Product(id: "123")` and the next user queries a different page that also needs `Product(id: "123")`, L2 serves it without touching the subgraph. TTLs are set per-entity via `@openfed__entityCache(maxAge)`.
 
 ### Shadow Mode
 
@@ -68,7 +68,7 @@ Negative caching stores a null sentinel in the cache with a separate (shorter) T
 
 ### Cache Invalidation (Three Mechanisms)
 
-**Mutation-triggered (`@cacheInvalidate`):** A subgraph team annotates mutations that modify entities. When `updateProduct(id: "1")` completes, the router automatically evicts `Product(id: "1")` from the cache using the `@key` fields from the mutation response. The next query fetches fresh data.
+**Mutation-triggered (`@openfed__cacheInvalidate`):** A subgraph team annotates mutations that modify entities. When `updateProduct(id: "1")` completes, the router automatically evicts `Product(id: "1")` from the cache using the `@key` fields from the mutation response. The next query fetches fresh data.
 
 **Extension-based invalidation:** Sometimes a mutation has side effects beyond its return type. For example, updating a product might affect related inventory counts, category rankings, or recommendation lists. The subgraph can return all affected entity keys in the response extensions:
 ```json
@@ -80,11 +80,11 @@ Negative caching stores a null sentinel in the cache with a separate (shorter) T
 ```
 The router batch-deletes all these entries in a single operation. This is extremely powerful for correlated invalidations that the subgraph understands but the router cannot infer from the mutation return type alone.
 
-**Subscription-triggered:** Real-time events can both invalidate and populate the cache. A subscription for `itemUpdated` with `@cacheInvalidate` evicts stale entities as events arrive. A subscription for `itemCreated` with `@cachePopulate` pre-warms the cache with new entities before any query asks for them.
+**Subscription-triggered:** Real-time events can both invalidate and populate the cache. A subscription for `itemUpdated` with `@openfed__cacheInvalidate` evicts stale entities as events arrive. A subscription for `itemCreated` with `@openfed__cachePopulate` pre-warms the cache with new entities before any query asks for them.
 
 ### Cache Populate on Mutations
 
-The flip side of invalidation: `@cachePopulate` on a mutation tells the router to write the returned entity into the cache. When `createProduct(name: "Widget")` returns the new product, it's immediately cached. The first query for that product is a cache hit.
+The flip side of invalidation: `@openfed__cachePopulate` on a mutation tells the router to write the returned entity into the cache. When `createProduct(name: "Widget")` returns the new product, it's immediately cached. The first query for that product is a cache hit.
 
 ### Per-Subgraph and Per-Entity Cache Routing
 
@@ -110,17 +110,17 @@ The circuit breaker wraps the cache layer with three states:
 
 The graph never goes down because of a cache failure.
 
-### Root Field Caching with `@is`
+### Root Field Caching with `@openfed__is`
 
-Entity caching works through `_entities` calls (federation entity resolution). But many queries start with a root field like `product(id: "123")` that fetches directly from a subgraph. The `@queryCache` directive enables caching these root field results.
+Entity caching works through `_entities` calls (federation entity resolution). But many queries start with a root field like `product(id: "123")` that fetches directly from a subgraph. The `@openfed__queryCache` directive enables caching these root field results.
 
 The key insight: if a root field returns a `Product` and takes `id` as an argument, the cache key should be the same as the entity key `Product(id: "123")`. This way, a product fetched via `product(id: "123")` shares its cache entry with the same product resolved via `_entities`.
 
-But sometimes argument names don't match entity key fields. A subgraph might expose `productByPid(pid: ID!)` where `pid` maps to the entity's `id` key field. The `@is` directive makes this explicit:
+But sometimes argument names don't match entity key fields. A subgraph might expose `productByPid(pid: ID!)` where `pid` maps to the entity's `id` key field. The `@openfed__is` directive makes this explicit:
 
 ```graphql
 type Query {
-  productByPid(pid: ID! @is(field: "id")): Product @queryCache(maxAge: 300)
+  productByPid(pid: ID! @openfed__is(field: "id")): Product @openfed__queryCache(maxAge: 300)
 }
 ```
 
@@ -134,7 +134,7 @@ Subgraph teams control caching through five directives in their schemas:
 
 ```graphql
 # Mark an entity as cacheable (300-second TTL)
-type Product @key(fields: "id") @entityCache(maxAge: 300) {
+type Product @key(fields: "id") @openfed__entityCache(maxAge: 300) {
   id: ID!
   name: String!
   price: Float!
@@ -142,22 +142,22 @@ type Product @key(fields: "id") @entityCache(maxAge: 300) {
 
 # Enable root field caching with argument-to-key mapping
 type Query {
-  product(id: ID!): Product @queryCache(maxAge: 300)
-  productByPid(pid: ID! @is(field: "id")): Product @queryCache(maxAge: 300)
-  products: [Product!]! @queryCache(maxAge: 300)
+  product(id: ID!): Product @openfed__queryCache(maxAge: 300)
+  productByPid(pid: ID! @openfed__is(field: "id")): Product @openfed__queryCache(maxAge: 300)
+  products: [Product!]! @openfed__queryCache(maxAge: 300)
 }
 
 # Invalidate cache on mutations
 type Mutation {
-  updateProduct(id: ID!, name: String!): Product @cacheInvalidate
-  deleteProduct(id: ID!): Product @cacheInvalidate
-  createProduct(name: String!): Product! @cachePopulate(maxAge: 60)
+  updateProduct(id: ID!, name: String!): Product @openfed__cacheInvalidate
+  deleteProduct(id: ID!): Product @openfed__cacheInvalidate
+  createProduct(name: String!): Product! @openfed__cachePopulate(maxAge: 60)
 }
 
 # Real-time cache management via subscriptions
 type Subscription {
-  productUpdated: Product @cacheInvalidate
-  productCreated: Product @cachePopulate
+  productUpdated: Product @openfed__cacheInvalidate
+  productCreated: Product @openfed__cachePopulate
 }
 ```
 
@@ -165,11 +165,11 @@ type Subscription {
 
 | Directive | Target | Arguments | Purpose |
 |-----------|--------|-----------|---------|
-| `@entityCache` | `OBJECT` | `maxAge: Int!`, `includeHeaders: Boolean`, `partialCacheLoad: Boolean`, `shadowMode: Boolean` | Marks an entity type as cacheable with TTL and behavior flags |
-| `@queryCache` | `FIELD_DEFINITION` | `maxAge: Int!`, `includeHeaders: Boolean`, `shadowMode: Boolean` | Enables cache reads for Query root fields returning cached entities |
-| `@cacheInvalidate` | `FIELD_DEFINITION` | (none) | Evicts the returned entity from cache after Mutation/Subscription |
-| `@cachePopulate` | `FIELD_DEFINITION` | `maxAge: Int` (optional override) | Writes the returned entity to cache after Mutation/Subscription |
-| `@is` | `ARGUMENT_DEFINITION` | `field: String!` | Maps a query argument to an entity `@key` field name |
+| `@openfed__entityCache` | `OBJECT` | `maxAge: Int!`, `includeHeaders: Boolean`, `partialCacheLoad: Boolean`, `shadowMode: Boolean` | Marks an entity type as cacheable with TTL and behavior flags |
+| `@openfed__queryCache` | `FIELD_DEFINITION` | `maxAge: Int!`, `includeHeaders: Boolean`, `shadowMode: Boolean` | Enables cache reads for Query root fields returning cached entities |
+| `@openfed__cacheInvalidate` | `FIELD_DEFINITION` | (none) | Evicts the returned entity from cache after Mutation/Subscription |
+| `@openfed__cachePopulate` | `FIELD_DEFINITION` | `maxAge: Int` (optional override) | Writes the returned entity to cache after Mutation/Subscription |
+| `@openfed__is` | `ARGUMENT_DEFINITION` | `field: String!` | Maps a query argument to an entity `@key` field name |
 
 ---
 
@@ -227,8 +227,8 @@ The subgraph knows about these correlations. Extension-based invalidation lets t
 ```
                                     Subgraph Schema
                                          |
-                              @entityCache, @queryCache,
-                           @cacheInvalidate, @cachePopulate, @is
+                              @openfed__entityCache, @openfed__queryCache,
+                           @openfed__cacheInvalidate, @openfed__cachePopulate, @openfed__is
                                          |
                                          v
                               ┌─────────────────────┐
@@ -291,7 +291,7 @@ Query arrives
 {"__typename":"Query","field":"topProducts","args":{"first":5}}
 ```
 
-When `@queryCache` + `@is` mappings are configured, root fields produce entity-format keys. This means `product(id: "123")` and the `_entities` fetch for `Product(id: "123")` share the same cache entry.
+When `@openfed__queryCache` + `@openfed__is` mappings are configured, root fields produce entity-format keys. This means `product(id: "123")` and the `_entities` fetch for `Product(id: "123")` share the same cache entry.
 
 **Key prefix pipeline** (applied in order):
 1. `GlobalCacheKeyPrefix` (e.g., multi-tenant isolation)
@@ -330,24 +330,24 @@ Fields with arguments (e.g., `friends(first:5)` vs `friends(first:10)`) coexist 
 
 ### Three-Phase Validation
 
-**Phase 1 -- Entity types:** Collects `@entityCache` from object types, validates `@key` presence and positive `maxAge`, builds `entityCacheConfigByTypeName` lookup.
+**Phase 1 -- Entity types:** Collects `@openfed__entityCache` from object types, validates `@key` presence and positive `maxAge`, builds `entityCacheConfigByTypeName` lookup.
 
-**Phase 2 -- Root type fields:** Processes `@queryCache`, `@cacheInvalidate`, `@cachePopulate`, `@is` on Query/Mutation/Subscription fields. Key rules:
-- `@queryCache` only on Query fields
-- `@cacheInvalidate` / `@cachePopulate` only on Mutation/Subscription
-- `@cacheInvalidate` + `@cachePopulate` are mutually exclusive
-- Return type must be an entity with `@entityCache`
-- `@is` field must reference a `@key` field; `@is` without `@queryCache` is an error
+**Phase 2 -- Root type fields:** Processes `@openfed__queryCache`, `@openfed__cacheInvalidate`, `@openfed__cachePopulate`, `@openfed__is` on Query/Mutation/Subscription fields. Key rules:
+- `@openfed__queryCache` only on Query fields
+- `@openfed__cacheInvalidate` / `@openfed__cachePopulate` only on Mutation/Subscription
+- `@openfed__cacheInvalidate` + `@openfed__cachePopulate` are mutually exclusive
+- Return type must be an entity with `@openfed__entityCache`
+- `@openfed__is` field must reference a `@key` field; `@openfed__is` without `@openfed__queryCache` is an error
 
 **Phase 3 -- Config attachment:** Validated configs attached to `ConfigurationData` entries for the proto serialization layer.
 
-### `@is` Directive and Key Mapping
+### `@openfed__is` Directive and Key Mapping
 
 Two strategies for mapping query arguments to `@key` fields:
-1. **Explicit:** `@is(field: "keyFieldName")` on an argument
+1. **Explicit:** `@openfed__is(field: "keyFieldName")` on an argument
 2. **Auto-mapping:** Argument name matches a `@key` field name
 
-Example: `product(pid: ID! @is(field: "id")): Product @queryCache(maxAge: 30)` maps argument `pid` to `@key(fields: "id")`.
+Example: `product(pid: ID! @openfed__is(field: "id")): Product @openfed__queryCache(maxAge: 30)` maps argument `pid` to `@key(fields: "id")`.
 
 List-returning fields skip key mapping entirely (no key-based lookups, only cache population). Incomplete mappings produce warnings, not errors. Nested `@key` fields (e.g., `store { id }`) are filtered out since they can't map to flat arguments.
 
@@ -355,17 +355,17 @@ List-returning fields skip key mapping entirely (no key-based lookups, only cach
 
 | # | Rule | Severity |
 |---|------|----------|
-| 1 | `@entityCache` requires `@key` | Error |
+| 1 | `@openfed__entityCache` requires `@key` | Error |
 | 2 | `maxAge` must be positive integer | Error |
-| 3 | `@queryCache` only on Query fields | Error |
-| 4 | `@queryCache` return type must be entity with `@entityCache` | Error |
-| 5 | `@is` requires `@queryCache` on the field | Error |
-| 6 | `@is(field)` must reference a `@key` field | Error |
+| 3 | `@openfed__queryCache` only on Query fields | Error |
+| 4 | `@openfed__queryCache` return type must be entity with `@openfed__entityCache` | Error |
+| 5 | `@openfed__is` requires `@openfed__queryCache` on the field | Error |
+| 6 | `@openfed__is(field)` must reference a `@key` field | Error |
 | 7 | Duplicate key field mappings (two args map to same key) | Error |
 | 8 | Incomplete key mapping (non-list) | Warning |
-| 9 | Redundant `@is` (arg name already matches key field) | Warning |
-| 10-13 | `@cacheInvalidate`/`@cachePopulate` operation type + return type checks | Error |
-| 14 | `@cacheInvalidate` + `@cachePopulate` mutual exclusion | Error |
+| 9 | Redundant `@openfed__is` (arg name already matches key field) | Warning |
+| 10-13 | `@openfed__cacheInvalidate`/`@openfed__cachePopulate` operation type + return type checks | Error |
+| 14 | `@openfed__cacheInvalidate` + `@openfed__cachePopulate` mutual exclusion | Error |
 
 ---
 
@@ -519,7 +519,7 @@ These metrics power the shadow mode workflow: monitor `shadow.staleness` to vali
 | Layer | Files | Lines | What's Covered |
 |-------|-------|-------|----------------|
 | **Engine (graphql-go-tools)** | 13 | ~12,300 | L1/L2 interaction, parallel resolution, shadow mode, negative cache, alias normalization, partial loads, mutation/subscription/extension invalidation, analytics |
-| **Composition (TypeScript)** | 1 | ~1,130 | All 14 validation rules, config extraction, federation, @is mapping |
+| **Composition (TypeScript)** | 1 | ~1,130 | All 14 validation rules, config extraction, federation, @openfed__is mapping |
 | **Router unit tests** | 4 | ~790 | Memory/Redis/CircuitBreaker cache ops, executor config builders |
 | **Router integration tests** | 2 | ~1,300 | 25 end-to-end scenarios with real subgraphs |
 
@@ -531,7 +531,7 @@ These metrics power the shadow mode workflow: monitor `shadow.staleness` to vali
 - Multi-subgraph caching (details + inventory subgraphs)
 - Cross-subgraph combined queries
 - Root field caching with key mappings
-- `@is` directive cache key mapping (`pid` -> `id`)
+- `@openfed__is` directive cache key mapping (`pid` -> `id`)
 
 **Cache behavior:**
 - TTL expiry (1s TTL + sleep verification)
@@ -547,7 +547,7 @@ These metrics power the shadow mode workflow: monitor `shadow.staleness` to vali
 - Shadow mode with failing cache (graceful degradation)
 
 **Invalidation + population:**
-- Mutation invalidation + population via `@cacheInvalidate` / `@cachePopulate`
+- Mutation invalidation + population via `@openfed__cacheInvalidate` / `@openfed__cachePopulate`
 - Delete mutation invalidation
 - Subscription invalidation via WebSocket
 - Subscription population via WebSocket
@@ -569,7 +569,7 @@ These metrics power the shadow mode workflow: monitor `shadow.staleness` to vali
 
 3. **Argument-aware field caching growth.** The xxhash suffix approach (`friends_AAA...`) means cached entities grow over time as different argument combinations are cached. There's no per-field TTL -- the entire entity expires together. Consider whether large entities with many argument variants could cause memory pressure.
 
-4. **Subscription `FindByTypeName` collision.** Both `@cachePopulate` and `@cacheInvalidate` on subscriptions create `SubscriptionEntityPopulationConfiguration` entries. `FindByTypeName` returns the first match, which can shadow one config if both exist for the same entity type. There's a workaround in tests (`removeSubscriptionPopulateConfigs`). Review whether this needs a fix.
+4. **Subscription `FindByTypeName` collision.** Both `@openfed__cachePopulate` and `@openfed__cacheInvalidate` on subscriptions create `SubscriptionEntityPopulationConfiguration` entries. `FindByTypeName` returns the first match, which can shadow one config if both exist for the same entity type. There's a workaround in tests (`removeSubscriptionPopulateConfigs`). Review whether this needs a fix.
 
 ### Cache Key Integrity
 
@@ -583,7 +583,7 @@ These metrics power the shadow mode workflow: monitor `shadow.staleness` to vali
 
 8. **Memory cache `Len()` is approximate.** The ristretto-backed counter can drift under concurrent access. Integration tests use `require.Equal` on `Len()` -- verify these don't flake under CI load.
 
-9. **`negativeCacheTtlSeconds` source.** Present in proto but not extracted from `@entityCache` directive arguments by the composition layer. Only set via runtime config mutations in tests. Clarify: is this intentionally a runtime-only setting?
+9. **`negativeCacheTtlSeconds` source.** Present in proto but not extracted from `@openfed__entityCache` directive arguments by the composition layer. Only set via runtime config mutations in tests. Clarify: is this intentionally a runtime-only setting?
 
 ### Coverage Gaps
 

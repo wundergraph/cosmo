@@ -90,8 +90,8 @@ export type RequestScopedFieldConfig = {
   fieldName: FieldName;
   typeName: TypeName;
   // L1 cache key used to store/lookup this field's value for the duration of a request.
-  // Format: "{subgraphName}.{key}" where `key` is the @requestScoped(key:) argument.
-  // All fields in the same subgraph declaring @requestScoped with the same key share
+  // Format: "{subgraphName}.{key}" where `key` is the @openfed__requestScoped(key:) argument.
+  // All fields in the same subgraph declaring @openfed__requestScoped with the same key share
   // the same L1 entry — the first one to resolve populates it, subsequent ones inject
   // from it (subject to widening checks and alias-aware normalization).
   l1Key: string;
@@ -124,7 +124,7 @@ export type ConfigurationData = {
   cacheInvalidateConfigurations?: Array<CacheInvalidateConfig>;
 };
 
-// Extracted from @entityCache(maxAge: Int!, includeHeaders: Boolean, partialCacheLoad: Boolean, shadowMode: Boolean)
+// Extracted from @openfed__entityCache(maxAge: Int!, includeHeaders: Boolean, partialCacheLoad: Boolean, shadowMode: Boolean)
 // on OBJECT types. Defines per-entity cache TTL and behavior.
 export type EntityCacheConfig = {
   typeName: TypeName;
@@ -138,41 +138,41 @@ export type EntityCacheConfig = {
   shadowMode: boolean;
 };
 
-// Extracted from @queryCache(maxAge: Int!, includeHeaders: Boolean, shadowMode: Boolean)
+// Extracted from @openfed__queryCache(maxAge: Int!, includeHeaders: Boolean, shadowMode: Boolean)
 // on Query fields. Tells the router which query fields can serve entities from cache.
 export type RootFieldCacheConfig = {
   fieldName: FieldName;
   maxAgeSeconds: number;
   includeHeaders: boolean;
   shadowMode: boolean;
-  // The entity type this query field returns (must have @entityCache)
+  // The entity type this query field returns (must have @openfed__entityCache)
   entityTypeName: TypeName;
   // Maps query arguments to entity @key fields so the router can construct cache keys from query arguments.
   // Empty for list-returning fields (cache reads are skipped; only cache writes/population apply).
   entityKeyMappings: Array<EntityKeyMappingConfig>;
 };
 
-// Groups field mappings for a single entity type returned by a @queryCache field.
+// Groups field mappings for a single entity type returned by a @openfed__queryCache field.
 export type EntityKeyMappingConfig = {
   entityTypeName: TypeName;
   fieldMappings: Array<FieldMappingConfig>;
 };
 
 // Maps a single query argument to an entity's @key field.
-// Example: query { product(productId: ID!) @queryCache } with @is(fields: "id") on productId
+// Example: query { product(productId: ID!) @openfed__queryCache } with @openfed__is(fields: "id") on productId
 //   → entityKeyField: "id", argumentPath: ["productId"]
-// When the argument name matches the @key field name, auto-mapping occurs without @is.
+// When the argument name matches the @key field name, auto-mapping occurs without @openfed__is.
 export type FieldMappingConfig = {
   entityKeyField: FieldName;
   argumentPath: Array<string>;
   isBatch?: boolean;
 };
 
-// Extracted from @cachePopulate(maxAge: Int) on Mutation/Subscription fields.
+// Extracted from @openfed__cachePopulate(maxAge: Int) on Mutation/Subscription fields.
 // Tells the router to populate the entity cache with the mutation's return value.
 // maxAgeSeconds overrides the entity's default TTL when provided.
 // entityTypeName identifies which cached entity this populate targets — derived from
-// the field's return type, which composition validates must be an @entityCache-marked entity.
+// the field's return type, which composition validates must be an @openfed__entityCache-marked entity.
 export type CachePopulateConfig = {
   fieldName: FieldName;
   operationType: string;
@@ -180,7 +180,7 @@ export type CachePopulateConfig = {
   maxAgeSeconds?: number;
 };
 
-// Extracted from @cacheInvalidate on Mutation/Subscription fields.
+// Extracted from @openfed__cacheInvalidate on Mutation/Subscription fields.
 // Tells the router to evict the returned entity from the cache after the operation completes.
 export type CacheInvalidateConfig = {
   fieldName: FieldName;

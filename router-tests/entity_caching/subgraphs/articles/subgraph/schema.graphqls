@@ -43,7 +43,7 @@ type Article implements Personalized @key(fields: "id") {
   personalizedRecommendation: String!
     @requires(fields: "currentViewer { id name email }")
   # relatedArticles enables nested selection of Article entities so tests
-  # can exercise @requestScoped deduplication across multiple nesting
+  # can exercise @openfed__requestScoped deduplication across multiple nesting
   # levels (Article.currentViewer selected inline at more than one depth).
   relatedArticles: [Article!]!
 }

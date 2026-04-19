@@ -23,7 +23,7 @@ func TestDataSourceMetaDataMapsNegativeEntityCacheTTL(t *testing.T) {
 			{
 				TypeName:                "Item",
 				MaxAgeSeconds:           300,
-				NegativeCacheTtlSeconds: 15,
+				NotFoundCacheTtlSeconds: 15,
 				IncludeHeaders:          true,
 				PartialCacheLoad:        true,
 				ShadowMode:              true,

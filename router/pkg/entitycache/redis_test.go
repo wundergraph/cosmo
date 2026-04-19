@@ -19,13 +19,15 @@ func newTestRedisCache(t *testing.T, prefix string) (*RedisEntityCache, *minired
 	return NewRedisEntityCache(client, prefix), mr
 }
 
-func TestNewRedisEntityCache(t *testing.T) {
+func TestRedisEntityCache_ConstructorStoresKeyPrefix(t *testing.T) {
+	t.Parallel()
 	cache, _ := newTestRedisCache(t, "test")
 	require.NotNil(t, cache)
 	require.Equal(t, "test", cache.keyPrefix)
 }
 
-func TestRedisEntityCache_Get_Miss(t *testing.T) {
+func TestRedisEntityCache_GetReturnsNilForMissingKey(t *testing.T) {
+	t.Parallel()
 	cache, _ := newTestRedisCache(t, "pfx")
 	ctx := context.Background()
 
@@ -35,7 +37,8 @@ func TestRedisEntityCache_Get_Miss(t *testing.T) {
 	require.Nil(t, entries[0])
 }
 
-func TestRedisEntityCache_Get_Hit(t *testing.T) {
+func TestRedisEntityCache_GetReturnsValueForExistingKey(t *testing.T) {
+	t.Parallel()
 	cache, mr := newTestRedisCache(t, "pfx")
 	ctx := context.Background()
 
@@ -50,7 +53,8 @@ func TestRedisEntityCache_Get_Hit(t *testing.T) {
 	require.Equal(t, []byte("myvalue"), entries[0].Value)
 }
 
-func TestRedisEntityCache_SetThenGet(t *testing.T) {
+func TestRedisEntityCache_SetThenGetReturnsStoredValues(t *testing.T) {
+	t.Parallel()
 	cache, _ := newTestRedisCache(t, "pfx")
 	ctx := context.Background()
 
@@ -67,7 +71,8 @@ func TestRedisEntityCache_SetThenGet(t *testing.T) {
 	require.Equal(t, []byte("v2"), entries[1].Value)
 }
 
-func TestRedisEntityCache_Set_TTLExpiry(t *testing.T) {
+func TestRedisEntityCache_KeyExpiresAfterTTL(t *testing.T) {
+	t.Parallel()
 	cache, mr := newTestRedisCache(t, "pfx")
 	ctx := context.Background()
 
@@ -89,7 +94,8 @@ func TestRedisEntityCache_Set_TTLExpiry(t *testing.T) {
 	require.Nil(t, entries[0])
 }
 
-func TestRedisEntityCache_DeleteThenGet(t *testing.T) {
+func TestRedisEntityCache_DeleteRemovesKey(t *testing.T) {
+	t.Parallel()
 	cache, _ := newTestRedisCache(t, "pfx")
 	ctx := context.Background()
 
@@ -106,7 +112,8 @@ func TestRedisEntityCache_DeleteThenGet(t *testing.T) {
 	require.Nil(t, entries[0])
 }
 
-func TestRedisEntityCache_KeyPrefixApplied(t *testing.T) {
+func TestRedisEntityCache_KeyPrefixAppliedToStoredKey(t *testing.T) {
+	t.Parallel()
 	cache, mr := newTestRedisCache(t, "myprefix")
 	ctx := context.Background()
 
@@ -122,7 +129,8 @@ func TestRedisEntityCache_KeyPrefixApplied(t *testing.T) {
 	require.False(t, mr.Exists("item"))
 }
 
-func TestRedisEntityCache_Get_EmptyKeys(t *testing.T) {
+func TestRedisEntityCache_GetWithEmptyKeysReturnsNil(t *testing.T) {
+	t.Parallel()
 	cache, _ := newTestRedisCache(t, "pfx")
 	ctx := context.Background()
 
@@ -131,7 +139,8 @@ func TestRedisEntityCache_Get_EmptyKeys(t *testing.T) {
 	require.Nil(t, entries)
 }
 
-func TestRedisEntityCache_Set_EmptyEntries(t *testing.T) {
+func TestRedisEntityCache_SetWithEmptyEntriesIsNoop(t *testing.T) {
+	t.Parallel()
 	cache, _ := newTestRedisCache(t, "pfx")
 	ctx := context.Background()
 
@@ -139,7 +148,8 @@ func TestRedisEntityCache_Set_EmptyEntries(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRedisEntityCache_Delete_EmptyKeys(t *testing.T) {
+func TestRedisEntityCache_DeleteWithEmptyKeysIsNoop(t *testing.T) {
+	t.Parallel()
 	cache, _ := newTestRedisCache(t, "pfx")
 	ctx := context.Background()
 
@@ -147,7 +157,8 @@ func TestRedisEntityCache_Delete_EmptyKeys(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRedisEntityCache_Close(t *testing.T) {
+func TestRedisEntityCache_GetAfterCloseReturnsError(t *testing.T) {
+	t.Parallel()
 	mr := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	cache := NewRedisEntityCache(client, "test")
@@ -158,4 +169,23 @@ func TestRedisEntityCache_Close(t *testing.T) {
 	// After closing, operations should fail
 	_, err = cache.Get(context.Background(), []string{"key"})
 	require.Error(t, err)
+}
+
+// TestRedisEntityCache_SetAndDeleteAfterCloseReturnError verifies the same
+// post-close semantics for the mutating operations: Set and Delete must also
+// surface an error instead of silently succeeding against a closed client.
+func TestRedisEntityCache_SetAndDeleteAfterCloseReturnError(t *testing.T) {
+	t.Parallel()
+	mr := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	cache := NewRedisEntityCache(client, "test")
+
+	require.NoError(t, cache.Close())
+
+	err := cache.Set(context.Background(),
+		[]*resolve.CacheEntry{{Key: "k", Value: []byte("v")}}, time.Minute)
+	require.Error(t, err, "Set on closed client must return error")
+
+	err = cache.Delete(context.Background(), []string{"k"})
+	require.Error(t, err, "Delete on closed client must return error")
 }

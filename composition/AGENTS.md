@@ -37,7 +37,7 @@ These are independent — a resolver only needs to satisfy ONE key. Each key is 
 
 ### Key Rule: Nested Keys Use Dot-Notation Paths
 
-`@key(fields: "store { id }")` means the entity is identified by `store.id` — a path through an object. The pipeline converts the normalized field set `"store { id }"` into the dot-notation path `"store.id"`. The `@is` directive references these paths directly: `@is(fields: "store.id")`. `FieldMappingConfig.entityKeyField` stores the dot-notation path string.
+`@key(fields: "store { id }")` means the entity is identified by `store.id` — a path through an object. The pipeline converts the normalized field set `"store { id }"` into the dot-notation path `"store.id"`. The `@openfed__is` directive references these paths directly: `@openfed__is(fields: "store.id")`. `FieldMappingConfig.entityKeyField` stores the dot-notation path string.
 
 ### Where Key Data Lives
 
@@ -52,19 +52,19 @@ These are independent — a resolver only needs to satisfy ONE key. Each key is 
 
 | Rule | What | Where |
 |------|------|-------|
-| 1 | @entityCache requires @key | Phase 1 |
+| 1 | @openfed__entityCache requires @key | Phase 1 |
 | 3 | maxAge must be positive | Phase 1 |
-| 4 | @queryCache only on Query fields | Phase 2 |
-| 5 | @queryCache return type must have @key | Phase 2 |
-| 6 | @queryCache return type must have @entityCache | Phase 2 |
+| 4 | @openfed__queryCache only on Query fields | Phase 2 |
+| 5 | @openfed__queryCache return type must have @key | Phase 2 |
+| 6 | @openfed__queryCache return type must have @openfed__entityCache | Phase 2 |
 | 7 | Warning: incomplete key mapping (non-list only) | Phase 2 |
-| 9 | @queryCache maxAge must be positive | Phase 2 |
-| 10 | @is only with @queryCache | Phase 2 |
-| 11 | `@is(fields: "...")` must reference an existing `@key` field path | buildArgumentKeyMappings |
+| 9 | @openfed__queryCache maxAge must be positive | Phase 2 |
+| 10 | @openfed__is only with @openfed__queryCache | Phase 2 |
+| 11 | `@openfed__is(fields: "...")` must reference an existing `@key` field path | buildArgumentKeyMappings |
 | 12 | No duplicate key field mappings | buildArgumentKeyMappings |
-| 13 | Warning: redundant @is when arg name matches key field | buildArgumentKeyMappings |
-| 14 | @cacheInvalidate only on Mutation/Subscription | Phase 2 |
-| 16 | @cacheInvalidate and @cachePopulate are mutually exclusive | Phase 2 |
+| 13 | Warning: redundant @openfed__is when arg name matches key field | buildArgumentKeyMappings |
+| 14 | @openfed__cacheInvalidate only on Mutation/Subscription | Phase 2 |
+| 16 | @openfed__cacheInvalidate and @openfed__cachePopulate are mutually exclusive | Phase 2 |
 
 ### Protobuf Mapping
 

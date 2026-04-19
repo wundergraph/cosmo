@@ -10,9 +10,6 @@ import (
 
 func NewSchema(itemUpdatedCh chan *model.Item, itemCreatedCh chan *model.Item) graphql.ExecutableSchema {
 	return generated.NewExecutableSchema(generated.Config{
-		Resolvers: &subgraph.Resolver{
-			ItemUpdatedCh: itemUpdatedCh,
-			ItemCreatedCh: itemCreatedCh,
-		},
+		Resolvers: subgraph.NewResolver(itemUpdatedCh, itemCreatedCh),
 	})
 }

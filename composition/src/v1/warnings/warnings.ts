@@ -195,8 +195,8 @@ export function singleSubgraphInputFieldOneOfWarning({
   });
 }
 
-// Warns when a @queryCache field cannot construct complete cache keys from its arguments.
-// This happens when the entity has @key fields that don't correspond to any argument (by name or @is mapping).
+// Warns when a @openfed__queryCache field cannot construct complete cache keys from its arguments.
+// This happens when the entity has @key fields that don't correspond to any argument (by name or @openfed__is mapping).
 // The field can still populate the cache (writes), but cannot serve reads from cache.
 export function incompleteQueryCacheKeyMappingWarning({
   subgraphName,
@@ -206,10 +206,10 @@ export function incompleteQueryCacheKeyMappingWarning({
 }: IncompleteQueryCacheKeyMappingWarningParams): Warning {
   return new Warning({
     message:
-      `Field "${fieldCoords}" has @queryCache returning "${entityType}" but @key field "${unmappedKeyField}"` +
+      `Field "${fieldCoords}" has @openfed__queryCache returning "${entityType}" but @key field "${unmappedKeyField}"` +
       ` cannot be mapped to any argument. Cache reads are disabled for this field` +
       ` (cache writes/population still work). Add an argument named "${unmappedKeyField}"` +
-      ` or use @is(fields: "${unmappedKeyField}") to enable cache reads.`,
+      ` or use @openfed__is(fields: "${unmappedKeyField}") to enable cache reads.`,
     subgraph: {
       name: subgraphName,
     },
@@ -284,7 +284,7 @@ export function singleFederatedInputFieldOneOfWarning({
   });
 }
 
-// Warns when @requestScoped(key: "...") is used on only one field in the subgraph.
+// Warns when @openfed__requestScoped(key: "...") is used on only one field in the subgraph.
 // The directive only provides a benefit when ≥ 2 fields share the same key —
 // otherwise there's no second reader to deduplicate against.
 export function requestScopedSingleFieldWarning({
@@ -294,7 +294,7 @@ export function requestScopedSingleFieldWarning({
 }: RequestScopedSingleFieldWarningParams): Warning {
   return new Warning({
     message:
-      `@requestScoped(key: "${key}") is declared on only one field ("${fieldCoords}") in this subgraph.` +
+      `@openfed__requestScoped(key: "${key}") is declared on only one field ("${fieldCoords}") in this subgraph.` +
       ` The directive is meaningless unless at least 2 fields share the same key so that the second` +
       ` and subsequent fields can be served from the per-request L1 cache populated by the first.`,
     subgraph: {

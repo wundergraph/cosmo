@@ -28,7 +28,7 @@ The composition library normalizes and validates GraphQL subgraph schemas for fe
 | `parentDefinitionDataByTypeName` | `Map<string, ParentDefinitionData>` | Central type registry — all objects, interfaces, scalars, enums, unions, input objects |
 | `keyFieldSetDatasByTypeName` | `Map<TypeName, Map<normalizedFieldSet, KeyFieldSetData>>` | Entity type → (normalized field set string → parsed key metadata) |
 | `keyFieldNamesByParentTypeName` | `Map<TypeName, Set<FieldName>>` | Entity type → top-level field names participating in any @key |
-| `entityCacheConfigByTypeName` | `Map<TypeName, {...}>` | @entityCache directives (lookup during cache validation) |
+| `entityCacheConfigByTypeName` | `Map<TypeName, {...}>` | @openfed__entityCache directives (lookup during cache validation) |
 | `configurationDataByTypeName` | `Map<TypeName, ConfigurationData>` | Final router configuration output |
 
 ### Normalization Pipeline
@@ -101,18 +101,18 @@ Stored in `configurationData.keys` array — one entry per @key directive.
 ### Directive Hierarchy
 
 ```
-@entityCache(maxAge: Int!)          → on OBJECT types (entities with @key)
-@queryCache(maxAge: Int!)           → on Query fields returning cached entities
-@cachePopulate(maxAge?: Int)        → on Mutation/Subscription fields
-@cacheInvalidate                    → on Mutation/Subscription fields
-@is(fields: String!)                 → on argument definitions (maps arg → key field)
+@openfed__entityCache(maxAge: Int!)          → on OBJECT types (entities with @key)
+@openfed__queryCache(maxAge: Int!)           → on Query fields returning cached entities
+@openfed__cachePopulate(maxAge?: Int)        → on Mutation/Subscription fields
+@openfed__cacheInvalidate                    → on Mutation/Subscription fields
+@openfed__is(fields: String!)                 → on argument definitions (maps arg → key field)
 ```
 
 ### Cache Validation (`validateAndExtractEntityCachingConfigs`)
 
 The entry method delegates to two helpers:
 
-- `extractEntityCacheDirectives` — reads @entityCache off object types.
+- `extractEntityCacheDirectives` — reads @openfed__entityCache off object types.
   Must run first because the root-field helpers look entity types up in `entityCacheConfigByTypeName`.
 - `processRootFieldCacheDirectives` — walks root types (Query/Mutation/Subscription) and dispatches
   to `extractQueryCacheConfig`, `extractCacheInvalidateConfig`, `extractCachePopulateConfig`, and
@@ -138,17 +138,17 @@ ALL fully-satisfiable keys are emitted as separate `EntityKeyMappingConfig` entr
 **Type checking:**
 - Auto-mapping compares named types (unwrapping NonNull).
   Mismatch → warning, mapping skipped.
-- Explicit `@is` compares strictly.
+- Explicit `@openfed__is` compares strictly.
   Mismatch → error.
 - Nullability differences are ignored (nullable arg can map to non-null key).
 
 **Nested key paths:**
 `@key(fields: "store { id }")` produces path `"store.id"`.
-`@is(fields: "store.id")` maps an argument to that path.
+`@openfed__is(fields: "store.id")` maps an argument to that path.
 Type checking resolves the leaf field type from the entity's AST.
 
 **Input object decomposition:**
-`@is(fields: "id sku")` with an input object argument decomposes into
+`@openfed__is(fields: "id sku")` with an input object argument decomposes into
 per-field mappings: `argumentPath: ["key", "id"]`, `argumentPath: ["key", "sku"]`.
 Nested input objects map recursively to nested key structures.
 
@@ -157,28 +157,28 @@ List-returning fields with list arguments produce `isBatch: true` on `FieldMappi
 Multiple list arguments on the same field are rejected.
 
 **Extra non-key argument detection:**
-Arguments not mapped to any key field → error for explicit `@is`, warning for auto-mapping.
+Arguments not mapped to any key field → error for explicit `@openfed__is`, warning for auto-mapping.
 All mappings for that key are discarded (cache key would be incomplete).
 
-### @is Directive
+### @openfed__is Directive
 
-`@is(fields: String!)` — note the argument name is `fields` (plural), matching the `FIELDS` constant.
+`@openfed__is(fields: String!)` — note the argument name is `fields` (plural), matching the `FIELDS` constant.
 The `IS_DEFINITION` in `directive-definitions.ts` and `IS_DEFINITION_DATA` in `directive-definition-data.ts`
 must both use `FIELDS`.
-The `buildArgumentKeyMappingsV2` reads `arg.name.value === FIELDS` to extract @is values.
+The `buildArgumentKeyMappingsV2` reads `arg.name.value === FIELDS` to extract @openfed__is values.
 
 **Gotcha**: A previous bug used `FIELD` (singular) instead of `FIELDS` (plural),
-silently breaking all @is extraction.
+silently breaking all @openfed__is extraction.
 Always verify the constant name matches the directive definition.
 
-### @requestScoped Directive
+### @openfed__requestScoped Directive
 
-`@requestScoped(key: String!)` on `FIELD_DEFINITION` — single mandatory argument.
+`@openfed__requestScoped(key: String!)` on `FIELD_DEFINITION` — single mandatory argument.
 Extracted by `extractRequestScopedFields()` in `normalization-factory.ts`.
 Produces `RequestScopedFieldConfig` on the datasource's `ConfigurationData`.
 
 **Symmetric semantics**: there is no receiver/provider distinction. Every field
-annotated with `@requestScoped(key: "X")` in the same subgraph shares the same L1
+annotated with `@openfed__requestScoped(key: "X")` in the same subgraph shares the same L1
 entry under `l1Key = "{subgraphName}.X"`. Whichever field resolves first populates
 L1; subsequent fields with the same key inject from L1 and may skip their fetch.
 
@@ -239,7 +239,7 @@ to avoid re-creating the fetcher and resetting the response state on mode change
 | `src/v1/normalization/walkers.ts` | AST visitor entry points |
 | `src/v1/normalization/utils.ts` | `validateKeyFieldSets()` and field set validation |
 | `src/v1/normalization/types.ts` | `KeyFieldSetData`, `FieldSetData`, etc. |
-| `src/v1/constants/directive-definitions.ts` | Directive AST definitions (@key, @entityCache, @queryCache, @is, etc.) |
+| `src/v1/constants/directive-definitions.ts` | Directive AST definitions (@key, @openfed__entityCache, @openfed__queryCache, @openfed__is, etc.) |
 | `src/router-configuration/types.ts` | Output types: `ConfigurationData`, `EntityCacheConfig`, `FieldMappingConfig`, etc. |
 | `src/errors/errors.ts` | Error message factories |
 | `src/v1/warnings/warnings.ts` | Warning message factories |

@@ -4,15 +4,15 @@ extend schema
     import: ["@key", "@interfaceObject", "@inaccessible"]
   )
 
-directive @requestScoped(key: String!) on FIELD_DEFINITION
+directive @openfed__requestScoped(key: String!) on FIELD_DEFINITION
 
-# Symmetric @requestScoped: both Query.currentViewer and Personalized.currentViewer
+# Symmetric @openfed__requestScoped: both Query.currentViewer and Personalized.currentViewer
 # declare key: "currentViewer". Their L1 cache entry is "viewer.currentViewer".
 # Whichever is resolved first populates L1; subsequent fields with the same key
 # inject from L1 and skip the fetch.
 type Personalized @key(fields: "id") @interfaceObject {
   id: ID!
-  currentViewer: Viewer @inaccessible @requestScoped(key: "currentViewer")
+  currentViewer: Viewer @inaccessible @openfed__requestScoped(key: "currentViewer")
 }
 
 type Viewer @key(fields: "id") {
@@ -22,5 +22,5 @@ type Viewer @key(fields: "id") {
 }
 
 type Query {
-  currentViewer: Viewer @requestScoped(key: "currentViewer")
+  currentViewer: Viewer @openfed__requestScoped(key: "currentViewer")
 }

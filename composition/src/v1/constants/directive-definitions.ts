@@ -111,7 +111,7 @@ export const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// @cacheInvalidate on FIELD_DEFINITION
+// @openfed__cacheInvalidate on FIELD_DEFINITION
 export const CACHE_INVALIDATE_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
@@ -119,7 +119,7 @@ export const CACHE_INVALIDATE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// @cachePopulate(maxAge: Int) on FIELD_DEFINITION
+// @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
 export const CACHE_POPULATE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -288,7 +288,7 @@ export const DEPRECATED_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// @entityCache(maxAge: Int!, includeHeaders: Boolean = false, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT
+// @openfed__entityCache(maxAge: Int!, includeHeaders: Boolean = false, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT
 export const ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -567,7 +567,7 @@ export const INTERFACE_OBJECT_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// @is(fields: String!) on ARGUMENT_DEFINITION
+// @openfed__is(fields: String!) on ARGUMENT_DEFINITION
 export const IS_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -736,7 +736,7 @@ export const PROVIDES_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// @queryCache(maxAge: Int!, includeHeaders: Boolean = false, shadowMode: Boolean = false) on FIELD_DEFINITION
+// @openfed__queryCache(maxAge: Int!, includeHeaders: Boolean = false, shadowMode: Boolean = false) on FIELD_DEFINITION
 export const QUERY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -763,7 +763,7 @@ export const QUERY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @requestScoped(key: String!) on FIELD_DEFINITION
+// directive @openfed__requestScoped(key: String!) on FIELD_DEFINITION
 //
 // Marks a field as resolving to the same value for the entire request, shared with
 // all other fields in the same subgraph that use the same `key`. Purely symmetric:

@@ -88,6 +88,25 @@ Each `EntityFieldHash` contains:
 - `KeyHash` — xxhash of key JSON (when `HashKeys=true`)
 - `Source` — where the entity data came from (L1/L2/Subgraph)
 
+> **Security: `KeyRaw` and `EntityCacheKey` are not safe to export as-is.**
+>
+> The `KeyRaw` field on `EntityFieldHash` and the `EntityCacheKey` field on
+> `MutationEvent` contain the raw JSON representation of entity key fields.
+> These values frequently carry user identifiers (user IDs, account numbers,
+> email addresses, phone numbers, tenant IDs) that are subject to privacy
+> regulations (GDPR, CCPA) and cross-boundary data-sharing contracts.
+>
+> - **Do not export `KeyRaw` / `EntityCacheKey` unredacted to external analytics
+>   sinks, object stores, or log aggregators.** Treat them as PII.
+> - Prefer `KeyHash` (set `HashKeys=true` on the analytics config) for any
+>   cardinality/aggregation analysis — it is a stable, non-reversible xxhash.
+> - If you need to emit raw keys for an internal debugging sink, gate them
+>   behind an explicit opt-in and apply your organization's redaction policy
+>   before transport.
+> - The router emits these fields into the in-memory `CacheAnalyticsSnapshot`
+>   by default; downstream exporters are responsible for filtering or hashing
+>   before upload. Treat "export" as an explicit decision, not a default.
+
 ### Entity Type Tracking
 
 | Field | Type | Description |

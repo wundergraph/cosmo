@@ -12,42 +12,42 @@ export type SingleFederatedInputFieldOneOfWarningParams = {
 };
 
 export type IncompleteQueryCacheKeyMappingWarningParams = {
-  subgraphName: string;
-  fieldCoords: string;
-  entityType: string;
-  unmappedKeyField: string;
+  subgraphName: SubgraphName;
+  fieldCoords: FieldName;
+  entityType: TypeName;
+  unmappedKeyField: FieldName;
 };
 
 export type AutoMappingTypeMismatchWarningParams = {
-  subgraphName: string;
+  subgraphName: SubgraphName;
   argumentName: string;
-  fieldCoords: string;
+  fieldCoords: FieldName;
   argumentType: string;
-  keyField: string;
-  entityType: string;
+  keyField: FieldName;
+  entityType: TypeName;
   keyFieldType: string;
 };
 
 export type AutoMappingAdditionalNonKeyArgumentWarningParams = {
-  subgraphName: string;
+  subgraphName: SubgraphName;
   argumentName: string;
-  fieldCoords: string;
-  keyField: string;
-  entityType: string;
+  fieldCoords: FieldName;
+  keyField: FieldName;
+  entityType: TypeName;
   extraArgument: string;
 };
 
 export type AutoBatchAdditionalNonKeyArgumentWarningParams = {
-  subgraphName: string;
-  fieldCoords: string;
+  subgraphName: SubgraphName;
+  fieldCoords: FieldName;
   argumentName: string;
-  keyField: string;
-  entityType: string;
+  keyField: FieldName;
+  entityType: TypeName;
   extraArgument: string;
 };
 
 export type RequestScopedSingleFieldWarningParams = {
-  subgraphName: string;
+  subgraphName: SubgraphName;
   key: string;
-  fieldCoords: string;
+  fieldCoords: FieldName;
 };

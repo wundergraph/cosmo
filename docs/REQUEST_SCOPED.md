@@ -1,4 +1,4 @@
-# @requestScoped Directive
+# @openfed__requestScoped Directive
 
 Per-request coordinate L1 cache for fields that resolve to the same value within a request.
 Eliminates redundant subgraph calls when multiple fields in a subgraph share an identity
@@ -7,16 +7,16 @@ that only depends on the request context (current viewer, tenant, locale, featur
 ## TL;DR
 
 ```graphql
-directive @requestScoped(key: String!) on FIELD_DEFINITION
+directive @openfed__requestScoped(key: String!) on FIELD_DEFINITION
 
 # Every participating field declares the directive with the SAME key.
 type Query {
-  currentViewer: Viewer @requestScoped(key: "currentViewer")
+  currentViewer: Viewer @openfed__requestScoped(key: "currentViewer")
 }
 
 type Personalized @key(fields: "id") @interfaceObject {
   id: ID!
-  currentViewer: Viewer @inaccessible @requestScoped(key: "currentViewer")
+  currentViewer: Viewer @inaccessible @openfed__requestScoped(key: "currentViewer")
 }
 ```
 
@@ -29,7 +29,7 @@ subsequent fields inject from L1 and skip their subgraph fetch.
 ### Symmetric — no receiver, no provider
 
 There is no receiver/provider distinction.
-Every field annotated with `@requestScoped(key: "X")` in the same subgraph is BOTH:
+Every field annotated with `@openfed__requestScoped(key: "X")` in the same subgraph is BOTH:
 
 - **A reader** — the planner emits a hint so the resolver can inject from L1 and skip the fetch
 - **A writer** — the planner emits an export so the resolver stores the value in L1 after the fetch
@@ -57,7 +57,7 @@ The directive is meaningless without a second reader — there would be no one t
 
 ## When to use it
 
-Use `@requestScoped` when:
+Use `@openfed__requestScoped` when:
 
 - Multiple fields in the same subgraph resolve to a value that depends ONLY on the request context
 - The value is identical across all entities/rows/items within the request
@@ -73,15 +73,15 @@ Typical use cases:
 | Rate limit / quota status | `quotaRemaining` |
 | A/B test bucket | `experimentBucket` |
 
-Do NOT use `@requestScoped` when:
+Do NOT use `@openfed__requestScoped` when:
 
 - The value depends on entity identity (use normal entity resolution)
-- The value changes between requests but should persist (use `@entityCache` / L2)
+- The value changes between requests but should persist (use `@openfed__entityCache` / L2)
 - The field has arguments that affect the value per call (use normal fetch)
 
-## Compared to `@entityCache`
+## Compared to `@openfed__entityCache`
 
-| Concern | `@entityCache` | `@requestScoped` |
+| Concern | `@openfed__entityCache` | `@openfed__requestScoped` |
 |---------|---------------|------------------|
 | Scope | Cross-request | Per-request |
 | Cache layer | L2 (Redis/Ristretto) + L1 | Coordinate L1 only |
@@ -90,7 +90,7 @@ Do NOT use `@requestScoped` when:
 | Purpose | Avoid re-fetching entities across requests | Avoid re-fetching the same request-scoped value within a request |
 
 The two directives are complementary and can be used together.
-A field with `@entityCache` on its return type and `@requestScoped` on the field itself
+A field with `@openfed__entityCache` on its return type and `@openfed__requestScoped` on the field itself
 gets request-scoped deduplication AND cross-request caching.
 
 ## Example: `Personalized` via `@interfaceObject`
@@ -107,11 +107,11 @@ extend schema
     import: ["@key", "@interfaceObject", "@inaccessible"]
   )
 
-directive @requestScoped(key: String!) on FIELD_DEFINITION
+directive @openfed__requestScoped(key: String!) on FIELD_DEFINITION
 
 type Personalized @key(fields: "id") @interfaceObject {
   id: ID!
-  currentViewer: Viewer @inaccessible @requestScoped(key: "currentViewer")
+  currentViewer: Viewer @inaccessible @openfed__requestScoped(key: "currentViewer")
 }
 
 type Viewer @key(fields: "id") {
@@ -121,7 +121,7 @@ type Viewer @key(fields: "id") {
 }
 
 type Query {
-  currentViewer: Viewer @requestScoped(key: "currentViewer")
+  currentViewer: Viewer @openfed__requestScoped(key: "currentViewer")
 }
 ```
 
@@ -147,12 +147,12 @@ For the query:
 }
 ```
 
-Without `@requestScoped`:
+Without `@openfed__requestScoped`:
 `Query.currentViewer` resolves on the viewer subgraph,
 then `Personalized._entities` is called on the viewer subgraph with N articles,
 each returning the same viewer data.
 
-With `@requestScoped`:
+With `@openfed__requestScoped`:
 `Query.currentViewer` populates L1 under `viewer.currentViewer`.
 The `Personalized._entities` batch for N articles is SKIPPED entirely —
 the cached value is injected onto each article's `currentViewer` field.
@@ -171,17 +171,17 @@ the cached value is injected onto each article's `currentViewer` field.
 ┌─────────────────────────────────────────────────────────┐
 │  Coordinate L1 (requestScopedL1, per-request sync.Map)  │
 │  Key: "{subgraphName}.{key}"                             │
-│  Used by: @requestScoped                                 │
+│  Used by: @openfed__requestScoped                                 │
 └─────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────┐
 │  Entity L1 (per-request sync.Map)                       │
 │  Key: `{"__typename":"X","key":{"id":"..."}}`           │
-│  Used by: entity fetch deduplication, @entityCache L1   │
+│  Used by: entity fetch deduplication, @openfed__entityCache L1   │
 └─────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────┐
 │  Entity L2 (cross-request, external — Redis/Ristretto)  │
 │  Key: `{"__typename":"X","key":{"id":"..."}}`           │
-│  Used by: @entityCache                                   │
+│  Used by: @openfed__entityCache                                   │
 └─────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────┐
 │  Subgraph                                                │
@@ -228,7 +228,7 @@ normalization pipeline based on the response plan's `*Object` tree:
 
 ```
 1. Planner walks the response plan and locates the *Object sub-tree for each
-   @requestScoped field. Populates RequestScopedHint.ProvidesData and
+   @openfed__requestScoped field. Populates RequestScopedHint.ProvidesData and
    RequestScopedExport.ProvidesData. Rewrites FieldName/FieldPath to use the
    outer query's alias when aliased.
 
@@ -288,23 +288,23 @@ Both variants coexist in L1 under different sub-field keys.
 ### Error: key missing
 
 ```graphql
-currentViewer: Viewer @requestScoped  # ERROR: missing required arg "key"
+currentViewer: Viewer @openfed__requestScoped  # ERROR: missing required arg "key"
 ```
 
 ### Error: directive repeated
 
 ```graphql
-# @requestScoped is NOT repeatable
-currentViewer: Viewer @requestScoped(key: "a") @requestScoped(key: "b")  # ERROR
+# @openfed__requestScoped is NOT repeatable
+currentViewer: Viewer @openfed__requestScoped(key: "a") @openfed__requestScoped(key: "b")  # ERROR
 ```
 
 ### Warning: single field with key
 
 ```graphql
 type Query {
-  currentViewer: Viewer @requestScoped(key: "lonely")  # WARNING: only one field
+  currentViewer: Viewer @openfed__requestScoped(key: "lonely")  # WARNING: only one field
 }
-# No other field in the subgraph declares @requestScoped(key: "lonely")
+# No other field in the subgraph declares @openfed__requestScoped(key: "lonely")
 # → directive is meaningless, warning emitted
 ```
 
@@ -326,7 +326,7 @@ For debugging / demo purposes, the router supports per-request cache control hea
 - `X-WG-Disable-Entity-Cache-L1: true` → disable L1 only (including coordinate L1)
 - `X-WG-Disable-Entity-Cache-L2: true` → disable L2 only
 
-Disabling L1 via these headers also disables the `@requestScoped` coordinate L1.
+Disabling L1 via these headers also disables the `@openfed__requestScoped` coordinate L1.
 
 The playground's cache mode dropdown ("Caching enabled / L2 only / L1 only / disabled")
 injects these headers transparently.
@@ -345,12 +345,12 @@ independently. That's still O(subgraphs) calls, not O(entities).
 ### Planner integration of aliases is partial
 
 The planner populates `ProvidesData` and rewrites `FieldName`/`FieldPath` to aliases
-for the top-level `@requestScoped` field. Sub-field aliases (e.g., `currentViewer { displayName: name }`)
+for the top-level `@openfed__requestScoped` field. Sub-field aliases (e.g., `currentViewer { displayName: name }`)
 are handled via the unified `*Object` pipeline automatically — nothing extra needed.
 
 ### No value validation on key collisions
 
-If two `@requestScoped` fields in the same subgraph declare the same key but have
+If two `@openfed__requestScoped` fields in the same subgraph declare the same key but have
 incompatible types (e.g., one returns `Viewer`, another returns `String`), composition
 does not currently validate this. At runtime, the widening check would catch the
 mismatch and fall back to running the fetch, but no warning is emitted at composition time.

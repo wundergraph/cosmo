@@ -679,12 +679,12 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 
 	// Entity caching configurations
 	for _, ec := range in.EntityCacheConfigurations {
-		cacheName := l.resolveEntityCacheProviderID(subgraphName, ec.TypeName)
+		cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, ec.TypeName)
 		out.FederationMetaData.EntityCaching = append(out.FederationMetaData.EntityCaching, plan.EntityCacheConfiguration{
 			TypeName:                    ec.TypeName,
 			CacheName:                   cacheName,
 			TTL:                         time.Duration(ec.MaxAgeSeconds) * time.Second,
-			NegativeCacheTTL:            time.Duration(ec.NegativeCacheTtlSeconds) * time.Second,
+			NegativeCacheTTL:            time.Duration(ec.NotFoundCacheTtlSeconds) * time.Second,
 			IncludeSubgraphHeaderPrefix: ec.IncludeHeaders,
 			EnablePartialCacheLoad:      ec.PartialCacheLoad,
 			ShadowMode:                  ec.ShadowMode,
@@ -693,7 +693,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 
 	// Root field cache configurations
 	for _, rfc := range in.RootFieldCacheConfigurations {
-		cacheName := l.resolveEntityCacheProviderID(subgraphName, rfc.EntityTypeName)
+		cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, rfc.EntityTypeName)
 		var mappings []plan.EntityKeyMapping
 		for _, m := range rfc.EntityKeyMappings {
 			var fieldMappings []plan.FieldMapping
@@ -738,7 +738,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 			if cp.MaxAgeSeconds != nil {
 				ttl = time.Duration(*cp.MaxAgeSeconds) * time.Second
 			}
-			cacheName := l.resolveEntityCacheProviderID(subgraphName, targetEntity.TypeName)
+			cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, targetEntity.TypeName)
 			out.FederationMetaData.SubscriptionEntityPopulation = append(
 				out.FederationMetaData.SubscriptionEntityPopulation,
 				plan.SubscriptionEntityPopulationConfiguration{
@@ -768,7 +768,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	// Mutation/subscription cache invalidation
 	for _, ci := range in.CacheInvalidateConfigurations {
 		if ci.OperationType == protoOperationTypeSubscription {
-			cacheName := l.resolveEntityCacheProviderID(subgraphName, ci.EntityTypeName)
+			cacheName := resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, ci.EntityTypeName)
 			var includeHeaders bool
 			for _, ec := range in.EntityCacheConfigurations {
 				if ec.TypeName == ci.EntityTypeName {
@@ -859,10 +859,6 @@ func rootTypeNameForField(rootNodes []*nodev1.TypeField, fieldName string) strin
 		}
 	}
 	return ""
-}
-
-func (l *Loader) resolveEntityCacheProviderID(subgraphName, typeName string) string {
-	return resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, typeName)
 }
 
 func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfiguration) bool {

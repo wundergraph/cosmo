@@ -6,7 +6,7 @@
 ┌─────────────────────────────────────────────────────────────────────┐
 │  cachegraph (port 4012)                                             │
 │                                                                     │
-│  type Article @key(fields: "id") @entityCache(maxAge: 120) {       │
+│  type Article @key(fields: "id") @openfed__entityCache(maxAge: 120) {       │
 │    id: ID!                                                          │
 │    title: String!                                                   │
 │    body: String!                                                    │
@@ -15,17 +15,18 @@
 │  }                                                                  │
 │                                                                     │
 │  type Query {                                                       │
-│    article(id: ID!): Article              @queryCache(maxAge: 120)  │
-│    articles: [Article!]!                  @queryCache(maxAge: 120)  │
-│    articlesByIds(ids: [ID!]!              @queryCache(maxAge: 120)  │
-│      @is(fields: "id")): [Article!]!         ← batch isBatch=true  │
+│    article(id: ID!): Article @openfed__queryCache(maxAge: 120)               │
+│    articles: [Article!]! @openfed__queryCache(maxAge: 120)                   │
+│    articlesByIds(                                                   │
+│      ids: [ID!]! @openfed__is(fields: "id")                                  │
+│    ): [Article!]! @openfed__queryCache(maxAge: 120)   ← batch isBatch=true  │
 │  }                                                                  │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │  cachegraph-ext (port 4013)                                         │
 │                                                                     │
-│  type Article @key(fields: "id") @entityCache(maxAge: 90) {        │
+│  type Article @key(fields: "id") @openfed__entityCache(maxAge: 90) {        │
 │    id: ID!                                                          │
 │    viewCount: Int!                                                  │
 │    rating: Float!                                                   │
@@ -41,7 +42,7 @@
 │  type Personalized @key(fields: "id") @interfaceObject {           │
 │    id: ID!                                                          │
 │    currentViewer: Viewer @inaccessible                              │
-│      @requestScoped(resolveFrom: ["Query.currentViewer"])           │
+│      @openfed__requestScoped(resolveFrom: ["Query.currentViewer"])           │
 │            ↑                                                        │
 │            └── L1 key: "viewer.Personalized.currentViewer"          │
 │                When Query.currentViewer resolves, result is stored   │
@@ -54,7 +55,7 @@
 │  }                                                                  │
 │                                                                     │
 │  type Query {                                                       │
-│    currentViewer: Viewer         ← provides @requestScoped value    │
+│    currentViewer: Viewer         ← provides @openfed__requestScoped value    │
 │  }                                                                  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -106,7 +107,7 @@ Without caching, this would require **7+ subgraph calls**.
                                                            → {viewCount, rating, relatedArticles}
                                                            L2 MISS → stored in L2 (TTL: 90s)
 
-  5      viewer          articles                          ★ SKIPPED! @requestScoped L1 HIT
+  5      viewer          articles                          ★ SKIPPED! @openfed__requestScoped L1 HIT
                                                            ╔═══════════════════════════════════╗
                                                            ║  4 entities need currentViewer    ║
                                                            ║  L1 has it from step 1            ║
@@ -118,7 +119,7 @@ Without caching, this would require **7+ subgraph calls**.
   6      cachegraph      articles.@.relatedArticles        BATCH ENTITY FETCH (8 articles)
                                                            → resolves related article entities
 ═══════════════════════════════════════════════════════════════════════════════════════
-  Total network calls: 5 (would be 6+ without @requestScoped)
+  Total network calls: 5 (would be 6+ without @openfed__requestScoped)
   Total time: ~6ms
 ```
 
@@ -128,7 +129,7 @@ Without caching, this would require **7+ subgraph calls**.
  Step  Subgraph          Path                              What Happens
 ═══════════════════════════════════════════════════════════════════════════════════════
   1   ┌─ viewer          /                                 FETCH Query.currentViewer
-      │                                                    (not cached — viewer has no @entityCache)
+      │                                                    (not cached — viewer has no @openfed__entityCache)
       │                                                    ✦ EXPORT to requestScoped L1
       │
   2   └─ cachegraph      /                                 ★ L2 HIT! (TTL: 120s)
@@ -142,7 +143,7 @@ Without caching, this would require **7+ subgraph calls**.
                                                            all served from entity cache
                                                            → 0ms, no network
 
-  5      viewer          articles                          ★ SKIPPED! @requestScoped L1 HIT
+  5      viewer          articles                          ★ SKIPPED! @openfed__requestScoped L1 HIT
                                                            (same as request 1)
 
   6      cachegraph      articles.@.relatedArticles        ★ L2 HIT! (TTL: 120s)
@@ -166,7 +167,7 @@ Without caching, this would require **7+ subgraph calls**.
 │                    COSMO ROUTER                                     │
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  @requestScoped Coordinate L1    (per-request, in-memory)   │   │
+│  │  @openfed__requestScoped Coordinate L1    (per-request, in-memory)   │   │
 │  │                                                             │   │
 │  │  "viewer.Personalized.currentViewer"                        │   │
 │  │     → {id:"v0", name:"Anonymous", email:"..."}              │   │
@@ -204,7 +205,7 @@ Without caching, this would require **7+ subgraph calls**.
 │  │  Query.articles → [{id:1},{id:2},{id:3},{id:4}]             │   │
 │  │                                                             │   │
 │  │  ✦ Populated after successful subgraph calls                │   │
-│  │  ✦ Per-entity TTL from @entityCache(maxAge:)                │   │
+│  │  ✦ Per-entity TTL from @openfed__entityCache(maxAge:)                │   │
 │  │  ✦ Normalized field names for query-independent reuse       │   │
 │  │  ✦ Validated before serving (missing fields → re-fetch)     │   │
 │  └─────────────────────────────────────────────────────────────┘   │
@@ -230,11 +231,11 @@ Without caching, this would require **7+ subgraph calls**.
                           ─────────────────        ─────────────────────
 
   Request 1 (cold)        7 subgraph calls         5 calls (viewer entity SKIPPED
-                                                      via @requestScoped)
+                                                      via @openfed__requestScoped)
 
   Request 2 (warm)        7 subgraph calls         2 calls (L2 serves articles,
                                                       extensions, related articles;
-                                                      @requestScoped skips viewer)
+                                                      @openfed__requestScoped skips viewer)
 
   Request 3+              7 subgraph calls         2 calls (same as R2 until
                                                       TTL expires)
@@ -247,12 +248,12 @@ Without caching, this would require **7+ subgraph calls**.
 
 | Directive | Placement | Purpose |
 |-----------|-----------|---------|
-| `@entityCache(maxAge: Int!)` | `OBJECT` | Marks entity type as cacheable with TTL |
-| `@queryCache(maxAge: Int!)` | `FIELD_DEFINITION` | Enables L2 cache reads for Query fields |
-| `@is(fields: String!)` | `ARGUMENT_DEFINITION` | Maps argument to @key field for cache key |
-| `@cacheInvalidate` | `FIELD_DEFINITION` | Evicts entity from cache (Mutation/Subscription) |
-| `@cachePopulate(maxAge?: Int)` | `FIELD_DEFINITION` | Writes to cache (Mutation/Subscription) |
-| `@requestScoped(resolveFrom: [String!], key: String)` | `FIELD_DEFINITION` | Eliminates redundant entity fetches via per-request L1 |
+| `@openfed__entityCache(maxAge: Int!)` | `OBJECT` | Marks entity type as cacheable with TTL |
+| `@openfed__queryCache(maxAge: Int!)` | `FIELD_DEFINITION` | Enables L2 cache reads for Query fields |
+| `@openfed__is(fields: String!)` | `ARGUMENT_DEFINITION` | Maps argument to @key field for cache key |
+| `@openfed__cacheInvalidate` | `FIELD_DEFINITION` | Evicts entity from cache (Mutation/Subscription) |
+| `@openfed__cachePopulate(maxAge?: Int)` | `FIELD_DEFINITION` | Writes to cache (Mutation/Subscription) |
+| `@openfed__requestScoped(resolveFrom: [String!], key: String)` | `FIELD_DEFINITION` | Eliminates redundant entity fetches via per-request L1 |
 
 ## Key Mapping Examples
 
@@ -265,12 +266,12 @@ Without caching, this would require **7+ subgraph calls**.
                                             (auto-mapped by name)
 
  @key(fields: "id")                         entityKeyField: "id"
- article(pid: ID! @is(fields: "id"))        argumentPath: ["pid"]
-                                            (explicit @is mapping)
+ article(pid: ID! @openfed__is(fields: "id"))        argumentPath: ["pid"]
+                                            (explicit @openfed__is mapping)
 
  @key(fields: "sellerId sku")               entityKeyField: "sellerId"
  listing(key: ListingKeyInput!              argumentPath: ["key","sellerId"]
-   @is(fields: "sellerId sku"))             entityKeyField: "sku"
+   @openfed__is(fields: "sellerId sku"))             entityKeyField: "sku"
                                             argumentPath: ["key","sku"]
                                             (input object decomposition)
 
@@ -279,7 +280,7 @@ Without caching, this would require **7+ subgraph calls**.
                                             (nested key + nested input)
 
  articlesByIds(ids: [ID!]!                  entityKeyField: "id"
-   @is(fields: "id")): [Article!]!         argumentPath: ["ids"]
+   @openfed__is(fields: "id")): [Article!]!         argumentPath: ["ids"]
                                             isBatch: true
                                             (batch per-element cache keys)
 ```

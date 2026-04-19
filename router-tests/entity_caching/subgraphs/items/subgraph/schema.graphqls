@@ -4,41 +4,41 @@ extend schema
     import: ["@key"]
   )
 
-directive @entityCache(
+directive @openfed__entityCache(
   maxAge: Int!
   includeHeaders: Boolean = false
   partialCacheLoad: Boolean = false
   shadowMode: Boolean = false
 ) on OBJECT
 
-directive @queryCache(
+directive @openfed__queryCache(
   maxAge: Int!
   includeHeaders: Boolean = false
   shadowMode: Boolean = false
 ) on FIELD_DEFINITION
 
-directive @cacheInvalidate on FIELD_DEFINITION
+directive @openfed__cacheInvalidate on FIELD_DEFINITION
 
-directive @cachePopulate(maxAge: Int) on FIELD_DEFINITION
+directive @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
 
-directive @is(fields: String!) on ARGUMENT_DEFINITION
+directive @openfed__is(fields: String!) on ARGUMENT_DEFINITION
 
 type Query {
-  item(id: ID!): Item @queryCache(maxAge: 300)
-  itemByPid(pid: ID! @is(fields: "id")): Item @queryCache(maxAge: 300)
-  items: [Item!]! @queryCache(maxAge: 300)
-  itemsByIds(ids: [ID!]! @is(fields: "id")): [Item!]! @queryCache(maxAge: 300)
-  product(id: ID!, region: String!): Product @queryCache(maxAge: 300)
-  productBySku(sku: String!): Product @queryCache(maxAge: 300)
-  productByName(name: String!): Product @queryCache(maxAge: 300)
-  productByKey(key: ProductKeyInput! @is(fields: "id region")): Product @queryCache(maxAge: 300)
-  warehouse(locationId: ID! @is(fields: "location.id")): Warehouse @queryCache(maxAge: 300)
+  item(id: ID!): Item @openfed__queryCache(maxAge: 300)
+  itemByPid(pid: ID! @openfed__is(fields: "id")): Item @openfed__queryCache(maxAge: 300)
+  items: [Item!]! @openfed__queryCache(maxAge: 300)
+  itemsByIds(ids: [ID!]! @openfed__is(fields: "id")): [Item!]! @openfed__queryCache(maxAge: 300)
+  product(id: ID!, region: String!): Product @openfed__queryCache(maxAge: 300)
+  productBySku(sku: String!): Product @openfed__queryCache(maxAge: 300)
+  productByName(name: String!): Product @openfed__queryCache(maxAge: 300)
+  productByKey(key: ProductKeyInput! @openfed__is(fields: "id region")): Product @openfed__queryCache(maxAge: 300)
+  warehouse(locationId: ID! @openfed__is(fields: "location.id")): Warehouse @openfed__queryCache(maxAge: 300)
   # warehouseByInput exercises the same nested @key as `warehouse` but reaches it
-  # via an input object using GraphQL selection syntax in @is. This produces the
+  # via an input object using GraphQL selection syntax in @openfed__is. This produces the
   # multi-hop argumentPath ["input","location","id"] instead of the scalar
   # ["locationId"]. Captures the red state where input-object → nested-key
   # cache writes don't persist (cache lookup uses correct key but never hits).
-  warehouseByInput(input: WarehouseLocationInput! @is(fields: "location { id }")): Warehouse @queryCache(maxAge: 300)
+  warehouseByInput(input: WarehouseLocationInput! @openfed__is(fields: "location { id }")): Warehouse @openfed__queryCache(maxAge: 300)
 }
 
 input ProductKeyInput {
@@ -55,27 +55,27 @@ input WarehouseLocationKeyInput {
 }
 
 type Mutation {
-  updateItem(id: ID!, name: String!): Item @cacheInvalidate
-  deleteItem(id: ID!): Item @cacheInvalidate
-  createItem(name: String!, category: String!): Item! @cachePopulate(maxAge: 60)
+  updateItem(id: ID!, name: String!): Item @openfed__cacheInvalidate
+  deleteItem(id: ID!): Item @openfed__cacheInvalidate
+  createItem(name: String!, category: String!): Item! @openfed__cachePopulate(maxAge: 60)
   # deleteProduct invalidates a composite-key entity (Product @key("id region")).
   # Used to pin behavior for cache invalidation when the entity uses a composite
   # @key — a separate code path from the simple id-only key in deleteItem.
-  deleteProduct(id: ID!, region: String!): Product @cacheInvalidate
+  deleteProduct(id: ID!, region: String!): Product @openfed__cacheInvalidate
 }
 
 type Subscription {
-  itemUpdated: Item @cacheInvalidate
-  itemCreated: Item @cachePopulate
+  itemUpdated: Item @openfed__cacheInvalidate
+  itemCreated: Item @openfed__cachePopulate
 }
 
-type Item @key(fields: "id") @entityCache(maxAge: 300) {
+type Item @key(fields: "id") @openfed__entityCache(maxAge: 300) {
   id: ID!
   name: String!
   category: String!
 }
 
-type Product @key(fields: "id region") @key(fields: "sku") @entityCache(maxAge: 300) {
+type Product @key(fields: "id region") @key(fields: "sku") @openfed__entityCache(maxAge: 300) {
   id: ID!
   region: String!
   sku: String!
@@ -86,7 +86,7 @@ type Location {
   id: ID!
 }
 
-type Warehouse @key(fields: "location { id }") @entityCache(maxAge: 300) {
+type Warehouse @key(fields: "location { id }") @openfed__entityCache(maxAge: 300) {
   location: Location!
   name: String!
 }

@@ -167,6 +167,7 @@
               },
               "max_size": {
                 "type": "string",
+                "format": "bytes-string",
                 "description": "Maximum cache size. Supports human-readable byte strings (e.g., '100MB', '1GB'). Default: 100MB.",
                 "default": "100MB"
               }

@@ -1329,13 +1329,17 @@ func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, er
 	caches := make(map[string]resolve.LoaderCache)
 	l2Cfg := r.entityCachingConfig.L2
 
-	// Build default cache from l2.storage.provider_id
+	// Build default cache from l2.storage.provider_id. Store it under both the
+	// literal "default" key (used when no override matches) and under its real
+	// provider_id so an override that redirects to the same backend reuses the
+	// same instance instead of allocating a second one.
 	if l2Cfg.Storage.ProviderID != "" {
 		cache, err := r.buildSingleEntityCache(l2Cfg.Storage.ProviderID, l2Cfg)
 		if err != nil {
 			return nil, fmt.Errorf("entity caching default provider: %w", err)
 		}
 		caches["default"] = cache
+		caches[l2Cfg.Storage.ProviderID] = cache
 	}
 
 	// Build per-subgraph/entity caches from subgraph_cache_overrides
@@ -1352,6 +1356,8 @@ func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, er
 		}
 		for providerID, context := range providerIDs {
 			if _, exists := caches[providerID]; exists {
+				// Already built (either as the default cache's provider alias
+				// or from an earlier override); reuse the same instance.
 				continue
 			}
 			cache, err := r.buildSingleEntityCache(providerID, l2Cfg)
@@ -1376,7 +1382,7 @@ func (r *Router) buildSingleEntityCache(providerID string, l2Cfg config.EntityCa
 		}
 		cache = mc
 	} else {
-		client, err := r.findRedisClient(providerID)
+		client, err := r.buildRedisClient(providerID)
 		if err != nil {
 			return nil, err
 		}
@@ -1392,7 +1398,7 @@ func (r *Router) buildSingleEntityCache(providerID string, l2Cfg config.EntityCa
 	return cache, nil
 }
 
-func (r *Router) findRedisClient(providerID string) (rd.RDCloser, error) {
+func (r *Router) buildRedisClient(providerID string) (rd.RDCloser, error) {
 	for _, provider := range r.storageProviders.Redis {
 		if provider.ID == providerID {
 			return rd.NewRedisCloser(&rd.RedisCloserOptions{

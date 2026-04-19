@@ -480,7 +480,7 @@ export function normalizeSubgraph({
 
 export class NormalizationFactory {
   argumentName = '';
-  authorizationDataByParentTypeName = new Map<string, AuthorizationData>();
+  authorizationDataByParentTypeName = new Map<TypeName, AuthorizationData>();
   concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
   conditionalFieldDataByCoords = new Map<string, ConditionalFieldData>();
   configurationDataByTypeName = new Map<TypeName, ConfigurationData>();
@@ -497,15 +497,15 @@ export class NormalizationFactory {
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
   // Populated in Phase 1 of validateAndExtractEntityCachingConfigs().
-  // Used as a lookup in Phase 2 to verify that @queryCache/@cacheInvalidate/@cachePopulate
+  // Used as a lookup in Phase 2 to verify that @openfed__queryCache/@openfed__cacheInvalidate/@openfed__cachePopulate
   // fields return entity types that have opted into caching.
   entityCacheConfigByTypeName = new Map<
     TypeName,
     { maxAgeSeconds: number; includeHeaders: boolean; partialCacheLoad: boolean; shadowMode: boolean }
   >();
   errors = new Array<Error>();
-  entityDataByTypeName = new Map<string, EntityData>();
-  entityInterfaceDataByTypeName = new Map<string, EntityInterfaceSubgraphData>();
+  entityDataByTypeName = new Map<TypeName, EntityData>();
+  entityInterfaceDataByTypeName = new Map<TypeName, EntityInterfaceSubgraphData>();
   eventsConfigurations = new Map<string, EventConfiguration[]>();
   fieldSetDataByTypeName = new Map<string, FieldSetData>();
   internalGraph: Graph;
@@ -3531,7 +3531,7 @@ export class NormalizationFactory {
   }
 
   extractRequestScopedFields() {
-    // Gather fields annotated with @requestScoped across all types in this subgraph.
+    // Gather fields annotated with @openfed__requestScoped across all types in this subgraph.
     // A field is both a reader and writer of the coordinate L1 — no receiver/provider.
     // Fields with the same `key` share the same L1 entry: whichever is resolved first
     // populates it, subsequent ones inject from it.
@@ -3542,8 +3542,8 @@ export class NormalizationFactory {
       key: string;
       l1Key: string;
     };
-    const collected: Collected[] = [];
-    const keyToCoordsList = new Map<string, string[]>();
+    const collected: Array<Collected> = [];
+    const keyToCoordsList = new Map<string, Array<string>>();
 
     for (const [, parentData] of this.parentDefinitionDataByTypeName) {
       if (
@@ -3588,7 +3588,7 @@ export class NormalizationFactory {
       return;
     }
 
-    // Warn when a key is used on only one field — @requestScoped is meaningless
+    // Warn when a key is used on only one field — @openfed__requestScoped is meaningless
     // unless ≥ 2 fields share the key (there'd be no second reader to benefit).
     for (const [key, coordsList] of keyToCoordsList) {
       if (coordsList.length < 2) {
@@ -3603,7 +3603,7 @@ export class NormalizationFactory {
     }
 
     // Group by type and attach to configurationData.
-    const byType = new Map<string, RequestScopedFieldConfig[]>();
+    const byType = new Map<string, Array<RequestScopedFieldConfig>>();
     for (const c of collected) {
       const list = byType.get(c.typeName) ?? [];
       list.push({
@@ -3653,7 +3653,7 @@ export class NormalizationFactory {
   // Returns the ConfigurationData entry for a type, creating it if missing.
   // Cache attachment must never silently drop — if the entry doesn't exist yet it's because
   // the type contributes nothing else to the router config (e.g., a Mutation type with only
-  // a single @cacheInvalidate field). Creating it on demand is the same pattern used by
+  // a single @openfed__cacheInvalidate field). Creating it on demand is the same pattern used by
   // addValidKeyFieldSetConfigurations and extractRequestScopedFields.
   private getCacheConfigurationData(typeName: string, isEntity: boolean): ConfigurationData {
     return getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
@@ -3669,18 +3669,18 @@ export class NormalizationFactory {
    *
    * Five directives work together to control caching behavior:
    *
-   *   @entityCache(maxAge: Int!)       — on OBJECT types: marks an entity type as cacheable
-   *   @queryCache(maxAge: Int!)        — on Query fields: enables cache reads for a query that returns a cached entity
-   *   @cacheInvalidate                 — on Mutation/Subscription fields: evicts the returned entity from cache
-   *   @cachePopulate(maxAge: Int)      — on Mutation/Subscription fields: writes the returned entity into cache
-   *   @is(fields: String!)             — on arguments: maps a query argument to an entity @key field for cache key construction
+   *   @openfed__entityCache(maxAge: Int!)       — on OBJECT types: marks an entity type as cacheable
+   *   @openfed__queryCache(maxAge: Int!)        — on Query fields: enables cache reads for a query that returns a cached entity
+   *   @openfed__cacheInvalidate                 — on Mutation/Subscription fields: evicts the returned entity from cache
+   *   @openfed__cachePopulate(maxAge: Int)      — on Mutation/Subscription fields: writes the returned entity into cache
+   *   @openfed__is(fields: String!)             — on arguments: maps a query argument to an entity @key field for cache key construction
    *
    * Validation behavior is encoded in the entity-caching test suite:
    * `tests/v1/directives/entity-caching.test.ts` and
    * `tests/v1/directives/entity-cache-mapping-rules.test.ts`.
    *
-   * @entityCache must be extracted first because the root-field directives validate that the
-   * return entity type has @entityCache via the entityCacheConfigByTypeName lookup.
+   * @openfed__entityCache must be extracted first because the root-field directives validate that the
+   * return entity type has @openfed__entityCache via the entityCacheConfigByTypeName lookup.
    *
    * All ConfigurationData attachments are keyed by the renamed root type name from the iteration
    * (e.g., "MyQuery" when the schema declares `schema { query: MyQuery }`) — never by the literal
@@ -3791,7 +3791,7 @@ export class NormalizationFactory {
       );
       return;
     }
-    // Return entity without @entityCache — still emit root-field config but skip entity key mappings.
+    // Return entity without @openfed__entityCache — still emit root-field config but skip entity key mappings.
     const hasEntityCache = this.entityCacheConfigByTypeName.has(returnTypeName);
     const queryCacheDirective = fieldData.directivesByName.get(QUERY_CACHE)![0];
     const maxAgeSeconds = this.extractCacheIntArg(queryCacheDirective, MAX_AGE) ?? 0;
@@ -3808,7 +3808,7 @@ export class NormalizationFactory {
 
     let mappings: EntityKeyMappingConfig[] = [];
     if (hasEntityCache) {
-      const isListReturn = this.isListType(fieldData.node.type);
+      const isListReturn = isTypeNodeListType(fieldData.node.type);
       const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
       mappings = this.buildArgumentKeyMappings(
         fieldData,
@@ -3898,8 +3898,8 @@ export class NormalizationFactory {
       );
       return;
     }
-    // maxAge is optional for @cachePopulate; when absent the router falls back to the entity's
-    // @entityCache TTL. When provided, it must be positive.
+    // maxAge is optional for @openfed__cachePopulate; when absent the router falls back to the entity's
+    // @openfed__entityCache TTL. When provided, it must be positive.
     const cachePopulateDirective = fieldData.directivesByName.get(CACHE_POPULATE)![0];
     const maxAgeRaw = this.extractCacheIntArg(cachePopulateDirective, MAX_AGE);
     let maxAgeSeconds: number | undefined;
@@ -3926,8 +3926,8 @@ export class NormalizationFactory {
     });
   }
 
-  // Enforces the top-level placement rule for @is: the field must also declare @queryCache.
-  // Deeper @is validation (path resolution, composite decomposition, type checking) lives in
+  // Enforces the top-level placement rule for @openfed__is: the field must also declare @openfed__queryCache.
+  // Deeper @openfed__is validation (path resolution, composite decomposition, type checking) lives in
   // buildArgumentKeyMappings.
   validateIsDirectivePlacement(fieldCoords: string, fieldData: FieldData, hasQueryCache: boolean) {
     if (hasQueryCache) {
@@ -3943,19 +3943,6 @@ export class NormalizationFactory {
         ]),
       );
     }
-  }
-
-  // Recursively unwraps NonNullType wrappers to check if the underlying type is a list.
-  // Used to determine whether a @queryCache field returns a single entity (cache-readable)
-  // or a list (cache writes only, no key-based lookups).
-  isListType(typeNode: TypeNode): boolean {
-    if (typeNode.kind === Kind.LIST_TYPE) {
-      return true;
-    }
-    if (typeNode.kind === Kind.NON_NULL_TYPE) {
-      return this.isListType(typeNode.type);
-    }
-    return false;
   }
 
   // Extracts key field info from a key's DocumentNode AST.
@@ -4015,17 +4002,6 @@ export class NormalizationFactory {
     return this.getNamedTypeName(typeNode.type);
   }
 
-  // Checks if a type is a list (unwrapping NonNull).
-  isListTypeNode(typeNode: TypeNode): boolean {
-    if (typeNode.kind === Kind.LIST_TYPE) {
-      return true;
-    }
-    if (typeNode.kind === Kind.NON_NULL_TYPE) {
-      return this.isListTypeNode(typeNode.type);
-    }
-    return false;
-  }
-
   // Unwraps one layer of list: [T!]! -> T!, [[T!]!]! -> [T!]!
   unwrapListType(typeNode: TypeNode): TypeNode {
     if (typeNode.kind === Kind.LIST_TYPE) {
@@ -4048,12 +4024,12 @@ export class NormalizationFactory {
 
   // Check if both types have matching list structure.
   listStructureMatches(a: TypeNode, b: TypeNode): boolean {
-    const aIsList = this.isListTypeNode(a);
-    const bIsList = this.isListTypeNode(b);
+    const aIsList = isTypeNodeListType(a);
+    const bIsList = isTypeNodeListType(b);
     return aIsList === bIsList;
   }
 
-  // Get @is field value from an argument's directives.
+  // Get @openfed__is field value from an argument's directives.
   getIsFieldValue(argumentData: InputValueData): string | undefined {
     const isDirectives = argumentData.directivesByName.get(IS);
     if (!isDirectives || isDirectives.length < 1) {
@@ -4210,7 +4186,7 @@ export class NormalizationFactory {
     type ArgumentInfo = {
       name: string;
       data: InputValueData;
-      isFieldValue: string | undefined; // @is(fields: "...") value
+      isFieldValue: string | undefined; // @openfed__is(fields: "...") value
       isList: boolean;
       typeNode: TypeNode;
     };
@@ -4221,7 +4197,7 @@ export class NormalizationFactory {
         name: argumentName,
         data: argumentData,
         isFieldValue: this.getIsFieldValue(argumentData),
-        isList: this.isListTypeNode(argumentData.type),
+        isList: isTypeNodeListType(argumentData.type),
         typeNode: argumentData.type,
       });
     }
@@ -4255,7 +4231,7 @@ export class NormalizationFactory {
       typeNode: TypeNode;
     }>,
   ): EntityKeyMappingConfig[] {
-    // Collect all @is field values and their infos across ALL keys
+    // Collect all @openfed__is field values and their infos across ALL keys
     const allKeyFieldInfosByKey = new Map<string, Array<{ path: string; typeNode: TypeNode }>>();
     // Build a set of ALL key field paths across all keys
     const allKeyFieldPaths = new Set<string>();
@@ -4279,7 +4255,7 @@ export class NormalizationFactory {
       }
     }
 
-    // Process each argument with @is
+    // Process each argument with @openfed__is
     const explicitMappings: Array<{ argumentName: string; isFieldValue: string; argumentInfo: typeof argumentInfos[0] }> = [];
     const mappedKeyFields = new Set<string>();
 
@@ -4290,7 +4266,7 @@ export class NormalizationFactory {
 
       const isFieldValue = argInfo.isFieldValue;
 
-      // Check if @is targets multiple fields (composite key via input object)
+      // Check if @openfed__is targets multiple fields (composite key via input object)
       const isCompositeIsSpec = isFieldValue.includes(LITERAL_SPACE);
 
       if (isCompositeIsSpec) {
@@ -4335,7 +4311,7 @@ export class NormalizationFactory {
       // Type checking
       if (isListReturn) {
         // Batch mode
-        if (this.isListTypeNode(keyFieldTypeNode)) {
+        if (isTypeNodeListType(keyFieldTypeNode)) {
           // Key field is a list - need list-of-lists argument
           if (!argInfo.isList) {
             // Scalar arg to list key in batch
@@ -4351,7 +4327,7 @@ export class NormalizationFactory {
           }
           // List arg but is it list-of-lists?
           const unwrapped = this.unwrapListType(argTypeNode);
-          if (!this.isListTypeNode(unwrapped)) {
+          if (!isTypeNodeListType(unwrapped)) {
             // Single list, not list of lists
             this.errors.push(
               invalidDirectiveError(IS, `${fieldCoords}(${argInfo.name}: ...)`, FIRST_ORDINAL, [
@@ -4393,13 +4369,13 @@ export class NormalizationFactory {
               return [];
             }
           } else {
-            // Scalar arg in batch mode - could still be valid as a scalar @is, we'll check later
+            // Scalar arg in batch mode - could still be valid as a scalar @openfed__is, we'll check later
           }
         }
       } else {
         // Singular mode
         const argIsList = argInfo.isList;
-        const keyIsList = this.isListTypeNode(keyFieldTypeNode);
+        const keyIsList = isTypeNodeListType(keyFieldTypeNode);
 
         if (argIsList && !keyIsList) {
           // List arg to scalar key on singular return
@@ -4452,7 +4428,7 @@ export class NormalizationFactory {
     // Check for duplicate: argument name matches a key field that's already explicitly mapped
     for (const argInfo of argumentInfos) {
       if (argInfo.isFieldValue) {
-        continue; // Skip @is arguments
+        continue; // Skip @openfed__is arguments
       }
       if (mappedKeyFields.has(argInfo.name)) {
         // This argument would auto-map to a key field that's already explicitly mapped
@@ -4467,7 +4443,7 @@ export class NormalizationFactory {
 
     // Check for batch mode: all explicit mappings on list return
     if (isListReturn) {
-      // Check for extra non-key arguments FIRST (not @is and not a key field in any key)
+      // Check for extra non-key arguments FIRST (not @openfed__is and not a key field in any key)
       const extraArgs = argumentInfos.filter(a => !a.isFieldValue && !allKeyFieldPaths.has(a.name));
       if (extraArgs.length > 0) {
         const firstExplicit = explicitMappings[0];
@@ -4504,7 +4480,7 @@ export class NormalizationFactory {
       }
     }
 
-    // Check for extra non-key arguments globally (args not @is and not a key field in any key)
+    // Check for extra non-key arguments globally (args not @openfed__is and not a key field in any key)
     const globalExtraArgs = argumentInfos.filter(a => !a.isFieldValue && !allKeyFieldPaths.has(a.name));
     if (globalExtraArgs.length > 0) {
       if (!isListReturn) {
@@ -4575,7 +4551,7 @@ export class NormalizationFactory {
         // Try auto-mapping
         const autoMapped = argumentInfos.find(a => !a.isFieldValue && a.name === info.path);
         if (autoMapped && this.namedTypesMatch(autoMapped.typeNode, info.typeNode) &&
-            this.isListTypeNode(autoMapped.typeNode) === this.isListTypeNode(info.typeNode)) {
+            isTypeNodeListType(autoMapped.typeNode) === isTypeNodeListType(info.typeNode)) {
           autoMappedForKey.push({ argumentName: autoMapped.name, keyPath: info.path, argInfo: autoMapped });
         } else {
           unmappedFields.push(info.path);
@@ -4758,9 +4734,10 @@ export class NormalizationFactory {
               typeNode: info.typeNode,
             }));
 
+            const isBatch = isListReturn && matchingArg.isList;
             const fieldMappings = this.validateNestedInputObjectMapping(
               matchingArg.name, fieldCoords, entityTypeName, nestedInfos, normalizedFieldSet,
-              argTypeName, [matchingArg.name], false, true, topFieldName,
+              argTypeName, [matchingArg.name], isBatch, true, topFieldName,
             );
 
             if (fieldMappings) {
@@ -4771,11 +4748,6 @@ export class NormalizationFactory {
           }
         }
       }
-    }
-
-    // If we already got results from nested mapping, return them
-    if (results.length > 0) {
-      return results;
     }
 
     // Per-key independent evaluation for flat keys
@@ -4805,7 +4777,7 @@ export class NormalizationFactory {
         const argTypeNode = matchingArg.typeNode;
         const keyTypeNode = keyInfo.typeNode;
         const argIsList = matchingArg.isList;
-        const keyIsList = this.isListTypeNode(keyTypeNode);
+        const keyIsList = isTypeNodeListType(keyTypeNode);
 
         if (!this.namedTypesMatch(argTypeNode, keyTypeNode) || (argIsList !== keyIsList && !isListReturn)) {
           if (!typeMismatchWarningEmitted) {
@@ -5509,7 +5481,7 @@ export class NormalizationFactory {
     this.addValidConditionalFieldSetConfigurations();
     // this is where @key configurations are added to the ConfigurationData
     this.addValidKeyFieldSetConfigurations();
-    // this is where @requestScoped configurations are added to the ConfigurationData
+    // this is where @openfed__requestScoped configurations are added to the ConfigurationData
     this.extractRequestScopedFields();
     // Extract and validate entity caching directives
     this.validateAndExtractEntityCachingConfigs();

@@ -24,6 +24,7 @@ import {
   RootFieldCacheConfig,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
+  subgraphValidationError,
   SUBSCRIPTION,
   TypeName,
   cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
@@ -52,8 +53,13 @@ function subgraph(sdl: string, name = 'subgraph-a'): Subgraph {
 
 // Helper: runs batchNormalize and returns the ConfigurationData for a given type.
 // Used by config-extraction tests that need to inspect the generated router configuration.
+// Pins ROUTER_COMPATIBILITY_VERSION_ONE explicitly — relying on the default masks breakage
+// when the default changes in the future.
 function getConfigForType(sg: Subgraph, typeName: string) {
-  const result = batchNormalize({ subgraphs: [sg], version }) as BatchNormalizationSuccess;
+  const result = batchNormalize({
+    subgraphs: [sg],
+    version: ROUTER_COMPATIBILITY_VERSION_ONE,
+  }) as BatchNormalizationSuccess;
   expect(result.success).toBe(true);
   const internal = result.internalSubgraphBySubgraphName.get(sg.name);
   expect(internal).toBeDefined();
@@ -61,17 +67,17 @@ function getConfigForType(sg: Subgraph, typeName: string) {
 }
 
 describe('Entity caching directive tests', () => {
-  // ─── @entityCache ─────────────────────────────────────────────────────────────
-  // @entityCache marks an entity type as cacheable. It requires @key (so the router
+  // ─── @openfed__entityCache ─────────────────────────────────────────────────────────────
+  // @openfed__entityCache marks an entity type as cacheable. It requires @key (so the router
   // can construct cache keys) and a positive maxAge (TTL in seconds).
 
-  describe('@entityCache', () => {
-    test('error: @entityCache without @key — the router needs @key fields to construct cache keys', () => {
+  describe('@openfed__entityCache', () => {
+    test('error: @openfed__entityCache without @key — the router needs @key fields to construct cache keys', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query { product(id: ID!): Product }
-          # Product has @entityCache but no @key — there's no cache key to use
-          type Product @entityCache(maxAge: 60) {
+          # Product has @openfed__entityCache but no @key — there's no cache key to use
+          type Product @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -88,7 +94,7 @@ describe('Entity caching directive tests', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query { product(id: ID!): Product }
-          type Product @key(fields: "id") @entityCache(maxAge: 0) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 0) {
             id: ID!
             name: String!
           }
@@ -107,7 +113,7 @@ describe('Entity caching directive tests', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query { product(id: ID!): Product }
-          type Product @key(fields: "id") @entityCache(maxAge: -5) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: -5) {
             id: ID!
             name: String!
           }
@@ -122,11 +128,11 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('success: valid @entityCache with @key normalizes without errors', () => {
+    test('success: valid @openfed__entityCache with @key normalizes without errors', () => {
       const { schema } = normalizeSubgraphSuccess(
         subgraph(`
           type Query { product(id: ID!): Product }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -136,12 +142,12 @@ describe('Entity caching directive tests', () => {
       expect(schema).toBeDefined();
     });
 
-    test('config: @entityCache with defaults produces correct EntityCacheConfig', () => {
+    test('config: @openfed__entityCache with defaults produces correct EntityCacheConfig', () => {
       // Only maxAge is required; includeHeaders, partialCacheLoad, shadowMode default to false
       const config = getConfigForType(
         subgraph(`
           type Query { product(id: ID!): Product }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -160,14 +166,14 @@ describe('Entity caching directive tests', () => {
       ] satisfies EntityCacheConfig[]);
     });
 
-    test('config: @entityCache with all options enabled', () => {
+    test('config: @openfed__entityCache with all options enabled', () => {
       // includeHeaders: cache key includes request headers (user-specific caching)
       // partialCacheLoad: fetch only missing entities from subgraph on partial cache hit
       // shadowMode: cache reads/writes happen but responses always come from subgraph
       const config = getConfigForType(
         subgraph(`
           type Query { product(id: ID!): Product }
-          type Product @key(fields: "id") @entityCache(maxAge: 120, includeHeaders: true, partialCacheLoad: true, shadowMode: true) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 120, includeHeaders: true, partialCacheLoad: true, shadowMode: true) {
             id: ID!
             name: String!
           }
@@ -187,20 +193,20 @@ describe('Entity caching directive tests', () => {
     });
   });
 
-  // ─── @queryCache ──────────────────────────────────────────────────────────────
-  // @queryCache on a Query field tells the router to serve the returned entity from cache.
-  // The return type must be an entity with @entityCache. Query arguments are mapped to
-  // @key fields (automatically by name, or explicitly via @is) to construct cache keys.
+  // ─── @openfed__queryCache ──────────────────────────────────────────────────────────────
+  // @openfed__queryCache on a Query field tells the router to serve the returned entity from cache.
+  // The return type must be an entity with @openfed__entityCache. Query arguments are mapped to
+  // @key fields (automatically by name, or explicitly via @openfed__is) to construct cache keys.
 
-  describe('@queryCache', () => {
-    test('error: @queryCache on a Mutation field — only Query fields support cache reads', () => {
+  describe('@openfed__queryCache', () => {
+    test('error: @openfed__queryCache on a Mutation field — only Query fields support cache reads', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            updateProduct(id: ID!): Product @queryCache(maxAge: 60)
+            updateProduct(id: ID!): Product @openfed__queryCache(maxAge: 60)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -219,7 +225,7 @@ describe('Entity caching directive tests', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query {
-            product(id: ID!): Product @queryCache(maxAge: 60)
+            product(id: ID!): Product @openfed__queryCache(maxAge: 60)
           }
           # Product has no @key — it's not an entity, so there's no cache key
           type Product {
@@ -237,11 +243,11 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('success: return entity can omit @entityCache and still keep root-field caching without mappings', () => {
+    test('success: return entity can omit @openfed__entityCache and still keep root-field caching without mappings', () => {
       const config = getConfigForType(
         subgraph(`
           type Query {
-            product(id: ID!): Product @queryCache(maxAge: 60)
+            product(id: ID!): Product @openfed__queryCache(maxAge: 60)
           }
           type Product @key(fields: "id") {
             id: ID!
@@ -267,9 +273,9 @@ describe('Entity caching directive tests', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query {
-            product(id: ID!): Product @queryCache(maxAge: 0)
+            product(id: ID!): Product @openfed__queryCache(maxAge: 0)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -289,9 +295,9 @@ describe('Entity caching directive tests', () => {
       const { warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
-            product(name: String!): Product @queryCache(maxAge: 30)
+            product(name: String!): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -307,9 +313,9 @@ describe('Entity caching directive tests', () => {
       const { warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
-            products: [Product] @queryCache(maxAge: 30)
+            products: [Product] @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -319,14 +325,14 @@ describe('Entity caching directive tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('success: argument name matches @key field — auto-mapped without @is', () => {
+    test('success: argument name matches @key field — auto-mapped without @openfed__is', () => {
       // The "id" argument automatically maps to the @key(fields: "id") field
       const { schema, warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
-            product(id: ID!): Product @queryCache(maxAge: 30)
+            product(id: ID!): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -342,9 +348,9 @@ describe('Entity caching directive tests', () => {
       const config = getConfigForType(
         subgraph(`
           type Query {
-            product(id: ID!): Product @queryCache(maxAge: 30)
+            product(id: ID!): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -369,13 +375,13 @@ describe('Entity caching directive tests', () => {
       ] satisfies RootFieldCacheConfig[]);
     });
 
-    test('config: @queryCache with includeHeaders and shadowMode', () => {
+    test('config: @openfed__queryCache with includeHeaders and shadowMode', () => {
       const config = getConfigForType(
         subgraph(`
           type Query {
-            product(id: ID!): Product @queryCache(maxAge: 30, includeHeaders: true, shadowMode: true)
+            product(id: ID!): Product @openfed__queryCache(maxAge: 30, includeHeaders: true, shadowMode: true)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -404,9 +410,9 @@ describe('Entity caching directive tests', () => {
       const config = getConfigForType(
         subgraph(`
           type Query {
-            product(id: ID!, region: String!): Product @queryCache(maxAge: 30)
+            product(id: ID!, region: String!): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id region") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id region") @openfed__entityCache(maxAge: 60) {
             id: ID!
             region: String!
             name: String!
@@ -435,13 +441,13 @@ describe('Entity caching directive tests', () => {
       ] satisfies RootFieldCacheConfig[]);
     });
 
-    test('config: composite @key with mixed auto and @is mapping', () => {
+    test('config: composite @key with mixed auto and @openfed__is mapping', () => {
       const config = getConfigForType(
         subgraph(`
           type Query {
-            product(id: ID!, loc: String! @is(fields: "region")): Product @queryCache(maxAge: 30)
+            product(id: ID!, loc: String! @openfed__is(fields: "region")): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id region") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id region") @openfed__entityCache(maxAge: 60) {
             id: ID!
             region: String!
             name: String!
@@ -460,19 +466,19 @@ describe('Entity caching directive tests', () => {
     });
   });
 
-  // ─── @is ──────────────────────────────────────────────────────────────────────
-  // @is(fields: "keyField") on a query argument explicitly maps it to a @key field.
+  // ─── @openfed__is ──────────────────────────────────────────────────────────────────────
+  // @openfed__is(fields: "keyField") on a query argument explicitly maps it to a @key field.
   // Useful when the argument name differs from the key field name,
-  // e.g., product(pid: ID! @is(fields: "id")) maps "pid" to the @key field "id".
+  // e.g., product(pid: ID! @openfed__is(fields: "id")) maps "pid" to the @key field "id".
 
-  describe('@is', () => {
-    test('error: @is without @queryCache on the field — @is only makes sense for cache key construction', () => {
+  describe('@openfed__is', () => {
+    test('error: @openfed__is without @openfed__queryCache on the field — @openfed__is only makes sense for cache key construction', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query {
-            product(pid: ID! @is(fields: "id")): Product
+            product(pid: ID! @openfed__is(fields: "id")): Product
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -487,13 +493,13 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('error: @is references a field not in @key', () => {
+    test('error: @openfed__is references a field not in @key', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query {
-            product(pid: ID! @is(fields: "unknown")): Product @queryCache(maxAge: 30)
+            product(pid: ID! @openfed__is(fields: "unknown")): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -509,13 +515,13 @@ describe('Entity caching directive tests', () => {
     });
 
     test('error: two arguments map to the same @key field — ambiguous cache key', () => {
-      // "id" auto-maps to @key field "id", then "otherId" also maps to "id" via @is
+      // "id" auto-maps to @key field "id", then "otherId" also maps to "id" via @openfed__is
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query {
-            product(id: ID!, otherId: ID! @is(fields: "id")): Product @queryCache(maxAge: 30)
+            product(id: ID!, otherId: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -530,13 +536,13 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('success: redundant @is(fields: "id") on argument named "id" is accepted silently', () => {
+    test('success: redundant @openfed__is(fields: "id") on argument named "id" is accepted silently', () => {
       const { warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
-            product(id: ID! @is(fields: "id")): Product @queryCache(maxAge: 30)
+            product(id: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -546,14 +552,14 @@ describe('Entity caching directive tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('success: @is maps differently-named argument to @key field', () => {
-      // "pid" doesn't match @key field "id", so @is(fields: "id") is required
+    test('success: @openfed__is maps differently-named argument to @key field', () => {
+      // "pid" doesn't match @key field "id", so @openfed__is(fields: "id") is required
       const { schema, warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
-            product(pid: ID! @is(fields: "id")): Product @queryCache(maxAge: 30)
+            product(pid: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -564,14 +570,14 @@ describe('Entity caching directive tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('config: @is mapping produces argumentPath with the original argument name', () => {
-      // product(pid: ID! @is(fields: "id")) → entityKeyField: "id", argumentPath: ["pid"]
+    test('config: @openfed__is mapping produces argumentPath with the original argument name', () => {
+      // product(pid: ID! @openfed__is(fields: "id")) → entityKeyField: "id", argumentPath: ["pid"]
       const config = getConfigForType(
         subgraph(`
           type Query {
-            product(pid: ID! @is(fields: "id")): Product @queryCache(maxAge: 30)
+            product(pid: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -596,13 +602,13 @@ describe('Entity caching directive tests', () => {
       ] satisfies RootFieldCacheConfig[]);
     });
 
-    test('config: compound flat @key with @is on both args', () => {
+    test('config: compound flat @key with @openfed__is on both args', () => {
       const config = getConfigForType(
         subgraph(`
           type Query {
-            product(pid: ID! @is(fields: "id"), loc: String! @is(fields: "region")): Product @queryCache(maxAge: 30)
+            product(pid: ID! @openfed__is(fields: "id"), loc: String! @openfed__is(fields: "region")): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id region") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id region") @openfed__entityCache(maxAge: 60) {
             id: ID!
             region: String!
             name: String!
@@ -623,9 +629,9 @@ describe('Entity caching directive tests', () => {
       const { warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
-            product(storeId: ID!): Product @queryCache(maxAge: 30)
+            product(storeId: ID!): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "store { id }") @entityCache(maxAge: 60) {
+          type Product @key(fields: "store { id }") @openfed__entityCache(maxAge: 60) {
             store: Store!
             name: String!
           }
@@ -639,18 +645,18 @@ describe('Entity caching directive tests', () => {
     });
   });
 
-  // ─── @cacheInvalidate ─────────────────────────────────────────────────────────
-  // @cacheInvalidate on a Mutation/Subscription field tells the router to evict the
+  // ─── @openfed__cacheInvalidate ─────────────────────────────────────────────────────────
+  // @openfed__cacheInvalidate on a Mutation/Subscription field tells the router to evict the
   // returned entity from the cache after the operation completes.
 
-  describe('@cacheInvalidate', () => {
-    test('error: @cacheInvalidate on a Query field — eviction only applies to side-effect operations', () => {
+  describe('@openfed__cacheInvalidate', () => {
+    test('error: @openfed__cacheInvalidate on a Query field — eviction only applies to side-effect operations', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query {
-            product(id: ID!): Product @cacheInvalidate
+            product(id: ID!): Product @openfed__cacheInvalidate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -670,10 +676,10 @@ describe('Entity caching directive tests', () => {
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            updateProduct(id: ID!): Result @cacheInvalidate
+            updateProduct(id: ID!): Result @openfed__cacheInvalidate
           }
           type Result { success: Boolean! }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -688,15 +694,15 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('error: both @cacheInvalidate and @cachePopulate on same field — mutually exclusive', () => {
+    test('error: both @openfed__cacheInvalidate and @openfed__cachePopulate on same field — mutually exclusive', () => {
       // A mutation can't both evict and write to the cache for the same entity
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            updateProduct(id: ID!): Product @cacheInvalidate @cachePopulate
+            updateProduct(id: ID!): Product @openfed__cacheInvalidate @openfed__cachePopulate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -711,14 +717,14 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('success: @cacheInvalidate on Mutation returning a cached entity', () => {
+    test('success: @openfed__cacheInvalidate on Mutation returning a cached entity', () => {
       const { schema } = normalizeSubgraphSuccess(
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            updateProduct(id: ID!): Product @cacheInvalidate
+            updateProduct(id: ID!): Product @openfed__cacheInvalidate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -733,9 +739,9 @@ describe('Entity caching directive tests', () => {
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            updateProduct(id: ID!): Product @cacheInvalidate
+            updateProduct(id: ID!): Product @openfed__cacheInvalidate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -752,14 +758,14 @@ describe('Entity caching directive tests', () => {
       ] satisfies CacheInvalidateConfig[]);
     });
 
-    test('success: @cacheInvalidate on Subscription returning a cached entity', () => {
+    test('success: @openfed__cacheInvalidate on Subscription returning a cached entity', () => {
       const { schema } = normalizeSubgraphSuccess(
         subgraph(`
           type Query { dummy: String! }
           type Subscription {
-            itemUpdated: Product @cacheInvalidate
+            itemUpdated: Product @openfed__cacheInvalidate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -774,9 +780,9 @@ describe('Entity caching directive tests', () => {
         subgraph(`
           type Query { dummy: String! }
           type Subscription {
-            itemUpdated: Product @cacheInvalidate
+            itemUpdated: Product @openfed__cacheInvalidate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -793,12 +799,12 @@ describe('Entity caching directive tests', () => {
       ] satisfies CacheInvalidateConfig[]);
     });
 
-    test('error: return entity has @key but no @entityCache — must opt into caching', () => {
+    test('error: return entity has @key but no @openfed__entityCache — must opt into caching', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            updateProduct(id: ID!): Product @cacheInvalidate
+            updateProduct(id: ID!): Product @openfed__cacheInvalidate
           }
           type Product @key(fields: "id") {
             id: ID!
@@ -816,18 +822,18 @@ describe('Entity caching directive tests', () => {
     });
   });
 
-  // ─── @cachePopulate ───────────────────────────────────────────────────────────
-  // @cachePopulate on a Mutation/Subscription field tells the router to write the
+  // ─── @openfed__cachePopulate ───────────────────────────────────────────────────────────
+  // @openfed__cachePopulate on a Mutation/Subscription field tells the router to write the
   // returned entity into the cache. Optional maxAge overrides the entity's default TTL.
 
-  describe('@cachePopulate', () => {
-    test('error: @cachePopulate on a Query field — population only applies to side-effect operations', () => {
+  describe('@openfed__cachePopulate', () => {
+    test('error: @openfed__cachePopulate on a Query field — population only applies to side-effect operations', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraph(`
           type Query {
-            product(id: ID!): Product @cachePopulate
+            product(id: ID!): Product @openfed__cachePopulate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -847,10 +853,10 @@ describe('Entity caching directive tests', () => {
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            createProduct(name: String!): Result @cachePopulate
+            createProduct(name: String!): Result @openfed__cachePopulate
           }
           type Result { success: Boolean! }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -870,9 +876,9 @@ describe('Entity caching directive tests', () => {
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            createProduct(name: String!): Product @cachePopulate(maxAge: 0)
+            createProduct(name: String!): Product @openfed__cachePopulate(maxAge: 0)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -889,40 +895,46 @@ describe('Entity caching directive tests', () => {
 
     test('config: invalid maxAge does not produce a config (regression)', () => {
       // Regression: invalid maxAge previously still pushed a config entry.
-      // Verify that no cachePopulateConfigurations are generated when maxAge is invalid.
+      // Since composition now fails outright on maxAge: 0, assert the failure surface:
+      // exactly one error, and it is the invalidDirectiveError for @openfed__cachePopulate.
+      // The pre-fix bug was that validation failed but the config entry was still emitted
+      // — which is unobservable on the BatchNormalizationFailure public surface. Asserting
+      // the failure shape pins the precondition that guards the previously-leaky path.
       const result = batchNormalize({
         subgraphs: [
           subgraph(`
             type Query { dummy: String! }
             type Mutation {
-              createProduct(name: String!): Product @cachePopulate(maxAge: 0)
+              createProduct(name: String!): Product @openfed__cachePopulate(maxAge: 0)
             }
-            type Product @key(fields: "id") @entityCache(maxAge: 60) {
+            type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
               id: ID!
               name: String!
             }
           `),
         ],
+        version: ROUTER_COMPATIBILITY_VERSION_ONE,
       });
-      if (result.success) {
-        const internal = (result as BatchNormalizationSuccess).internalSubgraphBySubgraphName.get('subgraph-a');
-        if (internal) {
-          const mutationConfig = internal.configurationDataByTypeName.get(MUTATION as TypeName);
-          if (mutationConfig) {
-            expect(mutationConfig.cachePopulateConfigurations).toBeUndefined();
-          }
-        }
-      }
+      expect(result.success).toBe(false);
+      if (result.success) return;
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toStrictEqual(
+        subgraphValidationError('subgraph-a', [
+          invalidDirectiveError(CACHE_POPULATE, 'Mutation.createProduct', FIRST_ORDINAL, [
+            maxAgeNotPositiveIntegerErrorMessage(CACHE_POPULATE, 0),
+          ]),
+        ]),
+      );
     });
 
-    test("success: @cachePopulate without maxAge — uses the entity's default TTL", () => {
+    test("success: @openfed__cachePopulate without maxAge — uses the entity's default TTL", () => {
       const { schema } = normalizeSubgraphSuccess(
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            createProduct(name: String!): Product @cachePopulate
+            createProduct(name: String!): Product @openfed__cachePopulate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -932,14 +944,14 @@ describe('Entity caching directive tests', () => {
       expect(schema).toBeDefined();
     });
 
-    test('success: @cachePopulate with explicit maxAge override', () => {
+    test('success: @openfed__cachePopulate with explicit maxAge override', () => {
       const { schema } = normalizeSubgraphSuccess(
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            createProduct(name: String!): Product @cachePopulate(maxAge: 120)
+            createProduct(name: String!): Product @openfed__cachePopulate(maxAge: 120)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -954,9 +966,9 @@ describe('Entity caching directive tests', () => {
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            createProduct(name: String!): Product @cachePopulate
+            createProduct(name: String!): Product @openfed__cachePopulate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -979,9 +991,9 @@ describe('Entity caching directive tests', () => {
         subgraph(`
           type Query { dummy: String! }
           type Mutation {
-            createProduct(name: String!): Product @cachePopulate(maxAge: 120)
+            createProduct(name: String!): Product @openfed__cachePopulate(maxAge: 120)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -999,14 +1011,14 @@ describe('Entity caching directive tests', () => {
       ] satisfies CachePopulateConfig[]);
     });
 
-    test('success: @cachePopulate on Subscription field', () => {
+    test('success: @openfed__cachePopulate on Subscription field', () => {
       const { schema } = normalizeSubgraphSuccess(
         subgraph(`
           type Query { dummy: String! }
           type Subscription {
-            itemCreated: Product @cachePopulate
+            itemCreated: Product @openfed__cachePopulate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -1016,14 +1028,14 @@ describe('Entity caching directive tests', () => {
       expect(schema).toBeDefined();
     });
 
-    test('config: @cachePopulate on Subscription produces correct config', () => {
+    test('config: @openfed__cachePopulate on Subscription produces correct config', () => {
       const config = getConfigForType(
         subgraph(`
           type Query { dummy: String! }
           type Subscription {
-            itemCreated: Product @cachePopulate
+            itemCreated: Product @openfed__cachePopulate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -1050,9 +1062,9 @@ describe('Entity caching directive tests', () => {
     test('caching directives on one subgraph compose cleanly with a non-caching subgraph', () => {
       const cachingSubgraph = subgraph(`
         type Query {
-          product(id: ID!): Product @queryCache(maxAge: 30)
+          product(id: ID!): Product @openfed__queryCache(maxAge: 30)
         }
-        type Product @key(fields: "id") @entityCache(maxAge: 60) {
+        type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
           id: ID!
           name: String!
         }
@@ -1089,10 +1101,10 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('both subgraphs define @entityCache on the same entity with different TTLs', () => {
+    test('both subgraphs define @openfed__entityCache on the same entity with different TTLs', () => {
       const subgraphA = subgraph(`
         type Query { product(id: ID!): Product }
-        type Product @key(fields: "id") @entityCache(maxAge: 60) {
+        type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
           id: ID!
           name: String!
         }
@@ -1100,7 +1112,7 @@ describe('Entity caching directive tests', () => {
       const subgraphB = subgraph(
         `
         type Query { productByPrice(price: Float!): Product }
-        type Product @key(fields: "id") @entityCache(maxAge: 30) {
+        type Product @key(fields: "id") @openfed__entityCache(maxAge: 30) {
           id: ID!
           price: Float!
         }
@@ -1142,14 +1154,14 @@ describe('Entity caching directive tests', () => {
     // attach configs via parentTypeName — never via literal "Query"/"Mutation"/"Subscription".
     // A regression here would silently drop every cache config when the schema renames a root type.
 
-    test('config: @queryCache on a renamed Query root type attaches to the renamed type', () => {
+    test('config: @openfed__queryCache on a renamed Query root type attaches to the renamed type', () => {
       const config = getConfigForType(
         subgraph(`
           schema { query: MyQuery }
           type MyQuery {
-            product(id: ID!): Product @queryCache(maxAge: 30)
+            product(id: ID!): Product @openfed__queryCache(maxAge: 30)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -1174,15 +1186,15 @@ describe('Entity caching directive tests', () => {
       ]);
     });
 
-    test('config: @cachePopulate on a renamed Mutation root type attaches to the renamed type', () => {
+    test('config: @openfed__cachePopulate on a renamed Mutation root type attaches to the renamed type', () => {
       const config = getConfigForType(
         subgraph(`
           schema { query: MyQuery, mutation: MyMutation }
           type MyQuery { product(id: ID!): Product }
           type MyMutation {
-            updateProduct(id: ID!, name: String!): Product @cachePopulate(maxAge: 120)
+            updateProduct(id: ID!, name: String!): Product @openfed__cachePopulate(maxAge: 120)
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -1200,15 +1212,15 @@ describe('Entity caching directive tests', () => {
       ]);
     });
 
-    test('config: @cacheInvalidate on a renamed Subscription root type attaches to the renamed type', () => {
+    test('config: @openfed__cacheInvalidate on a renamed Subscription root type attaches to the renamed type', () => {
       const config = getConfigForType(
         subgraph(`
           schema { query: MyQuery, subscription: MySubscription }
           type MyQuery { product(id: ID!): Product }
           type MySubscription {
-            productDeleted: Product! @cacheInvalidate
+            productDeleted: Product! @openfed__cacheInvalidate
           }
-          type Product @key(fields: "id") @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -1226,16 +1238,16 @@ describe('Entity caching directive tests', () => {
     });
 
     // @key(resolvable: false) means "this subgraph references the entity but cannot resolve it
-    // by key from the entities federation field." @entityCache currently still applies because
+    // by key from the entities federation field." @openfed__entityCache currently still applies because
     // the @key is present — the router can still construct a cache key from the SDL. If we ever
     // want to forbid this combination, change Phase 1's `keyFieldSetDatasByTypeName.has(typeName)`
     // check to also require at least one resolvable key.
 
-    test('config: @entityCache on a type with only @key(resolvable: false) is currently accepted', () => {
+    test('config: @openfed__entityCache on a type with only @key(resolvable: false) is currently accepted', () => {
       const config = getConfigForType(
         subgraph(`
           type Query { product(id: ID!): Product }
-          type Product @key(fields: "id", resolvable: false) @entityCache(maxAge: 60) {
+          type Product @key(fields: "id", resolvable: false) @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }
@@ -1258,11 +1270,11 @@ describe('Entity caching directive tests', () => {
     // accepts them) but the router treats them as interface representations. Their cache semantics
     // aren't defined by the spec yet — pin the current behavior so a future change is intentional.
 
-    test('config: @entityCache on an @interfaceObject type is currently accepted', () => {
+    test('config: @openfed__entityCache on an @interfaceObject type is currently accepted', () => {
       const config = getConfigForType(
         subgraph(`
           type Query { product(id: ID!): Product }
-          type Product @key(fields: "id") @interfaceObject @entityCache(maxAge: 60) {
+          type Product @key(fields: "id") @interfaceObject @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
           }

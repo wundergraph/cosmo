@@ -148,9 +148,9 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 		cacheType := cacheTypeFromEntityType(event.EntityType)
 		switch event.Kind {
 		case resolve.CacheKeyHit:
-			m.recordRequestStat(ctx, "hits", "l1", cacheType)
+			m.recordRequestStat(ctx, otel.CacheMetricsRequestTypeHits, otel.EntityCacheLevelL1, cacheType)
 		case resolve.CacheKeyMiss:
-			m.recordRequestStat(ctx, "misses", "l1", cacheType)
+			m.recordRequestStat(ctx, otel.CacheMetricsRequestTypeMisses, otel.EntityCacheLevelL1, cacheType)
 		}
 	}
 
@@ -158,31 +158,40 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 		cacheType := cacheTypeFromEntityType(event.EntityType)
 		switch event.Kind {
 		case resolve.CacheKeyHit:
-			m.recordRequestStat(ctx, "hits", "l2", cacheType)
+			m.recordRequestStat(ctx, otel.CacheMetricsRequestTypeHits, otel.EntityCacheLevelL2, cacheType)
 		case resolve.CacheKeyMiss:
-			m.recordRequestStat(ctx, "misses", "l2", cacheType)
+			m.recordRequestStat(ctx, otel.CacheMetricsRequestTypeMisses, otel.EntityCacheLevelL2, cacheType)
 		}
 	}
 
 	for range snapshot.L1Writes {
 		m.instruments.keysStats.Add(ctx, 1,
-			m.attrs(otel.CacheMetricsOperationAttribute.String("added"), otel.EntityCacheCacheLevelAttribute.String("l1")),
+			m.attrs(
+				otel.CacheMetricsOperationAttribute.String(otel.EntityCacheOperationAdded),
+				otel.EntityCacheCacheLevelAttribute.String(otel.EntityCacheLevelL1),
+			),
 		)
 	}
 
-	for range snapshot.L2Writes {
+	for _, event := range snapshot.L2Writes {
 		m.instruments.keysStats.Add(ctx, 1,
-			m.attrs(otel.CacheMetricsOperationAttribute.String("added"), otel.EntityCacheCacheLevelAttribute.String("l2")),
+			m.attrs(
+				otel.CacheMetricsOperationAttribute.String(otel.EntityCacheOperationAdded),
+				otel.EntityCacheCacheLevelAttribute.String(otel.EntityCacheLevelL2),
+			),
 		)
 		m.instruments.populations.Add(ctx, 1,
-			m.attrs(otel.EntityCacheSourceAttribute.String("query")),
+			m.attrs(otel.EntityCacheSourceAttribute.String(populationSource(event.Source))),
 		)
 	}
 
 	for _, event := range snapshot.FetchTimings {
 		if event.Source == resolve.FieldSourceL2 {
 			m.instruments.latency.Record(ctx, float64(event.DurationMs),
-				m.attrs(otel.EntityCacheCacheLevelAttribute.String("l2"), otel.CacheMetricsOperationAttribute.String("get")),
+				m.attrs(
+					otel.EntityCacheCacheLevelAttribute.String(otel.EntityCacheLevelL2),
+					otel.CacheMetricsOperationAttribute.String(otel.EntityCacheOperationGet),
+				),
 			)
 		}
 	}
@@ -198,7 +207,7 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 	for _, event := range snapshot.MutationEvents {
 		if event.HadCachedValue {
 			m.instruments.invalidations.Add(ctx, 1,
-				m.attrs(otel.EntityCacheSourceAttribute.String("mutation")),
+				m.attrs(otel.EntityCacheSourceAttribute.String(invalidationSource(event.Source))),
 			)
 		}
 	}
@@ -216,9 +225,42 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 
 func cacheTypeFromEntityType(entityType string) string {
 	if entityType != "" {
-		return "entity"
+		return otel.EntityCacheTypeEntity
 	}
-	return "root_field"
+	return otel.EntityCacheTypeRootField
+}
+
+// populationSource maps a cache write event's trigger source onto the metric
+// label. Falls back to "query" when the source is unset (empty string) — that
+// matches the pre-existing hardcoded default and keeps older analytics payloads
+// from losing their populate counts.
+func populationSource(s resolve.CacheOperationSource) string {
+	switch s {
+	case resolve.CacheSourceMutation:
+		return otel.EntityCacheSourceMutation
+	case resolve.CacheSourceSubscription:
+		return otel.EntityCacheSourceSubscription
+	case resolve.CacheSourceQuery:
+		return otel.EntityCacheSourceQuery
+	default:
+		return otel.EntityCacheSourceQuery
+	}
+}
+
+// invalidationSource maps a mutation/subscription event's trigger source onto
+// the metric label. Defaults to "mutation" when unset to preserve the previous
+// hardcoded value.
+func invalidationSource(s resolve.CacheOperationSource) string {
+	switch s {
+	case resolve.CacheSourceSubscription:
+		return otel.EntityCacheSourceSubscription
+	case resolve.CacheSourceQuery:
+		return otel.EntityCacheSourceQuery
+	case resolve.CacheSourceMutation:
+		return otel.EntityCacheSourceMutation
+	default:
+		return otel.EntityCacheSourceMutation
+	}
 }
 
 func (m *EntityCacheMetrics) recordRequestStat(ctx context.Context, typ, cacheLevel, cacheType string) {

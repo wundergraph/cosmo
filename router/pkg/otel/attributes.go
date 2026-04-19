@@ -90,10 +90,27 @@ const (
 
 // Entity cache metrics attributes
 const (
-	EntityCacheCacheLevelAttribute  = attribute.Key("cache_level")
-	EntityCacheSourceAttribute      = attribute.Key("source")
-	EntityCacheCacheNameAttribute   = attribute.Key("cache_name")
-	EntityCacheEntityTypeAttribute  = attribute.Key("entity_type")
+	EntityCacheCacheLevelAttribute = attribute.Key("cache_level")
+	EntityCacheSourceAttribute     = attribute.Key("source")
+	EntityCacheCacheNameAttribute  = attribute.Key("cache_name")
+	EntityCacheEntityTypeAttribute = attribute.Key("entity_type")
+)
+
+// Entity cache metrics attribute values. Kept as constants so every recording
+// site uses the same string (no "l1"/"L1"/"tier-1" drift across metrics).
+const (
+	EntityCacheLevelL1 = "l1"
+	EntityCacheLevelL2 = "l2"
+
+	EntityCacheSourceQuery        = "query"
+	EntityCacheSourceMutation     = "mutation"
+	EntityCacheSourceSubscription = "subscription"
+
+	EntityCacheTypeEntity    = "entity"
+	EntityCacheTypeRootField = "root_field"
+
+	EntityCacheOperationGet    = "get"
+	EntityCacheOperationAdded  = "added"
 )
 
 var (

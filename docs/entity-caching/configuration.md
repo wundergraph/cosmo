@@ -129,7 +129,7 @@ Cache backend assignment is an operator concern — subgraph developers shouldn'
 |-------|------|---------|-------------|
 | `subgraph_cache_overrides[].name` | string | required | Subgraph name (must match a subgraph in the router config). |
 | `subgraph_cache_overrides[].storage_provider_id` | string | "" | Storage provider for all entities in this subgraph (unless overridden per-entity). References a `storage_providers.redis` or `storage_providers.memory` entry by ID. |
-| `subgraph_cache_overrides[].entities[].type` | string | required | Entity type name (must be a type with `@entityCache` in this subgraph). |
+| `subgraph_cache_overrides[].entities[].type` | string | required | Entity type name (must be a type with `@openfed__entityCache` in this subgraph). |
 | `subgraph_cache_overrides[].entities[].storage_provider_id` | string | "" | Storage provider for this specific entity type. Overrides the subgraph-level `storage_provider_id`. |
 
 **Resolution order:** When the router needs a storage provider for a given entity type in a subgraph, it resolves using a 3-tier lookup:
@@ -141,7 +141,7 @@ Cache backend assignment is an operator concern — subgraph developers shouldn'
 The first non-empty match wins. If no override is configured, the entity uses the default cache.
 
 **Example resolution:**
-```
+```text
 Entity "Category" in subgraph "products":
   1. Entity-level: storage_provider_id = "hot-cache"  → uses "hot-cache"
 
@@ -313,7 +313,7 @@ func main() {
 
 ## Subgraph Extension-Based Invalidation
 
-In addition to directive-based invalidation (`@cacheInvalidate`), subgraphs can signal cache invalidation at runtime through GraphQL response extensions. This does not require any directive — it is a runtime protocol between the subgraph and the router.
+In addition to directive-based invalidation (`@openfed__cacheInvalidate`), subgraphs can signal cache invalidation at runtime through GraphQL response extensions. This does not require any directive — it is a runtime protocol between the subgraph and the router.
 
 ### Protocol
 
@@ -342,7 +342,7 @@ A subgraph includes invalidation hints in its response `extensions` field:
 
 ### Requirements
 
-- The entity type referenced in `typename` must have `@entityCache` configured in at least one subgraph. The router needs the cache configuration to determine which cache backend and key format to use.
+- The entity type referenced in `typename` must have `@openfed__entityCache` configured in at least one subgraph. The router needs the cache configuration to determine which cache backend and key format to use.
 - The `key` object must contain all `@key` fields for the entity type.
 - Extension-based invalidation works regardless of the operation type (query, mutation, or subscription).
 

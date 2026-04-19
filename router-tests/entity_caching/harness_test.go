@@ -276,11 +276,11 @@ func setEntityCacheIncludeHeaders(rc *nodev1.RouterConfig, enabled bool) {
 	}
 }
 
-// setNegativeCacheTTL sets NegativeCacheTtlSeconds on all entity cache configs.
-func setNegativeCacheTTL(rc *nodev1.RouterConfig, ttl int64) {
+// setNotFoundCacheTTL sets NotFoundCacheTtlSeconds on all entity cache configs.
+func setNotFoundCacheTTL(rc *nodev1.RouterConfig, ttl int64) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
 		for _, ec := range ds.EntityCacheConfigurations {
-			ec.NegativeCacheTtlSeconds = ttl
+			ec.NotFoundCacheTtlSeconds = ttl
 		}
 	}
 }

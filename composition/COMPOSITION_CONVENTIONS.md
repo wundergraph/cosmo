@@ -136,10 +136,10 @@ Live in:
 - `src/utils/string-constants.ts` — shared across versions
 - `src/v1/constants/strings.ts` — v1-scoped
 
-**Gotcha:** the `@is` directive argument is **`fields`** (plural) — constant name
-is `FIELDS`.
+**Gotcha:** the `@openfed__is` directive argument is **`fields`** (plural) —
+constant name is `FIELDS`.
 A past bug used `FIELD` (singular) and silently broke extraction (see
-`CLAUDE.md` §"@is Directive").
+`CLAUDE.md` §"@openfed__is Directive").
 
 ### 3.4 Test constants must match source constants
 

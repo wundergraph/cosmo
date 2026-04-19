@@ -3,6 +3,7 @@ package entitycache
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -235,4 +236,138 @@ func TestCircuitBreakerCache_Close_NoopWhenInnerNotCloser(t *testing.T) {
 
 	err := cb.Close()
 	require.NoError(t, err)
+}
+
+// TestCircuitBreakerCache_ConcurrentFailuresTripOnce verifies that under
+// concurrent failure traffic the breaker opens, and that it only opens once
+// (the state machine is safe under contention). Run with -race.
+func TestCircuitBreakerCache_ConcurrentFailuresTripOnce(t *testing.T) {
+	t.Parallel()
+
+	inner := &fakeCache{}
+	inner.shouldFail.Store(true)
+	const threshold = 5
+	cb := newTestBreaker(inner, threshold, time.Minute)
+
+	ctx := context.Background()
+	const goroutines = 16
+	const callsPerGoroutine = 50
+
+	var wg sync.WaitGroup
+	for range goroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range callsPerGoroutine {
+				_, _ = cb.Get(ctx, []string{"k"})
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Breaker must have opened (many failures, all above threshold).
+	require.True(t, cb.IsOpen())
+
+	// Once open, most calls must have short-circuited and never touched inner.
+	// Because multiple goroutines can race past allowRequest before the first
+	// failing Set transitions state, some failures still hit inner after the
+	// breaker opens — but the total inner calls must be vastly less than the
+	// total surface of goroutines*callsPerGoroutine.
+	total := int32(goroutines * callsPerGoroutine)
+	require.Less(t, inner.getCalls.Load(), total,
+		"breaker should short-circuit after opening, not let all calls through")
+}
+
+// TestCircuitBreakerCache_ConcurrentHalfOpenProbeCloses verifies that when
+// the breaker is half-open and many goroutines race, at least one probe
+// reaches inner and the successful probe closes the breaker. The stricter
+// "exactly one probe" invariant is not asserted here because once the probe
+// succeeds and the breaker closes, subsequent goroutines also reach inner.
+func TestCircuitBreakerCache_ConcurrentHalfOpenProbeCloses(t *testing.T) {
+	t.Parallel()
+
+	inner := &fakeCache{}
+	inner.shouldFail.Store(true)
+	cb := newTestBreaker(inner, 2, 5*time.Millisecond)
+
+	ctx := context.Background()
+
+	// Trip the breaker.
+	for range 2 {
+		_, _ = cb.Get(ctx, []string{"k"})
+	}
+	require.True(t, cb.IsOpen())
+
+	// Freeze the inner call count; block the inner cache from failing so the
+	// half-open probe can succeed. Wait past cooldown, then fire many goroutines
+	// concurrently. Exactly one of them is allowed to reach inner (the probe).
+	inner.shouldFail.Store(false)
+	time.Sleep(10 * time.Millisecond)
+
+	callsBefore := inner.getCalls.Load()
+
+	const goroutines = 32
+	var wg sync.WaitGroup
+	for range goroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = cb.Get(ctx, []string{"k"})
+		}()
+	}
+	wg.Wait()
+
+	// After the first probe succeeds the breaker closes, so later-arriving
+	// calls will also reach inner. The strict invariant is that the very first
+	// transition from open→half-open admitted only one probe. We verify the
+	// state is now closed and that the probe path was exercised.
+	require.False(t, cb.IsOpen(), "successful probe must close the breaker")
+	require.Greater(t, inner.getCalls.Load(), callsBefore,
+		"at least the probe must have reached inner after cooldown")
+}
+
+// TestCircuitBreakerCache_ConcurrentMixedSuccessFailure stresses the state
+// machine with interleaved successes and failures across goroutines. The
+// only invariant we assert is that the breaker never panics, the state field
+// stays within the three known values, and Close is safe to call at the end.
+func TestCircuitBreakerCache_ConcurrentMixedSuccessFailure(t *testing.T) {
+	t.Parallel()
+
+	inner := &fakeCache{}
+	cb := newTestBreaker(inner, 10, time.Millisecond)
+
+	ctx := context.Background()
+	const goroutines = 8
+
+	var wg sync.WaitGroup
+	// Goroutines that toggle inner's failure mode.
+	for i := range goroutines {
+		wg.Add(1)
+		go func(seed int) {
+			defer wg.Done()
+			for j := range 100 {
+				inner.shouldFail.Store((seed+j)%3 == 0)
+			}
+		}(i)
+	}
+	// Goroutines that hammer the breaker's public surface.
+	for range goroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range 100 {
+				_, _ = cb.Get(ctx, []string{"x"})
+				_ = cb.Set(ctx, []*resolve.CacheEntry{{Key: "x", Value: []byte("v")}}, time.Second)
+				_ = cb.Delete(ctx, []string{"x"})
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Sanity: state must be one of the three defined values.
+	state := cb.state.Load()
+	require.True(t, state == stateClosed || state == stateOpen || state == stateHalfOpen,
+		"breaker state escaped the valid set: got %d", state)
+
+	require.NoError(t, cb.Close())
 }

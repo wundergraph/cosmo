@@ -1855,6 +1855,49 @@ entity_caching:
 		require.NoError(t, err)
 	})
 
+	t.Run("memory provider max_size rejects invalid bytes string", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "not-a-byte-string"
+
+entity_caching:
+  enabled: true
+  l2:
+    storage:
+      provider_id: "in-memory"
+`)
+		_, err := LoadConfig([]string{f})
+		// Invalid bytes strings are caught by the BytesString YAML unmarshaler
+		// before json-schema validation runs, so the user-facing error surfaces
+		// as a parse error rather than a schema error. Either shape proves the
+		// value is rejected; assert only that the error path mentions the parse
+		// failure.
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "bytes string")
+	})
+
+	t.Run("config schema annotates memory max_size as bytes-string", func(t *testing.T) {
+		t.Parallel()
+		// The JSON schema itself does not enforce "bytes-string" (not a standard
+		// format), but the annotation is documented and surfaces in tooling that
+		// generates docs/IDE completions. Guard against accidental removal.
+		var schemaMap map[string]any
+		require.NoError(t, yaml.Unmarshal(JSONSchema, &schemaMap))
+		topProps := schemaMap["properties"].(map[string]any)
+		storage := topProps["storage_providers"].(map[string]any)
+		storageProps := storage["properties"].(map[string]any)
+		memory := storageProps["memory"].(map[string]any)
+		items := memory["items"].(map[string]any)
+		itemProps := items["properties"].(map[string]any)
+		maxSize := itemProps["max_size"].(map[string]any)
+		require.Equal(t, "bytes-string", maxSize["format"])
+	})
+
 	t.Run("memory provider rejected for persisted_operations", func(t *testing.T) {
 		t.Parallel()
 		f := createTempFileFromFixture(t, `

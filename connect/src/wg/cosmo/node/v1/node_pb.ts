@@ -866,7 +866,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
   cacheInvalidateConfigurations: CacheInvalidateConfiguration[] = [];
 
   /**
-   * Request-scoped field configurations (from @requestScoped directive)
+   * Request-scoped field configurations (from @openfed__requestScoped directive)
    *
    * @generated from field: repeated wg.cosmo.node.v1.RequestScopedFieldConfiguration request_scoped_fields = 21;
    */
@@ -921,8 +921,8 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
 }
 
 /**
- * Per-field declaration for @requestScoped. All fields in the same subgraph declaring
- * @requestScoped(key: "X") share L1 key "{subgraphName}.X". The first field to resolve
+ * Per-field declaration for @openfed__requestScoped. All fields in the same subgraph declaring
+ * @openfed__requestScoped(key: "X") share L1 key "{subgraphName}.X". The first field to resolve
  * populates L1; subsequent fields with the same key inject from L1 and can skip their
  * fetch when all required sub-fields are present.
  *
@@ -984,6 +984,9 @@ export class EntityCacheConfiguration extends Message<EntityCacheConfiguration> 
   typeName = "";
 
   /**
+   * TTL for cached entity values. Required: composition rejects values <= 0,
+   * so omit (zero) does not occur in practice. Interpreted in seconds.
+   *
    * @generated from field: int64 max_age_seconds = 2;
    */
   maxAgeSeconds = protoInt64.zero;
@@ -1004,9 +1007,14 @@ export class EntityCacheConfiguration extends Message<EntityCacheConfiguration> 
   shadowMode = false;
 
   /**
-   * @generated from field: int64 negative_cache_ttl_seconds = 6;
+   * TTL for caching "not found" entity responses (entity returned null from
+   * _entities without errors). Omit or 0 disables negative caching and null
+   * responses are not cached. Positive values are seconds. Composition rejects
+   * negative values at schema validation time.
+   *
+   * @generated from field: int64 not_found_cache_ttl_seconds = 6;
    */
-  negativeCacheTtlSeconds = protoInt64.zero;
+  notFoundCacheTtlSeconds = protoInt64.zero;
 
   constructor(data?: PartialMessage<EntityCacheConfiguration>) {
     super();
@@ -1021,7 +1029,7 @@ export class EntityCacheConfiguration extends Message<EntityCacheConfiguration> 
     { no: 3, name: "include_headers", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "partial_cache_load", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 5, name: "shadow_mode", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "negative_cache_ttl_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 6, name: "not_found_cache_ttl_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityCacheConfiguration {
@@ -1051,6 +1059,9 @@ export class RootFieldCacheConfiguration extends Message<RootFieldCacheConfigura
   fieldName = "";
 
   /**
+   * TTL for cached root-field responses. Required: composition rejects values
+   * <= 0. Interpreted in seconds.
+   *
    * @generated from field: int64 max_age_seconds = 2;
    */
   maxAgeSeconds = protoInt64.zero;
@@ -1215,6 +1226,11 @@ export class CachePopulateConfiguration extends Message<CachePopulateConfigurati
   operationType = "";
 
   /**
+   * Optional override TTL for mutation/subscription populate writes. When omit,
+   * falls back to the target entity's max_age_seconds (for subscriptions) or
+   * the cache's default TTL (for mutations). Zero is treated as "no override".
+   * Composition rejects negative values.
+   *
    * @generated from field: optional int64 max_age_seconds = 3;
    */
   maxAgeSeconds?: bigint;

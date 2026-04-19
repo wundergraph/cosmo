@@ -4,14 +4,14 @@ extend schema
     import: ["@key", "@external", "@requires"]
   )
 
-directive @entityCache(
+directive @openfed__entityCache(
   maxAge: Int!
   includeHeaders: Boolean = false
   partialCacheLoad: Boolean = false
   shadowMode: Boolean = false
 ) on OBJECT
 
-type Article @key(fields: "id") @entityCache(maxAge: 90) {
+type Article @key(fields: "id") @openfed__entityCache(maxAge: 90) {
   id: ID!
   currentViewer: Viewer @external
   viewCount: Int!
@@ -27,7 +27,7 @@ type Viewer @key(fields: "id") {
 }
 
 """Extends Catalog with description from a second subgraph (for partial cache load testing)"""
-type Catalog @key(fields: "id") @entityCache(maxAge: 120, partialCacheLoad: true) {
+type Catalog @key(fields: "id") @openfed__entityCache(maxAge: 120, partialCacheLoad: true) {
   id: ID!
   description: String!
   lastUpdated: String!

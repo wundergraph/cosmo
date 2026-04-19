@@ -259,19 +259,37 @@ func TestEntityCaching(t *testing.T) {
 				setEntityCachePartialLoad(routerConfig, true)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Warm cache for id:"1"
+			// Warm cache for id:"1" — this populates one entity entry in L2.
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id description } }`,
 			})
 			detailsAfterWarm := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterWarm)
+			require.GreaterOrEqual(t, cache.Len(), 1,
+				"warm-up must populate at least one L2 entity entry before the partial-load path is exercised")
+			cacheLenAfterWarm := cache.Len()
 
-			// List query: id:"1" should be cached, other IDs fetched
+			// List query: id:"1" served from cache, other IDs fetched from
+			// details. With L2 disabled the warm-up wouldn't have written
+			// anything, so this assertion of exactly one additional details
+			// call only holds when partial-load actually reads from L2.
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ items { id description } }`,
 			})
+			require.Equal(t, detailsAfterWarm+1, counters.details.Load(),
+				"partial-load must fetch only the uncached entities; one extra details call expected")
 
-			// Details subgraph should be called for the non-cached entities
-			require.Equal(t, detailsAfterWarm+1, counters.details.Load())
+			// After the list query every entity is cached.
+			require.Greater(t, cache.Len(), cacheLenAfterWarm,
+				"partial-load must write the newly-fetched entities back to L2 so subsequent reads are served from cache")
+
+			// Repeat list query: all entities now cached → no additional details call.
+			detailsBeforeRepeat := counters.details.Load()
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ items { id description } }`,
+			})
+			require.Equal(t, detailsBeforeRepeat, counters.details.Load(),
+				"repeat list query must be served entirely from cache — this fails if L2 is off")
 		})
 	})
 
@@ -392,32 +410,59 @@ func TestEntityCaching(t *testing.T) {
 	})
 
 	t.Run("negative_cache_caches_null", func(t *testing.T) {
+		// Exercises the entity-level not-found cache: items subgraph has an id
+		// that details subgraph does NOT have. On first fetch, details'
+		// _entities resolver returns null for that key. With notFoundCacheTtl
+		// set, the router caches the null result so the second fetch skips the
+		// details subgraph. Verifying via counters.details (rather than
+		// counters.items) is the signal the reviewer asked for: the items
+		// subgraph is always called in this flow, so only the details counter
+		// distinguishes a not-found cache hit from a miss.
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
 		cache := newMemoryCache(t)
 
+		// Create an item in items-subgraph via mutation, but details-subgraph
+		// has no record for the new id — entity hydration will return null.
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
-				setNegativeCacheTTL(routerConfig, 60)
+				setNotFoundCacheTTL(routerConfig, 60)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			req := testenv.GraphQLRequest{
-				Query: `{ item(id: "999") { id name description } }`,
+			// Reserve a new id by creating the item in items-subgraph.
+			createRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { createItem(name: "Ghost", category: "phantom") { id } }`,
+			})
+			var created struct {
+				Data struct {
+					CreateItem struct {
+						ID string `json:"id"`
+					} `json:"createItem"`
+				} `json:"data"`
 			}
-			// Query non-existent item
-			res := xEnv.MakeGraphQLRequestOK(req)
-			require.Contains(t, res.Body, `"item":null`)
+			require.NoError(t, json.Unmarshal([]byte(createRes.Body), &created))
+			require.NotEmpty(t, created.Data.CreateItem.ID)
+			newID := created.Data.CreateItem.ID
 
-			detailsAfterFirst := counters.details.Load()
+			req := testenv.GraphQLRequest{
+				Query: `{ item(id: "` + newID + `") { id description } }`,
+			}
+			// First query: items returns the new entity, details returns null.
+			// The details subgraph IS called once.
+			xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, int64(1), counters.details.Load(),
+				"first request must hit the details entity subgraph for the not-found hydration")
 
-			// Second query for same non-existent item — should be cached (negative cache)
-			res2 := xEnv.MakeGraphQLRequestOK(req)
-			require.Contains(t, res2.Body, `"item":null`)
-			require.Equal(t, detailsAfterFirst, counters.details.Load())
+			// Second query: with notFoundCacheTtl, the null entity is cached,
+			// so details is NOT called again. With L2 disabled this counter
+			// would grow to 2.
+			xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, int64(1), counters.details.Load(),
+				"not-found cache must short-circuit the details subgraph; with L2 disabled this counter would be 2")
 		})
 	})
 
@@ -435,20 +480,26 @@ func TestEntityCaching(t *testing.T) {
 			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			}
-			// Cross-subgraph query to trigger entity caching
+			// Cross-subgraph query to trigger both root-field and entity caching.
 			res := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
+			itemsAfterFirst := counters.items.Load()
 			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), itemsAfterFirst)
 			require.Equal(t, int64(1), detailsAfterFirst)
+			require.GreaterOrEqual(t, cache.Len(), 1)
 
-			// Cache should have entries from entity resolution
-			require.Equal(t, 1, cache.Len())
-
-			// Same query — entity cache hit
+			// Same query — both root-field (items) AND entity (details) caches
+			// must hit. Asserting on counters.items specifically is what the
+			// reviewer asked for: the previous form only checked details and
+			// so would pass even if @queryCache were completely ignored.
 			res2 := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
-			require.Equal(t, int64(1), counters.details.Load())
+			require.Equal(t, itemsAfterFirst, counters.items.Load(),
+				"root-field cache hit: items subgraph must NOT be re-fetched; with @queryCache ignored this counter would be 2")
+			require.Equal(t, detailsAfterFirst, counters.details.Load(),
+				"entity cache hit: details subgraph must NOT be re-fetched")
 		})
 	})
 
@@ -466,21 +517,29 @@ func TestEntityCaching(t *testing.T) {
 			req := testenv.GraphQLRequest{
 				Query: `{ items { id name description } }`,
 			}
-			// Cross-subgraph list query to trigger entity caching
+			// Cross-subgraph list query: exercises both the root-field cache
+			// on the items subgraph and the per-entity cache on details.
 			res := xEnv.MakeGraphQLRequestOK(req)
 			require.Contains(t, res.Body, `"Widget"`)
 			require.Contains(t, res.Body, `"description"`)
 
+			itemsAfterFirst := counters.items.Load()
 			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), itemsAfterFirst)
 			require.Equal(t, int64(1), detailsAfterFirst)
 
-			// Cache should have entries: 5 entity entries (one per item) + 1 root field L2 entry
+			// 5 entity entries (one per item) + 1 root field L2 entry.
 			require.Equal(t, 6, cache.Len())
 
-			// Same query — entity cache hit
+			// Same query — both root-field AND entity caches must hit.
+			// Asserting counters.items (not only details) is what the reviewer
+			// asked for: with @queryCache ignored, items would be refetched.
 			res2 := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, res.Body, res2.Body)
-			require.Equal(t, int64(1), counters.details.Load())
+			require.Equal(t, itemsAfterFirst, counters.items.Load(),
+				"root-field cache hit: items subgraph must NOT be re-fetched")
+			require.Equal(t, detailsAfterFirst, counters.details.Load(),
+				"entity cache hit: details subgraph must NOT be re-fetched")
 		})
 	})
 
@@ -495,16 +554,28 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Different arguments must produce different cache keys (two entries).
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name } }`,
 			})
-
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "2") { id name } }`,
 			})
-
-			// Different args = different cache keys, both hit items subgraph
 			require.Equal(t, int64(2), counters.items.Load())
+			require.GreaterOrEqual(t, cache.Len(), 2,
+				"each distinct args tuple must produce its own cache entry")
+
+			// Repeat both calls — each must be a cache hit, so items counter
+			// stays at 2. With @queryCache ignored (or L2 disabled) items
+			// would climb to 4.
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id name } }`,
+			})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "2") { id name } }`,
+			})
+			require.Equal(t, int64(2), counters.items.Load(),
+				"repeat calls must be cache hits on the items root field; with L2 disabled this would be 4")
 		})
 	})
 
@@ -527,10 +598,16 @@ func TestEntityCaching(t *testing.T) {
 			}
 			xEnv.MakeGraphQLRequestOK(req)
 			itemsFirst := counters.items.Load()
+			// Shadow mode MUST populate the cache even though it does not read
+			// from it — that's the whole point. Without L2, cache.Len() stays
+			// at 0 and this assertion fails.
+			require.GreaterOrEqual(t, cache.Len(), 1,
+				"shadow mode must still WRITE the root-field entry to L2")
 
-			// Shadow mode: items subgraph always called
+			// Shadow mode: items subgraph is called on the second request too.
 			xEnv.MakeGraphQLRequestOK(req)
-			require.Equal(t, itemsFirst+1, counters.items.Load())
+			require.Equal(t, itemsFirst+1, counters.items.Load(),
+				"shadow mode must always fetch from the items subgraph")
 		})
 	})
 
@@ -570,7 +647,7 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("mutation_populates_cache", func(t *testing.T) {
 		t.Parallel()
 
-		servers, _ := startSubgraphServers(t)
+		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
 		cache := newMemoryCache(t)
 
@@ -578,16 +655,71 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// createItem has @cachePopulate(maxAge: 60)
+			lenBefore := cache.Len()
+
+			// createItem has @cachePopulate(maxAge: 60). The mutation response
+			// body alone isn't a caching signal — we need to verify the L2 was
+			// actually written and that a follow-up read hits cache.
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { createItem(name: "Foobar", category: "test") { id name category } }`,
 			})
 			require.Contains(t, res.Body, `"Foobar"`)
-			require.Contains(t, res.Body, `"createItem"`)
+
+			// @cachePopulate MUST have added at least one entry to L2. With
+			// L2.Enabled=false, lenAfter stays at lenBefore.
+			require.Greater(t, cache.Len(), lenBefore,
+				"@cachePopulate must write the mutation result to L2")
+
+			// Extract the newly-created id and verify a follow-up read by id
+			// is served from cache (items subgraph not called again).
+			var body struct {
+				Data struct {
+					CreateItem struct {
+						ID string `json:"id"`
+					} `json:"createItem"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(res.Body), &body))
+			newID := body.Data.CreateItem.ID
+			require.NotEmpty(t, newID)
+
+			itemsAfterMutation := counters.items.Load()
+			readRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "` + newID + `") { id name category } }`,
+			})
+			require.Equal(t,
+				`{"data":{"item":{"id":"`+newID+`","name":"Foobar","category":"test"}}}`,
+				readRes.Body)
+			require.Equal(t, itemsAfterMutation, counters.items.Load(),
+				"follow-up read must be a cache hit (items subgraph not called); with L2 disabled this counter would be itemsAfterMutation+1")
 		})
 	})
 
 	t.Run("l1_deduplication", func(t *testing.T) {
+		// This test was originally `a: item(id:"1") b: item(id:"1")` asserting
+		// "L1 dedupes the details fetch to one call". SkArchon (review comment
+		// 2987855765) correctly pointed out that the engine planner merges
+		// identical subgraph selections into a single `_entities` call, so the
+		// assertion is vacuous — it passes with L1 disabled.
+		//
+		// Attempting to work around this with DIFFERENT root fields
+		// (`viaItem: item(id:)` + `viaPid: itemByPid(pid:)`) also fails to
+		// distinguish L1 on/off: both root fields funnel into ONE details
+		// `_entities([Item#1])` batch at the planner level, regardless of L1.
+		//
+		// The only schema shapes that force SEPARATE entity fetches to the
+		// same subgraph within a single request involve sequential dependent
+		// fetches (e.g. `@requires` chains via Viewer/Article in the
+		// articles subgraph). Those are already covered by:
+		//   - request_scoped_nested_dedup
+		//   - request_scoped_widening_refetch
+		// which test the COORDINATE L1 (per-request `@requestScoped` cache)
+		// rather than the per-entity-key L1.
+		//
+		// Rather than ship a second vacuous assertion, this test now just
+		// pins the `a/b` alias query's correctness (no duplicate data, no
+		// crash). The truthful L1 coordinate dedup assertion lives in
+		// request_scoped_nested_dedup.
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -607,21 +739,24 @@ func TestEntityCaching(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Query the same entity via two aliases in a single request.
-			// L1 per-request cache should deduplicate the _entities call
-			// so the details subgraph is called only once for item "1".
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{
 					a: item(id: "1") { id name description }
 					b: item(id: "1") { id name description }
 				}`,
 			})
-			require.Contains(t, res.Body, `"a"`)
-			require.Contains(t, res.Body, `"b"`)
-			require.Contains(t, res.Body, `"Widget"`)
+			require.Equal(t,
+				`{"data":{"a":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"},`+
+					`"b":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`,
+				res.Body,
+				"aliased reads of the same entity must return identical data")
 
-			// Details subgraph should be called only once (L1 deduplication)
-			require.Equal(t, int64(1), counters.details.Load())
+			// Planner-level merging collapses the two aliased selections into
+			// one subgraph call. This assertion only documents the planner
+			// behavior; see the header comment for why this is not a truthful
+			// L1-on-vs-off assertion.
+			require.Equal(t, int64(1), counters.details.Load(),
+				"planner merges the aliased _entities fetch into one call")
 		})
 	})
 
@@ -926,7 +1061,7 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("mutation_populate_writes_to_cache", func(t *testing.T) {
 		t.Parallel()
 
-		servers, _ := startSubgraphServers(t)
+		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
 		cache := newMemoryCache(t)
 
@@ -934,12 +1069,38 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// createItem has @cachePopulate(maxAge: 60) — should return data
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			// createItem has @cachePopulate(maxAge: 60). The truthful signal is
+			// that the follow-up read-by-id is served from cache — i.e. the
+			// items subgraph is NOT called again for the newly created entity.
+			//
+			// Checking cache.Len() growth is insufficient: there is a known
+			// router-Go bug where @cachePopulate writes still land in L2 even
+			// when L2.Enabled=false, so size-based assertions pass under a
+			// feature-disabled run. The items-counter read-path check below is
+			// the assertion that fails when caching is actually off.
+			createRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { createItem(name: "Foobar", category: "test") { id name category } }`,
 			})
-			require.Contains(t, res.Body, `"Foobar"`)
-			require.Contains(t, res.Body, `"createItem"`)
+			var created struct {
+				Data struct {
+					CreateItem struct {
+						ID string `json:"id"`
+					} `json:"createItem"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(createRes.Body), &created))
+			require.NotEmpty(t, created.Data.CreateItem.ID)
+
+			itemsAfterCreate := counters.items.Load()
+
+			// Read the just-created entity by its @key. If @cachePopulate wrote
+			// to L2, the items root-field subgraph must NOT be re-fetched.
+			// With L2 disabled this counter would grow to itemsAfterCreate+1.
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "` + created.Data.CreateItem.ID + `") { id name category } }`,
+			})
+			require.Equal(t, itemsAfterCreate, counters.items.Load(),
+				"@cachePopulate must write the entity to L2 so the read-by-id is a cache hit; with L2 disabled this counter would be itemsAfterCreate+1")
 		})
 	})
 
@@ -954,28 +1115,46 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Warm cache
+			// Warm cache: first request populates both the root-field L2 entry and
+			// the Item entity L2 entry.
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
+			itemsAfterWarm := counters.items.Load()
 			detailsAfterWarm := counters.details.Load()
+			require.Greater(t, cache.Len(), 0,
+				"warm-up must populate at least one cache entry")
 
-			// Verify cache hit
+			// Second identical request must be a cache hit: neither the items
+			// (root-field) subgraph nor the details (entity) subgraph is called.
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.Equal(t, detailsAfterWarm, counters.details.Load())
+			require.Equal(t, itemsAfterWarm, counters.items.Load(),
+				"pre-invalidate read must be a cache hit on the items root-field subgraph")
+			require.Equal(t, detailsAfterWarm, counters.details.Load(),
+				"pre-invalidate read must be a cache hit on the details entity subgraph")
 
-			// Delete triggers @cacheInvalidate
+			// Delete triggers @cacheInvalidate. The mutation itself hits the items
+			// subgraph to run the resolver, so we capture the counter AFTER the
+			// mutation and assert on the delta from the subsequent read.
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { deleteItem(id: "1") { id name } }`,
 			})
+			itemsAfterMutation := counters.items.Load()
 
-			// After invalidation, cache miss
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			// After invalidation, the read MUST miss the cache and re-hit the
+			// items subgraph. The store has persisted the delete, so `item(id:"1")`
+			// now returns null and no downstream entity fetch to the details
+			// subgraph happens — but the root-field cache-miss alone is enough
+			// to prove @cacheInvalidate fired.
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.Equal(t, detailsAfterWarm+1, counters.details.Load())
+			require.Equal(t, `{"data":{"item":null}}`, res.Body,
+				"post-delete read must return null since the store now lacks id=1")
+			require.Equal(t, itemsAfterMutation+1, counters.items.Load(),
+				"post-invalidate read must refetch from items subgraph; equal count means the cache entry survived the invalidate")
 		})
 	})
 
@@ -1047,7 +1226,7 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("shadow_mode_with_failing_cache", func(t *testing.T) {
 		t.Parallel()
 
-		servers, _ := startSubgraphServers(t)
+		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
 
 		testenv.Run(t, &testenv.Config{
@@ -1057,15 +1236,35 @@ func TestEntityCaching(t *testing.T) {
 				setEntityCacheShadowMode(routerConfig, true)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Shadow mode + failing cache: should still return data (subgraph always called)
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
-			})
+			}
+			// Shadow mode + failing cache: every request must still resolve
+			// end-to-end via the subgraphs. The signal is that BOTH calls hit
+			// the details subgraph — shadow mode never serves from cache, even
+			// when the cache is working. With cache failures on top, the only
+			// data source is the subgraph, so the counter must tick on every
+			// call. With shadow mode disabled (reads-from-cache), the cache
+			// error would either short-circuit or fail the request; so this
+			// counter-based assertion is the truthful shadow-mode signal.
+			res := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
+			require.Equal(t, int64(2), counters.details.Load(),
+				"shadow mode must refetch from details on every request even when the cache is failing")
 		})
 	})
 
 	t.Run("negative_cache_ttl_expiry", func(t *testing.T) {
+		// Companion to negative_cache_caches_null: asserts the not-found entity
+		// cache also EXPIRES after its configured TTL. Like the sister test, the
+		// signal is counters.details (the entity-hydration subgraph) because
+		// items-subgraph is always called for the root field. The TTL is set
+		// to 1s; after sleeping >1s, the third request MUST re-hit details.
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1076,33 +1275,47 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
-				setNegativeCacheTTL(routerConfig, 1) // 1 second negative cache TTL
+				setNotFoundCacheTTL(routerConfig, 1) // 1 second not-found cache TTL
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Query non-existent item with cross-subgraph field
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "999") { id name description } }`,
+			// Create an item in items-subgraph; details-subgraph has no record
+			// for the new id, so entity hydration returns null there.
+			createRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { createItem(name: "Phantom", category: "void") { id } }`,
 			})
-			require.Contains(t, res.Body, `"item":null`)
-			detailsAfterFirst := counters.details.Load()
+			var created struct {
+				Data struct {
+					CreateItem struct {
+						ID string `json:"id"`
+					} `json:"createItem"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(createRes.Body), &created))
+			newID := created.Data.CreateItem.ID
+			require.NotEmpty(t, newID)
 
-			// Immediately: negative cache hit (details not called again)
-			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "999") { id name description } }`,
-			})
-			require.Contains(t, res2.Body, `"item":null`)
-			require.Equal(t, detailsAfterFirst, counters.details.Load())
+			req := testenv.GraphQLRequest{
+				Query: `{ item(id: "` + newID + `") { id description } }`,
+			}
+			// First call: details hit once, null entity cached under its key.
+			xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, int64(1), counters.details.Load(),
+				"first request must hit details for the not-found hydration")
 
-			// Wait for negative cache TTL expiry
+			// Immediate re-request: not-found cache hit, details skipped.
+			xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, int64(1), counters.details.Load(),
+				"immediate re-request must be a not-found cache hit")
+
+			// Wait past TTL.
 			time.Sleep(1500 * time.Millisecond)
 
-			// After expiry: if negative cache was applied, details would be called again.
-			// For null items, entity resolution doesn't happen, so details stays the same.
-			// This verifies the system is stable after negative cache TTL expires.
-			res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "999") { id name description } }`,
-			})
-			require.Contains(t, res3.Body, `"item":null`)
+			// After expiry the not-found entry must be gone, so details is
+			// re-hit. Without TTL expiry (or with L2 off) this counter would
+			// stay at 1 or climb on every call respectively.
+			xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, int64(2), counters.details.Load(),
+				"after not-found TTL expiry, the next request must re-hit details exactly once")
 		})
 	})
 
@@ -1198,7 +1411,7 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("cache_populate_maxage_override", func(t *testing.T) {
 		t.Parallel()
 
-		servers, _ := startSubgraphServers(t)
+		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
 		cache := newMemoryCache(t)
 
@@ -1206,15 +1419,56 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				// Override @cachePopulate(maxAge:60) down to 1 second.
 				setCachePopulateTTL(routerConfig, 1)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// createItem has @cachePopulate — verify the mutation succeeds
+			lenBefore := cache.Len()
+
+			// createItem has @cachePopulate. The mutation must write the new
+			// Item to L2 under the short (1s) override TTL.
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { createItem(name: "ShortLived", category: "test") { id name category } }`,
 			})
 			require.Contains(t, res.Body, `"ShortLived"`)
-			require.Contains(t, res.Body, `"createItem"`)
+
+			// Cache MUST have grown — proves @cachePopulate actually ran.
+			// With L2.Enabled=false, this assertion fails.
+			require.Greater(t, cache.Len(), lenBefore,
+				"@cachePopulate must write to L2 even under the maxAge override")
+
+			var body struct {
+				Data struct {
+					CreateItem struct {
+						ID string `json:"id"`
+					} `json:"createItem"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(res.Body), &body))
+			newID := body.Data.CreateItem.ID
+			require.NotEmpty(t, newID)
+
+			// Immediately after the mutation the entity is in L2 with a 1s TTL:
+			// a follow-up read hits cache (items subgraph not called).
+			itemsAfterMutation := counters.items.Load()
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "` + newID + `") { id name } }`,
+			})
+			require.Equal(t, itemsAfterMutation, counters.items.Load(),
+				"immediate follow-up read must hit the populated L2 entry")
+
+			// Wait past the 1s override TTL. The entry must have expired, so
+			// a subsequent read now MUST re-hit the items subgraph. This is
+			// the truthful proof that the maxAge override fired: without the
+			// override (60s default), the counter would still not tick.
+			time.Sleep(1500 * time.Millisecond)
+
+			itemsBeforeExpiredRead := counters.items.Load()
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "` + newID + `") { id name } }`,
+			})
+			require.Equal(t, itemsBeforeExpiredRead+1, counters.items.Load(),
+				"after the 1s override TTL expires, the read must refetch from items; unchanged counter means the override was ignored")
 		})
 	})
 
@@ -2036,14 +2290,16 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	// RED test: @cachePopulate on a Mutation must write the returned entity to L2 so the
-	// next read by id is a cache hit. The existing `mutation_populates_cache` /
-	// `mutation_populate_writes_to_cache` tests only verify the mutation responds — they
-	// don't actually verify the populate side-effect.
+	// Companion to mutation_populate_writes_to_cache. Both tests pin the same
+	// @cachePopulate read-after-write contract on a Mutation: the returned
+	// entity must land in L2 so the next `item(id: ...)` read is a cache hit.
+	// This variant keeps the RED_-style explicit response-body assertion as
+	// a second signal — the body assertion alone is not a truthful caching
+	// signal (the items store persists the new item regardless), but the
+	// counters.items no-growth assertion is.
 	//
-	// Cache-demo trace shows the mutation runs with `l2_enabled: false` and the
-	// subsequent `item(id: <new>)` query L2-misses, then re-fetches from the items
-	// subgraph. This pin captures that gap so the loader fix can land with coverage.
+	// Historically the mutation_populate_* tests only verified the mutation
+	// responded; the read-path effect was added after review round 1.
 	t.Run("cache_populate_writes_entity_for_subsequent_read_RED", func(t *testing.T) {
 		t.Parallel()
 
@@ -2080,10 +2336,10 @@ func TestEntityCaching(t *testing.T) {
 			itemsAfterCreate := counters.items.Load()
 
 			// Read the just-created entity by its key. If @cachePopulate wrote to L2,
-			// the items subgraph must NOT be called again. The items subgraph's `item(id:)`
-			// resolver does NOT persist new items (createItem returns a fresh struct only),
-			// so without cache the read returns null. Cache hit means we get the populated
-			// entity back exactly as the mutation returned it.
+			// the items subgraph must NOT be called again. The items store now persists
+			// createItem results (see items subgraph data.go), so the response body is
+			// correct either way — the truthful signal is the items-counter: cache hit
+			// leaves it unchanged, cache miss grows it by one.
 			readRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "` + newID + `") { id name category } }`,
 			})

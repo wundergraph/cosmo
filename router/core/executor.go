@@ -93,7 +93,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		ValidateRequiredExternalFields:         opts.RouterEngineConfig.Execution.ValidateRequiredExternalFields,
 		SetDeduplicationShardCountToGOMAXPROCS: true,
 		Caches:                                 opts.EntityCacheInstances,
-		EntityCacheConfigs:                     buildEntityCacheInvalidationConfigs(opts.EntityCachingConfig, opts.Subgraphs, opts.EngineConfig),
+		EntityCacheConfigs:                     buildEntityCacheInvalidationConfigs(opts.EntityCachingConfig, opts.Subgraphs, opts.EngineConfig, b.logger),
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
@@ -262,20 +262,31 @@ func buildEntityCacheInvalidationConfigs(
 	cfg *config.EntityCachingConfiguration,
 	subgraphs []*nodev1.Subgraph,
 	engineConfig *nodev1.EngineConfiguration,
+	logger *zap.Logger,
 ) map[string]map[string]*resolve.EntityCacheInvalidationConfig {
-	if cfg == nil || !cfg.Enabled {
+	if cfg == nil || !cfg.Enabled || len(engineConfig.GetDatasourceConfigurations()) == 0 {
 		return nil
 	}
 	result := make(map[string]map[string]*resolve.EntityCacheInvalidationConfig)
-	for _, ds := range engineConfig.DatasourceConfigurations {
-		subgraphName := subgraphNameByID(subgraphs, ds.Id)
-		for _, ec := range ds.EntityCacheConfigurations {
+	for _, ds := range engineConfig.GetDatasourceConfigurations() {
+		subgraphName := subgraphNameByID(subgraphs, ds.GetId())
+		if subgraphName == "" {
+			// Datasource ID doesn't match any known subgraph — skip instead of
+			// bucketing under "" which would collide across datasources and
+			// produce a wrong cache lookup downstream.
+			if logger != nil {
+				logger.Warn("entity caching: skipping datasource with unknown subgraph id",
+					zap.String("datasource_id", ds.GetId()))
+			}
+			continue
+		}
+		for _, ec := range ds.GetEntityCacheConfigurations() {
 			if _, ok := result[subgraphName]; !ok {
 				result[subgraphName] = make(map[string]*resolve.EntityCacheInvalidationConfig)
 			}
-			result[subgraphName][ec.TypeName] = &resolve.EntityCacheInvalidationConfig{
-				CacheName:                   resolveEntityCacheProviderID(cfg, subgraphName, ec.TypeName),
-				IncludeSubgraphHeaderPrefix: ec.IncludeHeaders,
+			result[subgraphName][ec.GetTypeName()] = &resolve.EntityCacheInvalidationConfig{
+				CacheName:                   resolveEntityCacheProviderID(cfg, subgraphName, ec.GetTypeName()),
+				IncludeSubgraphHeaderPrefix: ec.GetIncludeHeaders(),
 			}
 		}
 	}

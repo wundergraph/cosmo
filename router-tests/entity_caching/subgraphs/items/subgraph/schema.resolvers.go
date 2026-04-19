@@ -13,29 +13,54 @@ import (
 )
 
 // UpdateItem is the resolver for the updateItem field.
+// It persists the new name to the per-resolver store and publishes the
+// updated entity on the itemUpdated subscription channel so subscription-based
+// @cacheInvalidate flows can be exercised end-to-end in tests.
 func (r *mutationResolver) UpdateItem(ctx context.Context, id string, name string) (*model.Item, error) {
-	for _, item := range Items {
-		if item.ID == id {
-			return &model.Item{ID: item.ID, Name: name, Category: item.Category}, nil
+	updated, ok := r.Store.update(id, name)
+	if !ok {
+		return nil, fmt.Errorf("item %s not found", id)
+	}
+	if r.ItemUpdatedCh != nil {
+		select {
+		case r.ItemUpdatedCh <- updated:
+		default:
 		}
 	}
-	return nil, fmt.Errorf("item %s not found", id)
+	return updated, nil
 }
 
 // DeleteItem is the resolver for the deleteItem field.
+// It removes the item from the per-resolver store and publishes the deleted
+// entity on the itemUpdated subscription channel so tests can verify the
+// downstream cache-invalidate pipeline.
 func (r *mutationResolver) DeleteItem(ctx context.Context, id string) (*model.Item, error) {
-	for _, item := range Items {
-		if item.ID == id {
-			return &model.Item{ID: item.ID, Name: item.Name, Category: item.Category}, nil
+	deleted, ok := r.Store.delete(id)
+	if !ok {
+		return nil, fmt.Errorf("item %s not found", id)
+	}
+	if r.ItemUpdatedCh != nil {
+		select {
+		case r.ItemUpdatedCh <- deleted:
+		default:
 		}
 	}
-	return nil, fmt.Errorf("item %s not found", id)
+	return deleted, nil
 }
 
 // CreateItem is the resolver for the createItem field.
+// It persists the new item to the per-resolver store and publishes it on the
+// itemCreated subscription channel so @cachePopulate subscription flows get a
+// real event to populate the cache from.
 func (r *mutationResolver) CreateItem(ctx context.Context, name string, category string) (*model.Item, error) {
-	id := fmt.Sprintf("%d", nextID.Add(1))
-	return &model.Item{ID: id, Name: name, Category: category}, nil
+	created := r.Store.create(name, category)
+	if r.ItemCreatedCh != nil {
+		select {
+		case r.ItemCreatedCh <- created:
+		default:
+		}
+	}
+	return created, nil
 }
 
 // DeleteProduct is the resolver for the deleteProduct field.
@@ -53,41 +78,22 @@ func (r *mutationResolver) DeleteProduct(ctx context.Context, id string, region 
 
 // Item is the resolver for the item field.
 func (r *queryResolver) Item(ctx context.Context, id string) (*model.Item, error) {
-	for _, item := range Items {
-		if item.ID == id {
-			return item, nil
-		}
-	}
-	return nil, nil
+	return r.Store.find(id), nil
 }
 
 // ItemByPid is the resolver for the itemByPid field.
 func (r *queryResolver) ItemByPid(ctx context.Context, pid string) (*model.Item, error) {
-	for _, item := range Items {
-		if item.ID == pid {
-			return item, nil
-		}
-	}
-	return nil, nil
+	return r.Store.find(pid), nil
 }
 
 // Items is the resolver for the items field.
 func (r *queryResolver) Items(ctx context.Context) ([]*model.Item, error) {
-	return Items, nil
+	return r.Store.all(), nil
 }
 
 // ItemsByIds is the resolver for the itemsByIds field.
 func (r *queryResolver) ItemsByIds(ctx context.Context, ids []string) ([]*model.Item, error) {
-	var result []*model.Item
-	for _, id := range ids {
-		for _, item := range Items {
-			if item.ID == id {
-				result = append(result, item)
-				break
-			}
-		}
-	}
-	return result, nil
+	return r.Store.byIDs(ids), nil
 }
 
 // Product is the resolver for the product field.

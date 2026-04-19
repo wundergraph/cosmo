@@ -669,24 +669,28 @@ export const Playground = (input: {
     'X-WG-Disable-Entity-Cache-L2',
   ];
   useEffect(() => {
-    try {
-      const parsed = JSON.parse(headers || '{}');
-      for (const key of cacheHeaderKeys) delete parsed[key];
-      if (cacheMode === 'disabled') {
-        parsed['X-WG-Disable-Entity-Cache'] = 'true';
-      } else if (cacheMode === 'no-l1') {
-        parsed['X-WG-Disable-Entity-Cache-L1'] = 'true';
-      } else if (cacheMode === 'no-l2') {
-        parsed['X-WG-Disable-Entity-Cache-L2'] = 'true';
+    setHeaders((prev) => {
+      try {
+        const parsed = JSON.parse(prev || '{}');
+        for (const key of cacheHeaderKeys) delete parsed[key];
+        if (cacheMode === 'disabled') {
+          parsed['X-WG-Disable-Entity-Cache'] = 'true';
+        } else if (cacheMode === 'no-l1') {
+          parsed['X-WG-Disable-Entity-Cache-L1'] = 'true';
+        } else if (cacheMode === 'no-l2') {
+          parsed['X-WG-Disable-Entity-Cache-L2'] = 'true';
+        }
+        const newHeaders = JSON.stringify(parsed, null, 2);
+        if (newHeaders !== prev) {
+          suppressSchemaRefetch.current = true;
+          return newHeaders;
+        }
+        return prev;
+      } catch {
+        // Headers aren't valid JSON — don't interfere
+        return prev;
       }
-      const newHeaders = JSON.stringify(parsed, null, 2);
-      if (newHeaders !== headers) {
-        suppressSchemaRefetch.current = true;
-        setHeaders(newHeaders);
-      }
-    } catch {
-      // Headers aren't valid JSON — don't interfere
-    }
+    });
   }, [cacheMode]);
 
   const [response, setResponse] = useState<string>('');

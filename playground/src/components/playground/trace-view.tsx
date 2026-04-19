@@ -321,7 +321,7 @@ const Trace = ({
       if (!fetchNode.durationSinceStart && fetchNode.cacheTrace) {
         const ct = fetch.trace?.cache_trace;
         fetchNode.durationSinceStart = ct?.duration_since_start_nanoseconds ?? plannerEndNs;
-        fetchNode.durationLoad = ct?.duration_nanoseconds ?? 1000; // minimum 1µs so the bar is visible
+        fetchNode.durationLoad = Math.max(ct?.duration_nanoseconds ?? 0, 1000); // minimum 1µs so the bar is visible
       }
 
       const fetchOutputTrace = fetch.trace?.output?.extensions?.trace;
@@ -713,7 +713,7 @@ export const TraceView = () => {
 
   return (
     <div className="relative flex h-full w-full flex-1 flex-col font-sans">
-      <Tabs defaultValue="tree" className="absolute bottom-3 right-4 z-30 w-max" onValueChange={(v: any) => setView(v)}>
+      <Tabs value={view} className="absolute bottom-3 right-4 z-30 w-max" onValueChange={(v: any) => setView(v)}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="tree">
             <div className="flex items-center gap-x-2">

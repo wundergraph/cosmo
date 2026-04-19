@@ -4,21 +4,21 @@ extend schema
     import: ["@key"]
   )
 
-directive @entityCache(
+directive @openfed__entityCache(
   maxAge: Int!
   includeHeaders: Boolean = false
   partialCacheLoad: Boolean = false
   shadowMode: Boolean = false
 ) on OBJECT
 
-type Item @key(fields: "id") @entityCache(maxAge: 300) {
+type Item @key(fields: "id") @openfed__entityCache(maxAge: 300) {
   id: ID!
   description: String!
   rating: Float!
   tags: [String!]!
 }
 
-type Product @key(fields: "id region") @entityCache(maxAge: 300) {
+type Product @key(fields: "id region") @openfed__entityCache(maxAge: 300) {
   id: ID!
   region: String!
   info: String!
@@ -28,7 +28,7 @@ type Location {
   id: ID!
 }
 
-type Warehouse @key(fields: "location { id }") @entityCache(maxAge: 300) {
+type Warehouse @key(fields: "location { id }") @openfed__entityCache(maxAge: 300) {
   location: Location!
   capacity: Int!
 }

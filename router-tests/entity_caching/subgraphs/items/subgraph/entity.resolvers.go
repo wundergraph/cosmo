@@ -13,12 +13,7 @@ import (
 
 // FindItemByID is the resolver for the findItemByID field.
 func (r *entityResolver) FindItemByID(ctx context.Context, id string) (*model.Item, error) {
-	for _, item := range Items {
-		if item.ID == id {
-			return item, nil
-		}
-	}
-	return nil, nil
+	return r.Store.find(id), nil
 }
 
 // FindProductByIDAndRegion is the resolver for the findProductByIDAndRegion field.

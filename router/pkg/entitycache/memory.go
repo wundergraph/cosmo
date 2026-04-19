@@ -30,6 +30,7 @@ func NewMemoryEntityCache(maxSizeBytes int64) (*MemoryEntityCache, error) {
 		MaxCost:            maxSizeBytes,
 		BufferItems:        64,
 		IgnoreInternalCost: true,
+		Metrics:            true,
 		OnEvict: func(item *ristretto.Item[[]byte]) {
 			m.len.Add(-1)
 		},
@@ -99,8 +100,15 @@ func (c *MemoryEntityCache) Delete(_ context.Context, keys []string) error {
 // This is intended for use in tests only. The count may drift
 // under heavy concurrent access due to races between Get/Set/Delete
 // and the asynchronous eviction callback.
+// Ristretto metrics don't cover Delete, so we keep a manual counter.
 func (c *MemoryEntityCache) Len() int {
 	return int(c.len.Load())
+}
+
+// Metrics returns the underlying ristretto metrics for exporter wiring.
+// Exposes hits, misses, keys added/updated/evicted, cost added/evicted.
+func (c *MemoryEntityCache) Metrics() *ristretto.Metrics {
+	return c.cache.Metrics
 }
 
 func (c *MemoryEntityCache) Close() error {

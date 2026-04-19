@@ -4,14 +4,14 @@ extend schema
     import: ["@key"]
   )
 
-directive @entityCache(
+directive @openfed__entityCache(
   maxAge: Int!
   includeHeaders: Boolean = false
   partialCacheLoad: Boolean = false
   shadowMode: Boolean = false
 ) on OBJECT
 
-type Item @key(fields: "id") @entityCache(maxAge: 300) {
+type Item @key(fields: "id") @openfed__entityCache(maxAge: 300) {
   id: ID!
   available: Boolean!
   count: Int!
