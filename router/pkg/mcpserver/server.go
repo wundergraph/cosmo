@@ -769,7 +769,7 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 
 		// If we have both errors and data, include data in the error message
 		dataString := string(graphqlResponse.Data)
-		combinedErrorMsg := fmt.Sprintf("Response error with partial success, Error: %s, Data: %s)", errorMessage, dataString)
+		combinedErrorMsg := fmt.Sprintf("Response error with partial success, Error: %s, Data: %s", errorMessage, dataString)
 		return mcp.NewToolResultError(combinedErrorMsg), nil
 	}
 
