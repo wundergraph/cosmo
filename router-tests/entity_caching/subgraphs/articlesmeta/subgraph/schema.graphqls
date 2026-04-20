@@ -1,0 +1,12 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: ["@key"]
+  )
+
+type Article @key(fields: "id") {
+  id: ID!
+  viewCount: Int!
+  rating: Float!
+  reviewSummary: String!
+}

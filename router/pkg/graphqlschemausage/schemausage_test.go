@@ -208,7 +208,7 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	inputVariables, err := astjson.ParseBytes(op.Input.Variables)
 	assert.NoError(t, err)
 
-	merged, _, err := astjson.MergeValues(arena.NewMonotonicArena(), vars, inputVariables)
+	merged, err := astjson.MergeValues(arena.NewMonotonicArena(), vars, inputVariables)
 	assert.NoError(t, err)
 
 	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)

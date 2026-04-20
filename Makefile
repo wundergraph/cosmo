@@ -184,6 +184,38 @@ docker-build-minikube: docker-build-local
 
 	rm -f mk-*.tar
 
+demo-compose:
+	cd demo && $(MAKE) compose-cache
+
+demo:
+	@echo "Composing subgraph schemas..."
+	cd demo && $(MAKE) compose-cache
+	@echo "Starting subgraphs and router..."
+	@echo "Playground will be at http://localhost:3002/"
+	cd demo && go run cmd/all/main.go & \
+	sleep 2 && cd router && go run cmd/router/main.go --config ../demo/router-cache.yaml
+
+benchmark-cache-demo:
+	pnpm dlx tsx benchmark/scripts/run_suite.ts --all \
+		$(if $(VUS),--vus $(VUS),) \
+		$(if $(DURATION),--duration $(DURATION),) \
+		$(if $(RAMP_UP),--ramp-up $(RAMP_UP),) \
+		$(if $(RAMP_DOWN),--ramp-down $(RAMP_DOWN),)
+
+benchmark-cache-demo-scenario:
+	@if [ -z "$(SCENARIO)" ]; then \
+		echo "Usage: make benchmark-cache-demo-scenario SCENARIO=<scenario_name>"; \
+		exit 1; \
+	fi
+	pnpm dlx tsx benchmark/scripts/run_suite.ts --scenario $(SCENARIO) \
+		$(if $(VUS),--vus $(VUS),) \
+		$(if $(DURATION),--duration $(DURATION),) \
+		$(if $(RAMP_UP),--ramp-up $(RAMP_UP),) \
+		$(if $(RAMP_DOWN),--ramp-down $(RAMP_DOWN),)
+
+benchmark-cache-demo-validate:
+	pnpm dlx tsx benchmark/scripts/run_suite.ts validate
+
 run-subgraphs-local:
 	cd demo && go run cmd/all/main.go
 

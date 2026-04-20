@@ -1,6 +1,11 @@
 import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
 import {
+  type AutoBatchAdditionalNonKeyArgumentWarningParams,
+  type AutoMappingAdditionalNonKeyArgumentWarningParams,
+  type AutoMappingTypeMismatchWarningParams,
+  type IncompleteQueryCacheKeyMappingWarningParams,
+  type RequestScopedSingleFieldWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
 } from './params';
@@ -190,6 +195,76 @@ export function singleSubgraphInputFieldOneOfWarning({
   });
 }
 
+// Warns when a @openfed__queryCache field cannot construct complete cache keys from its arguments.
+// This happens when the entity has @key fields that don't correspond to any argument (by name or @openfed__is mapping).
+// The field can still populate the cache (writes), but cannot serve reads from cache.
+export function incompleteQueryCacheKeyMappingWarning({
+  subgraphName,
+  fieldCoords,
+  entityType,
+  unmappedKeyField,
+}: IncompleteQueryCacheKeyMappingWarningParams): Warning {
+  return new Warning({
+    message:
+      `Field "${fieldCoords}" has @openfed__queryCache returning "${entityType}" but @key field "${unmappedKeyField}"` +
+      ` cannot be mapped to any argument. Cache reads are disabled for this field` +
+      ` (cache writes/population still work). Add an argument named "${unmappedKeyField}"` +
+      ` or use @openfed__is(fields: "${unmappedKeyField}") to enable cache reads.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function autoMappingTypeMismatchWarning({
+  subgraphName,
+  argumentName,
+  fieldCoords,
+  argumentType,
+  keyField,
+  entityType,
+  keyFieldType,
+}: AutoMappingTypeMismatchWarningParams): Warning {
+  return new Warning({
+    message: `Argument "${argumentName}" on field "${fieldCoords}" has type "${argumentType}" but @key field "${keyField}" on entity "${entityType}" has type "${keyFieldType}". Auto-mapping skipped due to type mismatch.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function autoMappingAdditionalNonKeyArgumentWarning({
+  subgraphName,
+  argumentName,
+  fieldCoords,
+  keyField,
+  entityType,
+  extraArgument,
+}: AutoMappingAdditionalNonKeyArgumentWarningParams): Warning {
+  return new Warning({
+    message: `Argument "${argumentName}" on field "${fieldCoords}" matches @key field "${keyField}" on entity "${entityType}", but field has additional argument "${extraArgument}" which is not mapped to a key field. Auto-mapping skipped — all arguments must be key arguments because additional arguments may filter the response, making the cache key incomplete.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function autoBatchAdditionalNonKeyArgumentWarning({
+  subgraphName,
+  fieldCoords,
+  argumentName,
+  keyField,
+  entityType,
+  extraArgument,
+}: AutoBatchAdditionalNonKeyArgumentWarningParams): Warning {
+  return new Warning({
+    message: `Field "${fieldCoords}" returns a list of entities, so cache lookup is a batch lookup and requires a single key input that determines the returned entities. Argument "${argumentName}" matches @key field "${keyField}" on entity "${entityType}", but additional argument "${extraArgument}" is not mapped to a key field and may filter the response, so auto-mapping is skipped because the batch key would be incomplete.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
 export function singleFederatedInputFieldOneOfWarning({
   fieldName,
   typeName,
@@ -202,6 +277,25 @@ export function singleFederatedInputFieldOneOfWarning({
       ` to a required type, and removing any other remaining optional Input fields instead.`,
     subgraph: {
       name: '',
+    },
+  });
+}
+
+// Warns when @openfed__requestScoped(key: "...") is used on only one field in the subgraph.
+// The directive only provides a benefit when ≥ 2 fields share the same key —
+// otherwise there's no second reader to deduplicate against.
+export function requestScopedSingleFieldWarning({
+  subgraphName,
+  key,
+  fieldCoords,
+}: RequestScopedSingleFieldWarningParams): Warning {
+  return new Warning({
+    message:
+      `@openfed__requestScoped(key: "${key}") is declared on only one field ("${fieldCoords}") in this subgraph.` +
+      ` The directive is meaningless unless at least 2 fields share the same key so that the second` +
+      ` and subsequent fields can be served from the per-request L1 cache populated by the first.`,
+    subgraph: {
+      name: subgraphName,
     },
   });
 }

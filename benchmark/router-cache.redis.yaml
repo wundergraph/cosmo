@@ -1,0 +1,53 @@
+version: "1"
+
+execution_config:
+  file:
+    path: "../demo/config-cache-only.json"
+
+storage_providers:
+  redis:
+    - id: "benchmark-redis"
+      urls:
+        - "redis://localhost:6399/2"
+      cluster_enabled: false
+
+entity_caching:
+  enabled: true
+  l1:
+    enabled: true
+  l2:
+    enabled: true
+    storage:
+      provider_id: "benchmark-redis"
+      key_prefix: "cosmo_entity_cache"
+    circuit_breaker:
+      enabled: false
+
+headers:
+  subgraphs:
+    cachegraph:
+      request:
+        - op: propagate
+          named: Authorization
+        - op: propagate
+          named: X-Artificial-Latency
+    cachegraph-ext:
+      request:
+        - op: propagate
+          named: X-Artificial-Latency
+    viewer:
+      request:
+        - op: propagate
+          named: Authorization
+        - op: propagate
+          named: X-Artificial-Latency
+
+graph:
+  token: ""
+
+log_level: debug
+dev_mode: true
+listen_addr: "localhost:3002"
+playground:
+  enabled: true
+  path: "/"

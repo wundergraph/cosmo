@@ -8,10 +8,13 @@ import {
   detachPlaygroundAPI,
   PreFlightScript,
 } from '@/components/playground/custom-scripts';
+import { CacheExplorerView } from '@/components/playground/cache-explorer-view';
+import { cacheExplorerController } from '@/components/playground/cache-explorer-controller';
+import type { CacheExplorerConfig } from '@/components/playground/cache-explorer-runner';
 import { PlanView } from '@/components/playground/plan-view';
 import { SharePlaygroundModal } from '@/components/playground/share-playground-modal';
 import { TraceContext, TraceView } from '@/components/playground/trace-view';
-import { PlaygroundContext, PlaygroundView, QueryPlan, TabsState } from '@/components/playground/types';
+import { CacheMode, PlaygroundContext, PlaygroundView, QueryPlan, TabsState } from '@/components/playground/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -70,11 +73,12 @@ import { GraphQLSchema, parse, validate } from 'graphql';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/router';
 import posthog from 'posthog-js';
-import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { BoltIcon } from '@heroicons/react/24/solid';
 import { FaNetworkWired } from 'react-icons/fa';
 import { FiSave } from 'react-icons/fi';
-import { LuLayoutDashboard } from 'react-icons/lu';
+import { LuActivity, LuLayoutDashboard } from 'react-icons/lu';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiBracketsCurly, PiDevices, PiGraphLight } from 'react-icons/pi';
 import { TbDevicesCheck } from 'react-icons/tb';
@@ -187,6 +191,27 @@ const executePostScripts = async (graphId: string, requestBody: any, responseBod
   }
 };
 
+export const applyCacheModeHeaders = (headersJson: string | undefined, cacheMode: CacheMode): string => {
+  try {
+    const parsed = JSON.parse(headersJson || '{}');
+    delete parsed['X-WG-Disable-Entity-Cache'];
+    delete parsed['X-WG-Disable-Entity-Cache-L1'];
+    delete parsed['X-WG-Disable-Entity-Cache-L2'];
+
+    if (cacheMode === 'disabled') {
+      parsed['X-WG-Disable-Entity-Cache'] = 'true';
+    } else if (cacheMode === 'no-l1') {
+      parsed['X-WG-Disable-Entity-Cache-L1'] = 'true';
+    } else if (cacheMode === 'no-l2') {
+      parsed['X-WG-Disable-Entity-Cache-L2'] = 'true';
+    }
+
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return headersJson ?? '';
+  }
+};
+
 const graphiQLFetch = async (
   onFetch: any,
   graphRequestToken: string,
@@ -195,12 +220,26 @@ const graphiQLFetch = async (
   url: URL,
   init: RequestInit,
   graphId: string,
+  cacheMode?: CacheMode,
+  view?: PlaygroundView,
   featureFlagName?: string,
 ) => {
   try {
     let headers: Record<string, string> = {
       ...(init.headers as Record<string, string>),
     };
+
+    // Inject entity cache control headers based on cache mode
+    delete headers['X-WG-Disable-Entity-Cache'];
+    delete headers['X-WG-Disable-Entity-Cache-L1'];
+    delete headers['X-WG-Disable-Entity-Cache-L2'];
+    if (cacheMode === 'disabled') {
+      headers['X-WG-Disable-Entity-Cache'] = 'true';
+    } else if (cacheMode === 'no-l1') {
+      headers['X-WG-Disable-Entity-Cache-L1'] = 'true';
+    } else if (cacheMode === 'no-l2') {
+      headers['X-WG-Disable-Entity-Cache-L2'] = 'true';
+    }
 
     headers = substituteHeadersFromEnv(headers, graphId);
 
@@ -222,6 +261,35 @@ const graphiQLFetch = async (
 
     if (featureFlagName) {
       headers['X-Feature-Flag'] = featureFlagName;
+    }
+
+    // Cache Explorer intercept: if we're in cache-explorer view AND the user
+    // explicitly clicked the play button (trigger gate), dispatch to the
+    // explorer controller. Without the gate, GraphiQL's auto-refetch on
+    // header/query edits would re-launch the benchmark unintentionally.
+    if (view === 'cache-explorer') {
+      const trigger = (window as any).__cacheExplorerTrigger;
+      if (trigger) {
+        (window as any).__cacheExplorerTrigger = false;
+        const body = JSON.parse(init.body as string);
+        const explorerConfig: CacheExplorerConfig = {
+          url: url.toString(),
+          query: body.query,
+          variables: body.variables ? JSON.stringify(body.variables) : undefined,
+          operationName: body.operationName,
+          headers,
+          iterations: (window as any).__cacheExplorerConfig?.iterations ?? 10,
+          cacheMode: cacheMode || 'enabled',
+        };
+        // Fire and forget — the controller emits state via its subscription.
+        cacheExplorerController.start(explorerConfig);
+      }
+      const synthetic = new Response(
+        JSON.stringify({ data: null, extensions: { cacheExplorer: { status: 'running' } } }),
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+      onFetch(await synthetic.clone().json(), 200, 'OK');
+      return synthetic;
     }
 
     if (schema && clientValidationEnabled) {
@@ -490,6 +558,117 @@ const PersistOperation = () => {
   );
 };
 
+type CacheSummary = { hits: number; total: number } | null;
+
+const collectCacheSummary = (fetches: any): CacheSummary => {
+  if (!fetches) return null;
+
+  let hits = 0;
+  let total = 0;
+
+  const walkFetch = (node: any) => {
+    if (!node) return;
+
+    const trace = node.trace || node.datasource_load_trace;
+
+    // Count every fetch that has a trace (i.e., a real datasource fetch).
+    if (trace) {
+      total++;
+      if (trace.load_skipped) {
+        // Skipped fetches (e.g., @requestScoped L1 injection) count as cache hits.
+        hits++;
+      } else {
+        const ct = trace.cache_trace;
+        if (ct && (ct.l1_hit > 0 || ct.l2_hit > 0)) {
+          hits++;
+        }
+      }
+    }
+
+    const children = node.children || node.fetches || node.traces;
+    if (children) {
+      for (const child of children) {
+        walkFetch(child.fetch || child);
+      }
+    }
+  };
+
+  walkFetch(fetches);
+  return total > 0 ? { hits, total } : null;
+};
+
+const CacheBadge = ({ hits, total }: { hits: number; total: number }) => {
+  const pct = Math.round((hits / total) * 100);
+  const allHit = hits === total;
+  const noneHit = hits === 0;
+
+  return (
+    <Tooltip delayDuration={200}>
+      <TooltipTrigger>
+        <div
+          className={cn(
+            'flex h-8 items-center gap-x-1.5 rounded-md border px-3 text-xs font-medium',
+            noneHit && 'bg-secondary text-secondary-foreground',
+            allHit && 'border-transparent bg-success text-success-foreground',
+            !noneHit && !allHit && 'border-transparent text-white',
+          )}
+          style={
+            !noneHit && !allHit
+              ? {
+                  background: `linear-gradient(to right, hsl(var(--success)) ${pct}%, hsl(var(--muted)) ${pct}%)`,
+                }
+              : undefined
+          }
+        >
+          <BoltIcon className={cn('h-3.5 w-3.5', noneHit ? 'text-muted-foreground' : 'text-current')} />
+          <span>
+            {hits}/{total} Cached
+          </span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent className="rounded-md border bg-background px-2 py-1">
+        {allHit
+          ? 'All fetches served from cache'
+          : noneHit
+            ? 'No cache hits'
+            : `${hits} of ${total} fetches served from cache`}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
+const cacheModeLabels: Record<CacheMode, string> = {
+  enabled: 'Caching enabled',
+  'no-l1': 'Caching (L2 only)',
+  'no-l2': 'Caching (L1 only)',
+  disabled: 'Caching disabled',
+};
+
+const cacheModeColors: Record<CacheMode, string> = {
+  enabled: 'border-success/50 bg-success/10 text-success',
+  'no-l1': 'border-orange-500/50 bg-orange-500/10 text-orange-500',
+  'no-l2': 'border-orange-500/50 bg-orange-500/10 text-orange-500',
+  disabled: 'border-destructive/50 bg-destructive/10 text-destructive',
+};
+
+const CacheControl = () => {
+  const { cacheMode, setCacheMode } = useContext(PlaygroundContext);
+
+  return (
+    <Select value={cacheMode} onValueChange={(val) => setCacheMode(val as CacheMode)}>
+      <SelectTrigger className={cn('h-8 w-auto max-w-[170px] text-xs font-medium', cacheModeColors[cacheMode])}>
+        <SelectValue>{cacheModeLabels[cacheMode]}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="enabled">Caching enabled</SelectItem>
+        <SelectItem value="no-l1">Caching (L2 only)</SelectItem>
+        <SelectItem value="no-l2">Caching (L1 only)</SelectItem>
+        <SelectItem value="disabled">Caching disabled</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+};
+
 const ResponseToolbar = () => {
   const { view, setView } = useContext(PlaygroundContext);
 
@@ -500,34 +679,38 @@ const ResponseToolbar = () => {
 
     const plan = document.getElementById('planner-visualization') as HTMLDivElement;
 
-    if (!response || !art || !plan) {
+    const explorer = document.getElementById('cache-explorer-visualization') as HTMLDivElement;
+
+    if (!response || !art || !plan || !explorer) {
       return;
     }
 
+    const hide = (el: HTMLDivElement) => {
+      el.classList.add('invisible');
+      el.classList.add('-z-50');
+    };
+    const show = (el: HTMLDivElement) => {
+      el.classList.remove('invisible');
+      el.classList.remove('-z-50');
+    };
+
+    // Hide all first
+    hide(art);
+    hide(plan);
+    hide(explorer);
+    response.classList.add('invisible');
+    response.classList.add('-z-50');
+
+    // Then show the chosen one
     if (val === 'request-trace') {
-      response.classList.add('invisible');
-      response.classList.add('-z-50');
-      plan.classList.add('invisible');
-      plan.classList.add('-z-50');
-
-      art.classList.remove('invisible');
-      art.classList.remove('-z-50');
+      show(art);
     } else if (val === 'query-plan') {
-      response.classList.add('invisible');
-      response.classList.add('-z-50');
-      art.classList.add('invisible');
-      art.classList.add('-z-50');
-
-      plan.classList.remove('invisible');
-      plan.classList.remove('-z-50');
+      show(plan);
+    } else if (val === 'cache-explorer') {
+      show(explorer);
     } else {
       response.classList.remove('invisible');
       response.classList.remove('-z-50');
-
-      art.classList.add('invisible');
-      art.classList.add('-z-50');
-      plan.classList.add('invisible');
-      plan.classList.add('-z-50');
     }
 
     setView(val);
@@ -538,17 +721,35 @@ const ResponseToolbar = () => {
       return <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />;
     } else if (val === 'request-trace') {
       return <FaNetworkWired className="h-4 w-4 flex-shrink-0" />;
+    } else if (val === 'cache-explorer') {
+      return <LuActivity className="h-4 w-4 flex-shrink-0" />;
     } else {
       return <LuLayoutDashboard className="h-4 w-4 flex-shrink-0" />;
     }
   };
 
   const { status, statusText } = useContext(PlaygroundContext);
+  const { response } = useContext(TraceContext);
+
+  const cacheSummary = useMemo<CacheSummary>(() => {
+    try {
+      const parsed = JSON.parse(response || '{}');
+      // Skip introspection responses — they have __schema in data
+      if (parsed?.data?.__schema) return null;
+      const trace = parsed?.extensions?.trace;
+      if (!trace) return null;
+      return collectCacheSummary(trace.fetches || trace);
+    } catch {
+      return null;
+    }
+  }, [response]);
 
   const isSuccess = !!status && status >= 200 && status < 300;
 
   return (
     <div className="flex items-center gap-x-2">
+      <CacheControl />
+      {cacheSummary && <CacheBadge hits={cacheSummary.hits} total={cacheSummary.total} />}
       {(status || statusText) && (
         <Badge className="h-8" variant={isSuccess ? 'success' : 'destructive'}>
           {!isSuccess && <ExclamationTriangleIcon className="mr-1 h-4 w-4" />}
@@ -581,6 +782,12 @@ const ResponseToolbar = () => {
             <div className="flex items-center gap-x-2">
               {getIcon('query-plan')}
               Query Plan
+            </div>
+          </SelectItem>
+          <SelectItem value="cache-explorer">
+            <div className="flex items-center gap-x-2">
+              {getIcon('cache-explorer')}
+              Cache Explorer
             </div>
           </SelectItem>
         </SelectContent>
@@ -692,6 +899,7 @@ const PlaygroundPortal = () => {
   const responseToolbar = document.getElementById('response-toolbar');
   const artDiv = document.getElementById('art-visualization');
   const plannerDiv = document.getElementById('planner-visualization');
+  const cacheExplorerDiv = document.getElementById('cache-explorer-visualization');
   const saveDiv = document.getElementById('save-button');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
   const scriptsSection = document.getElementById('scripts-section');
@@ -702,6 +910,7 @@ const PlaygroundPortal = () => {
     !responseToolbar ||
     !artDiv ||
     !plannerDiv ||
+    !cacheExplorerDiv ||
     !saveDiv ||
     !toggleClientValidation ||
     !scriptsSection ||
@@ -716,6 +925,7 @@ const PlaygroundPortal = () => {
       {createPortal(<ResponseToolbar />, responseToolbar)}
       {createPortal(<PlanView />, plannerDiv)}
       {createPortal(<TraceView />, artDiv)}
+      {createPortal(<CacheExplorerView />, cacheExplorerDiv)}
       {createPortal(<PersistOperation />, saveDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
       {createPortal(<CustomScripts />, scriptsSection)}
@@ -806,6 +1016,21 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [isMounted, setIsMounted] = useState(false);
 
   const [view, setView] = useState<PlaygroundView>('response');
+  const viewRef = useRef<PlaygroundView>(view);
+  viewRef.current = view;
+
+  const [cacheMode, setCacheMode] = useState<CacheMode>('enabled');
+  const cacheModeRef = useRef<CacheMode>(cacheMode);
+  cacheModeRef.current = cacheMode;
+
+  // Sync cache mode into the visible headers JSON editor so users can see exactly
+  // which `X-WG-Disable-Entity-Cache*` headers get forwarded to the router.
+  useEffect(() => {
+    setHeaders((prev) => {
+      const next = applyCacheModeHeaders(prev, cacheMode);
+      return next !== prev ? next : prev;
+    });
+  }, [cacheMode]);
 
   const [tabsState, setTabsState] = useState<TabsState>({
     activeTabIndex: 0,
@@ -911,8 +1136,13 @@ const PlaygroundPage: NextPageWithLayout = () => {
         plannerWrapper.id = 'planner-visualization';
         plannerWrapper.className = 'flex flex-1 h-full w-full absolute invisible -z-50';
 
+        const cacheExplorerWrapper = document.createElement('div');
+        cacheExplorerWrapper.id = 'cache-explorer-visualization';
+        cacheExplorerWrapper.className = 'flex flex-1 absolute inset-0 invisible -z-50 overflow-hidden';
+
         responseSectionParent.append(artWrapper);
         responseSectionParent.append(plannerWrapper);
+        responseSectionParent.append(cacheExplorerWrapper);
       }
     }
 
@@ -992,6 +1222,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
           args[0] as URL,
           args[1] as RequestInit,
           graphContext?.graph?.id || '',
+          cacheModeRef.current,
+          viewRef.current,
           type === 'featureFlag'
             ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
             : undefined,
@@ -1118,6 +1350,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         statusText,
         view,
         setView,
+        cacheMode,
+        setCacheMode,
         isHydrated,
         setIsHydrated,
       }}

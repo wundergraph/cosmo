@@ -1705,6 +1705,283 @@ export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOf
   );
 }
 
+// Entity caching directive error messages.
+// These are reported during composition when subgraph schemas use entity caching directives
+// incorrectly. Each error corresponds to a validation rule in validateAndExtractEntityCachingConfigs().
+
+// @openfed__entityCache requires the type to be a federation entity (must have @key)
+export function entityCacheWithoutKeyErrorMessage(typeName: string): string {
+  return `Type "${typeName}" has @openfed__entityCache but no @key directive.`;
+}
+
+// @openfed__queryCache must only be defined on fields of the root query type.
+// Mutation/Subscription fields use @openfed__cachePopulate or @openfed__cacheInvalidate.
+// The root query type may be renamed via `schema { query: MyQuery }`; this validation runs
+// after resolving the canonical root type, so the field coords reported here reflect the
+// declared (possibly renamed) type.
+export function queryCacheOnNonQueryFieldErrorMessage(fieldCoords: string): string {
+  return (
+    `@openfed__queryCache must only be defined on fields of the root query type; found on "${fieldCoords}".` +
+    ` Use @openfed__cachePopulate or @openfed__cacheInvalidate on mutation or subscription fields.`
+  );
+}
+
+// @openfed__queryCache requires the return type to be a federation entity — non-entity types have no @key for cache key construction
+export function queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
+  return (
+    `Field "${fieldCoords}" has @openfed__queryCache but returns non-entity type "${returnType}".` +
+    ` @openfed__queryCache requires the return type to be an entity with @key.`
+  );
+}
+
+// Shared validation for maxAge across @openfed__entityCache, @openfed__queryCache, and @openfed__cachePopulate
+export function maxAgeNotPositiveIntegerErrorMessage(directiveName: string, value: number): string {
+  return `@${directiveName} maxAge must be a positive integer, got "${value}".`;
+}
+
+// @openfed__is maps arguments to @key fields — it's meaningless without @openfed__queryCache since only @openfed__queryCache uses argument-to-key mappings
+export function isWithoutQueryCacheErrorMessage(argumentName: string, fieldCoords: string): string {
+  return `@openfed__is on argument "${argumentName}" of field "${fieldCoords}" has no effect without @openfed__queryCache.`;
+}
+
+// @openfed__is(fields: "...") must reference a field that appears in the entity's @key directive
+export function isReferencesUnknownKeyFieldErrorMessage(
+  isField: string,
+  argumentName: string,
+  fieldCoords: string,
+  entityType: string,
+): string {
+  return (
+    `@openfed__is(fields: "${isField}") on argument "${argumentName}" of field "${fieldCoords}"` +
+    ` references unknown @key field "${isField}" on type "${entityType}".`
+  );
+}
+
+// Each @key field may only be mapped to one argument — duplicates would create ambiguous cache keys
+export function duplicateKeyFieldMappingErrorMessage(fieldCoords: string, keyField: string): string {
+  return `Multiple arguments on field "${fieldCoords}" map to @key field "${keyField}".`;
+}
+
+// @openfed__cacheInvalidate is for side-effect operations — Query fields should use @openfed__queryCache instead
+export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
+  return `@openfed__cacheInvalidate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
+}
+
+// @openfed__cacheInvalidate needs to know which entity to evict — non-entity return types have no cache key
+export function cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
+  return `Field "${fieldCoords}" has @openfed__cacheInvalidate but returns non-entity type "${returnType}".`;
+}
+
+// @openfed__cachePopulate is for side-effect operations — Query fields should use @openfed__queryCache instead
+export function cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
+  return `@openfed__cachePopulate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
+}
+
+// @openfed__cachePopulate needs to know which entity to write — non-entity return types have no cache key
+export function cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
+  return `Field "${fieldCoords}" has @openfed__cachePopulate but returns non-entity type "${returnType}".`;
+}
+
+// A field cannot both populate and invalidate — these are contradictory cache operations
+export function cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords: string): string {
+  return (
+    `Field "${fieldCoords}" has both @openfed__cacheInvalidate and @openfed__cachePopulate.` +
+    ` A field must use one or the other, not both.`
+  );
+}
+
+export function explicitTypeMismatchErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  argumentType: string,
+  isField: string,
+  entityType: string,
+  keyFieldType: string,
+): string {
+  return `Argument "${argumentName}" on field "${fieldCoords}" has type "${argumentType}" but @openfed__is(fields: "${isField}") targets @key field "${isField}" of type "${keyFieldType}" on entity "${entityType}".`;
+}
+
+export function nonKeyFieldSpecErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  isField: string,
+  entityType: string,
+): string {
+  return `Argument "${argumentName}" on field "${fieldCoords}" uses @openfed__is(fields: "${isField}"), but "${isField}" is not a @key field on entity "${entityType}". @openfed__is can only target fields that are part of a @key.`;
+}
+
+export function listArgumentToScalarKeySpecErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  argumentType: string,
+  isField: string,
+  entityType: string,
+  keyFieldType: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" has type "${argumentType}" but @openfed__is(fields: "${isField}") targets @key field "${isField}" of type "${keyFieldType}" on entity "${entityType}".` +
+    ' List arguments can only map to scalar key fields when the field returns a list of entities, or to list key fields when the key field itself is a list type.'
+  );
+}
+
+export function scalarArgumentToListKeySpecErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  argumentType: string,
+  isField: string,
+  entityType: string,
+  keyFieldType: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" has type "${argumentType}" but @openfed__is(fields: "${isField}") targets @key field "${isField}" of type "${keyFieldType}" on entity "${entityType}".` +
+    ' A scalar argument cannot map to a list key field.'
+  );
+}
+
+export function explicitIncompleteCompositeKeyErrorMessage(
+  fieldCoords: string,
+  argumentName: string,
+  mappedField: string,
+  entityType: string,
+  compositeKey: string,
+  missingField: string,
+): string {
+  return `Field "${fieldCoords}" has argument "${argumentName}" with @openfed__is mapping to @key field "${mappedField}" on entity "${entityType}", but composite @key "${compositeKey}" is incomplete because no argument maps to required key field "${missingField}".`;
+}
+
+export function explicitSingularAdditionalNonKeyArgumentErrorMessage(
+  fieldCoords: string,
+  argumentName: string,
+  keyField: string,
+  entityType: string,
+  extraArgument: string,
+): string {
+  return `Field "${fieldCoords}" has argument "${argumentName}" with @openfed__is mapping to @key field "${keyField}" on entity "${entityType}", but also has additional argument "${extraArgument}" which is not mapped to a key field. All arguments must be key arguments — additional arguments may filter the response, making the cache key incomplete.`;
+}
+
+export function explicitCompositeAdditionalNonKeyArgumentErrorMessage(
+  fieldCoords: string,
+  firstArgument: string,
+  secondArgument: string,
+  compositeKey: string,
+  entityType: string,
+  extraArgument: string,
+): string {
+  return `Field "${fieldCoords}" has arguments "${firstArgument}" and "${secondArgument}" with @openfed__is mappings covering composite @key "${compositeKey}" on entity "${entityType}", but also has additional argument "${extraArgument}" which is not mapped to a key field. All arguments must be key arguments — additional arguments may filter the response, making the cache key incomplete.`;
+}
+
+export function batchListValuedKeyRequiresNestedListsErrorMessage(
+  fieldCoords: string,
+  isField: string,
+  entityType: string,
+  actualType: string,
+): string {
+  return `Field "${fieldCoords}" returns a list of entities, so cache lookup is a batch lookup and requires one key value per entity. Because @openfed__is(fields: "${isField}") targets list-valued @key field "${isField}" on entity "${entityType}", the argument must provide a list of tag lists (e.g., "[[String!]!]!"), not ${actualType}.`;
+}
+
+export function explicitBatchAdditionalNonKeyArgumentErrorMessage(
+  fieldCoords: string,
+  argumentName: string,
+  keyField: string,
+  entityType: string,
+  extraArgument: string,
+): string {
+  return `Field "${fieldCoords}" returns a list of entities, so cache lookup is a batch lookup and requires a single key input that determines the returned entities. Argument "${argumentName}" uses @openfed__is to map to @key field "${keyField}" on entity "${entityType}", but additional argument "${extraArgument}" is not mapped to a key field and may filter the response, so the batch key would be incomplete.`;
+}
+
+export function explicitScalarArgumentsCannotEstablishBatchMappingErrorMessage(
+  fieldCoords: string,
+  entityType: string,
+): string {
+  return `Field "${fieldCoords}" returns a list of entities, so cache lookup is a batch lookup and requires one key value per entity. Scalar arguments with @openfed__is mapping to @key fields on entity "${entityType}" cannot provide a batch of keys, so they cannot establish cache key mappings for this field. Use list arguments for batch cache lookups.`;
+}
+
+export function multipleListArgumentsBatchFactoryMessage(fieldCoords: string, entityType: string): string {
+  return (
+    `Field "${fieldCoords}" has multiple list arguments mapping to @key fields on entity "${entityType}".` +
+    ' Batch cache lookups require a single list argument.' +
+    ' For composite keys, use a single list of input objects instead.'
+  );
+}
+
+export function inputObjectCompositeTypeMismatchErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  keyFields: string,
+  entityType: string,
+  inputType: string,
+  inputFieldName: string,
+  inputFieldType: string,
+  entityFieldPath: string,
+  entityFieldType: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" uses @openfed__is(fields: "${keyFields}") mapping to composite @key on entity "${entityType}",` +
+    ` but input type "${inputType}" field "${inputFieldName}" has type "${inputFieldType}"` +
+    ` which does not match key field "${entityFieldPath}" of type "${entityFieldType}".`
+  );
+}
+
+export function inputObjectCompositeMissingFieldErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  keyFields: string,
+  entityType: string,
+  inputType: string,
+  missingFieldName: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" uses @openfed__is(fields: "${keyFields}") mapping to composite @key on entity "${entityType}",` +
+    ` but input type "${inputType}" is missing required key field "${missingFieldName}".`
+  );
+}
+
+export function nestedInputObjectTypeMismatchErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  keyFields: string,
+  entityType: string,
+  inputType: string,
+  inputFieldName: string,
+  inputFieldType: string,
+  entityFieldPath: string,
+  entityFieldType: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" maps to nested @key "${keyFields}" on entity "${entityType}",` +
+    ` but input type "${inputType}" field "${inputFieldName}" has type "${inputFieldType}"` +
+    ` which does not match key field "${entityFieldPath}" of type "${entityFieldType}".`
+  );
+}
+
+export function nestedInputObjectMissingFieldErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  keyFields: string,
+  entityType: string,
+  inputType: string,
+  missingFieldName: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" maps to nested @key "${keyFields}" on entity "${entityType}",` +
+    ` but input type "${inputType}" is missing required key field "${missingFieldName}".`
+  );
+}
+
+export function nonInputArgumentCannotTargetCompositeKeyErrorMessage(
+  argumentName: string,
+  fieldCoords: string,
+  keyFields: string,
+  entityType: string,
+  argumentType: string,
+): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" uses @openfed__is(fields: "${keyFields}") targeting composite @key on entity "${entityType}",` +
+    ` but argument type "${argumentType}" does not provide nested fields for each key field.` +
+    ' Use separate arguments or an input object that matches the composite key shape.'
+  );
+}
+
 export function listSizeInvalidSlicingArgumentErrorMessage(
   directiveCoords: DirectiveArgumentCoords,
   argumentName: ArgumentName,

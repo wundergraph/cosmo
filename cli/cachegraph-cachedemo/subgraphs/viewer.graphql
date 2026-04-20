@@ -1,0 +1,26 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: ["@key", "@interfaceObject", "@inaccessible"]
+  )
+
+directive @openfed__requestScoped(key: String!) on FIELD_DEFINITION
+
+# Symmetric @openfed__requestScoped: both Query.currentViewer and Personalized.currentViewer
+# declare key: "currentViewer". Their L1 cache entry is "viewer.currentViewer".
+# Whichever is resolved first populates L1; subsequent fields with the same key
+# inject from L1 and skip the fetch.
+type Personalized @key(fields: "id") @interfaceObject {
+  id: ID!
+  currentViewer: Viewer @inaccessible @openfed__requestScoped(key: "currentViewer")
+}
+
+type Viewer @key(fields: "id") {
+  id: ID!
+  name: String!
+  email: String!
+}
+
+type Query {
+  currentViewer: Viewer @openfed__requestScoped(key: "currentViewer")
+}

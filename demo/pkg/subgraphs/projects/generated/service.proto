@@ -1163,6 +1163,7 @@ message RequireEmployeeDeepWorkItemInfoByIdFields {
 }
 
 message Project {
+  reserved 20 to 21;
   string id = 1;
   string name = 2;
   google.protobuf.StringValue description = 3;
@@ -1221,6 +1222,7 @@ message Task {
 }
 
 message Employee {
+  reserved 8;
   int32 id = 1;
   ListOfProject projects = 2;
   repeated Task assigned_tasks = 3;

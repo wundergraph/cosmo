@@ -1862,6 +1862,12 @@ type Environment struct {
 	cmdLogChannel chan string
 }
 
+func (e *Environment) WithT(t testing.TB) *Environment {
+	clone := *e
+	clone.t = t
+	return &clone
+}
+
 func GetPubSubNameFn(prefix string) func(name string) string {
 	return func(name string) string {
 		return prefix + name
