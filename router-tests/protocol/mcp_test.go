@@ -350,6 +350,131 @@ func TestMCP(t *testing.T) {
 						assert.Equal(t, content.Text, "Input validation Error: validation error: at '/criteria': got null, want object")
 					})
 				})
+
+				t.Run("GraphQL error from subgraph is passed through to the MCP client", func(t *testing.T) {
+					testenv.Run(t, &testenv.Config{
+						MCP: config.MCPConfiguration{
+							Enabled: true,
+						},
+						Subgraphs: testenv.SubgraphsConfig{
+							Family: testenv.SubgraphConfig{
+								Middleware: func(handler http.Handler) http.Handler {
+									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+										w.Header().Set("Content-Type", "application/json")
+										w.WriteHeader(http.StatusForbidden)
+										_, _ = w.Write([]byte(`{"errors":[{"message":"not authorized","extensions":{"code":"FORBIDDEN"}}]}`))
+									})
+								},
+							},
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+
+						req := mcp.CallToolRequest{}
+						req.Params.Name = "execute_operation_my_employees"
+						req.Params.Arguments = map[string]interface{}{
+							"criteria": map[string]interface{}{},
+						}
+
+						resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+						require.NoError(t, err)
+						require.NotNil(t, resp)
+						require.True(t, resp.IsError)
+						require.Len(t, resp.Content, 1)
+
+						content, ok := resp.Content[0].(mcp.TextContent)
+						require.True(t, ok)
+						require.Equal(t, "text", content.Type)
+						// The actual GraphQL error message from the router must be surfaced to
+						// the MCP client, not masked by a generic "Response Error" placeholder.
+						require.Equal(t, "Response Error: Failed to fetch from Subgraph 'family'.", content.Text)
+					})
+				})
+
+				t.Run("GraphQL error from subgraph is forwarded in pass-through mode", func(t *testing.T) {
+					testenv.Run(t, &testenv.Config{
+						MCP: config.MCPConfiguration{
+							Enabled: true,
+						},
+						RouterOptions: []core.Option{
+							core.WithSubgraphErrorPropagation(config.SubgraphErrorPropagationConfiguration{
+								Enabled: true,
+								Mode:    config.SubgraphErrorPropagationModePassthrough,
+							}),
+						},
+						Subgraphs: testenv.SubgraphsConfig{
+							Family: testenv.SubgraphConfig{
+								Middleware: func(handler http.Handler) http.Handler {
+									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+										w.Header().Set("Content-Type", "application/json")
+										w.WriteHeader(http.StatusForbidden)
+										_, _ = w.Write([]byte(`{"errors":[{"message":"not authorized","extensions":{"code":"FORBIDDEN"}}]}`))
+									})
+								},
+							},
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+
+						req := mcp.CallToolRequest{}
+						req.Params.Name = "execute_operation_my_employees"
+						req.Params.Arguments = map[string]interface{}{
+							"criteria": map[string]interface{}{},
+						}
+
+						resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+						require.NoError(t, err)
+						require.NotNil(t, resp)
+						require.True(t, resp.IsError)
+						require.Len(t, resp.Content, 1)
+
+						content, ok := resp.Content[0].(mcp.TextContent)
+						require.True(t, ok)
+						require.Equal(t, "text", content.Type)
+						// When pass-through is enabled the original subgraph error message must
+						// reach the MCP client (the motivating scenario for this bug fix).
+						require.Contains(t, content.Text, "Response Error: not authorized")
+					})
+				})
+
+				t.Run("GraphQL partial success with errors includes both data and error details", func(t *testing.T) {
+					testenv.Run(t, &testenv.Config{
+						MCP: config.MCPConfiguration{
+							Enabled: true,
+						},
+						Subgraphs: testenv.SubgraphsConfig{
+							Family: testenv.SubgraphConfig{
+								Middleware: func(handler http.Handler) http.Handler {
+									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+										w.Header().Set("Content-Type", "application/json")
+										w.WriteHeader(http.StatusOK)
+										_, _ = w.Write([]byte(`{"data":{"findEmployees":[{"id":1,"isAvailable":false,"currentMood":"HAPPY","products":["COSMO"],"details":{"forename":"Jens","nationality":"GERMAN"}}]},"errors":[{"message":"partial failure"}]}`))
+									})
+								},
+							},
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+
+						req := mcp.CallToolRequest{}
+						req.Params.Name = "execute_operation_my_employees"
+						req.Params.Arguments = map[string]interface{}{
+							"criteria": map[string]interface{}{},
+						}
+
+						resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+						require.NoError(t, err)
+						require.NotNil(t, resp)
+						require.True(t, resp.IsError)
+						require.Len(t, resp.Content, 1)
+
+						content, ok := resp.Content[0].(mcp.TextContent)
+						require.True(t, ok)
+						require.Equal(t, "text", content.Type)
+						require.Contains(t, content.Text, "Response error with partial success")
+						// Error message from the router is included in the combined payload.
+						require.Contains(t, content.Text, "Failed to fetch from Subgraph 'family'")
+						// Partial data from the upstream response is also preserved.
+						require.Contains(t, content.Text, `"findEmployees"`)
+					})
+				})
 			})
 
 			t.Run("Execute Mutation", func(t *testing.T) {

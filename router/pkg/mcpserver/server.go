@@ -764,13 +764,13 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 
 		// If there are errors but no data, return only the errors
 		if len(graphqlResponse.Data) == 0 || string(graphqlResponse.Data) == "null" {
-			return mcp.NewToolResultErrorFromErr("Response Error", err), nil
+			return mcp.NewToolResultError("Response Error: " + errorMessage), nil
 		}
 
 		// If we have both errors and data, include data in the error message
 		dataString := string(graphqlResponse.Data)
 		combinedErrorMsg := fmt.Sprintf("Response error with partial success, Error: %s, Data: %s)", errorMessage, dataString)
-		return mcp.NewToolResultErrorFromErr(combinedErrorMsg, err), nil
+		return mcp.NewToolResultError(combinedErrorMsg), nil
 	}
 
 	return mcp.NewToolResultText(string(body)), nil
