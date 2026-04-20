@@ -66,6 +66,7 @@ import {
   sanitizeReadme,
 } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { traced } from '../tracing.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -82,6 +83,7 @@ type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 /**
  * Repository for managing subgraphs.
  */
+@traced
 export class SubgraphRepository {
   constructor(
     private logger: FastifyBaseLogger,
@@ -667,7 +669,7 @@ export class SubgraphRepository {
    * @param conditions
    * @private
    */
-  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+  static applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
     if (!rbac || rbac.isOrganizationViewer) {
       return true;
     }
@@ -733,7 +735,7 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+    if (!SubgraphRepository.applyRbacConditionsToQuery(opts.rbac, conditions)) {
       return [];
     }
 
@@ -792,7 +794,7 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+    if (!SubgraphRepository.applyRbacConditionsToQuery(opts.rbac, conditions)) {
       return [];
     }
 
@@ -855,7 +857,7 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+    if (!SubgraphRepository.applyRbacConditionsToQuery(opts.rbac, conditions)) {
       return 0;
     }
 
@@ -909,45 +911,156 @@ export class SubgraphRepository {
 
     const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
       eq(schema.subgraphsToFederatedGraph.federatedGraphId, target.federatedGraph.id),
     ];
 
-    if (!this.applyRbacConditionsToQuery(data.rbac, conditions)) {
+    if (!SubgraphRepository.applyRbacConditionsToQuery(data.rbac, conditions)) {
       return [];
     }
 
-    const targets = await this.db
+    return this.getSubgraphsMatching({
+      conditions,
+      published: data.published,
+      enforceFederatedGraph: true,
+      includeSubgraphs: data.includeSubgraphs,
+    });
+  }
+
+  public getSubgraphsByTargetIds(ids: string[], rbac?: RBACEvaluator): Promise<SubgraphDTO[]> {
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
+      inArray(schema.targets.id, ids),
+    ];
+
+    return SubgraphRepository.applyRbacConditionsToQuery(rbac, conditions)
+      ? this.getSubgraphsMatching({ conditions, enforceFederatedGraph: false })
+      : Promise.resolve([]);
+  }
+
+  private async getSubgraphsMatching({
+    conditions,
+    published,
+    enforceFederatedGraph,
+    includeSubgraphs,
+  }: {
+    conditions: (SQL<unknown> | undefined)[];
+    published?: boolean;
+    enforceFederatedGraph?: boolean;
+    includeSubgraphs?: string[];
+  }) {
+    const subgraphs = await this.db
       .select({
-        id: schema.targets.id,
         name: schema.targets.name,
-        lastUpdatedAt: schema.schemaVersion.createdAt,
+        labels: schema.targets.labels,
+        createdBy: schema.targets.createdBy,
+        readme: schema.targets.readme,
+        id: schema.subgraphs.id,
+        routingUrl: schema.subgraphs.routingUrl,
+        subscriptionUrl: schema.subgraphs.subscriptionUrl,
+        subscriptionProtocol: schema.subgraphs.subscriptionProtocol,
+        websocketSubprotocol: schema.subgraphs.websocketSubprotocol,
+        targetId: schema.subgraphs.targetId,
+        namespaceId: schema.namespaces.id,
+        namespaceName: schema.namespaces.name,
+        schemaVersionId: schema.subgraphs.schemaVersionId,
+        isFeatureSubgraph: schema.subgraphs.isFeatureSubgraph,
+        isEventDrivenGraph: schema.subgraphs.isEventDrivenGraph,
+        type: schema.subgraphs.type,
+        // Schema Version
+        svLastUpdated: schema.schemaVersion.createdAt,
+        svSchemaSDL: schema.schemaVersion.schemaSDL,
+        svIsV2Graph: schema.schemaVersion.isV2Graph,
+        // Proto
+        protoSchemaVersion: schema.protobufSchemaVersions.protoSchema,
+        protoMappings: schema.protobufSchemaVersions.protoMappings,
+        protoLock: schema.protobufSchemaVersions.protoLock,
+        // Plugin Data
+        pluginDataPlatforms: schema.pluginImageVersions.platform,
+        pluginDataVersion: schema.pluginImageVersions.version,
       })
       .from(schema.targets)
       .innerJoin(
         schema.subgraphs,
-        Array.isArray(data.includeSubgraphs) && data.includeSubgraphs.length > 0
-          ? and(eq(schema.subgraphs.targetId, schema.targets.id), inArray(schema.subgraphs.id, data.includeSubgraphs))
+        Array.isArray(includeSubgraphs) && includeSubgraphs.length > 0
+          ? and(eq(schema.subgraphs.targetId, schema.targets.id), inArray(schema.subgraphs.id, includeSubgraphs))
           : eq(schema.subgraphs.targetId, schema.targets.id),
       )
-      [data.published ? 'innerJoin' : 'leftJoin'](
+      .innerJoin(schema.namespaces, eq(schema.namespaces.id, schema.targets.namespaceId))
+      [enforceFederatedGraph ? 'innerJoin' : 'leftJoin'](
+        schema.subgraphsToFederatedGraph,
+        eq(schema.subgraphsToFederatedGraph.subgraphId, schema.subgraphs.id),
+      )
+      [published ? 'innerJoin' : 'leftJoin'](
         schema.schemaVersion,
         eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id),
       )
-      .innerJoin(schema.subgraphsToFederatedGraph, eq(schema.subgraphsToFederatedGraph.subgraphId, schema.subgraphs.id))
+      .leftJoin(
+        schema.protobufSchemaVersions,
+        and(
+          inArray(schema.subgraphs.type, ['grpc_plugin', 'grpc_service']),
+          eq(schema.subgraphs.schemaVersionId, schema.protobufSchemaVersions.schemaVersionId),
+        ),
+      )
+      .leftJoin(
+        schema.pluginImageVersions,
+        and(
+          eq(schema.subgraphs.type, 'grpc_plugin'),
+          eq(schema.subgraphs.schemaVersionId, schema.pluginImageVersions.schemaVersionId),
+        ),
+      )
       .orderBy(asc(schema.schemaVersion.createdAt))
-      .where(and(...conditions));
+      .where(and(...conditions))
+      .execute();
 
-    const subgraphs: SubgraphDTO[] = [];
+    // Transform the selected subgraphs into SubgraphDTO objects
+    return subgraphs.map((sg) => {
+      let proto: ProtoSubgraph | undefined;
+      if (sg.type === 'grpc_plugin' || sg.type === 'grpc_service') {
+        if (!sg.protoSchemaVersion) {
+          this.logger.warn(
+            `Missing protobuf schema for ${sg.type} subgraph with schemaVersionId: ${sg.schemaVersionId}`,
+          );
+        }
 
-    for (const target of targets) {
-      const sg = await this.byTargetId(target.id);
-      if (sg === undefined) {
-        continue;
+        proto = {
+          schema: sg.protoSchemaVersion ?? '',
+          mappings: sg.protoMappings ?? '',
+          lock: sg.protoLock ?? '',
+        };
+
+        if (sg.type === 'grpc_plugin') {
+          proto.pluginData = {
+            platforms: sg.pluginDataPlatforms ?? [],
+            version: sg.pluginDataVersion ?? 'v1',
+          };
+        }
       }
-      subgraphs.push(sg);
-    }
 
-    return subgraphs;
+      return {
+        id: sg.id,
+        targetId: sg.targetId,
+        routingUrl: sg.routingUrl,
+        readme: sg.readme || undefined,
+        subscriptionUrl: sg.subscriptionUrl || '',
+        subscriptionProtocol: sg.subscriptionProtocol ?? 'ws',
+        websocketSubprotocol: sg.websocketSubprotocol || undefined,
+        name: sg.name,
+        schemaSDL: sg.svSchemaSDL ?? '',
+        schemaVersionId: sg.schemaVersionId || '',
+        lastUpdatedAt: sg.svLastUpdated?.toISOString() ?? '',
+        labels: sg.labels?.map?.((l) => splitLabel(l)) ?? [],
+        creatorUserId: sg.createdBy || undefined,
+        namespace: sg.namespaceName,
+        namespaceId: sg.namespaceId,
+        isEventDrivenGraph: sg.isEventDrivenGraph,
+        isV2Graph: sg.svIsV2Graph || undefined,
+        isFeatureSubgraph: sg.isFeatureSubgraph,
+        type: sg.type,
+        proto,
+      };
+    });
   }
 
   private async getSubgraph(conditions: SQL<unknown>[]): Promise<SubgraphDTO | undefined> {

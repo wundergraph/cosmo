@@ -1342,6 +1342,9 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 
 	if o.cache != nil && o.cache.complexityCache != nil {
 		if cachedComplexity, found := o.cache.complexityCache.Get(o.parsedOperation.InternalID); found {
+			if limits.Mode == config.ComplexityLimitsModeMeasure {
+				return true, cachedComplexity, nil
+			}
 			return true, cachedComplexity, o.runComplexityComparisons(limits, cachedComplexity, o.parsedOperation.IsPersistedOperation)
 		}
 	}
@@ -1363,6 +1366,10 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 
 	if o.cache != nil && o.cache.complexityCache != nil {
 		o.cache.complexityCache.Set(o.parsedOperation.InternalID, cacheResult, 1)
+	}
+
+	if limits.Mode == config.ComplexityLimitsModeMeasure {
+		return false, cacheResult, nil
 	}
 
 	return false, cacheResult, o.runComplexityComparisons(limits, cacheResult, o.parsedOperation.IsPersistedOperation)
