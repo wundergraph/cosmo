@@ -16,7 +16,7 @@ import (
 func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
 	t.Parallel()
 
-	const testMetadataURL = "http://localhost:5025/.well-known/oauth-protected-resource/mcp"
+	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
 
 	schema := parseTestSchema(t)
 	fieldConfigs := testFieldConfigs()
@@ -172,7 +172,7 @@ func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
 func TestMCPAuthMiddleware_ExecuteGraphQLNoExtractor(t *testing.T) {
 	t.Parallel()
 
-	const testMetadataURL = "http://localhost:5025/.well-known/oauth-protected-resource/mcp"
+	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
 
 	decoder := &mockTokenDecoder{
 		decodeFunc: func(token string) (authentication.Claims, error) {

@@ -52,7 +52,7 @@ func TestNewMCPAuthMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(tt.decoder, "http://localhost:5025/.well-known/oauth-protected-resource/mcp", config.MCPOAuthScopesConfiguration{}, false)
+			middleware, err := NewMCPAuthMiddleware(tt.decoder, "https://test.example/.well-known/oauth-protected-resource/mcp", config.MCPOAuthScopesConfiguration{}, false)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, middleware)
@@ -153,7 +153,7 @@ func TestExtractScopes(t *testing.T) {
 func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 	t.Parallel()
 
-	const testMetadataURL = "http://localhost:5025/.well-known/oauth-protected-resource/mcp"
+	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
 
 	tests := []struct {
 		name                      string
@@ -312,7 +312,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
 	t.Parallel()
 
-	const testMetadataURL = "http://localhost:5025/.well-known/oauth-protected-resource/mcp"
+	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
 
 	validDecoder := &mockTokenDecoder{
 		decodeFunc: func(token string) (authentication.Claims, error) {
@@ -472,7 +472,7 @@ func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
 func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 	t.Parallel()
 
-	const testMetadataURL = "http://localhost:5025/.well-known/oauth-protected-resource/mcp"
+	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
 
 	validDecoder := &mockTokenDecoder{
 		decodeFunc: func(token string) (authentication.Claims, error) {
@@ -594,7 +594,7 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 func TestMCPAuthMiddleware_BuiltinToolScopes(t *testing.T) {
 	t.Parallel()
 
-	const testMetadataURL = "http://localhost:5025/.well-known/oauth-protected-resource/mcp"
+	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
 
 	validDecoder := &mockTokenDecoder{
 		decodeFunc: func(token string) (authentication.Claims, error) {
