@@ -70,7 +70,10 @@ func (sc *SchemaCompiler) ValidateInput(data []byte, compiledSchema *jsonschema.
 	if err := compiledSchema.Validate(v); err != nil {
 		var validationErr *jsonschema.ValidationError
 		if errors.As(err, &validationErr) {
-			return fmt.Errorf("validation error: %s", validationErr.Causes[0].Error())
+			if len(validationErr.Causes) > 0 {
+				return fmt.Errorf("validation error: %s", validationErr.Causes[0].Error())
+			}
+			return fmt.Errorf("validation error: %s", validationErr.Error())
 		}
 		return fmt.Errorf("schema validation failed: %w", err)
 	}
