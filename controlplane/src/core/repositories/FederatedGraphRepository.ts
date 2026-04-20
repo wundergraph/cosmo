@@ -74,6 +74,7 @@ import { checkIfLabelMatchersChanged, normalizeLabelMatchers, normalizeLabels } 
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
+import { traced } from '../tracing.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
@@ -85,6 +86,7 @@ export interface FederatedGraphConfig {
   trafficCheckDays: number;
 }
 
+@traced
 export class FederatedGraphRepository {
   constructor(
     private logger: FastifyBaseLogger,
@@ -456,7 +458,7 @@ export class FederatedGraphRepository {
     });
   }
 
-  private applyRbacConditionsToQuery(
+  static applyRbacConditionsToQuery(
     rbac: RBACEvaluator | undefined,
     conditions: (SQL<unknown> | undefined)[],
   ): boolean {
@@ -511,7 +513,7 @@ export class FederatedGraphRepository {
       conditions.push(eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation));
     }
 
-    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+    if (!FederatedGraphRepository.applyRbacConditionsToQuery(opts.rbac, conditions)) {
       return [];
     }
 
@@ -1501,7 +1503,7 @@ export class FederatedGraphRepository {
   /**
    * This method recomposes and deploys federated graphs and their respective contract graphs.
    */
-  public composeAndDeployGraphs = ({
+  public composeAndDeployGraphs({
     actorId,
     admissionConfig,
     compositionOptions,
@@ -1520,7 +1522,7 @@ export class FederatedGraphRepository {
     federatedGraphs: FederatedGraphDTO[];
     compositionOptions?: CompositionOptions;
     webhookProxyUrl?: string;
-  }) => {
+  }) {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
@@ -1860,7 +1862,7 @@ export class FederatedGraphRepository {
         compositionWarnings: allCompositionWarnings,
       };
     });
-  };
+  }
 
   public updateRouterCompatibilityVersion(id: string, version: string) {
     return this.db

@@ -3,9 +3,11 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { NamespaceDTO } from '../../types/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
+import { traced } from '../tracing.js';
 
 export const DefaultNamespace = 'default';
 
+@traced
 export class NamespaceRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,

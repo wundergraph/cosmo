@@ -4,6 +4,46 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.218.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.218.0...controlplane@0.218.1) (2026-04-17)
+
+### Bug Fixes
+
+* **controlplane:** populate userEmail in whoAmI response ([#2774](https://github.com/wundergraph/cosmo/issues/2774)) ([13a70dc](https://github.com/wundergraph/cosmo/commit/13a70dca3edd187856232d2746b33c434e1e12ff)) (@thisisnithin)
+
+# [0.218.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.217.0...controlplane@0.218.0) (2026-04-17)
+
+### Features
+
+* improve OpenId Configuration fetching to prevent DoS ([#2748](https://github.com/wundergraph/cosmo/issues/2748)) ([07de56d](https://github.com/wundergraph/cosmo/commit/07de56dd31dd35ad09214d98086eecd8d77fce98)) (@wilsonrivera)
+
+# [0.217.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.216.0...controlplane@0.217.0) (2026-04-17)
+
+### Features
+
+* **controlplane:** add service-level tracing spans to Connect-RPC handlers ([#2771](https://github.com/wundergraph/cosmo/issues/2771)) ([9cf421a](https://github.com/wundergraph/cosmo/commit/9cf421a2540323b617edd8036e3a213fc426e03d)) (@thisisnithin)
+
+# [0.216.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.215.0...controlplane@0.216.0) (2026-04-16)
+
+### Features
+
+* add new endpoints for fetching feature flags and feature subgraphs by federated graph ([#2729](https://github.com/wundergraph/cosmo/issues/2729)) ([74f44a1](https://github.com/wundergraph/cosmo/commit/74f44a1614ef0976231b143b52203c5a9dd2034e)) (@JivusAyrus)
+
+# [0.215.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.214.1...controlplane@0.215.0) (2026-04-15)
+
+### Features
+
+* use email as main tracking field ([#2700](https://github.com/wundergraph/cosmo/issues/2700)) ([23fc31d](https://github.com/wundergraph/cosmo/commit/23fc31dd11c94fb242e6cec7b820b806a88d4cb6)) (@alepane21)
+
+## [0.214.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.214.0...controlplane@0.214.1) (2026-04-14)
+
+**Note:** Version bump only for package controlplane
+
+# [0.214.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.213.1...controlplane@0.214.0) (2026-04-13)
+
+### Features
+
+* **controlplane:** implement dual-bucket write for execution configs ([#2717](https://github.com/wundergraph/cosmo/issues/2717)) ([0b0d42d](https://github.com/wundergraph/cosmo/commit/0b0d42d6ea05478904882e44dbace9ff1b17d621)) (@pepol)
+
 ## [0.213.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.213.0...controlplane@0.213.1) (2026-04-02)
 
 **Note:** Version bump only for package controlplane

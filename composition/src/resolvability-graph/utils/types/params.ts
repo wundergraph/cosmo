@@ -1,4 +1,10 @@
-import { type NodeName, type RootFieldData, type SelectionPath, type SubgraphName } from '../../types/types';
+import {
+  type FieldCoords,
+  type NodeName,
+  type RootFieldData,
+  type SelectionPath,
+  type SubgraphName,
+} from '../../types/types';
 import { type NodeResolutionData } from '../../node-resolution-data/node-resolution-data';
 
 import { type EntityAncestorCollection, type EntityAncestorData } from './types';
@@ -56,4 +62,12 @@ export type GenerateSharedResolvabilityErrorReasonsParams = {
   rootFieldData: RootFieldData;
   unresolvableFieldData: UnresolvableFieldData;
   entityAncestors: EntityAncestorCollection;
+};
+
+export type GetEntityReasonsParams = {
+  coords: FieldCoords;
+  entityAncestors: EntityAncestorCollection;
+  fieldSets: Set<string>;
+  reasons: Array<string>;
+  targetSubgraphName: SubgraphName;
 };

@@ -457,10 +457,6 @@ message GetFederatedGraphByNameResponse {
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
-  repeated FeatureFlag featureFlagsInLatestValidComposition = 5;
-  // includes all the feature subgraphs that are part of the federated graph;
-  // even the ones that are not part of the latest composition
-  repeated Subgraph featureSubgraphs = 6;
 }
 
 message GetFederatedGraphSDLByNameRequest {
@@ -1235,6 +1231,7 @@ message WhoAmIResponse {
   string organizationName = 2;
   optional string userEmail = 3;
   string organizationSlug = 4;
+  string organizationId = 5;
 }
 
 message RouterToken {
@@ -2526,6 +2523,32 @@ message GetFeatureFlagsByFederatedGraphResponse {
   int32 total_count = 3;
 }
 
+message GetFeatureFlagsInLatestCompositionByFederatedGraphRequest {
+  string federated_graph_name = 1;
+  string namespace = 2;
+}
+
+message GetFeatureFlagsInLatestCompositionByFederatedGraphResponse {
+  Response response = 1;
+  // feature flags that are part of the latest valid composition of the federated graph
+  repeated FeatureFlag feature_flags = 2;
+}
+
+message GetFeatureSubgraphsByFederatedGraphRequest {
+  string federated_graph_name = 1;
+  string namespace = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+  optional string query = 5;
+}
+
+message GetFeatureSubgraphsByFederatedGraphResponse {
+  Response response = 1;
+  // all unique feature subgraphs across all feature flags of the federated graph
+  repeated Subgraph feature_subgraphs = 2;
+  int32 total_count = 3;
+}
+
 message GetOrganizationWebhookHistoryRequest {
   Pagination pagination = 1;
   DateRange date_range = 2;
@@ -3511,6 +3534,10 @@ service PlatformService {
   rpc GetFeatureSubgraphs(GetFeatureSubgraphsRequest) returns (GetFeatureSubgraphsResponse) {}
   // GetFeatureFlagsByFederatedGraph returns the list of feature flags which match the label matchers of the federated graph.
   rpc GetFeatureFlagsByFederatedGraph(GetFeatureFlagsByFederatedGraphRequest) returns (GetFeatureFlagsByFederatedGraphResponse) {}
+  // GetFeatureFlagsInLatestCompositionByFederatedGraph returns only the feature flags that are part of the latest valid composition.
+  rpc GetFeatureFlagsInLatestCompositionByFederatedGraph(GetFeatureFlagsInLatestCompositionByFederatedGraphRequest) returns (GetFeatureFlagsInLatestCompositionByFederatedGraphResponse) {}
+  // GetFeatureSubgraphsByFederatedGraph returns the paginated list of unique feature subgraphs across all feature flags of the federated graph.
+  rpc GetFeatureSubgraphsByFederatedGraph(GetFeatureSubgraphsByFederatedGraphRequest) returns (GetFeatureSubgraphsByFederatedGraphResponse) {}
 
   // GetFederatedGraphById returns the federated graph by id.
   rpc GetFederatedGraphById(GetFederatedGraphByIdRequest) returns (GetFederatedGraphByIdResponse) {}
