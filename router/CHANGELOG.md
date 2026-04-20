@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.308.0](https://github.com/wundergraph/cosmo/compare/router@0.307.0...router@0.308.0) (2026-04-20)
+
+### Features
+
+* **mcp:** add OAuth 2.1 authorization with per-tool scope extraction ([#2636](https://github.com/wundergraph/cosmo/issues/2636)) ([235e4ef](https://github.com/wundergraph/cosmo/commit/235e4ef8bdd3adf2fea5c085fade5eda63af4a52)) (@asoorm)
+
 # [0.307.0](https://github.com/wundergraph/cosmo/compare/router@0.306.0...router@0.307.0) (2026-04-17)
 
 ### Features
