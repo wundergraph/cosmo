@@ -185,8 +185,8 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 
 					// Per-tool scope check from @requiresScopes directives
 					if toolOrScopes := m.getToolScopes(toolName); len(toolOrScopes) > 0 {
-						if !SatisfiesAnyGroup(tokenScopeSet, toolOrScopes) {
-							challengeScopes := BestScopeChallengeWithExisting(tokenScopes, toolOrScopes, m.scopeChallengeIncludeTokenScopes)
+						if !satisfiesAnyGroup(tokenScopeSet, toolOrScopes) {
+							challengeScopes := bestScopeChallengeWithExisting(tokenScopes, toolOrScopes, m.scopeChallengeIncludeTokenScopes)
 							m.sendPerToolInsufficientScopeResponse(w, challengeScopes, toolName)
 							return
 						}
@@ -293,11 +293,11 @@ func (m *MCPAuthMiddleware) checkExecuteGraphQLScopes(tokenScopes []string, toke
 		return nil
 	}
 
-	if SatisfiesAnyGroup(tokenScopeSet, combinedScopes) {
+	if satisfiesAnyGroup(tokenScopeSet, combinedScopes) {
 		return nil
 	}
 
-	return BestScopeChallengeWithExisting(tokenScopes, combinedScopes, m.scopeChallengeIncludeTokenScopes)
+	return bestScopeChallengeWithExisting(tokenScopes, combinedScopes, m.scopeChallengeIncludeTokenScopes)
 }
 
 // findMissing returns scopes from required that are not in tokenSet.

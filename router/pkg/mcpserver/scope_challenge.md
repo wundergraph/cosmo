@@ -16,7 +16,7 @@ Scopes are represented as `[][]string` — a list of AND-groups where satisfying
 
 When an operation touches multiple scoped fields, their requirements are combined via Cartesian product (see `scope_extractor.go`), producing a single `[][]string` for the tool.
 
-## Algorithm: `BestScopeChallenge`
+## Algorithm: `bestScopeChallenge`
 
 **Input:**
 
@@ -80,7 +80,7 @@ Required: [
 | `["read:fact"]` | 2, 1, 2, 1        | group 2 (tie→first) | `["read:fact", "read:all"]` |
 | `[]`            | 3, 2, 3, 1        | group 4             | `["read:all"]`              |
 
-## `BestScopeChallengeWithExisting`
+## `bestScopeChallengeWithExisting`
 
 Some MCP client SDKs **replace** rather than **accumulate** scopes when re-authorizing. If the challenge only contains the scopes for the failed operation, the client loses its existing scopes.
 
@@ -89,6 +89,6 @@ When `includeExisting` is `true`, the result is the **union** of the token's cur
 Example: token has `["init", "mcp:tools:write", "a"]`, best group is `["a", "b", "d"]`
 → result: `["init", "mcp:tools:write", "a", "b", "d"]`
 
-## `SatisfiesAnyGroup`
+## `satisfiesAnyGroup`
 
 A simple check: does the token satisfy at least one AND-group? Returns `true` if requirements are empty/nil (no scopes needed). Used as the gate check before computing a challenge.

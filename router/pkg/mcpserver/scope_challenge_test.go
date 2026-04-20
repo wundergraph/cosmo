@@ -221,7 +221,7 @@ func TestBestScopeChallenge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := BestScopeChallenge(tt.tokenScopes, tt.combinedOrScopes)
+			got := bestScopeChallenge(tt.tokenScopes, tt.combinedOrScopes)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -270,7 +270,7 @@ func TestBestScopeChallengeWithExisting(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := BestScopeChallengeWithExisting(tt.tokenScopes, tt.combinedOrScopes, tt.includeExisting)
+			got := bestScopeChallengeWithExisting(tt.tokenScopes, tt.combinedOrScopes, tt.includeExisting)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -332,7 +332,7 @@ func TestSatisfiesAnyGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := SatisfiesAnyGroup(toSet(tt.tokenScopes), tt.orScopes)
+			got := satisfiesAnyGroup(toSet(tt.tokenScopes), tt.orScopes)
 			assert.Equal(t, tt.want, got)
 		})
 	}

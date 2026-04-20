@@ -1,8 +1,8 @@
 package mcpserver
 
-// SatisfiesAnyGroup checks whether tokenScopeSet satisfies at least one AND-group
+// satisfiesAnyGroup checks whether tokenScopeSet satisfies at least one AND-group
 // in the OR-of-AND scope requirements. Returns true if no requirements exist.
-func SatisfiesAnyGroup(tokenScopeSet map[string]struct{}, orScopes [][]string) bool {
+func satisfiesAnyGroup(tokenScopeSet map[string]struct{}, orScopes [][]string) bool {
 	if len(orScopes) == 0 {
 		return true
 	}
@@ -14,7 +14,7 @@ func SatisfiesAnyGroup(tokenScopeSet map[string]struct{}, orScopes [][]string) b
 	return false
 }
 
-// BestScopeChallenge picks the AND-group closest to the client's current scopes.
+// bestScopeChallenge picks the AND-group closest to the client's current scopes.
 // Returns the complete AND-group that the client should request, or nil if any
 // group is already satisfied.
 //
@@ -22,7 +22,7 @@ func SatisfiesAnyGroup(tokenScopeSet map[string]struct{}, orScopes [][]string) b
 //  1. For each AND-group, count how many scopes the token is missing.
 //  2. If any group has 0 missing, return nil (already satisfied).
 //  3. Pick the group with the fewest missing scopes (ties: first group wins).
-func BestScopeChallenge(tokenScopes []string, combinedOrScopes [][]string) []string {
+func bestScopeChallenge(tokenScopes []string, combinedOrScopes [][]string) []string {
 	if len(combinedOrScopes) == 0 {
 		return nil
 	}
@@ -51,12 +51,12 @@ func BestScopeChallenge(tokenScopes []string, combinedOrScopes [][]string) []str
 	return combinedOrScopes[bestIdx]
 }
 
-// BestScopeChallengeWithExisting returns the challenge scopes, optionally including
+// bestScopeChallengeWithExisting returns the challenge scopes, optionally including
 // the token's existing scopes. When includeExisting is true, the result is the union
 // of the token's current scopes and the best AND-group, deduplicated. This works
 // around MCP client SDKs that replace rather than accumulate scopes on re-authorization.
-func BestScopeChallengeWithExisting(tokenScopes []string, combinedOrScopes [][]string, includeExisting bool) []string {
-	best := BestScopeChallenge(tokenScopes, combinedOrScopes)
+func bestScopeChallengeWithExisting(tokenScopes []string, combinedOrScopes [][]string, includeExisting bool) []string {
+	best := bestScopeChallenge(tokenScopes, combinedOrScopes)
 	if best == nil {
 		return nil
 	}
