@@ -799,7 +799,7 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 		var input GraphQLOperationInfoInput
 		inputBytes := request.Params.Arguments
 		if err := json.Unmarshal(inputBytes, &input); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal input arguments: %w. Ensure you provide {\"operationName\": \"<n>\"}", err)
+			return nil, fmt.Errorf(`failed to unmarshal input arguments: %w. Ensure you provide {"operationName": "<n>"}`, err)
 		}
 
 		if input.OperationName == "" {
