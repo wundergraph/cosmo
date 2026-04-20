@@ -1785,10 +1785,10 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
-		if authorization == "" {
-			require.NotEmpty(t, authorization, "missing authorization header")
-		}
-		token := authorization[len("Bearer "):]
+		require.NotEmpty(t, authorization, "missing authorization header")
+		token, ok := strings.CutPrefix(authorization, "Bearer ")
+		require.True(t, ok, "authorization header must start with 'Bearer '")
+		require.NotEmpty(t, token, "bearer token must not be empty")
 		parsedClaims := make(jwt.MapClaims)
 		jwtParser := new(jwt.Parser)
 		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)

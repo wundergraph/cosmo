@@ -17,6 +17,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	otelsdktracetest "go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -28,6 +29,28 @@ func rootSpan(spans []sdktrace.ReadOnlySpan) sdktrace.ReadOnlySpan {
 		return nil
 	}
 	return spans[len(spans)-1]
+}
+
+// waitForStableSpans polls exporter.GetSpans() until the snapshot count stops
+// changing for at least 200ms, guaranteeing the trace tree has finished exporting
+// before assertions run across all spans.
+func waitForStableSpans(t *testing.T, exporter *otelsdktracetest.InMemoryExporter) []sdktrace.ReadOnlySpan {
+	t.Helper()
+	var (
+		spans       []sdktrace.ReadOnlySpan
+		lastCount   = -1
+		stableSince time.Time
+	)
+	require.Eventually(t, func() bool {
+		spans = exporter.GetSpans().Snapshots()
+		if len(spans) != lastCount {
+			lastCount = len(spans)
+			stableSince = time.Now()
+			return false
+		}
+		return len(spans) > 0 && time.Since(stableSince) >= 200*time.Millisecond
+	}, 5*time.Second, 50*time.Millisecond, "expected span snapshot to stabilize")
+	return spans
 }
 
 func TestClientDisconnectionBehavior(t *testing.T) {
@@ -185,18 +208,7 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 			require.Error(t, err)
 			require.Nil(t, resp, "client should not receive any response when it disconnects")
 
-			var spans []sdktrace.ReadOnlySpan
-			var fetchSpan sdktrace.ReadOnlySpan
-			require.Eventually(t, func() bool {
-				spans = exporter.GetSpans().Snapshots()
-				for _, s := range spans {
-					if s.Name() == "Engine - Fetch" {
-						fetchSpan = s
-						return true
-					}
-				}
-				return false
-			}, 5*time.Second, 50*time.Millisecond, "expected Engine - Fetch span to be exported")
+			spans := waitForStableSpans(t, exporter)
 
 			// No span in the entire trace should be marked as ERROR for client disconnections
 			for _, s := range spans {
@@ -204,6 +216,14 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 					"span %q should not be marked as error when client disconnects", s.Name())
 			}
 
+			// Find the "Engine - Fetch" span and verify the cancellation is still recorded as an event
+			var fetchSpan sdktrace.ReadOnlySpan
+			for _, s := range spans {
+				if s.Name() == "Engine - Fetch" {
+					fetchSpan = s
+					break
+				}
+			}
 			require.NotNil(t, fetchSpan, "expected Engine - Fetch span to be exported")
 
 			hasExceptionEvent := false
@@ -246,11 +266,11 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 			}
 			// Validate the authorization header like the real CDN
 			authorization := r.Header.Get("Authorization")
-			if authorization == "" {
+			token, ok := strings.CutPrefix(authorization, "Bearer ")
+			if !ok || token == "" {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			token := authorization[len("Bearer "):]
 			parsedClaims := make(jwt.MapClaims)
 			jwtParser := new(jwt.Parser)
 			_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
@@ -289,18 +309,7 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 			require.Error(t, err)
 			require.Nil(t, resp, "client should not receive any response when it disconnects")
 
-			var spans []sdktrace.ReadOnlySpan
-			var poSpan sdktrace.ReadOnlySpan
-			require.Eventually(t, func() bool {
-				spans = exporter.GetSpans().Snapshots()
-				for _, s := range spans {
-					if s.Name() == "Load Persisted Operation" {
-						poSpan = s
-						return true
-					}
-				}
-				return false
-			}, 5*time.Second, 50*time.Millisecond, "expected Load Persisted Operation span to be exported")
+			spans := waitForStableSpans(t, exporter)
 
 			// No span should be marked as ERROR for client disconnections
 			for _, s := range spans {
@@ -308,6 +317,14 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 					"span %q should not be marked as error when client disconnects during persisted op fetch", s.Name())
 			}
 
+			// Verify the "Load Persisted Operation" span exists and has the exception event
+			var poSpan sdktrace.ReadOnlySpan
+			for _, s := range spans {
+				if s.Name() == "Load Persisted Operation" {
+					poSpan = s
+					break
+				}
+			}
 			require.NotNil(t, poSpan, "expected Load Persisted Operation span to be exported")
 
 			hasExceptionEvent := false
@@ -359,11 +376,7 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 			require.Error(t, err)
 			require.Nil(t, res, "client should not receive any response when it disconnects")
 
-			var spans []sdktrace.ReadOnlySpan
-			require.Eventually(t, func() bool {
-				spans = exporter.GetSpans().Snapshots()
-				return len(spans) > 0
-			}, 5*time.Second, 50*time.Millisecond, "expected spans to be exported")
+			spans := waitForStableSpans(t, exporter)
 
 			// No span should be marked as ERROR for client disconnections
 			for _, s := range spans {
