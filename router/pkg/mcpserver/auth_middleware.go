@@ -118,7 +118,7 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 
 		claims, err := m.authenticator.Authenticate(r.Context(), provider)
 		if err != nil || len(claims) == 0 {
-			m.sendUnauthorizedResponse(w, err)
+			m.sendUnauthorizedResponse(w, "invalid or missing access token")
 			return
 		}
 
@@ -138,11 +138,11 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 		if r.Method == http.MethodPost && r.Body != nil {
 			body, err = io.ReadAll(io.LimitReader(r.Body, maxBodyBytes+1))
 			if err != nil {
-				m.sendUnauthorizedResponse(w, fmt.Errorf("failed to read request body"))
+				m.sendUnauthorizedResponse(w, "failed to read request body")
 				return
 			}
 			if int64(len(body)) > maxBodyBytes {
-				m.sendUnauthorizedResponse(w, fmt.Errorf("request body too large"))
+				m.sendUnauthorizedResponse(w, "request body too large")
 				return
 			}
 			r.Body = io.NopCloser(bytes.NewBuffer(body))
@@ -213,7 +213,7 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 }
 
 // sendUnauthorizedResponse sends a 401 with WWW-Authenticate per RFC 6750 and RFC 9728.
-func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, err error) {
+func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, errorDescription string) {
 	authHeader := `Bearer realm="mcp"`
 
 	if len(m.scopes.Initialize) > 0 {
@@ -222,8 +222,8 @@ func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, err 
 	if m.resourceMetadataURL != "" {
 		authHeader += fmt.Sprintf(`, resource_metadata="%s"`, m.resourceMetadataURL)
 	}
-	if err != nil {
-		desc := strings.ReplaceAll(err.Error(), `"`, `'`)
+	if errorDescription != "" {
+		desc := strings.ReplaceAll(errorDescription, `"`, `'`)
 		authHeader += fmt.Sprintf(`, error_description="%s"`, desc)
 	}
 
