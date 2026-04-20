@@ -268,7 +268,7 @@ type Subscription {
 
 If we send a Subscription with the \`employeeID\` argument \`1\`, the topic would render as "employeeUpdated.1".
 
-Variable expansion is supported for NATS subjects and Kafka topics. When using Kafka topic templates, make sure the rendered Kafka topics already exist. The Router does not create Kafka topics automatically.
+Variable expansion is supported for NATS subjects, Kafka topics, and Redis channels. Redis channels follow the same template-expansion path. When using Kafka topic templates, make sure the rendered Kafka topics already exist. The Router does not create Kafka topics automatically.
 
 ### Request/Reply
 

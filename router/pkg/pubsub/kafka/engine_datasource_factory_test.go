@@ -158,6 +158,42 @@ func TestTransformEventConfig(t *testing.T) {
 		require.Equal(t, []string{"transformed.original.topic"}, cfg.topics)
 	})
 
+	t.Run("publish event invalid topic count", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			topics      []string
+			expectedErr string
+		}{
+			{
+				name:        "no topics",
+				topics:      nil,
+				expectedErr: "publish events should define one topic but received 0",
+			},
+			{
+				name:        "multiple topics",
+				topics:      []string{"topic.one", "topic.two"},
+				expectedErr: "publish events should define one topic but received 2",
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				cfg := &EngineDataSourceFactory{
+					providerId: "test-provider",
+					eventType:  EventTypePublish,
+					topics:     append([]string(nil), tc.topics...),
+					fieldName:  "testField",
+				}
+
+				err := cfg.TransformEventData(func(s string) (string, error) {
+					return "transformed." + s, nil
+				})
+				require.ErrorContains(t, err, tc.expectedErr)
+				require.Equal(t, tc.topics, cfg.topics)
+			})
+		}
+	})
+
 	t.Run("subscribe event", func(t *testing.T) {
 		cfg := &EngineDataSourceFactory{
 			providerId: "test-provider",

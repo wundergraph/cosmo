@@ -109,6 +109,10 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, 
 func (c *EngineDataSourceFactory) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
 	switch c.eventType {
 	case EventTypePublish:
+		if len(c.topics) != 1 {
+			return fmt.Errorf("publish events should define one topic but received %d", len(c.topics))
+		}
+
 		extractedTopic, err := extractFn(c.topics[0])
 		if err != nil {
 			return fmt.Errorf("unable to parse topic with id %s", c.topics[0])
