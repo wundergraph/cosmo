@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/MicahParks/jwkset"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 )
 
@@ -47,7 +47,7 @@ type OAuthTestServer struct {
 	issuer   string
 	audience string
 	jwksURL  string
-	server   *http.Server
+	server   *httptest.Server
 	storage  jwkset.Storage
 
 	mu      sync.RWMutex
@@ -72,9 +72,6 @@ func NewOAuthTestServer(t *testing.T, opts *OAuthTestServerOptions) (*OAuthTestS
 		opts = &OAuthTestServerOptions{}
 	}
 
-	port := freeport.GetOne(t)
-	portStr := fmt.Sprintf("%d", port)
-
 	cryptoProvider, err := jwks.NewRSACrypto("test_rsa", jwkset.AlgRS256, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RSA crypto: %w", err)
@@ -89,15 +86,11 @@ func NewOAuthTestServer(t *testing.T, opts *OAuthTestServerOptions) (*OAuthTestS
 		return nil, fmt.Errorf("failed to write key to storage: %w", err)
 	}
 
-	baseURL := fmt.Sprintf("http://localhost:%s", portStr)
-
 	s := &OAuthTestServer{
 		t:             t,
 		provider:      cryptoProvider,
 		keyID:         "test_rsa",
-		issuer:        baseURL,
 		audience:      "test-audience",
-		jwksURL:       baseURL + "/.well-known/jwks.json",
 		storage:       jwkStorage,
 		clients:       make(map[string]*OAuthClient),
 		codes:         make(map[string]*authCode),
@@ -115,21 +108,9 @@ func NewOAuthTestServer(t *testing.T, opts *OAuthTestServerOptions) (*OAuthTestS
 	mux.HandleFunc("/register", s.handleRegister)
 	mux.HandleFunc("/authorize", s.handleAuthorize)
 
-	httpServer := &http.Server{
-		Addr:    ":" + portStr,
-		Handler: withCORS(mux),
-	}
-	s.server = httpServer
-
-	go func() {
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			t.Logf("OAuth server error: %v", err)
-		}
-	}()
-
-	if err := s.waitForReady(5 * time.Second); err != nil {
-		return nil, fmt.Errorf("OAuth server failed to start: %w", err)
-	}
+	s.server = httptest.NewServer(withCORS(mux))
+	s.issuer = s.server.URL
+	s.jwksURL = s.server.URL + "/.well-known/jwks.json"
 
 	t.Logf("OAuth test server started at %s", s.issuer)
 	return s, nil
@@ -442,33 +423,6 @@ func (s *OAuthTestServer) tokenError(w http.ResponseWriter, errCode, description
 	})
 }
 
-func (s *OAuthTestServer) waitForReady(timeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("timeout waiting for OAuth server")
-		case <-ticker.C:
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.jwksURL, nil)
-			if err != nil {
-				continue
-			}
-			resp, err := http.DefaultClient.Do(req)
-			if err == nil {
-				resp.Body.Close()
-				if resp.StatusCode == http.StatusOK {
-					return nil
-				}
-			}
-		}
-	}
-}
-
 // ---------------------------------------------------------------------------
 // Public API for tests
 // ---------------------------------------------------------------------------
@@ -528,9 +482,8 @@ func (s *OAuthTestServer) TokenEndpoint() string { return s.issuer + "/token" }
 
 // Close stops the server.
 func (s *OAuthTestServer) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	return s.server.Shutdown(ctx)
+	s.server.Close()
+	return nil
 }
 
 func randomString(nBytes int) string {
