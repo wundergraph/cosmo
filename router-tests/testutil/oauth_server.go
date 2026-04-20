@@ -51,8 +51,8 @@ type OAuthTestServer struct {
 	storage  jwkset.Storage
 
 	mu      sync.RWMutex
-	clients map[string]*OAuthClient // clientID → client
-	codes   map[string]*authCode    // code → pending auth code
+	clients map[string]*OAuthClient // clientID -> client
+	codes   map[string]*authCode    // code -> pending auth code
 
 	// DefaultScopes assigned to tokens when the client doesn't request specific scopes.
 	DefaultScopes string
