@@ -185,10 +185,18 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 			require.Error(t, err)
 			require.Nil(t, resp, "client should not receive any response when it disconnects")
 
-			time.Sleep(500 * time.Millisecond)
-
-			spans := exporter.GetSpans().Snapshots()
-			require.NotEmpty(t, spans)
+			var spans []sdktrace.ReadOnlySpan
+			var fetchSpan sdktrace.ReadOnlySpan
+			require.Eventually(t, func() bool {
+				spans = exporter.GetSpans().Snapshots()
+				for _, s := range spans {
+					if s.Name() == "Engine - Fetch" {
+						fetchSpan = s
+						return true
+					}
+				}
+				return false
+			}, 5*time.Second, 50*time.Millisecond, "expected Engine - Fetch span to be exported")
 
 			// No span in the entire trace should be marked as ERROR for client disconnections
 			for _, s := range spans {
@@ -196,14 +204,6 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 					"span %q should not be marked as error when client disconnects", s.Name())
 			}
 
-			// Find the "Engine - Fetch" span and verify the cancellation is still recorded as an event
-			var fetchSpan sdktrace.ReadOnlySpan
-			for _, s := range spans {
-				if s.Name() == "Engine - Fetch" {
-					fetchSpan = s
-					break
-				}
-			}
 			require.NotNil(t, fetchSpan, "expected Engine - Fetch span to be exported")
 
 			hasExceptionEvent := false
@@ -289,9 +289,18 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 			require.Error(t, err)
 			require.Nil(t, resp, "client should not receive any response when it disconnects")
 
-			time.Sleep(500 * time.Millisecond)
-
-			spans := exporter.GetSpans().Snapshots()
+			var spans []sdktrace.ReadOnlySpan
+			var poSpan sdktrace.ReadOnlySpan
+			require.Eventually(t, func() bool {
+				spans = exporter.GetSpans().Snapshots()
+				for _, s := range spans {
+					if s.Name() == "Load Persisted Operation" {
+						poSpan = s
+						return true
+					}
+				}
+				return false
+			}, 5*time.Second, 50*time.Millisecond, "expected Load Persisted Operation span to be exported")
 
 			// No span should be marked as ERROR for client disconnections
 			for _, s := range spans {
@@ -299,14 +308,6 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 					"span %q should not be marked as error when client disconnects during persisted op fetch", s.Name())
 			}
 
-			// Verify the "Load Persisted Operation" span exists and has the exception event
-			var poSpan sdktrace.ReadOnlySpan
-			for _, s := range spans {
-				if s.Name() == "Load Persisted Operation" {
-					poSpan = s
-					break
-				}
-			}
 			require.NotNil(t, poSpan, "expected Load Persisted Operation span to be exported")
 
 			hasExceptionEvent := false
@@ -358,9 +359,11 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 			require.Error(t, err)
 			require.Nil(t, res, "client should not receive any response when it disconnects")
 
-			time.Sleep(500 * time.Millisecond)
-
-			spans := exporter.GetSpans().Snapshots()
+			var spans []sdktrace.ReadOnlySpan
+			require.Eventually(t, func() bool {
+				spans = exporter.GetSpans().Snapshots()
+				return len(spans) > 0
+			}, 5*time.Second, 50*time.Millisecond, "expected spans to be exported")
 
 			// No span should be marked as ERROR for client disconnections
 			for _, s := range spans {

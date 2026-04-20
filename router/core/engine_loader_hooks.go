@@ -281,6 +281,7 @@ func (f *engineLoaderHooks) recordFetchError(
 	metricSliceAttrs []attribute.KeyValue,
 ) ([]attribute.KeyValue, otelmetric.MeasurementOption) {
 	rtrace.SetSanitizedSpanStatus(span, codes.Error, fetchErr.Error())
+	span.SetAttributes(rotel.WgRequestError.Bool(true))
 	span.RecordError(fetchErr)
 
 	// Extract downstream error codes from subgraph errors

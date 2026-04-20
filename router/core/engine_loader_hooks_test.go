@@ -424,4 +424,3 @@ func TestRecordFetchError(t *testing.T) {
 		require.True(t, store.requestErrorCalled)
 	})
 }
-
