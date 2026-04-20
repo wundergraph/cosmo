@@ -87,7 +87,7 @@ func TestPQLManifest(t *testing.T) {
 			require.Equal(t, expectedEmployeesBody, res.Body)
 
 			// Verify startup log
-			logEntries := xEnv.Observer().FilterMessageSnippet("Loaded initial PQL manifest").All()
+			logEntries := xEnv.Observer().FilterMessageSnippet("Loaded PQL manifest").All()
 			require.Len(t, logEntries, 1)
 		})
 	})

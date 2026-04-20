@@ -317,7 +317,8 @@
       "Period": 1000000000,
       "RejectExceedingRequests": false,
       "RejectStatusCode": 200,
-      "HideStatsFromResponseExtension": false
+      "HideStatsFromResponseExtension": false,
+      "Overrides": null
     },
     "Storage": {
       "URLs": null,
@@ -545,6 +546,7 @@
     },
     "Manifest": {
       "Enabled": false,
+      "FileName": "manifest.json",
       "PollInterval": 10000000000,
       "PollJitter": 5000000000,
       "Warmup": {

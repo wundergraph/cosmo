@@ -394,6 +394,7 @@ export function createProposal(
       contractRepo,
       graphCompostionRepo,
       opts.chClient,
+      opts.webhookProxyUrl,
     );
 
     const {
@@ -446,6 +447,7 @@ export function createProposal(
         opts.billingDefaultPlanId,
         opts.webhookProxyUrl,
       ),
+      webhookProxyUrl: opts.webhookProxyUrl,
     });
 
     if (checkId) {

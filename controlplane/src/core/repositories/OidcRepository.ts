@@ -2,7 +2,9 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { oidcProviders } from '../../db/schema.js';
+import { traced } from '../tracing.js';
 
+@traced
 export class OidcRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 

@@ -403,6 +403,11 @@ rate_limit:
     burst: 60
     period: '60s'
     reject_exceeding_requests: true
+    overrides:
+      - matching: '^premium-.*'
+        rate: 200
+        burst: 200
+        period: '60s'
 
 override_routing_url:
   subgraphs:
@@ -462,6 +467,7 @@ security:
     enabled: true
     size: 1024
   complexity_limits:
+    mode: enforce
     depth:
       enabled: true
       limit: 5
@@ -496,6 +502,7 @@ persisted_operations:
     object_prefix: '5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo'
   manifest:
     enabled: true
+    file_name: manifest.json
     poll_interval: 30s
     poll_jitter: 10s
 

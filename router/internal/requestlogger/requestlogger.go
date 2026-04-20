@@ -233,7 +233,7 @@ func (al *accessLogger) getRequestFields(r *http.Request, logger *zap.Logger) []
 		if err != nil {
 			// We ignore logging the err since it could leak partial sensitive data
 			// such as %pa from "%password"
-			logger.Error("Failed to parse query parameters")
+			logger.Debug("Failed to parse query parameters")
 			// Since we wanted to ignore some values but we cant parse it
 			// we default to a safer skip all
 			query = ""

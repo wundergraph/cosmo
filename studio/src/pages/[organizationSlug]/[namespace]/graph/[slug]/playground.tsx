@@ -53,11 +53,16 @@ import { TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getClients,
+  getFeatureFlagsInLatestCompositionByFederatedGraph,
   getFederatedGraphSDLByName,
   getSubgraphSDLFromLatestComposition,
   publishPersistedOperations,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { PersistedOperation, PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  PersistedOperation,
+  PublishedOperationStatus,
+  GetFeatureFlagsInLatestCompositionByFederatedGraphResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { sentenceCase } from 'change-case';
 import crypto from 'crypto';
 import { GraphiQL } from 'graphiql';
@@ -65,7 +70,7 @@ import { GraphQLSchema, parse, validate } from 'graphql';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/router';
 import posthog from 'posthog-js';
-import { ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { FiSave } from 'react-icons/fi';
@@ -615,7 +620,8 @@ const ConfigSelect = () => {
 
   const graphContext = useContext(GraphContext);
   const subgraphs = graphContext?.subgraphs;
-  const featureFlags = graphContext?.featureFlagsInLatestValidComposition;
+  const compositionFlagsData = useCompositionFlags();
+  const featureFlags = compositionFlagsData?.featureFlags ?? [];
 
   const selected = (router.query.load as string) || graphContext?.graph?.id || '';
   const type = (router.query.type as string) || 'graph';
@@ -729,12 +735,14 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const loadSchemaGraphId = (router.query.load as string) || graphContext?.graph?.id || '';
   const type = (router.query.type as string) || 'graph';
 
+  const compositionFlagsData = useCompositionFlags();
+
   const { data, isLoading: isLoadingGraphSchema } = useQuery(getFederatedGraphSDLByName, {
     name: graphContext?.graph?.name,
     namespace: graphContext?.graph?.namespace,
     featureFlagName:
       type === 'featureFlag'
-        ? graphContext?.featureFlagsInLatestValidComposition.find((f) => f.id === loadSchemaGraphId)?.name
+        ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
         : undefined,
   });
 
@@ -985,7 +993,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
           args[1] as RequestInit,
           graphContext?.graph?.id || '',
           type === 'featureFlag'
-            ? graphContext?.featureFlagsInLatestValidComposition.find((f) => f.id === loadSchemaGraphId)?.name
+            ? (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId)?.name
             : undefined,
         ),
     });
@@ -994,7 +1002,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     subscriptionUrl,
     graphContext?.graphRequestToken,
     graphContext?.graph?.id,
-    graphContext?.featureFlagsInLatestValidComposition,
+    compositionFlagsData?.featureFlags,
     schema,
     clientValidationEnabled,
     type,
@@ -1040,9 +1048,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
         validateHeaders(requestHeaders);
 
         if (type === 'featureFlag') {
-          const featureFlag = graphContext?.featureFlagsInLatestValidComposition.find(
-            (f) => f.id === loadSchemaGraphId,
-          );
+          const featureFlag = (compositionFlagsData?.featureFlags ?? []).find((f) => f.id === loadSchemaGraphId);
           if (featureFlag) {
             requestHeaders['X-Feature-Flag'] = featureFlag.name;
           }
@@ -1074,7 +1080,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   }, [
     debouncedQuery,
     debouncedHeaders,
-    graphContext?.featureFlagsInLatestValidComposition,
+    compositionFlagsData?.featureFlags,
     graphContext?.graphRequestToken,
     graphContext?.graph?.id,
     loadSchemaGraphId,
@@ -1164,17 +1170,43 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 };
 
+const CompositionFlagsContext = createContext<GetFeatureFlagsInLatestCompositionByFederatedGraphResponse | undefined>(
+  undefined,
+);
+
+function useCompositionFlags() {
+  return useContext(CompositionFlagsContext);
+}
+
+const CompositionFlagsProvider = ({ children }: PropsWithChildren) => {
+  const graphContext = useContext(GraphContext);
+  const { data: compositionFlagsData } = useQuery(
+    getFeatureFlagsInLatestCompositionByFederatedGraph,
+    {
+      federatedGraphName: graphContext?.graph?.name,
+      namespace: graphContext?.graph?.namespace,
+    },
+    {
+      enabled: !!graphContext?.graph?.name,
+    },
+  );
+
+  return <CompositionFlagsContext.Provider value={compositionFlagsData}>{children}</CompositionFlagsContext.Provider>;
+};
+
 PlaygroundPage.getLayout = (page: ReactNode) => {
   return getGraphLayout(
     <PageHeader title="Playground | Studio">
-      <GraphPageLayout
-        title="Playground"
-        subtitle="Execute queries against your graph"
-        noPadding
-        toolbar={<ConfigSelect />}
-      >
-        {page}
-      </GraphPageLayout>
+      <CompositionFlagsProvider>
+        <GraphPageLayout
+          title="Playground"
+          subtitle="Execute queries against your graph"
+          noPadding
+          toolbar={<ConfigSelect />}
+        >
+          {page}
+        </GraphPageLayout>
+      </CompositionFlagsProvider>
     </PageHeader>,
   );
 };

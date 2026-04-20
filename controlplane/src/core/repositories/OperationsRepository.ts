@@ -17,6 +17,7 @@ import {
   SchemaCheckDetailsDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
+import { traced } from '../tracing.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
 export const MAX_MANIFEST_OPERATIONS = 3000;
@@ -42,6 +43,7 @@ type IgnoreAllOverride = {
   hash: string;
 };
 
+@traced
 export class OperationsRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,

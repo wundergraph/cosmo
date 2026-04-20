@@ -8,6 +8,7 @@ import pino from 'pino';
 import { v4 } from 'uuid';
 import * as z from 'zod';
 import { LintSeverity, VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
@@ -28,6 +29,7 @@ import { SubgraphCheckExtensionsRepository } from '../repositories/SubgraphCheck
 import { BlobStorage } from '../blobstorage/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
+import { traced } from '../tracing.js';
 import { makeWebhookRequest } from './utils.js';
 
 const subgraphCheckExtensionSchema = z.object({
@@ -120,6 +122,7 @@ type Config = {
   type: 'webhook' | 'slack';
 };
 
+@traced
 export class OrganizationWebhookService {
   private readonly logger: pino.Logger;
   private readonly defaultBillingPlanId?: string;
@@ -135,18 +138,21 @@ export class OrganizationWebhookService {
     this.logger = logger.child({ organizationId });
     this.defaultBillingPlanId = defaultBillingPlanId;
 
-    let agent: HttpsProxyAgent<string> | undefined;
+    let httpAgent: HttpProxyAgent<string> | undefined;
+    let httpsAgent: HttpsProxyAgent<string> | undefined;
     if (proxyUrl) {
       try {
-        agent = new HttpsProxyAgent(proxyUrl, {});
+        httpAgent = new HttpProxyAgent(proxyUrl, {});
+        httpsAgent = new HttpsProxyAgent(proxyUrl, {});
       } catch (e) {
         logger.error(e, 'Failed to create proxy agent');
       }
     }
 
     this.httpClient = axios.create({
-      httpsAgent: agent,
-      httpAgent: agent,
+      httpAgent,
+      httpsAgent,
+      proxy: false,
       timeout: 30_000,
       maxContentLength: 5 * 1024 * 1024, // ~5mb
     });
@@ -586,8 +592,7 @@ export class OrganizationWebhookService {
       await this.sendEvent(eventData, configs, actorId);
     } catch (e: any) {
       const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
-      logger.child({ message: e.message });
-      logger.error(`Could not send webhook event`);
+      logger.error(e, 'Could not send webhook event');
     }
   }
 
