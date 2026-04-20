@@ -3,6 +3,7 @@ package kafka
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
@@ -106,5 +107,25 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, 
 }
 
 func (c *EngineDataSourceFactory) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
+	switch c.eventType {
+	case EventTypePublish:
+		extractedTopic, err := extractFn(c.topics[0])
+		if err != nil {
+			return fmt.Errorf("unable to parse topic with id %s", c.topics[0])
+		}
+		c.topics = []string{extractedTopic}
+	case EventTypeSubscribe:
+		extractedTopics := make([]string, 0, len(c.topics))
+		for _, rawTopic := range c.topics {
+			extractedTopic, err := extractFn(rawTopic)
+			if err != nil {
+				return nil
+			}
+			extractedTopics = append(extractedTopics, extractedTopic)
+		}
+		slices.Sort(extractedTopics)
+		c.topics = extractedTopics
+	}
+
 	return nil
 }

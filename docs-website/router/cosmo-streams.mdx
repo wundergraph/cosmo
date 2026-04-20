@@ -251,7 +251,7 @@ type Employee @key(fields: "id", resolvable: false) {
 
 #### The "subjects" Argument
 
-The subjects/topics/channels argument of all events Directives allows you to use templating Syntax to use an argument to render the topic.
+The subjects/topics/channels argument of all event directives allows you to use templating syntax to render the destination from field arguments.
 
 Given the following Schema:
 
@@ -268,7 +268,7 @@ type Subscription {
 
 If we send a Subscription with the \`employeeID\` argument \`1\`, the topic would render as "employeeUpdated.1".
 
-Variable expansion is only supported for NATS on the subject/topic argument.
+Variable expansion is supported for NATS subjects and Kafka topics. When using Kafka topic templates, make sure the rendered Kafka topics already exist. The Router does not create Kafka topics automatically.
 
 ### Request/Reply
 
@@ -370,7 +370,7 @@ It's worth noting that the Router will not send any responses before you publish
 
 ### Subscription Filter
 
-The `@openfed__subscriptionFilter` directive allows you to filter subscription messages based on specified conditions. These conditions are defined as an argument on the directive. You can also nest conditions for negations or OR queries. This directive was developed due to limitations in Kafka, which does not recommend dynamic topic creation at runtime. To segment the event stream into different pieces, a user can express their interest using input arguments, whose values can be used to implement a dynamic filter at runtime.
+The `@openfed__subscriptionFilter` directive allows you to filter subscription messages based on specified conditions. These conditions are defined as an argument on the directive. You can also nest conditions for negations or OR queries. This directive is especially useful with Kafka when you want to segment a stream without pre-creating many topics. Kafka topic templates are supported, but the rendered topics must already exist and dynamic topic creation at runtime is generally not recommended.
 
 Given the following subscription:
 
