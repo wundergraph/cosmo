@@ -44,13 +44,13 @@ func overrideKafkaTopicsForField(t *testing.T, routerConfig *nodev1.RouterConfig
 				continue
 			}
 
-				require.NotEmpty(t, currentTopics)
-				require.Len(t, kafkaEvent.Topics, len(currentTopics))
-				for i := range currentTopics {
-					require.True(t, strings.HasSuffix(kafkaEvent.Topics[i], currentTopics[i]))
-				}
+			require.NotEmpty(t, currentTopics)
+			require.Len(t, kafkaEvent.Topics, len(currentTopics))
+			for i := range currentTopics {
+				require.True(t, strings.HasSuffix(kafkaEvent.Topics[i], currentTopics[i]))
+			}
 
-				prefix := strings.TrimSuffix(kafkaEvent.Topics[0], currentTopics[0])
+			prefix := strings.TrimSuffix(kafkaEvent.Topics[0], currentTopics[0])
 			prefixedTopics := make([]string, 0, len(topics))
 			for _, topic := range topics {
 				prefixedTopics = append(prefixedTopics, prefix+topic)
