@@ -83,7 +83,7 @@
     "ioredis": "^5.4.1",
     "isomorphic-dompurify": "^2.33.0",
     "jose": "^5.2.4",
-    "lodash": "^4.17.21",
+    "lodash": "4.18.1",
     "nodemailer": "^7.0.11",
     "nuid": "^1.1.6",
     "octokit": "^4.1.3",

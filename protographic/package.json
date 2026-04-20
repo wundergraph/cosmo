@@ -44,7 +44,7 @@
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "graphql": "^16.9.0",
-    "lodash-es": "4.17.21",
+    "lodash-es": "4.18.1",
     "protobufjs": "^7.5.0"
   }
 }
