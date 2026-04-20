@@ -105,24 +105,17 @@ const LatencyChart = ({
   const plotW = width - padding.left - padding.right;
   const plotH = height - padding.top - padding.bottom;
 
-  const allValues = [
-    ...cached.map((r) => r.serverDurationMs),
-    ...uncached.map((r) => r.serverDurationMs),
-  ];
+  const allValues = [...cached.map((r) => r.serverDurationMs), ...uncached.map((r) => r.serverDurationMs)];
   // 15% headroom gives the line some breathing room below the (now reserved)
   // legend area at the very top.
   const maxY = allValues.length > 0 ? Math.max(...allValues) * 1.15 : 10;
   const minY = 0;
 
-  const xForIndex = (i: number) =>
-    padding.left + (iterations > 1 ? (i / (iterations - 1)) * plotW : plotW / 2);
-  const yForValue = (v: number) =>
-    padding.top + plotH - ((v - minY) / (maxY - minY || 1)) * plotH;
+  const xForIndex = (i: number) => padding.left + (iterations > 1 ? (i / (iterations - 1)) * plotW : plotW / 2);
+  const yForValue = (v: number) => padding.top + plotH - ((v - minY) / (maxY - minY || 1)) * plotH;
 
   const toPath = (reqs: CacheExplorerRequestResult[]): string =>
-    reqs
-      .map((r, i) => `${i === 0 ? 'M' : 'L'} ${xForIndex(r.index)} ${yForValue(r.serverDurationMs)}`)
-      .join(' ');
+    reqs.map((r, i) => `${i === 0 ? 'M' : 'L'} ${xForIndex(r.index)} ${yForValue(r.serverDurationMs)}`).join(' ');
 
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => ({
     y: padding.top + plotH - t * plotH,
@@ -130,11 +123,7 @@ const LatencyChart = ({
   }));
 
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="xMidYMid meet"
-      className="h-auto w-full"
-    >
+    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" className="h-auto w-full">
       {/* Grid */}
       {yTicks.map((t, idx) => (
         <g key={idx}>
@@ -146,12 +135,7 @@ const LatencyChart = ({
             className="stroke-border"
             strokeDasharray="2 2"
           />
-          <text
-            x={padding.left - 6}
-            y={t.y + 4}
-            className="fill-muted-foreground text-[10px]"
-            textAnchor="end"
-          >
+          <text x={padding.left - 6} y={t.y + 4} className="fill-muted-foreground text-[10px]" textAnchor="end">
             {formatMs(t.value)}
           </text>
         </g>
@@ -164,27 +148,12 @@ const LatencyChart = ({
         y2={padding.top + plotH}
         className="stroke-border"
       />
-      <line
-        x1={padding.left}
-        x2={padding.left}
-        y1={padding.top}
-        y2={padding.top + plotH}
-        className="stroke-border"
-      />
+      <line x1={padding.left} x2={padding.left} y1={padding.top} y2={padding.top + plotH} className="stroke-border" />
       {/* X labels */}
-      <text
-        x={padding.left}
-        y={height - 10}
-        className="fill-muted-foreground text-[10px]"
-      >
+      <text x={padding.left} y={height - 10} className="fill-muted-foreground text-[10px]">
         1
       </text>
-      <text
-        x={width - padding.right}
-        y={height - 10}
-        textAnchor="end"
-        className="fill-muted-foreground text-[10px]"
-      >
+      <text x={width - padding.right} y={height - 10} textAnchor="end" className="fill-muted-foreground text-[10px]">
         {iterations}
       </text>
       <text
@@ -252,13 +221,9 @@ const SummaryTable = ({
   cacheRatio: number;
 }) => {
   const latencyReduction =
-    uncached.avgServerLatencyMs > 0
-      ? (1 - cached.avgServerLatencyMs / uncached.avgServerLatencyMs)
-      : 0;
+    uncached.avgServerLatencyMs > 0 ? 1 - cached.avgServerLatencyMs / uncached.avgServerLatencyMs : 0;
   const bytesReduction =
-    uncached.totalBytesTransferred > 0
-      ? (1 - cached.totalBytesTransferred / uncached.totalBytesTransferred)
-      : 0;
+    uncached.totalBytesTransferred > 0 ? 1 - cached.totalBytesTransferred / uncached.totalBytesTransferred : 0;
 
   const rows: Array<{ label: string; cached: string; uncached: string }> = [
     {
@@ -314,12 +279,8 @@ const SummaryTable = ({
         <thead className="bg-secondary/50">
           <tr>
             <th className="px-3 py-2 text-left font-medium">Metric</th>
-            <th className="px-3 py-2 text-right font-medium text-green-600 dark:text-green-400">
-              Cached
-            </th>
-            <th className="px-3 py-2 text-right font-medium text-red-600 dark:text-red-400">
-              Uncached
-            </th>
+            <th className="px-3 py-2 text-right font-medium text-green-600 dark:text-green-400">Cached</th>
+            <th className="px-3 py-2 text-right font-medium text-red-600 dark:text-red-400">Uncached</th>
           </tr>
         </thead>
         <tbody>
@@ -377,9 +338,7 @@ const FetchBreakdown = ({ requests }: { requests: CacheExplorerRequestResult[] }
 
   return (
     <div className="w-full overflow-hidden rounded-md border">
-      <div className="bg-secondary/50 px-3 py-2 text-sm font-medium">
-        Fetch Breakdown by Subgraph (cached phase)
-      </div>
+      <div className="bg-secondary/50 px-3 py-2 text-sm font-medium">Fetch Breakdown by Subgraph (cached phase)</div>
       <table className="w-full text-sm">
         <thead className="bg-secondary/30 text-xs text-muted-foreground">
           <tr>
@@ -396,14 +355,9 @@ const FetchBreakdown = ({ requests }: { requests: CacheExplorerRequestResult[] }
             const cached = s.l1Cached + s.l2Cached;
             const ratio = s.totalFetches > 0 ? cached / s.totalFetches : 0;
             return (
-              <tr
-                key={s.sourceName}
-                className={i % 2 === 0 ? 'bg-background' : 'bg-secondary/20'}
-              >
+              <tr key={s.sourceName} className={i % 2 === 0 ? 'bg-background' : 'bg-secondary/20'}>
                 <td className="px-3 py-1.5 font-medium text-foreground">{s.sourceName}</td>
-                <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">
-                  {s.totalFetches}
-                </td>
+                <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{s.totalFetches}</td>
                 <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">
                   {s.l1Cached > 0 ? s.l1Cached : '—'}
                 </td>
@@ -571,8 +525,8 @@ const splitPath = (p: string): string[] => {
 };
 
 type PathNode = {
-  segment: string;      // display segment at this level (e.g. "recommendedArticles", "@.relatedArticles")
-  fullPath: string;     // full router path represented by this node
+  segment: string; // display segment at this level (e.g. "recommendedArticles", "@.relatedArticles")
+  fullPath: string; // full router path represented by this node
   fetches: FetchPair[]; // fetches that resolve to exactly this path
   children: PathNode[]; // deeper paths nested under this one
 };
@@ -637,9 +591,7 @@ const StatusBadge = ({ status, missingLabel }: { status: FetchPlanStatus | null;
 };
 
 const LatencyCell = ({ text }: { text: string | null }) => (
-  <span className="block text-right font-mono text-[11px] text-muted-foreground">
-    {text || ''}
-  </span>
+  <span className="block text-right font-mono text-[11px] text-muted-foreground">{text || ''}</span>
 );
 
 // Attempt to pretty-print a GraphQL query string using the official parser.
@@ -715,9 +667,7 @@ const normalizeForComparison = (
 // just a green "match" banner is shown — no need to render the full body.
 const DIFF_CONTEXT = 2;
 
-type DiffChunk =
-  | { kind: 'match'; count: number }
-  | { kind: 'diff'; cachedLines: string[]; uncachedLines: string[] };
+type DiffChunk = { kind: 'match'; count: number } | { kind: 'diff'; cachedLines: string[]; uncachedLines: string[] };
 
 const buildDiffChunks = (a: string[], b: string[]): DiffChunk[] => {
   const maxLen = Math.max(a.length, b.length);
@@ -762,22 +712,17 @@ const buildDiffChunks = (a: string[], b: string[]): DiffChunk[] => {
   return chunks;
 };
 
-const ResponseDiff = ({
-  cachedJson,
-  uncachedJson,
-}: {
-  cachedJson: string;
-  uncachedJson: string;
-}) => {
+const ResponseDiff = ({ cachedJson, uncachedJson }: { cachedJson: string; uncachedJson: string }) => {
   const match = cachedJson === uncachedJson;
   const cachedLines = useMemo(() => cachedJson.split('\n'), [cachedJson]);
   const uncachedLines = useMemo(() => uncachedJson.split('\n'), [uncachedJson]);
-  const chunks = useMemo(
-    () => buildDiffChunks(cachedLines, uncachedLines),
-    [cachedLines, uncachedLines],
-  );
+  const chunks = useMemo(() => buildDiffChunks(cachedLines, uncachedLines), [cachedLines, uncachedLines]);
   const diffCount = useMemo(
-    () => chunks.reduce((n, c) => n + (c.kind === 'diff' ? c.cachedLines.filter((l, i) => l !== c.uncachedLines[i]).length : 0), 0),
+    () =>
+      chunks.reduce(
+        (n, c) => n + (c.kind === 'diff' ? c.cachedLines.filter((l, i) => l !== c.uncachedLines[i]).length : 0),
+        0,
+      ),
     [chunks],
   );
   // When matching: default to showing full response. When differing: default
@@ -843,9 +788,7 @@ const ResponseDiff = ({
       <div
         className={cn(
           'flex items-center justify-between border-y border-border/50 px-3 py-1 text-[9px] font-semibold uppercase tracking-wide',
-          match
-            ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-            : 'bg-red-500/10 text-red-600 dark:text-red-400',
+          match ? 'bg-green-500/10 text-green-600 dark:text-green-400' : 'bg-red-500/10 text-red-600 dark:text-red-400',
         )}
       >
         <span>
@@ -854,7 +797,7 @@ const ResponseDiff = ({
             : `Response — ${diffCount} line${diffCount !== 1 ? 's' : ''} differ`}
         </span>
         <button
-          className="rounded border border-current/30 px-1.5 py-0.5 text-[9px] font-medium normal-case tracking-normal opacity-70 hover:opacity-100"
+          className="border-current/30 rounded border px-1.5 py-0.5 text-[9px] font-medium normal-case tracking-normal opacity-70 hover:opacity-100"
           onClick={(e) => {
             e.stopPropagation();
             setShowFull((v) => !v);
@@ -884,13 +827,7 @@ const ResponseDiff = ({
 // Top-level response comparison between the last cached and uncached iterations.
 // Shows a side-by-side diff of the full GraphQL response data so users can
 // verify cache correctness — if the responses differ, there's a bug.
-const ResponseComparison = ({
-  cachedResponse,
-  uncachedResponse,
-}: {
-  cachedResponse: any;
-  uncachedResponse: any;
-}) => {
+const ResponseComparison = ({ cachedResponse, uncachedResponse }: { cachedResponse: any; uncachedResponse: any }) => {
   const cachedJson = useMemo(
     () => (cachedResponse != null ? JSON.stringify(cachedResponse, null, 2) : ''),
     [cachedResponse],
@@ -904,9 +841,7 @@ const ResponseComparison = ({
 
   return (
     <div className="w-full overflow-hidden rounded-md border">
-      <div className="bg-secondary/50 px-3 py-2 text-sm font-medium">
-        Response Comparison (last measured iteration)
-      </div>
+      <div className="bg-secondary/50 px-3 py-2 text-sm font-medium">Response Comparison (last measured iteration)</div>
       <ResponseDiff cachedJson={cachedJson} uncachedJson={uncachedJson} />
     </div>
   );
@@ -923,7 +858,9 @@ const summarizeCacheKeys = (keys: string[]): string => {
         const parsed = JSON.parse(raw.slice(jsonStart));
         if (parsed?.__typename) typeName = parsed.__typename;
       }
-    } catch { /* keep '?' */ }
+    } catch {
+      /* keep '?' */
+    }
     counts.set(typeName, (counts.get(typeName) || 0) + 1);
   }
   return Array.from(counts.entries())
@@ -995,15 +932,17 @@ const FetchRow = ({ pair }: { pair: FetchPair }) => {
   const cachedLatency = pair.cached ? fetchNodeLatency(pair.cached) : null;
   const uncachedLatency = pair.uncached ? fetchNodeLatency(pair.uncached) : null;
   const rawQuery = pair.cached?.query || pair.uncached?.query;
-  const formattedQuery = useMemo(
-    () => (rawQuery ? prettyPrintQuery(rawQuery) : undefined),
-    [rawQuery],
-  );
+  const formattedQuery = useMemo(() => (rawQuery ? prettyPrintQuery(rawQuery) : undefined), [rawQuery]);
   const rawCacheKeys = pair.cached?.cacheKeys || pair.uncached?.cacheKeys;
   const cacheKeys = useMemo(() => dedupeCacheKeysForDisplay(rawCacheKeys), [rawCacheKeys]);
   const cachedResponseData = pair.cached?.responseData;
   const uncachedResponseData = pair.uncached?.responseData;
-  const hasDetail = !!(cacheKeys?.length || formattedQuery || cachedResponseData != null || uncachedResponseData != null);
+  const hasDetail = !!(
+    cacheKeys?.length ||
+    formattedQuery ||
+    cachedResponseData != null ||
+    uncachedResponseData != null
+  );
   const keySummary = useMemo(
     () => (cacheKeys && cacheKeys.length > 0 ? summarizeCacheKeys(cacheKeys) : undefined),
     [cacheKeys],
@@ -1068,9 +1007,7 @@ const FetchRow = ({ pair }: { pair: FetchPair }) => {
         <div className="flex items-baseline gap-x-1.5 truncate">
           <span className="text-muted-foreground">Fetch →</span>
           <span className="text-foreground">{ref.sourceName || '?'}</span>
-          {identityLabel && (
-            <span className="truncate text-[10px] text-muted-foreground">· {identityLabel}</span>
-          )}
+          {identityLabel && <span className="truncate text-[10px] text-muted-foreground">· {identityLabel}</span>}
         </div>
         <StatusBadge status={cachedStatus} missingLabel="no cached fetch" />
         <LatencyCell text={cachedLatency} />
@@ -1112,9 +1049,9 @@ const FetchRow = ({ pair }: { pair: FetchPair }) => {
               />
               {extraFields > 0 && (
                 <div className="px-3 py-1 text-[9px] text-muted-foreground">
-                  Cached response has {extraFields} additional field{extraFields !== 1 ? 's' : ''} from
-                  other subgraphs (expected — L2 stores denormalized entities).
-                  Comparison above shows only the fields this subgraph provides.
+                  Cached response has {extraFields} additional field{extraFields !== 1 ? 's' : ''} from other subgraphs
+                  (expected — L2 stores denormalized entities). Comparison above shows only the fields this subgraph
+                  provides.
                 </div>
               )}
             </>
@@ -1164,18 +1101,9 @@ const PathTreeNode = ({ node, depth }: { node: PathNode; depth: number }) => {
   );
 };
 
-const FetchPlanTree = ({
-  cachedPlan,
-  uncachedPlan,
-}: {
-  cachedPlan?: FetchPlanNode;
-  uncachedPlan?: FetchPlanNode;
-}) => {
+const FetchPlanTree = ({ cachedPlan, uncachedPlan }: { cachedPlan?: FetchPlanNode; uncachedPlan?: FetchPlanNode }) => {
   // Hooks must come before any early return — React's rules-of-hooks.
-  const entries = useMemo(
-    () => collectFetchPairs(cachedPlan, uncachedPlan),
-    [cachedPlan, uncachedPlan],
-  );
+  const entries = useMemo(() => collectFetchPairs(cachedPlan, uncachedPlan), [cachedPlan, uncachedPlan]);
   const pathRoot = useMemo(() => buildPathTrie(entries), [entries]);
 
   if (!cachedPlan && !uncachedPlan) return null;
@@ -1239,13 +1167,7 @@ const computeCacheRatio = (requests: CacheExplorerRequestResult[]): number => {
   return totalFetches > 0 ? cachedFetches / totalFetches : 0;
 };
 
-const SpeedupBanner = ({
-  speedup,
-  cacheRatio,
-}: {
-  speedup: number;
-  cacheRatio: number;
-}) => {
+const SpeedupBanner = ({ speedup, cacheRatio }: { speedup: number; cacheRatio: number }) => {
   if (!isFinite(speedup) || speedup <= 0) return null;
   const isFaster = speedup > 1;
   return (
@@ -1277,10 +1199,7 @@ const SpeedupBanner = ({
 
 export const CacheExplorerView = () => {
   const { cacheMode } = useContext(PlaygroundContext);
-  const [iterations, setIterations] = useLocalStorage<number>(
-    'playground:cache-explorer:iterations',
-    10,
-  );
+  const [iterations, setIterations] = useLocalStorage<number>('playground:cache-explorer:iterations', 10);
   const [state, setState] = useState<CacheExplorerState>(cacheExplorerController.getState());
 
   useEffect(() => {
@@ -1368,8 +1287,8 @@ export const CacheExplorerView = () => {
         <div className="text-xs text-muted-foreground">
           {canRun ? (
             <>
-              Comparing: <span className="font-medium text-foreground">{cacheModeLabels[cacheMode]}</span>{' '}
-              vs <span className="font-medium text-foreground">Cache disabled</span>
+              Comparing: <span className="font-medium text-foreground">{cacheModeLabels[cacheMode]}</span> vs{' '}
+              <span className="font-medium text-foreground">Cache disabled</span>
               {!isRunning && state.status !== 'complete' && (
                 <span className="ml-2">— click the Play button to run</span>
               )}
@@ -1385,31 +1304,29 @@ export const CacheExplorerView = () => {
 
       {/* Running progress — single bar from 0% to 100%. Warmup is hidden
           (runs silently between uncached and cached phases). */}
-      {isRunning && state.phase !== 'warmup' && (() => {
-        const totalWork = state.total * 2;
-        const completed = state.phase === 'uncached'
-          ? state.current
-          : state.total + state.current;
-        const pct = Math.min(100, (completed / totalWork) * 100);
-        const label = state.phase === 'uncached'
-          ? `Uncached phase — request ${state.current} / ${state.total}`
-          : `Cached phase — request ${state.current} / ${state.total}`;
-        const step = state.phase === 'uncached' ? 'Step 1/2' : 'Step 2/2';
-        return (
-          <div className="rounded-md border bg-secondary/20 p-3">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-medium">{label}</span>
-              <span className="text-muted-foreground">{step}</span>
+      {isRunning &&
+        state.phase !== 'warmup' &&
+        (() => {
+          const totalWork = state.total * 2;
+          const completed = state.phase === 'uncached' ? state.current : state.total + state.current;
+          const pct = Math.min(100, (completed / totalWork) * 100);
+          const label =
+            state.phase === 'uncached'
+              ? `Uncached phase — request ${state.current} / ${state.total}`
+              : `Cached phase — request ${state.current} / ${state.total}`;
+          const step = state.phase === 'uncached' ? 'Step 1/2' : 'Step 2/2';
+          return (
+            <div className="rounded-md border bg-secondary/20 p-3">
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="font-medium">{label}</span>
+                <span className="text-muted-foreground">{step}</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+              </div>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-              <div
-                className="h-full bg-primary transition-all"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* Error */}
       {state.status === 'error' && (
@@ -1436,9 +1353,7 @@ export const CacheExplorerView = () => {
       {/* Results (also shown live during run) */}
       {(isRunning || state.status === 'complete') && (cachedReqs.length > 0 || uncachedReqs.length > 0) && (
         <>
-          {liveSpeedup > 0 && (
-            <SpeedupBanner speedup={liveSpeedup} cacheRatio={liveCacheRatio} />
-          )}
+          {liveSpeedup > 0 && <SpeedupBanner speedup={liveSpeedup} cacheRatio={liveCacheRatio} />}
 
           <div className="w-full rounded-md border p-3">
             <LatencyChart
@@ -1468,12 +1383,10 @@ export const CacheExplorerView = () => {
             <div className="flex items-start gap-x-2">
               <BoltIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
               <div>
-                <strong>Note:</strong> The cached phase is preceded by {WARMUP_ITERATIONS}{' '}
-                warm-up queries (not shown in results) so the cache is fully populated before
-                the measured iterations begin. Other router caches (plan, normalization,
-                variables) also warm during warm-up, so the measured iterations focus on
-                entity cache impact. This is a dev-mode exploration tool, not a production
-                load test.
+                <strong>Note:</strong> The cached phase is preceded by {WARMUP_ITERATIONS} warm-up queries (not shown in
+                results) so the cache is fully populated before the measured iterations begin. Other router caches
+                (plan, normalization, variables) also warm during warm-up, so the measured iterations focus on entity
+                cache impact. This is a dev-mode exploration tool, not a production load test.
               </div>
             </div>
           </div>

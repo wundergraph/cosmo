@@ -12,11 +12,11 @@ import { CacheMode } from './types';
 export type CacheExplorerConfig = {
   url: string;
   query: string;
-  variables?: string;     // raw JSON string from editor
+  variables?: string; // raw JSON string from editor
   operationName?: string;
-  headers: Record<string, string>;   // user's editor headers, already sanitized
+  headers: Record<string, string>; // user's editor headers, already sanitized
   iterations: number;
-  cacheMode: CacheMode;   // drives which disable headers the cached phase sends
+  cacheMode: CacheMode; // drives which disable headers the cached phase sends
 };
 
 type ProgressCallback = (state: CacheExplorerState) => void;
@@ -41,10 +41,7 @@ const stripCacheHeaders = (headers: Record<string, string>): Record<string, stri
   return out;
 };
 
-const applyCacheModeHeaders = (
-  headers: Record<string, string>,
-  mode: CacheMode,
-): Record<string, string> => {
+const applyCacheModeHeaders = (headers: Record<string, string>, mode: CacheMode): Record<string, string> => {
   const h = { ...headers };
   if (mode === 'no-l1') {
     h['X-WG-Disable-Entity-Cache-L1'] = 'true';
@@ -71,8 +68,7 @@ const buildFetchPlan = (node: any): FetchPlanNode | undefined => {
 
   const t = node.trace || node.datasource_load_trace;
   const ct = t?.cache_trace;
-  const bodySize: number =
-    t?.output?.extensions?.trace?.response?.body_size ?? 0;
+  const bodySize: number = t?.output?.extensions?.trace?.response?.body_size ?? 0;
 
   // Load duration: prefer the actual HTTP load time. For skipped fetches with
   // cache trace timing, fall back to the cache operation duration.
@@ -81,8 +77,7 @@ const buildFetchPlan = (node: any): FetchPlanNode | undefined => {
     loadNs = ct.duration_nanoseconds;
   }
 
-  const rawKeys: string[] | undefined =
-    Array.isArray(ct?.keys) && ct.keys.length > 0 ? ct.keys : undefined;
+  const rawKeys: string[] | undefined = Array.isArray(ct?.keys) && ct.keys.length > 0 ? ct.keys : undefined;
 
   const planNode: FetchPlanNode = {
     kind: node.kind || '?',
@@ -137,10 +132,7 @@ const extractMetricsFromTrace = (
   let entityCount = 0;
   let subgraphRequests = 0;
   let bytesTransferred = 0;
-  const sourceMap = new Map<
-    string,
-    { totalFetches: number; l1Cached: number; l2Cached: number; httpCalls: number }
-  >();
+  const sourceMap = new Map<string, { totalFetches: number; l1Cached: number; l2Cached: number; httpCalls: number }>();
 
   const walk = (node: any) => {
     if (!node) return;
@@ -243,8 +235,7 @@ const extractServerDurationMs = (trace: any): number => {
   // Find the last fetch end time relative to request start
   let maxFetchEndNs = 0;
   const plannerEndNs =
-    (info.planner_stats?.duration_since_start_nanoseconds || 0) +
-    (info.planner_stats?.duration_nanoseconds || 0);
+    (info.planner_stats?.duration_since_start_nanoseconds || 0) + (info.planner_stats?.duration_nanoseconds || 0);
 
   const walk = (node: any) => {
     if (!node) return;
@@ -389,9 +380,9 @@ export const runCacheExplorer = async (
     throw new Error('Cache mode is "disabled" — nothing to compare. Pick a cache mode first.');
   }
 
-  const prefix = `cache-explorer-${
-    (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`).toString().slice(0, 12)
-  }`;
+  const prefix = `cache-explorer-${(globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`)
+    .toString()
+    .slice(0, 12)}`;
   const baseHeaders = stripCacheHeaders(config.headers);
   baseHeaders['X-WG-TRACE'] = 'true';
 
@@ -449,8 +440,7 @@ export const runCacheExplorer = async (
 
   const cached = computePhaseResult('cached', cachedResults);
   const uncached = computePhaseResult('uncached', uncachedResults);
-  const speedup =
-    cached.avgServerLatencyMs > 0 ? uncached.avgServerLatencyMs / cached.avgServerLatencyMs : 0;
+  const speedup = cached.avgServerLatencyMs > 0 ? uncached.avgServerLatencyMs / cached.avgServerLatencyMs : 0;
 
   const result: CacheExplorerResult = {
     timestamp: Date.now(),

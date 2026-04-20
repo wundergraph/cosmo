@@ -187,27 +187,34 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
             Single Flight Shared Response: {getIcon(data.singleFlightSharedResponse)}
           </p>
           <p className="flex items-center gap-x-2">Load Skipped: {getIcon(data.loadSkipped)}</p>
-          {data.cacheTrace && (() => {
-            const status = getCacheStatus(data.cacheTrace);
-            return (
-              <>
-                <Separator className="my-1" />
-                <p className="flex items-center gap-x-2">
-                  Cache:{' '}
-                  <Badge variant={status === 'l1-hit' || status === 'l2-hit' ? 'success' : 'secondary'}>
-                    {getCacheStatusLabel(data.cacheTrace)}
-                  </Badge>
-                </p>
-                <p>Cache Name: {data.cacheTrace.cacheName}</p>
-                <p>TTL: {data.cacheTrace.ttlSeconds}s</p>
-                <p>Entities: {data.cacheTrace.entityCount}</p>
-                <p>L1: {data.cacheTrace.l1Hit} hit / {data.cacheTrace.l1Miss} miss</p>
-                <p>L2: {data.cacheTrace.l2Hit} hit / {data.cacheTrace.l2Miss} miss</p>
-              </>
-            );
-          })()}
+          {data.cacheTrace &&
+            (() => {
+              const status = getCacheStatus(data.cacheTrace);
+              return (
+                <>
+                  <Separator className="my-1" />
+                  <p className="flex items-center gap-x-2">
+                    Cache:{' '}
+                    <Badge variant={status === 'l1-hit' || status === 'l2-hit' ? 'success' : 'secondary'}>
+                      {getCacheStatusLabel(data.cacheTrace)}
+                    </Badge>
+                  </p>
+                  <p>Cache Name: {data.cacheTrace.cacheName}</p>
+                  <p>TTL: {data.cacheTrace.ttlSeconds}s</p>
+                  <p>Entities: {data.cacheTrace.entityCount}</p>
+                  <p>
+                    L1: {data.cacheTrace.l1Hit} hit / {data.cacheTrace.l1Miss} miss
+                  </p>
+                  <p>
+                    L2: {data.cacheTrace.l2Hit} hit / {data.cacheTrace.l2Miss} miss
+                  </p>
+                </>
+              );
+            })()}
         </div>
-        {(data.outputTrace || data.input || data.rawInput || data.output || data.cacheTrace) && <Separator className="mb-4" />}
+        {(data.outputTrace || data.input || data.rawInput || data.output || data.cacheTrace) && (
+          <Separator className="mb-4" />
+        )}
         <div
           className={cn('flex gap-2 px-4', {
             'grid grid-cols-2': data.outputTrace && (data.input || data.rawInput) && data.output && data.loadStats,

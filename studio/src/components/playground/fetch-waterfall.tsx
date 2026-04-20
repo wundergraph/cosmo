@@ -197,21 +197,22 @@ export const FetchWaterfall = ({
                           <div className="flex flex-1 items-center gap-x-1.5 truncate font-medium">
                             {fetch.dataSourceName}
                             {statusCode && !isLoadSkipped ? <Badge>{statusCode}</Badge> : <div />}
-                            {fetch.cacheTrace && (() => {
-                              const status = getCacheStatus(fetch.cacheTrace);
-                              if (status === 'l1-hit' || status === 'l2-hit') {
-                                return (
-                                  <BoltIcon
-                                    className={cn(
-                                      'h-4 w-4 flex-shrink-0',
-                                      status === 'l1-hit' ? 'text-red-500' : 'text-green-500',
-                                    )}
-                                    title={status === 'l1-hit' ? 'L1 Cache Hit' : 'L2 Cache Hit'}
-                                  />
-                                );
-                              }
-                              return null;
-                            })()}
+                            {fetch.cacheTrace &&
+                              (() => {
+                                const status = getCacheStatus(fetch.cacheTrace);
+                                if (status === 'l1-hit' || status === 'l2-hit') {
+                                  return (
+                                    <BoltIcon
+                                      className={cn(
+                                        'h-4 w-4 flex-shrink-0',
+                                        status === 'l1-hit' ? 'text-red-500' : 'text-green-500',
+                                      )}
+                                      title={status === 'l1-hit' ? 'L1 Cache Hit' : 'L2 Cache Hit'}
+                                    />
+                                  );
+                                }
+                                return null;
+                              })()}
                           </div>
                         </div>
                       </div>
@@ -329,7 +330,11 @@ export const FetchWaterfall = ({
                 <pre className="scrollbar-custom max-h-40 overflow-auto rounded border bg-secondary/50 p-2 text-xs text-accent-foreground/80">
                   {JSON.stringify(
                     fetch.cacheTrace.keys.map((k) => {
-                      try { return JSON.parse(k); } catch { return k; }
+                      try {
+                        return JSON.parse(k);
+                      } catch {
+                        return k;
+                      }
                     }),
                     null,
                     2,

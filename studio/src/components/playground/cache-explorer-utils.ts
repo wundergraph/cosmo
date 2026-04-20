@@ -80,8 +80,7 @@ const extractRepresentationsIdentity = (representations?: any[]): string => {
   return representations.map((representation) => stableStringify(representation)).join('|');
 };
 
-const fetchBucket = (node: FetchPlanNode): string =>
-  [node.path || '', node.sourceName || ''].join('||');
+const fetchBucket = (node: FetchPlanNode): string => [node.path || '', node.sourceName || ''].join('||');
 
 const fetchIdentity = (node: FetchPlanNode): string => {
   const representationsIdentity = extractRepresentationsIdentity(node.representations);
@@ -117,8 +116,7 @@ const summarizeIdentity = (identity: string): string => {
   return identity;
 };
 
-const isContainerNode = (node: FetchPlanNode): boolean =>
-  node.kind === 'Sequence' || node.kind === 'Parallel';
+const isContainerNode = (node: FetchPlanNode): boolean => node.kind === 'Sequence' || node.kind === 'Parallel';
 
 const flattenLeafFetches = (root: FetchPlanNode | undefined): FetchPlanNode[] => {
   if (!root) return [];

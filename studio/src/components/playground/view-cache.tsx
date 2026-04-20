@@ -48,8 +48,12 @@ export const ViewCache = ({ cacheTrace, asChild }: { cacheTrace: CacheTrace; asC
           </div>
           <div className="flex flex-col gap-y-1">
             <h2 className="mb-1 text-base font-medium text-foreground">Statistics</h2>
-            <p className="text-muted-foreground">L1: {cacheTrace.l1Hit} hit / {cacheTrace.l1Miss} miss</p>
-            <p className="text-muted-foreground">L2: {cacheTrace.l2Hit} hit / {cacheTrace.l2Miss} miss</p>
+            <p className="text-muted-foreground">
+              L1: {cacheTrace.l1Hit} hit / {cacheTrace.l1Miss} miss
+            </p>
+            <p className="text-muted-foreground">
+              L2: {cacheTrace.l2Hit} hit / {cacheTrace.l2Miss} miss
+            </p>
             {cacheTrace.durationPretty && (
               <p className="text-muted-foreground">Cache Duration: {cacheTrace.durationPretty}</p>
             )}
@@ -67,7 +71,11 @@ export const ViewCache = ({ cacheTrace, asChild }: { cacheTrace: CacheTrace; asC
                 <CodeViewer
                   code={JSON.stringify(
                     cacheTrace.keys.map((k) => {
-                      try { return JSON.parse(k); } catch { return k; }
+                      try {
+                        return JSON.parse(k);
+                      } catch {
+                        return k;
+                      }
                     }),
                     null,
                     2,
