@@ -22,6 +22,37 @@ The graphql-go-tools dependency is typically resolved from the path replacement 
 `router/go.mod` and `router-tests/go.mod` — currently pointing at a local sibling
 clone. Changes to resolver/planner code happen in that repo, not here.
 
+## Post-change rebuild triggers
+
+These three rebuild chains are non-optional.
+Skipping any step makes the change invisible to downstream consumers, often silently.
+
+- **Change anything under `composition/`**: rebuild composition, shared, and the composition-go bundle, then recompose router-test configs.
+  ```bash
+  cd composition && pnpm build \
+    && cd ../shared && pnpm build \
+    && cd ../composition-go && bash generate.sh \
+    && cd ../router-tests/entity_caching && make compose
+  ```
+  Order matters — `composition-go/generate.sh` pulls in both composition and shared builds,
+  so both must be fresh first.
+  See "Pipeline: composition → router" below for the full 9-step wiring when the change also touches proto types.
+
+- **Change anything under `proto/wg/cosmo/node/`**: regenerate Go and Connect bindings.
+  ```bash
+  make generate-go
+  ```
+  CI's `git-dirty-check-graphqlmetrics` runs against `graphqlmetrics/**` only;
+  if CI skips it because the change is elsewhere,
+  trigger it manually (or touch a file under `graphqlmetrics/`) to clear a stale sticky.
+
+- **Change anything under `playground/`**: rebuild the router-embedded bundle.
+  ```bash
+  cd playground && pnpm build:router
+  ```
+  Plain `npm run build` / `pnpm build` only builds the library bundle — it does NOT copy to `router/internal/graphiql/graphiql.html`.
+  Always use `build:router`, then restart the router so the `//go:embed` picks up the new HTML.
+
 ## Entity caching + `@requestScoped`
 
 - **[@requestScoped directive](./docs/REQUEST_SCOPED.md)** — Per-request coordinate L1
