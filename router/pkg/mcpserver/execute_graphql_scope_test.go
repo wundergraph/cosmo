@@ -13,7 +13,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
+func TestMCPAuthMiddlewareExecuteGraphQLScopes(t *testing.T) {
 	t.Parallel()
 
 	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
@@ -64,25 +64,25 @@ func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
 		wantContains                     string
 	}{
 		{
-			name:           "unscoped query passes",
+			name:           "allows request when query has no scoped fields",
 			token:          "no-extra-scopes",
 			query:          `query { employees { id tag } }`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "scoped query with matching scope passes",
+			name:           "allows request when token has required scope",
 			token:          "has-read-fact",
 			query:          `query { topSecretFederationFacts { ... on DirectiveFact { title } } }`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "scoped query with alternative scope (read:all) passes",
+			name:           "allows request when token has alternative OR scope",
 			token:          "has-read-all",
 			query:          `query { topSecretFederationFacts { ... on DirectiveFact { title } } }`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "scoped query without required scope returns 403",
+			name:           "returns 403 with scope challenge when token is missing required scope",
 			token:          "no-extra-scopes",
 			query:          `query { topSecretFederationFacts { ... on DirectiveFact { title } } }`,
 			wantStatusCode: 403,
@@ -90,26 +90,26 @@ func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
 			wantContains:   `error_description="insufficient scopes for tool execute_graphql"`,
 		},
 		{
-			name:           "AND scopes - token has one of two required",
+			name:           "returns 403 when token has only one scope from an AND group",
 			token:          "has-read-employee",
 			query:          `query { employee(id: 1) { id startDate } }`,
 			wantStatusCode: 403,
 			wantScope:      `scope="read:employee read:private"`,
 		},
 		{
-			name:           "AND scopes - token satisfies full AND group",
+			name:           "allows request when token satisfies full AND group",
 			token:          "has-read-employee-private",
 			query:          `query { employee(id: 1) { id startDate } }`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "AND scopes - read:all satisfies alternative group",
+			name:           "allows request when token has scope from alternative OR group",
 			token:          "has-read-all",
 			query:          `query { employee(id: 1) { id startDate } }`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "empty relevant scopes picks smallest group",
+			name:           "picks smallest missing group for challenge when token has no relevant scopes",
 			token:          "no-extra-scopes",
 			query:          `query { employee(id: 1) { id startDate } }`,
 			wantStatusCode: 403,
@@ -117,7 +117,7 @@ func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
 			wantScope: `scope="read:all"`,
 		},
 		{
-			name:                             "include token scopes in challenge",
+			name:                             "includes token scopes in challenge when configured",
 			token:                            "has-mcp-connect",
 			query:                            `query { topSecretFederationFacts { ... on DirectiveFact { title } } }`,
 			scopeChallengeIncludeTokenScopes: true,
@@ -125,13 +125,13 @@ func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
 			wantScope:                        `scope="mcp:connect mcp:tools:write read:fact"`,
 		},
 		{
-			name:           "invalid query passes through (not scope-checked)",
+			name:           "allows request through when query fails to parse",
 			token:          "no-extra-scopes",
 			query:          `not a valid query {}`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "empty query passes through",
+			name:           "allows request through when query is empty",
 			token:          "no-extra-scopes",
 			query:          ``,
 			wantStatusCode: 200,
@@ -169,7 +169,7 @@ func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
 	}
 }
 
-func TestMCPAuthMiddleware_ExecuteGraphQLNoExtractor(t *testing.T) {
+func TestMCPAuthMiddlewareExecuteGraphQLNoExtractor(t *testing.T) {
 	t.Parallel()
 
 	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
