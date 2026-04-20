@@ -1171,19 +1171,19 @@ const FetchPlanTree = ({
   cachedPlan?: FetchPlanNode;
   uncachedPlan?: FetchPlanNode;
 }) => {
+  // Hooks must come before any early return — React's rules-of-hooks.
+  const entries = useMemo(
+    () => collectFetchPairs(cachedPlan, uncachedPlan),
+    [cachedPlan, uncachedPlan],
+  );
+  const pathRoot = useMemo(() => buildPathTrie(entries), [entries]);
+
   if (!cachedPlan && !uncachedPlan) return null;
 
   const cachedCount = countRealFetches(cachedPlan);
   const uncachedCount = countRealFetches(uncachedPlan);
   const cachedTotal = sumRealLoadMs(cachedPlan);
   const uncachedTotal = sumRealLoadMs(uncachedPlan);
-
-  // Reorganize by path hierarchy for display.
-  const entries = useMemo(
-    () => collectFetchPairs(cachedPlan, uncachedPlan),
-    [cachedPlan, uncachedPlan],
-  );
-  const pathRoot = useMemo(() => buildPathTrie(entries), [entries]);
 
   return (
     <div className="w-full overflow-hidden rounded-md border">
@@ -1377,7 +1377,7 @@ export const CacheExplorerView = () => {
           ) : (
             <span className="flex items-center gap-x-1.5 text-orange-600 dark:text-orange-400">
               <ExclamationTriangleIcon className="h-4 w-4" />
-              Select a cache mode other than "Cache disabled" to run the explorer
+              Select a cache mode other than &quot;Cache disabled&quot; to run the explorer
             </span>
           )}
         </div>
