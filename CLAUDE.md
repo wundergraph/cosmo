@@ -107,7 +107,84 @@ cd playground && pnpm build:router   # builds + copies to router/internal/graphi
 ```
 
 Just running `npm run build` in the playground builds the library bundle but does
-NOT copy to the router. Always use `build:router`.
+NOT copy to the router.
+Always use `build:router`.
+
+### Two playgrounds, only one has the Cache Explorer
+
+There are two separate playground implementations in this repo — do not assume a change to one affects the other:
+
+| Playground | Source | Surfaces |
+|---|---|---|
+| **Router** (`http://<router>/`) | `playground/` package, embedded via `graphiql.html` | Cache Explorer view, cache-mode dropdown (`X-WG-Disable-Entity-Cache[-L1/-L2]` headers), cache-annotated trace view |
+| **Studio** (`http://studio/.../graph/.../playground`) | `studio/src/components/playground/*` + `studio/src/pages/[...]/playground.tsx` (own GraphiQL wrapper using `@graphiql/plugin-explorer`) | Request Trace (Tree + Waterfall) with `Load Skipped` annotations, Plan view — **no Cache Explorer, no cache-mode dropdown** |
+
+Studio does NOT import `@wundergraph/playground`.
+To get Cache Explorer parity in Studio, either iframe the router playground or port the cache-explorer files (`cache-explorer-view.tsx`, `cache-explorer-controller.tsx`, `cache-explorer-runner.ts`, the `cacheMode` types, and the `graphiQLFetch` header injection) into `studio/src/components/playground/`.
+
+## Full local stack bring-up (infra in docker, CP/studio/router local)
+
+For end-to-end testing of router ↔ control plane flows (as opposed to `execution_config.file` offline mode), bring up the stack in this shape:
+
+- **Docker (`make infra-up` → `docker-compose.yml --profile dev`)**: postgres, keycloak, clickhouse, redis, nats, kafka, rustfs, cdn, otelcollector, graphqlmetrics.
+- **Local (host)**: controlplane, studio, subgraphs, router.
+
+### Phase order
+1. `make infra-up` — then poll keycloak `http://localhost:8080/realms/cosmo` (200) and redis `docker exec cosmo-dev-redis-1 redis-cli PING` (PONG) before moving on.
+2. `cd controlplane && cp .env.example .env && pnpm migrate && pnpm seed && LOG_LEVEL=debug pnpm dev` — seeds the fixed API key `cosmo_669b576aaadc10ee1ae81d9193425705` and user `foo@wundergraph.com` / `wunder@123`.
+3. `cd studio && cp .env.local.example .env.local && pnpm dev` — serves at `http://localhost:3000`.
+4. Subgraphs (for cache demo: `cd demo && go run ./cmd/cache-demo` → :4012/:4013/:4014).
+5. `pnpm wgc` flows to create namespace, federated-graph, subgraphs, publish schemas, and mint a router token.
+6. Router with `GRAPH_API_TOKEN`, `CONTROLPLANE_URL=http://localhost:3001`, `CDN_URL=http://localhost:11000`, **no `execution_config.file`** — it polls CDN every 10s.
+   See `demo/router-cache-cp.yaml` for an entity-caching + L2 Redis example.
+
+### Gotchas collected during stack bring-up
+
+- **`pnpm dev` does NOT run migrations** — `pnpm seed` fails with `relation "users" does not exist` unless `pnpm migrate` was run first.
+  `pnpm migrate` runs both `db:migrate` (drizzle, pg) and `ch:migrate` (dbmate, clickhouse).
+- **Keycloak image mismatch**: if docker has previously pulled a stale `ghcr.io/wundergraph/cosmo/keycloak:latest` that is actually the Bitnami image, it restarts in a loop with `exec: start: not found`.
+  Fix: `docker rmi ghcr.io/wundergraph/cosmo/keycloak:latest && docker compose -f docker-compose.yml --profile dev build keycloak` — the local `keycloak/Dockerfile` builds from `quay.io/keycloak/keycloak` with custom theme providers.
+- **Rustfs on :10000**: `S3_STORAGE_URL` defaults to `http://localhost:10000/cosmo` in `controlplane/.env.example`.
+  Rustfs container maps its internal `:9000` to host `:10000` / `:10001`.
+- **Port map to remember**: studio `:3000`, controlplane `:3001`, router `:3002`, cache demo subgraphs `:4012`-`:4014`, postgres `:5432`, redis `:6379`, keycloak `:8080`, rustfs `:10000`, cdn `:11000`.
+- **CDN eventual consistency**: after `pnpm wgc subgraph publish ...`, the router may still serve the previous supergraph config for up to 10s (the config poller interval).
+
+### wgc CLI env
+
+`cli/.env` needs at minimum:
+
+```bash
+COSMO_API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705
+COSMO_API_URL=http://localhost:3001
+CDN_URL=http://localhost:11000
+```
+
+Then `pnpm wgc <cmd>` from either `cli/` or from `demo/` works (via the workspace root alias).
+
+## Demo subgraph gqlgen gotcha: directive name prefixes
+
+Subgraphs under `demo/pkg/subgraphs/` that use `@openfed__*` caching/request-scoped directives in their `schema.graphqls` must list the directive names in `gqlgen.yml` with their **full prefixed names**, not the local short names:
+
+```yaml
+# WRONG — skip_runtime silently no-ops, runtime errors with "directive openfed__queryCache is not implemented"
+directives:
+  entityCache:
+    skip_runtime: true
+  queryCache:
+    skip_runtime: true
+
+# CORRECT
+directives:
+  openfed__entityCache:
+    skip_runtime: true
+  openfed__queryCache:
+    skip_runtime: true
+```
+
+Gqlgen matches the `directives:` keys against the directive name as it appears in the SDL.
+If the name in `gqlgen.yml` doesn't match, `skip_runtime` is ignored and the generated `DirectiveRoot` struct contains a field that panics with `"directive ... is not implemented"` on every request touching that field.
+This is silent at generate time — only surfaces when a federated router actually fetches from the subgraph.
+Affected subgraphs in this repo: `cachegraph`, `cachegraph_ext`, `viewer` (all fixed).
 
 ## Pre-existing bugs found and fixed in this session
 
