@@ -486,3 +486,21 @@ func TestComputeCombinedScopes_ExceedsLimit(t *testing.T) {
 	assert.Nil(t, got)
 	assert.Contains(t, err.Error(), "scope combination limit")
 }
+
+func TestCrossProduct_EdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty OR list means no way to pass, result is empty", func(t *testing.T) {
+		t.Parallel()
+		got, err := crossProduct([][]string{}, [][]string{{"x"}}, 100)
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("empty AND group means no scopes required, merges to just the other side", func(t *testing.T) {
+		t.Parallel()
+		got, err := crossProduct([][]string{{}}, [][]string{{"x"}}, 100)
+		require.NoError(t, err)
+		assert.Equal(t, [][]string{{"x"}}, got)
+	})
+}

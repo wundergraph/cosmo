@@ -143,6 +143,9 @@ func (v *scopeFieldVisitor) EnterField(ref int) {
 // crossProduct computes the Cartesian product of two sets of OR-groups,
 // merging AND-scopes within each combination and deduplicating.
 // Returns an error if the resulting number of combinations would exceed the limit.
+//
+// Callers pass non-empty inputs in practice. If `a` is empty (no OR branches),
+// the result is empty, meaning nothing grants access.
 func crossProduct(a, b [][]string, maxCombinations int) ([][]string, error) {
 	total := len(a) * len(b)
 	if total > maxCombinations {
