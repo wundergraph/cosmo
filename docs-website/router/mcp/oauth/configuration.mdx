@@ -11,7 +11,7 @@ icon: 'sliders-up'
 | `oauth.enabled`                              | Enable OAuth 2.1 / JWKS-based authentication for the MCP server                                                                                                                                                               | `false` |
 | `oauth.authorization_server_url`             | Base URL of the OAuth 2.0 authorization server. Advertised via the [RFC 9728 metadata endpoint](#rfc-9728-protected-resource-metadata) so clients can discover authorization endpoints.                                       | -       |
 | `oauth.scope_challenge_include_token_scopes` | When `true`, includes the token's existing scopes in the `scope` parameter of 403 responses. Works around MCP SDK scope accumulation bugs. See [Scope Challenge Behavior](/router/mcp/oauth/scopes#scope-challenge-behavior). | `false` |
-| `oauth.max_scope_combinations`               | Upper limit on scope combinations produced when computing the Cartesian product of `@requiresScopes` across fields. Increase for complex RBAC configurations. | `2048`  |
+| `oauth.max_scope_combinations`               | Maximum scope combinations computed per operation. Raise for schemas with many overlapping `@requiresScopes`.                                                                                                                 | `2048`  |
 | `oauth.scopes.initialize`                    | Scopes required for **all** HTTP requests (checked before JSON-RPC parsing). This is the baseline scope needed to establish an MCP connection.                                                                                | `[]`    |
 | `oauth.scopes.tools_list`                    | Scopes required for the `tools/list` MCP method.                                                                                                                                                                              | `[]`    |
 | `oauth.scopes.tools_call`                    | Scopes required for the `tools/call` MCP method (any tool invocation). Per-tool and built-in tool scopes are enforced additively.                                                                                             | `[]`    |
@@ -55,7 +55,7 @@ For development or testing, you can use a shared symmetric secret instead of a r
 oauth:
   jwks:
     - secret: 'your-shared-secret'
-      symmetric_algorithm: 'HS256' # HS256, HS384, or HS512
+      symmetric_algorithm: 'HS256' # HS256, HS384, or HS512. For other algorithms, use a remote JWKS URL.
       header_key_id: 'my-key-id'
 ```
 
@@ -76,7 +76,9 @@ Returned when the token is missing, invalid, expired, or signature verification 
 
 ```
 HTTP/1.1 401 Unauthorized
-WWW-Authenticate: Bearer realm="mcp", scope="mcp:connect", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp"
+WWW-Authenticate: Bearer realm="mcp",
+                  scope="mcp:connect",
+                  resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp"
 ```
 
 The `scope` parameter contains the `initialize` scopes (minimum scopes needed to connect). The `resource_metadata` URL points to the [RFC 9728 metadata endpoint](#rfc-9728-protected-resource-metadata) for OAuth discovery.
@@ -89,20 +91,26 @@ Returned when the token is valid but lacks required scopes. The exact `scope` pa
 
 ```
 HTTP/1.1 403 Forbidden
-WWW-Authenticate: Bearer error="insufficient_scope", scope="mcp:tools:execute", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp", error_description="missing required scopes: mcp:tools:execute"
+WWW-Authenticate: Bearer error="insufficient_scope",
+                  scope="mcp:tools:execute",
+                  resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp",
+                  error_description="missing required scopes: mcp:tools:execute"
 ```
 
 **Per-tool rejection** (e.g., calling a tool that requires `read:fact`):
 
 ```
 HTTP/1.1 403 Forbidden
-WWW-Authenticate: Bearer error="insufficient_scope", scope="read:fact", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp", error_description="insufficient scopes for tool execute_operation_get_top_secret_facts"
+WWW-Authenticate: Bearer error="insufficient_scope",
+                  scope="read:fact",
+                  resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp",
+                  error_description="insufficient scopes for tool execute_operation_get_top_secret_facts"
 ```
 
 The `scope` parameter always contains only the scopes needed for the specific operation that failed (unless `scope_challenge_include_token_scopes` is enabled).
 
 <Info>
-  Per the MCP specification, HTTP-level authentication failures return only HTTP status codes and headers — no JSON-RPC
+  Per the MCP specification, HTTP-level authentication failures return only HTTP status codes and headers - no JSON-RPC
   response body is included.
 </Info>
 
@@ -146,7 +154,7 @@ The `scopes_supported` field is **automatically computed** as the union of:
 The router performs startup validation when OAuth is enabled:
 
 - If `oauth.jwks` is empty, the router exits with a fatal error to prevent starting an unprotected endpoint
-- If `server.base_url` is empty, the router exits with a fatal error because it is required for RFC 9728 metadata discovery
+- If `server.base_url` is empty, the router exits with a fatal error because it is required for [RFC 9728](https://datatracker.ietf.org/doc/rfc9728/) metadata discovery
 
 ## Full Configuration Example
 

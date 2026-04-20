@@ -38,7 +38,7 @@ storage_providers:
 | `exclude_mutations`           | Whether to exclude mutation operations from being exposed                                                                                                                                                                                                                    | `false`          |
 | `enable_arbitrary_operations` | Enables the `execute_graphql` built-in tool, allowing clients to run arbitrary GraphQL operations beyond the pre-defined operation set.                                                                                                                                      | `false`          |
 | `expose_schema`               | Enables the `get_schema` built-in tool, exposing the full GraphQL schema to MCP clients.                                                                                                                                                                                     | `false`          |
-| `omit_tool_name_prefix`       | When enabled, MCP tool names omit the `execute_operation_` prefix. For example, `GetUser` becomes `get_user` instead of `execute_operation_get_user`. See [Operations — Omitting the Tool Name Prefix](/router/mcp/operations#omitting-the-tool-name-prefix).                | `false`          |
+| `omit_tool_name_prefix`       | When enabled, MCP tool names omit the `execute_operation_` prefix. For example, `GetUser` becomes `get_user` instead of `execute_operation_get_user`. See [Operations - Omitting the Tool Name Prefix](/router/mcp/operations#omitting-the-tool-name-prefix).                | `false`          |
 
 For OAuth-specific configuration, see [OAuth 2.1 Authorization](/router/mcp/oauth/overview).
 
@@ -93,7 +93,7 @@ To configure sticky sessions:
 2. Clients must include that value in subsequent requests as the `Mcp-Session-Id` request header
 3. Your load balancer or reverse proxy must route requests with the same `Mcp-Session-Id` to the same instance
 
-For details, see your load balancer or reverse proxy documentation (e.g., [F5 NGINX Plus — MCP Session Affinity](https://community.f5.com/kb/technicalarticles/mcp-session-affinity-with-f5-nginx-plus/341961)).
+For details, see your load balancer or reverse proxy documentation (e.g., [F5 NGINX Plus - MCP Session Affinity](https://community.f5.com/kb/technicalarticles/mcp-session-affinity-with-f5-nginx-plus/341961)).
 
 ## CORS
 

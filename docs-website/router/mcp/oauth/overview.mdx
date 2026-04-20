@@ -16,7 +16,7 @@ All scope enforcement happens at the HTTP transport level per the MCP specificat
 
 ## Token Validation
 
-The MCP server validates JWT bearer tokens using JWKS (JSON Web Key Sets). You can configure one or more JWKS providers — either remote JWKS URLs (for production with providers like Keycloak, Auth0, Okta) or symmetric secrets (for development and testing).
+The MCP server validates JWT bearer tokens using JWKS (JSON Web Key Sets). You can configure one or more JWKS providers - either remote JWKS URLs (for production with providers like Keycloak, Auth0, Okta) or symmetric secrets (for development and testing).
 
 The MCP OAuth config uses the **same JWKS format** as the router's top-level [authentication configuration](/router/authentication-and-authorization), though it is configured independently. You can point the MCP JWKS to the same JWKS URL as your router authentication, or to a different identity provider entirely.
 

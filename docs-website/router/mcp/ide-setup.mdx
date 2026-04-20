@@ -1,6 +1,7 @@
 ---
 title: 'IDE & AI Tool Setup'
-description: 'Connect Claude Desktop, Cursor, Windsurf, VS Code, and other AI tools to your MCP Gateway. Includes header forwarding for authentication and tracing.'
+description: 'Connect AI tools to your MCP Gateway. Includes header forwarding for authentication and tracing.'
+keywords: ['MCP', 'Claude Desktop', 'Cursor', 'Windsurf', 'VS Code', 'IDE', 'AI tools']
 icon: 'display-code'
 ---
 
@@ -10,14 +11,14 @@ This guide covers how to connect popular AI tools to your Cosmo Router MCP serve
 
 <Info>Available since Router [0.260.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.260.0)</Info>
 
-The MCP server forwards most client headers to the Router — including authorization, custom, and tracing headers — but skips hop-by-hop and content negotiation headers (defined in [`headers.SkippedHeaders`](https://github.com/wundergraph/cosmo/blob/main/router/internal/headers/headers.go)). This allows you to:
+The MCP server forwards most client headers to the Router - including authorization, custom, and tracing headers - but skips hop-by-hop and content negotiation headers (defined in [`headers.SkippedHeaders`](https://github.com/wundergraph/cosmo/blob/main/router/internal/headers/headers.go)). This allows you to:
 
 - Leverage all authentication and authorization capabilities of your Cosmo Router
 - Pass custom headers for tracing, debugging, or application-specific purposes
 - Maintain consistent security and observability across all API consumers
 
 <Info>
-  Headers are forwarded through the chain: MCP Client → MCP Server → Router → Subgraphs. The router's
+  Headers are forwarded through the chain: MCP Client -> MCP Server -> Router -> Subgraphs. The router's
   [header forwarding rules](/router/proxy-capabilities/subgraph-request-header-operations) determine what ultimately
   reaches your subgraphs.
 </Info>
@@ -45,7 +46,7 @@ Go to **Settings** > **Tools & Integrations** > **MCP Servers** and add the foll
 }
 ```
 
-All `headers` fields are optional — include only what your setup requires.
+All `headers` fields are optional - include only what your setup requires.
 
 ### Claude Desktop
 
