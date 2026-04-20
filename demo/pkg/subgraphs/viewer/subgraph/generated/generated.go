@@ -44,7 +44,6 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
-	Openfed__requestScoped func(ctx context.Context, obj any, next graphql.Resolver, key string) (res any, err error)
 }
 
 type ComplexityRoot struct {
@@ -386,34 +385,6 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
-
-func (ec *executionContext) dir_openfed__requestScoped_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.dir_openfed__requestScoped_argsKey(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["key"] = arg0
-	return args, nil
-}
-func (ec *executionContext) dir_openfed__requestScoped_argsKey(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (string, error) {
-	if _, ok := rawArgs["key"]; !ok {
-		var zeroVal string
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("key"))
-	if tmp, ok := rawArgs["key"]; ok {
-		return ec.unmarshalNString2string(ctx, tmp)
-	}
-
-	var zeroVal string
-	return zeroVal, nil
-}
 
 func (ec *executionContext) field_Entity_findPersonalizedByID_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
@@ -828,35 +799,8 @@ func (ec *executionContext) _Personalized_currentViewer(ctx context.Context, fie
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return obj.CurrentViewer, nil
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			key, err := ec.unmarshalNString2string(ctx, "currentViewer")
-			if err != nil {
-				var zeroVal *model.Viewer
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__requestScoped == nil {
-				var zeroVal *model.Viewer
-				return zeroVal, errors.New("directive openfed__requestScoped is not implemented")
-			}
-			return ec.directives.Openfed__requestScoped(ctx, obj, directive0, key)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Viewer); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/viewer/subgraph/model.Viewer`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return obj.CurrentViewer, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -904,35 +848,8 @@ func (ec *executionContext) _Query_currentViewer(ctx context.Context, field grap
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().CurrentViewer(rctx)
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			key, err := ec.unmarshalNString2string(ctx, "currentViewer")
-			if err != nil {
-				var zeroVal *model.Viewer
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__requestScoped == nil {
-				var zeroVal *model.Viewer
-				return zeroVal, errors.New("directive openfed__requestScoped is not implemented")
-			}
-			return ec.directives.Openfed__requestScoped(ctx, nil, directive0, key)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Viewer); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/viewer/subgraph/model.Viewer`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().CurrentViewer(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)

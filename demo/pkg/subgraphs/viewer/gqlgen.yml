@@ -17,7 +17,7 @@ model:
   package: model
 
 directives:
-  requestScoped:
+  openfed__requestScoped:
     skip_runtime: true
 
 resolver:

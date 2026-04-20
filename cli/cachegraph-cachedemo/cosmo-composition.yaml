@@ -1,0 +1,17 @@
+version: 1
+subgraphs:
+  - name: cachegraph
+    routing_url: http://localhost:4012/graphql
+    schema:
+      file: >-
+        /Users/jens/conductor/workspaces/cosmo/tripoli/cli/cachegraph-cachedemo/subgraphs/cachegraph.graphql
+  - name: cachegraph-ext
+    routing_url: http://localhost:4013/graphql
+    schema:
+      file: >-
+        /Users/jens/conductor/workspaces/cosmo/tripoli/cli/cachegraph-cachedemo/subgraphs/cachegraph-ext.graphql
+  - name: viewer
+    routing_url: http://localhost:4014/graphql
+    schema:
+      file: >-
+        /Users/jens/conductor/workspaces/cosmo/tripoli/cli/cachegraph-cachedemo/subgraphs/viewer.graphql

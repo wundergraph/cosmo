@@ -46,11 +46,6 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
-	Openfed__cacheInvalidate func(ctx context.Context, obj any, next graphql.Resolver) (res any, err error)
-	Openfed__cachePopulate   func(ctx context.Context, obj any, next graphql.Resolver, maxAge *int) (res any, err error)
-	Openfed__entityCache     func(ctx context.Context, obj any, next graphql.Resolver, maxAge int, includeHeaders *bool, partialCacheLoad *bool, shadowMode *bool) (res any, err error)
-	Openfed__is              func(ctx context.Context, obj any, next graphql.Resolver, fields string) (res any, err error)
-	Openfed__queryCache      func(ctx context.Context, obj any, next graphql.Resolver, maxAge int, includeHeaders *bool, shadowMode *bool) (res any, err error)
 }
 
 type ComplexityRoot struct {
@@ -1028,233 +1023,6 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) dir_openfed__cachePopulate_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.dir_openfed__cachePopulate_argsMaxAge(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["maxAge"] = arg0
-	return args, nil
-}
-func (ec *executionContext) dir_openfed__cachePopulate_argsMaxAge(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*int, error) {
-	if _, ok := rawArgs["maxAge"]; !ok {
-		var zeroVal *int
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("maxAge"))
-	if tmp, ok := rawArgs["maxAge"]; ok {
-		return ec.unmarshalOInt2ᚖint(ctx, tmp)
-	}
-
-	var zeroVal *int
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_openfed__entityCache_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.dir_openfed__entityCache_argsMaxAge(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["maxAge"] = arg0
-	arg1, err := ec.dir_openfed__entityCache_argsIncludeHeaders(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["includeHeaders"] = arg1
-	arg2, err := ec.dir_openfed__entityCache_argsPartialCacheLoad(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["partialCacheLoad"] = arg2
-	arg3, err := ec.dir_openfed__entityCache_argsShadowMode(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["shadowMode"] = arg3
-	return args, nil
-}
-func (ec *executionContext) dir_openfed__entityCache_argsMaxAge(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (int, error) {
-	if _, ok := rawArgs["maxAge"]; !ok {
-		var zeroVal int
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("maxAge"))
-	if tmp, ok := rawArgs["maxAge"]; ok {
-		return ec.unmarshalNInt2int(ctx, tmp)
-	}
-
-	var zeroVal int
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_openfed__entityCache_argsIncludeHeaders(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*bool, error) {
-	if _, ok := rawArgs["includeHeaders"]; !ok {
-		var zeroVal *bool
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("includeHeaders"))
-	if tmp, ok := rawArgs["includeHeaders"]; ok {
-		return ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
-	}
-
-	var zeroVal *bool
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_openfed__entityCache_argsPartialCacheLoad(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*bool, error) {
-	if _, ok := rawArgs["partialCacheLoad"]; !ok {
-		var zeroVal *bool
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("partialCacheLoad"))
-	if tmp, ok := rawArgs["partialCacheLoad"]; ok {
-		return ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
-	}
-
-	var zeroVal *bool
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_openfed__entityCache_argsShadowMode(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*bool, error) {
-	if _, ok := rawArgs["shadowMode"]; !ok {
-		var zeroVal *bool
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("shadowMode"))
-	if tmp, ok := rawArgs["shadowMode"]; ok {
-		return ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
-	}
-
-	var zeroVal *bool
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_openfed__is_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.dir_openfed__is_argsFields(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["fields"] = arg0
-	return args, nil
-}
-func (ec *executionContext) dir_openfed__is_argsFields(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (string, error) {
-	if _, ok := rawArgs["fields"]; !ok {
-		var zeroVal string
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("fields"))
-	if tmp, ok := rawArgs["fields"]; ok {
-		return ec.unmarshalNString2string(ctx, tmp)
-	}
-
-	var zeroVal string
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_openfed__queryCache_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.dir_openfed__queryCache_argsMaxAge(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["maxAge"] = arg0
-	arg1, err := ec.dir_openfed__queryCache_argsIncludeHeaders(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["includeHeaders"] = arg1
-	arg2, err := ec.dir_openfed__queryCache_argsShadowMode(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["shadowMode"] = arg2
-	return args, nil
-}
-func (ec *executionContext) dir_openfed__queryCache_argsMaxAge(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (int, error) {
-	if _, ok := rawArgs["maxAge"]; !ok {
-		var zeroVal int
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("maxAge"))
-	if tmp, ok := rawArgs["maxAge"]; ok {
-		return ec.unmarshalNInt2int(ctx, tmp)
-	}
-
-	var zeroVal int
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_openfed__queryCache_argsIncludeHeaders(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*bool, error) {
-	if _, ok := rawArgs["includeHeaders"]; !ok {
-		var zeroVal *bool
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("includeHeaders"))
-	if tmp, ok := rawArgs["includeHeaders"]; ok {
-		return ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
-	}
-
-	var zeroVal *bool
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_openfed__queryCache_argsShadowMode(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*bool, error) {
-	if _, ok := rawArgs["shadowMode"]; !ok {
-		var zeroVal *bool
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("shadowMode"))
-	if tmp, ok := rawArgs["shadowMode"]; ok {
-		return ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
-	}
-
-	var zeroVal *bool
-	return zeroVal, nil
-}
-
 func (ec *executionContext) field_Entity_findArticleByID_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1731,39 +1499,12 @@ func (ec *executionContext) field_Query_articleBySlug_argsSlug(
 	}
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
-	directive0 := func(ctx context.Context) (any, error) {
-		tmp, ok := rawArgs["slug"]
-		if !ok {
-			var zeroVal string
-			return zeroVal, nil
-		}
+	if tmp, ok := rawArgs["slug"]; ok {
 		return ec.unmarshalNID2string(ctx, tmp)
 	}
 
-	directive1 := func(ctx context.Context) (any, error) {
-		fields, err := ec.unmarshalNString2string(ctx, "id")
-		if err != nil {
-			var zeroVal string
-			return zeroVal, err
-		}
-		if ec.directives.Openfed__is == nil {
-			var zeroVal string
-			return zeroVal, errors.New("directive openfed__is is not implemented")
-		}
-		return ec.directives.Openfed__is(ctx, rawArgs, directive0, fields)
-	}
-
-	tmp, err := directive1(ctx)
-	if err != nil {
-		var zeroVal string
-		return zeroVal, graphql.ErrorOnPath(ctx, err)
-	}
-	if data, ok := tmp.(string); ok {
-		return data, nil
-	} else {
-		var zeroVal string
-		return zeroVal, graphql.ErrorOnPath(ctx, fmt.Errorf(`unexpected type %T from directive, should be string`, tmp))
-	}
+	var zeroVal string
+	return zeroVal, nil
 }
 
 func (ec *executionContext) field_Query_article_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
@@ -1814,42 +1555,12 @@ func (ec *executionContext) field_Query_articlesByIds_argsIds(
 	}
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
-	directive0 := func(ctx context.Context) (any, error) {
-		tmp, ok := rawArgs["ids"]
-		if !ok {
-			var zeroVal []string
-			return zeroVal, nil
-		}
+	if tmp, ok := rawArgs["ids"]; ok {
 		return ec.unmarshalNID2ᚕstringᚄ(ctx, tmp)
 	}
 
-	directive1 := func(ctx context.Context) (any, error) {
-		fields, err := ec.unmarshalNString2string(ctx, "id")
-		if err != nil {
-			var zeroVal []string
-			return zeroVal, err
-		}
-		if ec.directives.Openfed__is == nil {
-			var zeroVal []string
-			return zeroVal, errors.New("directive openfed__is is not implemented")
-		}
-		return ec.directives.Openfed__is(ctx, rawArgs, directive0, fields)
-	}
-
-	tmp, err := directive1(ctx)
-	if err != nil {
-		var zeroVal []string
-		return zeroVal, graphql.ErrorOnPath(ctx, err)
-	}
-	if data, ok := tmp.([]string); ok {
-		return data, nil
-	} else if tmp == nil {
-		var zeroVal []string
-		return zeroVal, nil
-	} else {
-		var zeroVal []string
-		return zeroVal, graphql.ErrorOnPath(ctx, fmt.Errorf(`unexpected type %T from directive, should be []string`, tmp))
-	}
+	var zeroVal []string
+	return zeroVal, nil
 }
 
 func (ec *executionContext) field_Query_catalog_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
@@ -1900,39 +1611,12 @@ func (ec *executionContext) field_Query_listing_argsKey(
 	}
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("key"))
-	directive0 := func(ctx context.Context) (any, error) {
-		tmp, ok := rawArgs["key"]
-		if !ok {
-			var zeroVal model.ListingKey
-			return zeroVal, nil
-		}
+	if tmp, ok := rawArgs["key"]; ok {
 		return ec.unmarshalNListingKey2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋcachegraphᚋsubgraphᚋmodelᚐListingKey(ctx, tmp)
 	}
 
-	directive1 := func(ctx context.Context) (any, error) {
-		fields, err := ec.unmarshalNString2string(ctx, "sellerId sku")
-		if err != nil {
-			var zeroVal model.ListingKey
-			return zeroVal, err
-		}
-		if ec.directives.Openfed__is == nil {
-			var zeroVal model.ListingKey
-			return zeroVal, errors.New("directive openfed__is is not implemented")
-		}
-		return ec.directives.Openfed__is(ctx, rawArgs, directive0, fields)
-	}
-
-	tmp, err := directive1(ctx)
-	if err != nil {
-		var zeroVal model.ListingKey
-		return zeroVal, graphql.ErrorOnPath(ctx, err)
-	}
-	if data, ok := tmp.(model.ListingKey); ok {
-		return data, nil
-	} else {
-		var zeroVal model.ListingKey
-		return zeroVal, graphql.ErrorOnPath(ctx, fmt.Errorf(`unexpected type %T from directive, should be github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.ListingKey`, tmp))
-	}
+	var zeroVal model.ListingKey
+	return zeroVal, nil
 }
 
 func (ec *executionContext) field_Query_metric_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
@@ -2011,39 +1695,12 @@ func (ec *executionContext) field_Query_venue_argsLocation(
 	}
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("location"))
-	directive0 := func(ctx context.Context) (any, error) {
-		tmp, ok := rawArgs["location"]
-		if !ok {
-			var zeroVal model.VenueLocationKey
-			return zeroVal, nil
-		}
+	if tmp, ok := rawArgs["location"]; ok {
 		return ec.unmarshalNVenueLocationKey2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋcachegraphᚋsubgraphᚋmodelᚐVenueLocationKey(ctx, tmp)
 	}
 
-	directive1 := func(ctx context.Context) (any, error) {
-		fields, err := ec.unmarshalNString2string(ctx, "address { id }")
-		if err != nil {
-			var zeroVal model.VenueLocationKey
-			return zeroVal, err
-		}
-		if ec.directives.Openfed__is == nil {
-			var zeroVal model.VenueLocationKey
-			return zeroVal, errors.New("directive openfed__is is not implemented")
-		}
-		return ec.directives.Openfed__is(ctx, rawArgs, directive0, fields)
-	}
-
-	tmp, err := directive1(ctx)
-	if err != nil {
-		var zeroVal model.VenueLocationKey
-		return zeroVal, graphql.ErrorOnPath(ctx, err)
-	}
-	if data, ok := tmp.(model.VenueLocationKey); ok {
-		return data, nil
-	} else {
-		var zeroVal model.VenueLocationKey
-		return zeroVal, graphql.ErrorOnPath(ctx, fmt.Errorf(`unexpected type %T from directive, should be github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.VenueLocationKey`, tmp))
-	}
+	var zeroVal model.VenueLocationKey
+	return zeroVal, nil
 }
 
 func (ec *executionContext) field___Directive_args_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
@@ -2663,50 +2320,8 @@ func (ec *executionContext) _Entity_findArticleByID(ctx context.Context, field g
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Entity().FindArticleByID(rctx, fc.Args["id"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Article
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Article); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Article`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindArticleByID(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2774,50 +2389,8 @@ func (ec *executionContext) _Entity_findCatalogByID(ctx context.Context, field g
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Entity().FindCatalogByID(rctx, fc.Args["id"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Catalog
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Catalog); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Catalog`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindCatalogByID(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2881,50 +2454,8 @@ func (ec *executionContext) _Entity_findListingBySellerIDAndSku(ctx context.Cont
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Entity().FindListingBySellerIDAndSku(rctx, fc.Args["sellerID"].(string), fc.Args["sku"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 60)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Listing
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Listing); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Listing`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindListingBySellerIDAndSku(rctx, fc.Args["sellerID"].(string), fc.Args["sku"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2992,50 +2523,8 @@ func (ec *executionContext) _Entity_findMetricByID(ctx context.Context, field gr
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Entity().FindMetricByID(rctx, fc.Args["id"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 300)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Metric
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Metric); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Metric`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindMetricByID(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3154,50 +2643,8 @@ func (ec *executionContext) _Entity_findUserProfileByID(ctx context.Context, fie
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Entity().FindUserProfileByID(rctx, fc.Args["id"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 60)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.UserProfile); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.UserProfile`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindUserProfileByID(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3261,50 +2708,8 @@ func (ec *executionContext) _Entity_findVenueByAddressID(ctx context.Context, fi
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Entity().FindVenueByAddressID(rctx, fc.Args["addressID"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 180)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Venue
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Venue); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Venue`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindVenueByAddressID(rctx, fc.Args["addressID"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3869,57 +3274,8 @@ func (ec *executionContext) _Mutation_updateArticle(ctx context.Context, field g
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().UpdateArticle(rctx, fc.Args["id"].(string), fc.Args["title"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Article
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			if ec.directives.Openfed__cacheInvalidate == nil {
-				var zeroVal *model.Article
-				return zeroVal, errors.New("directive openfed__cacheInvalidate is not implemented")
-			}
-			return ec.directives.Openfed__cacheInvalidate(ctx, nil, directive1)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Article); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Article`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateArticle(rctx, fc.Args["id"].(string), fc.Args["title"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3984,62 +3340,8 @@ func (ec *executionContext) _Mutation_createArticle(ctx context.Context, field g
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().CreateArticle(rctx, fc.Args["title"].(string), fc.Args["body"].(string), fc.Args["authorName"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Article
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalOInt2ᚖint(ctx, 30)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__cachePopulate == nil {
-				var zeroVal *model.Article
-				return zeroVal, errors.New("directive openfed__cachePopulate is not implemented")
-			}
-			return ec.directives.Openfed__cachePopulate(ctx, nil, directive1, maxAge)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Article); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Article`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateArticle(rctx, fc.Args["title"].(string), fc.Args["body"].(string), fc.Args["authorName"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4107,57 +3409,8 @@ func (ec *executionContext) _Mutation_deleteListing(ctx context.Context, field g
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().DeleteListing(rctx, fc.Args["key"].(model.ListingKey))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 60)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Listing
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			if ec.directives.Openfed__cacheInvalidate == nil {
-				var zeroVal *model.Listing
-				return zeroVal, errors.New("directive openfed__cacheInvalidate is not implemented")
-			}
-			return ec.directives.Openfed__cacheInvalidate(ctx, nil, directive1)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Listing); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Listing`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteListing(rctx, fc.Args["key"].(model.ListingKey))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4222,72 +3475,8 @@ func (ec *executionContext) _Query_article(ctx context.Context, field graphql.Co
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Article(rctx, fc.Args["id"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Article
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal *model.Article
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Article); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Article`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Article(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4352,72 +3541,8 @@ func (ec *executionContext) _Query_articles(ctx context.Context, field graphql.C
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Articles(rctx)
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal []*model.Article
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal []*model.Article
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*model.Article); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Article`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Articles(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4474,72 +3599,8 @@ func (ec *executionContext) _Query_articlesByIds(ctx context.Context, field grap
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().ArticlesByIds(rctx, fc.Args["ids"].([]string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal []*model.Article
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal []*model.Article
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*model.Article); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Article`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ArticlesByIds(rctx, fc.Args["ids"].([]string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4607,72 +3668,8 @@ func (ec *executionContext) _Query_articleBySlug(ctx context.Context, field grap
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().ArticleBySlug(rctx, fc.Args["slug"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Article
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal *model.Article
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Article); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Article`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ArticleBySlug(rctx, fc.Args["slug"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4737,72 +3734,8 @@ func (ec *executionContext) _Query_listing(ctx context.Context, field graphql.Co
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Listing(rctx, fc.Args["key"].(model.ListingKey))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 60)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Listing
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 60)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Listing
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal *model.Listing
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Listing); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Listing`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Listing(rctx, fc.Args["key"].(model.ListingKey))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4867,72 +3800,8 @@ func (ec *executionContext) _Query_listings(ctx context.Context, field graphql.C
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Listings(rctx)
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 60)
-			if err != nil {
-				var zeroVal []*model.Listing
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Listing
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Listing
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Listing
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal []*model.Listing
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 60)
-			if err != nil {
-				var zeroVal []*model.Listing
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Listing
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Listing
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal []*model.Listing
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*model.Listing); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Listing`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Listings(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4989,72 +3858,8 @@ func (ec *executionContext) _Query_venue(ctx context.Context, field graphql.Coll
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Venue(rctx, fc.Args["location"].(model.VenueLocationKey))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 180)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Venue
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 180)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Venue
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal *model.Venue
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Venue); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Venue`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Venue(rctx, fc.Args["location"].(model.VenueLocationKey))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5115,72 +3920,8 @@ func (ec *executionContext) _Query_venues(ctx context.Context, field graphql.Col
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Venues(rctx)
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 180)
-			if err != nil {
-				var zeroVal []*model.Venue
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Venue
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Venue
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Venue
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal []*model.Venue
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 180)
-			if err != nil {
-				var zeroVal []*model.Venue
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Venue
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Venue
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal []*model.Venue
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*model.Venue); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Venue`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Venues(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5233,72 +3974,8 @@ func (ec *executionContext) _Query_userProfile(ctx context.Context, field graphq
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().UserProfile(rctx, fc.Args["id"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 60)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 60)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal *model.UserProfile
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.UserProfile); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.UserProfile`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().UserProfile(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5359,72 +4036,8 @@ func (ec *executionContext) _Query_catalog(ctx context.Context, field graphql.Co
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Catalog(rctx, fc.Args["id"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Catalog
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Catalog
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal *model.Catalog
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Catalog); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Catalog`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Catalog(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5485,72 +4098,8 @@ func (ec *executionContext) _Query_catalogs(ctx context.Context, field graphql.C
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Catalogs(rctx)
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal []*model.Catalog
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Catalog
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal []*model.Catalog
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Catalog
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal []*model.Catalog
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal []*model.Catalog
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Catalog
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Catalog
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal []*model.Catalog
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*model.Catalog); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Catalog`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Catalogs(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5603,72 +4152,8 @@ func (ec *executionContext) _Query_metric(ctx context.Context, field graphql.Col
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Metric(rctx, fc.Args["id"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 300)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal *model.Metric
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, nil, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-		directive2 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 300)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal *model.Metric
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__queryCache == nil {
-				var zeroVal *model.Metric
-				return zeroVal, errors.New("directive openfed__queryCache is not implemented")
-			}
-			return ec.directives.Openfed__queryCache(ctx, nil, directive1, maxAge, includeHeaders, shadowMode)
-		}
-
-		tmp, err := directive2(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Metric); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Metric`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Metric(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6363,50 +4848,8 @@ func (ec *executionContext) _Viewer_recommendedArticles(ctx context.Context, fie
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Viewer().RecommendedArticles(rctx, obj)
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			maxAge, err := ec.unmarshalNInt2int(ctx, 120)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			includeHeaders, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			partialCacheLoad, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			shadowMode, err := ec.unmarshalOBoolean2ᚖbool(ctx, false)
-			if err != nil {
-				var zeroVal []*model.Article
-				return zeroVal, err
-			}
-			if ec.directives.Openfed__entityCache == nil {
-				var zeroVal []*model.Article
-				return zeroVal, errors.New("directive openfed__entityCache is not implemented")
-			}
-			return ec.directives.Openfed__entityCache(ctx, obj, directive0, maxAge, includeHeaders, partialCacheLoad, shadowMode)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*model.Article); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model.Article`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Viewer().RecommendedArticles(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)

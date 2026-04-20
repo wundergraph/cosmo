@@ -26,15 +26,15 @@ resolver:
   package: subgraph
 
 directives:
-  entityCache:
+  openfed__entityCache:
     skip_runtime: true
-  queryCache:
+  openfed__queryCache:
     skip_runtime: true
-  cacheInvalidate:
+  openfed__cacheInvalidate:
     skip_runtime: true
-  cachePopulate:
+  openfed__cachePopulate:
     skip_runtime: true
-  is:
+  openfed__is:
     skip_runtime: true
 
 models:

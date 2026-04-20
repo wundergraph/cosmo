@@ -22,7 +22,7 @@ resolver:
   package: subgraph
 
 directives:
-  entityCache:
+  openfed__entityCache:
     skip_runtime: true
 
 models:
