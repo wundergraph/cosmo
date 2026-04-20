@@ -340,6 +340,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"x-wg-token",
 		"x-wg-skip-loader",
 		"x-wg-include-query-plan",
+		// Required for the studio playground's Cache Explorer (cache-mode dropdown)
+		"x-wg-disable-entity-cache",
+		"x-wg-disable-entity-cache-l1",
+		"x-wg-disable-entity-cache-l2",
+		"x-wg-cache-key-prefix",
 		// Required for Trace Context propagation
 		"traceparent",
 		"tracestate",

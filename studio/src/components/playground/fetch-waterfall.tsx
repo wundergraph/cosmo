@@ -1,12 +1,13 @@
 import { nsToTime } from '@/lib/insights-helpers';
 import { cn } from '@/lib/utils';
+import { BoltIcon } from '@heroicons/react/24/solid';
 import { CubeIcon, ExclamationTriangleIcon, MinusIcon, PlusIcon } from '@radix-ui/react-icons';
 import { sentenceCase } from 'change-case';
 import { useState } from 'react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { ARTFetchNode } from './types';
+import { ARTFetchNode, getCacheStatus, getCacheStatusLabel } from './types';
 import { ViewHeaders } from './view-headers';
 import { ViewInput } from './view-input';
 import { ViewLoadStats } from './view-load-stats';
@@ -15,6 +16,22 @@ import { ViewOutput } from './view-output';
 const bigintE3 = BigInt(1e3);
 const bigintE2 = BigInt(1e2);
 const initialCollapsedSpanDepth = 4;
+
+const Attribute = ({ name, value }: { name: string; value: any }) => {
+  return (
+    <TooltipProvider>
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger>
+          <div className="flex w-60 items-center gap-x-1">
+            <span className="text-accent-foreground">{name}</span> <span className="text-accent-foreground">=</span>{' '}
+            <span className="truncate text-accent-foreground/80">{value}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>{value}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 const mapFetchType = (type: string) => {
   switch (type) {
@@ -33,22 +50,6 @@ const mapFetchType = (type: string) => {
     default:
       return sentenceCase(type);
   }
-};
-
-const Attribute = ({ name, value }: { name: string; value: any }) => {
-  return (
-    <TooltipProvider>
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger>
-          <div className="flex w-60 items-center gap-x-1">
-            <span className="text-accent-foreground">{name}</span> <span className="text-accent-foreground">=</span>{' '}
-            <span className="truncate text-accent-foreground/80">{value}</span>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>{value}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
 };
 
 export const FetchWaterfall = ({
@@ -195,7 +196,22 @@ export const FetchWaterfall = ({
                           {isError && <ExclamationTriangleIcon className="mt-1 h-4 w-4 text-destructive" />}
                           <div className="flex flex-1 items-center gap-x-1.5 truncate font-medium">
                             {fetch.dataSourceName}
-                            {statusCode ? <Badge>{statusCode}</Badge> : <div />}
+                            {statusCode && !isLoadSkipped ? <Badge>{statusCode}</Badge> : <div />}
+                            {fetch.cacheTrace && (() => {
+                              const status = getCacheStatus(fetch.cacheTrace);
+                              if (status === 'l1-hit' || status === 'l2-hit') {
+                                return (
+                                  <BoltIcon
+                                    className={cn(
+                                      'h-4 w-4 flex-shrink-0',
+                                      status === 'l1-hit' ? 'text-red-500' : 'text-green-500',
+                                    )}
+                                    title={status === 'l1-hit' ? 'L1 Cache Hit' : 'L2 Cache Hit'}
+                                  />
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -271,6 +287,28 @@ export const FetchWaterfall = ({
             <Attribute name="single flight shared response" value={`${fetch.singleFlightSharedResponse}`} />
             <Attribute name="load skipped" value={`${fetch.loadSkipped}`} />
 
+            {fetch.cacheTrace && (
+              <>
+                <Attribute name="cache" value={getCacheStatusLabel(fetch.cacheTrace)} />
+                <Attribute name="cache name" value={fetch.cacheTrace.cacheName} />
+                <Attribute name="cache ttl" value={`${fetch.cacheTrace.ttlSeconds}s`} />
+                <Attribute name="entities" value={`${fetch.cacheTrace.entityCount}`} />
+                <Attribute name="L1 enabled" value={fetch.cacheTrace.l1Enabled ? 'true' : 'false'} />
+                <Attribute name="L2 enabled" value={fetch.cacheTrace.l2Enabled ? 'true' : 'false'} />
+                <Attribute name="L1" value={`${fetch.cacheTrace.l1Hit} hit / ${fetch.cacheTrace.l1Miss} miss`} />
+                <Attribute name="L2" value={`${fetch.cacheTrace.l2Hit} hit / ${fetch.cacheTrace.l2Miss} miss`} />
+                {fetch.cacheTrace.durationPretty && (
+                  <Attribute name="cache duration" value={fetch.cacheTrace.durationPretty} />
+                )}
+                {fetch.cacheTrace.l2GetDurationPretty && (
+                  <Attribute name="L2 get" value={fetch.cacheTrace.l2GetDurationPretty} />
+                )}
+                {fetch.cacheTrace.l2SetDurationPretty && (
+                  <Attribute name="L2 set" value={fetch.cacheTrace.l2SetDurationPretty} />
+                )}
+              </>
+            )}
+
             <div className="col-span-full mt-4 flex w-full">
               <div className="z-50 flex w-max items-center gap-8">
                 {fetch.outputTrace && (
@@ -284,6 +322,21 @@ export const FetchWaterfall = ({
                 {fetch.loadStats && <ViewLoadStats loadStats={fetch.loadStats} />}
               </div>
             </div>
+
+            {fetch.cacheTrace?.keys && fetch.cacheTrace.keys.length > 0 && (
+              <div className="col-span-full mt-2 w-full">
+                <p className="mb-1 text-accent-foreground">Cache Keys ({fetch.cacheTrace.keys.length})</p>
+                <pre className="scrollbar-custom max-h-40 overflow-auto rounded border bg-secondary/50 p-2 text-xs text-accent-foreground/80">
+                  {JSON.stringify(
+                    fetch.cacheTrace.keys.map((k) => {
+                      try { return JSON.parse(k); } catch { return k; }
+                    }),
+                    null,
+                    2,
+                  )}
+                </pre>
+              </div>
+            )}
           </div>
         )}
       </li>

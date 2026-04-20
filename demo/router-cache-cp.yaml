@@ -42,27 +42,13 @@ headers:
         - op: propagate
           named: X-Artificial-Latency
 
+# Needed because the demo cachegraph subgraphs use a non-standard header to inject
+# synthetic latency for visible cache effect. All WG-standard headers (X-WG-Trace,
+# X-WG-Token, X-WG-Disable-Entity-Cache*, etc.) are appended to AllowHeaders by the
+# router automatically, so they do not need to be listed here.
 cors:
-  allow_origins:
-    - "http://localhost:3000"
-  allow_methods:
-    - GET
-    - POST
-    - OPTIONS
   allow_headers:
-    - Origin
-    - Content-Length
-    - Content-Type
-    - Authorization
-    - X-WG-Trace
-    - X-WG-Token
     - X-Artificial-Latency
-    - X-WG-Disable-Entity-Cache
-    - X-WG-Disable-Entity-Cache-L1
-    - X-WG-Disable-Entity-Cache-L2
-    - X-WG-Cache-Key-Prefix
-    - X-Feature-Flag
-  allow_credentials: true
 
 log_level: debug
 dev_mode: true
