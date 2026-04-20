@@ -209,7 +209,23 @@
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
     "RouterURL": "https://cosmo-router.wundergraph.com",
-    "OmitToolNamePrefix": false
+    "OmitToolNamePrefix": false,
+    "OAuth": {
+      "Enabled": false,
+      "JWKS": null,
+      "AuthorizationServerURL": "",
+      "Scopes": {
+        "Initialize": null,
+        "ToolsList": null,
+        "ToolsCall": null,
+        "ExecuteGraphQL": null,
+        "GetOperationInfo": null,
+        "GetSchema": null
+      },
+      "ScopeChallengeIncludeTokenScopes": false,
+      "MaxScopeCombinations": 2048
+    },
+    "ResourceDocumentation": ""
   },
   "ConnectRPC": {
     "Enabled": false,
