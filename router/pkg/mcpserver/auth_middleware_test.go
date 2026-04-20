@@ -39,12 +39,12 @@ func TestNewMCPAuthMiddleware(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "valid decoder",
+			name:    "returns middleware when decoder is valid",
 			decoder: validDecoder,
 			wantErr: false,
 		},
 		{
-			name:    "nil decoder",
+			name:    "returns error when decoder is nil",
 			decoder: nil,
 			wantErr: true,
 		},
@@ -74,7 +74,7 @@ func TestGetClaimsFromContext(t *testing.T) {
 		wantClaims authentication.Claims
 	}{
 		{
-			name: "claims present",
+			name: "returns claims when present in context",
 			setupCtx: func() context.Context {
 				return context.WithValue(context.Background(), userClaimsContextKey, expectedClaims)
 			},
@@ -82,7 +82,7 @@ func TestGetClaimsFromContext(t *testing.T) {
 			wantClaims: expectedClaims,
 		},
 		{
-			name: "claims absent",
+			name: "returns false when claims are absent from context",
 			setupCtx: func() context.Context {
 				return context.Background()
 			},
@@ -90,7 +90,7 @@ func TestGetClaimsFromContext(t *testing.T) {
 			wantClaims: nil,
 		},
 		{
-			name: "wrong type",
+			name: "returns false when context value has wrong type",
 			setupCtx: func() context.Context {
 				return context.WithValue(context.Background(), userClaimsContextKey, "not-claims")
 			},
@@ -115,26 +115,26 @@ func TestExtractScopes(t *testing.T) {
 		want   []string
 	}{
 		{
-			name: "scope with multiple values",
+			name: "splits scope claim into multiple values",
 			claims: authentication.Claims{
 				"scope": "mcp:tools mcp:read mcp:write",
 			},
 			want: []string{"mcp:tools", "mcp:read", "mcp:write"},
 		},
 		{
-			name: "scope with single value",
+			name: "returns single value for single-scope claim",
 			claims: authentication.Claims{
 				"scope": "mcp:tools",
 			},
 			want: []string{"mcp:tools"},
 		},
 		{
-			name:   "no scope claim",
+			name:   "returns nil when scope claim is missing",
 			claims: authentication.Claims{},
 			want:   nil,
 		},
 		{
-			name: "empty scope string",
+			name: "returns empty slice when scope claim is empty string",
 			claims: authentication.Claims{
 				"scope": "",
 			},
@@ -150,7 +150,7 @@ func TestExtractScopes(t *testing.T) {
 	}
 }
 
-func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
+func TestMCPAuthMiddlewareHTTP(t *testing.T) {
 	t.Parallel()
 
 	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
@@ -164,7 +164,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 		wantWWWAuthenticatePrefix string
 	}{
 		{
-			name:   "valid token without scopes",
+			name:   "allows request with valid token when no scopes are configured",
 			scopes: config.MCPOAuthScopesConfiguration{},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
@@ -184,7 +184,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 			wantStatusCode: 200,
 		},
 		{
-			name:   "missing auth header - 401 includes init scopes",
+			name:   "returns 401 with init scopes in challenge when auth header is missing",
 			scopes: config.MCPOAuthScopesConfiguration{Initialize: []string{"mcp:connect"}},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
@@ -201,7 +201,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 			wantWWWAuthenticatePrefix: `Bearer realm="mcp", scope="mcp:connect", resource_metadata="` + testMetadataURL + `"`,
 		},
 		{
-			name:   "missing auth header - 401 without scopes when none configured",
+			name:   "returns 401 without scope challenge when no scopes are configured",
 			scopes: config.MCPOAuthScopesConfiguration{},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
@@ -218,7 +218,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 			wantWWWAuthenticatePrefix: `Bearer realm="mcp", resource_metadata="` + testMetadataURL + `"`,
 		},
 		{
-			name:   "invalid token - 401 includes init scopes",
+			name:   "returns 401 with init scopes in challenge when token is invalid",
 			scopes: config.MCPOAuthScopesConfiguration{Initialize: []string{"mcp:connect"}},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
@@ -236,7 +236,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 			wantWWWAuthenticatePrefix: `Bearer realm="mcp", scope="mcp:connect", resource_metadata="` + testMetadataURL + `"`,
 		},
 		{
-			name:   "insufficient init scopes - 403 with include token scopes enabled",
+			name:   "returns 403 with token scopes in challenge when init scopes are insufficient",
 			scopes: config.MCPOAuthScopesConfiguration{Initialize: []string{"mcp:connect"}},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
@@ -260,7 +260,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 			wantWWWAuthenticatePrefix: `Bearer error="insufficient_scope", scope="mcp:tools:read mcp:connect"`,
 		},
 		{
-			name: "valid token with all required scopes",
+			name: "allows request when token has all required scopes",
 			scopes: config.MCPOAuthScopesConfiguration{
 				Initialize: []string{"mcp:connect"},
 			},
@@ -309,7 +309,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 	}
 }
 
-func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
+func TestMCPAuthMiddlewarePerToolScopes(t *testing.T) {
 	t.Parallel()
 
 	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
@@ -361,25 +361,25 @@ func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
 		wantContains                     string // additional WWW-Authenticate check
 	}{
 		{
-			name:           "unscoped tool passes with just static scopes",
+			name:           "allows tool call when tool has no per-tool scopes configured",
 			token:          "no-scopes",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_list_employees"}}`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "scoped tool - token has matching scope (read:fact)",
+			name:           "allows tool call when token has required per-tool scope",
 			token:          "has-read-fact",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_top_secret_facts"}}`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "scoped tool - token has matching scope (read:all)",
+			name:           "allows tool call when token has alternative per-tool scope",
 			token:          "has-read-all",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_top_secret_facts"}}`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "scoped tool - token lacks scopes, challenge picks smallest group",
+			name:           "returns 403 with smallest group as challenge when token lacks per-tool scopes",
 			token:          "no-scopes",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_top_secret_facts"}}`,
 			wantStatusCode: 403,
@@ -387,7 +387,7 @@ func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
 			wantContains:   `error_description="insufficient scopes for tool execute_operation_get_top_secret_facts"`,
 		},
 		{
-			name:                             "scoped tool - include token scopes in challenge",
+			name:                             "includes token scopes in per-tool challenge when configured",
 			token:                            "no-scopes",
 			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_top_secret_facts"}}`,
 			scopeChallengeIncludeTokenScopes: true,
@@ -395,7 +395,7 @@ func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
 			wantScope:                        `scope="mcp:connect mcp:tools:write read:fact"`,
 		},
 		{
-			name:           "AND group - token has one of two required, challenge picks closest group",
+			name:           "returns 403 with closest group as challenge when token has only one scope from an AND group",
 			token:          "has-read-employee",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_employee_start_date"}}`,
 			wantStatusCode: 403,
@@ -405,19 +405,19 @@ func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
 			wantScope: `scope="read:employee read:private"`,
 		},
 		{
-			name:           "AND group - token satisfies full AND group",
+			name:           "allows tool call when token satisfies full AND group",
 			token:          "has-read-employee-private",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_employee_start_date"}}`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "AND group - token has read:all satisfies second OR group",
+			name:           "allows tool call when token has scope from alternative OR group",
 			token:          "has-read-all",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_employee_start_date"}}`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "AND group - empty relevant scopes, challenge picks smallest group",
+			name:           "returns 403 with smallest group as challenge when token has no relevant scopes",
 			token:          "no-scopes",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_employee_start_date"}}`,
 			wantStatusCode: 403,
@@ -425,13 +425,13 @@ func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
 			wantScope: `scope="read:all"`,
 		},
 		{
-			name:           "tools/list is not affected by per-tool scopes",
+			name:           "allows tools/list regardless of per-tool scopes",
 			token:          "no-scopes",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "unknown tool name passes (no per-tool scopes)",
+			name:           "allows tool call when tool name has no per-tool scopes configured",
 			token:          "no-scopes",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"unknown_tool"}}`,
 			wantStatusCode: 200,
@@ -469,7 +469,7 @@ func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
 	}
 }
 
-func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
+func TestMCPAuthMiddlewareMethodLevelScopes(t *testing.T) {
 	t.Parallel()
 
 	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
@@ -513,7 +513,7 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 		wantScope                        string // expected scope value in WWW-Authenticate, empty if not checked
 	}{
 		{
-			name:                             "tools/list with insufficient scopes - default returns operation scopes only",
+			name:                             "returns 403 with only operation scopes when tools/list lacks required scopes",
 			token:                            "connect-only",
 			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
 			scopeChallengeIncludeTokenScopes: false,
@@ -521,7 +521,7 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 			wantScope:                        `scope="mcp:tools:read"`,
 		},
 		{
-			name:                             "tools/list with insufficient scopes - include token scopes",
+			name:                             "returns 403 with token and operation scopes when tools/list lacks required scopes and include token scopes is enabled",
 			token:                            "connect-only",
 			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
 			scopeChallengeIncludeTokenScopes: true,
@@ -529,14 +529,14 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 			wantScope:                        `scope="mcp:connect mcp:tools:read"`,
 		},
 		{
-			name:                             "tools/list with sufficient scopes succeeds",
+			name:                             "allows tools/list when token has required scopes",
 			token:                            "connect-and-read",
 			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
 			scopeChallengeIncludeTokenScopes: false,
 			wantStatusCode:                   200,
 		},
 		{
-			name:                             "tools/call with insufficient scopes - default returns operation scopes only",
+			name:                             "returns 403 with only operation scopes when tools/call lacks required scopes",
 			token:                            "connect-and-read",
 			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
 			scopeChallengeIncludeTokenScopes: false,
@@ -544,7 +544,7 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 			wantScope:                        `scope="mcp:tools:write"`,
 		},
 		{
-			name:                             "tools/call with insufficient scopes - include token scopes",
+			name:                             "returns 403 with token and operation scopes when tools/call lacks required scopes and include token scopes is enabled",
 			token:                            "connect-and-read",
 			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
 			scopeChallengeIncludeTokenScopes: true,
@@ -552,14 +552,14 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 			wantScope:                        `scope="mcp:connect mcp:tools:read mcp:tools:write"`,
 		},
 		{
-			name:                             "tools/call with all scopes succeeds",
+			name:                             "allows tools/call when token has all required scopes",
 			token:                            "all-scopes",
 			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
 			scopeChallengeIncludeTokenScopes: false,
 			wantStatusCode:                   200,
 		},
 		{
-			name:                             "unknown method with no scope requirements succeeds",
+			name:                             "allows unknown method when no scope requirements are configured",
 			token:                            "connect-only",
 			body:                             `{"jsonrpc":"2.0","id":1,"method":"ping"}`,
 			scopeChallengeIncludeTokenScopes: false,
@@ -591,7 +591,7 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 	}
 }
 
-func TestMCPAuthMiddleware_BuiltinToolScopes(t *testing.T) {
+func TestMCPAuthMiddlewareBuiltinToolScopes(t *testing.T) {
 	t.Parallel()
 
 	const testMetadataURL = "https://test.example/.well-known/oauth-protected-resource/mcp"
@@ -629,46 +629,46 @@ func TestMCPAuthMiddleware_BuiltinToolScopes(t *testing.T) {
 		wantScope      string
 	}{
 		{
-			name:           "execute_graphql without required scope returns 403",
+			name:           "returns 403 when execute_graphql lacks required builtin scope",
 			token:          "base-only",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
 			wantStatusCode: 403,
 			wantScope:      `scope="mcp:graphql:execute"`,
 		},
 		{
-			name:           "execute_graphql with required scope passes",
+			name:           "allows execute_graphql when token has required builtin scope",
 			token:          "has-graphql-execute",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "get_schema without required scope returns 403",
+			name:           "returns 403 when get_schema lacks required builtin scope",
 			token:          "base-only",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_schema"}}`,
 			wantStatusCode: 403,
 			wantScope:      `scope="mcp:schema:read"`,
 		},
 		{
-			name:           "get_schema with required scope passes",
+			name:           "allows get_schema when token has required builtin scope",
 			token:          "has-schema-read",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_schema"}}`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "get_operation_info without required scope returns 403",
+			name:           "returns 403 when get_operation_info lacks required builtin scope",
 			token:          "base-only",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_operation_info"}}`,
 			wantStatusCode: 403,
 			wantScope:      `scope="mcp:ops:read"`,
 		},
 		{
-			name:           "get_operation_info with required scope passes",
+			name:           "allows get_operation_info when token has required builtin scope",
 			token:          "has-ops-read",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_operation_info"}}`,
 			wantStatusCode: 200,
 		},
 		{
-			name:           "non-builtin tool is not affected by builtin scopes",
+			name:           "allows non-builtin tool regardless of builtin scopes",
 			token:          "base-only",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_users"}}`,
 			wantStatusCode: 200,

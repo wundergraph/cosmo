@@ -182,7 +182,7 @@ func TestExtractScopesForOperation(t *testing.T) {
 		wantNoScopes bool // expect nil/empty RequiredScopes
 	}{
 		{
-			name: "no scoped fields: list employees with public info",
+			name: "returns no scoped fields for query with only public fields",
 			operation: `
 				query ListEmployees {
 				  employees {
@@ -198,7 +198,7 @@ func TestExtractScopesForOperation(t *testing.T) {
 			wantNoScopes: true,
 		},
 		{
-			name: "single scoped root query field: facts titles only",
+			name: "returns one scoped field for scoped root query field",
 			operation: `
 				query GetTopSecretFacts {
 				  topSecretFederationFacts {
@@ -210,7 +210,7 @@ func TestExtractScopesForOperation(t *testing.T) {
 			wantFields: 1, // Query.topSecretFederationFacts
 		},
 		{
-			name: "single scoped mutation field",
+			name: "returns one scoped field for scoped mutation",
 			operation: `
 				mutation AddFact($fact: TopSecretFactInput!) {
 				  addFact(fact: $fact) {
@@ -222,7 +222,7 @@ func TestExtractScopesForOperation(t *testing.T) {
 			wantFields: 1, // Mutation.addFact
 		},
 		{
-			name: "single scoped entity field with AND group",
+			name: "returns one scoped field for entity field with AND group",
 			operation: `
 				query GetEmployeeStartDate($id: Int!) {
 				  employee(id: $id) {
@@ -234,7 +234,7 @@ func TestExtractScopesForOperation(t *testing.T) {
 			wantFields: 1, // Employee.startDate
 		},
 		{
-			name: "multiple scoped fields via inline fragments on different types",
+			name: "returns multiple scoped fields for inline fragments on different types",
 			operation: `
 				query GetTopSecretFactsWithDescriptions {
 				  topSecretFederationFacts {
@@ -251,7 +251,7 @@ func TestExtractScopesForOperation(t *testing.T) {
 			wantFields: 3, // Query.topSecretFederationFacts, DirectiveFact.description, MiscellaneousFact.description
 		},
 		{
-			name: "cross-subgraph scoped fields from products and employees",
+			name: "returns scoped fields aggregated from multiple subgraphs",
 			operation: `
 				query GetFactsAndEmployeeStartDate($id: Int!) {
 				  topSecretFederationFacts {
@@ -265,7 +265,7 @@ func TestExtractScopesForOperation(t *testing.T) {
 			wantFields: 2, // Query.topSecretFederationFacts, Employee.startDate
 		},
 		{
-			name: "no scoped fields despite touching scoped type (startDate excluded)",
+			name: "returns no scoped fields when only unscoped fields are selected on a scoped type",
 			operation: `
 				query GetEmployeeBasicInfo($id: Int!) {
 				  employee(id: $id) {
@@ -299,19 +299,12 @@ func TestExtractScopesForOperation(t *testing.T) {
 			}
 		})
 	}
-}
 
-func TestExtractScopesForOperation_FieldDetails(t *testing.T) {
-	t.Parallel()
-
-	fieldConfigs := testFieldConfigs()
-
-	schemaDoc := parseTestSchema(t)
-
-	extractor := NewScopeExtractor(fieldConfigs, &schemaDoc, 2048)
-
-	t.Run("root query field returns correct OR-of-AND scopes", func(t *testing.T) {
+	t.Run("returns correct OR-of-AND scopes for root query field", func(t *testing.T) {
 		t.Parallel()
+		schemaDoc := parseTestSchema(t)
+		extractor := NewScopeExtractor(fieldConfigs, &schemaDoc, 2048)
+
 		opDoc, report := astparser.ParseGraphqlDocumentString(`
 			query GetTopSecretFacts {
 			  topSecretFederationFacts {
@@ -328,8 +321,11 @@ func TestExtractScopesForOperation_FieldDetails(t *testing.T) {
 		assert.Equal(t, [][]string{{"read:fact"}, {"read:all"}}, fieldReqs[0].OrScopes)
 	})
 
-	t.Run("entity field returns AND scopes with OR alternative", func(t *testing.T) {
+	t.Run("returns AND scopes with OR alternative for entity field", func(t *testing.T) {
 		t.Parallel()
+		schemaDoc := parseTestSchema(t)
+		extractor := NewScopeExtractor(fieldConfigs, &schemaDoc, 2048)
+
 		opDoc, report := astparser.ParseGraphqlDocumentString(`
 			query GetEmployeeStartDate($id: Int!) {
 			  employee(id: $id) {
@@ -346,8 +342,11 @@ func TestExtractScopesForOperation_FieldDetails(t *testing.T) {
 		assert.Equal(t, [][]string{{"read:employee", "read:private"}, {"read:all"}}, fieldReqs[0].OrScopes)
 	})
 
-	t.Run("mutation field returns correct scopes", func(t *testing.T) {
+	t.Run("returns correct scopes for mutation field", func(t *testing.T) {
 		t.Parallel()
+		schemaDoc := parseTestSchema(t)
+		extractor := NewScopeExtractor(fieldConfigs, &schemaDoc, 2048)
+
 		opDoc, report := astparser.ParseGraphqlDocumentString(`
 			mutation AddFact($fact: TopSecretFactInput!) {
 			  addFact(fact: $fact) {
@@ -374,12 +373,12 @@ func TestComputeCombinedScopes(t *testing.T) {
 		want      [][]string
 	}{
 		{
-			name:      "no field requirements returns nil",
+			name:      "returns nil when there are no field requirements",
 			fieldReqs: nil,
 			want:      nil,
 		},
 		{
-			name: "single field passes through directly",
+			name: "passes through a single field's scopes directly",
 			fieldReqs: []FieldScopeRequirement{
 				{
 					TypeName:  "Query",
@@ -390,7 +389,7 @@ func TestComputeCombinedScopes(t *testing.T) {
 			want: [][]string{{"read:fact"}, {"read:all"}},
 		},
 		{
-			name: "two fields: cross-product with dedup",
+			name: "computes cross-product with dedup for two fields",
 			fieldReqs: []FieldScopeRequirement{
 				{
 					TypeName:  "Query",
@@ -411,7 +410,7 @@ func TestComputeCombinedScopes(t *testing.T) {
 			},
 		},
 		{
-			name: "three fields: full cross-product with dedup",
+			name: "computes full cross-product with dedup for three fields",
 			fieldReqs: []FieldScopeRequirement{
 				{
 					TypeName:  "Query",
@@ -462,42 +461,41 @@ func TestComputeCombinedScopes(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
-}
 
-func TestComputeCombinedScopes_ExceedsLimit(t *testing.T) {
-	t.Parallel()
+	t.Run("returns error when combinations exceed configured limit", func(t *testing.T) {
+		t.Parallel()
+		schemaDoc := parseTestSchema(t)
+		extractor := NewScopeExtractor(testFieldConfigs(), &schemaDoc, 2048)
 
-	schemaDoc := parseTestSchema(t)
-	extractor := NewScopeExtractor(testFieldConfigs(), &schemaDoc, 2048)
-
-	// Build field requirements that will exceed MaxScopeCombinations (2048).
-	// 12 fields × 2 OR-groups each = 2^12 = 4096 combinations > 2048.
-	fieldReqs := make([]FieldScopeRequirement, 12)
-	for i := range fieldReqs {
-		fieldReqs[i] = FieldScopeRequirement{
-			TypeName:  "Query",
-			FieldName: fmt.Sprintf("field_%d", i),
-			OrScopes:  [][]string{{"scope_a"}, {"scope_b"}},
+		// Build field requirements that will exceed MaxScopeCombinations (2048).
+		// 12 fields × 2 OR-groups each = 2^12 = 4096 combinations > 2048.
+		fieldReqs := make([]FieldScopeRequirement, 12)
+		for i := range fieldReqs {
+			fieldReqs[i] = FieldScopeRequirement{
+				TypeName:  "Query",
+				FieldName: fmt.Sprintf("field_%d", i),
+				OrScopes:  [][]string{{"scope_a"}, {"scope_b"}},
+			}
 		}
-	}
 
-	got, err := extractor.ComputeCombinedScopes(fieldReqs)
-	assert.Error(t, err)
-	assert.Nil(t, got)
-	assert.Contains(t, err.Error(), "scope combination limit")
+		got, err := extractor.ComputeCombinedScopes(fieldReqs)
+		assert.Error(t, err)
+		assert.Nil(t, got)
+		assert.Contains(t, err.Error(), "scope combination limit")
+	})
 }
 
-func TestCrossProduct_EdgeCases(t *testing.T) {
+func TestCrossProduct(t *testing.T) {
 	t.Parallel()
 
-	t.Run("empty OR list means no way to pass, result is empty", func(t *testing.T) {
+	t.Run("returns empty result when OR list is empty", func(t *testing.T) {
 		t.Parallel()
 		got, err := crossProduct([][]string{}, [][]string{{"x"}}, 100)
 		require.NoError(t, err)
 		assert.Empty(t, got)
 	})
 
-	t.Run("empty AND group means no scopes required, merges to just the other side", func(t *testing.T) {
+	t.Run("returns the other side unchanged when AND group is empty", func(t *testing.T) {
 		t.Parallel()
 		got, err := crossProduct([][]string{{}}, [][]string{{"x"}}, 100)
 		require.NoError(t, err)

@@ -18,25 +18,25 @@ func TestBestScopeChallenge(t *testing.T) {
 		// --- Simple OR scopes (single field, single-scope groups) ---
 		// e.g. Query.topSecretFederationFacts → [["read:fact"], ["read:all"]]
 		{
-			name:             "simple OR: token satisfies first group",
+			name:             "returns nil when token satisfies first OR group",
 			tokenScopes:      []string{"read:fact"},
 			combinedOrScopes: [][]string{{"read:fact"}, {"read:all"}},
 			want:             nil,
 		},
 		{
-			name:             "simple OR: token satisfies second group",
+			name:             "returns nil when token satisfies second OR group",
 			tokenScopes:      []string{"read:all"},
 			combinedOrScopes: [][]string{{"read:fact"}, {"read:all"}},
 			want:             nil,
 		},
 		{
-			name:             "simple OR: empty token picks first group on tie",
+			name:             "returns first group as challenge when token is empty and all groups tie",
 			tokenScopes:      []string{},
 			combinedOrScopes: [][]string{{"read:fact"}, {"read:all"}},
 			want:             []string{"read:fact"},
 		},
 		{
-			name:             "simple OR: unrelated token picks first group on tie",
+			name:             "returns first group as challenge when token has only unrelated scopes",
 			tokenScopes:      []string{"read:other"},
 			combinedOrScopes: [][]string{{"read:fact"}, {"read:all"}},
 			want:             []string{"read:fact"},
@@ -45,25 +45,25 @@ func TestBestScopeChallenge(t *testing.T) {
 		// --- Mutation with simple OR scopes ---
 		// e.g. Mutation.addFact → [["write:fact"], ["write:all"]]
 		{
-			name:             "mutation OR: token has write:fact passes",
+			name:             "returns nil when token has matching write scope for first OR group",
 			tokenScopes:      []string{"write:fact"},
 			combinedOrScopes: [][]string{{"write:fact"}, {"write:all"}},
 			want:             nil,
 		},
 		{
-			name:             "mutation OR: token has write:all passes",
+			name:             "returns nil when token has wildcard write scope for second OR group",
 			tokenScopes:      []string{"write:all"},
 			combinedOrScopes: [][]string{{"write:fact"}, {"write:all"}},
 			want:             nil,
 		},
 		{
-			name:             "mutation OR: wrong category scope picks first group",
+			name:             "returns first group as challenge when token has scope from wrong category",
 			tokenScopes:      []string{"read:fact"},
 			combinedOrScopes: [][]string{{"write:fact"}, {"write:all"}},
 			want:             []string{"write:fact"},
 		},
 		{
-			name:             "mutation OR: empty token picks first group",
+			name:             "returns first group as challenge when token is empty for mutation",
 			tokenScopes:      []string{},
 			combinedOrScopes: [][]string{{"write:fact"}, {"write:all"}},
 			want:             []string{"write:fact"},
@@ -72,31 +72,31 @@ func TestBestScopeChallenge(t *testing.T) {
 		// --- AND scopes with OR alternative ---
 		// e.g. Employee.startDate → [["read:employee", "read:private"], ["read:all"]]
 		{
-			name:             "AND group: token satisfies full AND group",
+			name:             "returns nil when token satisfies all scopes in an AND group",
 			tokenScopes:      []string{"read:employee", "read:private"},
 			combinedOrScopes: [][]string{{"read:employee", "read:private"}, {"read:all"}},
 			want:             nil,
 		},
 		{
-			name:             "AND group: token satisfies shortcut group",
+			name:             "returns nil when token satisfies alternative single-scope OR group",
 			tokenScopes:      []string{"read:all"},
 			combinedOrScopes: [][]string{{"read:employee", "read:private"}, {"read:all"}},
 			want:             nil,
 		},
 		{
-			name:             "AND group: partial match picks first group on tie (1 missing each)",
+			name:             "returns first group when token partially matches on tie",
 			tokenScopes:      []string{"read:employee"},
 			combinedOrScopes: [][]string{{"read:employee", "read:private"}, {"read:all"}},
 			want:             []string{"read:employee", "read:private"},
 		},
 		{
-			name:             "AND group: other partial match also picks first on tie",
+			name:             "returns first group when token has the other partial match on tie",
 			tokenScopes:      []string{"read:private"},
 			combinedOrScopes: [][]string{{"read:employee", "read:private"}, {"read:all"}},
 			want:             []string{"read:employee", "read:private"},
 		},
 		{
-			name:             "AND group: empty token picks shorter group (read:all needs 1 vs 2)",
+			name:             "returns shorter group as challenge when token is empty and groups differ in size",
 			tokenScopes:      []string{},
 			combinedOrScopes: [][]string{{"read:employee", "read:private"}, {"read:all"}},
 			want:             []string{"read:all"},
@@ -105,7 +105,7 @@ func TestBestScopeChallenge(t *testing.T) {
 		// --- Cross-product: multiple scoped fields ---
 		// 3 scoped fields with cross-product yielding 6 groups (see plan Operation 5)
 		{
-			name:        "cross-product: token has read:all picks simplest group",
+			name:        "returns group with fewest missing scopes when token has wildcard",
 			tokenScopes: []string{"read:all"},
 			combinedOrScopes: [][]string{
 				{"read:fact", "read:scalar", "read:miscellaneous"},
@@ -118,7 +118,7 @@ func TestBestScopeChallenge(t *testing.T) {
 			want: []string{"read:all", "read:miscellaneous"}, // missing only 1
 		},
 		{
-			name:        "cross-product: partial match narrows to best group",
+			name:        "returns group with fewest missing scopes for partial match",
 			tokenScopes: []string{"read:fact", "read:scalar"},
 			combinedOrScopes: [][]string{
 				{"read:fact", "read:scalar", "read:miscellaneous"},
@@ -131,7 +131,7 @@ func TestBestScopeChallenge(t *testing.T) {
 			want: []string{"read:fact", "read:scalar", "read:miscellaneous"}, // missing only "read:miscellaneous"
 		},
 		{
-			name:        "cross-product: empty token picks group with fewest total scopes",
+			name:        "returns group with fewest total scopes when token is empty",
 			tokenScopes: []string{},
 			combinedOrScopes: [][]string{
 				{"read:fact", "read:scalar", "read:miscellaneous"},
@@ -147,7 +147,7 @@ func TestBestScopeChallenge(t *testing.T) {
 		// --- Cross-subgraph aggregation ---
 		// Products + Employees subgraph scoped fields, cross-product yields 4 groups
 		{
-			name:        "cross-subgraph: token has read:all passes single-scope group",
+			name:        "returns nil when token has wildcard scope satisfying aggregated groups",
 			tokenScopes: []string{"read:all"},
 			combinedOrScopes: [][]string{
 				{"read:fact", "read:employee", "read:private"},
@@ -158,7 +158,7 @@ func TestBestScopeChallenge(t *testing.T) {
 			want: nil,
 		},
 		{
-			name:        "cross-subgraph: partial match picks closest group",
+			name:        "returns closest group when token partially matches across subgraphs",
 			tokenScopes: []string{"read:fact"},
 			combinedOrScopes: [][]string{
 				{"read:fact", "read:employee", "read:private"},
@@ -169,7 +169,7 @@ func TestBestScopeChallenge(t *testing.T) {
 			want: []string{"read:fact", "read:all"}, // missing 1, tied with group 4, first tie wins
 		},
 		{
-			name:        "cross-subgraph: unrelated partial match picks smallest group",
+			name:        "returns smallest group when token has unrelated partial match",
 			tokenScopes: []string{"read:employee"},
 			combinedOrScopes: [][]string{
 				{"read:fact", "read:employee", "read:private"},
@@ -180,7 +180,7 @@ func TestBestScopeChallenge(t *testing.T) {
 			want: []string{"read:all"}, // missing 1, clear winner
 		},
 		{
-			name:        "cross-subgraph: empty token picks smallest group",
+			name:        "returns smallest group when token is empty across subgraphs",
 			tokenScopes: []string{},
 			combinedOrScopes: [][]string{
 				{"read:fact", "read:employee", "read:private"},
@@ -193,25 +193,25 @@ func TestBestScopeChallenge(t *testing.T) {
 
 		// --- Edge cases ---
 		{
-			name:             "nil combined scopes returns nil",
+			name:             "returns nil when combined scopes is nil",
 			tokenScopes:      []string{"some:scope"},
 			combinedOrScopes: nil,
 			want:             nil,
 		},
 		{
-			name:             "empty combined scopes returns nil",
+			name:             "returns nil when combined scopes is empty",
 			tokenScopes:      []string{"some:scope"},
 			combinedOrScopes: [][]string{},
 			want:             nil,
 		},
 		{
-			name:             "single AND-group not satisfied returns that group",
+			name:             "returns the only group when single AND group is not satisfied",
 			tokenScopes:      []string{"a"},
 			combinedOrScopes: [][]string{{"a", "b", "c"}},
 			want:             []string{"a", "b", "c"},
 		},
 		{
-			name:             "single AND-group fully satisfied returns nil",
+			name:             "returns nil when single AND group is fully satisfied",
 			tokenScopes:      []string{"a", "b", "c"},
 			combinedOrScopes: [][]string{{"a", "b", "c"}},
 			want:             nil,
@@ -238,28 +238,28 @@ func TestBestScopeChallengeWithExisting(t *testing.T) {
 		want             []string
 	}{
 		{
-			name:             "include existing: unions token scopes with best group",
+			name:             "returns union of token scopes and best group when include existing is true",
 			tokenScopes:      []string{"init", "mcp:tools:write", "a"},
 			combinedOrScopes: [][]string{{"a", "b", "d"}, {"a", "c", "d"}},
 			includeExisting:  true,
 			want:             []string{"init", "mcp:tools:write", "a", "b", "d"},
 		},
 		{
-			name:             "exclude existing: returns only best group",
+			name:             "returns only the best group when include existing is false",
 			tokenScopes:      []string{"init", "mcp:tools:write", "a"},
 			combinedOrScopes: [][]string{{"a", "b", "d"}, {"a", "c", "d"}},
 			includeExisting:  false,
 			want:             []string{"a", "b", "d"},
 		},
 		{
-			name:             "include existing: passes returns nil",
+			name:             "returns nil when token satisfies scopes even with include existing enabled",
 			tokenScopes:      []string{"a", "b", "d"},
 			combinedOrScopes: [][]string{{"a", "b", "d"}, {"a", "c", "d"}},
 			includeExisting:  true,
 			want:             nil,
 		},
 		{
-			name:             "include existing: deduplicates overlapping scopes",
+			name:             "deduplicates overlapping scopes when merging token scopes with best group",
 			tokenScopes:      []string{"read:employee"},
 			combinedOrScopes: [][]string{{"read:employee", "read:private"}, {"read:all"}},
 			includeExisting:  true,
@@ -286,43 +286,43 @@ func TestSatisfiesAnyGroup(t *testing.T) {
 		want        bool
 	}{
 		{
-			name:        "satisfies first AND-group",
+			name:        "returns true when token satisfies first AND group",
 			tokenScopes: []string{"a", "b"},
 			orScopes:    [][]string{{"a", "b"}, {"c", "d"}},
 			want:        true,
 		},
 		{
-			name:        "satisfies second AND-group with extra scopes",
+			name:        "returns true when token satisfies second AND group with extra scopes",
 			tokenScopes: []string{"c", "d", "e"},
 			orScopes:    [][]string{{"a", "b"}, {"c", "d"}},
 			want:        true,
 		},
 		{
-			name:        "partial match on each group fails",
+			name:        "returns false when token only partially matches each AND group",
 			tokenScopes: []string{"a", "c"},
 			orScopes:    [][]string{{"a", "b"}, {"c", "d"}},
 			want:        false,
 		},
 		{
-			name:        "empty requirements always passes",
+			name:        "returns true when required scopes are empty",
 			tokenScopes: []string{},
 			orScopes:    [][]string{},
 			want:        true,
 		},
 		{
-			name:        "nil requirements always passes",
+			name:        "returns true when required scopes are nil",
 			tokenScopes: []string{},
 			orScopes:    nil,
 			want:        true,
 		},
 		{
-			name:        "empty token with requirements fails",
+			name:        "returns false when token is empty but scopes are required",
 			tokenScopes: []string{},
 			orScopes:    [][]string{{"a"}},
 			want:        false,
 		},
 		{
-			name:        "token superset of AND-group passes",
+			name:        "returns true when token is a superset of an AND group",
 			tokenScopes: []string{"a", "b", "c", "d"},
 			orScopes:    [][]string{{"a", "b"}},
 			want:        true,
