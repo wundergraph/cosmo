@@ -1130,6 +1130,7 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 	}
 
 	mcpss, err := mcpserver.NewGraphQLSchemaServer(
+		ctx,
 		mcpGraphQLEndpoint,
 		mcpOpts...,
 	)

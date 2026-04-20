@@ -115,7 +115,6 @@ type GraphQLSchemaServer struct {
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
 	corsConfig                cors.Config
-	ctx                       context.Context
 	cancel                    context.CancelFunc
 	oauthConfig               *config.MCPOAuthConfiguration
 	serverBaseURL             string
@@ -193,7 +192,7 @@ type GraphQLResponse struct {
 }
 
 // NewGraphQLSchemaServer creates a new GraphQL schema server
-func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)) (*GraphQLSchemaServer, error) {
+func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, opts ...func(*Options)) (*GraphQLSchemaServer, error) {
 	if routerGraphQLEndpoint == "" {
 		return nil, fmt.Errorf("routerGraphQLEndpoint cannot be empty")
 	}
@@ -219,8 +218,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		opt(options)
 	}
 
-	// Create a cancellable context for managing the server lifecycle
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 
 	var authMiddleware *MCPAuthMiddleware
 	if options.OAuthConfig != nil && options.OAuthConfig.Enabled {
@@ -316,7 +314,6 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		omitToolNamePrefix:        options.OmitToolNamePrefix,
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
-		ctx:                       ctx,
 		cancel:                    cancel,
 		oauthConfig:               options.OAuthConfig,
 		serverBaseURL:             options.ServerBaseURL,

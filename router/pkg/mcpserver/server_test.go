@@ -81,6 +81,7 @@ func TestReload_NoToolDuplication(t *testing.T) {
 	require.NoError(t, err)
 
 	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
 		"http://localhost:4000/graphql",
 		WithLogger(logger),
 		WithOperationsDir(tempDir),
@@ -127,6 +128,7 @@ func TestReload_ReservedToolNameCollision(t *testing.T) {
 	require.NoError(t, err)
 
 	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
 		"http://localhost:4000/graphql",
 		WithLogger(logger),
 		WithOperationsDir(tempDir),
@@ -170,6 +172,7 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 	require.NoError(t, err)
 
 	srv, err := NewGraphQLSchemaServer(
+		t.Context(),
 		"http://localhost:4000/graphql",
 		WithLogger(logger),
 		WithOperationsDir(tempDir),
