@@ -26,7 +26,7 @@ import { OrganizationGroupRepository } from './repositories/OrganizationGroupRep
 import { DefaultNamespace, NamespaceRepository } from './repositories/NamespaceRepository.js';
 import Keycloak from './services/Keycloak.js';
 import { IPlatformWebhookService } from './webhooks/PlatformWebhookService.js';
-
+import { traced } from './tracing.js';
 export type AuthUtilsOptions = {
   webBaseUrl: string;
   webErrorPath: string;
@@ -711,3 +711,5 @@ export default class AuthUtils {
     return 0;
   }
 }
+
+traced(AuthUtils);

@@ -496,7 +496,21 @@ type ComplexityCalculationCache struct {
 	CacheSize int64 `yaml:"size,omitempty" envDefault:"1024" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
 }
 
+// ComplexityLimitsMode defines how complexity limits behave.
+type ComplexityLimitsMode string
+
+const (
+	ComplexityLimitsModeUnset   ComplexityLimitsMode = ""
+	ComplexityLimitsModeMeasure ComplexityLimitsMode = "measure"
+	ComplexityLimitsModeEnforce ComplexityLimitsMode = "enforce"
+)
+
 type ComplexityLimits struct {
+	// Mode controls complexity limits behavior:
+	// - "measure": calculates complexity without rejecting operations (for monitoring)
+	// - "enforce": calculates complexity and rejects operations exceeding limits
+	Mode ComplexityLimitsMode `yaml:"mode,omitempty"`
+
 	Depth            *ComplexityLimit `yaml:"depth"`
 	TotalFields      *ComplexityLimit `yaml:"total_fields"`
 	RootFields       *ComplexityLimit `yaml:"root_fields"`
@@ -902,10 +916,10 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3         []S3StorageProvider         `yaml:"s3,omitempty"`
-	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty"`
-	Redis      []RedisStorageProvider      `yaml:"redis,omitempty"`
-	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty"`
+	S3         []S3StorageProvider         `yaml:"s3,omitempty" envPrefix:"S3_"`
+	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty" envPrefix:"CDN_"`
+	Redis      []RedisStorageProvider      `yaml:"redis,omitempty" envPrefix:"REDIS_"`
+	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty" envPrefix:"FS_"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -919,29 +933,29 @@ type AutomaticPersistedQueriesStorageConfig struct {
 }
 
 type S3StorageProvider struct {
-	ID        string `yaml:"id,omitempty"`
-	Endpoint  string `yaml:"endpoint,omitempty"`
-	AccessKey string `yaml:"access_key,omitempty"`
-	SecretKey string `yaml:"secret_key,omitempty"`
-	Bucket    string `yaml:"bucket,omitempty"`
-	Region    string `yaml:"region,omitempty"`
-	Secure    bool   `yaml:"secure,omitempty"`
+	ID        string `yaml:"id,omitempty" env:"ID"`
+	Endpoint  string `yaml:"endpoint,omitempty" env:"ENDPOINT"`
+	AccessKey string `yaml:"access_key,omitempty" env:"ACCESS_KEY"`
+	SecretKey string `yaml:"secret_key,omitempty" env:"SECRET_KEY"`
+	Bucket    string `yaml:"bucket,omitempty" env:"BUCKET"`
+	Region    string `yaml:"region,omitempty" env:"REGION"`
+	Secure    bool   `yaml:"secure,omitempty" env:"SECURE"`
 }
 
 type CDNStorageProvider struct {
-	ID  string `yaml:"id,omitempty"`
-	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
+	ID  string `yaml:"id,omitempty" env:"ID"`
+	URL string `yaml:"url,omitempty" env:"URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
 
 type FileSystemStorageProvider struct {
-	ID   string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_FS_ID"`
-	Path string `yaml:"path,omitempty" env:"STORAGE_PROVIDER_FS_PATH"`
+	ID   string `yaml:"id,omitempty" env:"ID"`
+	Path string `yaml:"path,omitempty" env:"PATH"`
 }
 
 type RedisStorageProvider struct {
-	ID             string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
-	URLs           []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`
-	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"STORAGE_PROVIDER_REDIS_CLUSTER_ENABLED"`
+	ID             string   `yaml:"id,omitempty" env:"ID"`
+	URLs           []string `yaml:"urls,omitempty" env:"URLS"`
+	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" env:"CLUSTER_ENABLED" envDefault:"false"`
 }
 
 type PersistedOperationsCDNProvider struct {
@@ -1237,7 +1251,7 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
 
-	StorageProviders               StorageProviders                `yaml:"storage_providers"`
+	StorageProviders               StorageProviders                `yaml:"storage_providers" envPrefix:"STORAGE_PROVIDER_"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
 	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`

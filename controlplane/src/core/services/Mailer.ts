@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { createTransport, Transporter } from 'nodemailer';
 import * as ejs from 'ejs';
 import { MailerParams } from '../../types/index.js';
+import { traced } from '../tracing.js';
 
 interface OrganizationInviteBody {
   organizationName: string;
@@ -10,6 +11,7 @@ interface OrganizationInviteBody {
   inviteLink: string;
 }
 
+@traced
 export default class Mailer {
   client: Transporter;
 

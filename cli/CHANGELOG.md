@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.114.2](https://github.com/wundergraph/cosmo/compare/wgc@0.114.1...wgc@0.114.2) (2026-04-17)
+
+### Bug Fixes
+
+* create the config directory only after checking for DISABLE_UPDATE_CHECK ([#2773](https://github.com/wundergraph/cosmo/issues/2773)) ([c7beb72](https://github.com/wundergraph/cosmo/commit/c7beb7286fc823fa9dd39c835d1e621f438d84bd)) (@JivusAyrus)
+
+## [0.114.1](https://github.com/wundergraph/cosmo/compare/wgc@0.114.0...wgc@0.114.1) (2026-04-16)
+
+**Note:** Version bump only for package wgc
+
+# [0.114.0](https://github.com/wundergraph/cosmo/compare/wgc@0.113.0...wgc@0.114.0) (2026-04-15)
+
+### Features
+
+* use email as main tracking field ([#2700](https://github.com/wundergraph/cosmo/issues/2700)) ([23fc31d](https://github.com/wundergraph/cosmo/commit/23fc31dd11c94fb242e6cec7b820b806a88d4cb6)) (@alepane21)
+
+# [0.113.0](https://github.com/wundergraph/cosmo/compare/wgc@0.112.7...wgc@0.113.0) (2026-04-14)
+
+### Features
+
+* update packages to address high severity vulnerabilities ([#2757](https://github.com/wundergraph/cosmo/issues/2757)) ([e14c41b](https://github.com/wundergraph/cosmo/commit/e14c41bfac517c6f1ea7d9d00e85bbbdff29b4e0)) (@pepol)
+
 ## [0.112.7](https://github.com/wundergraph/cosmo/compare/wgc@0.112.6...wgc@0.112.7) (2026-04-02)
 
 **Note:** Version bump only for package wgc
