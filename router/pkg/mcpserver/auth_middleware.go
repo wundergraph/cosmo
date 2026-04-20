@@ -277,7 +277,11 @@ func (m *MCPAuthMiddleware) checkExecuteGraphQLScopes(tokenScopes []string, toke
 		return nil // let the tool handler deal with parse errors
 	}
 
-	fieldReqs := extractor.ExtractScopesForOperation(&opDoc)
+	fieldReqs, err := extractor.ExtractScopesForOperation(&opDoc)
+	if err != nil {
+		// Fail closed: if we cannot determine scope requirements, treat as insufficient.
+		return []string{"insufficient_scope"}
+	}
 	if len(fieldReqs) == 0 {
 		return nil
 	}

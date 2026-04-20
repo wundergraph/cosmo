@@ -55,7 +55,9 @@ func NewScopeExtractor(fieldConfigs []*nodev1.FieldConfiguration, schemaDoc *ast
 
 // ExtractScopesForOperation walks the operation's selection set and returns
 // per-field scope requirements for fields that have @requiresScopes.
-func (e *ScopeExtractor) ExtractScopesForOperation(operation *ast.Document) []FieldScopeRequirement {
+// Returns an error if the walker fails, so callers can fail closed rather than
+// acting on a partially-populated result.
+func (e *ScopeExtractor) ExtractScopesForOperation(operation *ast.Document) ([]FieldScopeRequirement, error) {
 	walker := astvisitor.NewWalker(48)
 
 	v := &scopeFieldVisitor{
@@ -69,8 +71,11 @@ func (e *ScopeExtractor) ExtractScopesForOperation(operation *ast.Document) []Fi
 
 	report := &operationreport.Report{}
 	walker.Walk(operation, e.schemaDoc, report)
+	if report.HasErrors() {
+		return nil, fmt.Errorf("scope extraction walker failed: %w", report)
+	}
 
-	return v.results
+	return v.results, nil
 }
 
 // ComputeCombinedScopes computes the Cartesian product of OR-groups across fields,

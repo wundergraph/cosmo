@@ -289,7 +289,8 @@ func TestExtractScopesForOperation(t *testing.T) {
 			require.False(t, opReport.HasErrors(), "operation parse error: %s", opReport.Error())
 
 			extractor := NewScopeExtractor(fieldConfigs, &schemaDoc, 2048)
-			fieldReqs := extractor.ExtractScopesForOperation(&opDoc)
+			fieldReqs, err := extractor.ExtractScopesForOperation(&opDoc)
+			require.NoError(t, err)
 
 			if tt.wantNoScopes {
 				assert.Empty(t, fieldReqs, "expected no scoped fields")
@@ -319,7 +320,8 @@ func TestExtractScopesForOperation_FieldDetails(t *testing.T) {
 			}`)
 		require.False(t, report.HasErrors())
 
-		fieldReqs := extractor.ExtractScopesForOperation(&opDoc)
+		fieldReqs, err := extractor.ExtractScopesForOperation(&opDoc)
+		require.NoError(t, err)
 		require.Len(t, fieldReqs, 1)
 		assert.Equal(t, "Query", fieldReqs[0].TypeName)
 		assert.Equal(t, "topSecretFederationFacts", fieldReqs[0].FieldName)
@@ -336,7 +338,8 @@ func TestExtractScopesForOperation_FieldDetails(t *testing.T) {
 			}`)
 		require.False(t, report.HasErrors())
 
-		fieldReqs := extractor.ExtractScopesForOperation(&opDoc)
+		fieldReqs, err := extractor.ExtractScopesForOperation(&opDoc)
+		require.NoError(t, err)
 		require.Len(t, fieldReqs, 1)
 		assert.Equal(t, "Employee", fieldReqs[0].TypeName)
 		assert.Equal(t, "startDate", fieldReqs[0].FieldName)
@@ -353,7 +356,8 @@ func TestExtractScopesForOperation_FieldDetails(t *testing.T) {
 			}`)
 		require.False(t, report.HasErrors())
 
-		fieldReqs := extractor.ExtractScopesForOperation(&opDoc)
+		fieldReqs, err := extractor.ExtractScopesForOperation(&opDoc)
+		require.NoError(t, err)
 		require.Len(t, fieldReqs, 1)
 		assert.Equal(t, "Mutation", fieldReqs[0].TypeName)
 		assert.Equal(t, "addFact", fieldReqs[0].FieldName)

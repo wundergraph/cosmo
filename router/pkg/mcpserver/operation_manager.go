@@ -93,7 +93,10 @@ func (om *OperationsManager) GetOperation(name string) *schemaloader.Operation {
 func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration, maxScopeCombinations int) error {
 	extractor := NewScopeExtractor(fieldConfigs, om.schemaDoc, maxScopeCombinations)
 	for i := range om.operations {
-		fieldReqs := extractor.ExtractScopesForOperation(&om.operations[i].Document)
+		fieldReqs, err := extractor.ExtractScopesForOperation(&om.operations[i].Document)
+		if err != nil {
+			return fmt.Errorf("tool %q: %w", om.operations[i].Name, err)
+		}
 		combinedScopes, err := extractor.ComputeCombinedScopes(fieldReqs)
 		if err != nil {
 			return fmt.Errorf("tool %q: %w", om.operations[i].Name, err)
