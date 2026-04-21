@@ -52,6 +52,7 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
+	ExpensiveOp func(ctx context.Context, obj any, next graphql.Resolver, applied *bool) (res any, err error)
 }
 
 type ComplexityRoot struct {
@@ -1240,6 +1241,9 @@ directive @goField(
 
 directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
 
+# To demonstrate that cost can be applied to the argument of a directive
+directive @expensiveOp(applied: Boolean = true @cost(weight: 22)) on FIELD_DEFINITION
+
 type Query {
   employee(id: Int! @cost(weight: 2)): Employee @cost(weight: 5) @openfed__requireFetchReasons
   employeeAsList(id: Int!): [Employee]
@@ -1304,14 +1308,14 @@ interface Identifiable @openfed__requireFetchReasons {
 type Engineer implements RoleType {
   departments: [Department!]!
   title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
+  employees: [Employee!]! @goField(forceResolver: true) @expensiveOp
   engineerType: EngineerType!
 }
 
 type Marketer implements RoleType {
   departments: [Department!]!
   title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
+  employees: [Employee!]! @goField(forceResolver: true) @expensiveOp
 }
 
 enum OperationType {
@@ -1322,7 +1326,7 @@ enum OperationType {
 type Operator implements RoleType {
   departments: [Department!]!
   title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
+  employees: [Employee!]! @goField(forceResolver: true) @expensiveOp
   operatorType: [OperationType!]!
 }
 
@@ -1557,6 +1561,34 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) dir_expensiveOp_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.dir_expensiveOp_argsApplied(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["applied"] = arg0
+	return args, nil
+}
+func (ec *executionContext) dir_expensiveOp_argsApplied(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (*bool, error) {
+	if _, ok := rawArgs["applied"]; !ok {
+		var zeroVal *bool
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("applied"))
+	if tmp, ok := rawArgs["applied"]; ok {
+		return ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
+	}
+
+	var zeroVal *bool
+	return zeroVal, nil
+}
 
 func (ec *executionContext) field_Entity_findConsultancyByUpc_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
@@ -3846,8 +3878,35 @@ func (ec *executionContext) _Engineer_employees(ctx context.Context, field graph
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Engineer().Employees(rctx, obj)
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Engineer().Employees(rctx, obj)
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			applied, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
+			if err != nil {
+				var zeroVal []*model.Employee
+				return zeroVal, err
+			}
+			if ec.directives.ExpensiveOp == nil {
+				var zeroVal []*model.Employee
+				return zeroVal, errors.New("directive expensiveOp is not implemented")
+			}
+			return ec.directives.ExpensiveOp(ctx, obj, directive0, applied)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.Employee); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Employee`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4792,8 +4851,35 @@ func (ec *executionContext) _Marketer_employees(ctx context.Context, field graph
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Marketer().Employees(rctx, obj)
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Marketer().Employees(rctx, obj)
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			applied, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
+			if err != nil {
+				var zeroVal []*model.Employee
+				return zeroVal, err
+			}
+			if ec.directives.ExpensiveOp == nil {
+				var zeroVal []*model.Employee
+				return zeroVal, errors.New("directive expensiveOp is not implemented")
+			}
+			return ec.directives.ExpensiveOp(ctx, obj, directive0, applied)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.Employee); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Employee`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5209,8 +5295,35 @@ func (ec *executionContext) _Operator_employees(ctx context.Context, field graph
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Operator().Employees(rctx, obj)
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Operator().Employees(rctx, obj)
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			applied, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
+			if err != nil {
+				var zeroVal []*model.Employee
+				return zeroVal, err
+			}
+			if ec.directives.ExpensiveOp == nil {
+				var zeroVal []*model.Employee
+				return zeroVal, errors.New("directive expensiveOp is not implemented")
+			}
+			return ec.directives.ExpensiveOp(ctx, obj, directive0, applied)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.Employee); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Employee`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
