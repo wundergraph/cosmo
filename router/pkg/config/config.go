@@ -608,6 +608,7 @@ type HeaderSource struct {
 
 type JWTAuthenticationConfiguration struct {
 	JWKS              []JWKSConfiguration `yaml:"jwks"`
+	ScopeClaim        string              `yaml:"scope_claim" envDefault:"scope"`
 	HeaderName        string              `yaml:"header_name" envDefault:"Authorization"`
 	HeaderValuePrefix string              `yaml:"header_value_prefix" envDefault:"Bearer"`
 	HeaderSources     []HeaderSource      `yaml:"header_sources"`
