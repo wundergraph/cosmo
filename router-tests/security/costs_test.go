@@ -365,7 +365,7 @@ func TestOperationCost(t *testing.T) {
 				// Engineer.employees, Marketer.employees, and Operator.employees.
 				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + @expensiveOp.applied(22) + 10 * employees(1)))
 				require.Equal(t, "40", res.Response.Header.Get(core.CostEstimatedHeader))
-				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + @expensiveOp.applied(22) + 10 * employees(1)))
+				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + @expensiveOp.applied(22) + 7 * employees(1)))
 				require.Equal(t, "37", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
