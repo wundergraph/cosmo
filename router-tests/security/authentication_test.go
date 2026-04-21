@@ -32,7 +32,7 @@ import (
 const (
 	employeesQuery                    = `{"query":"{ employees { id } }"}`
 	employeesQueryRequiringClaims     = `{ employees { id startDate } }`
-	employeesQueryBodyRequiringClaims = `{"query":"` + employeesQueryRequiringClaims + `'"}`
+	employeesQueryBodyRequiringClaims = `{"query":"` + employeesQueryRequiringClaims + `"}`
 	employeesExpectedData             = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 	unauthorizedExpectedData          = `{"errors":[{"message":"unauthorized"}]}`
 	xAuthenticatedByHeader            = "X-Authenticated-By"
