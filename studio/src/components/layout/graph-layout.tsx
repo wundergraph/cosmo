@@ -37,8 +37,6 @@ export interface GraphContextProps {
   subgraphs: GetFederatedGraphByNameResponse['subgraphs'];
   graphs: GetFederatedGraphsResponse['graphs'];
   graphRequestToken: string;
-  featureFlagsInLatestValidComposition: GetFederatedGraphByNameResponse['featureFlagsInLatestValidComposition'];
-  featureSubgraphs: GetFederatedGraphByNameResponse['featureSubgraphs'];
 }
 
 export const GraphContext = createContext<GraphContextProps | undefined>(undefined);
@@ -69,8 +67,6 @@ export const GraphLayout = ({ children }: LayoutProps) => {
       subgraphs: data.subgraphs,
       graphRequestToken: data.graphRequestToken,
       graphs: graphsData.graphs,
-      featureFlagsInLatestValidComposition: data.featureFlagsInLatestValidComposition,
-      featureSubgraphs: data.featureSubgraphs,
     };
   }, [data, graphsData]);
 

@@ -76,6 +76,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getFederatedGraphSDLByName,
+  getFeatureFlagsInLatestCompositionByFederatedGraph,
   getFieldUsage,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { sentenceCase } from 'change-case';
@@ -869,14 +870,29 @@ export const GraphSelector = () => {
   const activeFeatureFlag = router.query.featureFlag as string;
   const graphName = router.query.slug as string;
   const schemaType = router.query.schemaType as string;
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const fullPath = router.asPath;
   const pathWithHash = fullPath.split('?')[0];
   const pathname = pathWithHash.split('#')[0];
 
   const applyParams = useApplyParams();
+
+  const { data: compositionFlagsData } = useQuery(
+    getFeatureFlagsInLatestCompositionByFederatedGraph,
+    {
+      federatedGraphName: graphData?.graph?.name,
+      namespace,
+    },
+    {
+      enabled: !!graphData?.graph?.name,
+    },
+  );
+
   const featureFlags =
-    graphData?.featureFlagsInLatestValidComposition.map((each) => {
+    compositionFlagsData?.featureFlags.map((each) => {
       return {
         name: each.name,
         query: `?featureFlag=${each.name}`,

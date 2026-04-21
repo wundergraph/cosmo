@@ -1,4 +1,5 @@
 import { ClickHouseClient } from '../../clickhouse/index.js';
+import { traced } from '../../tracing.js';
 
 export interface RouterDTO {
   hostname: string;
@@ -23,6 +24,7 @@ export interface RouterRuntimeDTO {
   };
 }
 
+@traced
 export class RouterMetricsRepository {
   constructor(private client: ClickHouseClient) {}
 
