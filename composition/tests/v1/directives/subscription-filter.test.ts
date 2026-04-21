@@ -453,6 +453,28 @@ describe('@openfed__subscriptionFilter tests', () => {
       ]);
     });
 
+    test('that a subscription filter is emitted when the return type is a union (pylon #2913)', () => {
+      const result = federateSubgraphsSuccess(
+        [subgraphUnionResolver, subgraphUnionEDG],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(result.success).toBe(true);
+      const subscriptionField = result.fieldConfigurations.find(
+        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'field',
+      );
+      expect(subscriptionField).toStrictEqual({
+        argumentNames: ['phoneChannelId'],
+        fieldName: 'field',
+        typeName: SUBSCRIPTION,
+        subscriptionFilterCondition: {
+          in: {
+            fieldPath: ['phoneChannelId'],
+            values: ['1'],
+          },
+        },
+      });
+    });
+
     test('that an entity can be defined as an extension in an EDG', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphQ, subgraphR],
@@ -920,10 +942,55 @@ const subgraphR: Subgraph = {
     type Query{
       entity: Entity!
     }
-    
+
     type Entity @key(fields: "id") {
-      id: ID! 
-      name: String! 
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const subgraphUnionEDG: Subgraph = {
+  name: 'subgraph-union-edg',
+  url: '',
+  definitions: parse(`
+    type TaskUpdated @key(fields: "id phoneChannelId", resolvable: false) {
+      id: ID! @external
+      phoneChannelId: ID! @external
+    }
+
+    type TaskDeleted @key(fields: "id phoneChannelId", resolvable: false) {
+      id: ID! @external
+      phoneChannelId: ID! @external
+    }
+
+    union TaskEvent = TaskUpdated | TaskDeleted
+
+    type Subscription {
+      field(phoneChannelId: ID!): TaskEvent!
+        @edfs__kafkaSubscribe(topics: ["taskEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["1"] } })
+    }
+  `),
+};
+
+const subgraphUnionResolver: Subgraph = {
+  name: 'subgraph-union-resolver',
+  url: '',
+  definitions: parse(`
+    type Query {
+      task(id: ID!): TaskUpdated
+    }
+
+    type TaskUpdated @key(fields: "id phoneChannelId") {
+      id: ID!
+      phoneChannelId: ID!
+      title: String!
+    }
+
+    type TaskDeleted @key(fields: "id phoneChannelId") {
+      id: ID!
+      phoneChannelId: ID!
     }
   `),
 };
