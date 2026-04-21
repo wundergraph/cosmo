@@ -741,18 +741,6 @@ func TestWebSockets(t *testing.T) {
 	t.Run("empty allow lists should allow all headers and query args", func(t *testing.T) {
 		t.Parallel()
 
-		opts := core.NewSubgraphRetryOptions(config.TrafficShapingRules{
-			All: config.GlobalSubgraphRequestRule{
-				BackoffJitterRetry: config.BackoffJitterRetry{
-					Enabled:     true,
-					MaxAttempts: 5,
-					MaxDuration: 10 * time.Second,
-					Interval:    200 * time.Millisecond,
-					Expression:  "true",
-				},
-			},
-		})
-
 		headerRules := config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
@@ -781,7 +769,6 @@ func TestWebSockets(t *testing.T) {
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
-				core.WithSubgraphRetryOptions(opts),
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{

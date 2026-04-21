@@ -1027,10 +1027,15 @@ func TestRetryPerSubgraph(t *testing.T) {
 								_ = conn.Close()
 							}()
 
+							// Read connection_init
 							_, _, err = testenv.WSReadMessage(t, conn)
 							require.NoError(t, err)
 
 							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
+							require.NoError(t, err)
+
+							// Read subscribe message before sending data
+							_, _, err = testenv.WSReadMessage(t, conn)
 							require.NoError(t, err)
 
 							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(timestampMessage))

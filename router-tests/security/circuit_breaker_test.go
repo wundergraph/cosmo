@@ -641,9 +641,7 @@ func TestCircuitBreaker(t *testing.T) {
 
 		breaker.NumBuckets = 1
 		breaker.RollingDuration = 5000 * time.Millisecond
-		breaker.ExecutionTimeout = 30 * time.Second
-
-		trafficConfig := getTrafficConfigWithTimeout(breaker, 30*time.Second)
+		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
 
 		employeesCalls := atomic.Int64{}
 
@@ -681,10 +679,15 @@ func TestCircuitBreaker(t *testing.T) {
 								_ = conn.Close()
 							}()
 
+							// Read connection_init
 							_, _, err = testenv.WSReadMessage(t, conn)
 							require.NoError(t, err)
 
 							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
+							require.NoError(t, err)
+
+							// Read subscribe message before sending data
+							_, _, err = testenv.WSReadMessage(t, conn)
 							require.NoError(t, err)
 
 							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(timestampMessage))
@@ -748,11 +751,6 @@ func TestCircuitBreaker(t *testing.T) {
 
 			_, message, err := testenv.WSReadMessage(t, conn)
 			require.NoError(t, err)
-
-			t.Logf("employeesCalls after recovery: %d", employeesCalls.Load())
-			t.Logf("received message: %s", string(message))
-			t.Logf("circuit breaker status changed count: %d", xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
-			t.Logf("circuit breaker open count: %d", xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute").Len())
 
 			require.JSONEq(t, timestampMessage, string(message))
 
