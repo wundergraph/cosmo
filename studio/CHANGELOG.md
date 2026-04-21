@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.165.0](https://github.com/wundergraph/cosmo/compare/studio@0.164.0...studio@0.165.0) (2026-04-16)
+
+### Features
+
+* add new endpoints for fetching feature flags and feature subgraphs by federated graph ([#2729](https://github.com/wundergraph/cosmo/issues/2729)) ([74f44a1](https://github.com/wundergraph/cosmo/commit/74f44a1614ef0976231b143b52203c5a9dd2034e)) (@JivusAyrus)
+
+# [0.164.0](https://github.com/wundergraph/cosmo/compare/studio@0.163.3...studio@0.164.0) (2026-04-15)
+
+### Features
+
+* use email as main tracking field ([#2700](https://github.com/wundergraph/cosmo/issues/2700)) ([23fc31d](https://github.com/wundergraph/cosmo/commit/23fc31dd11c94fb242e6cec7b820b806a88d4cb6)) (@alepane21)
+
+## [0.163.3](https://github.com/wundergraph/cosmo/compare/studio@0.163.2...studio@0.163.3) (2026-04-14)
+
+### Bug Fixes
+
+* fix `Contact us` links on Studio ([#2763](https://github.com/wundergraph/cosmo/issues/2763)) ([0a880bd](https://github.com/wundergraph/cosmo/commit/0a880bd570255589e413f8160c27a1e09482c2e8)) (@wilsonrivera)
+
 ## [0.163.2](https://github.com/wundergraph/cosmo/compare/studio@0.163.1...studio@0.163.2) (2026-04-02)
 
 **Note:** Version bump only for package studio

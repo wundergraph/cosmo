@@ -3593,19 +3593,6 @@ export class GetFederatedGraphByNameResponse extends Message<GetFederatedGraphBy
    */
   graphRequestToken = "";
 
-  /**
-   * @generated from field: repeated wg.cosmo.platform.v1.FeatureFlag featureFlagsInLatestValidComposition = 5;
-   */
-  featureFlagsInLatestValidComposition: FeatureFlag[] = [];
-
-  /**
-   * includes all the feature subgraphs that are part of the federated graph;
-   * even the ones that are not part of the latest composition
-   *
-   * @generated from field: repeated wg.cosmo.platform.v1.Subgraph featureSubgraphs = 6;
-   */
-  featureSubgraphs: Subgraph[] = [];
-
   constructor(data?: PartialMessage<GetFederatedGraphByNameResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3618,8 +3605,6 @@ export class GetFederatedGraphByNameResponse extends Message<GetFederatedGraphBy
     { no: 2, name: "graph", kind: "message", T: FederatedGraph },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
     { no: 4, name: "graphRequestToken", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "featureFlagsInLatestValidComposition", kind: "message", T: FeatureFlag, repeated: true },
-    { no: 6, name: "featureSubgraphs", kind: "message", T: Subgraph, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphByNameResponse {
@@ -9273,6 +9258,11 @@ export class WhoAmIResponse extends Message<WhoAmIResponse> {
    */
   organizationSlug = "";
 
+  /**
+   * @generated from field: string organizationId = 5;
+   */
+  organizationId = "";
+
   constructor(data?: PartialMessage<WhoAmIResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9285,6 +9275,7 @@ export class WhoAmIResponse extends Message<WhoAmIResponse> {
     { no: 2, name: "organizationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "userEmail", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "organizationSlug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "organizationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WhoAmIResponse {
@@ -19821,6 +19812,206 @@ export class GetFeatureFlagsByFederatedGraphResponse extends Message<GetFeatureF
 
   static equals(a: GetFeatureFlagsByFederatedGraphResponse | PlainMessage<GetFeatureFlagsByFederatedGraphResponse> | undefined, b: GetFeatureFlagsByFederatedGraphResponse | PlainMessage<GetFeatureFlagsByFederatedGraphResponse> | undefined): boolean {
     return proto3.util.equals(GetFeatureFlagsByFederatedGraphResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest
+ */
+export class GetFeatureFlagsInLatestCompositionByFederatedGraphRequest extends Message<GetFeatureFlagsInLatestCompositionByFederatedGraphRequest> {
+  /**
+   * @generated from field: string federated_graph_name = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetFeatureFlagsInLatestCompositionByFederatedGraphRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federated_graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFeatureFlagsInLatestCompositionByFederatedGraphRequest {
+    return new GetFeatureFlagsInLatestCompositionByFederatedGraphRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFeatureFlagsInLatestCompositionByFederatedGraphRequest {
+    return new GetFeatureFlagsInLatestCompositionByFederatedGraphRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFeatureFlagsInLatestCompositionByFederatedGraphRequest {
+    return new GetFeatureFlagsInLatestCompositionByFederatedGraphRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetFeatureFlagsInLatestCompositionByFederatedGraphRequest | PlainMessage<GetFeatureFlagsInLatestCompositionByFederatedGraphRequest> | undefined, b: GetFeatureFlagsInLatestCompositionByFederatedGraphRequest | PlainMessage<GetFeatureFlagsInLatestCompositionByFederatedGraphRequest> | undefined): boolean {
+    return proto3.util.equals(GetFeatureFlagsInLatestCompositionByFederatedGraphRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse
+ */
+export class GetFeatureFlagsInLatestCompositionByFederatedGraphResponse extends Message<GetFeatureFlagsInLatestCompositionByFederatedGraphResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * feature flags that are part of the latest valid composition of the federated graph
+   *
+   * @generated from field: repeated wg.cosmo.platform.v1.FeatureFlag feature_flags = 2;
+   */
+  featureFlags: FeatureFlag[] = [];
+
+  constructor(data?: PartialMessage<GetFeatureFlagsInLatestCompositionByFederatedGraphResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "feature_flags", kind: "message", T: FeatureFlag, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFeatureFlagsInLatestCompositionByFederatedGraphResponse {
+    return new GetFeatureFlagsInLatestCompositionByFederatedGraphResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFeatureFlagsInLatestCompositionByFederatedGraphResponse {
+    return new GetFeatureFlagsInLatestCompositionByFederatedGraphResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFeatureFlagsInLatestCompositionByFederatedGraphResponse {
+    return new GetFeatureFlagsInLatestCompositionByFederatedGraphResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetFeatureFlagsInLatestCompositionByFederatedGraphResponse | PlainMessage<GetFeatureFlagsInLatestCompositionByFederatedGraphResponse> | undefined, b: GetFeatureFlagsInLatestCompositionByFederatedGraphResponse | PlainMessage<GetFeatureFlagsInLatestCompositionByFederatedGraphResponse> | undefined): boolean {
+    return proto3.util.equals(GetFeatureFlagsInLatestCompositionByFederatedGraphResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphRequest
+ */
+export class GetFeatureSubgraphsByFederatedGraphRequest extends Message<GetFeatureSubgraphsByFederatedGraphRequest> {
+  /**
+   * @generated from field: string federated_graph_name = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: int32 limit = 3;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 4;
+   */
+  offset = 0;
+
+  /**
+   * @generated from field: optional string query = 5;
+   */
+  query?: string;
+
+  constructor(data?: PartialMessage<GetFeatureSubgraphsByFederatedGraphRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federated_graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFeatureSubgraphsByFederatedGraphRequest {
+    return new GetFeatureSubgraphsByFederatedGraphRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFeatureSubgraphsByFederatedGraphRequest {
+    return new GetFeatureSubgraphsByFederatedGraphRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFeatureSubgraphsByFederatedGraphRequest {
+    return new GetFeatureSubgraphsByFederatedGraphRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetFeatureSubgraphsByFederatedGraphRequest | PlainMessage<GetFeatureSubgraphsByFederatedGraphRequest> | undefined, b: GetFeatureSubgraphsByFederatedGraphRequest | PlainMessage<GetFeatureSubgraphsByFederatedGraphRequest> | undefined): boolean {
+    return proto3.util.equals(GetFeatureSubgraphsByFederatedGraphRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphResponse
+ */
+export class GetFeatureSubgraphsByFederatedGraphResponse extends Message<GetFeatureSubgraphsByFederatedGraphResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * all unique feature subgraphs across all feature flags of the federated graph
+   *
+   * @generated from field: repeated wg.cosmo.platform.v1.Subgraph feature_subgraphs = 2;
+   */
+  featureSubgraphs: Subgraph[] = [];
+
+  /**
+   * @generated from field: int32 total_count = 3;
+   */
+  totalCount = 0;
+
+  constructor(data?: PartialMessage<GetFeatureSubgraphsByFederatedGraphResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "feature_subgraphs", kind: "message", T: Subgraph, repeated: true },
+    { no: 3, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFeatureSubgraphsByFederatedGraphResponse {
+    return new GetFeatureSubgraphsByFederatedGraphResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFeatureSubgraphsByFederatedGraphResponse {
+    return new GetFeatureSubgraphsByFederatedGraphResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFeatureSubgraphsByFederatedGraphResponse {
+    return new GetFeatureSubgraphsByFederatedGraphResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetFeatureSubgraphsByFederatedGraphResponse | PlainMessage<GetFeatureSubgraphsByFederatedGraphResponse> | undefined, b: GetFeatureSubgraphsByFederatedGraphResponse | PlainMessage<GetFeatureSubgraphsByFederatedGraphResponse> | undefined): boolean {
+    return proto3.util.equals(GetFeatureSubgraphsByFederatedGraphResponse, a, b);
   }
 }
 

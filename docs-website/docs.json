@@ -26,10 +26,10 @@
     "codeblocks": "system",
     "eyebrows": "breadcrumbs"
   },
-    "banner": {
-      "content": "Help map how teams scale Federated GraphQL in the State of Federation 2026 Survey. We donate $30 to UNICEF per response → [Take the survey](https://8bxwlo3ot55.typeform.com/to/zIJKRQUe).",
-      "dismissible": false 
-    },
+  "banner": {
+    "content": "Help map how teams scale Federated GraphQL in the State of Federation 2026 Survey. We donate $30 to UNICEF per response → [Take the survey](https://8bxwlo3ot55.typeform.com/to/zIJKRQUe).",
+    "dismissible": false
+  },
   "contextual": {
     "options": ["copy", "view", "chatgpt", "claude"]
   },
@@ -41,13 +41,7 @@
         "groups": [
           {
             "group": " ",
-            "pages": [
-              "overview",
-              "architecture",
-              "enterprise",
-              "security-and-compliance",
-              "self-hosted"
-            ]
+            "pages": ["overview", "architecture", "enterprise", "security-and-compliance", "self-hosted"]
           },
           {
             "group": "Getting Started",
@@ -70,11 +64,7 @@
           },
           {
             "group": "Cosmo Connect",
-            "pages": [
-              "connect/overview",
-              "connect/plugins",
-              "connect/grpc-services"
-            ]
+            "pages": ["connect/overview", "connect/plugins", "connect/grpc-services"]
           },
           {
             "group": "Cosmo ConnectRPC",
@@ -102,14 +92,31 @@
                   "router/configuration/template-expressions"
                 ]
               },
-              "router/mcp",
+              {
+                "group": "MCP Gateway",
+                "icon": "robot",
+                "pages": [
+                  "router/mcp",
+                  "router/mcp/quickstart",
+                  "router/mcp/operations",
+                  "router/mcp/configuration",
+                  {
+                    "group": "OAuth 2.1",
+                    "icon": "shield-check",
+                    "pages": [
+                      "router/mcp/oauth/overview",
+                      "router/mcp/oauth/quickstart",
+                      "router/mcp/oauth/scopes",
+                      "router/mcp/oauth/configuration"
+                    ]
+                  },
+                  "router/mcp/ide-setup"
+                ]
+              },
               {
                 "group": "Custom Modules",
                 "icon": "cubes",
-                "pages": [
-                  "router/custom-modules",
-                  "router/custom-modules-migration"
-                ]
+                "pages": ["router/custom-modules", "router/custom-modules-migration"]
               },
               {
                 "group": "Cosmo Connect",
@@ -215,10 +222,7 @@
               {
                 "group": "Deployment",
                 "icon": "truck-ramp-couch",
-                "pages": [
-                  "router/deployment",
-                  "router/deployment/config-hot-reload"
-                ]
+                "pages": ["router/deployment", "router/deployment/config-hot-reload"]
               },
               {
                 "group": "Security",
@@ -234,11 +238,7 @@
               {
                 "group": "Development",
                 "icon": "flask-round-potion",
-                "pages": [
-                  "router/development",
-                  "router/development/debugging",
-                  "router/development/development-mode"
-                ]
+                "pages": ["router/development", "router/development/debugging", "router/development/development-mode"]
               },
               "router/request-deduplication",
               "router/performance-debugging",
@@ -246,10 +246,7 @@
               {
                 "group": "Query Plan",
                 "icon": "file-contract",
-                "pages": [
-                  "router/query-plan",
-                  "router/query-plan/batch-generate-query-plans"
-                ]
+                "pages": ["router/query-plan", "router/query-plan/batch-generate-query-plans"]
               },
               {
                 "group": "Cosmo Streams (EDFS)",
@@ -338,11 +335,7 @@
               {
                 "group": "API Keys",
                 "icon": "key",
-                "pages": [
-                  "studio/api-keys",
-                  "studio/api-keys/api-key-permissions",
-                  "studio/api-keys/api-key-resources"
-                ]
+                "pages": ["studio/api-keys", "studio/api-keys/api-key-permissions", "studio/api-keys/api-key-resources"]
               },
               "studio/migrate-from-apollo",
               {
@@ -377,11 +370,7 @@
               {
                 "group": "SCIM",
                 "icon": "file-user",
-                "pages": [
-                  "studio/scim",
-                  "studio/scim/okta",
-                  "studio/scim/okta-oin-version"
-                ]
+                "pages": ["studio/scim", "studio/scim/okta", "studio/scim/okta-oin-version"]
               },
               "studio/audit-log",
               "studio/cosmo-ai",
@@ -396,11 +385,7 @@
           },
           {
             "group": "Control Plane",
-            "pages": [
-              "control-plane/intro",
-              "control-plane/configuration",
-              "control-plane/webhooks"
-            ]
+            "pages": ["control-plane/intro", "control-plane/configuration", "control-plane/webhooks"]
           },
           {
             "group": "GraphQL / Federation",
@@ -463,10 +448,7 @@
               {
                 "group": "Terraform",
                 "icon": "road-bridge",
-                "pages": [
-                  "deployments-and-hosting/terraform",
-                  "deployments-and-hosting/terraform/aws-fargate"
-                ]
+                "pages": ["deployments-and-hosting/terraform", "deployments-and-hosting/terraform/aws-fargate"]
               },
               "deployments-and-hosting/docker",
               "deployments-and-hosting/release-management",
@@ -558,11 +540,7 @@
                   {
                     "group": "Version",
                     "icon": "code-branch",
-                    "pages": [
-                      "cli/monograph/version",
-                      "cli/monograph/version/get",
-                      "cli/monograph/version/set"
-                    ]
+                    "pages": ["cli/monograph/version", "cli/monograph/version/get", "cli/monograph/version/set"]
                   }
                 ]
               },
@@ -592,10 +570,7 @@
                   {
                     "group": "Compatibility version",
                     "icon": "code-compare",
-                    "pages": [
-                      "cli/router/compatibility-version",
-                      "cli/router/compatibility-version/list"
-                    ]
+                    "pages": ["cli/router/compatibility-version", "cli/router/compatibility-version/list"]
                   },
                   {
                     "group": "Router Plugin",
@@ -629,12 +604,7 @@
               {
                 "group": "Auth",
                 "icon": "key",
-                "pages": [
-                  "cli/auth",
-                  "cli/auth/login",
-                  "cli/auth/whoami",
-                  "cli/auth/logout"
-                ]
+                "pages": ["cli/auth", "cli/auth/login", "cli/auth/whoami", "cli/auth/logout"]
               },
               {
                 "group": "Operations",
@@ -678,11 +648,7 @@
               {
                 "group": "Proposal",
                 "icon": "file-circle-plus",
-                "pages": [
-                  "cli/proposal",
-                  "cli/proposal/create",
-                  "cli/proposal/update"
-                ]
+                "pages": ["cli/proposal", "cli/proposal/create", "cli/proposal/update"]
               }
             ]
           }
