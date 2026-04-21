@@ -2108,6 +2108,12 @@
                 ]
               }
             },
+            "scope_claim": {
+              "type": "string",
+              "description": "The JWT claim to use when reading scopes for authorization. Only top level claims are supported. The default value is 'scope'.",
+              "default": "scope",
+              "minLength": 1
+            },
             "header_name": {
               "type": "string",
               "description": "The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.",
