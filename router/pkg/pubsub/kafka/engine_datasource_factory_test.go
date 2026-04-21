@@ -167,12 +167,12 @@ func TestTransformEventConfig(t *testing.T) {
 			{
 				name:        "no topics",
 				topics:      nil,
-				expectedErr: "publish events should define one topic but received 0",
+				expectedErr: "publish event definition should define one topic but has 0",
 			},
 			{
 				name:        "multiple topics",
 				topics:      []string{"topic.one", "topic.two"},
-				expectedErr: "publish events should define one topic but received 2",
+				expectedErr: "publish event definition should define one topic but has 2",
 			},
 		}
 

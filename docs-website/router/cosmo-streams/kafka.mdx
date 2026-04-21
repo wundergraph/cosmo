@@ -19,8 +19,8 @@ descripton: "Kafka event provider support for Cosmo Streams"
 | wgc          | 0.55.0          |
 
 <Note>
-  Kafka topic arguments support the same argument template syntax as the other event providers, for example `employeeUpdated.{{ args.employeeID }}`.
-  When you use topic templates with Kafka, you must create the rendered Kafka topics in your broker ahead of time. The Router does not create Kafka topics automatically.
+  Kafka topic arguments support the same [argument template syntax](/router/cosmo-streams#the-subjects-argument) as the other event providers, for example `employeeUpdated.{{ args.employeeID }}`.
+  When you use topic templates with Kafka, you must create the resulting name as a Kafka topic in your broker ahead of time. The Router does not create Kafka topics automatically.
 </Note>
 
 ## Full schema example

@@ -50,7 +50,7 @@ func (c *EngineDataSourceFactory) ResolveDataSource() (resolve.DataSource, error
 
 func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (string, error) {
 	if len(c.topics) != 1 {
-		return "", fmt.Errorf("publish events should define one topic but received %d", len(c.topics))
+		return "", fmt.Errorf("publish event definition should define one topic but has %d", len(c.topics))
 	}
 
 	evtCfg := publishData{
@@ -110,7 +110,7 @@ func (c *EngineDataSourceFactory) TransformEventData(extractFn datasource.Argume
 	switch c.eventType {
 	case EventTypePublish:
 		if len(c.topics) != 1 {
-			return fmt.Errorf("publish events should define one topic but received %d", len(c.topics))
+			return fmt.Errorf("publish event definition should define one topic but has %d", len(c.topics))
 		}
 
 		extractedTopic, err := extractFn(c.topics[0])
