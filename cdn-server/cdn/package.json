@@ -26,13 +26,13 @@
     "dist"
   ],
   "dependencies": {
-    "hono": "4.12.12",
+    "hono": "catalog:",
     "jose": "^5.2.4"
   },
   "devDependencies": {
-    "eslint": "^8.57.1",
-    "eslint-config-unjs": "^0.2.1",
-    "typescript": "5.5.2",
-    "vitest": "^3.2.4"
+    "eslint": "catalog:",
+    "eslint-config-unjs": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
