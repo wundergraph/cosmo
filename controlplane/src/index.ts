@@ -74,6 +74,7 @@ const {
   REDIS_TLS_CA,
   REDIS_TLS_CERT,
   REDIS_TLS_KEY,
+  REDIS_USERNAME,
   REDIS_PASSWORD,
   AUTH_ADMISSION_JWT_SECRET,
   CDN_BASE_URL,
@@ -172,6 +173,7 @@ const options: BuildConfig = {
   redis: {
     host: REDIS_HOST,
     port: REDIS_PORT,
+    username: REDIS_USERNAME,
     password: REDIS_PASSWORD,
     tls:
       REDIS_TLS_CERT || REDIS_TLS_KEY || REDIS_TLS_CA

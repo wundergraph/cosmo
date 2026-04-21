@@ -45,6 +45,7 @@ export const envVariables = z
       .string()
       .default('6379')
       .transform((val) => Number.parseInt(val)),
+    REDIS_USERNAME: z.string().optional(),
     REDIS_PASSWORD: z.string().optional(),
     REDIS_TLS_CERT: z.string().optional(),
     REDIS_TLS_CA: z.string().optional(),

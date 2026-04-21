@@ -27,6 +27,7 @@ const getConfig = () => {
     redis: {
       host: process.env.REDIS_HOST || 'localhost',
       port: process.env.REDIS_PORT || 6379,
+      username: process.env.REDIS_USERNAME,
       password: process.env.REDIS_PASSWORD,
       tls:
         process.env.REDIS_TLS_CERT || process.env.REDIS_TLS_KEY || process.env.REDIS_TLS_CA

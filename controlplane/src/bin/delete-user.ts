@@ -12,6 +12,7 @@ const userEmail = process.env.USER_EMAIL || '';
 const { redisQueue, redisWorker } = await createRedisConnections({
   host: redis.host!,
   port: Number(redis.port),
+  username: redis.username,
   password: redis.password,
   tls: redis.tls,
 });

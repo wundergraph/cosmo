@@ -16,6 +16,11 @@ declare module 'fastify' {
 export interface RedisPluginOptions {
   host: string;
   port: number;
+  // Optional ACL username (Redis 6+). When set, ioredis sends
+  // `AUTH <username> <password>` instead of the legacy `AUTH <password>`.
+  // Required for managed Redis offerings that mandate RBAC (e.g. AWS
+  // ElastiCache RBAC, Azure Cache for Redis, GCP Memorystore IAM Auth).
+  username?: string;
   password?: string;
   tls?: {
     // Necessary only if the server uses a self-signed certificate.
@@ -30,6 +35,7 @@ export const createRedisConnections = async (opts: RedisPluginOptions) => {
   const connectionConfig: IORedis.RedisOptions = {
     host: opts.host,
     port: opts.port,
+    username: opts.username,
     password: opts.password,
   };
 

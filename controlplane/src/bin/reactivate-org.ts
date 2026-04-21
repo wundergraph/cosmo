@@ -11,6 +11,7 @@ const organizationId = process.env.ORGANIZATION_ID || '';
 const { redisQueue, redisWorker } = await createRedisConnections({
   host: redis.host!,
   port: Number(redis.port),
+  username: redis.username,
   password: redis.password,
   tls: redis.tls,
 });
