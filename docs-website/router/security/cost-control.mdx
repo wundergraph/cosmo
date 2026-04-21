@@ -161,16 +161,16 @@ type Query {
 Input object weights are evaluated per request, not cached with the query plan.
 Two requests using the same query but different input fields produce different cost estimates.
 
-When specified **on a directive argument definition** — adds cost to every field where the directive
-is applied and the argument is active. See [Weights on Directive Arguments](#weights-on-directive-arguments).
-
-When specified **on a field returning a list** — the list size multiplies the weight of this field:
+When specified **on a field returning a list**, the list size multiplies the weight of this field:
 
 ```graphql
 type Query {
   searchAll(term: String!): [Result] @cost(weight: 10)
 }
 ```
+
+When specified **on a directive argument definition**, it adds cost to every field where the directive
+is applied and the argument is active. See [Weights on Directive Arguments](#weights-on-directive-arguments).
 
 ### The @listSize Directive
 
