@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.309.0](https://github.com/wundergraph/cosmo/compare/router@0.308.0...router@0.309.0) (2026-04-21)
+
+### Features
+
+* allow custom scope claim name ([#2724](https://github.com/wundergraph/cosmo/issues/2724)) ([f96a99b](https://github.com/wundergraph/cosmo/commit/f96a99b0872ea5a4f429a1d0f159ad95ec8a2009)) (@alepane21)
+* **streams:** add topic templates support to Kafka provider ([#2776](https://github.com/wundergraph/cosmo/issues/2776)) ([1ac6450](https://github.com/wundergraph/cosmo/commit/1ac64504e01ff05697af9d549afb4859796ee249)) (@alepane21)
+
 # [0.308.0](https://github.com/wundergraph/cosmo/compare/router@0.307.0...router@0.308.0) (2026-04-20)
 
 ### Features

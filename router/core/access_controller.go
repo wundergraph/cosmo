@@ -22,6 +22,7 @@ type AccessControllerOptions struct {
 	AuthenticationRequired   bool
 	SkipIntrospectionQueries bool
 	IntrospectionSkipSecret  string
+	ScopeClaim               string
 }
 
 // AccessController handles both authentication and authorization for the Router
@@ -30,6 +31,7 @@ type AccessController struct {
 	authenticators           []authentication.Authenticator
 	skipIntrospectionQueries bool
 	introspectionSkipSecret  string
+	scopeClaim               string
 }
 
 // NewAccessController creates a new AccessController.
@@ -40,6 +42,7 @@ func NewAccessController(opts AccessControllerOptions) (*AccessController, error
 		skipIntrospectionQueries: opts.SkipIntrospectionQueries,
 		authenticators:           opts.Authenticators,
 		introspectionSkipSecret:  opts.IntrospectionSkipSecret,
+		scopeClaim:               opts.ScopeClaim,
 	}, nil
 }
 
@@ -47,7 +50,7 @@ func NewAccessController(opts AccessControllerOptions) (*AccessController, error
 // should not proceed. If it succeeds, a new http.Request with an updated context.Context
 // is returned.
 func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
-	auth, err := authentication.AuthenticateHTTPRequest(r.Context(), a.authenticators, r)
+	auth, err := authentication.AuthenticateHTTPRequest(r.Context(), a.authenticators, r, a.scopeClaim)
 	if err != nil {
 		return nil, errors.Join(err, ErrUnauthorized)
 	}

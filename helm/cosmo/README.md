@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.16.0](https://img.shields.io/badge/Version-0.16.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.17.0](https://img.shields.io/badge/Version-0.17.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -200,6 +200,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | minio.defaultBuckets | string | `"cosmo"` |  |
 | minio.image.registry | string | `"docker.io"` |  |
 | minio.image.repository | string | `"bitnamilegacy/minio"` |  |
+| minio.image.tag | string | `"2025.7.23-debian-12-r5"` |  |
 | minio.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
 | minio.persistence.size | string | `"1Gi"` |  |
 | minio.service.ports.minio | int | `9000` |  |

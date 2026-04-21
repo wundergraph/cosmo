@@ -618,6 +618,7 @@
           "Audiences": null
         }
       ],
+      "ScopeClaim": "customscp",
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": [

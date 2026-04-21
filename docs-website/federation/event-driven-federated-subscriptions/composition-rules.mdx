@@ -56,9 +56,9 @@ Attempting to return a type other than `edfs__PublishResult!` from a EDG Mutatio
 
 ### Root field arguments and event subjects
 
-Arguments can be defined on a root field, which can then be passed to event subjects through an argument template. Argument templates are only support on the subject by NATS. In Kafka we use the subscription filter to split the topic into different streams.
+Arguments can be defined on a root field, which can then be passed to event subjects or topics through an argument template. Argument templates are supported for NATS subjects and Kafka topics. With Kafka, the rendered topics must already exist, so the subscription filter is still useful when you want to split a stream without pre-creating many topics.
 
-The argument template should follow the period delimiter of your subject. The `args` refers to the field arguments, which has its own period delimiter, followed by a name of a field argument. This argument name must match exactly to a corresponding field argument name.
+The argument template should follow the period delimiter of your subject or topic. The `args` refers to the field arguments, which has its own period delimiter, followed by a name of a field argument. This argument name must match exactly to a corresponding field argument name.
 
 ```graphql
 eventSubject.{{ args.nameOfAFieldArgument }}
