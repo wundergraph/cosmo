@@ -120,9 +120,6 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 }
 
 func NewEmptyAuthentication(scopeClaim string) Authentication {
-	if scopeClaim == "" {
-		scopeClaim = DefaultScopeClaim
-	}
 	return &authentication{
 		scopeClaim: scopeClaim,
 	}
