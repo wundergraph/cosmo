@@ -149,10 +149,7 @@ func TestTransport(t *testing.T) {
 		})
 
 		// Cancel the context after a short delay to simulate client disconnect
-		go func() {
-			time.Sleep(50 * time.Millisecond)
-			cancel()
-		}()
+		time.AfterFunc(50*time.Millisecond, cancel)
 
 		c := http.Client{Transport: tr}
 		_, err = c.Do(r)

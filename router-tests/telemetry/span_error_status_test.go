@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -56,7 +55,7 @@ func waitForStableSpans(t *testing.T, exporter *otelsdktracetest.InMemoryExporte
 func TestClientDisconnectionBehavior(t *testing.T) {
 	t.Parallel()
 
-	t.Run("span status is not error but exception event is recorded", func(t *testing.T) {
+	t.Run("root span is not marked as error but records exception event on client disconnect", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -101,7 +100,7 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 		})
 	})
 
-	t.Run("error metrics are not inflated but request count is recorded", func(t *testing.T) {
+	t.Run("error metrics are not inflated but request count is recorded on client disconnect", func(t *testing.T) {
 		t.Parallel()
 
 		metricReader := sdkmetric.NewManualReader()
@@ -143,7 +142,7 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 		})
 	})
 
-	t.Run("log level is info not error", func(t *testing.T) {
+	t.Run("context canceled is not logged at error level on client disconnect", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -178,7 +177,7 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 		})
 	})
 
-	t.Run("no span in the trace is marked as error on client disconnect", func(t *testing.T) {
+	t.Run("subgraph fetch span is not marked as error on client disconnect", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -195,6 +194,8 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Since the subgraph takes 2 seconds, and this takes 200 milliseconds which is less than the subgraph
+			// this will ensure that the request is cancelled due to a timeout
 			ctx, cancel := context.WithTimeout(t.Context(), 200*time.Millisecond)
 			defer cancel()
 
@@ -257,28 +258,14 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
-		// Create a slow CDN server that delays persisted operation responses
+		// Create a slow CDN server that delays persisted operation responses long enough
+		// for the client's request context to be canceled mid-fetch.
 		cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/" {
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(`[]`))
 				return
 			}
-			// Validate the authorization header like the real CDN
-			authorization := r.Header.Get("Authorization")
-			token, ok := strings.CutPrefix(authorization, "Bearer ")
-			if !ok || token == "" {
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			parsedClaims := make(jwt.MapClaims)
-			jwtParser := new(jwt.Parser)
-			_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-			if err != nil {
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			// Delay the CDN response so the client times out
 			time.Sleep(2 * time.Second)
 			w.WriteHeader(http.StatusNotFound)
 		}))
@@ -391,7 +378,7 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 		})
 	})
 
-	t.Run("other errors still mark span as error", func(t *testing.T) {
+	t.Run("root span is marked as error on subgraph failure", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
