@@ -343,6 +343,33 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
+		t.Run("directive argument weight on interface field implementations adds to cost", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { role { employees { id } } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+
+				// "@expensiveOp(applied: Boolean = true @cost(weight: 22))" is applied on
+				// Engineer.employees, Marketer.employees, and Operator.employees.
+				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + @expensiveOp.applied(22) + 10 * employees(1)))
+				require.Equal(t, "40", res.Response.Header.Get(core.CostEstimatedHeader))
+				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + @expensiveOp.applied(22) + 10 * employees(1)))
+				require.Equal(t, "37", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
 		t.Run("slicingArguments controls list size estimation", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -1177,11 +1204,11 @@ func TestOperationCost(t *testing.T) {
 
 				// Without sizedFields: estimated=28 (both departments and employees use defaultListSize=10)
 				// With sizedFields(assumedSize=3): departments multiplier=3 instead of 10, employees stays at 10:
-				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + (3 * departments(1)) + (10 * employees(1))))
-				require.Equal(t, "21", res.Response.Header.Get(core.CostEstimatedHeader))
+				// employee.arg(2) + directivesCost(22) + 1 * (employee(5) + 1 * (role(1) + (3 * departments(1)) + (10 * employees(1))))
+				require.Equal(t, "43", res.Response.Header.Get(core.CostEstimatedHeader))
 
-				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + (2 * departments(1)) + (7 * employees(1))))
-				require.Equal(t, "17", res.Response.Header.Get(core.CostActualHeader))
+				// employee.arg(2) + directivesCost(22) + 1 * (employee(5) + 1 * (role(1) + (2 * departments(1)) + (7 * employees(1))))
+				require.Equal(t, "39", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 	})

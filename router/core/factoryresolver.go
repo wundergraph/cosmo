@@ -724,8 +724,6 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	for k, v := range costConfig.GetTypeWeights() {
 		out.CostConfig.Types[k] = int(v)
 	}
-	// Directives with argument weights are TBD.
-
 	return out
 }
 
