@@ -2793,6 +2793,11 @@
                     "description": "TLS configuration for the NATS provider.",
                     "additionalProperties": false,
                     "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Enable TLS for this NATS provider."
+                      },
                       "insecure_skip_verify": {
                         "type": "boolean",
                         "default": false,

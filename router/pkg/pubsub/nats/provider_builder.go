@@ -117,7 +117,7 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 		}
 	}
 
-	if eventSource.TLS != nil {
+	if eventSource.TLS != nil && eventSource.TLS.Enabled {
 		tlsCfg := &tls.Config{
 			InsecureSkipVerify: eventSource.TLS.InsecureSkipVerify,
 		}

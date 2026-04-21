@@ -104,6 +104,80 @@ events:
 	require.NoError(t, err)
 }
 
+func TestValidNatsTLSEnabled(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+        tls:
+          enabled: true
+
+`)
+
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.NotNil(t, cfg.Config.Events.Providers.Nats[0].TLS)
+	require.True(t, cfg.Config.Events.Providers.Nats[0].TLS.Enabled)
+}
+
+func TestValidNatsTLSDisabledByDefault(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+        tls:
+          ca_file: "/tmp/ca.pem"
+
+`)
+
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.NotNil(t, cfg.Config.Events.Providers.Nats[0].TLS)
+	require.False(t, cfg.Config.Events.Providers.Nats[0].TLS.Enabled)
+}
+
+func TestValidNatsTLSEmptyBlockIsDisabled(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+        tls: {}
+
+`)
+
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+	require.NotNil(t, cfg.Config.Events.Providers.Nats[0].TLS)
+	require.False(t, cfg.Config.Events.Providers.Nats[0].TLS.Enabled)
+}
+
 func TestValidNatsTLSInsecureSkipVerify(t *testing.T) {
 	t.Parallel()
 
@@ -119,6 +193,7 @@ events:
       - id: default
         url: "nats://localhost:4222"
         tls:
+          enabled: true
           insecure_skip_verify: true
 
 `)
@@ -142,6 +217,7 @@ events:
       - id: default
         url: "nats://localhost:4222"
         tls:
+          enabled: true
           ca_file: "/tmp/ca.pem"
           cert_file: "/tmp/client.crt"
           key_file: "/tmp/client.key"
@@ -167,6 +243,7 @@ events:
       - id: default
         url: "nats://localhost:4222"
         tls:
+          enabled: true
           cert_file: "/tmp/client.crt"
 
 `)
@@ -191,6 +268,7 @@ events:
       - id: default
         url: "nats://localhost:4222"
         tls:
+          enabled: true
           key_file: "/tmp/client.key"
 
 `)
