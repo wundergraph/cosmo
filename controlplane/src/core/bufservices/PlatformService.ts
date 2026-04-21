@@ -45,7 +45,9 @@ import { enableFeatureFlag } from './feature-flag/enableFeatureFlag.js';
 import { getFeatureFlagByName } from './feature-flag/getFeatureFlagByName.js';
 import { getFeatureFlags } from './feature-flag/getFeatureFlags.js';
 import { getFeatureFlagsByFederatedGraph } from './feature-flag/getFeatureFlagsByFederatedGraph.js';
+import { getFeatureFlagsInLatestCompositionByFederatedGraph } from './feature-flag/getFeatureFlagsInLatestCompositionByFederatedGraph.js';
 import { getFeatureSubgraphs } from './feature-flag/getFeatureSubgraphs.js';
+import { getFeatureSubgraphsByFederatedGraph } from './feature-flag/getFeatureSubgraphsByFederatedGraph.js';
 import { getFeatureSubgraphsByFeatureFlag } from './feature-flag/getFeatureSubgraphsByFeatureFlag.js';
 import { updateFeatureFlag } from './feature-flag/updateFeatureFlag.js';
 import { checkFederatedGraph } from './federated-graph/checkFederatedGraph.js';
@@ -753,6 +755,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getFeatureFlagsByFederatedGraph: (req, ctx) => {
       return getFeatureFlagsByFederatedGraph(opts, req, ctx);
+    },
+
+    getFeatureFlagsInLatestCompositionByFederatedGraph: (req, ctx) => {
+      return getFeatureFlagsInLatestCompositionByFederatedGraph(opts, req, ctx);
+    },
+
+    getFeatureSubgraphsByFederatedGraph: (req, ctx) => {
+      return getFeatureSubgraphsByFederatedGraph(opts, req, ctx);
     },
 
     getOrganizationWebhookHistory: (req, ctx) => {
