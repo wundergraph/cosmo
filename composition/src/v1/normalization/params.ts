@@ -1,9 +1,16 @@
 import type { DirectiveName, FieldName, SubgraphName } from '../../types/types';
-import type { CompositeOutputData, InputObjectDefinitionData } from '../../schema-building/types';
-import type { ConstDirectiveNode, DocumentNode } from 'graphql';
+import type {
+  ArgumentData,
+  CompositeOutputData,
+  InputObjectDefinitionData,
+  InputValueData,
+  ParentDefinitionData,
+} from '../../schema-building/types';
+import type { ConstDirectiveNode, DocumentNode, InputValueDefinitionNode } from 'graphql';
 import type { Subgraph } from '../../subgraph/types';
 import type { CompositionOptions } from '../../types/params';
 import type { Graph } from '../../resolvability-graph/graph';
+import { type MutableInputValueNode } from '../../schema-building/ast';
 
 export type ValidateOneOfDirectiveParams = {
   data: InputObjectDefinitionData;
@@ -46,4 +53,10 @@ export type NormalizeSubgraphFromStringParams = {
   noLocation: boolean;
   sdlString: string;
   options?: CompositionOptions;
+};
+
+export type SanitizeDefaultValueParams = {
+  data: ArgumentData | InputValueData;
+  namedTypeData: ParentDefinitionData;
+  node?: MutableInputValueNode;
 };

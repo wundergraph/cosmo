@@ -5,7 +5,9 @@ import * as schema from '../../db/schema.js';
 import { namespaceLintCheckConfig, schemaCheckLintAction, schemaCheckSubgraphs } from '../../db/schema.js';
 import { SchemaLintDTO, LintSeverityLevel, LintIssueResult, LintRule, SchemaLintIssues } from '../../types/index.js';
 import SchemaLinter from '../services/SchemaLinter.js';
+import { traced } from '../tracing.js';
 
+@traced
 export class SchemaLintRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 

@@ -496,7 +496,21 @@ type ComplexityCalculationCache struct {
 	CacheSize int64 `yaml:"size,omitempty" envDefault:"1024" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
 }
 
+// ComplexityLimitsMode defines how complexity limits behave.
+type ComplexityLimitsMode string
+
+const (
+	ComplexityLimitsModeUnset   ComplexityLimitsMode = ""
+	ComplexityLimitsModeMeasure ComplexityLimitsMode = "measure"
+	ComplexityLimitsModeEnforce ComplexityLimitsMode = "enforce"
+)
+
 type ComplexityLimits struct {
+	// Mode controls complexity limits behavior:
+	// - "measure": calculates complexity without rejecting operations (for monitoring)
+	// - "enforce": calculates complexity and rejects operations exceeding limits
+	Mode ComplexityLimitsMode `yaml:"mode,omitempty"`
+
 	Depth            *ComplexityLimit `yaml:"depth"`
 	TotalFields      *ComplexityLimit `yaml:"total_fields"`
 	RootFields       *ComplexityLimit `yaml:"root_fields"`
@@ -902,10 +916,10 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3         []S3StorageProvider         `yaml:"s3,omitempty"`
-	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty"`
-	Redis      []RedisStorageProvider      `yaml:"redis,omitempty"`
-	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty"`
+	S3         []S3StorageProvider         `yaml:"s3,omitempty" envPrefix:"S3_"`
+	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty" envPrefix:"CDN_"`
+	Redis      []RedisStorageProvider      `yaml:"redis,omitempty" envPrefix:"REDIS_"`
+	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty" envPrefix:"FS_"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -919,29 +933,29 @@ type AutomaticPersistedQueriesStorageConfig struct {
 }
 
 type S3StorageProvider struct {
-	ID        string `yaml:"id,omitempty"`
-	Endpoint  string `yaml:"endpoint,omitempty"`
-	AccessKey string `yaml:"access_key,omitempty"`
-	SecretKey string `yaml:"secret_key,omitempty"`
-	Bucket    string `yaml:"bucket,omitempty"`
-	Region    string `yaml:"region,omitempty"`
-	Secure    bool   `yaml:"secure,omitempty"`
+	ID        string `yaml:"id,omitempty" env:"ID"`
+	Endpoint  string `yaml:"endpoint,omitempty" env:"ENDPOINT"`
+	AccessKey string `yaml:"access_key,omitempty" env:"ACCESS_KEY"`
+	SecretKey string `yaml:"secret_key,omitempty" env:"SECRET_KEY"`
+	Bucket    string `yaml:"bucket,omitempty" env:"BUCKET"`
+	Region    string `yaml:"region,omitempty" env:"REGION"`
+	Secure    bool   `yaml:"secure,omitempty" env:"SECURE"`
 }
 
 type CDNStorageProvider struct {
-	ID  string `yaml:"id,omitempty"`
-	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
+	ID  string `yaml:"id,omitempty" env:"ID"`
+	URL string `yaml:"url,omitempty" env:"URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
 
 type FileSystemStorageProvider struct {
-	ID   string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_FS_ID"`
-	Path string `yaml:"path,omitempty" env:"STORAGE_PROVIDER_FS_PATH"`
+	ID   string `yaml:"id,omitempty" env:"ID"`
+	Path string `yaml:"path,omitempty" env:"PATH"`
 }
 
 type RedisStorageProvider struct {
-	ID             string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
-	URLs           []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`
-	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"STORAGE_PROVIDER_REDIS_CLUSTER_ENABLED"`
+	ID             string   `yaml:"id,omitempty" env:"ID"`
+	URLs           []string `yaml:"urls,omitempty" env:"URLS"`
+	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" env:"CLUSTER_ENABLED" envDefault:"false"`
 }
 
 type PersistedOperationsCDNProvider struct {
@@ -1124,7 +1138,50 @@ type MCPConfiguration struct {
 	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
-	OmitToolNamePrefix bool `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	OmitToolNamePrefix bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	OAuth              MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
+	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
+	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
+	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
+}
+
+type MCPOAuthConfiguration struct {
+	Enabled                bool                `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	JWKS                   []JWKSConfiguration `yaml:"jwks"`
+	AuthorizationServerURL string              `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
+	// Scopes configures which OAuth scopes are required for different MCP operations.
+	Scopes MCPOAuthScopesConfiguration `yaml:"scopes,omitempty" envPrefix:"SCOPES_"`
+	// ScopeChallengeIncludeTokenScopes controls whether the server includes the token's existing scopes
+	// in the scope parameter of 403 insufficient_scope responses.
+	// When false (default), only the scopes required for the operation are returned (RFC 6750 strict).
+	// When true, the token's existing scopes are unioned with the required scopes.
+	// This is a workaround for MCP client SDKs that replace rather than accumulate scopes.
+	ScopeChallengeIncludeTokenScopes bool `yaml:"scope_challenge_include_token_scopes" envDefault:"false" env:"SCOPE_CHALLENGE_INCLUDE_TOKEN_SCOPES"`
+	// MaxScopeCombinations sets the upper limit on the number of OR-group combinations
+	// produced when computing the Cartesian product of @requiresScopes across fields.
+	// Increase for complex RBAC configurations.
+	MaxScopeCombinations int `yaml:"max_scope_combinations" envDefault:"2048" env:"MAX_SCOPE_COMBINATIONS"`
+}
+
+// MCPOAuthScopesConfiguration defines which scopes are required for different MCP operations.
+// All configured scopes are automatically unioned into scopes_supported for OAuth metadata discovery.
+type MCPOAuthScopesConfiguration struct {
+	// Initialize specifies scopes required for ALL HTTP requests (checked before JSON-RPC parsing).
+	// This is the baseline scope needed to establish an MCP connection.
+	Initialize []string `yaml:"initialize,omitempty" env:"INITIALIZE"`
+	// ToolsList specifies scopes required for the tools/list MCP method.
+	ToolsList []string `yaml:"tools_list,omitempty" env:"TOOLS_LIST"`
+	// ToolsCall specifies scopes required for the tools/call MCP method (any tool).
+	ToolsCall []string `yaml:"tools_call,omitempty" env:"TOOLS_CALL"`
+	// ExecuteGraphQL specifies scopes required to call the execute_graphql built-in tool.
+	// Additive to tools_call scopes. Only relevant when enable_arbitrary_operations is true.
+	ExecuteGraphQL []string `yaml:"execute_graphql,omitempty" env:"EXECUTE_GRAPHQL"`
+	// GetOperationInfo specifies scopes required to call the get_operation_info built-in tool.
+	// Additive to tools_call scopes.
+	GetOperationInfo []string `yaml:"get_operation_info,omitempty" env:"GET_OPERATION_INFO"`
+	// GetSchema specifies scopes required to call the get_schema built-in tool.
+	// Additive to tools_call scopes. Only relevant when expose_schema is true.
+	GetSchema []string `yaml:"get_schema,omitempty" env:"GET_SCHEMA"`
 }
 
 type MCPSessionConfig struct {
@@ -1237,7 +1294,7 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
 
-	StorageProviders               StorageProviders                `yaml:"storage_providers"`
+	StorageProviders               StorageProviders                `yaml:"storage_providers" envPrefix:"STORAGE_PROVIDER_"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
 	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`

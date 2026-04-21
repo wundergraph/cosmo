@@ -1,5 +1,7 @@
 import { ClickHouseClient } from '../../../core/clickhouse/index.js';
+import { traced } from '../../tracing.js';
 
+@traced
 export class MonthlyRequestViewRepository {
   constructor(private client: ClickHouseClient) {}
 
