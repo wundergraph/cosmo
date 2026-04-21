@@ -200,6 +200,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | minio.defaultBuckets | string | `"cosmo"` |  |
 | minio.image.registry | string | `"docker.io"` |  |
 | minio.image.repository | string | `"bitnamilegacy/minio"` |  |
+| minio.image.tag | string | `"2025.7.23-debian-12-r5"` |  |
 | minio.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
 | minio.persistence.size | string | `"1Gi"` |  |
 | minio.service.ports.minio | int | `9000` |  |
