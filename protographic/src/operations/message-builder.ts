@@ -20,8 +20,7 @@ import {
   GraphQLInterfaceType,
   GraphQLUnionType,
 } from 'graphql';
-import camelCase from 'lodash/camelCase';
-import upperFirst from 'lodash/upperFirst';
+import { camelCase, upperFirst } from 'lodash-es';
 import { graphqlFieldToProtoField } from '../naming-conventions.js';
 import { mapGraphQLTypeToProto, ProtoTypeInfo } from './type-mapper.js';
 import { assignFieldNumbersFromLockData, FieldNumberManager } from './field-numbering.js';

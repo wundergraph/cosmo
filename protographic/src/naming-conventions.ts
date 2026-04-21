@@ -1,7 +1,5 @@
 import { getNormalizedFieldSet, safeParse } from '@wundergraph/composition';
-import camelCase from 'lodash/camelCase';
-import snakeCase from 'lodash/snakeCase';
-import upperFirst from 'lodash/upperFirst';
+import { camelCase, snakeCase, upperFirst } from 'lodash-es';
 
 /**
  * Shared naming conventions for converting GraphQL to Protocol Buffers

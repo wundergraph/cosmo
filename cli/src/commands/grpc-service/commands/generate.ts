@@ -11,8 +11,7 @@ import {
   protobuf,
 } from '@wundergraph/protographic';
 import { Command, program } from 'commander';
-import camelCase from 'lodash/camelCase';
-import upperFirst from 'lodash/upperFirst'
+import { camelCase, upperFirst } from 'lodash-es';
 import Spinner, { type Ora } from 'ora';
 import { resolve, extname } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';

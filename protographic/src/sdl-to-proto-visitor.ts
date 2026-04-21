@@ -25,7 +25,7 @@ import {
   Kind,
   StringValueNode,
 } from 'graphql';
-import camelCase from 'lodash/camelCase';
+import { camelCase } from 'lodash-es';
 import {
   createEntityLookupMethodName,
   createEnumUnspecifiedValue,
