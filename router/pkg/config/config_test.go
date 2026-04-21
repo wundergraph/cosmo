@@ -1533,7 +1533,7 @@ authentication:
 		require.NoError(t, err)
 	})
 
-	t.Run("verify scope claim can be configured", func(t *testing.T) {
+	t.Run("scope claim can be configured", func(t *testing.T) {
 		t.Parallel()
 
 		f := createTempFileFromFixture(t, `

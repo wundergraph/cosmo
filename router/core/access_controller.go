@@ -50,14 +50,11 @@ func NewAccessController(opts AccessControllerOptions) (*AccessController, error
 // should not proceed. If it succeeds, a new http.Request with an updated context.Context
 // is returned.
 func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
-	auth, err := authentication.AuthenticateHTTPRequest(r.Context(), a.authenticators, r)
+	auth, err := authentication.AuthenticateHTTPRequest(r.Context(), a.authenticators, r, a.scopeClaim)
 	if err != nil {
 		return nil, errors.Join(err, ErrUnauthorized)
 	}
 	if auth != nil {
-		if a.scopeClaim != "" {
-			auth.SetScopesClaim(a.scopeClaim)
-		}
 		w.Header().Set("X-Authenticated-By", auth.Authenticator())
 		return r.WithContext(authentication.NewContext(r.Context(), auth)), nil
 	}

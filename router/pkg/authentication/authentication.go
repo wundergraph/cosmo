@@ -33,8 +33,6 @@ type Authentication interface {
 	// Claims returns the claims of the authenticated request, as returned by
 	// the Authenticator.
 	Claims() Claims
-	// SetScopesClaim sets the claim key used by Scopes and SetScopes.
-	SetScopesClaim(scopeClaim string)
 	// SetScopes sets the scopes of the authenticated request. It will replace the scopes already parsed from the claims.
 	// If users desire to append the scopes, they can first run `Scopes` to get the current scopes, and then append the new scopes
 	SetScopes(scopes []string)
@@ -58,13 +56,6 @@ func (a *authentication) Claims() Claims {
 		return nil
 	}
 	return a.claims
-}
-
-func (a *authentication) SetScopesClaim(scopeClaim string) {
-	if a == nil || scopeClaim == "" {
-		return
-	}
-	a.scopeClaim = scopeClaim
 }
 
 func (a *authentication) SetScopes(scopes []string) {
@@ -96,7 +87,10 @@ var errUnacceptableAud = errors.New("audience match not found")
 // has no authentication information, the Authentication result is nil with no error. If the authentication
 // information is present but some or all of the authenticators fail to validate it, then a non-nil error
 // will be produced.
-func Authenticate(ctx context.Context, authenticators []Authenticator, p Provider) (Authentication, error) {
+func Authenticate(ctx context.Context, authenticators []Authenticator, p Provider, scopeClaim string) (Authentication, error) {
+	if scopeClaim == "" {
+		scopeClaim = DefaultScopeClaim
+	}
 	var joinedErrors error
 	for _, auth := range authenticators {
 		claims, err := auth.Authenticate(ctx, p)
@@ -117,7 +111,7 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 		return &authentication{
 			authenticator: auth.Name(),
 			claims:        claims,
-			scopeClaim:    DefaultScopeClaim,
+			scopeClaim:    scopeClaim,
 		}, nil
 	}
 	// If no authentication failed error will be nil here,
@@ -125,8 +119,11 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 	return nil, joinedErrors
 }
 
-func NewEmptyAuthentication() Authentication {
+func NewEmptyAuthentication(scopeClaim string) Authentication {
+	if scopeClaim == "" {
+		scopeClaim = DefaultScopeClaim
+	}
 	return &authentication{
-		scopeClaim: DefaultScopeClaim,
+		scopeClaim: scopeClaim,
 	}
 }
