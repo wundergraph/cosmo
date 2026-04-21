@@ -13,7 +13,8 @@ import {
 } from '@wundergraph/protographic';
 import prompts from 'prompts';
 import semver from 'semver';
-import { camelCase, upperFirst } from 'lodash-es';
+import camelCase from 'lodash/camelCase';
+import upperFirst from 'lodash/upperFirst';
 import pupa from 'pupa';
 import { program } from 'commander';
 import { dataDir } from '../../../../core/config.js';

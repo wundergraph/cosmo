@@ -23,7 +23,8 @@ import {
   specifiedRules,
   KnownDirectivesRule,
 } from 'graphql';
-import { upperFirst, camelCase } from 'lodash-es';
+import camelCase from 'lodash/camelCase';
+import upperFirst from 'lodash/upperFirst';
 import { createFieldNumberManager } from './operations/field-numbering.js';
 import { buildMessageFromSelectionSet } from './operations/message-builder.js';
 import { buildRequestMessage, buildInputObjectMessage, buildEnumType } from './operations/request-builder.js';
