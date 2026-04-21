@@ -76,6 +76,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// employee: @cost(weight: 5); argument id: @cost(weight: 2); details: 1 = 8
 				require.Equal(t, "8", res.Response.Header.Get(core.CostEstimatedHeader))
@@ -100,6 +101,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// employee: @cost(weight: 5); argument id: @cost(weight: 2); details: 1 = 8
 				require.Equal(t, "8", res.Response.Header.Get(core.CostEstimatedHeader))
@@ -124,6 +126,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ teammates(team: ENGINEERING) { id details { forename } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// teammates has NO @listSize, so it uses EstimatedListSize(3)
 				require.Equal(t, "7", res.Response.Header.Get(core.CostEstimatedHeader))
@@ -148,6 +151,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// @listSize(assumedSize: 50) on employees overrides EstimatedListSize(200)
 				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
@@ -169,6 +173,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employees { id details { forename surname } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 			})
 		})
 
@@ -189,6 +194,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// employee: @cost(weight: 5), argument id: @cost(weight: 2), Details: 1 = 8
 				require.Equal(t, "8", res.Response.Header.Get(core.CostEstimatedHeader))
@@ -213,6 +219,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employees { id role { departments title } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// 50 * (employees(1) + id(0) + 1 * (role(1) + 3 * departments(1) + 5 * title(1)))
 				require.Equal(t, "500", res.Response.Header.Get(core.CostEstimatedHeader))
@@ -237,6 +244,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employee(id:1) { role { departments } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// Department enum has @cost(weight: 1), overriding the default enum weight of 0.
 				// employee(5) + 2 + 1 * (role(1) + 3 * departments(1)))
@@ -264,6 +272,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ products { ... on Cosmo { upc repositoryURL engineers { id } } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// The Cosmo type has @cost(weight: 5) in employees and @cost(weight: 8) in products.
 				// When a field is planned across multiple data sources, type weights are summed
@@ -310,6 +319,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ findEmployeesBy(criteria: { department: ENGINEERING }) { id } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// 10*1 + 17
 				require.Equal(t, "27", res.Response.Header.Get(core.CostEstimatedHeader))
@@ -335,6 +345,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ findEmployeesBy(criteria: { title: "Founder" }) { id } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// 10 * 1 - 3
 				require.Equal(t, "7", res.Response.Header.Get(core.CostEstimatedHeader))
@@ -360,13 +371,14 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employee(id:1) { role { employees { id } } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// "@expensiveOp(applied: Boolean = true @cost(weight: 22))" is applied on
 				// Engineer.employees, Marketer.employees, and Operator.employees.
 				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + @expensiveOp.applied(22) + 10 * employees(1)))
 				require.Equal(t, "40", res.Response.Header.Get(core.CostEstimatedHeader))
-				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + @expensiveOp.applied(22) + 1 * employees(1)))
-				require.Equal(t, "31", res.Response.Header.Get(core.CostActualHeader))
+				// employee.arg(2) + 1 * (employee(5) + 1 * (role(1) + @expensiveOp.applied(22) + 7 * employees(1)))
+				require.Equal(t, "37", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
@@ -387,6 +399,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ sharedThings(numOfA: 3, numOfB: 10) { a } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"error":`)
 
 				// numOfA=3 overrides EstimatedListSize(100) as the list multiplier.
 				require.Equal(t, "3", res.Response.Header.Get(core.CostEstimatedHeader))
@@ -533,6 +546,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employees { id details { forename surname } } }`,
 				})
 				require.Contains(t, res.Body, `"employees"`)
+				require.NotContains(t, res.Body, `"errors"`)
 
 				var rm metricdata.ResourceMetrics
 				err := metricReader.Collect(context.Background(), &rm)
@@ -634,6 +648,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employee(id:1) { id details { forename } } }`,
 				})
 				require.Contains(t, res2.Body, `"employee"`)
+				require.NotContains(t, res2.Body, `"errors"`)
 
 				var rm metricdata.ResourceMetrics
 				err := metricReader.Collect(context.Background(), &rm)
@@ -740,6 +755,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
+				require.NotContains(t, res.Body, `"errors"`)
 
 				var rm metricdata.ResourceMetrics
 				err := metricReader.Collect(context.Background(), &rm)
@@ -785,6 +801,7 @@ func TestOperationCost(t *testing.T) {
 				// 1st request – plan cache MISS
 				res1 := xEnv.MakeGraphQLRequestOK(query)
 				require.Contains(t, res1.Body, `"data":`)
+				require.NotContains(t, res1.Body, `"errors"`)
 				require.Equal(t, "MISS", res1.Response.Header.Get(core.ExecutionPlanCacheHeader))
 				require.Equal(t, "8", res1.Response.Header.Get(core.CostEstimatedHeader))
 				require.Equal(t, "8", res1.Response.Header.Get(core.CostActualHeader))
@@ -792,6 +809,7 @@ func TestOperationCost(t *testing.T) {
 				// 2nd request – plan cache HIT
 				res2 := xEnv.MakeGraphQLRequestOK(query)
 				require.Contains(t, res2.Body, `"data":`)
+				require.NotContains(t, res2.Body, `"errors"`)
 				require.Equal(t, "HIT", res2.Response.Header.Get(core.ExecutionPlanCacheHeader))
 				require.Equal(t, "8", res2.Response.Header.Get(core.CostEstimatedHeader))
 				require.Equal(t, "8", res2.Response.Header.Get(core.CostActualHeader))
@@ -816,6 +834,7 @@ func TestOperationCost(t *testing.T) {
 				}
 				res1 := xEnv.MakeGraphQLRequestOK(query1)
 				require.Contains(t, res1.Body, `"data":`)
+				require.NotContains(t, res1.Body, `"errors"`)
 
 				estimated1 := res1.Response.Header.Get(core.CostEstimatedHeader)
 				actual1 := res1.Response.Header.Get(core.CostActualHeader)
@@ -828,6 +847,7 @@ func TestOperationCost(t *testing.T) {
 				}
 				res2 := xEnv.MakeGraphQLRequestOK(query2)
 				require.Contains(t, res2.Body, `"data":`)
+				require.NotContains(t, res2.Body, `"errors"`)
 
 				estimated2 := res2.Response.Header.Get(core.CostEstimatedHeader)
 				actual2 := res2.Response.Header.Get(core.CostActualHeader)
@@ -1043,6 +1063,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors"`)
 				require.Equal(t, "0", res.Response.Header.Get(core.CostEstimatedHeader))
 				require.Equal(t, "0", res.Response.Header.Get(core.CostActualHeader))
 			})
@@ -1075,6 +1096,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employee(id:1) { role { departments } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors"`)
 
 				require.Equal(t, "8", res.Response.Header.Get(core.CostEstimatedHeader))
 			})
@@ -1110,6 +1132,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors"`)
 				require.Equal(t, "1", res.Response.Header.Get(core.CostEstimatedHeader))
 				require.Equal(t, "1", res.Response.Header.Get(core.CostActualHeader))
 			})
@@ -1201,6 +1224,7 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employee(id:1) { role { departments employees { id } } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors"`)
 
 				// Without sizedFields: estimated=28 (both departments and employees use defaultListSize=10)
 				// With sizedFields(assumedSize=3): departments multiplier=3 instead of 10, employees stays at 10:
