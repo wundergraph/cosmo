@@ -298,20 +298,13 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	if s.retryOptions.IsEnabled() {
 		retryExprManager := expr.NewRetryExpressionManager()
-		// Build retry options and handle any expression compilation errors
-		shouldRetryFunc, err := BuildRetryFunction(retryExprManager)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build retry function: %w", err)
-		}
+		retryManager := retrytransport.NewManager(retryExprManager, BuildRetryFunction(retryExprManager), s.retryOptions.OnRetryFunc, s.logger)
 
-		retryManager := retrytransport.NewManager(retryExprManager, shouldRetryFunc, s.retryOptions.OnRetryFunc)
-
-		err = retryManager.Initialize(
+		if err := retryManager.Initialize(
 			s.retryOptions.All,
 			s.retryOptions.SubgraphMap,
 			routerConfig,
-		)
-		if err != nil {
+		); err != nil {
 			return nil, err
 		}
 

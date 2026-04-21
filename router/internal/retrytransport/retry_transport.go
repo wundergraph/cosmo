@@ -126,8 +126,8 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		}
 
 		// A hook used for testing
-		if rt.retryManager.OnRetry != nil {
-			rt.retryManager.OnRetry(retries, req, resp, sleepDuration, err)
+		if rt.retryManager.onRetry != nil {
+			rt.retryManager.onRetry(retries, req, resp, sleepDuration, err)
 		}
 
 		// Wait for the specified duration

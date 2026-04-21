@@ -3,7 +3,6 @@ package retrytransport
 import (
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -32,18 +31,22 @@ type RetryOptions struct {
 
 type Manager struct {
 	retries     map[string]*RetryOptions
-	lock        sync.RWMutex
 	exprManager *expr.RetryExpressionManager
 	retryFunc   ShouldRetryFunc
-	OnRetry     OnRetryFunc
+	onRetry     OnRetryFunc
+	logger      *zap.Logger
 }
 
-func NewManager(exprManager *expr.RetryExpressionManager, retryFunc ShouldRetryFunc, onRetryFunc OnRetryFunc) *Manager {
+func NewManager(exprManager *expr.RetryExpressionManager, retryFunc ShouldRetryFunc, onRetryFunc OnRetryFunc, logger *zap.Logger) *Manager {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &Manager{
 		retries:     make(map[string]*RetryOptions),
 		exprManager: exprManager,
 		retryFunc:   retryFunc,
-		OnRetry:     onRetryFunc,
+		onRetry:     onRetryFunc,
+		logger:      logger,
 	}
 }
 
@@ -58,6 +61,17 @@ func (m *Manager) Initialize(baseRetryOptions RetryOptions, subgraphRetryOptions
 			for _, subgraph := range ffConfig.GetSubgraphs() {
 				subgraphNameSet[subgraph.Name] = true
 			}
+		}
+	}
+
+	// Warn on retry configs pointing at subgraphs that don't exist in the
+	// router config — likely a typo that would otherwise silently disable
+	// the override.
+	for sgName := range subgraphRetryOptions {
+		if !subgraphNameSet[sgName] {
+			m.logger.Warn("Retry config references unknown subgraph; override will be ignored",
+				zap.String("subgraph_name", sgName),
+			)
 		}
 	}
 
@@ -80,6 +94,8 @@ func (m *Manager) Initialize(baseRetryOptions RetryOptions, subgraphRetryOptions
 			return fmt.Errorf("unsupported retry algorithm: %s", baseRetryOptions.Algorithm)
 		}
 
+		// There is a chance that this is not evaluated if all defaultSgNames == 0, and only will
+		// then error out when its > 0 there
 		err := m.exprManager.AddExpression(baseRetryOptions.Expression)
 		if err != nil {
 			return fmt.Errorf("failed to add base retry expression: %w", err)
@@ -89,18 +105,17 @@ func (m *Manager) Initialize(baseRetryOptions RetryOptions, subgraphRetryOptions
 			opts := baseRetryOptions
 			m.retries[sgName] = &opts
 		}
-
 	}
 
 	// Process custom retry options
 	for _, sgName := range customSgNames {
 		entry, ok := subgraphRetryOptions[sgName]
 		if !ok {
-			return fmt.Errorf("failed to add base retry expression: %s", sgName)
+			return fmt.Errorf("failed to get subgraphRetryOptions: %s", sgName)
 		}
 
 		if entry.Algorithm != BackoffJitter {
-			return fmt.Errorf("unsupported retry algorithm for subgraph %s: %s", sgName, baseRetryOptions.Algorithm)
+			return fmt.Errorf("unsupported retry algorithm for subgraph %s: %s", sgName, entry.Algorithm)
 		}
 
 		// Validate expression before assigning options
@@ -121,24 +136,13 @@ func (m *Manager) GetSubgraphOptions(name string) *RetryOptions {
 	if m == nil {
 		return nil
 	}
-
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
-	if retryOptions, ok := m.retries[name]; ok {
-		return retryOptions
-	}
-	return nil
+	return m.retries[name]
 }
 
 func (m *Manager) IsEnabled() bool {
 	if m == nil {
 		return false
 	}
-
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
 	return len(m.retries) > 0
 }
 

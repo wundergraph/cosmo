@@ -10,7 +10,7 @@ import (
 )
 
 // BuildRetryFunction creates a ShouldRetry function based on the provided expression
-func BuildRetryFunction(manager *expr.RetryExpressionManager) (retrytransport.ShouldRetryFunc, error) {
+func BuildRetryFunction(manager *expr.RetryExpressionManager) retrytransport.ShouldRetryFunc {
 	return func(err error, req *http.Request, resp *http.Response, expression string) bool {
 		reqContext := getRequestContext(req.Context())
 		if reqContext == nil {
@@ -42,7 +42,7 @@ func BuildRetryFunction(manager *expr.RetryExpressionManager) (retrytransport.Sh
 		}
 
 		return shouldRetry
-	}, nil
+	}
 }
 
 // isDefaultRetryableError checks for errors that should always be retryable

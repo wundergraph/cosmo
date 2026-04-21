@@ -51,8 +51,7 @@ func createRequestWithContext(opType string) (*http.Request, *requestContext) {
 func TestBuildRetryFunction(t *testing.T) {
 	t.Run("build function when retry is disabled", func(t *testing.T) {
 		manager := expr.NewRetryExpressionManager()
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 	})
 
@@ -62,8 +61,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression("")
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with proper query context
@@ -90,8 +88,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with proper query context
@@ -116,8 +113,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with proper query context
@@ -149,8 +145,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression("")
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with proper query context
@@ -179,8 +174,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with proper query context
@@ -195,8 +189,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with proper query context
@@ -217,8 +210,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with proper query context
@@ -245,8 +237,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with mutation context
@@ -275,8 +266,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with query context
@@ -300,8 +290,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with subscription context
@@ -323,8 +312,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create request with proper context
@@ -344,8 +332,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create request with proper query context
@@ -366,8 +353,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Create a request with mutation context
@@ -394,8 +380,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		err := manager.AddExpression(expression)
 		assert.NoError(t, err)
 
-		fn, err := BuildRetryFunction(manager)
-		assert.NoError(t, err)
+		fn := BuildRetryFunction(manager)
 		assert.NotNil(t, fn)
 
 		// Test query operation - should retry on all conditions

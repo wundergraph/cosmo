@@ -13,10 +13,13 @@ import (
 	"time"
 
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 )
 
@@ -65,7 +68,7 @@ func (dt *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 func newTestManager(shouldRetry func(error, *http.Request, *http.Response) bool, onRetry OnRetryFunc, opts RetryOptions, subgraphName string) *Manager {
 	mgr := NewManager(expr.NewRetryExpressionManager(), func(err error, req *http.Request, resp *http.Response, _ string) bool {
 		return shouldRetry(err, req, resp)
-	}, onRetry)
+	}, onRetry, zap.NewNop())
 	// attach options for the subgraph
 	mgr.retries[subgraphName] = &opts
 	return mgr
@@ -227,7 +230,7 @@ func TestShortCircuitOnSuccess(t *testing.T) {
 
 	subgraphName := "sg"
 	mgr := newTestManager(simpleShouldRetry, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
-		t.Error("OnRetry should not be called when first request succeeds")
+		t.Error("onRetry should not be called when first request succeeds")
 	}, RetryOptions{MaxRetryCount: 5, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
 	tr := NewRetryHTTPTransport(&MockTransport{
@@ -445,7 +448,7 @@ func TestOnRetryCallbackInvoked(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// Verify OnRetry was called the right number of times
+	// Verify onRetry was called the right number of times
 	assert.Equal(t, maxRetries, retries)
 	assert.Len(t, retryCallbacks, maxRetries)
 
@@ -1014,4 +1017,58 @@ func TestShouldUseRetryAfter(t *testing.T) {
 			assert.Equal(t, tt.expectedUse, use)
 		})
 	}
+}
+
+func TestManager_Initialize_WarnsOnUnknownSubgraph(t *testing.T) {
+	routerConfig := &nodev1.RouterConfig{
+		Subgraphs: []*nodev1.Subgraph{
+			{Id: "known-id", Name: "known", RoutingUrl: "http://localhost:8001/graphql"},
+		},
+	}
+
+	t.Run("warns for each retry config whose subgraph is not in the router config", func(t *testing.T) {
+		core, logs := observer.New(zapcore.WarnLevel)
+		mgr := NewManager(expr.NewRetryExpressionManager(), nil, nil, zap.New(core))
+
+		err := mgr.Initialize(
+			RetryOptions{},
+			map[string]RetryOptions{
+				"known":      {Enabled: true, Algorithm: BackoffJitter, Expression: "true"},
+				"typo_name":  {Enabled: true, Algorithm: BackoffJitter, Expression: "true"},
+				"other_typo": {Enabled: false},
+			},
+			routerConfig,
+		)
+		require.NoError(t, err)
+
+		warnings := logs.FilterMessage("Retry config references unknown subgraph; override will be ignored").All()
+		require.Len(t, warnings, 2)
+
+		got := make(map[string]bool, len(warnings))
+		for _, entry := range warnings {
+			got[entry.ContextMap()["subgraph_name"].(string)] = true
+		}
+		require.True(t, got["typo_name"])
+		require.True(t, got["other_typo"])
+
+		// Unknown-named overrides must not leak into the retries map
+		require.Nil(t, mgr.GetSubgraphOptions("typo_name"))
+		require.Nil(t, mgr.GetSubgraphOptions("other_typo"))
+		require.NotNil(t, mgr.GetSubgraphOptions("known"))
+	})
+
+	t.Run("does not warn when every retry config matches a known subgraph", func(t *testing.T) {
+		core, logs := observer.New(zapcore.WarnLevel)
+		mgr := NewManager(expr.NewRetryExpressionManager(), nil, nil, zap.New(core))
+
+		err := mgr.Initialize(
+			RetryOptions{},
+			map[string]RetryOptions{
+				"known": {Enabled: true, Algorithm: BackoffJitter, Expression: "true"},
+			},
+			routerConfig,
+		)
+		require.NoError(t, err)
+		require.Zero(t, logs.FilterMessage("Retry config references unknown subgraph; override will be ignored").Len())
+	})
 }

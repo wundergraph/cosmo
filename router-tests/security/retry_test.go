@@ -928,12 +928,11 @@ func TestRetryPerSubgraph(t *testing.T) {
 		})
 	})
 
-	t.Run("verify retries are applied when only all and no subgraph specific overrides are present", func(t *testing.T) {
+	t.Run("verify retries are applied on feature flags when only all and no subgraph specific overrides are present", func(t *testing.T) {
 		t.Parallel()
 
 		calls := atomic.Int32{}
 
-		// Configure per-subgraph retry: employees gets 3 retries, test1 gets 1 retry
 		generalMax := 5
 		opts := core.NewSubgraphRetryOptions(config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
