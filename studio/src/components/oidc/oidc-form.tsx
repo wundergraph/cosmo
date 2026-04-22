@@ -81,7 +81,7 @@ export function OIDCForm({ isPending, handleSubmit, onCancel }: OIDCFormProps) {
           name="clientSecret"
           render={({ field }) => (
             <FormItem className="flex flex-col gap-y-1">
-              <FormLabel>Client ID</FormLabel>
+              <FormLabel>Client Secret</FormLabel>
               <FormControl>
                 <Input {...field} disabled={isPending} type="password" className="w-full" />
               </FormControl>

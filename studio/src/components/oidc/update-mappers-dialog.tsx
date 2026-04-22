@@ -161,7 +161,7 @@ export function UpdateMappersDialog({
           </div>
         ) : (
           <>
-            <div className="max-h-[35vh] space-y-3">
+            <div className="max-h-[35vh] space-y-3 overflow-scroll">
               {mappers.length === 0 ? (
                 <div className="px-1 py-2 text-center text-sm text-muted-foreground">No mappers have been added.</div>
               ) : (
