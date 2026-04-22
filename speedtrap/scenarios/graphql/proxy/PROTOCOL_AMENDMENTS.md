@@ -66,30 +66,3 @@ close with 4409 "Subscriber for <id> already exists").
 **Rationale:** Implicit replacement adds complexity and can mask client bugs. A
 client reusing an active ID is almost certainly a bug. Closing is the safest
 response and keeps behavior consistent across protocols.
-
-# graphql-transport-ws
-
-Deviations from the graphql-transport-ws spec and reference implementation
-(graphql-ws v6.0.7).
-
-## Server sends complete after error
-
-**Spec behavior:** An `error` message terminates the operation — "no further
-messages will be sent" for that subscription ID.
-
-**Observed behavior (graphql-ws reference implementation v6.0.7):** After
-sending an `error` for a subscription, the server also sends a `complete` for
-the same ID. This contradicts the spec but is consistent across the reference
-implementation.
-
-**Speedtrap expectation:** The router follows the reference implementation and
-sends both `error` and `complete` for the affected subscription. Scenarios that
-involve server errors on multiplexed connections must accept both messages
-(in any order) without treating the extra `complete` as a failure.
-
-**Scenario:** `OneSubscriptionErrorDoesNotAffectAnother`
-
-**Rationale:** The router proxies the upstream behavior faithfully. Since the
-graphql-ws reference implementation (which most backends use) sends
-complete-after-error, the router must forward it rather than suppress it. This
-is a known spec violation tracked upstream.

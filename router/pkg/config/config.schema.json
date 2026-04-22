@@ -3524,26 +3524,6 @@
           "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
           "default": true
         },
-        "websocket_client_poll_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "default": "1s",
-          "deprecated": true,
-          "description": "Deprecated: use websocket_server_poll_timeout instead."
-        },
-        "websocket_client_conn_buffer_size": {
-          "type": "integer",
-          "default": 128,
-          "deprecated": true,
-          "description": "Deprecated: use websocket_server_conn_buffer_size instead."
-        },
-        "websocket_client_read_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "default": "5s",
-          "deprecated": true,
-          "description": "Deprecated: use websocket_server_read_timeout instead."
-        },
         "websocket_client_write_timeout": {
           "type": "string",
           "format": "go-duration",
@@ -3590,13 +3570,6 @@
           "duration": {
             "minimum": "5s"
           }
-        },
-        "websocket_client_frame_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "default": "100ms",
-          "deprecated": true,
-          "description": "Deprecated: only used by the old epoll-based subscription client. Defines how long the router will wait for a frame response from the subgraph."
         },
         "websocket_client_ack_timeout": {
           "type": "string",

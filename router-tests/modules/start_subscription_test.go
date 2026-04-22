@@ -381,6 +381,9 @@ func TestStartSubscriptionHook(t *testing.T) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
+			require.Eventually(t, func() bool {
+				return customModule.HookCallCount.Load() >= 2
+			}, time.Second*10, time.Millisecond*50)
 			assert.Equal(t, int32(2), customModule.HookCallCount.Load())
 			t.Cleanup(func() {
 				require.Len(t, subscriptionOneArgsCh, 0)
