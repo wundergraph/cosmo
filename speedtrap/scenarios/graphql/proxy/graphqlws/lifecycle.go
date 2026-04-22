@@ -5,6 +5,7 @@ import (
 
 	"github.com/kinbiko/jsonassert"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 	"github.com/wundergraph/cosmo/speedtrap"
 )
 
@@ -145,9 +146,11 @@ var StopCancelsSubscription = speedtrap.Scenario{
 	},
 }
 
-// ServerErrorInDataPayload verifies that when the backend sends an error
-// message, the router wraps it in a "data" message with errors in the payload,
-// per the subscriptions-transport-ws protocol.
+// ServerErrorInDataPayload verifies that when the backend sends a terminal
+// error, the router delivers it to the legacy client as a "data" message with
+// errors in the payload followed by a "complete" frame. subscriptions-transport-ws
+// reserves "error" for pre-execution failures, so terminal runtime errors are
+// expressed as data+errors plus a terminal complete.
 var ServerErrorInDataPayload = speedtrap.Scenario{
 	Name: "server error delivered in data payload",
 	Run: func(s *speedtrap.S) {
@@ -162,14 +165,15 @@ var ServerErrorInDataPayload = speedtrap.Scenario{
 		require.NoError(s, err)
 		subID := extractID(msg)
 
-		// Backend sends error (modern protocol)
+		// Backend sends terminal error (modern protocol)
 		require.NoError(s, b.Send(fmt.Sprintf(
 			`{"id":"%s","type":"error","payload":[{"message":"something went wrong"}]}`, subID)))
 
-		// Client receives a "data" message with errors in the payload
-		// (subscriptions-transport-ws wraps errors inside data messages)
 		msg = readSkippingKA(s, c)
 		ja.Assertf(msg, `{"id":"1","type":"data","payload":{"errors":[{"message":"something went wrong"}]}}`)
+
+		msg = readSkippingKA(s, c)
+		ja.Assertf(msg, `{"id":"1","type":"complete"}`)
 	},
 }
 
@@ -237,17 +241,18 @@ var OneSubscriptionErrorDoesNotAffectAnother = speedtrap.Scenario{
 		require.NoError(s, c.Send(`{"id":"2","type":"start","payload":{"query":"subscription($key: String){streamA(key: $key){key}}","variables":{"key":"err2"}}}`))
 
 		b := backendHandshake(s)
-		msg, err := b.Read()
-		require.NoError(s, err)
-		subID1 := extractID(msg)
+
+		// Read both subscribes (order is non-deterministic)
+		var subID1, subID2 string
+		varKey := func(msg string) string { return gjson.Get(msg, "payload.variables.key").String() }
+		speedtrap.ReadSwitch(s, b.Messages(), varKey,
+			speedtrap.Case("err1", func(msg string) { subID1 = extractID(msg) }),
+			speedtrap.Case("err2", func(msg string) { subID2 = extractID(msg) }),
+		)
 
 		// Proxy must multiplex onto the same upstream connection
-		_, err = s.Backend("subgraph-a").TryAccept()
+		_, err := s.Backend("subgraph-a").TryAccept()
 		require.Error(s, err, "expected no second upstream connection (multiplexing)")
-
-		msg, err = b.Read()
-		require.NoError(s, err)
-		subID2 := extractID(msg)
 
 		// Error on subscription 1
 		require.NoError(s, b.Send(fmt.Sprintf(
@@ -257,13 +262,16 @@ var OneSubscriptionErrorDoesNotAffectAnother = speedtrap.Scenario{
 		require.NoError(s, b.Send(fmt.Sprintf(
 			`{"id":"%s","type":"next","payload":{"data":{"streamA":{"key":"err2"}}}}`, subID2)))
 
-		// Client receives error for "1" (wrapped in data) and data for "2"
-		// (unordered, interspersed with possible ka messages).
+		// Client receives terminal error for "1" (data+errors then complete) and
+		// data for "2" (unordered, interspersed with possible ka messages).
 		isKA := func(msg string) bool { return msg == `{"type":"ka"}` }
 		idType := func(msg string) string { return extractID(msg) + ":" + extractType(msg) }
 		speedtrap.ReadSwitch(s, speedtrap.Filter(c.Messages(), isKA), idType,
 			speedtrap.Case("1:data", func(msg string) {
 				ja.Assertf(msg, `{"id":"1","type":"data","payload":{"errors":[{"message":"sub1 failed"}]}}`)
+			}),
+			speedtrap.Case("1:complete", func(msg string) {
+				ja.Assertf(msg, `{"id":"1","type":"complete"}`)
 			}),
 			speedtrap.Case("2:data", func(msg string) {
 				ja.Assertf(msg, `{"id":"2","type":"data","payload":{"data":{"streamA":{"key":"err2"}}}}`)
@@ -273,7 +281,7 @@ var OneSubscriptionErrorDoesNotAffectAnother = speedtrap.Scenario{
 		// Complete subscription 2
 		require.NoError(s, b.Send(fmt.Sprintf(`{"id":"%s","type":"complete"}`, subID2)))
 
-		msg = readSkippingKA(s, c)
+		msg := readSkippingKA(s, c)
 		ja.Assertf(msg, `{"id":"2","type":"complete"}`)
 	},
 }
