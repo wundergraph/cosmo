@@ -5,10 +5,12 @@ import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
 import { organizationInvitations, organizations, users } from '../../db/schema.js';
 import { OrganizationDTO, OrganizationInvitationDTO, UserDTO } from '../../types/index.js';
+import { traced } from '../tracing.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { UserRepository } from './UserRepository.js';
 import { OrganizationGroupRepository } from './OrganizationGroupRepository.js';
 
+@traced
 export class OrganizationInvitationRepository {
   constructor(
     private logger: FastifyBaseLogger,

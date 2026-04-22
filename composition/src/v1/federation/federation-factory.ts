@@ -237,10 +237,12 @@ import type {
   InvalidRequiredInputValueData,
 } from '../../utils/types';
 import {
+  type ArgumentName,
   type ContractName,
   type DirectiveName,
   type FieldCoords,
   type FieldName,
+  type InterfaceTypeName,
   type SubgraphName,
   type TypeName,
 } from '../../types/types';
@@ -279,6 +281,7 @@ export class FederationFactory {
   fieldCoordsByNamedTypeName: Map<TypeName, Set<FieldCoords>>;
   inaccessibleCoords = new Set<string>();
   inaccessibleRequiredInputValueErrorByCoords = new Map<string, Error>();
+  interfaceImplementationTypeNamesByInterfaceTypeName: Map<InterfaceTypeName, Set<InterfaceTypeName>>;
   internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<SubgraphName, InternalSubgraph>;
   invalidORScopesCoords = new Set<string>();
@@ -311,6 +314,7 @@ export class FederationFactory {
     entityDataByTypeName,
     entityInterfaceFederationDataByTypeName,
     fieldCoordsByNamedTypeName,
+    interfaceImplementationTypeNamesByInterfaceTypeName,
     internalGraph,
     internalSubgraphBySubgraphName,
     options,
@@ -322,6 +326,7 @@ export class FederationFactory {
     this.entityDataByTypeName = entityDataByTypeName;
     this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
     this.fieldCoordsByNamedTypeName = fieldCoordsByNamedTypeName;
+    this.interfaceImplementationTypeNamesByInterfaceTypeName = interfaceImplementationTypeNamesByInterfaceTypeName;
     this.internalGraph = internalGraph;
     this.internalSubgraphBySubgraphName = internalSubgraphBySubgraphName;
     this.warnings = warnings;
@@ -402,15 +407,17 @@ export class FederationFactory {
           invalidImplementedArguments: [],
           isInaccessible: false,
           originalResponseType: printTypeNode(interfaceField.node.type),
-          unimplementedArguments: new Set<string>(),
+          unimplementedArguments: new Set<ArgumentName>(),
         };
         // The implemented field type must be equally or more restrictive than the original interface field type
         if (
-          !isTypeValidImplementation(
-            interfaceField.node.type,
-            fieldData.node.type,
-            this.concreteTypeNamesByAbstractTypeName,
-          )
+          !isTypeValidImplementation({
+            concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
+            implementationType: fieldData.node.type,
+            interfaceImplementationTypeNamesByInterfaceTypeName:
+              this.interfaceImplementationTypeNamesByInterfaceTypeName,
+            originalType: interfaceField.node.type,
+          })
         ) {
           hasErrors = true;
           hasNestedErrors = true;
@@ -3373,6 +3380,7 @@ function initializeFederationFactory({ options, subgraphs }: FederationParams): 
       entityDataByTypeName: result.entityDataByTypeName,
       entityInterfaceFederationDataByTypeName,
       fieldCoordsByNamedTypeName: result.fieldCoordsByNamedTypeName,
+      interfaceImplementationTypeNamesByInterfaceTypeName: result.interfaceImplementationTypeNamesByInterfaceTypeName,
       internalSubgraphBySubgraphName: result.internalSubgraphBySubgraphName,
       internalGraph: result.internalGraph,
       options,

@@ -469,6 +469,12 @@ const (
 	// PlatformServiceGetFeatureFlagsByFederatedGraphProcedure is the fully-qualified name of the
 	// PlatformService's GetFeatureFlagsByFederatedGraph RPC.
 	PlatformServiceGetFeatureFlagsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFeatureFlagsByFederatedGraph"
+	// PlatformServiceGetFeatureFlagsInLatestCompositionByFederatedGraphProcedure is the fully-qualified
+	// name of the PlatformService's GetFeatureFlagsInLatestCompositionByFederatedGraph RPC.
+	PlatformServiceGetFeatureFlagsInLatestCompositionByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFeatureFlagsInLatestCompositionByFederatedGraph"
+	// PlatformServiceGetFeatureSubgraphsByFederatedGraphProcedure is the fully-qualified name of the
+	// PlatformService's GetFeatureSubgraphsByFederatedGraph RPC.
+	PlatformServiceGetFeatureSubgraphsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFeatureSubgraphsByFederatedGraph"
 	// PlatformServiceGetFederatedGraphByIdProcedure is the fully-qualified name of the
 	// PlatformService's GetFederatedGraphById RPC.
 	PlatformServiceGetFederatedGraphByIdProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFederatedGraphById"
@@ -572,185 +578,187 @@ const (
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	platformServiceServiceDescriptor                                     = v1.File_wg_cosmo_platform_v1_platform_proto.Services().ByName("PlatformService")
-	platformServiceCreatePlaygroundScriptMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("CreatePlaygroundScript")
-	platformServiceDeletePlaygroundScriptMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("DeletePlaygroundScript")
-	platformServiceUpdatePlaygroundScriptMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("UpdatePlaygroundScript")
-	platformServiceGetPlaygroundScriptsMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetPlaygroundScripts")
-	platformServiceCreateNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("CreateNamespace")
-	platformServiceDeleteNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("DeleteNamespace")
-	platformServiceRenameNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("RenameNamespace")
-	platformServiceGetNamespacesMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetNamespaces")
-	platformServiceGetNamespaceMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetNamespace")
-	platformServiceGetWorkspaceMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetWorkspace")
-	platformServiceCreateContractMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("CreateContract")
-	platformServiceUpdateContractMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateContract")
-	platformServiceMoveFederatedGraphMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("MoveFederatedGraph")
-	platformServiceMoveSubgraphMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("MoveSubgraph")
-	platformServiceMoveMonographMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("MoveMonograph")
-	platformServiceCreateMonographMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("CreateMonograph")
-	platformServicePublishMonographMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("PublishMonograph")
-	platformServiceDeleteMonographMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("DeleteMonograph")
-	platformServiceUpdateMonographMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("UpdateMonograph")
-	platformServiceMigrateMonographMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("MigrateMonograph")
-	platformServiceCreateFederatedSubgraphMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedSubgraph")
-	platformServicePublishFederatedSubgraphMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("PublishFederatedSubgraph")
-	platformServiceCreateFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedGraph")
-	platformServiceDeleteFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedGraph")
-	platformServiceDeleteFederatedSubgraphMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedSubgraph")
-	platformServiceCheckSubgraphSchemaMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("CheckSubgraphSchema")
-	platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("GetProposedSchemaOfCheckedSubgraph")
-	platformServiceFixSubgraphSchemaMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("FixSubgraphSchema")
-	platformServiceUpdateFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("UpdateFederatedGraph")
-	platformServiceUpdateSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateSubgraph")
-	platformServiceCheckFederatedGraphMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("CheckFederatedGraph")
-	platformServiceWhoAmIMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("WhoAmI")
-	platformServiceGenerateRouterTokenMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GenerateRouterToken")
-	platformServiceGetRouterTokensMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetRouterTokens")
-	platformServiceDeleteRouterTokenMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteRouterToken")
-	platformServicePublishPersistedOperationsMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("PublishPersistedOperations")
-	platformServiceCheckPersistedOperationTrafficMethodDescriptor        = platformServiceServiceDescriptor.Methods().ByName("CheckPersistedOperationTraffic")
-	platformServiceDeletePersistedOperationMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("DeletePersistedOperation")
-	platformServiceGetPersistedOperationsMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetPersistedOperations")
-	platformServiceGetAuditLogsMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetAuditLogs")
-	platformServiceInitializeCosmoUserMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("InitializeCosmoUser")
-	platformServiceListOrganizationsMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("ListOrganizations")
-	platformServiceGetFederatedGraphsMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphs")
-	platformServiceGetFederatedGraphsBySubgraphLabelsMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphsBySubgraphLabels")
-	platformServiceGetFederatedGraphByNameMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphByName")
-	platformServiceGetFederatedGraphSDLByNameMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphSDLByName")
-	platformServiceGetSubgraphsMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphs")
-	platformServiceGetSubgraphByNameMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphByName")
-	platformServiceGetSubgraphSDLFromLatestCompositionMethodDescriptor   = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphSDLFromLatestComposition")
-	platformServiceGetLatestSubgraphSDLMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetLatestSubgraphSDL")
-	platformServiceGetChecksByFederatedGraphNameMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetChecksByFederatedGraphName")
-	platformServiceGetCheckSummaryMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetCheckSummary")
-	platformServiceGetCheckOperationsMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetCheckOperations")
-	platformServiceForceCheckSuccessMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("ForceCheckSuccess")
-	platformServiceCreateOperationOverridesMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("CreateOperationOverrides")
-	platformServiceRemoveOperationOverridesMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("RemoveOperationOverrides")
-	platformServiceCreateOperationIgnoreAllOverrideMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("CreateOperationIgnoreAllOverride")
-	platformServiceRemoveOperationIgnoreAllOverrideMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("RemoveOperationIgnoreAllOverride")
-	platformServiceGetOperationOverridesMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetOperationOverrides")
-	platformServiceGetAllOverridesMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetAllOverrides")
-	platformServiceToggleChangeOverridesForAllOperationsMethodDescriptor = platformServiceServiceDescriptor.Methods().ByName("ToggleChangeOverridesForAllOperations")
-	platformServiceCreateIgnoreOverridesForAllOperationsMethodDescriptor = platformServiceServiceDescriptor.Methods().ByName("CreateIgnoreOverridesForAllOperations")
-	platformServiceGetOperationContentMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetOperationContent")
-	platformServiceGetFederatedGraphChangelogMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphChangelog")
-	platformServiceCreateFederatedGraphTokenMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedGraphToken")
-	platformServiceGetOrganizationBySlugMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationBySlug")
-	platformServiceGetOrganizationMembersMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationMembers")
-	platformServiceGetPendingOrganizationMembersMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetPendingOrganizationMembers")
-	platformServiceIsMemberLimitReachedMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("IsMemberLimitReached")
-	platformServiceInviteUserMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("InviteUser")
-	platformServiceGetAPIKeysMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetAPIKeys")
-	platformServiceCreateAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("CreateAPIKey")
-	platformServiceUpdateAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("UpdateAPIKey")
-	platformServiceDeleteAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("DeleteAPIKey")
-	platformServiceRemoveOrganizationMemberMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("RemoveOrganizationMember")
-	platformServiceRemoveInvitationMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("RemoveInvitation")
-	platformServiceMigrateFromApolloMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("MigrateFromApollo")
-	platformServiceCreateOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationGroup")
-	platformServiceGetOrganizationGroupsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationGroups")
-	platformServiceGetOrganizationGroupMembersMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationGroupMembers")
-	platformServiceUpdateOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationGroup")
-	platformServiceDeleteOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganizationGroup")
-	platformServiceCreateOrganizationWebhookConfigMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationWebhookConfig")
-	platformServiceGetOrganizationWebhookConfigsMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookConfigs")
-	platformServiceGetOrganizationWebhookMetaMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookMeta")
-	platformServiceUpdateOrganizationWebhookConfigMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationWebhookConfig")
-	platformServiceDeleteOrganizationWebhookConfigMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganizationWebhookConfig")
-	platformServiceGetOrganizationWebhookHistoryMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookHistory")
-	platformServiceGetWebhookDeliveryDetailsMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("GetWebhookDeliveryDetails")
-	platformServiceRedeliverWebhookMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("RedeliverWebhook")
-	platformServiceCreateIntegrationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("CreateIntegration")
-	platformServiceGetOrganizationIntegrationsMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationIntegrations")
-	platformServiceUpdateIntegrationConfigMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("UpdateIntegrationConfig")
-	platformServiceDeleteIntegrationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteIntegration")
-	platformServiceDeleteUserMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("DeleteUser")
-	platformServiceDeleteOrganizationMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganization")
-	platformServiceRestoreOrganizationMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("RestoreOrganization")
-	platformServiceLeaveOrganizationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("LeaveOrganization")
-	platformServiceUpdateOrganizationDetailsMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationDetails")
-	platformServiceUpdateOrgMemberGroupMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberGroup")
-	platformServiceIsGitHubAppInstalledMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("IsGitHubAppInstalled")
-	platformServiceCreateOIDCProviderMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("CreateOIDCProvider")
-	platformServiceGetOIDCProviderMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetOIDCProvider")
-	platformServiceDeleteOIDCProviderMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("DeleteOIDCProvider")
-	platformServiceUpdateIDPMappersMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("UpdateIDPMappers")
-	platformServiceGetClientsMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetClients")
-	platformServiceGetRoutersMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetRouters")
-	platformServiceGetInvitationsMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("GetInvitations")
-	platformServiceAcceptOrDeclineInvitationMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("AcceptOrDeclineInvitation")
-	platformServiceGetCompositionsMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetCompositions")
-	platformServiceGetCompositionDetailsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetCompositionDetails")
-	platformServiceGetSdlBySchemaVersionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetSdlBySchemaVersion")
-	platformServiceGetChangelogBySchemaVersionMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetChangelogBySchemaVersion")
-	platformServiceGetUserAccessibleResourcesMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessibleResources")
-	platformServiceUpdateFeatureSettingsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("UpdateFeatureSettings")
-	platformServiceGetSubgraphMembersMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMembers")
-	platformServiceAddReadmeMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("AddReadme")
-	platformServiceGetUserAccessiblePermissionsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessiblePermissions")
-	platformServiceCreateFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("CreateFeatureFlag")
-	platformServiceDeleteFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteFeatureFlag")
-	platformServiceUpdateFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("UpdateFeatureFlag")
-	platformServiceEnableFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("EnableFeatureFlag")
-	platformServiceGetAnalyticsViewMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("GetAnalyticsView")
-	platformServiceGetDashboardAnalyticsViewMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("GetDashboardAnalyticsView")
-	platformServiceGetTraceMethodDescriptor                              = platformServiceServiceDescriptor.Methods().ByName("GetTrace")
-	platformServiceGetGraphMetricsMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetGraphMetrics")
-	platformServiceGetMetricsErrorRateMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetMetricsErrorRate")
-	platformServiceGetSubgraphMetricsMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMetrics")
-	platformServiceGetSubgraphMetricsErrorRateMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMetricsErrorRate")
-	platformServiceGetFieldUsageMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetFieldUsage")
-	platformServiceGetOrganizationRequestsCountMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationRequestsCount")
-	platformServiceCreateOrganizationMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("CreateOrganization")
-	platformServiceEnableLintingForTheNamespaceMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("EnableLintingForTheNamespace")
-	platformServiceConfigureNamespaceLintConfigMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceLintConfig")
-	platformServiceGetNamespaceLintConfigMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceLintConfig")
-	platformServiceGetNamespaceChecksConfigMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceChecksConfig")
-	platformServiceUpdateNamespaceChecksConfigMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("UpdateNamespaceChecksConfig")
-	platformServiceEnableGraphPruningMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("EnableGraphPruning")
-	platformServiceConfigureNamespaceGraphPruningConfigMethodDescriptor  = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceGraphPruningConfig")
-	platformServiceGetNamespaceGraphPruningConfigMethodDescriptor        = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceGraphPruningConfig")
-	platformServiceGetFeatureFlagsMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlags")
-	platformServiceGetFeatureFlagByNameMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlagByName")
-	platformServiceGetFeatureSubgraphsByFeatureFlagMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphsByFeatureFlag")
-	platformServiceGetFeatureSubgraphsMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphs")
-	platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlagsByFederatedGraph")
-	platformServiceGetFederatedGraphByIdMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphById")
-	platformServiceGetSubgraphByIdMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphById")
-	platformServicePushCacheWarmerOperationMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("PushCacheWarmerOperation")
-	platformServiceGetCacheWarmerOperationsMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerOperations")
-	platformServiceComputeCacheWarmerOperationsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("ComputeCacheWarmerOperations")
-	platformServiceConfigureCacheWarmerMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("ConfigureCacheWarmer")
-	platformServiceGetCacheWarmerConfigMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerConfig")
-	platformServiceDeleteCacheWarmerOperationMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("DeleteCacheWarmerOperation")
-	platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphCheckExtensionsConfig")
-	platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("ConfigureSubgraphCheckExtensions")
-	platformServiceGetBillingPlansMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetBillingPlans")
-	platformServiceCreateCheckoutSessionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
-	platformServiceCreateBillingPortalSessionMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
-	platformServiceUpgradePlanMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("UpgradePlan")
-	platformServiceListRouterCompatibilityVersionsMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("ListRouterCompatibilityVersions")
-	platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("SetGraphRouterCompatibilityVersion")
-	platformServiceCreateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("CreateProposal")
-	platformServiceGetProposalMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("GetProposal")
-	platformServiceUpdateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateProposal")
-	platformServiceEnableProposalsForNamespaceMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("EnableProposalsForNamespace")
-	platformServiceConfigureNamespaceProposalConfigMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceProposalConfig")
-	platformServiceGetNamespaceProposalConfigMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceProposalConfig")
-	platformServiceGetProposalsByFederatedGraphMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
-	platformServiceGetProposalChecksMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
-	platformServiceGetOperationsMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetOperations")
-	platformServiceGetClientsFromAnalyticsMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetClientsFromAnalytics")
-	platformServiceGetOperationClientsMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetOperationClients")
-	platformServiceGetOperationDeprecatedFieldsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetOperationDeprecatedFields")
-	platformServiceValidateAndFetchPluginDataMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("ValidateAndFetchPluginData")
-	platformServiceLinkSubgraphMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("LinkSubgraph")
-	platformServiceUnlinkSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
-	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
-	platformServiceRecomposeGraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
+	platformServiceServiceDescriptor                                                  = v1.File_wg_cosmo_platform_v1_platform_proto.Services().ByName("PlatformService")
+	platformServiceCreatePlaygroundScriptMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("CreatePlaygroundScript")
+	platformServiceDeletePlaygroundScriptMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("DeletePlaygroundScript")
+	platformServiceUpdatePlaygroundScriptMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("UpdatePlaygroundScript")
+	platformServiceGetPlaygroundScriptsMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("GetPlaygroundScripts")
+	platformServiceCreateNamespaceMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("CreateNamespace")
+	platformServiceDeleteNamespaceMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("DeleteNamespace")
+	platformServiceRenameNamespaceMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("RenameNamespace")
+	platformServiceGetNamespacesMethodDescriptor                                      = platformServiceServiceDescriptor.Methods().ByName("GetNamespaces")
+	platformServiceGetNamespaceMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("GetNamespace")
+	platformServiceGetWorkspaceMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("GetWorkspace")
+	platformServiceCreateContractMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("CreateContract")
+	platformServiceUpdateContractMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("UpdateContract")
+	platformServiceMoveFederatedGraphMethodDescriptor                                 = platformServiceServiceDescriptor.Methods().ByName("MoveFederatedGraph")
+	platformServiceMoveSubgraphMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("MoveSubgraph")
+	platformServiceMoveMonographMethodDescriptor                                      = platformServiceServiceDescriptor.Methods().ByName("MoveMonograph")
+	platformServiceCreateMonographMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("CreateMonograph")
+	platformServicePublishMonographMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("PublishMonograph")
+	platformServiceDeleteMonographMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("DeleteMonograph")
+	platformServiceUpdateMonographMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("UpdateMonograph")
+	platformServiceMigrateMonographMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("MigrateMonograph")
+	platformServiceCreateFederatedSubgraphMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedSubgraph")
+	platformServicePublishFederatedSubgraphMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("PublishFederatedSubgraph")
+	platformServiceCreateFederatedGraphMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedGraph")
+	platformServiceDeleteFederatedGraphMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedGraph")
+	platformServiceDeleteFederatedSubgraphMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedSubgraph")
+	platformServiceCheckSubgraphSchemaMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("CheckSubgraphSchema")
+	platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetProposedSchemaOfCheckedSubgraph")
+	platformServiceFixSubgraphSchemaMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("FixSubgraphSchema")
+	platformServiceUpdateFederatedGraphMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("UpdateFederatedGraph")
+	platformServiceUpdateSubgraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("UpdateSubgraph")
+	platformServiceCheckFederatedGraphMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("CheckFederatedGraph")
+	platformServiceWhoAmIMethodDescriptor                                             = platformServiceServiceDescriptor.Methods().ByName("WhoAmI")
+	platformServiceGenerateRouterTokenMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("GenerateRouterToken")
+	platformServiceGetRouterTokensMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("GetRouterTokens")
+	platformServiceDeleteRouterTokenMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("DeleteRouterToken")
+	platformServicePublishPersistedOperationsMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("PublishPersistedOperations")
+	platformServiceCheckPersistedOperationTrafficMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("CheckPersistedOperationTraffic")
+	platformServiceDeletePersistedOperationMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("DeletePersistedOperation")
+	platformServiceGetPersistedOperationsMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("GetPersistedOperations")
+	platformServiceGetAuditLogsMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("GetAuditLogs")
+	platformServiceInitializeCosmoUserMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("InitializeCosmoUser")
+	platformServiceListOrganizationsMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("ListOrganizations")
+	platformServiceGetFederatedGraphsMethodDescriptor                                 = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphs")
+	platformServiceGetFederatedGraphsBySubgraphLabelsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphsBySubgraphLabels")
+	platformServiceGetFederatedGraphByNameMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphByName")
+	platformServiceGetFederatedGraphSDLByNameMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphSDLByName")
+	platformServiceGetSubgraphsMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphs")
+	platformServiceGetSubgraphByNameMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphByName")
+	platformServiceGetSubgraphSDLFromLatestCompositionMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphSDLFromLatestComposition")
+	platformServiceGetLatestSubgraphSDLMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("GetLatestSubgraphSDL")
+	platformServiceGetChecksByFederatedGraphNameMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("GetChecksByFederatedGraphName")
+	platformServiceGetCheckSummaryMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("GetCheckSummary")
+	platformServiceGetCheckOperationsMethodDescriptor                                 = platformServiceServiceDescriptor.Methods().ByName("GetCheckOperations")
+	platformServiceForceCheckSuccessMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("ForceCheckSuccess")
+	platformServiceCreateOperationOverridesMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("CreateOperationOverrides")
+	platformServiceRemoveOperationOverridesMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("RemoveOperationOverrides")
+	platformServiceCreateOperationIgnoreAllOverrideMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("CreateOperationIgnoreAllOverride")
+	platformServiceRemoveOperationIgnoreAllOverrideMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("RemoveOperationIgnoreAllOverride")
+	platformServiceGetOperationOverridesMethodDescriptor                              = platformServiceServiceDescriptor.Methods().ByName("GetOperationOverrides")
+	platformServiceGetAllOverridesMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("GetAllOverrides")
+	platformServiceToggleChangeOverridesForAllOperationsMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("ToggleChangeOverridesForAllOperations")
+	platformServiceCreateIgnoreOverridesForAllOperationsMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("CreateIgnoreOverridesForAllOperations")
+	platformServiceGetOperationContentMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("GetOperationContent")
+	platformServiceGetFederatedGraphChangelogMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphChangelog")
+	platformServiceCreateFederatedGraphTokenMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedGraphToken")
+	platformServiceGetOrganizationBySlugMethodDescriptor                              = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationBySlug")
+	platformServiceGetOrganizationMembersMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationMembers")
+	platformServiceGetPendingOrganizationMembersMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("GetPendingOrganizationMembers")
+	platformServiceIsMemberLimitReachedMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("IsMemberLimitReached")
+	platformServiceInviteUserMethodDescriptor                                         = platformServiceServiceDescriptor.Methods().ByName("InviteUser")
+	platformServiceGetAPIKeysMethodDescriptor                                         = platformServiceServiceDescriptor.Methods().ByName("GetAPIKeys")
+	platformServiceCreateAPIKeyMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("CreateAPIKey")
+	platformServiceUpdateAPIKeyMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("UpdateAPIKey")
+	platformServiceDeleteAPIKeyMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("DeleteAPIKey")
+	platformServiceRemoveOrganizationMemberMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("RemoveOrganizationMember")
+	platformServiceRemoveInvitationMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("RemoveInvitation")
+	platformServiceMigrateFromApolloMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("MigrateFromApollo")
+	platformServiceCreateOrganizationGroupMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationGroup")
+	platformServiceGetOrganizationGroupsMethodDescriptor                              = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationGroups")
+	platformServiceGetOrganizationGroupMembersMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationGroupMembers")
+	platformServiceUpdateOrganizationGroupMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationGroup")
+	platformServiceDeleteOrganizationGroupMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganizationGroup")
+	platformServiceCreateOrganizationWebhookConfigMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationWebhookConfig")
+	platformServiceGetOrganizationWebhookConfigsMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookConfigs")
+	platformServiceGetOrganizationWebhookMetaMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookMeta")
+	platformServiceUpdateOrganizationWebhookConfigMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationWebhookConfig")
+	platformServiceDeleteOrganizationWebhookConfigMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganizationWebhookConfig")
+	platformServiceGetOrganizationWebhookHistoryMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookHistory")
+	platformServiceGetWebhookDeliveryDetailsMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetWebhookDeliveryDetails")
+	platformServiceRedeliverWebhookMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("RedeliverWebhook")
+	platformServiceCreateIntegrationMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("CreateIntegration")
+	platformServiceGetOrganizationIntegrationsMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationIntegrations")
+	platformServiceUpdateIntegrationConfigMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("UpdateIntegrationConfig")
+	platformServiceDeleteIntegrationMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("DeleteIntegration")
+	platformServiceDeleteUserMethodDescriptor                                         = platformServiceServiceDescriptor.Methods().ByName("DeleteUser")
+	platformServiceDeleteOrganizationMethodDescriptor                                 = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganization")
+	platformServiceRestoreOrganizationMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("RestoreOrganization")
+	platformServiceLeaveOrganizationMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("LeaveOrganization")
+	platformServiceUpdateOrganizationDetailsMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationDetails")
+	platformServiceUpdateOrgMemberGroupMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberGroup")
+	platformServiceIsGitHubAppInstalledMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("IsGitHubAppInstalled")
+	platformServiceCreateOIDCProviderMethodDescriptor                                 = platformServiceServiceDescriptor.Methods().ByName("CreateOIDCProvider")
+	platformServiceGetOIDCProviderMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("GetOIDCProvider")
+	platformServiceDeleteOIDCProviderMethodDescriptor                                 = platformServiceServiceDescriptor.Methods().ByName("DeleteOIDCProvider")
+	platformServiceUpdateIDPMappersMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("UpdateIDPMappers")
+	platformServiceGetClientsMethodDescriptor                                         = platformServiceServiceDescriptor.Methods().ByName("GetClients")
+	platformServiceGetRoutersMethodDescriptor                                         = platformServiceServiceDescriptor.Methods().ByName("GetRouters")
+	platformServiceGetInvitationsMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("GetInvitations")
+	platformServiceAcceptOrDeclineInvitationMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("AcceptOrDeclineInvitation")
+	platformServiceGetCompositionsMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("GetCompositions")
+	platformServiceGetCompositionDetailsMethodDescriptor                              = platformServiceServiceDescriptor.Methods().ByName("GetCompositionDetails")
+	platformServiceGetSdlBySchemaVersionMethodDescriptor                              = platformServiceServiceDescriptor.Methods().ByName("GetSdlBySchemaVersion")
+	platformServiceGetChangelogBySchemaVersionMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("GetChangelogBySchemaVersion")
+	platformServiceGetUserAccessibleResourcesMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessibleResources")
+	platformServiceUpdateFeatureSettingsMethodDescriptor                              = platformServiceServiceDescriptor.Methods().ByName("UpdateFeatureSettings")
+	platformServiceGetSubgraphMembersMethodDescriptor                                 = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMembers")
+	platformServiceAddReadmeMethodDescriptor                                          = platformServiceServiceDescriptor.Methods().ByName("AddReadme")
+	platformServiceGetUserAccessiblePermissionsMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessiblePermissions")
+	platformServiceCreateFeatureFlagMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("CreateFeatureFlag")
+	platformServiceDeleteFeatureFlagMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("DeleteFeatureFlag")
+	platformServiceUpdateFeatureFlagMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("UpdateFeatureFlag")
+	platformServiceEnableFeatureFlagMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("EnableFeatureFlag")
+	platformServiceGetAnalyticsViewMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("GetAnalyticsView")
+	platformServiceGetDashboardAnalyticsViewMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetDashboardAnalyticsView")
+	platformServiceGetTraceMethodDescriptor                                           = platformServiceServiceDescriptor.Methods().ByName("GetTrace")
+	platformServiceGetGraphMetricsMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("GetGraphMetrics")
+	platformServiceGetMetricsErrorRateMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("GetMetricsErrorRate")
+	platformServiceGetSubgraphMetricsMethodDescriptor                                 = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMetrics")
+	platformServiceGetSubgraphMetricsErrorRateMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMetricsErrorRate")
+	platformServiceGetFieldUsageMethodDescriptor                                      = platformServiceServiceDescriptor.Methods().ByName("GetFieldUsage")
+	platformServiceGetOrganizationRequestsCountMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationRequestsCount")
+	platformServiceCreateOrganizationMethodDescriptor                                 = platformServiceServiceDescriptor.Methods().ByName("CreateOrganization")
+	platformServiceEnableLintingForTheNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("EnableLintingForTheNamespace")
+	platformServiceConfigureNamespaceLintConfigMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceLintConfig")
+	platformServiceGetNamespaceLintConfigMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceLintConfig")
+	platformServiceGetNamespaceChecksConfigMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceChecksConfig")
+	platformServiceUpdateNamespaceChecksConfigMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateNamespaceChecksConfig")
+	platformServiceEnableGraphPruningMethodDescriptor                                 = platformServiceServiceDescriptor.Methods().ByName("EnableGraphPruning")
+	platformServiceConfigureNamespaceGraphPruningConfigMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceGraphPruningConfig")
+	platformServiceGetNamespaceGraphPruningConfigMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceGraphPruningConfig")
+	platformServiceGetFeatureFlagsMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlags")
+	platformServiceGetFeatureFlagByNameMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlagByName")
+	platformServiceGetFeatureSubgraphsByFeatureFlagMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphsByFeatureFlag")
+	platformServiceGetFeatureSubgraphsMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphs")
+	platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlagsByFederatedGraph")
+	platformServiceGetFeatureFlagsInLatestCompositionByFederatedGraphMethodDescriptor = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlagsInLatestCompositionByFederatedGraph")
+	platformServiceGetFeatureSubgraphsByFederatedGraphMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetFeatureSubgraphsByFederatedGraph")
+	platformServiceGetFederatedGraphByIdMethodDescriptor                              = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphById")
+	platformServiceGetSubgraphByIdMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphById")
+	platformServicePushCacheWarmerOperationMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("PushCacheWarmerOperation")
+	platformServiceGetCacheWarmerOperationsMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerOperations")
+	platformServiceComputeCacheWarmerOperationsMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("ComputeCacheWarmerOperations")
+	platformServiceConfigureCacheWarmerMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("ConfigureCacheWarmer")
+	platformServiceGetCacheWarmerConfigMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerConfig")
+	platformServiceDeleteCacheWarmerOperationMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("DeleteCacheWarmerOperation")
+	platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphCheckExtensionsConfig")
+	platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("ConfigureSubgraphCheckExtensions")
+	platformServiceGetBillingPlansMethodDescriptor                                    = platformServiceServiceDescriptor.Methods().ByName("GetBillingPlans")
+	platformServiceCreateCheckoutSessionMethodDescriptor                              = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
+	platformServiceCreateBillingPortalSessionMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
+	platformServiceUpgradePlanMethodDescriptor                                        = platformServiceServiceDescriptor.Methods().ByName("UpgradePlan")
+	platformServiceListRouterCompatibilityVersionsMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("ListRouterCompatibilityVersions")
+	platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("SetGraphRouterCompatibilityVersion")
+	platformServiceCreateProposalMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("CreateProposal")
+	platformServiceGetProposalMethodDescriptor                                        = platformServiceServiceDescriptor.Methods().ByName("GetProposal")
+	platformServiceUpdateProposalMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("UpdateProposal")
+	platformServiceEnableProposalsForNamespaceMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("EnableProposalsForNamespace")
+	platformServiceConfigureNamespaceProposalConfigMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceProposalConfig")
+	platformServiceGetNamespaceProposalConfigMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceProposalConfig")
+	platformServiceGetProposalsByFederatedGraphMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
+	platformServiceGetProposalChecksMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
+	platformServiceGetOperationsMethodDescriptor                                      = platformServiceServiceDescriptor.Methods().ByName("GetOperations")
+	platformServiceGetClientsFromAnalyticsMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetClientsFromAnalytics")
+	platformServiceGetOperationClientsMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("GetOperationClients")
+	platformServiceGetOperationDeprecatedFieldsMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetOperationDeprecatedFields")
+	platformServiceValidateAndFetchPluginDataMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("ValidateAndFetchPluginData")
+	platformServiceLinkSubgraphMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("LinkSubgraph")
+	platformServiceUnlinkSubgraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
+	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
+	platformServiceRecomposeGraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -1024,6 +1032,10 @@ type PlatformServiceClient interface {
 	GetFeatureSubgraphs(context.Context, *connect.Request[v1.GetFeatureSubgraphsRequest]) (*connect.Response[v1.GetFeatureSubgraphsResponse], error)
 	// GetFeatureFlagsByFederatedGraph returns the list of feature flags which match the label matchers of the federated graph.
 	GetFeatureFlagsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsByFederatedGraphResponse], error)
+	// GetFeatureFlagsInLatestCompositionByFederatedGraph returns only the feature flags that are part of the latest valid composition.
+	GetFeatureFlagsInLatestCompositionByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse], error)
+	// GetFeatureSubgraphsByFederatedGraph returns the paginated list of unique feature subgraphs across all feature flags of the federated graph.
+	GetFeatureSubgraphsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureSubgraphsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureSubgraphsByFederatedGraphResponse], error)
 	// GetFederatedGraphById returns the federated graph by id.
 	GetFederatedGraphById(context.Context, *connect.Request[v1.GetFederatedGraphByIdRequest]) (*connect.Response[v1.GetFederatedGraphByIdResponse], error)
 	// GetSubgraphById returns the subgraph by id.
@@ -1980,6 +1992,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getFeatureFlagsInLatestCompositionByFederatedGraph: connect.NewClient[v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest, v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetFeatureFlagsInLatestCompositionByFederatedGraphProcedure,
+			connect.WithSchema(platformServiceGetFeatureFlagsInLatestCompositionByFederatedGraphMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getFeatureSubgraphsByFederatedGraph: connect.NewClient[v1.GetFeatureSubgraphsByFederatedGraphRequest, v1.GetFeatureSubgraphsByFederatedGraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetFeatureSubgraphsByFederatedGraphProcedure,
+			connect.WithSchema(platformServiceGetFeatureSubgraphsByFederatedGraphMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getFederatedGraphById: connect.NewClient[v1.GetFederatedGraphByIdRequest, v1.GetFederatedGraphByIdResponse](
 			httpClient,
 			baseURL+PlatformServiceGetFederatedGraphByIdProcedure,
@@ -2183,184 +2207,186 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // platformServiceClient implements PlatformServiceClient.
 type platformServiceClient struct {
-	createPlaygroundScript                *connect.Client[v1.CreatePlaygroundScriptRequest, v1.CreatePlaygroundScriptResponse]
-	deletePlaygroundScript                *connect.Client[v1.DeletePlaygroundScriptRequest, v1.DeletePlaygroundScriptResponse]
-	updatePlaygroundScript                *connect.Client[v1.UpdatePlaygroundScriptRequest, v1.UpdatePlaygroundScriptResponse]
-	getPlaygroundScripts                  *connect.Client[v1.GetPlaygroundScriptsRequest, v1.GetPlaygroundScriptsResponse]
-	createNamespace                       *connect.Client[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse]
-	deleteNamespace                       *connect.Client[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse]
-	renameNamespace                       *connect.Client[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse]
-	getNamespaces                         *connect.Client[v1.GetNamespacesRequest, v1.GetNamespacesResponse]
-	getNamespace                          *connect.Client[v1.GetNamespaceRequest, v1.GetNamespaceResponse]
-	getWorkspace                          *connect.Client[v1.GetWorkspaceRequest, v1.GetWorkspaceResponse]
-	createContract                        *connect.Client[v1.CreateContractRequest, v1.CreateContractResponse]
-	updateContract                        *connect.Client[v1.UpdateContractRequest, v1.UpdateContractResponse]
-	moveFederatedGraph                    *connect.Client[v1.MoveGraphRequest, v1.MoveGraphResponse]
-	moveSubgraph                          *connect.Client[v1.MoveGraphRequest, v1.MoveGraphResponse]
-	moveMonograph                         *connect.Client[v1.MoveGraphRequest, v1.MoveGraphResponse]
-	createMonograph                       *connect.Client[v1.CreateMonographRequest, v1.CreateMonographResponse]
-	publishMonograph                      *connect.Client[v1.PublishMonographRequest, v1.PublishMonographResponse]
-	deleteMonograph                       *connect.Client[v1.DeleteMonographRequest, v1.DeleteMonographResponse]
-	updateMonograph                       *connect.Client[v1.UpdateMonographRequest, v1.UpdateMonographResponse]
-	migrateMonograph                      *connect.Client[v1.MigrateMonographRequest, v1.MigrateMonographResponse]
-	createFederatedSubgraph               *connect.Client[v1.CreateFederatedSubgraphRequest, v1.CreateFederatedSubgraphResponse]
-	publishFederatedSubgraph              *connect.Client[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse]
-	createFederatedGraph                  *connect.Client[v1.CreateFederatedGraphRequest, v1.CreateFederatedGraphResponse]
-	deleteFederatedGraph                  *connect.Client[v1.DeleteFederatedGraphRequest, v1.DeleteFederatedGraphResponse]
-	deleteFederatedSubgraph               *connect.Client[v1.DeleteFederatedSubgraphRequest, v1.DeleteFederatedSubgraphResponse]
-	checkSubgraphSchema                   *connect.Client[v1.CheckSubgraphSchemaRequest, v1.CheckSubgraphSchemaResponse]
-	getProposedSchemaOfCheckedSubgraph    *connect.Client[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse]
-	fixSubgraphSchema                     *connect.Client[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse]
-	updateFederatedGraph                  *connect.Client[v1.UpdateFederatedGraphRequest, v1.UpdateFederatedGraphResponse]
-	updateSubgraph                        *connect.Client[v1.UpdateSubgraphRequest, v1.UpdateSubgraphResponse]
-	checkFederatedGraph                   *connect.Client[v1.CheckFederatedGraphRequest, v1.CheckFederatedGraphResponse]
-	whoAmI                                *connect.Client[v1.WhoAmIRequest, v1.WhoAmIResponse]
-	generateRouterToken                   *connect.Client[v1.GenerateRouterTokenRequest, v1.GenerateRouterTokenResponse]
-	getRouterTokens                       *connect.Client[v1.GetRouterTokensRequest, v1.GetRouterTokensResponse]
-	deleteRouterToken                     *connect.Client[v1.DeleteRouterTokenRequest, v1.DeleteRouterTokenResponse]
-	publishPersistedOperations            *connect.Client[v1.PublishPersistedOperationsRequest, v1.PublishPersistedOperationsResponse]
-	checkPersistedOperationTraffic        *connect.Client[v1.CheckPersistedOperationTrafficRequest, v1.CheckPersistedOperationTrafficResponse]
-	deletePersistedOperation              *connect.Client[v1.DeletePersistedOperationRequest, v1.DeletePersistedOperationResponse]
-	getPersistedOperations                *connect.Client[v1.GetPersistedOperationsRequest, v1.GetPersistedOperationsResponse]
-	getAuditLogs                          *connect.Client[v1.GetAuditLogsRequest, v1.GetAuditLogsResponse]
-	initializeCosmoUser                   *connect.Client[v1.InitializeCosmoUserRequest, v1.InitializeCosmoUserResponse]
-	listOrganizations                     *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
-	getFederatedGraphs                    *connect.Client[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse]
-	getFederatedGraphsBySubgraphLabels    *connect.Client[v1.GetFederatedGraphsBySubgraphLabelsRequest, v1.GetFederatedGraphsBySubgraphLabelsResponse]
-	getFederatedGraphByName               *connect.Client[v1.GetFederatedGraphByNameRequest, v1.GetFederatedGraphByNameResponse]
-	getFederatedGraphSDLByName            *connect.Client[v1.GetFederatedGraphSDLByNameRequest, v1.GetFederatedGraphSDLByNameResponse]
-	getSubgraphs                          *connect.Client[v1.GetSubgraphsRequest, v1.GetSubgraphsResponse]
-	getSubgraphByName                     *connect.Client[v1.GetSubgraphByNameRequest, v1.GetSubgraphByNameResponse]
-	getSubgraphSDLFromLatestComposition   *connect.Client[v1.GetSubgraphSDLFromLatestCompositionRequest, v1.GetSubgraphSDLFromLatestCompositionResponse]
-	getLatestSubgraphSDL                  *connect.Client[v1.GetLatestSubgraphSDLRequest, v1.GetLatestSubgraphSDLResponse]
-	getChecksByFederatedGraphName         *connect.Client[v1.GetChecksByFederatedGraphNameRequest, v1.GetChecksByFederatedGraphNameResponse]
-	getCheckSummary                       *connect.Client[v1.GetCheckSummaryRequest, v1.GetCheckSummaryResponse]
-	getCheckOperations                    *connect.Client[v1.GetCheckOperationsRequest, v1.GetCheckOperationsResponse]
-	forceCheckSuccess                     *connect.Client[v1.ForceCheckSuccessRequest, v1.ForceCheckSuccessResponse]
-	createOperationOverrides              *connect.Client[v1.CreateOperationOverridesRequest, v1.CreateOperationOverridesResponse]
-	removeOperationOverrides              *connect.Client[v1.RemoveOperationOverridesRequest, v1.RemoveOperationOverridesResponse]
-	createOperationIgnoreAllOverride      *connect.Client[v1.CreateOperationIgnoreAllOverrideRequest, v1.CreateOperationIgnoreAllOverrideResponse]
-	removeOperationIgnoreAllOverride      *connect.Client[v1.RemoveOperationIgnoreAllOverrideRequest, v1.RemoveOperationIgnoreAllOverrideResponse]
-	getOperationOverrides                 *connect.Client[v1.GetOperationOverridesRequest, v1.GetOperationOverridesResponse]
-	getAllOverrides                       *connect.Client[v1.GetAllOverridesRequest, v1.GetAllOverridesResponse]
-	toggleChangeOverridesForAllOperations *connect.Client[v1.ToggleChangeOverridesForAllOperationsRequest, v1.ToggleChangeOverridesForAllOperationsResponse]
-	createIgnoreOverridesForAllOperations *connect.Client[v1.CreateIgnoreOverridesForAllOperationsRequest, v1.CreateIgnoreOverridesForAllOperationsResponse]
-	getOperationContent                   *connect.Client[v1.GetOperationContentRequest, v1.GetOperationContentResponse]
-	getFederatedGraphChangelog            *connect.Client[v1.GetFederatedGraphChangelogRequest, v1.GetFederatedGraphChangelogResponse]
-	createFederatedGraphToken             *connect.Client[v1.CreateFederatedGraphTokenRequest, v1.CreateFederatedGraphTokenResponse]
-	getOrganizationBySlug                 *connect.Client[v1.GetOrganizationBySlugRequest, v1.GetOrganizationBySlugResponse]
-	getOrganizationMembers                *connect.Client[v1.GetOrganizationMembersRequest, v1.GetOrganizationMembersResponse]
-	getPendingOrganizationMembers         *connect.Client[v1.GetPendingOrganizationMembersRequest, v1.GetPendingOrganizationMembersResponse]
-	isMemberLimitReached                  *connect.Client[v1.IsMemberLimitReachedRequest, v1.IsMemberLimitReachedResponse]
-	inviteUser                            *connect.Client[v1.InviteUserRequest, v1.InviteUserResponse]
-	getAPIKeys                            *connect.Client[v1.GetAPIKeysRequest, v1.GetAPIKeysResponse]
-	createAPIKey                          *connect.Client[v1.CreateAPIKeyRequest, v1.CreateAPIKeyResponse]
-	updateAPIKey                          *connect.Client[v1.UpdateAPIKeyRequest, v1.UpdateAPIKeyResponse]
-	deleteAPIKey                          *connect.Client[v1.DeleteAPIKeyRequest, v1.DeleteAPIKeyResponse]
-	removeOrganizationMember              *connect.Client[v1.RemoveOrganizationMemberRequest, v1.RemoveOrganizationMemberResponse]
-	removeInvitation                      *connect.Client[v1.RemoveInvitationRequest, v1.RemoveInvitationResponse]
-	migrateFromApollo                     *connect.Client[v1.MigrateFromApolloRequest, v1.MigrateFromApolloResponse]
-	createOrganizationGroup               *connect.Client[v1.CreateOrganizationGroupRequest, v1.CreateOrganizationGroupResponse]
-	getOrganizationGroups                 *connect.Client[v1.GetOrganizationGroupsRequest, v1.GetOrganizationGroupsResponse]
-	getOrganizationGroupMembers           *connect.Client[v1.GetOrganizationGroupMembersRequest, v1.GetOrganizationGroupMembersResponse]
-	updateOrganizationGroup               *connect.Client[v1.UpdateOrganizationGroupRequest, v1.UpdateOrganizationGroupResponse]
-	deleteOrganizationGroup               *connect.Client[v1.DeleteOrganizationGroupRequest, v1.DeleteOrganizationGroupResponse]
-	createOrganizationWebhookConfig       *connect.Client[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse]
-	getOrganizationWebhookConfigs         *connect.Client[v1.GetOrganizationWebhookConfigsRequest, v1.GetOrganizationWebhookConfigsResponse]
-	getOrganizationWebhookMeta            *connect.Client[v1.GetOrganizationWebhookMetaRequest, v1.GetOrganizationWebhookMetaResponse]
-	updateOrganizationWebhookConfig       *connect.Client[v1.UpdateOrganizationWebhookConfigRequest, v1.UpdateOrganizationWebhookConfigResponse]
-	deleteOrganizationWebhookConfig       *connect.Client[v1.DeleteOrganizationWebhookConfigRequest, v1.DeleteOrganizationWebhookConfigResponse]
-	getOrganizationWebhookHistory         *connect.Client[v1.GetOrganizationWebhookHistoryRequest, v1.GetOrganizationWebhookHistoryResponse]
-	getWebhookDeliveryDetails             *connect.Client[v1.GetWebhookDeliveryDetailsRequest, v1.GetWebhookDeliveryDetailsResponse]
-	redeliverWebhook                      *connect.Client[v1.RedeliverWebhookRequest, v1.RedeliverWebhookResponse]
-	createIntegration                     *connect.Client[v1.CreateIntegrationRequest, v1.CreateIntegrationResponse]
-	getOrganizationIntegrations           *connect.Client[v1.GetOrganizationIntegrationsRequest, v1.GetOrganizationIntegrationsResponse]
-	updateIntegrationConfig               *connect.Client[v1.UpdateIntegrationConfigRequest, v1.UpdateIntegrationConfigResponse]
-	deleteIntegration                     *connect.Client[v1.DeleteIntegrationRequest, v1.DeleteIntegrationResponse]
-	deleteUser                            *connect.Client[v1.DeleteUserRequest, v1.DeleteUserResponse]
-	deleteOrganization                    *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
-	restoreOrganization                   *connect.Client[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse]
-	leaveOrganization                     *connect.Client[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse]
-	updateOrganizationDetails             *connect.Client[v1.UpdateOrganizationDetailsRequest, v1.UpdateOrganizationDetailsResponse]
-	updateOrgMemberGroup                  *connect.Client[v1.UpdateOrgMemberGroupRequest, v1.UpdateOrgMemberGroupResponse]
-	isGitHubAppInstalled                  *connect.Client[v1.IsGitHubAppInstalledRequest, v1.IsGitHubAppInstalledResponse]
-	createOIDCProvider                    *connect.Client[v1.CreateOIDCProviderRequest, v1.CreateOIDCProviderResponse]
-	getOIDCProvider                       *connect.Client[v1.GetOIDCProviderRequest, v1.GetOIDCProviderResponse]
-	deleteOIDCProvider                    *connect.Client[v1.DeleteOIDCProviderRequest, v1.DeleteOIDCProviderResponse]
-	updateIDPMappers                      *connect.Client[v1.UpdateIDPMappersRequest, v1.UpdateIDPMappersResponse]
-	getClients                            *connect.Client[v1.GetClientsRequest, v1.GetClientsResponse]
-	getRouters                            *connect.Client[v1.GetRoutersRequest, v1.GetRoutersResponse]
-	getInvitations                        *connect.Client[v1.GetInvitationsRequest, v1.GetInvitationsResponse]
-	acceptOrDeclineInvitation             *connect.Client[v1.AcceptOrDeclineInvitationRequest, v1.AcceptOrDeclineInvitationResponse]
-	getCompositions                       *connect.Client[v1.GetCompositionsRequest, v1.GetCompositionsResponse]
-	getCompositionDetails                 *connect.Client[v1.GetCompositionDetailsRequest, v1.GetCompositionDetailsResponse]
-	getSdlBySchemaVersion                 *connect.Client[v1.GetSdlBySchemaVersionRequest, v1.GetSdlBySchemaVersionResponse]
-	getChangelogBySchemaVersion           *connect.Client[v1.GetChangelogBySchemaVersionRequest, v1.GetChangelogBySchemaVersionResponse]
-	getUserAccessibleResources            *connect.Client[v1.GetUserAccessibleResourcesRequest, v1.GetUserAccessibleResourcesResponse]
-	updateFeatureSettings                 *connect.Client[v1.UpdateFeatureSettingsRequest, v1.UpdateFeatureSettingsResponse]
-	getSubgraphMembers                    *connect.Client[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse]
-	addReadme                             *connect.Client[v1.AddReadmeRequest, v1.AddReadmeResponse]
-	getUserAccessiblePermissions          *connect.Client[v1.GetUserAccessiblePermissionsRequest, v1.GetUserAccessiblePermissionsResponse]
-	createFeatureFlag                     *connect.Client[v1.CreateFeatureFlagRequest, v1.CreateFeatureFlagResponse]
-	deleteFeatureFlag                     *connect.Client[v1.DeleteFeatureFlagRequest, v1.DeleteFeatureFlagResponse]
-	updateFeatureFlag                     *connect.Client[v1.UpdateFeatureFlagRequest, v1.UpdateFeatureFlagResponse]
-	enableFeatureFlag                     *connect.Client[v1.EnableFeatureFlagRequest, v1.EnableFeatureFlagResponse]
-	getAnalyticsView                      *connect.Client[v1.GetAnalyticsViewRequest, v1.GetAnalyticsViewResponse]
-	getDashboardAnalyticsView             *connect.Client[v1.GetDashboardAnalyticsViewRequest, v1.GetDashboardAnalyticsViewResponse]
-	getTrace                              *connect.Client[v1.GetTraceRequest, v1.GetTraceResponse]
-	getGraphMetrics                       *connect.Client[v1.GetGraphMetricsRequest, v1.GetGraphMetricsResponse]
-	getMetricsErrorRate                   *connect.Client[v1.GetMetricsErrorRateRequest, v1.GetMetricsErrorRateResponse]
-	getSubgraphMetrics                    *connect.Client[v1.GetSubgraphMetricsRequest, v1.GetSubgraphMetricsResponse]
-	getSubgraphMetricsErrorRate           *connect.Client[v1.GetSubgraphMetricsErrorRateRequest, v1.GetSubgraphMetricsErrorRateResponse]
-	getFieldUsage                         *connect.Client[v1.GetFieldUsageRequest, v1.GetFieldUsageResponse]
-	getOrganizationRequestsCount          *connect.Client[v1.GetOrganizationRequestsCountRequest, v1.GetOrganizationRequestsCountResponse]
-	createOrganization                    *connect.Client[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse]
-	enableLintingForTheNamespace          *connect.Client[v1.EnableLintingForTheNamespaceRequest, v1.EnableLintingForTheNamespaceResponse]
-	configureNamespaceLintConfig          *connect.Client[v1.ConfigureNamespaceLintConfigRequest, v1.ConfigureNamespaceLintConfigResponse]
-	getNamespaceLintConfig                *connect.Client[v1.GetNamespaceLintConfigRequest, v1.GetNamespaceLintConfigResponse]
-	getNamespaceChecksConfig              *connect.Client[v1.GetNamespaceChecksConfigurationRequest, v1.GetNamespaceChecksConfigurationResponse]
-	updateNamespaceChecksConfig           *connect.Client[v1.UpdateNamespaceChecksConfigurationRequest, v1.UpdateNamespaceChecksConfigurationResponse]
-	enableGraphPruning                    *connect.Client[v1.EnableGraphPruningRequest, v1.EnableGraphPruningResponse]
-	configureNamespaceGraphPruningConfig  *connect.Client[v1.ConfigureNamespaceGraphPruningConfigRequest, v1.ConfigureNamespaceGraphPruningConfigResponse]
-	getNamespaceGraphPruningConfig        *connect.Client[v1.GetNamespaceGraphPruningConfigRequest, v1.GetNamespaceGraphPruningConfigResponse]
-	getFeatureFlags                       *connect.Client[v1.GetFeatureFlagsRequest, v1.GetFeatureFlagsResponse]
-	getFeatureFlagByName                  *connect.Client[v1.GetFeatureFlagByNameRequest, v1.GetFeatureFlagByNameResponse]
-	getFeatureSubgraphsByFeatureFlag      *connect.Client[v1.GetFeatureSubgraphsByFeatureFlagRequest, v1.GetFeatureSubgraphsByFeatureFlagResponse]
-	getFeatureSubgraphs                   *connect.Client[v1.GetFeatureSubgraphsRequest, v1.GetFeatureSubgraphsResponse]
-	getFeatureFlagsByFederatedGraph       *connect.Client[v1.GetFeatureFlagsByFederatedGraphRequest, v1.GetFeatureFlagsByFederatedGraphResponse]
-	getFederatedGraphById                 *connect.Client[v1.GetFederatedGraphByIdRequest, v1.GetFederatedGraphByIdResponse]
-	getSubgraphById                       *connect.Client[v1.GetSubgraphByIdRequest, v1.GetSubgraphByIdResponse]
-	pushCacheWarmerOperation              *connect.Client[v1.PushCacheWarmerOperationRequest, v1.PushCacheWarmerOperationResponse]
-	getCacheWarmerOperations              *connect.Client[v1.GetCacheWarmerOperationsRequest, v1.GetCacheWarmerOperationsResponse]
-	computeCacheWarmerOperations          *connect.Client[v1.ComputeCacheWarmerOperationsRequest, v1.ComputeCacheWarmerOperationsResponse]
-	configureCacheWarmer                  *connect.Client[v1.ConfigureCacheWarmerRequest, v1.ConfigureCacheWarmerResponse]
-	getCacheWarmerConfig                  *connect.Client[v1.GetCacheWarmerConfigRequest, v1.GetCacheWarmerConfigResponse]
-	deleteCacheWarmerOperation            *connect.Client[v1.DeleteCacheWarmerOperationRequest, v1.DeleteCacheWarmerOperationResponse]
-	getSubgraphCheckExtensionsConfig      *connect.Client[v1.GetSubgraphCheckExtensionsConfigRequest, v1.GetSubgraphCheckExtensionsConfigResponse]
-	configureSubgraphCheckExtensions      *connect.Client[v1.ConfigureSubgraphCheckExtensionsRequest, v1.ConfigureSubgraphCheckExtensionsResponse]
-	getBillingPlans                       *connect.Client[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse]
-	createCheckoutSession                 *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
-	createBillingPortalSession            *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
-	upgradePlan                           *connect.Client[v1.UpgradePlanRequest, v1.UpgradePlanResponse]
-	listRouterCompatibilityVersions       *connect.Client[v1.ListRouterCompatibilityVersionsRequest, v1.ListRouterCompatibilityVersionsResponse]
-	setGraphRouterCompatibilityVersion    *connect.Client[v1.SetGraphRouterCompatibilityVersionRequest, v1.SetGraphRouterCompatibilityVersionResponse]
-	createProposal                        *connect.Client[v1.CreateProposalRequest, v1.CreateProposalResponse]
-	getProposal                           *connect.Client[v1.GetProposalRequest, v1.GetProposalResponse]
-	updateProposal                        *connect.Client[v1.UpdateProposalRequest, v1.UpdateProposalResponse]
-	enableProposalsForNamespace           *connect.Client[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse]
-	configureNamespaceProposalConfig      *connect.Client[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse]
-	getNamespaceProposalConfig            *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
-	getProposalsByFederatedGraph          *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
-	getProposalChecks                     *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
-	getOperations                         *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
-	getClientsFromAnalytics               *connect.Client[v1.GetClientsFromAnalyticsRequest, v1.GetClientsFromAnalyticsResponse]
-	getOperationClients                   *connect.Client[v1.GetOperationClientsRequest, v1.GetOperationClientsResponse]
-	getOperationDeprecatedFields          *connect.Client[v1.GetOperationDeprecatedFieldsRequest, v1.GetOperationDeprecatedFieldsResponse]
-	validateAndFetchPluginData            *connect.Client[v1.ValidateAndFetchPluginDataRequest, v1.ValidateAndFetchPluginDataResponse]
-	linkSubgraph                          *connect.Client[v1.LinkSubgraphRequest, v1.LinkSubgraphResponse]
-	unlinkSubgraph                        *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
-	verifyAPIKeyGraphAccess               *connect.Client[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse]
-	recomposeGraph                        *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
+	createPlaygroundScript                             *connect.Client[v1.CreatePlaygroundScriptRequest, v1.CreatePlaygroundScriptResponse]
+	deletePlaygroundScript                             *connect.Client[v1.DeletePlaygroundScriptRequest, v1.DeletePlaygroundScriptResponse]
+	updatePlaygroundScript                             *connect.Client[v1.UpdatePlaygroundScriptRequest, v1.UpdatePlaygroundScriptResponse]
+	getPlaygroundScripts                               *connect.Client[v1.GetPlaygroundScriptsRequest, v1.GetPlaygroundScriptsResponse]
+	createNamespace                                    *connect.Client[v1.CreateNamespaceRequest, v1.CreateNamespaceResponse]
+	deleteNamespace                                    *connect.Client[v1.DeleteNamespaceRequest, v1.DeleteNamespaceResponse]
+	renameNamespace                                    *connect.Client[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse]
+	getNamespaces                                      *connect.Client[v1.GetNamespacesRequest, v1.GetNamespacesResponse]
+	getNamespace                                       *connect.Client[v1.GetNamespaceRequest, v1.GetNamespaceResponse]
+	getWorkspace                                       *connect.Client[v1.GetWorkspaceRequest, v1.GetWorkspaceResponse]
+	createContract                                     *connect.Client[v1.CreateContractRequest, v1.CreateContractResponse]
+	updateContract                                     *connect.Client[v1.UpdateContractRequest, v1.UpdateContractResponse]
+	moveFederatedGraph                                 *connect.Client[v1.MoveGraphRequest, v1.MoveGraphResponse]
+	moveSubgraph                                       *connect.Client[v1.MoveGraphRequest, v1.MoveGraphResponse]
+	moveMonograph                                      *connect.Client[v1.MoveGraphRequest, v1.MoveGraphResponse]
+	createMonograph                                    *connect.Client[v1.CreateMonographRequest, v1.CreateMonographResponse]
+	publishMonograph                                   *connect.Client[v1.PublishMonographRequest, v1.PublishMonographResponse]
+	deleteMonograph                                    *connect.Client[v1.DeleteMonographRequest, v1.DeleteMonographResponse]
+	updateMonograph                                    *connect.Client[v1.UpdateMonographRequest, v1.UpdateMonographResponse]
+	migrateMonograph                                   *connect.Client[v1.MigrateMonographRequest, v1.MigrateMonographResponse]
+	createFederatedSubgraph                            *connect.Client[v1.CreateFederatedSubgraphRequest, v1.CreateFederatedSubgraphResponse]
+	publishFederatedSubgraph                           *connect.Client[v1.PublishFederatedSubgraphRequest, v1.PublishFederatedSubgraphResponse]
+	createFederatedGraph                               *connect.Client[v1.CreateFederatedGraphRequest, v1.CreateFederatedGraphResponse]
+	deleteFederatedGraph                               *connect.Client[v1.DeleteFederatedGraphRequest, v1.DeleteFederatedGraphResponse]
+	deleteFederatedSubgraph                            *connect.Client[v1.DeleteFederatedSubgraphRequest, v1.DeleteFederatedSubgraphResponse]
+	checkSubgraphSchema                                *connect.Client[v1.CheckSubgraphSchemaRequest, v1.CheckSubgraphSchemaResponse]
+	getProposedSchemaOfCheckedSubgraph                 *connect.Client[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse]
+	fixSubgraphSchema                                  *connect.Client[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse]
+	updateFederatedGraph                               *connect.Client[v1.UpdateFederatedGraphRequest, v1.UpdateFederatedGraphResponse]
+	updateSubgraph                                     *connect.Client[v1.UpdateSubgraphRequest, v1.UpdateSubgraphResponse]
+	checkFederatedGraph                                *connect.Client[v1.CheckFederatedGraphRequest, v1.CheckFederatedGraphResponse]
+	whoAmI                                             *connect.Client[v1.WhoAmIRequest, v1.WhoAmIResponse]
+	generateRouterToken                                *connect.Client[v1.GenerateRouterTokenRequest, v1.GenerateRouterTokenResponse]
+	getRouterTokens                                    *connect.Client[v1.GetRouterTokensRequest, v1.GetRouterTokensResponse]
+	deleteRouterToken                                  *connect.Client[v1.DeleteRouterTokenRequest, v1.DeleteRouterTokenResponse]
+	publishPersistedOperations                         *connect.Client[v1.PublishPersistedOperationsRequest, v1.PublishPersistedOperationsResponse]
+	checkPersistedOperationTraffic                     *connect.Client[v1.CheckPersistedOperationTrafficRequest, v1.CheckPersistedOperationTrafficResponse]
+	deletePersistedOperation                           *connect.Client[v1.DeletePersistedOperationRequest, v1.DeletePersistedOperationResponse]
+	getPersistedOperations                             *connect.Client[v1.GetPersistedOperationsRequest, v1.GetPersistedOperationsResponse]
+	getAuditLogs                                       *connect.Client[v1.GetAuditLogsRequest, v1.GetAuditLogsResponse]
+	initializeCosmoUser                                *connect.Client[v1.InitializeCosmoUserRequest, v1.InitializeCosmoUserResponse]
+	listOrganizations                                  *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
+	getFederatedGraphs                                 *connect.Client[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse]
+	getFederatedGraphsBySubgraphLabels                 *connect.Client[v1.GetFederatedGraphsBySubgraphLabelsRequest, v1.GetFederatedGraphsBySubgraphLabelsResponse]
+	getFederatedGraphByName                            *connect.Client[v1.GetFederatedGraphByNameRequest, v1.GetFederatedGraphByNameResponse]
+	getFederatedGraphSDLByName                         *connect.Client[v1.GetFederatedGraphSDLByNameRequest, v1.GetFederatedGraphSDLByNameResponse]
+	getSubgraphs                                       *connect.Client[v1.GetSubgraphsRequest, v1.GetSubgraphsResponse]
+	getSubgraphByName                                  *connect.Client[v1.GetSubgraphByNameRequest, v1.GetSubgraphByNameResponse]
+	getSubgraphSDLFromLatestComposition                *connect.Client[v1.GetSubgraphSDLFromLatestCompositionRequest, v1.GetSubgraphSDLFromLatestCompositionResponse]
+	getLatestSubgraphSDL                               *connect.Client[v1.GetLatestSubgraphSDLRequest, v1.GetLatestSubgraphSDLResponse]
+	getChecksByFederatedGraphName                      *connect.Client[v1.GetChecksByFederatedGraphNameRequest, v1.GetChecksByFederatedGraphNameResponse]
+	getCheckSummary                                    *connect.Client[v1.GetCheckSummaryRequest, v1.GetCheckSummaryResponse]
+	getCheckOperations                                 *connect.Client[v1.GetCheckOperationsRequest, v1.GetCheckOperationsResponse]
+	forceCheckSuccess                                  *connect.Client[v1.ForceCheckSuccessRequest, v1.ForceCheckSuccessResponse]
+	createOperationOverrides                           *connect.Client[v1.CreateOperationOverridesRequest, v1.CreateOperationOverridesResponse]
+	removeOperationOverrides                           *connect.Client[v1.RemoveOperationOverridesRequest, v1.RemoveOperationOverridesResponse]
+	createOperationIgnoreAllOverride                   *connect.Client[v1.CreateOperationIgnoreAllOverrideRequest, v1.CreateOperationIgnoreAllOverrideResponse]
+	removeOperationIgnoreAllOverride                   *connect.Client[v1.RemoveOperationIgnoreAllOverrideRequest, v1.RemoveOperationIgnoreAllOverrideResponse]
+	getOperationOverrides                              *connect.Client[v1.GetOperationOverridesRequest, v1.GetOperationOverridesResponse]
+	getAllOverrides                                    *connect.Client[v1.GetAllOverridesRequest, v1.GetAllOverridesResponse]
+	toggleChangeOverridesForAllOperations              *connect.Client[v1.ToggleChangeOverridesForAllOperationsRequest, v1.ToggleChangeOverridesForAllOperationsResponse]
+	createIgnoreOverridesForAllOperations              *connect.Client[v1.CreateIgnoreOverridesForAllOperationsRequest, v1.CreateIgnoreOverridesForAllOperationsResponse]
+	getOperationContent                                *connect.Client[v1.GetOperationContentRequest, v1.GetOperationContentResponse]
+	getFederatedGraphChangelog                         *connect.Client[v1.GetFederatedGraphChangelogRequest, v1.GetFederatedGraphChangelogResponse]
+	createFederatedGraphToken                          *connect.Client[v1.CreateFederatedGraphTokenRequest, v1.CreateFederatedGraphTokenResponse]
+	getOrganizationBySlug                              *connect.Client[v1.GetOrganizationBySlugRequest, v1.GetOrganizationBySlugResponse]
+	getOrganizationMembers                             *connect.Client[v1.GetOrganizationMembersRequest, v1.GetOrganizationMembersResponse]
+	getPendingOrganizationMembers                      *connect.Client[v1.GetPendingOrganizationMembersRequest, v1.GetPendingOrganizationMembersResponse]
+	isMemberLimitReached                               *connect.Client[v1.IsMemberLimitReachedRequest, v1.IsMemberLimitReachedResponse]
+	inviteUser                                         *connect.Client[v1.InviteUserRequest, v1.InviteUserResponse]
+	getAPIKeys                                         *connect.Client[v1.GetAPIKeysRequest, v1.GetAPIKeysResponse]
+	createAPIKey                                       *connect.Client[v1.CreateAPIKeyRequest, v1.CreateAPIKeyResponse]
+	updateAPIKey                                       *connect.Client[v1.UpdateAPIKeyRequest, v1.UpdateAPIKeyResponse]
+	deleteAPIKey                                       *connect.Client[v1.DeleteAPIKeyRequest, v1.DeleteAPIKeyResponse]
+	removeOrganizationMember                           *connect.Client[v1.RemoveOrganizationMemberRequest, v1.RemoveOrganizationMemberResponse]
+	removeInvitation                                   *connect.Client[v1.RemoveInvitationRequest, v1.RemoveInvitationResponse]
+	migrateFromApollo                                  *connect.Client[v1.MigrateFromApolloRequest, v1.MigrateFromApolloResponse]
+	createOrganizationGroup                            *connect.Client[v1.CreateOrganizationGroupRequest, v1.CreateOrganizationGroupResponse]
+	getOrganizationGroups                              *connect.Client[v1.GetOrganizationGroupsRequest, v1.GetOrganizationGroupsResponse]
+	getOrganizationGroupMembers                        *connect.Client[v1.GetOrganizationGroupMembersRequest, v1.GetOrganizationGroupMembersResponse]
+	updateOrganizationGroup                            *connect.Client[v1.UpdateOrganizationGroupRequest, v1.UpdateOrganizationGroupResponse]
+	deleteOrganizationGroup                            *connect.Client[v1.DeleteOrganizationGroupRequest, v1.DeleteOrganizationGroupResponse]
+	createOrganizationWebhookConfig                    *connect.Client[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse]
+	getOrganizationWebhookConfigs                      *connect.Client[v1.GetOrganizationWebhookConfigsRequest, v1.GetOrganizationWebhookConfigsResponse]
+	getOrganizationWebhookMeta                         *connect.Client[v1.GetOrganizationWebhookMetaRequest, v1.GetOrganizationWebhookMetaResponse]
+	updateOrganizationWebhookConfig                    *connect.Client[v1.UpdateOrganizationWebhookConfigRequest, v1.UpdateOrganizationWebhookConfigResponse]
+	deleteOrganizationWebhookConfig                    *connect.Client[v1.DeleteOrganizationWebhookConfigRequest, v1.DeleteOrganizationWebhookConfigResponse]
+	getOrganizationWebhookHistory                      *connect.Client[v1.GetOrganizationWebhookHistoryRequest, v1.GetOrganizationWebhookHistoryResponse]
+	getWebhookDeliveryDetails                          *connect.Client[v1.GetWebhookDeliveryDetailsRequest, v1.GetWebhookDeliveryDetailsResponse]
+	redeliverWebhook                                   *connect.Client[v1.RedeliverWebhookRequest, v1.RedeliverWebhookResponse]
+	createIntegration                                  *connect.Client[v1.CreateIntegrationRequest, v1.CreateIntegrationResponse]
+	getOrganizationIntegrations                        *connect.Client[v1.GetOrganizationIntegrationsRequest, v1.GetOrganizationIntegrationsResponse]
+	updateIntegrationConfig                            *connect.Client[v1.UpdateIntegrationConfigRequest, v1.UpdateIntegrationConfigResponse]
+	deleteIntegration                                  *connect.Client[v1.DeleteIntegrationRequest, v1.DeleteIntegrationResponse]
+	deleteUser                                         *connect.Client[v1.DeleteUserRequest, v1.DeleteUserResponse]
+	deleteOrganization                                 *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
+	restoreOrganization                                *connect.Client[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse]
+	leaveOrganization                                  *connect.Client[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse]
+	updateOrganizationDetails                          *connect.Client[v1.UpdateOrganizationDetailsRequest, v1.UpdateOrganizationDetailsResponse]
+	updateOrgMemberGroup                               *connect.Client[v1.UpdateOrgMemberGroupRequest, v1.UpdateOrgMemberGroupResponse]
+	isGitHubAppInstalled                               *connect.Client[v1.IsGitHubAppInstalledRequest, v1.IsGitHubAppInstalledResponse]
+	createOIDCProvider                                 *connect.Client[v1.CreateOIDCProviderRequest, v1.CreateOIDCProviderResponse]
+	getOIDCProvider                                    *connect.Client[v1.GetOIDCProviderRequest, v1.GetOIDCProviderResponse]
+	deleteOIDCProvider                                 *connect.Client[v1.DeleteOIDCProviderRequest, v1.DeleteOIDCProviderResponse]
+	updateIDPMappers                                   *connect.Client[v1.UpdateIDPMappersRequest, v1.UpdateIDPMappersResponse]
+	getClients                                         *connect.Client[v1.GetClientsRequest, v1.GetClientsResponse]
+	getRouters                                         *connect.Client[v1.GetRoutersRequest, v1.GetRoutersResponse]
+	getInvitations                                     *connect.Client[v1.GetInvitationsRequest, v1.GetInvitationsResponse]
+	acceptOrDeclineInvitation                          *connect.Client[v1.AcceptOrDeclineInvitationRequest, v1.AcceptOrDeclineInvitationResponse]
+	getCompositions                                    *connect.Client[v1.GetCompositionsRequest, v1.GetCompositionsResponse]
+	getCompositionDetails                              *connect.Client[v1.GetCompositionDetailsRequest, v1.GetCompositionDetailsResponse]
+	getSdlBySchemaVersion                              *connect.Client[v1.GetSdlBySchemaVersionRequest, v1.GetSdlBySchemaVersionResponse]
+	getChangelogBySchemaVersion                        *connect.Client[v1.GetChangelogBySchemaVersionRequest, v1.GetChangelogBySchemaVersionResponse]
+	getUserAccessibleResources                         *connect.Client[v1.GetUserAccessibleResourcesRequest, v1.GetUserAccessibleResourcesResponse]
+	updateFeatureSettings                              *connect.Client[v1.UpdateFeatureSettingsRequest, v1.UpdateFeatureSettingsResponse]
+	getSubgraphMembers                                 *connect.Client[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse]
+	addReadme                                          *connect.Client[v1.AddReadmeRequest, v1.AddReadmeResponse]
+	getUserAccessiblePermissions                       *connect.Client[v1.GetUserAccessiblePermissionsRequest, v1.GetUserAccessiblePermissionsResponse]
+	createFeatureFlag                                  *connect.Client[v1.CreateFeatureFlagRequest, v1.CreateFeatureFlagResponse]
+	deleteFeatureFlag                                  *connect.Client[v1.DeleteFeatureFlagRequest, v1.DeleteFeatureFlagResponse]
+	updateFeatureFlag                                  *connect.Client[v1.UpdateFeatureFlagRequest, v1.UpdateFeatureFlagResponse]
+	enableFeatureFlag                                  *connect.Client[v1.EnableFeatureFlagRequest, v1.EnableFeatureFlagResponse]
+	getAnalyticsView                                   *connect.Client[v1.GetAnalyticsViewRequest, v1.GetAnalyticsViewResponse]
+	getDashboardAnalyticsView                          *connect.Client[v1.GetDashboardAnalyticsViewRequest, v1.GetDashboardAnalyticsViewResponse]
+	getTrace                                           *connect.Client[v1.GetTraceRequest, v1.GetTraceResponse]
+	getGraphMetrics                                    *connect.Client[v1.GetGraphMetricsRequest, v1.GetGraphMetricsResponse]
+	getMetricsErrorRate                                *connect.Client[v1.GetMetricsErrorRateRequest, v1.GetMetricsErrorRateResponse]
+	getSubgraphMetrics                                 *connect.Client[v1.GetSubgraphMetricsRequest, v1.GetSubgraphMetricsResponse]
+	getSubgraphMetricsErrorRate                        *connect.Client[v1.GetSubgraphMetricsErrorRateRequest, v1.GetSubgraphMetricsErrorRateResponse]
+	getFieldUsage                                      *connect.Client[v1.GetFieldUsageRequest, v1.GetFieldUsageResponse]
+	getOrganizationRequestsCount                       *connect.Client[v1.GetOrganizationRequestsCountRequest, v1.GetOrganizationRequestsCountResponse]
+	createOrganization                                 *connect.Client[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse]
+	enableLintingForTheNamespace                       *connect.Client[v1.EnableLintingForTheNamespaceRequest, v1.EnableLintingForTheNamespaceResponse]
+	configureNamespaceLintConfig                       *connect.Client[v1.ConfigureNamespaceLintConfigRequest, v1.ConfigureNamespaceLintConfigResponse]
+	getNamespaceLintConfig                             *connect.Client[v1.GetNamespaceLintConfigRequest, v1.GetNamespaceLintConfigResponse]
+	getNamespaceChecksConfig                           *connect.Client[v1.GetNamespaceChecksConfigurationRequest, v1.GetNamespaceChecksConfigurationResponse]
+	updateNamespaceChecksConfig                        *connect.Client[v1.UpdateNamespaceChecksConfigurationRequest, v1.UpdateNamespaceChecksConfigurationResponse]
+	enableGraphPruning                                 *connect.Client[v1.EnableGraphPruningRequest, v1.EnableGraphPruningResponse]
+	configureNamespaceGraphPruningConfig               *connect.Client[v1.ConfigureNamespaceGraphPruningConfigRequest, v1.ConfigureNamespaceGraphPruningConfigResponse]
+	getNamespaceGraphPruningConfig                     *connect.Client[v1.GetNamespaceGraphPruningConfigRequest, v1.GetNamespaceGraphPruningConfigResponse]
+	getFeatureFlags                                    *connect.Client[v1.GetFeatureFlagsRequest, v1.GetFeatureFlagsResponse]
+	getFeatureFlagByName                               *connect.Client[v1.GetFeatureFlagByNameRequest, v1.GetFeatureFlagByNameResponse]
+	getFeatureSubgraphsByFeatureFlag                   *connect.Client[v1.GetFeatureSubgraphsByFeatureFlagRequest, v1.GetFeatureSubgraphsByFeatureFlagResponse]
+	getFeatureSubgraphs                                *connect.Client[v1.GetFeatureSubgraphsRequest, v1.GetFeatureSubgraphsResponse]
+	getFeatureFlagsByFederatedGraph                    *connect.Client[v1.GetFeatureFlagsByFederatedGraphRequest, v1.GetFeatureFlagsByFederatedGraphResponse]
+	getFeatureFlagsInLatestCompositionByFederatedGraph *connect.Client[v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest, v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse]
+	getFeatureSubgraphsByFederatedGraph                *connect.Client[v1.GetFeatureSubgraphsByFederatedGraphRequest, v1.GetFeatureSubgraphsByFederatedGraphResponse]
+	getFederatedGraphById                              *connect.Client[v1.GetFederatedGraphByIdRequest, v1.GetFederatedGraphByIdResponse]
+	getSubgraphById                                    *connect.Client[v1.GetSubgraphByIdRequest, v1.GetSubgraphByIdResponse]
+	pushCacheWarmerOperation                           *connect.Client[v1.PushCacheWarmerOperationRequest, v1.PushCacheWarmerOperationResponse]
+	getCacheWarmerOperations                           *connect.Client[v1.GetCacheWarmerOperationsRequest, v1.GetCacheWarmerOperationsResponse]
+	computeCacheWarmerOperations                       *connect.Client[v1.ComputeCacheWarmerOperationsRequest, v1.ComputeCacheWarmerOperationsResponse]
+	configureCacheWarmer                               *connect.Client[v1.ConfigureCacheWarmerRequest, v1.ConfigureCacheWarmerResponse]
+	getCacheWarmerConfig                               *connect.Client[v1.GetCacheWarmerConfigRequest, v1.GetCacheWarmerConfigResponse]
+	deleteCacheWarmerOperation                         *connect.Client[v1.DeleteCacheWarmerOperationRequest, v1.DeleteCacheWarmerOperationResponse]
+	getSubgraphCheckExtensionsConfig                   *connect.Client[v1.GetSubgraphCheckExtensionsConfigRequest, v1.GetSubgraphCheckExtensionsConfigResponse]
+	configureSubgraphCheckExtensions                   *connect.Client[v1.ConfigureSubgraphCheckExtensionsRequest, v1.ConfigureSubgraphCheckExtensionsResponse]
+	getBillingPlans                                    *connect.Client[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse]
+	createCheckoutSession                              *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
+	createBillingPortalSession                         *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
+	upgradePlan                                        *connect.Client[v1.UpgradePlanRequest, v1.UpgradePlanResponse]
+	listRouterCompatibilityVersions                    *connect.Client[v1.ListRouterCompatibilityVersionsRequest, v1.ListRouterCompatibilityVersionsResponse]
+	setGraphRouterCompatibilityVersion                 *connect.Client[v1.SetGraphRouterCompatibilityVersionRequest, v1.SetGraphRouterCompatibilityVersionResponse]
+	createProposal                                     *connect.Client[v1.CreateProposalRequest, v1.CreateProposalResponse]
+	getProposal                                        *connect.Client[v1.GetProposalRequest, v1.GetProposalResponse]
+	updateProposal                                     *connect.Client[v1.UpdateProposalRequest, v1.UpdateProposalResponse]
+	enableProposalsForNamespace                        *connect.Client[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse]
+	configureNamespaceProposalConfig                   *connect.Client[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse]
+	getNamespaceProposalConfig                         *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
+	getProposalsByFederatedGraph                       *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
+	getProposalChecks                                  *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
+	getOperations                                      *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
+	getClientsFromAnalytics                            *connect.Client[v1.GetClientsFromAnalyticsRequest, v1.GetClientsFromAnalyticsResponse]
+	getOperationClients                                *connect.Client[v1.GetOperationClientsRequest, v1.GetOperationClientsResponse]
+	getOperationDeprecatedFields                       *connect.Client[v1.GetOperationDeprecatedFieldsRequest, v1.GetOperationDeprecatedFieldsResponse]
+	validateAndFetchPluginData                         *connect.Client[v1.ValidateAndFetchPluginDataRequest, v1.ValidateAndFetchPluginDataResponse]
+	linkSubgraph                                       *connect.Client[v1.LinkSubgraphRequest, v1.LinkSubgraphResponse]
+	unlinkSubgraph                                     *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
+	verifyAPIKeyGraphAccess                            *connect.Client[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse]
+	recomposeGraph                                     *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -3116,6 +3142,18 @@ func (c *platformServiceClient) GetFeatureFlagsByFederatedGraph(ctx context.Cont
 	return c.getFeatureFlagsByFederatedGraph.CallUnary(ctx, req)
 }
 
+// GetFeatureFlagsInLatestCompositionByFederatedGraph calls
+// wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsInLatestCompositionByFederatedGraph.
+func (c *platformServiceClient) GetFeatureFlagsInLatestCompositionByFederatedGraph(ctx context.Context, req *connect.Request[v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse], error) {
+	return c.getFeatureFlagsInLatestCompositionByFederatedGraph.CallUnary(ctx, req)
+}
+
+// GetFeatureSubgraphsByFederatedGraph calls
+// wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFederatedGraph.
+func (c *platformServiceClient) GetFeatureSubgraphsByFederatedGraph(ctx context.Context, req *connect.Request[v1.GetFeatureSubgraphsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureSubgraphsByFederatedGraphResponse], error) {
+	return c.getFeatureSubgraphsByFederatedGraph.CallUnary(ctx, req)
+}
+
 // GetFederatedGraphById calls wg.cosmo.platform.v1.PlatformService.GetFederatedGraphById.
 func (c *platformServiceClient) GetFederatedGraphById(ctx context.Context, req *connect.Request[v1.GetFederatedGraphByIdRequest]) (*connect.Response[v1.GetFederatedGraphByIdResponse], error) {
 	return c.getFederatedGraphById.CallUnary(ctx, req)
@@ -3561,6 +3599,10 @@ type PlatformServiceHandler interface {
 	GetFeatureSubgraphs(context.Context, *connect.Request[v1.GetFeatureSubgraphsRequest]) (*connect.Response[v1.GetFeatureSubgraphsResponse], error)
 	// GetFeatureFlagsByFederatedGraph returns the list of feature flags which match the label matchers of the federated graph.
 	GetFeatureFlagsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsByFederatedGraphResponse], error)
+	// GetFeatureFlagsInLatestCompositionByFederatedGraph returns only the feature flags that are part of the latest valid composition.
+	GetFeatureFlagsInLatestCompositionByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse], error)
+	// GetFeatureSubgraphsByFederatedGraph returns the paginated list of unique feature subgraphs across all feature flags of the federated graph.
+	GetFeatureSubgraphsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureSubgraphsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureSubgraphsByFederatedGraphResponse], error)
 	// GetFederatedGraphById returns the federated graph by id.
 	GetFederatedGraphById(context.Context, *connect.Request[v1.GetFederatedGraphByIdRequest]) (*connect.Response[v1.GetFederatedGraphByIdResponse], error)
 	// GetSubgraphById returns the subgraph by id.
@@ -4513,6 +4555,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetFeatureFlagsInLatestCompositionByFederatedGraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetFeatureFlagsInLatestCompositionByFederatedGraphProcedure,
+		svc.GetFeatureFlagsInLatestCompositionByFederatedGraph,
+		connect.WithSchema(platformServiceGetFeatureFlagsInLatestCompositionByFederatedGraphMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetFeatureSubgraphsByFederatedGraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetFeatureSubgraphsByFederatedGraphProcedure,
+		svc.GetFeatureSubgraphsByFederatedGraph,
+		connect.WithSchema(platformServiceGetFeatureSubgraphsByFederatedGraphMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetFederatedGraphByIdHandler := connect.NewUnaryHandler(
 		PlatformServiceGetFederatedGraphByIdProcedure,
 		svc.GetFederatedGraphById,
@@ -5003,6 +5057,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetFeatureSubgraphsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFeatureFlagsByFederatedGraphProcedure:
 			platformServiceGetFeatureFlagsByFederatedGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceGetFeatureFlagsInLatestCompositionByFederatedGraphProcedure:
+			platformServiceGetFeatureFlagsInLatestCompositionByFederatedGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceGetFeatureSubgraphsByFederatedGraphProcedure:
+			platformServiceGetFeatureSubgraphsByFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFederatedGraphByIdProcedure:
 			platformServiceGetFederatedGraphByIdHandler.ServeHTTP(w, r)
 		case PlatformServiceGetSubgraphByIdProcedure:
@@ -5656,6 +5714,14 @@ func (UnimplementedPlatformServiceHandler) GetFeatureSubgraphs(context.Context, 
 
 func (UnimplementedPlatformServiceHandler) GetFeatureFlagsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsByFederatedGraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsByFederatedGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetFeatureFlagsInLatestCompositionByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsInLatestCompositionByFederatedGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetFeatureSubgraphsByFederatedGraph(context.Context, *connect.Request[v1.GetFeatureSubgraphsByFederatedGraphRequest]) (*connect.Response[v1.GetFeatureSubgraphsByFederatedGraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFederatedGraph is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetFederatedGraphById(context.Context, *connect.Request[v1.GetFederatedGraphByIdRequest]) (*connect.Response[v1.GetFederatedGraphByIdResponse], error) {

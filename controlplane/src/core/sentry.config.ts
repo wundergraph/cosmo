@@ -29,6 +29,7 @@ if (SENTRY_ENABLED && SENTRY_DSN) {
     tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
     profileLifecycle: SENTRY_PROFILE_LIFECYCLE,
     enableLogs: SENTRY_ENABLE_LOGS,
+    spotlight: process.env.NODE_ENV !== 'production',
   });
   console.log('Sentry is initialized.');
 }

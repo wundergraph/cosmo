@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,12 +18,49 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/events"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 type kafkaSubscriptionArgs struct {
 	dataValue []byte
 	errValue  error
+}
+
+func overrideKafkaTopicsForField(t *testing.T, routerConfig *nodev1.RouterConfig, fieldName string, currentTopics []string, topics ...string) {
+	t.Helper()
+
+	require.NotNil(t, routerConfig)
+	require.NotNil(t, routerConfig.EngineConfig)
+
+	for _, dataSourceConfig := range routerConfig.EngineConfig.GetDatasourceConfigurations() {
+		customEvents := dataSourceConfig.GetCustomEvents()
+		if customEvents == nil {
+			continue
+		}
+		for _, kafkaEvent := range customEvents.GetKafka() {
+			engineEventConfiguration := kafkaEvent.GetEngineEventConfiguration()
+			if engineEventConfiguration == nil || engineEventConfiguration.GetFieldName() != fieldName {
+				continue
+			}
+
+			require.NotEmpty(t, currentTopics)
+			require.Len(t, kafkaEvent.Topics, len(currentTopics))
+			for i := range currentTopics {
+				require.True(t, strings.HasSuffix(kafkaEvent.Topics[i], currentTopics[i]))
+			}
+
+			prefix := strings.TrimSuffix(kafkaEvent.Topics[0], currentTopics[0])
+			prefixedTopics := make([]string, 0, len(topics))
+			for _, topic := range topics {
+				prefixedTopics = append(prefixedTopics, prefix+topic)
+			}
+			kafkaEvent.Topics = prefixedTopics
+			return
+		}
+	}
+
+	t.Fatalf("unable to find kafka custom event for field %q", fieldName)
 }
 
 func TestKafkaEvents(t *testing.T) {
@@ -85,6 +123,70 @@ func TestKafkaEvents(t *testing.T) {
 			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+		})
+	})
+
+	t.Run("subscribe async with topic template override", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"employeeUpdated.2", "employeeUpdatedTwo.2"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				overrideKafkaTopicsForField(t, routerConfig, "employeeUpdatedMyKafka",
+					[]string{"employeeUpdated", "employeeUpdatedTwo"},
+					"employeeUpdated.{{ args.employeeID }}",
+					"employeeUpdatedTwo.{{ args.employeeID }}",
+				)
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
+
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: 2)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			xEnv.KafkaPublishUntilReceived(topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`, 1, EventWaitTimeout)
+
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(args.dataValue))
 			})
 
 			require.NoError(t, client.Close())
@@ -869,6 +971,32 @@ func TestKafkaEvents(t *testing.T) {
 			records, err := events.ReadKafkaMessages(xEnv, EventWaitTimeout, topics[0], 1)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(records))
+			require.Equal(t, `{"employeeID":3,"update":{"name":"name test"}}`, string(records[0].Value))
+		})
+	})
+
+	t.Run("mutate with topic template override", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"employeeUpdated.3"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				overrideKafkaTopicsForField(t, routerConfig, "updateEmployeeMyKafka", []string{"employeeUpdated"}, "employeeUpdated.{{ args.employeeID }}")
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
+
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
+
+			records, err := events.ReadKafkaMessages(xEnv, EventWaitTimeout, topics[0], 1)
+			require.NoError(t, err)
+			require.Len(t, records, 1)
 			require.Equal(t, `{"employeeID":3,"update":{"name":"name test"}}`, string(records[0].Value))
 		})
 	})

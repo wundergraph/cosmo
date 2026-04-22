@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.11.0...@wundergraph/playground@0.11.1) (2026-04-21)
+
+### Bug Fixes
+
+* formatting drift & linter in playground ([#2641](https://github.com/wundergraph/cosmo/issues/2641)) ([c7d1016](https://github.com/wundergraph/cosmo/commit/c7d10161feea2b2414f1b7642e895d46787dc1b3)) (@comatory)
+
+# [0.11.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.10.1...@wundergraph/playground@0.11.0) (2026-04-14)
+
+### Features
+
+* update packages to address high severity vulnerabilities ([#2757](https://github.com/wundergraph/cosmo/issues/2757)) ([e14c41b](https://github.com/wundergraph/cosmo/commit/e14c41bfac517c6f1ea7d9d00e85bbbdff29b4e0)) (@pepol)
+
 ## [0.10.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.10.0...@wundergraph/playground@0.10.1) (2026-03-31)
 
 ### Bug Fixes
