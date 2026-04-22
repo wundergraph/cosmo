@@ -251,7 +251,7 @@ func TestNATSTLSEvents(t *testing.T) {
 		certs := generateNATSTLSTestCerts(t)
 		srv := startTLSNATSServer(t, &natssrv.Options{
 			Host:      "127.0.0.1",
-			Port:      -1,
+			Port:      -1, // tells nats to use a free port
 			TLS:       true,
 			TLSConfig: buildServerTLSConfig(t, certs.ServerCertFile, certs.ServerKeyFile),
 		})
@@ -277,7 +277,7 @@ func TestNATSTLSEvents(t *testing.T) {
 		certs := generateNATSTLSTestCerts(t)
 		srv := startTLSNATSServer(t, &natssrv.Options{
 			Host:      "127.0.0.1",
-			Port:      -1,
+			Port:      -1, // tells nats to use a free port
 			TLS:       true,
 			TLSConfig: buildServerTLSConfig(t, certs.ServerCertFile, certs.ServerKeyFile),
 		})
@@ -305,7 +305,7 @@ func TestNATSTLSEvents(t *testing.T) {
 		// Server requires client certs verified against the CA.
 		srv := startTLSNATSServer(t, &natssrv.Options{
 			Host:      "127.0.0.1",
-			Port:      -1,
+			Port:      -1, // tells nats to use a free port
 			TLS:       true,
 			TLSVerify: true,
 			TLSConfig: buildMTLSServerConfig(t, certs.ServerCertFile, certs.ServerKeyFile, certs.CACertFile),
@@ -349,7 +349,7 @@ func TestNATSTLSEvents(t *testing.T) {
 		certs := generateNATSTLSTestCerts(t)
 		srv := startTLSNATSServer(t, &natssrv.Options{
 			Host:      "127.0.0.1",
-			Port:      -1,
+			Port:      -1, // tells nats to use a free port
 			TLS:       true,
 			TLSConfig: buildServerTLSConfig(t, certs.ServerCertFile, certs.ServerKeyFile),
 		})
