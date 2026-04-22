@@ -684,8 +684,7 @@ type NatsAuthentication struct {
 }
 
 type NatsTLSConfiguration struct {
-	Enabled            bool   `yaml:"enabled"`
-	InsecureSkipVerify bool   `yaml:"insecure_skip_verify,omitempty"`
+	InsecureSkipVerify bool   `yaml:"insecure_skip_verify,omitempty" envDefault:"false"`
 	CaFile             string `yaml:"ca_file,omitempty"`
 	CertFile           string `yaml:"cert_file,omitempty"`
 	KeyFile            string `yaml:"key_file,omitempty"`

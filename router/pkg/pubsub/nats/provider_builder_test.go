@@ -87,55 +87,11 @@ func TestBuildNatsOptions(t *testing.T) {
 }
 
 func TestBuildNatsOptionsWithTLS(t *testing.T) {
-	t.Run("disabled tls skips secure option even if fields are set", func(t *testing.T) {
-		caFile, certFile, keyFile := generateTestCerts(t)
-		cfg := config.NatsEventSource{
-			ID:  "test-nats",
-			URL: "nats://localhost:4222",
-			TLS: &config.NatsTLSConfiguration{
-				Enabled:  false,
-				CaFile:   caFile,
-				CertFile: certFile,
-				KeyFile:  keyFile,
-			},
-		}
-		logger := zaptest.NewLogger(t)
-
-		opts, err := buildNatsOptions(cfg, logger)
-		require.NoError(t, err)
-
-		natsOpts := applyNatsOptions(t, opts)
-		require.False(t, natsOpts.Secure)
-		require.Nil(t, natsOpts.TLSConfig)
-	})
-
-	t.Run("enabled with no other fields uses system trust store", func(t *testing.T) {
-		cfg := config.NatsEventSource{
-			ID:  "test-nats",
-			URL: "nats://localhost:4222",
-			TLS: &config.NatsTLSConfiguration{
-				Enabled: true,
-			},
-		}
-		logger := zaptest.NewLogger(t)
-
-		opts, err := buildNatsOptions(cfg, logger)
-		require.NoError(t, err)
-
-		natsOpts := applyNatsOptions(t, opts)
-		require.True(t, natsOpts.Secure)
-		require.NotNil(t, natsOpts.TLSConfig)
-		require.False(t, natsOpts.TLSConfig.InsecureSkipVerify)
-		require.Nil(t, natsOpts.TLSConfig.RootCAs)
-		require.Empty(t, natsOpts.TLSConfig.Certificates)
-	})
-
 	t.Run("insecure skip verify is allowed", func(t *testing.T) {
 		cfg := config.NatsEventSource{
 			ID:  "test-nats",
 			URL: "nats://localhost:4222",
 			TLS: &config.NatsTLSConfiguration{
-				Enabled:            true,
 				InsecureSkipVerify: true,
 			},
 		}
@@ -155,8 +111,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 			ID:  "test-nats",
 			URL: "nats://localhost:4222",
 			TLS: &config.NatsTLSConfiguration{
-				Enabled: true,
-				CaFile:  "/nonexistent/ca.pem",
+				CaFile: "/nonexistent/ca.pem",
 			},
 		}
 		logger := zaptest.NewLogger(t)
@@ -170,7 +125,6 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 			ID:  "test-nats",
 			URL: "nats://localhost:4222",
 			TLS: &config.NatsTLSConfiguration{
-				Enabled:  true,
 				CertFile: "/tmp/client.crt",
 			},
 		}
@@ -185,7 +139,6 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 			ID:  "test-nats",
 			URL: "nats://localhost:4222",
 			TLS: &config.NatsTLSConfiguration{
-				Enabled: true,
 				KeyFile: "/tmp/client.key",
 			},
 		}
@@ -201,7 +154,6 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 			ID:  "test-nats",
 			URL: "nats://localhost:4222",
 			TLS: &config.NatsTLSConfiguration{
-				Enabled:  true,
 				CertFile: certFile,
 				KeyFile:  keyFile,
 			},
@@ -224,8 +176,7 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 			ID:  "test-nats",
 			URL: "nats://localhost:4222",
 			TLS: &config.NatsTLSConfiguration{
-				Enabled: true,
-				CaFile:  caFile,
+				CaFile: caFile,
 			},
 		}
 		logger := zaptest.NewLogger(t)
@@ -247,7 +198,6 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 			ID:  "test-nats",
 			URL: "nats://localhost:4222",
 			TLS: &config.NatsTLSConfiguration{
-				Enabled:  true,
 				CaFile:   caFile,
 				CertFile: certFile,
 				KeyFile:  keyFile,
