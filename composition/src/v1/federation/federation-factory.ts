@@ -2836,19 +2836,50 @@ export class FederationFactory {
         // @inaccessible error are caught elsewhere
         continue;
       }
-      // TODO handle Unions and Interfaces
-      if (namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+      const objectData = this.resolveSubscriptionFilterValidationTarget(namedTypeData);
+      if (!objectData) {
         continue;
       }
       this.validateSubscriptionFilterAndGenerateConfiguration(
         data.directive,
-        namedTypeData,
+        objectData,
         fieldPath,
         data.fieldData.name,
         data.fieldData.renamedParentTypeName,
         data.directiveSubgraphName,
       );
     }
+  }
+
+  resolveSubscriptionFilterValidationTarget(namedTypeData: ParentDefinitionData): ObjectDefinitionData | undefined {
+    if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
+      return namedTypeData;
+    }
+    if (namedTypeData.kind === Kind.UNION_TYPE_DEFINITION) {
+      for (const memberName of namedTypeData.memberByMemberTypeName.keys()) {
+        const memberData = this.parentDefinitionDataByTypeName.get(memberName);
+        if (
+          memberData &&
+          memberData.kind === Kind.OBJECT_TYPE_DEFINITION &&
+          !isNodeDataInaccessible(memberData)
+        ) {
+          return memberData;
+        }
+      }
+      return undefined;
+    }
+    if (namedTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+      for (const candidate of this.parentDefinitionDataByTypeName.values()) {
+        if (
+          candidate.kind === Kind.OBJECT_TYPE_DEFINITION &&
+          candidate.implementedInterfaceTypeNames.has(namedTypeData.name) &&
+          !isNodeDataInaccessible(candidate)
+        ) {
+          return candidate;
+        }
+      }
+    }
+    return undefined;
   }
 
   buildFederationResult(): FederationResult {

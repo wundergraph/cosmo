@@ -65,6 +65,12 @@ type Subscription {
     filteredEmployeeUpdatedMyRedis(ids: [ID!]!): Employee!
         @edfs__redisSubscribe(channels: ["employeeUpdatedMyRedis"], providerId: "my-redis")
         @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["{{ args.ids }}"] } })
+    filteredTaskUpdatedMyKafkaInterface(phoneChannelId: ID!): TaskEvent!
+        @edfs__kafkaSubscribe(topics: ["taskUpdated"], providerId: "my-kafka")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
+    filteredTaskUpdatedMyKafkaUnion(phoneChannelId: ID!): TaskNotification!
+        @edfs__kafkaSubscribe(topics: ["taskUpdated"], providerId: "my-kafka")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
 }
 
 input KafkaInput {
@@ -74,6 +80,23 @@ input KafkaInput {
 type Employee @key(fields: "id", resolvable: false) {
   id: Int! @external
 }
+
+interface TaskEvent @key(fields: "id phoneChannelId", resolvable: false) {
+    id: ID!
+    phoneChannelId: ID!
+}
+
+type TaskUpdated implements TaskEvent @key(fields: "id phoneChannelId", resolvable: false) {
+    id: ID! @external
+    phoneChannelId: ID! @external
+}
+
+type TaskDeleted implements TaskEvent @key(fields: "id phoneChannelId", resolvable: false) {
+    id: ID! @external
+    phoneChannelId: ID! @external
+}
+
+union TaskNotification = TaskUpdated | TaskDeleted
 
 type edfs__PublishResult {
     success: Boolean!

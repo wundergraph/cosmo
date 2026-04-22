@@ -1,0 +1,24 @@
+extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
+type Query {
+    task(id: ID!): TaskUpdated
+}
+
+interface TaskEvent @key(fields: "id phoneChannelId") {
+    id: ID!
+    phoneChannelId: ID!
+}
+
+type TaskUpdated implements TaskEvent @key(fields: "id phoneChannelId") {
+    id: ID!
+    phoneChannelId: ID!
+    title: String!
+}
+
+type TaskDeleted implements TaskEvent @key(fields: "id phoneChannelId") {
+    id: ID!
+    phoneChannelId: ID!
+}
+
+union TaskNotification = TaskUpdated | TaskDeleted

@@ -1063,3 +1063,122 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 }
+
+// TestKafkaSubscriptionFilterAbstractReturnTypes is a regression test for pylon #2913:
+// `@openfed__subscriptionFilter` was silently dropped during composition when a subscription
+// field's return type was an interface or a union, so every event reached the subscriber
+// unfiltered. The test publishes a mix of matching and non-matching Kafka messages and
+// asserts that only the matching ones (as defined by the filter) are delivered.
+//
+// Uses ConfigWithEdfsJSONTemplate because the demo's kafka-only config is not regenerated
+// from the updated schema; the full edfs config is the one produced by update-config.sh.
+func TestKafkaSubscriptionFilterAbstractReturnTypes(t *testing.T) {
+	t.Parallel()
+
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	t.Run("filter applies when return type is an interface (pylon #2913)", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"taskUpdated"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
+			EnableNats:               true,
+			EnableKafka:              true,
+			EnableRedis:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
+
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { filteredTaskUpdatedMyKafkaInterface(phoneChannelId: \"1\") { __typename id phoneChannelId } }"}`),
+			})
+			require.NoError(t, err)
+
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			// Warm-up: send a matching event and confirm it arrives.
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"TaskUpdated","id":"A","phoneChannelId":"1"}`, 1, EventWaitTimeout)
+
+			var msg testenv.WebSocketMessage
+			require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			require.JSONEq(t,
+				`{"data":{"filteredTaskUpdatedMyKafkaInterface":{"__typename":"TaskUpdated","id":"A","phoneChannelId":"1"}}}`,
+				string(msg.Payload),
+			)
+
+			// Non-matching events: must be filtered out.
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"TaskUpdated","id":"B","phoneChannelId":"2"}`)
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"TaskDeleted","id":"C","phoneChannelId":"3"}`)
+
+			// Sentinel matching event: if filtering works, this is the very next message we read.
+			// If the bug is present, we would read "B" or "C" here instead.
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"TaskDeleted","id":"D","phoneChannelId":"1"}`)
+
+			require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			require.JSONEq(t,
+				`{"data":{"filteredTaskUpdatedMyKafkaInterface":{"__typename":"TaskDeleted","id":"D","phoneChannelId":"1"}}}`,
+				string(msg.Payload),
+			)
+		})
+	})
+
+	t.Run("filter applies when return type is a union (pylon #2913)", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"taskUpdated"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
+			EnableNats:               true,
+			EnableKafka:              true,
+			EnableRedis:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
+
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { filteredTaskUpdatedMyKafkaUnion(phoneChannelId: \"1\") { ... on TaskUpdated { __typename id phoneChannelId } ... on TaskDeleted { __typename id phoneChannelId } } }"}`),
+			})
+			require.NoError(t, err)
+
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
+
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"TaskUpdated","id":"A","phoneChannelId":"1"}`, 1, EventWaitTimeout)
+
+			var msg testenv.WebSocketMessage
+			require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			require.JSONEq(t,
+				`{"data":{"filteredTaskUpdatedMyKafkaUnion":{"__typename":"TaskUpdated","id":"A","phoneChannelId":"1"}}}`,
+				string(msg.Payload),
+			)
+
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"TaskUpdated","id":"B","phoneChannelId":"2"}`)
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"TaskDeleted","id":"C","phoneChannelId":"3"}`)
+			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"TaskDeleted","id":"D","phoneChannelId":"1"}`)
+
+			require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			require.JSONEq(t,
+				`{"data":{"filteredTaskUpdatedMyKafkaUnion":{"__typename":"TaskDeleted","id":"D","phoneChannelId":"1"}}}`,
+				string(msg.Payload),
+			)
+		})
+	})
+}
