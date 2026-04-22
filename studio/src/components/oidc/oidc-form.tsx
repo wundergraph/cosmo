@@ -53,7 +53,7 @@ export function OIDCForm({ isPending, handleSubmit, onCancel }: OIDCFormProps) {
                 <Input
                   {...field}
                   disabled={isPending}
-                  placeholder="https://hostname/auth/realms/master/.wellknown/openid-configuration"
+                  placeholder="https://hostname/auth/realms/master/.well-known/openid-configuration"
                   className="w-full"
                 />
               </FormControl>
