@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/gobwas/ws"
@@ -25,6 +26,7 @@ type Backend struct {
 	addr         string
 	timeout      time.Duration
 	done         chan struct{}
+	stopOnce     sync.Once
 }
 
 // BackendOption configures a Backend.
@@ -164,12 +166,15 @@ func (b *Backend) Addr() string {
 }
 
 // Stop shuts down the backend, closing the listener and draining pending connections.
+// Safe to call multiple times.
 func (b *Backend) Stop() {
-	close(b.done)
-	if b.server != nil {
-		b.server.Close()
-	} else if b.listener != nil {
-		b.listener.Close()
-	}
-	b.drain()
+	b.stopOnce.Do(func() {
+		close(b.done)
+		if b.server != nil {
+			b.server.Close()
+		} else if b.listener != nil {
+			b.listener.Close()
+		}
+		b.drain()
+	})
 }

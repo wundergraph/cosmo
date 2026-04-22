@@ -1,4 +1,4 @@
-cli = pnpm dlx tsx --env-file ../cli/.env ../cli/src/index.ts router
+cli = pnpm dlx tsx ../cli/src/index.ts router
 
 .PHONY: config-router
 

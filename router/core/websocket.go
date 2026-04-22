@@ -39,6 +39,18 @@ import (
 
 var errClientTerminatedConnection = errors.New("client terminated connection")
 
+// closeConnectionError signals that the message loop should tear down the
+// connection with the given close kind. HandleMessage returns this instead of
+// calling handler.Close directly, so the loop owns lifecycle (single Close,
+// immediate map removal in the netpoll case).
+type closeConnectionError struct {
+	kind SubscriptionCloseKind
+}
+
+func (e *closeConnectionError) Error() string {
+	return fmt.Sprintf("close connection (%d): %s", e.kind.WSCode, e.kind.Reason)
+}
+
 type WebsocketMiddlewareOptions struct {
 	OperationProcessor *OperationProcessor
 	OperationBlocker   *OperationBlocker
@@ -468,6 +480,11 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 					handler.Close(true, SubscriptionCloseKindNormal)
 					return
 				}
+				var closeErr *closeConnectionError
+				if errors.As(err, &closeErr) {
+					handler.Close(true, closeErr.kind)
+					return
+				}
 			}
 		}
 	}
@@ -485,7 +502,7 @@ func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnec
 	return h.netPoll.Add(conn)
 }
 
-func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketConnectionHandler, fd int) {
+func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketConnectionHandler, fd int, closeKind SubscriptionCloseKind) {
 	h.stats.ConnectionsDec()
 	h.connectionsMu.Lock()
 	delete(h.connections, fd)
@@ -494,7 +511,7 @@ func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketCon
 	if err != nil {
 		h.logger.Warn("Removing connection from net poller", zap.Error(err))
 	}
-	handler.Close(true, SubscriptionCloseKindNormal)
+	handler.Close(true, closeKind)
 }
 
 func socketFd(conn net.Conn) int {
@@ -560,21 +577,26 @@ func (h *WebsocketHandler) runPoller() {
 
 				if fd == 0 {
 					h.logger.Debug("Invalid socket fd", zap.Int("fd", fd))
-					h.removeConnection(conn, handler, fd)
+					h.removeConnection(conn, handler, fd, SubscriptionCloseKindNormal)
 					continue
 				}
 
 				msg, err := handler.protocol.ReadMessage()
 				if err != nil {
 					h.logger.Debug("Client closed connection", zap.Error(err))
-					h.removeConnection(conn, handler, fd)
+					h.removeConnection(conn, handler, fd, SubscriptionCloseKindNormal)
 					continue
 				}
 				err = h.HandleMessage(handler, msg)
 				if err != nil {
 					h.logger.Debug("Handling websocket message", zap.Error(err))
 					if errors.Is(err, errClientTerminatedConnection) {
-						h.removeConnection(conn, handler, fd)
+						h.removeConnection(conn, handler, fd, SubscriptionCloseKindNormal)
+						continue
+					}
+					var closeErr *closeConnectionError
+					if errors.As(err, &closeErr) {
+						h.removeConnection(conn, handler, fd, closeErr.kind)
 						continue
 					}
 				}
@@ -1186,8 +1208,7 @@ func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, ms
 		registration, err := handler.registerSubscription(msg)
 		if err != nil {
 			h.logger.Warn("Handling subscription registration", zap.Error(err))
-			handler.Close(true, SubscriptionCloseKind{WSCode: 4409, Reason: "Subscriber for " + msg.ID + " already exists"})
-			return nil
+			return &closeConnectionError{kind: SubscriptionCloseKind{WSCode: 4409, Reason: "Subscriber for " + msg.ID + " already exists"}}
 		}
 		handler.executeSubscription(registration)
 	case wsproto.MessageTypeComplete:
