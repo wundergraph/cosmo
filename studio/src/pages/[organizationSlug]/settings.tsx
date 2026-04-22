@@ -36,9 +36,7 @@ import {
   updateFeatureSettings,
   updateOrganizationDetails,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import {
-  Feature,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { Feature } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useContext, useEffect, useState } from 'react';
