@@ -95,4 +95,3 @@ func TestSpeedtrapScenarios(t *testing.T) {
 		runSpeedtrapScenarios(t, graphqlws.Scenarios)
 	})
 }
-
