@@ -39,6 +39,7 @@ overrides:
   minimatch@10.x: 10.2.4
   express-rate-limit: 8.2.2
   serialize-javascript: 7.0.3
+  markdown-it: '>=14.1.1'
 
 patchedDependencies:
   graphql@16.9.0:
@@ -9654,10 +9655,6 @@ packages:
   entities@2.2.0:
     resolution: {integrity: sha512-p92if5Nz619I0w+akJrLZH0MX0Pb5DX39XOwQTtXSdQQOaYH03S1uIQp4mhOZtAXrxq4ViO67YTiLBo2638o9A==}
 
-  entities@3.0.1:
-    resolution: {integrity: sha512-WiyBqoomrwMdFG1e0kqvASYfnlb0lp8M5o5Fw2OFq1hNZxxcNk8Ik0Xm7LxzBhuidnZB/UtBqVCgUz3kBOP51Q==}
-    engines: {node: '>=0.12'}
-
   entities@4.5.0:
     resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
     engines: {node: '>=0.12'}
@@ -11449,9 +11446,6 @@ packages:
   lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
 
-  linkify-it@4.0.1:
-    resolution: {integrity: sha512-C7bfi1UZmoj8+PQx22XyeXCuBlokoyWQL5pWSP+EI6nzRylyThouddufc2c1NDIcP9k5agmN9fLpA7VNJfIiqw==}
-
   linkify-it@5.0.0:
     resolution: {integrity: sha512-5aHCbzQRADcdP+ATqnDuhhJ/MRIqDkZX5pyjFHRRysS8vZ5AbqGEoFIb6pYHPZ+L/OC2Lc+xT8uHVVR5CAK/wQ==}
 
@@ -11638,12 +11632,8 @@ packages:
   markdown-it-task-lists@2.1.1:
     resolution: {integrity: sha512-TxFAc76Jnhb2OUu+n3yz9RMu4CwGfaT788br6HhEDlvWfdeJcLUsxk1Hgw2yJio0OXsxv7pyIPmvECY7bMbluA==}
 
-  markdown-it@13.0.2:
-    resolution: {integrity: sha512-FtwnEuuK+2yVU7goGn/MJ0WBZMM9ZPgU9spqlFs7/A/pDIUNSOQZhUgOqYCficIuR2QaFnrt8LHqBWsbTAoI5w==}
-    hasBin: true
-
-  markdown-it@14.1.0:
-    resolution: {integrity: sha512-a54IwgWPaeBCAAsv13YgmALOF1elABB08FxO9i+r4VFk5Vl4pKokRPeX8u5TCgSsPi6ec1otfLjdOpVcgbpshg==}
+  markdown-it@14.1.1:
+    resolution: {integrity: sha512-BuU2qnTti9YKgK5N+IeMubp14ZUKUUw7yeJbkjtosvHiP0AZ5c8IAgEMk79D0eC8F23r4Ac/q8cAIFdm2FtyoA==}
     hasBin: true
 
   markdown-table@3.0.3:
@@ -11717,9 +11707,6 @@ packages:
 
   mdn-data@2.27.1:
     resolution: {integrity: sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ==}
-
-  mdurl@1.0.1:
-    resolution: {integrity: sha512-/sKlQJCBYVY9Ers9hqzKou4H6V5UWc/M59TH2dvkt+84itfnq7uFOMLpOiOS4ujvHP4etln18fmIxA5R5fll0g==}
 
   mdurl@2.0.0:
     resolution: {integrity: sha512-Lf+9+2r+Tdp5wXDXC4PcIBjTDtq4UKjCPMQhKIuzpJNW0b96kVqSwW0bT7FhRSfmAiFYgP+SCRvdrDozfh0U5w==}
@@ -14324,9 +14311,6 @@ packages:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
-
-  uc.micro@1.0.6:
-    resolution: {integrity: sha512-8Y75pvTYkLJW2hWQHXxoqRgV7qb9B+9vFEtidML+7koHUFapnVJAZ6cKs+Qjz5Aw3aZWHMC6u0wJE3At+nSGwA==}
 
   uc.micro@2.1.0:
     resolution: {integrity: sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A==}
@@ -17694,7 +17678,7 @@ snapshots:
       framer-motion: 6.5.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
       graphql-language-service: 5.2.1(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
-      markdown-it: 14.1.0
+      markdown-it: 14.1.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       set-value: 4.1.0
@@ -24860,8 +24844,6 @@ snapshots:
 
   entities@2.2.0: {}
 
-  entities@3.0.1: {}
-
   entities@4.5.0: {}
 
   entities@6.0.1: {}
@@ -26221,7 +26203,7 @@ snapshots:
       '@graphiql/toolkit': 0.9.1(@types/node@22.17.0)(graphql-ws@6.0.6(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))(ws@8.19.0))(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
       graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
       graphql-language-service: 5.2.1(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
-      markdown-it: 14.1.0
+      markdown-it: 14.1.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
     transitivePeerDependencies:
@@ -27172,10 +27154,6 @@ snapshots:
 
   lines-and-columns@1.2.4: {}
 
-  linkify-it@4.0.1:
-    dependencies:
-      uc.micro: 1.0.6
-
   linkify-it@5.0.0:
     dependencies:
       uc.micro: 2.1.0
@@ -27366,15 +27344,7 @@ snapshots:
 
   markdown-it-task-lists@2.1.1: {}
 
-  markdown-it@13.0.2:
-    dependencies:
-      argparse: 2.0.1
-      entities: 3.0.1
-      linkify-it: 4.0.1
-      mdurl: 1.0.1
-      uc.micro: 1.0.6
-
-  markdown-it@14.1.0:
+  markdown-it@14.1.1:
     dependencies:
       argparse: 2.0.1
       entities: 4.5.0
@@ -27552,8 +27522,6 @@ snapshots:
   mdn-data@2.0.30: {}
 
   mdn-data@2.27.1: {}
-
-  mdurl@1.0.1: {}
 
   mdurl@2.0.0: {}
 
@@ -28916,13 +28884,13 @@ snapshots:
 
   prosemirror-markdown@1.12.0:
     dependencies:
-      markdown-it: 14.1.0
+      markdown-it: 14.1.1
       prosemirror-model: 1.21.0
 
   prosemirror-markdown@1.13.2:
     dependencies:
       '@types/markdown-it': 14.1.2
-      markdown-it: 14.1.0
+      markdown-it: 14.1.1
       prosemirror-model: 1.25.3
 
   prosemirror-menu@1.2.5:
@@ -30365,7 +30333,7 @@ snapshots:
     dependencies:
       '@tiptap/core': 2.4.0(@tiptap/pm@2.1.13)
       '@types/markdown-it': 12.2.3
-      markdown-it: 13.0.2
+      markdown-it: 14.1.1
       markdown-it-task-lists: 2.1.1
       prosemirror-markdown: 1.12.0
 
@@ -30651,8 +30619,6 @@ snapshots:
   typescript@5.5.2: {}
 
   typescript@5.9.3: {}
-
-  uc.micro@1.0.6: {}
 
   uc.micro@2.1.0: {}
 
