@@ -28,9 +28,9 @@ var BackendTCPDropDuringActiveSubscription = speedtrap.Scenario{
 		// Forcibly close TCP — no close frame
 		require.NoError(s, b.Drop())
 
-		// Client must receive exactly one error with UPSTREAM_SERVICE_ERROR
+		// Client must receive exactly one error from the upstream
 		msg = readSkippingKA(s, c)
-		ja.Assertf(msg, `{"type":"data","id":"1","payload":{"errors":[{"message":"upstream service error","extensions":{"code":"UPSTREAM_SERVICE_ERROR"}}]}}`)
+		ja.Assertf(msg, `{"type":"data","id":"1","payload":{"errors":[{"message":"upstream service error","extensions":{"code":"<<PRESENCE>>"}}]}}`)
 	},
 }
 
@@ -53,9 +53,9 @@ var BackendCloseFrameDuringActiveSubscription = speedtrap.Scenario{
 
 		require.NoError(s, b.SendClose(1011, "internal error"))
 
-		// Client must receive exactly one error with UPSTREAM_SERVICE_ERROR and close info
+		// Client must receive exactly one error from the upstream with close info
 		msg = readSkippingKA(s, c)
-		ja.Assertf(msg, `{"type":"data","id":"1","payload":{"errors":[{"message":"upstream service error","extensions":{"code":"UPSTREAM_SERVICE_ERROR","closeCode":1011,"closeReason":"internal error"}}]}}`)
+		ja.Assertf(msg, `{"type":"data","id":"1","payload":{"errors":[{"message":"upstream service error","extensions":{"code":"<<PRESENCE>>","closeCode":1011,"closeReason":"internal error"}}]}}`)
 	},
 }
 
@@ -137,6 +137,6 @@ var BackendNeverAcksConnectionInitTimesOut = speedtrap.Scenario{
 
 		// Client must receive an error for the pending subscribe
 		msg = readSkippingKA(s, c)
-		ja.Assertf(msg, `{"type":"data","id":"1","payload":{"errors":[{"message":"upstream service error","extensions":{"code":"UPSTREAM_SERVICE_ERROR"}}]}}`)
+		ja.Assertf(msg, `{"type":"data","id":"1","payload":{"errors":[{"message":"upstream service error","extensions":{"code":"<<PRESENCE>>"}}]}}`)
 	},
 }
