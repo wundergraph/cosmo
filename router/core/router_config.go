@@ -123,6 +123,7 @@ type Config struct {
 	tlsServerConfig               *tls.Config
 	tlsConfig                     *TlsConfig
 	subgraphTLSConfiguration      config.ClientTLSConfiguration
+	subgraphGRPCTLSConfiguration  config.GRPCClientTLSConfiguration
 	telemetryAttributes           []config.CustomAttribute
 	tracePropagators              []propagation.TextMapPropagator
 	compositePropagator           propagation.TextMapPropagator

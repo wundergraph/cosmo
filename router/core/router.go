@@ -2307,6 +2307,12 @@ func WithSubgraphTLSConfiguration(cfg config.ClientTLSConfiguration) Option {
 	}
 }
 
+func WithSubgraphGRPCTLSConfiguration(cfg config.GRPCClientTLSConfiguration) Option {
+	return func(r *Router) {
+		r.subgraphGRPCTLSConfiguration = cfg
+	}
+}
+
 func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	return func(r *Router) {
 		r.telemetryAttributes = attributes

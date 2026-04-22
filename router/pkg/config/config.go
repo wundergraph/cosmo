@@ -890,9 +890,17 @@ type ClientTLSConfiguration struct {
 	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
 }
 
+type GRPCClientTLSConfiguration struct {
+	// All applies to all gRPC subgraph connections.
+	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_GRPC_ALL_"`
+	// Subgraphs overrides per-subgraph gRPC TLS config. Key is the subgraph name.
+	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
 type TLSConfiguration struct {
-	Server TLSServerConfiguration `yaml:"server"`
-	Client ClientTLSConfiguration `yaml:"client"`
+	Server     TLSServerConfiguration     `yaml:"server"`
+	Client     ClientTLSConfiguration     `yaml:"client"`
+	ClientGRPC GRPCClientTLSConfiguration `yaml:"client_grpc"`
 }
 
 type SubgraphErrorPropagationMode string

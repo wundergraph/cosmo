@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -105,6 +106,8 @@ type (
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
 		headerPropagation       *HeaderPropagation
+		defaultGRPCClientTLS    *tls.Config
+		perSubgraphGRPCTLS      map[string]*tls.Config
 	}
 )
 
@@ -147,10 +150,16 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		traceDialer = NewTraceDialer()
 	}
 
-	// Build subgraph client TLS configs (mTLS for outbound subgraph connections)
-	defaultClientTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(r.logger, &r.subgraphTLSConfiguration)
+	// Build subgraph client TLS configs (mTLS for outbound HTTP subgraph connections)
+	defaultClientTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(r.logger, r.subgraphTLSConfiguration.All, r.subgraphTLSConfiguration.Subgraphs)
 	if err != nil {
 		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+	}
+
+	// Build gRPC subgraph client TLS configs
+	defaultGRPCClientTLS, perSubgraphGRPCTLS, err := buildSubgraphTLSConfigs(r.logger, r.subgraphGRPCTLSConfiguration.All, r.subgraphGRPCTLSConfiguration.Subgraphs)
+	if err != nil {
+		return nil, fmt.Errorf("could not build gRPC subgraph client TLS config: %w", err)
 	}
 
 	// Base transport
@@ -193,8 +202,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
 		},
-		storageProviders:  &r.storageProviders,
-		headerPropagation: r.headerPropagation,
+		storageProviders:     &r.storageProviders,
+		headerPropagation:    r.headerPropagation,
+		defaultGRPCClientTLS: defaultGRPCClientTLS,
+		perSubgraphGRPCTLS:   perSubgraphGRPCTLS,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -1769,9 +1780,18 @@ func (s *graphServer) setupConnector(
 
 		pluginConfig := grpcConfig.GetPlugin()
 		if pluginConfig == nil {
+			// Resolve per-subgraph gRPC TLS config, falling back to the default.
+			var grpcTLS *tls.Config
+			if sgTLS, ok := s.perSubgraphGRPCTLS[sg.Name]; ok {
+				grpcTLS = sgTLS
+			} else {
+				grpcTLS = s.defaultGRPCClientTLS
+			}
+
 			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
-				Logger:   s.logger,
-				Endpoint: sg.RoutingUrl,
+				Logger:    s.logger,
+				Endpoint:  sg.RoutingUrl,
+				TLSConfig: grpcTLS,
 			})
 
 			if err != nil {

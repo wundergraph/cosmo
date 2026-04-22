@@ -140,6 +140,15 @@
         "InsecureSkipCaVerification": false
       },
       "Subgraphs": null
+    },
+    "ClientGRPC": {
+      "All": {
+        "CertFile": "",
+        "KeyFile": "",
+        "CaFile": "",
+        "InsecureSkipCaVerification": false
+      },
+      "Subgraphs": null
     }
   },
   "CacheControl": {
