@@ -20,8 +20,7 @@ import (
 	"github.com/gobwas/ws/wsutil"
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
+	"github.com/tidwall/sjson"
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -34,7 +33,8 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
-	"github.com/tidwall/sjson"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
 )
 
 var errClientTerminatedConnection = errors.New("client terminated connection")

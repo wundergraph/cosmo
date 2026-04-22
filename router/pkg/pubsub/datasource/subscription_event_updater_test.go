@@ -694,7 +694,6 @@ func TestSubscriptionEventUpdater_UpdateEvents_EmptyEvents(t *testing.T) {
 	mockUpdater.AssertNotCalled(t, "Update")
 }
 
-
 func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscription(t *testing.T) {
 	testCases := []struct {
 		name      string
