@@ -39,8 +39,8 @@ overrides:
   minimatch@10.x: 10.2.4
   express-rate-limit: 8.2.2
   serialize-javascript: 7.0.3
-  markdown-it: '>=14.1.1'
-  lodash: '>=4.18.1'
+  markdown-it: 14.1.1
+  lodash: 4.18.1
 
 patchedDependencies:
   graphql@16.9.0:
@@ -404,7 +404,7 @@ importers:
         specifier: 16.9.0
         version: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
       lodash:
-        specifier: '>=4.18.1'
+        specifier: 4.18.1
         version: 4.18.1
       pathe:
         specifier: ^1.1.1
@@ -805,7 +805,7 @@ importers:
         specifier: ^5.16.0
         version: 5.16.0(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
       lodash:
-        specifier: '>=4.18.1'
+        specifier: 4.18.1
         version: 4.18.1
       monaco-editor:
         specifier: ^0.45.0
@@ -1184,7 +1184,7 @@ importers:
         specifier: ^3.0.5
         version: 3.0.5
       lodash:
-        specifier: '>=4.18.1'
+        specifier: 4.18.1
         version: 4.18.1
       lz-string:
         specifier: ^1.5.0
