@@ -104,7 +104,7 @@ events:
 	require.NoError(t, err)
 }
 
-func TestValidNatsTLSInsecureSkipVerify(t *testing.T) {
+func TestValidNatsTLSInsecureSkipCaVerification(t *testing.T) {
 	t.Parallel()
 
 	f := createTempFileFromFixture(t, `
@@ -119,7 +119,7 @@ events:
       - id: default
         url: "nats://localhost:4222"
         tls:
-          insecure_skip_verify: true
+          insecure_skip_ca_verification: true
 
 `)
 

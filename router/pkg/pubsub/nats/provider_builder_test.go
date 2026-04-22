@@ -87,12 +87,31 @@ func TestBuildNatsOptions(t *testing.T) {
 }
 
 func TestBuildNatsOptionsWithTLS(t *testing.T) {
-	t.Run("insecure skip verify is allowed", func(t *testing.T) {
+	t.Run("empty tls block enables TLS with system trust store", func(t *testing.T) {
+		cfg := config.NatsEventSource{
+			ID:  "test-nats",
+			URL: "nats://localhost:4222",
+			TLS: &config.NatsTLSConfiguration{},
+		}
+		logger := zaptest.NewLogger(t)
+
+		opts, err := buildNatsOptions(cfg, logger)
+		require.NoError(t, err)
+
+		natsOpts := applyNatsOptions(t, opts)
+		require.True(t, natsOpts.Secure)
+		require.NotNil(t, natsOpts.TLSConfig)
+		require.False(t, natsOpts.TLSConfig.InsecureSkipVerify)
+		require.Nil(t, natsOpts.TLSConfig.RootCAs)
+		require.Empty(t, natsOpts.TLSConfig.Certificates)
+	})
+
+	t.Run("insecure skip ca verification is allowed", func(t *testing.T) {
 		cfg := config.NatsEventSource{
 			ID:  "test-nats",
 			URL: "nats://localhost:4222",
 			TLS: &config.NatsTLSConfiguration{
-				InsecureSkipVerify: true,
+				InsecureSkipCaVerification: true,
 			},
 		}
 		logger := zaptest.NewLogger(t)

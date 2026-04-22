@@ -119,11 +119,11 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 
 	if eventSource.TLS != nil {
 		tlsCfg := &tls.Config{
-			InsecureSkipVerify: eventSource.TLS.InsecureSkipVerify,
+			InsecureSkipVerify: eventSource.TLS.InsecureSkipCaVerification,
 		}
 
-		if eventSource.TLS.InsecureSkipVerify {
-			logger.Warn("TLS InsecureSkipVerify is enabled for NATS provider. This is not recommended for production environments.", zap.String("provider_id", eventSource.ID))
+		if eventSource.TLS.InsecureSkipCaVerification {
+			logger.Warn("TLS InsecureSkipCaVerification is enabled for NATS provider. This is not recommended for production environments.", zap.String("provider_id", eventSource.ID))
 		}
 
 		if eventSource.TLS.CaFile != "" {

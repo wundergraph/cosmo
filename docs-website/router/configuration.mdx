@@ -1747,7 +1747,7 @@ events:
 |                      | authentication.user_info.username | <Icon icon="square" />                        | Username.                                                                                |               |
 |                      | authentication.user_info.password | <Icon icon="square" />                        | Password.                                                                                |               |
 |                      | tls                               | <Icon icon="square" />                        | TLS configuration for the NATS provider.                                                 |               |
-|                      | tls.insecure_skip_verify          | <Icon icon="square" />                        | Skip server certificate verification. Not recommended for production.                    | false         |
+|                      | tls.insecure_skip_ca_verification | <Icon icon="square" />                        | Skip server certificate verification. Not recommended for production.                    | false         |
 |                      | tls.ca_file                       | <Icon icon="square" />                        | Path to a custom CA certificate file (PEM) used to verify the server certificate. Defaults to the host's system trust store. |               |
 |                      | tls.cert_file                     | <Icon icon="square" />                        | Path to the client certificate file (PEM) for mTLS. Must be set together with `key_file`.             |               |
 |                      | tls.key_file                      | <Icon icon="square" />                        | Path to the client private key file (PEM) for mTLS. Must be set together with `cert_file`.            |               |
@@ -1759,7 +1759,7 @@ The NATS provider supports four TLS modes:
 | Mode | Config |
 |---|---|
 | No TLS | Omit the `tls` block |
-| TLS with skip verify | `insecure_skip_verify: true` |
+| TLS with skip verify | `insecure_skip_ca_verification: true` |
 | TLS with custom CA | `ca_file: /path/to/ca.crt` |
 | Mutual TLS (mTLS) | `cert_file` + `key_file` (plus optional `ca_file`) |
 
@@ -1771,7 +1771,7 @@ The NATS provider supports four TLS modes:
         - id: my-nats
           url: "nats://localhost:4222"
           tls:
-            insecure_skip_verify: true
+            insecure_skip_ca_verification: true
   ```
 
   ```yaml Custom CA (1-way TLS)
@@ -1798,7 +1798,7 @@ The NATS provider supports four TLS modes:
 </CodeGroup>
 
 <Warning>
-  `insecure_skip_verify: true` disables server certificate verification. Do not use in production.
+  `insecure_skip_ca_verification: true` disables server certificate verification. Do not use in production.
 </Warning>
 
 ### Kafka Provider
