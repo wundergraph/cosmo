@@ -614,11 +614,8 @@ func (h *WebsocketHandler) closeAllConnections() {
 	}
 	h.connectionsMu.Unlock()
 
-	for range handlers {
-		h.stats.ConnectionsDec()
-	}
-
 	for _, handler := range handlers {
+		h.stats.ConnectionsDec()
 		handler.Close(true, SubscriptionCloseKindGoingAway)
 	}
 }
