@@ -318,7 +318,6 @@ func (r *subscriptionResolver) Metadata(ctx context.Context, repeat int) (<-chan
 		defer close(ch)
 
 		for range repeat {
-			// In our example we'll send the current time every second.
 			time.Sleep(100 * time.Millisecond)
 			select {
 			case <-ctx.Done():
