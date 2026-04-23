@@ -181,7 +181,12 @@ func processBatchedRequest(w http.ResponseWriter, r *http.Request, handlerOpts H
 }
 
 func processBatchError(w http.ResponseWriter, r *http.Request, err error, requestLogger *zap.Logger) {
-	ctrace.AttachErrToSpanFromContext(r.Context(), err)
+	if errors.Is(err, context.Canceled) {
+		span := trace.SpanFromContext(r.Context())
+		span.RecordError(err)
+	} else {
+		ctrace.AttachErrToSpanFromContext(r.Context(), err)
+	}
 
 	requestError := graphqlerrors.RequestError{
 		Message: err.Error(),
