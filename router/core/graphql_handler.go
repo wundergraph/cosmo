@@ -370,7 +370,24 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 // WriteError writes the error to the response writer. This function must be concurrency-safe.
 // @TODO This function should be refactored to be a helper function for websocket and http error writing
 // In the websocket case, we call this function concurrently as part of the polling loop. This is error-prone.
+// WriteError is used by the resolver's AsyncErrorWriter and by request-scoped
+// handlers. For subscription writers it emits a non-terminal error frame
+// (inlined into a next/data frame) so the subscription stays alive — the
+// per-update contract in the resolver. Terminal subscription failures should
+// call WriteTerminalError instead.
 func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer) {
+	h.writeError(ctx, err, res, w, false)
+}
+
+// WriteTerminalError delivers a terminal error to a subscription writer. The
+// writer emits a protocol-level error frame (and, for subscriptions-transport-ws,
+// a following complete) so the client stops the subscription. For
+// non-subscription writers this behaves identically to WriteError.
+func (h *GraphQLHandler) WriteTerminalError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer) {
+	h.writeError(ctx, err, res, w, true)
+}
+
+func (h *GraphQLHandler) writeError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer, terminal bool) {
 	reqContext := getRequestContext(ctx.Context())
 
 	if reqContext == nil {
@@ -516,15 +533,26 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 			requestLogger.Error("Unable to marshal error response", zap.Error(encErr))
 			return
 		}
-		sub.Error(data)
-	} else {
-		err = json.NewEncoder(w).Encode(response)
-		if err != nil {
-			if rErrors.IsBrokenPipe(err) {
-				requestLogger.Warn("Broken pipe, unable to write error response", zap.Error(err))
-			} else {
-				requestLogger.Error("Unable to write error response", zap.Error(err))
-			}
+		if terminal || isTerminalSubscriptionError(err) {
+			sub.Error(data)
+			return
+		}
+		if _, wErr := sub.Write(data); wErr != nil {
+			requestLogger.Debug("Unable to write error response", zap.Error(wErr))
+			return
+		}
+		if flushErr := sub.Flush(); flushErr != nil {
+			requestLogger.Debug("Unable to flush error response", zap.Error(flushErr))
+		}
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		if rErrors.IsBrokenPipe(err) {
+			requestLogger.Warn("Broken pipe, unable to write error response", zap.Error(err))
+		} else {
+			requestLogger.Error("Unable to write error response", zap.Error(err))
 		}
 	}
 }

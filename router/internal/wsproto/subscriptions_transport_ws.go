@@ -113,22 +113,20 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLData(id string, data json
 }
 
 func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error {
-	// subscriptions-transport-ws reserves "error" for pre-execution failures.
-	// Terminal runtime errors are delivered as a "data" frame with the errors
-	// inside the ExecutionResult, followed by a "complete" to end the stream.
+	// subscriptions-transport-ws reserves "error" for pre-execution failures,
+	// so runtime errors are delivered as a "data" frame with the errors inside
+	// the ExecutionResult. Callers decide whether to follow up with "complete"
+	// (for terminal errors) via Complete.
 	data, err := sjson.SetBytes([]byte(`{}`), "errors", errors)
 	if err != nil {
 		return fmt.Errorf("encoding JSON: %w", err)
 	}
-	if err := p.conn.WriteJSON(subscriptionsTransportWSMessage{
+	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:         id,
 		Type:       subscriptionsTransportWSMessageTypeData,
 		Payload:    data,
 		Extensions: extensions,
-	}); err != nil {
-		return err
-	}
-	return p.Complete(id)
+	})
 }
 
 func (p *subscriptionsTransportWSProtocol) Close(code ws.StatusCode, reason string) error {

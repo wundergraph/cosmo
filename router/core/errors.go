@@ -55,6 +55,24 @@ type (
 	}
 )
 
+// isTerminalSubscriptionError reports whether the given error, when surfaced
+// from the resolver during a subscription, should terminate the stream rather
+// than being delivered inline as a per-update error. These are errors that
+// invalidate the whole subscription (auth reject, upgrade failure, rate limit)
+// — continuing to deliver updates after one of these wouldn't be meaningful.
+func isTerminalSubscriptionError(err error) bool {
+	switch getErrorType(err) {
+	case errorTypeUnauthorized,
+		errorTypeUpgradeFailed,
+		errorTypeInvalidWsSubprotocol,
+		errorTypeRateLimit,
+		errorTypeContextCanceled,
+		errorTypeContextTimeout:
+		return true
+	}
+	return false
+}
+
 func getErrorType(err error) errorType {
 	if errors.Is(err, ErrRateLimitExceeded) {
 		return errorTypeRateLimit

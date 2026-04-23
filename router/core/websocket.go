@@ -685,6 +685,12 @@ func (rw *websocketResponseWriter) Heartbeat() error {
 	return nil
 }
 
+// Error delivers a terminal error payload. The subscription will not
+// produce any further messages after this call, so protocols that need
+// an explicit termination frame (subscriptions-transport-ws: complete
+// after data+errors) emit it here. Non-terminal per-update errors must
+// use Flush with errors buffered via Write, which keeps the subscription
+// alive.
 func (rw *websocketResponseWriter) Error(data []byte) {
 	if rw.subscriptions != nil {
 		rw.subscriptions.Delete(rw.id)
@@ -700,9 +706,17 @@ func (rw *websocketResponseWriter) Error(data []byte) {
 	} else {
 		errors = json.RawMessage(`[{"message":"Unable to subscribe"}]`)
 	}
-	err := rw.protocol.WriteGraphQLErrors(rw.id, errors, nil)
-	if err != nil {
+	if err := rw.protocol.WriteGraphQLErrors(rw.id, errors, nil); err != nil {
 		rw.logger.Debug("Sending error message", zap.Error(err))
+		return
+	}
+	// subscriptions-transport-ws clients rely on an explicit "complete" to end
+	// the stream after a data+errors frame. graphql-transport-ws treats the
+	// "error" frame as terminal per spec, so no follow-up is needed there.
+	if rw.protocol.Subprotocol() == wsproto.SubscriptionsTransportWSSubprotocol {
+		if err := rw.protocol.Complete(rw.id); err != nil {
+			rw.logger.Debug("Sending complete after error", zap.Error(err))
+		}
 	}
 }
 
@@ -726,6 +740,10 @@ func (rw *websocketResponseWriter) Flush() error {
 			}
 		}
 
+		// Errors inside the buffered payload are emitted inline as part of the
+		// execution result (a non-terminal "next"/"data" frame) so the
+		// subscription stays alive. Terminal errors go through Error, which uses
+		// the protocol-level error frame.
 		if !rw.propagateErrors {
 			if errorsResult := gjson.GetBytes(payload, "errors"); errorsResult.Type == gjson.JSON {
 				payload, _ = sjson.SetRawBytes(payload, "errors", []byte(`[{"message":"Unable to subscribe"}]`))
@@ -1134,7 +1152,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), registration.id)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
-			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw)
+			// Subscription setup failed so no updates will follow. Send a terminal
+			// error frame and stop.
+			h.graphqlHandler.WriteTerminalError(resolveCtx, err, p.Response.Response, rw)
 			return
 		}
 	}
