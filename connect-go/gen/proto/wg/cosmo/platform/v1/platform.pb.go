@@ -796,7 +796,7 @@ func (x GetOperationsResponse_OperationType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use GetOperationsResponse_OperationType.Descriptor instead.
 func (GetOperationsResponse_OperationType) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{424, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{428, 0}
 }
 
 type Label struct {
@@ -19218,6 +19218,254 @@ func (x *GetClientsResponse) GetClients() []*ClientInfo {
 	return nil
 }
 
+type PreviewDeleteClientRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FedGraphName  string                 `protobuf:"bytes,1,opt,name=fedGraphName,proto3" json:"fedGraphName,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	ClientName    string                 `protobuf:"bytes,3,opt,name=clientName,proto3" json:"clientName,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PreviewDeleteClientRequest) Reset() {
+	*x = PreviewDeleteClientRequest{}
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[286]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PreviewDeleteClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PreviewDeleteClientRequest) ProtoMessage() {}
+
+func (x *PreviewDeleteClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[286]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PreviewDeleteClientRequest.ProtoReflect.Descriptor instead.
+func (*PreviewDeleteClientRequest) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{286}
+}
+
+func (x *PreviewDeleteClientRequest) GetFedGraphName() string {
+	if x != nil {
+		return x.FedGraphName
+	}
+	return ""
+}
+
+func (x *PreviewDeleteClientRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *PreviewDeleteClientRequest) GetClientName() string {
+	if x != nil {
+		return x.ClientName
+	}
+	return ""
+}
+
+type PreviewDeleteClientResponse struct {
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Response                 *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	Client                   *ClientInfo            `protobuf:"bytes,2,opt,name=client,proto3" json:"client,omitempty"`
+	PersistedOperationsCount int32                  `protobuf:"varint,3,opt,name=persistedOperationsCount,proto3" json:"persistedOperationsCount,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *PreviewDeleteClientResponse) Reset() {
+	*x = PreviewDeleteClientResponse{}
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[287]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PreviewDeleteClientResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PreviewDeleteClientResponse) ProtoMessage() {}
+
+func (x *PreviewDeleteClientResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[287]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PreviewDeleteClientResponse.ProtoReflect.Descriptor instead.
+func (*PreviewDeleteClientResponse) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{287}
+}
+
+func (x *PreviewDeleteClientResponse) GetResponse() *Response {
+	if x != nil {
+		return x.Response
+	}
+	return nil
+}
+
+func (x *PreviewDeleteClientResponse) GetClient() *ClientInfo {
+	if x != nil {
+		return x.Client
+	}
+	return nil
+}
+
+func (x *PreviewDeleteClientResponse) GetPersistedOperationsCount() int32 {
+	if x != nil {
+		return x.PersistedOperationsCount
+	}
+	return 0
+}
+
+type DeleteClientRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FedGraphName  string                 `protobuf:"bytes,1,opt,name=fedGraphName,proto3" json:"fedGraphName,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	ClientName    string                 `protobuf:"bytes,3,opt,name=clientName,proto3" json:"clientName,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteClientRequest) Reset() {
+	*x = DeleteClientRequest{}
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[288]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteClientRequest) ProtoMessage() {}
+
+func (x *DeleteClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[288]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteClientRequest.ProtoReflect.Descriptor instead.
+func (*DeleteClientRequest) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{288}
+}
+
+func (x *DeleteClientRequest) GetFedGraphName() string {
+	if x != nil {
+		return x.FedGraphName
+	}
+	return ""
+}
+
+func (x *DeleteClientRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *DeleteClientRequest) GetClientName() string {
+	if x != nil {
+		return x.ClientName
+	}
+	return ""
+}
+
+type DeleteClientResponse struct {
+	state                  protoimpl.MessageState            `protogen:"open.v1"`
+	Response               *Response                         `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	Client                 *ClientInfo                       `protobuf:"bytes,2,opt,name=client,proto3" json:"client,omitempty"`
+	DeletedOperationsCount int32                             `protobuf:"varint,3,opt,name=deletedOperationsCount,proto3" json:"deletedOperationsCount,omitempty"`
+	DeletedOperations      []*DeleteClientResponse_Operation `protobuf:"bytes,4,rep,name=deletedOperations,proto3" json:"deletedOperations,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *DeleteClientResponse) Reset() {
+	*x = DeleteClientResponse{}
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[289]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteClientResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteClientResponse) ProtoMessage() {}
+
+func (x *DeleteClientResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[289]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteClientResponse.ProtoReflect.Descriptor instead.
+func (*DeleteClientResponse) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{289}
+}
+
+func (x *DeleteClientResponse) GetResponse() *Response {
+	if x != nil {
+		return x.Response
+	}
+	return nil
+}
+
+func (x *DeleteClientResponse) GetClient() *ClientInfo {
+	if x != nil {
+		return x.Client
+	}
+	return nil
+}
+
+func (x *DeleteClientResponse) GetDeletedOperationsCount() int32 {
+	if x != nil {
+		return x.DeletedOperationsCount
+	}
+	return 0
+}
+
+func (x *DeleteClientResponse) GetDeletedOperations() []*DeleteClientResponse_Operation {
+	if x != nil {
+		return x.DeletedOperations
+	}
+	return nil
+}
+
 type GetFieldUsageRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	GraphName       string                 `protobuf:"bytes,1,opt,name=graph_name,json=graphName,proto3" json:"graph_name,omitempty"`
@@ -19236,7 +19484,7 @@ type GetFieldUsageRequest struct {
 
 func (x *GetFieldUsageRequest) Reset() {
 	*x = GetFieldUsageRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[286]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[290]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19248,7 +19496,7 @@ func (x *GetFieldUsageRequest) String() string {
 func (*GetFieldUsageRequest) ProtoMessage() {}
 
 func (x *GetFieldUsageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[286]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[290]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19261,7 +19509,7 @@ func (x *GetFieldUsageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFieldUsageRequest.ProtoReflect.Descriptor instead.
 func (*GetFieldUsageRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{286}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{290}
 }
 
 func (x *GetFieldUsageRequest) GetGraphName() string {
@@ -19345,7 +19593,7 @@ type ClientWithOperations struct {
 
 func (x *ClientWithOperations) Reset() {
 	*x = ClientWithOperations{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[287]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[291]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19357,7 +19605,7 @@ func (x *ClientWithOperations) String() string {
 func (*ClientWithOperations) ProtoMessage() {}
 
 func (x *ClientWithOperations) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[287]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[291]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19370,7 +19618,7 @@ func (x *ClientWithOperations) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientWithOperations.ProtoReflect.Descriptor instead.
 func (*ClientWithOperations) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{287}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{291}
 }
 
 func (x *ClientWithOperations) GetName() string {
@@ -19405,7 +19653,7 @@ type FieldUsageMeta struct {
 
 func (x *FieldUsageMeta) Reset() {
 	*x = FieldUsageMeta{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[288]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[292]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19417,7 +19665,7 @@ func (x *FieldUsageMeta) String() string {
 func (*FieldUsageMeta) ProtoMessage() {}
 
 func (x *FieldUsageMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[288]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[292]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19430,7 +19678,7 @@ func (x *FieldUsageMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldUsageMeta.ProtoReflect.Descriptor instead.
 func (*FieldUsageMeta) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{288}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{292}
 }
 
 func (x *FieldUsageMeta) GetSubgraphIds() []string {
@@ -19466,7 +19714,7 @@ type GetFieldUsageResponse struct {
 
 func (x *GetFieldUsageResponse) Reset() {
 	*x = GetFieldUsageResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[289]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[293]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19478,7 +19726,7 @@ func (x *GetFieldUsageResponse) String() string {
 func (*GetFieldUsageResponse) ProtoMessage() {}
 
 func (x *GetFieldUsageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[289]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[293]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19491,7 +19739,7 @@ func (x *GetFieldUsageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFieldUsageResponse.ProtoReflect.Descriptor instead.
 func (*GetFieldUsageResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{289}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{293}
 }
 
 func (x *GetFieldUsageResponse) GetResponse() *Response {
@@ -19531,7 +19779,7 @@ type CreateNamespaceRequest struct {
 
 func (x *CreateNamespaceRequest) Reset() {
 	*x = CreateNamespaceRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[290]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[294]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19543,7 +19791,7 @@ func (x *CreateNamespaceRequest) String() string {
 func (*CreateNamespaceRequest) ProtoMessage() {}
 
 func (x *CreateNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[290]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[294]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19556,7 +19804,7 @@ func (x *CreateNamespaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateNamespaceRequest.ProtoReflect.Descriptor instead.
 func (*CreateNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{290}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{294}
 }
 
 func (x *CreateNamespaceRequest) GetName() string {
@@ -19575,7 +19823,7 @@ type CreateNamespaceResponse struct {
 
 func (x *CreateNamespaceResponse) Reset() {
 	*x = CreateNamespaceResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[291]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[295]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19587,7 +19835,7 @@ func (x *CreateNamespaceResponse) String() string {
 func (*CreateNamespaceResponse) ProtoMessage() {}
 
 func (x *CreateNamespaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[291]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[295]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19600,7 +19848,7 @@ func (x *CreateNamespaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateNamespaceResponse.ProtoReflect.Descriptor instead.
 func (*CreateNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{291}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{295}
 }
 
 func (x *CreateNamespaceResponse) GetResponse() *Response {
@@ -19619,7 +19867,7 @@ type DeleteNamespaceRequest struct {
 
 func (x *DeleteNamespaceRequest) Reset() {
 	*x = DeleteNamespaceRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[292]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[296]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19631,7 +19879,7 @@ func (x *DeleteNamespaceRequest) String() string {
 func (*DeleteNamespaceRequest) ProtoMessage() {}
 
 func (x *DeleteNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[292]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[296]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19644,7 +19892,7 @@ func (x *DeleteNamespaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteNamespaceRequest.ProtoReflect.Descriptor instead.
 func (*DeleteNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{292}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{296}
 }
 
 func (x *DeleteNamespaceRequest) GetName() string {
@@ -19663,7 +19911,7 @@ type DeleteNamespaceResponse struct {
 
 func (x *DeleteNamespaceResponse) Reset() {
 	*x = DeleteNamespaceResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[293]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[297]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19675,7 +19923,7 @@ func (x *DeleteNamespaceResponse) String() string {
 func (*DeleteNamespaceResponse) ProtoMessage() {}
 
 func (x *DeleteNamespaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[293]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[297]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19688,7 +19936,7 @@ func (x *DeleteNamespaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteNamespaceResponse.ProtoReflect.Descriptor instead.
 func (*DeleteNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{293}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{297}
 }
 
 func (x *DeleteNamespaceResponse) GetResponse() *Response {
@@ -19708,7 +19956,7 @@ type RenameNamespaceRequest struct {
 
 func (x *RenameNamespaceRequest) Reset() {
 	*x = RenameNamespaceRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[294]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[298]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19720,7 +19968,7 @@ func (x *RenameNamespaceRequest) String() string {
 func (*RenameNamespaceRequest) ProtoMessage() {}
 
 func (x *RenameNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[294]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[298]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19733,7 +19981,7 @@ func (x *RenameNamespaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameNamespaceRequest.ProtoReflect.Descriptor instead.
 func (*RenameNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{294}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{298}
 }
 
 func (x *RenameNamespaceRequest) GetName() string {
@@ -19759,7 +20007,7 @@ type RenameNamespaceResponse struct {
 
 func (x *RenameNamespaceResponse) Reset() {
 	*x = RenameNamespaceResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[295]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[299]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19771,7 +20019,7 @@ func (x *RenameNamespaceResponse) String() string {
 func (*RenameNamespaceResponse) ProtoMessage() {}
 
 func (x *RenameNamespaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[295]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[299]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19784,7 +20032,7 @@ func (x *RenameNamespaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameNamespaceResponse.ProtoReflect.Descriptor instead.
 func (*RenameNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{295}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{299}
 }
 
 func (x *RenameNamespaceResponse) GetResponse() *Response {
@@ -19804,7 +20052,7 @@ type Namespace struct {
 
 func (x *Namespace) Reset() {
 	*x = Namespace{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[296]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[300]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19816,7 +20064,7 @@ func (x *Namespace) String() string {
 func (*Namespace) ProtoMessage() {}
 
 func (x *Namespace) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[296]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[300]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19829,7 +20077,7 @@ func (x *Namespace) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Namespace.ProtoReflect.Descriptor instead.
 func (*Namespace) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{296}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{300}
 }
 
 func (x *Namespace) GetId() string {
@@ -19854,7 +20102,7 @@ type GetNamespacesRequest struct {
 
 func (x *GetNamespacesRequest) Reset() {
 	*x = GetNamespacesRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[297]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[301]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19866,7 +20114,7 @@ func (x *GetNamespacesRequest) String() string {
 func (*GetNamespacesRequest) ProtoMessage() {}
 
 func (x *GetNamespacesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[297]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[301]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19879,7 +20127,7 @@ func (x *GetNamespacesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamespacesRequest.ProtoReflect.Descriptor instead.
 func (*GetNamespacesRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{297}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{301}
 }
 
 type GetNamespacesResponse struct {
@@ -19892,7 +20140,7 @@ type GetNamespacesResponse struct {
 
 func (x *GetNamespacesResponse) Reset() {
 	*x = GetNamespacesResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[298]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[302]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19904,7 +20152,7 @@ func (x *GetNamespacesResponse) String() string {
 func (*GetNamespacesResponse) ProtoMessage() {}
 
 func (x *GetNamespacesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[298]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[302]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19917,7 +20165,7 @@ func (x *GetNamespacesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamespacesResponse.ProtoReflect.Descriptor instead.
 func (*GetNamespacesResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{298}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{302}
 }
 
 func (x *GetNamespacesResponse) GetResponse() *Response {
@@ -19946,7 +20194,7 @@ type MoveGraphRequest struct {
 
 func (x *MoveGraphRequest) Reset() {
 	*x = MoveGraphRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[299]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[303]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19958,7 +20206,7 @@ func (x *MoveGraphRequest) String() string {
 func (*MoveGraphRequest) ProtoMessage() {}
 
 func (x *MoveGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[299]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[303]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19971,7 +20219,7 @@ func (x *MoveGraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveGraphRequest.ProtoReflect.Descriptor instead.
 func (*MoveGraphRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{299}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{303}
 }
 
 func (x *MoveGraphRequest) GetName() string {
@@ -20014,7 +20262,7 @@ type MoveGraphResponse struct {
 
 func (x *MoveGraphResponse) Reset() {
 	*x = MoveGraphResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[300]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[304]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20026,7 +20274,7 @@ func (x *MoveGraphResponse) String() string {
 func (*MoveGraphResponse) ProtoMessage() {}
 
 func (x *MoveGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[300]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[304]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20039,7 +20287,7 @@ func (x *MoveGraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveGraphResponse.ProtoReflect.Descriptor instead.
 func (*MoveGraphResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{300}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{304}
 }
 
 func (x *MoveGraphResponse) GetResponse() *Response {
@@ -20079,7 +20327,7 @@ type GetNamespaceLintConfigRequest struct {
 
 func (x *GetNamespaceLintConfigRequest) Reset() {
 	*x = GetNamespaceLintConfigRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[301]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[305]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20091,7 +20339,7 @@ func (x *GetNamespaceLintConfigRequest) String() string {
 func (*GetNamespaceLintConfigRequest) ProtoMessage() {}
 
 func (x *GetNamespaceLintConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[301]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[305]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20104,7 +20352,7 @@ func (x *GetNamespaceLintConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamespaceLintConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetNamespaceLintConfigRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{301}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{305}
 }
 
 func (x *GetNamespaceLintConfigRequest) GetNamespace() string {
@@ -20125,7 +20373,7 @@ type GetNamespaceLintConfigResponse struct {
 
 func (x *GetNamespaceLintConfigResponse) Reset() {
 	*x = GetNamespaceLintConfigResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[302]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[306]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20137,7 +20385,7 @@ func (x *GetNamespaceLintConfigResponse) String() string {
 func (*GetNamespaceLintConfigResponse) ProtoMessage() {}
 
 func (x *GetNamespaceLintConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[302]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[306]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20150,7 +20398,7 @@ func (x *GetNamespaceLintConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamespaceLintConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetNamespaceLintConfigResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{302}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{306}
 }
 
 func (x *GetNamespaceLintConfigResponse) GetResponse() *Response {
@@ -20183,7 +20431,7 @@ type GetNamespaceChecksConfigurationRequest struct {
 
 func (x *GetNamespaceChecksConfigurationRequest) Reset() {
 	*x = GetNamespaceChecksConfigurationRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[303]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[307]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20195,7 +20443,7 @@ func (x *GetNamespaceChecksConfigurationRequest) String() string {
 func (*GetNamespaceChecksConfigurationRequest) ProtoMessage() {}
 
 func (x *GetNamespaceChecksConfigurationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[303]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[307]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20208,7 +20456,7 @@ func (x *GetNamespaceChecksConfigurationRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use GetNamespaceChecksConfigurationRequest.ProtoReflect.Descriptor instead.
 func (*GetNamespaceChecksConfigurationRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{303}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{307}
 }
 
 func (x *GetNamespaceChecksConfigurationRequest) GetNamespace() string {
@@ -20229,7 +20477,7 @@ type GetNamespaceChecksConfigurationResponse struct {
 
 func (x *GetNamespaceChecksConfigurationResponse) Reset() {
 	*x = GetNamespaceChecksConfigurationResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[304]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[308]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20241,7 +20489,7 @@ func (x *GetNamespaceChecksConfigurationResponse) String() string {
 func (*GetNamespaceChecksConfigurationResponse) ProtoMessage() {}
 
 func (x *GetNamespaceChecksConfigurationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[304]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[308]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20254,7 +20502,7 @@ func (x *GetNamespaceChecksConfigurationResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use GetNamespaceChecksConfigurationResponse.ProtoReflect.Descriptor instead.
 func (*GetNamespaceChecksConfigurationResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{304}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{308}
 }
 
 func (x *GetNamespaceChecksConfigurationResponse) GetResponse() *Response {
@@ -20288,7 +20536,7 @@ type UpdateNamespaceChecksConfigurationRequest struct {
 
 func (x *UpdateNamespaceChecksConfigurationRequest) Reset() {
 	*x = UpdateNamespaceChecksConfigurationRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[305]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[309]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20300,7 +20548,7 @@ func (x *UpdateNamespaceChecksConfigurationRequest) String() string {
 func (*UpdateNamespaceChecksConfigurationRequest) ProtoMessage() {}
 
 func (x *UpdateNamespaceChecksConfigurationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[305]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[309]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20313,7 +20561,7 @@ func (x *UpdateNamespaceChecksConfigurationRequest) ProtoReflect() protoreflect.
 
 // Deprecated: Use UpdateNamespaceChecksConfigurationRequest.ProtoReflect.Descriptor instead.
 func (*UpdateNamespaceChecksConfigurationRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{305}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{309}
 }
 
 func (x *UpdateNamespaceChecksConfigurationRequest) GetNamespace() string {
@@ -20339,7 +20587,7 @@ type UpdateNamespaceChecksConfigurationResponse struct {
 
 func (x *UpdateNamespaceChecksConfigurationResponse) Reset() {
 	*x = UpdateNamespaceChecksConfigurationResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[306]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[310]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20351,7 +20599,7 @@ func (x *UpdateNamespaceChecksConfigurationResponse) String() string {
 func (*UpdateNamespaceChecksConfigurationResponse) ProtoMessage() {}
 
 func (x *UpdateNamespaceChecksConfigurationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[306]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[310]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20364,7 +20612,7 @@ func (x *UpdateNamespaceChecksConfigurationResponse) ProtoReflect() protoreflect
 
 // Deprecated: Use UpdateNamespaceChecksConfigurationResponse.ProtoReflect.Descriptor instead.
 func (*UpdateNamespaceChecksConfigurationResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{306}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{310}
 }
 
 func (x *UpdateNamespaceChecksConfigurationResponse) GetResponse() *Response {
@@ -20384,7 +20632,7 @@ type EnableLintingForTheNamespaceRequest struct {
 
 func (x *EnableLintingForTheNamespaceRequest) Reset() {
 	*x = EnableLintingForTheNamespaceRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[307]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[311]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20396,7 +20644,7 @@ func (x *EnableLintingForTheNamespaceRequest) String() string {
 func (*EnableLintingForTheNamespaceRequest) ProtoMessage() {}
 
 func (x *EnableLintingForTheNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[307]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[311]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20409,7 +20657,7 @@ func (x *EnableLintingForTheNamespaceRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use EnableLintingForTheNamespaceRequest.ProtoReflect.Descriptor instead.
 func (*EnableLintingForTheNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{307}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{311}
 }
 
 func (x *EnableLintingForTheNamespaceRequest) GetNamespace() string {
@@ -20435,7 +20683,7 @@ type EnableLintingForTheNamespaceResponse struct {
 
 func (x *EnableLintingForTheNamespaceResponse) Reset() {
 	*x = EnableLintingForTheNamespaceResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[308]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[312]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20447,7 +20695,7 @@ func (x *EnableLintingForTheNamespaceResponse) String() string {
 func (*EnableLintingForTheNamespaceResponse) ProtoMessage() {}
 
 func (x *EnableLintingForTheNamespaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[308]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[312]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20460,7 +20708,7 @@ func (x *EnableLintingForTheNamespaceResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use EnableLintingForTheNamespaceResponse.ProtoReflect.Descriptor instead.
 func (*EnableLintingForTheNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{308}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{312}
 }
 
 func (x *EnableLintingForTheNamespaceResponse) GetResponse() *Response {
@@ -20480,7 +20728,7 @@ type LintConfig struct {
 
 func (x *LintConfig) Reset() {
 	*x = LintConfig{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[309]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[313]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20492,7 +20740,7 @@ func (x *LintConfig) String() string {
 func (*LintConfig) ProtoMessage() {}
 
 func (x *LintConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[309]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[313]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20505,7 +20753,7 @@ func (x *LintConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LintConfig.ProtoReflect.Descriptor instead.
 func (*LintConfig) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{309}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{313}
 }
 
 func (x *LintConfig) GetRuleName() string {
@@ -20532,7 +20780,7 @@ type ConfigureNamespaceLintConfigRequest struct {
 
 func (x *ConfigureNamespaceLintConfigRequest) Reset() {
 	*x = ConfigureNamespaceLintConfigRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[310]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[314]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20544,7 +20792,7 @@ func (x *ConfigureNamespaceLintConfigRequest) String() string {
 func (*ConfigureNamespaceLintConfigRequest) ProtoMessage() {}
 
 func (x *ConfigureNamespaceLintConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[310]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[314]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20557,7 +20805,7 @@ func (x *ConfigureNamespaceLintConfigRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ConfigureNamespaceLintConfigRequest.ProtoReflect.Descriptor instead.
 func (*ConfigureNamespaceLintConfigRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{310}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{314}
 }
 
 func (x *ConfigureNamespaceLintConfigRequest) GetNamespace() string {
@@ -20583,7 +20831,7 @@ type ConfigureNamespaceLintConfigResponse struct {
 
 func (x *ConfigureNamespaceLintConfigResponse) Reset() {
 	*x = ConfigureNamespaceLintConfigResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[311]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[315]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20595,7 +20843,7 @@ func (x *ConfigureNamespaceLintConfigResponse) String() string {
 func (*ConfigureNamespaceLintConfigResponse) ProtoMessage() {}
 
 func (x *ConfigureNamespaceLintConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[311]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[315]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20608,7 +20856,7 @@ func (x *ConfigureNamespaceLintConfigResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ConfigureNamespaceLintConfigResponse.ProtoReflect.Descriptor instead.
 func (*ConfigureNamespaceLintConfigResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{311}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{315}
 }
 
 func (x *ConfigureNamespaceLintConfigResponse) GetResponse() *Response {
@@ -20628,7 +20876,7 @@ type EnableGraphPruningRequest struct {
 
 func (x *EnableGraphPruningRequest) Reset() {
 	*x = EnableGraphPruningRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[312]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[316]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20640,7 +20888,7 @@ func (x *EnableGraphPruningRequest) String() string {
 func (*EnableGraphPruningRequest) ProtoMessage() {}
 
 func (x *EnableGraphPruningRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[312]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[316]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20653,7 +20901,7 @@ func (x *EnableGraphPruningRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnableGraphPruningRequest.ProtoReflect.Descriptor instead.
 func (*EnableGraphPruningRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{312}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{316}
 }
 
 func (x *EnableGraphPruningRequest) GetNamespace() string {
@@ -20679,7 +20927,7 @@ type EnableGraphPruningResponse struct {
 
 func (x *EnableGraphPruningResponse) Reset() {
 	*x = EnableGraphPruningResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[313]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[317]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20691,7 +20939,7 @@ func (x *EnableGraphPruningResponse) String() string {
 func (*EnableGraphPruningResponse) ProtoMessage() {}
 
 func (x *EnableGraphPruningResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[313]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[317]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20704,7 +20952,7 @@ func (x *EnableGraphPruningResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnableGraphPruningResponse.ProtoReflect.Descriptor instead.
 func (*EnableGraphPruningResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{313}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{317}
 }
 
 func (x *EnableGraphPruningResponse) GetResponse() *Response {
@@ -20726,7 +20974,7 @@ type GraphPruningConfig struct {
 
 func (x *GraphPruningConfig) Reset() {
 	*x = GraphPruningConfig{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[314]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[318]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20738,7 +20986,7 @@ func (x *GraphPruningConfig) String() string {
 func (*GraphPruningConfig) ProtoMessage() {}
 
 func (x *GraphPruningConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[314]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[318]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20751,7 +20999,7 @@ func (x *GraphPruningConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphPruningConfig.ProtoReflect.Descriptor instead.
 func (*GraphPruningConfig) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{314}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{318}
 }
 
 func (x *GraphPruningConfig) GetRuleName() string {
@@ -20792,7 +21040,7 @@ type ConfigureNamespaceGraphPruningConfigRequest struct {
 
 func (x *ConfigureNamespaceGraphPruningConfigRequest) Reset() {
 	*x = ConfigureNamespaceGraphPruningConfigRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[315]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[319]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20804,7 +21052,7 @@ func (x *ConfigureNamespaceGraphPruningConfigRequest) String() string {
 func (*ConfigureNamespaceGraphPruningConfigRequest) ProtoMessage() {}
 
 func (x *ConfigureNamespaceGraphPruningConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[315]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[319]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20817,7 +21065,7 @@ func (x *ConfigureNamespaceGraphPruningConfigRequest) ProtoReflect() protoreflec
 
 // Deprecated: Use ConfigureNamespaceGraphPruningConfigRequest.ProtoReflect.Descriptor instead.
 func (*ConfigureNamespaceGraphPruningConfigRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{315}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{319}
 }
 
 func (x *ConfigureNamespaceGraphPruningConfigRequest) GetNamespace() string {
@@ -20843,7 +21091,7 @@ type ConfigureNamespaceGraphPruningConfigResponse struct {
 
 func (x *ConfigureNamespaceGraphPruningConfigResponse) Reset() {
 	*x = ConfigureNamespaceGraphPruningConfigResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[316]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[320]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20855,7 +21103,7 @@ func (x *ConfigureNamespaceGraphPruningConfigResponse) String() string {
 func (*ConfigureNamespaceGraphPruningConfigResponse) ProtoMessage() {}
 
 func (x *ConfigureNamespaceGraphPruningConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[316]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[320]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20868,7 +21116,7 @@ func (x *ConfigureNamespaceGraphPruningConfigResponse) ProtoReflect() protorefle
 
 // Deprecated: Use ConfigureNamespaceGraphPruningConfigResponse.ProtoReflect.Descriptor instead.
 func (*ConfigureNamespaceGraphPruningConfigResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{316}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{320}
 }
 
 func (x *ConfigureNamespaceGraphPruningConfigResponse) GetResponse() *Response {
@@ -20887,7 +21135,7 @@ type GetNamespaceGraphPruningConfigRequest struct {
 
 func (x *GetNamespaceGraphPruningConfigRequest) Reset() {
 	*x = GetNamespaceGraphPruningConfigRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[317]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[321]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20899,7 +21147,7 @@ func (x *GetNamespaceGraphPruningConfigRequest) String() string {
 func (*GetNamespaceGraphPruningConfigRequest) ProtoMessage() {}
 
 func (x *GetNamespaceGraphPruningConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[317]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[321]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20912,7 +21160,7 @@ func (x *GetNamespaceGraphPruningConfigRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use GetNamespaceGraphPruningConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetNamespaceGraphPruningConfigRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{317}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{321}
 }
 
 func (x *GetNamespaceGraphPruningConfigRequest) GetNamespace() string {
@@ -20933,7 +21181,7 @@ type GetNamespaceGraphPruningConfigResponse struct {
 
 func (x *GetNamespaceGraphPruningConfigResponse) Reset() {
 	*x = GetNamespaceGraphPruningConfigResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[318]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[322]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -20945,7 +21193,7 @@ func (x *GetNamespaceGraphPruningConfigResponse) String() string {
 func (*GetNamespaceGraphPruningConfigResponse) ProtoMessage() {}
 
 func (x *GetNamespaceGraphPruningConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[318]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[322]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -20958,7 +21206,7 @@ func (x *GetNamespaceGraphPruningConfigResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use GetNamespaceGraphPruningConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetNamespaceGraphPruningConfigResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{318}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{322}
 }
 
 func (x *GetNamespaceGraphPruningConfigResponse) GetResponse() *Response {
@@ -20992,7 +21240,7 @@ type MigrateMonographRequest struct {
 
 func (x *MigrateMonographRequest) Reset() {
 	*x = MigrateMonographRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[319]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[323]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21004,7 +21252,7 @@ func (x *MigrateMonographRequest) String() string {
 func (*MigrateMonographRequest) ProtoMessage() {}
 
 func (x *MigrateMonographRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[319]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[323]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21017,7 +21265,7 @@ func (x *MigrateMonographRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MigrateMonographRequest.ProtoReflect.Descriptor instead.
 func (*MigrateMonographRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{319}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{323}
 }
 
 func (x *MigrateMonographRequest) GetName() string {
@@ -21043,7 +21291,7 @@ type MigrateMonographResponse struct {
 
 func (x *MigrateMonographResponse) Reset() {
 	*x = MigrateMonographResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[320]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[324]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21055,7 +21303,7 @@ func (x *MigrateMonographResponse) String() string {
 func (*MigrateMonographResponse) ProtoMessage() {}
 
 func (x *MigrateMonographResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[320]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[324]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21068,7 +21316,7 @@ func (x *MigrateMonographResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MigrateMonographResponse.ProtoReflect.Descriptor instead.
 func (*MigrateMonographResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{320}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{324}
 }
 
 func (x *MigrateMonographResponse) GetResponse() *Response {
@@ -21086,7 +21334,7 @@ type GetUserAccessiblePermissionsRequest struct {
 
 func (x *GetUserAccessiblePermissionsRequest) Reset() {
 	*x = GetUserAccessiblePermissionsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[321]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[325]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21098,7 +21346,7 @@ func (x *GetUserAccessiblePermissionsRequest) String() string {
 func (*GetUserAccessiblePermissionsRequest) ProtoMessage() {}
 
 func (x *GetUserAccessiblePermissionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[321]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[325]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21111,7 +21359,7 @@ func (x *GetUserAccessiblePermissionsRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GetUserAccessiblePermissionsRequest.ProtoReflect.Descriptor instead.
 func (*GetUserAccessiblePermissionsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{321}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{325}
 }
 
 type Permission struct {
@@ -21124,7 +21372,7 @@ type Permission struct {
 
 func (x *Permission) Reset() {
 	*x = Permission{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[322]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[326]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21136,7 +21384,7 @@ func (x *Permission) String() string {
 func (*Permission) ProtoMessage() {}
 
 func (x *Permission) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[322]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[326]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21149,7 +21397,7 @@ func (x *Permission) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Permission.ProtoReflect.Descriptor instead.
 func (*Permission) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{322}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{326}
 }
 
 func (x *Permission) GetDisplayName() string {
@@ -21176,7 +21424,7 @@ type GetUserAccessiblePermissionsResponse struct {
 
 func (x *GetUserAccessiblePermissionsResponse) Reset() {
 	*x = GetUserAccessiblePermissionsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[323]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[327]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21188,7 +21436,7 @@ func (x *GetUserAccessiblePermissionsResponse) String() string {
 func (*GetUserAccessiblePermissionsResponse) ProtoMessage() {}
 
 func (x *GetUserAccessiblePermissionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[323]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[327]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21201,7 +21449,7 @@ func (x *GetUserAccessiblePermissionsResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetUserAccessiblePermissionsResponse.ProtoReflect.Descriptor instead.
 func (*GetUserAccessiblePermissionsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{323}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{327}
 }
 
 func (x *GetUserAccessiblePermissionsResponse) GetResponse() *Response {
@@ -21236,7 +21484,7 @@ type CreateContractRequest struct {
 
 func (x *CreateContractRequest) Reset() {
 	*x = CreateContractRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[324]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[328]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21248,7 +21496,7 @@ func (x *CreateContractRequest) String() string {
 func (*CreateContractRequest) ProtoMessage() {}
 
 func (x *CreateContractRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[324]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[328]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21261,7 +21509,7 @@ func (x *CreateContractRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateContractRequest.ProtoReflect.Descriptor instead.
 func (*CreateContractRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{324}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{328}
 }
 
 func (x *CreateContractRequest) GetName() string {
@@ -21346,7 +21594,7 @@ type CreateContractResponse struct {
 
 func (x *CreateContractResponse) Reset() {
 	*x = CreateContractResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[325]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[329]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21358,7 +21606,7 @@ func (x *CreateContractResponse) String() string {
 func (*CreateContractResponse) ProtoMessage() {}
 
 func (x *CreateContractResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[325]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[329]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21371,7 +21619,7 @@ func (x *CreateContractResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateContractResponse.ProtoReflect.Descriptor instead.
 func (*CreateContractResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{325}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{329}
 }
 
 func (x *CreateContractResponse) GetResponse() *Response {
@@ -21419,7 +21667,7 @@ type UpdateContractRequest struct {
 
 func (x *UpdateContractRequest) Reset() {
 	*x = UpdateContractRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[326]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[330]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21431,7 +21679,7 @@ func (x *UpdateContractRequest) String() string {
 func (*UpdateContractRequest) ProtoMessage() {}
 
 func (x *UpdateContractRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[326]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[330]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21444,7 +21692,7 @@ func (x *UpdateContractRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateContractRequest.ProtoReflect.Descriptor instead.
 func (*UpdateContractRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{326}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{330}
 }
 
 func (x *UpdateContractRequest) GetName() string {
@@ -21522,7 +21770,7 @@ type UpdateContractResponse struct {
 
 func (x *UpdateContractResponse) Reset() {
 	*x = UpdateContractResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[327]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[331]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21534,7 +21782,7 @@ func (x *UpdateContractResponse) String() string {
 func (*UpdateContractResponse) ProtoMessage() {}
 
 func (x *UpdateContractResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[327]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[331]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21547,7 +21795,7 @@ func (x *UpdateContractResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateContractResponse.ProtoReflect.Descriptor instead.
 func (*UpdateContractResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{327}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{331}
 }
 
 func (x *UpdateContractResponse) GetResponse() *Response {
@@ -21586,7 +21834,7 @@ type IsMemberLimitReachedRequest struct {
 
 func (x *IsMemberLimitReachedRequest) Reset() {
 	*x = IsMemberLimitReachedRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[328]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[332]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21598,7 +21846,7 @@ func (x *IsMemberLimitReachedRequest) String() string {
 func (*IsMemberLimitReachedRequest) ProtoMessage() {}
 
 func (x *IsMemberLimitReachedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[328]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[332]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21611,7 +21859,7 @@ func (x *IsMemberLimitReachedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IsMemberLimitReachedRequest.ProtoReflect.Descriptor instead.
 func (*IsMemberLimitReachedRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{328}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{332}
 }
 
 type IsMemberLimitReachedResponse struct {
@@ -21625,7 +21873,7 @@ type IsMemberLimitReachedResponse struct {
 
 func (x *IsMemberLimitReachedResponse) Reset() {
 	*x = IsMemberLimitReachedResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[329]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[333]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21637,7 +21885,7 @@ func (x *IsMemberLimitReachedResponse) String() string {
 func (*IsMemberLimitReachedResponse) ProtoMessage() {}
 
 func (x *IsMemberLimitReachedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[329]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[333]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21650,7 +21898,7 @@ func (x *IsMemberLimitReachedResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IsMemberLimitReachedResponse.ProtoReflect.Descriptor instead.
 func (*IsMemberLimitReachedResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{329}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{333}
 }
 
 func (x *IsMemberLimitReachedResponse) GetResponse() *Response {
@@ -21682,7 +21930,7 @@ type DeleteUserRequest struct {
 
 func (x *DeleteUserRequest) Reset() {
 	*x = DeleteUserRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[330]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[334]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21694,7 +21942,7 @@ func (x *DeleteUserRequest) String() string {
 func (*DeleteUserRequest) ProtoMessage() {}
 
 func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[330]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[334]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21707,7 +21955,7 @@ func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserRequest.ProtoReflect.Descriptor instead.
 func (*DeleteUserRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{330}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{334}
 }
 
 type DeleteUserResponse struct {
@@ -21719,7 +21967,7 @@ type DeleteUserResponse struct {
 
 func (x *DeleteUserResponse) Reset() {
 	*x = DeleteUserResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[331]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[335]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21731,7 +21979,7 @@ func (x *DeleteUserResponse) String() string {
 func (*DeleteUserResponse) ProtoMessage() {}
 
 func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[331]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[335]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21744,7 +21992,7 @@ func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserResponse.ProtoReflect.Descriptor instead.
 func (*DeleteUserResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{331}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{335}
 }
 
 func (x *DeleteUserResponse) GetResponse() *Response {
@@ -21768,7 +22016,7 @@ type CreateFeatureFlagRequest struct {
 
 func (x *CreateFeatureFlagRequest) Reset() {
 	*x = CreateFeatureFlagRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[332]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[336]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21780,7 +22028,7 @@ func (x *CreateFeatureFlagRequest) String() string {
 func (*CreateFeatureFlagRequest) ProtoMessage() {}
 
 func (x *CreateFeatureFlagRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[332]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[336]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21793,7 +22041,7 @@ func (x *CreateFeatureFlagRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateFeatureFlagRequest.ProtoReflect.Descriptor instead.
 func (*CreateFeatureFlagRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{332}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{336}
 }
 
 func (x *CreateFeatureFlagRequest) GetName() string {
@@ -21850,7 +22098,7 @@ type CreateFeatureFlagResponse struct {
 
 func (x *CreateFeatureFlagResponse) Reset() {
 	*x = CreateFeatureFlagResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[333]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[337]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21862,7 +22110,7 @@ func (x *CreateFeatureFlagResponse) String() string {
 func (*CreateFeatureFlagResponse) ProtoMessage() {}
 
 func (x *CreateFeatureFlagResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[333]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[337]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21875,7 +22123,7 @@ func (x *CreateFeatureFlagResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateFeatureFlagResponse.ProtoReflect.Descriptor instead.
 func (*CreateFeatureFlagResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{333}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{337}
 }
 
 func (x *CreateFeatureFlagResponse) GetResponse() *Response {
@@ -21920,7 +22168,7 @@ type UpdateFeatureFlagRequest struct {
 
 func (x *UpdateFeatureFlagRequest) Reset() {
 	*x = UpdateFeatureFlagRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[334]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[338]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -21932,7 +22180,7 @@ func (x *UpdateFeatureFlagRequest) String() string {
 func (*UpdateFeatureFlagRequest) ProtoMessage() {}
 
 func (x *UpdateFeatureFlagRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[334]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[338]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -21945,7 +22193,7 @@ func (x *UpdateFeatureFlagRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFeatureFlagRequest.ProtoReflect.Descriptor instead.
 func (*UpdateFeatureFlagRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{334}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{338}
 }
 
 func (x *UpdateFeatureFlagRequest) GetName() string {
@@ -22002,7 +22250,7 @@ type UpdateFeatureFlagResponse struct {
 
 func (x *UpdateFeatureFlagResponse) Reset() {
 	*x = UpdateFeatureFlagResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[335]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[339]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22014,7 +22262,7 @@ func (x *UpdateFeatureFlagResponse) String() string {
 func (*UpdateFeatureFlagResponse) ProtoMessage() {}
 
 func (x *UpdateFeatureFlagResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[335]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[339]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22027,7 +22275,7 @@ func (x *UpdateFeatureFlagResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFeatureFlagResponse.ProtoReflect.Descriptor instead.
 func (*UpdateFeatureFlagResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{335}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{339}
 }
 
 func (x *UpdateFeatureFlagResponse) GetResponse() *Response {
@@ -22070,7 +22318,7 @@ type EnableFeatureFlagRequest struct {
 
 func (x *EnableFeatureFlagRequest) Reset() {
 	*x = EnableFeatureFlagRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[336]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[340]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22082,7 +22330,7 @@ func (x *EnableFeatureFlagRequest) String() string {
 func (*EnableFeatureFlagRequest) ProtoMessage() {}
 
 func (x *EnableFeatureFlagRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[336]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[340]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22095,7 +22343,7 @@ func (x *EnableFeatureFlagRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnableFeatureFlagRequest.ProtoReflect.Descriptor instead.
 func (*EnableFeatureFlagRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{336}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{340}
 }
 
 func (x *EnableFeatureFlagRequest) GetName() string {
@@ -22139,7 +22387,7 @@ type EnableFeatureFlagResponse struct {
 
 func (x *EnableFeatureFlagResponse) Reset() {
 	*x = EnableFeatureFlagResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[337]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[341]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22151,7 +22399,7 @@ func (x *EnableFeatureFlagResponse) String() string {
 func (*EnableFeatureFlagResponse) ProtoMessage() {}
 
 func (x *EnableFeatureFlagResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[337]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[341]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22164,7 +22412,7 @@ func (x *EnableFeatureFlagResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnableFeatureFlagResponse.ProtoReflect.Descriptor instead.
 func (*EnableFeatureFlagResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{337}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{341}
 }
 
 func (x *EnableFeatureFlagResponse) GetResponse() *Response {
@@ -22213,7 +22461,7 @@ type DeleteFeatureFlagRequest struct {
 
 func (x *DeleteFeatureFlagRequest) Reset() {
 	*x = DeleteFeatureFlagRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[338]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[342]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22225,7 +22473,7 @@ func (x *DeleteFeatureFlagRequest) String() string {
 func (*DeleteFeatureFlagRequest) ProtoMessage() {}
 
 func (x *DeleteFeatureFlagRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[338]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[342]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22238,7 +22486,7 @@ func (x *DeleteFeatureFlagRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFeatureFlagRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFeatureFlagRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{338}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{342}
 }
 
 func (x *DeleteFeatureFlagRequest) GetName() string {
@@ -22274,7 +22522,7 @@ type DeleteFeatureFlagResponse struct {
 
 func (x *DeleteFeatureFlagResponse) Reset() {
 	*x = DeleteFeatureFlagResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[339]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[343]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22286,7 +22534,7 @@ func (x *DeleteFeatureFlagResponse) String() string {
 func (*DeleteFeatureFlagResponse) ProtoMessage() {}
 
 func (x *DeleteFeatureFlagResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[339]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[343]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22299,7 +22547,7 @@ func (x *DeleteFeatureFlagResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFeatureFlagResponse.ProtoReflect.Descriptor instead.
 func (*DeleteFeatureFlagResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{339}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{343}
 }
 
 func (x *DeleteFeatureFlagResponse) GetResponse() *Response {
@@ -22346,7 +22594,7 @@ type FeatureFlag struct {
 
 func (x *FeatureFlag) Reset() {
 	*x = FeatureFlag{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[340]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[344]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22358,7 +22606,7 @@ func (x *FeatureFlag) String() string {
 func (*FeatureFlag) ProtoMessage() {}
 
 func (x *FeatureFlag) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[340]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[344]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22371,7 +22619,7 @@ func (x *FeatureFlag) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FeatureFlag.ProtoReflect.Descriptor instead.
 func (*FeatureFlag) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{340}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{344}
 }
 
 func (x *FeatureFlag) GetId() string {
@@ -22442,7 +22690,7 @@ type GetFeatureFlagsRequest struct {
 
 func (x *GetFeatureFlagsRequest) Reset() {
 	*x = GetFeatureFlagsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[341]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[345]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22454,7 +22702,7 @@ func (x *GetFeatureFlagsRequest) String() string {
 func (*GetFeatureFlagsRequest) ProtoMessage() {}
 
 func (x *GetFeatureFlagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[341]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[345]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22467,7 +22715,7 @@ func (x *GetFeatureFlagsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFeatureFlagsRequest.ProtoReflect.Descriptor instead.
 func (*GetFeatureFlagsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{341}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{345}
 }
 
 func (x *GetFeatureFlagsRequest) GetLimit() int32 {
@@ -22509,7 +22757,7 @@ type GetFeatureFlagsResponse struct {
 
 func (x *GetFeatureFlagsResponse) Reset() {
 	*x = GetFeatureFlagsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[342]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[346]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22521,7 +22769,7 @@ func (x *GetFeatureFlagsResponse) String() string {
 func (*GetFeatureFlagsResponse) ProtoMessage() {}
 
 func (x *GetFeatureFlagsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[342]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[346]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22534,7 +22782,7 @@ func (x *GetFeatureFlagsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFeatureFlagsResponse.ProtoReflect.Descriptor instead.
 func (*GetFeatureFlagsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{342}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{346}
 }
 
 func (x *GetFeatureFlagsResponse) GetResponse() *Response {
@@ -22568,7 +22816,7 @@ type GetFeatureFlagByNameRequest struct {
 
 func (x *GetFeatureFlagByNameRequest) Reset() {
 	*x = GetFeatureFlagByNameRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[343]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[347]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22580,7 +22828,7 @@ func (x *GetFeatureFlagByNameRequest) String() string {
 func (*GetFeatureFlagByNameRequest) ProtoMessage() {}
 
 func (x *GetFeatureFlagByNameRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[343]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[347]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22593,7 +22841,7 @@ func (x *GetFeatureFlagByNameRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFeatureFlagByNameRequest.ProtoReflect.Descriptor instead.
 func (*GetFeatureFlagByNameRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{343}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{347}
 }
 
 func (x *GetFeatureFlagByNameRequest) GetName() string {
@@ -22622,7 +22870,7 @@ type GetFeatureFlagByNameResponse struct {
 
 func (x *GetFeatureFlagByNameResponse) Reset() {
 	*x = GetFeatureFlagByNameResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[344]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[348]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22634,7 +22882,7 @@ func (x *GetFeatureFlagByNameResponse) String() string {
 func (*GetFeatureFlagByNameResponse) ProtoMessage() {}
 
 func (x *GetFeatureFlagByNameResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[344]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[348]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22647,7 +22895,7 @@ func (x *GetFeatureFlagByNameResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFeatureFlagByNameResponse.ProtoReflect.Descriptor instead.
 func (*GetFeatureFlagByNameResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{344}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{348}
 }
 
 func (x *GetFeatureFlagByNameResponse) GetResponse() *Response {
@@ -22688,7 +22936,7 @@ type GetFeatureSubgraphsByFeatureFlagRequest struct {
 
 func (x *GetFeatureSubgraphsByFeatureFlagRequest) Reset() {
 	*x = GetFeatureSubgraphsByFeatureFlagRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[345]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[349]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22700,7 +22948,7 @@ func (x *GetFeatureSubgraphsByFeatureFlagRequest) String() string {
 func (*GetFeatureSubgraphsByFeatureFlagRequest) ProtoMessage() {}
 
 func (x *GetFeatureSubgraphsByFeatureFlagRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[345]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[349]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22713,7 +22961,7 @@ func (x *GetFeatureSubgraphsByFeatureFlagRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use GetFeatureSubgraphsByFeatureFlagRequest.ProtoReflect.Descriptor instead.
 func (*GetFeatureSubgraphsByFeatureFlagRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{345}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{349}
 }
 
 func (x *GetFeatureSubgraphsByFeatureFlagRequest) GetFeatureFlagName() string {
@@ -22740,7 +22988,7 @@ type GetFeatureSubgraphsByFeatureFlagResponse struct {
 
 func (x *GetFeatureSubgraphsByFeatureFlagResponse) Reset() {
 	*x = GetFeatureSubgraphsByFeatureFlagResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[346]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[350]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22752,7 +23000,7 @@ func (x *GetFeatureSubgraphsByFeatureFlagResponse) String() string {
 func (*GetFeatureSubgraphsByFeatureFlagResponse) ProtoMessage() {}
 
 func (x *GetFeatureSubgraphsByFeatureFlagResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[346]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[350]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22765,7 +23013,7 @@ func (x *GetFeatureSubgraphsByFeatureFlagResponse) ProtoReflect() protoreflect.M
 
 // Deprecated: Use GetFeatureSubgraphsByFeatureFlagResponse.ProtoReflect.Descriptor instead.
 func (*GetFeatureSubgraphsByFeatureFlagResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{346}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{350}
 }
 
 func (x *GetFeatureSubgraphsByFeatureFlagResponse) GetResponse() *Response {
@@ -22794,7 +23042,7 @@ type GetFeatureSubgraphsRequest struct {
 
 func (x *GetFeatureSubgraphsRequest) Reset() {
 	*x = GetFeatureSubgraphsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[347]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[351]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22806,7 +23054,7 @@ func (x *GetFeatureSubgraphsRequest) String() string {
 func (*GetFeatureSubgraphsRequest) ProtoMessage() {}
 
 func (x *GetFeatureSubgraphsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[347]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[351]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22819,7 +23067,7 @@ func (x *GetFeatureSubgraphsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFeatureSubgraphsRequest.ProtoReflect.Descriptor instead.
 func (*GetFeatureSubgraphsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{347}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{351}
 }
 
 func (x *GetFeatureSubgraphsRequest) GetLimit() int32 {
@@ -22861,7 +23109,7 @@ type GetFeatureSubgraphsResponse struct {
 
 func (x *GetFeatureSubgraphsResponse) Reset() {
 	*x = GetFeatureSubgraphsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[348]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[352]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22873,7 +23121,7 @@ func (x *GetFeatureSubgraphsResponse) String() string {
 func (*GetFeatureSubgraphsResponse) ProtoMessage() {}
 
 func (x *GetFeatureSubgraphsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[348]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[352]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22886,7 +23134,7 @@ func (x *GetFeatureSubgraphsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFeatureSubgraphsResponse.ProtoReflect.Descriptor instead.
 func (*GetFeatureSubgraphsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{348}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{352}
 }
 
 func (x *GetFeatureSubgraphsResponse) GetResponse() *Response {
@@ -22923,7 +23171,7 @@ type GetFeatureFlagsByFederatedGraphRequest struct {
 
 func (x *GetFeatureFlagsByFederatedGraphRequest) Reset() {
 	*x = GetFeatureFlagsByFederatedGraphRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[349]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[353]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -22935,7 +23183,7 @@ func (x *GetFeatureFlagsByFederatedGraphRequest) String() string {
 func (*GetFeatureFlagsByFederatedGraphRequest) ProtoMessage() {}
 
 func (x *GetFeatureFlagsByFederatedGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[349]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[353]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -22948,7 +23196,7 @@ func (x *GetFeatureFlagsByFederatedGraphRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use GetFeatureFlagsByFederatedGraphRequest.ProtoReflect.Descriptor instead.
 func (*GetFeatureFlagsByFederatedGraphRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{349}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{353}
 }
 
 func (x *GetFeatureFlagsByFederatedGraphRequest) GetFederatedGraphName() string {
@@ -22997,7 +23245,7 @@ type GetFeatureFlagsByFederatedGraphResponse struct {
 
 func (x *GetFeatureFlagsByFederatedGraphResponse) Reset() {
 	*x = GetFeatureFlagsByFederatedGraphResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[350]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[354]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23009,7 +23257,7 @@ func (x *GetFeatureFlagsByFederatedGraphResponse) String() string {
 func (*GetFeatureFlagsByFederatedGraphResponse) ProtoMessage() {}
 
 func (x *GetFeatureFlagsByFederatedGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[350]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[354]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23022,7 +23270,7 @@ func (x *GetFeatureFlagsByFederatedGraphResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use GetFeatureFlagsByFederatedGraphResponse.ProtoReflect.Descriptor instead.
 func (*GetFeatureFlagsByFederatedGraphResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{350}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{354}
 }
 
 func (x *GetFeatureFlagsByFederatedGraphResponse) GetResponse() *Response {
@@ -23056,7 +23304,7 @@ type GetFeatureFlagsInLatestCompositionByFederatedGraphRequest struct {
 
 func (x *GetFeatureFlagsInLatestCompositionByFederatedGraphRequest) Reset() {
 	*x = GetFeatureFlagsInLatestCompositionByFederatedGraphRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[351]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[355]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23068,7 +23316,7 @@ func (x *GetFeatureFlagsInLatestCompositionByFederatedGraphRequest) String() str
 func (*GetFeatureFlagsInLatestCompositionByFederatedGraphRequest) ProtoMessage() {}
 
 func (x *GetFeatureFlagsInLatestCompositionByFederatedGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[351]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[355]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23081,7 +23329,7 @@ func (x *GetFeatureFlagsInLatestCompositionByFederatedGraphRequest) ProtoReflect
 
 // Deprecated: Use GetFeatureFlagsInLatestCompositionByFederatedGraphRequest.ProtoReflect.Descriptor instead.
 func (*GetFeatureFlagsInLatestCompositionByFederatedGraphRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{351}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{355}
 }
 
 func (x *GetFeatureFlagsInLatestCompositionByFederatedGraphRequest) GetFederatedGraphName() string {
@@ -23109,7 +23357,7 @@ type GetFeatureFlagsInLatestCompositionByFederatedGraphResponse struct {
 
 func (x *GetFeatureFlagsInLatestCompositionByFederatedGraphResponse) Reset() {
 	*x = GetFeatureFlagsInLatestCompositionByFederatedGraphResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[352]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[356]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23121,7 +23369,7 @@ func (x *GetFeatureFlagsInLatestCompositionByFederatedGraphResponse) String() st
 func (*GetFeatureFlagsInLatestCompositionByFederatedGraphResponse) ProtoMessage() {}
 
 func (x *GetFeatureFlagsInLatestCompositionByFederatedGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[352]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[356]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23134,7 +23382,7 @@ func (x *GetFeatureFlagsInLatestCompositionByFederatedGraphResponse) ProtoReflec
 
 // Deprecated: Use GetFeatureFlagsInLatestCompositionByFederatedGraphResponse.ProtoReflect.Descriptor instead.
 func (*GetFeatureFlagsInLatestCompositionByFederatedGraphResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{352}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{356}
 }
 
 func (x *GetFeatureFlagsInLatestCompositionByFederatedGraphResponse) GetResponse() *Response {
@@ -23164,7 +23412,7 @@ type GetFeatureSubgraphsByFederatedGraphRequest struct {
 
 func (x *GetFeatureSubgraphsByFederatedGraphRequest) Reset() {
 	*x = GetFeatureSubgraphsByFederatedGraphRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[353]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[357]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23176,7 +23424,7 @@ func (x *GetFeatureSubgraphsByFederatedGraphRequest) String() string {
 func (*GetFeatureSubgraphsByFederatedGraphRequest) ProtoMessage() {}
 
 func (x *GetFeatureSubgraphsByFederatedGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[353]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[357]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23189,7 +23437,7 @@ func (x *GetFeatureSubgraphsByFederatedGraphRequest) ProtoReflect() protoreflect
 
 // Deprecated: Use GetFeatureSubgraphsByFederatedGraphRequest.ProtoReflect.Descriptor instead.
 func (*GetFeatureSubgraphsByFederatedGraphRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{353}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{357}
 }
 
 func (x *GetFeatureSubgraphsByFederatedGraphRequest) GetFederatedGraphName() string {
@@ -23239,7 +23487,7 @@ type GetFeatureSubgraphsByFederatedGraphResponse struct {
 
 func (x *GetFeatureSubgraphsByFederatedGraphResponse) Reset() {
 	*x = GetFeatureSubgraphsByFederatedGraphResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[354]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[358]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23251,7 +23499,7 @@ func (x *GetFeatureSubgraphsByFederatedGraphResponse) String() string {
 func (*GetFeatureSubgraphsByFederatedGraphResponse) ProtoMessage() {}
 
 func (x *GetFeatureSubgraphsByFederatedGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[354]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[358]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23264,7 +23512,7 @@ func (x *GetFeatureSubgraphsByFederatedGraphResponse) ProtoReflect() protoreflec
 
 // Deprecated: Use GetFeatureSubgraphsByFederatedGraphResponse.ProtoReflect.Descriptor instead.
 func (*GetFeatureSubgraphsByFederatedGraphResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{354}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{358}
 }
 
 func (x *GetFeatureSubgraphsByFederatedGraphResponse) GetResponse() *Response {
@@ -23299,7 +23547,7 @@ type GetOrganizationWebhookHistoryRequest struct {
 
 func (x *GetOrganizationWebhookHistoryRequest) Reset() {
 	*x = GetOrganizationWebhookHistoryRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[355]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[359]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23311,7 +23559,7 @@ func (x *GetOrganizationWebhookHistoryRequest) String() string {
 func (*GetOrganizationWebhookHistoryRequest) ProtoMessage() {}
 
 func (x *GetOrganizationWebhookHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[355]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[359]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23324,7 +23572,7 @@ func (x *GetOrganizationWebhookHistoryRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetOrganizationWebhookHistoryRequest.ProtoReflect.Descriptor instead.
 func (*GetOrganizationWebhookHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{355}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{359}
 }
 
 func (x *GetOrganizationWebhookHistoryRequest) GetPagination() *Pagination {
@@ -23372,7 +23620,7 @@ type WebhookDelivery struct {
 
 func (x *WebhookDelivery) Reset() {
 	*x = WebhookDelivery{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[356]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[360]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23384,7 +23632,7 @@ func (x *WebhookDelivery) String() string {
 func (*WebhookDelivery) ProtoMessage() {}
 
 func (x *WebhookDelivery) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[356]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[360]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23397,7 +23645,7 @@ func (x *WebhookDelivery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WebhookDelivery.ProtoReflect.Descriptor instead.
 func (*WebhookDelivery) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{356}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{360}
 }
 
 func (x *WebhookDelivery) GetId() string {
@@ -23523,7 +23771,7 @@ type GetOrganizationWebhookHistoryResponse struct {
 
 func (x *GetOrganizationWebhookHistoryResponse) Reset() {
 	*x = GetOrganizationWebhookHistoryResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[357]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[361]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23535,7 +23783,7 @@ func (x *GetOrganizationWebhookHistoryResponse) String() string {
 func (*GetOrganizationWebhookHistoryResponse) ProtoMessage() {}
 
 func (x *GetOrganizationWebhookHistoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[357]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[361]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23548,7 +23796,7 @@ func (x *GetOrganizationWebhookHistoryResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use GetOrganizationWebhookHistoryResponse.ProtoReflect.Descriptor instead.
 func (*GetOrganizationWebhookHistoryResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{357}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{361}
 }
 
 func (x *GetOrganizationWebhookHistoryResponse) GetResponse() *Response {
@@ -23581,7 +23829,7 @@ type RedeliverWebhookRequest struct {
 
 func (x *RedeliverWebhookRequest) Reset() {
 	*x = RedeliverWebhookRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[358]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[362]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23593,7 +23841,7 @@ func (x *RedeliverWebhookRequest) String() string {
 func (*RedeliverWebhookRequest) ProtoMessage() {}
 
 func (x *RedeliverWebhookRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[358]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[362]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23606,7 +23854,7 @@ func (x *RedeliverWebhookRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedeliverWebhookRequest.ProtoReflect.Descriptor instead.
 func (*RedeliverWebhookRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{358}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{362}
 }
 
 func (x *RedeliverWebhookRequest) GetId() string {
@@ -23625,7 +23873,7 @@ type RedeliverWebhookResponse struct {
 
 func (x *RedeliverWebhookResponse) Reset() {
 	*x = RedeliverWebhookResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[359]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[363]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23637,7 +23885,7 @@ func (x *RedeliverWebhookResponse) String() string {
 func (*RedeliverWebhookResponse) ProtoMessage() {}
 
 func (x *RedeliverWebhookResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[359]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[363]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23650,7 +23898,7 @@ func (x *RedeliverWebhookResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedeliverWebhookResponse.ProtoReflect.Descriptor instead.
 func (*RedeliverWebhookResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{359}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{363}
 }
 
 func (x *RedeliverWebhookResponse) GetResponse() *Response {
@@ -23669,7 +23917,7 @@ type GetWebhookDeliveryDetailsRequest struct {
 
 func (x *GetWebhookDeliveryDetailsRequest) Reset() {
 	*x = GetWebhookDeliveryDetailsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[360]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[364]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23681,7 +23929,7 @@ func (x *GetWebhookDeliveryDetailsRequest) String() string {
 func (*GetWebhookDeliveryDetailsRequest) ProtoMessage() {}
 
 func (x *GetWebhookDeliveryDetailsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[360]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[364]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23694,7 +23942,7 @@ func (x *GetWebhookDeliveryDetailsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWebhookDeliveryDetailsRequest.ProtoReflect.Descriptor instead.
 func (*GetWebhookDeliveryDetailsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{360}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{364}
 }
 
 func (x *GetWebhookDeliveryDetailsRequest) GetId() string {
@@ -23714,7 +23962,7 @@ type GetWebhookDeliveryDetailsResponse struct {
 
 func (x *GetWebhookDeliveryDetailsResponse) Reset() {
 	*x = GetWebhookDeliveryDetailsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[361]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[365]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23726,7 +23974,7 @@ func (x *GetWebhookDeliveryDetailsResponse) String() string {
 func (*GetWebhookDeliveryDetailsResponse) ProtoMessage() {}
 
 func (x *GetWebhookDeliveryDetailsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[361]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[365]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23739,7 +23987,7 @@ func (x *GetWebhookDeliveryDetailsResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetWebhookDeliveryDetailsResponse.ProtoReflect.Descriptor instead.
 func (*GetWebhookDeliveryDetailsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{361}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{365}
 }
 
 func (x *GetWebhookDeliveryDetailsResponse) GetResponse() *Response {
@@ -23767,7 +24015,7 @@ type CreatePlaygroundScriptRequest struct {
 
 func (x *CreatePlaygroundScriptRequest) Reset() {
 	*x = CreatePlaygroundScriptRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[362]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[366]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23779,7 +24027,7 @@ func (x *CreatePlaygroundScriptRequest) String() string {
 func (*CreatePlaygroundScriptRequest) ProtoMessage() {}
 
 func (x *CreatePlaygroundScriptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[362]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[366]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23792,7 +24040,7 @@ func (x *CreatePlaygroundScriptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePlaygroundScriptRequest.ProtoReflect.Descriptor instead.
 func (*CreatePlaygroundScriptRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{362}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{366}
 }
 
 func (x *CreatePlaygroundScriptRequest) GetTitle() string {
@@ -23825,7 +24073,7 @@ type CreatePlaygroundScriptResponse struct {
 
 func (x *CreatePlaygroundScriptResponse) Reset() {
 	*x = CreatePlaygroundScriptResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[363]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[367]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23837,7 +24085,7 @@ func (x *CreatePlaygroundScriptResponse) String() string {
 func (*CreatePlaygroundScriptResponse) ProtoMessage() {}
 
 func (x *CreatePlaygroundScriptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[363]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[367]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23850,7 +24098,7 @@ func (x *CreatePlaygroundScriptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePlaygroundScriptResponse.ProtoReflect.Descriptor instead.
 func (*CreatePlaygroundScriptResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{363}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{367}
 }
 
 func (x *CreatePlaygroundScriptResponse) GetResponse() *Response {
@@ -23869,7 +24117,7 @@ type DeletePlaygroundScriptRequest struct {
 
 func (x *DeletePlaygroundScriptRequest) Reset() {
 	*x = DeletePlaygroundScriptRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[364]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[368]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23881,7 +24129,7 @@ func (x *DeletePlaygroundScriptRequest) String() string {
 func (*DeletePlaygroundScriptRequest) ProtoMessage() {}
 
 func (x *DeletePlaygroundScriptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[364]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[368]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23894,7 +24142,7 @@ func (x *DeletePlaygroundScriptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePlaygroundScriptRequest.ProtoReflect.Descriptor instead.
 func (*DeletePlaygroundScriptRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{364}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{368}
 }
 
 func (x *DeletePlaygroundScriptRequest) GetId() string {
@@ -23913,7 +24161,7 @@ type DeletePlaygroundScriptResponse struct {
 
 func (x *DeletePlaygroundScriptResponse) Reset() {
 	*x = DeletePlaygroundScriptResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[365]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[369]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23925,7 +24173,7 @@ func (x *DeletePlaygroundScriptResponse) String() string {
 func (*DeletePlaygroundScriptResponse) ProtoMessage() {}
 
 func (x *DeletePlaygroundScriptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[365]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[369]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23938,7 +24186,7 @@ func (x *DeletePlaygroundScriptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePlaygroundScriptResponse.ProtoReflect.Descriptor instead.
 func (*DeletePlaygroundScriptResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{365}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{369}
 }
 
 func (x *DeletePlaygroundScriptResponse) GetResponse() *Response {
@@ -23959,7 +24207,7 @@ type UpdatePlaygroundScriptRequest struct {
 
 func (x *UpdatePlaygroundScriptRequest) Reset() {
 	*x = UpdatePlaygroundScriptRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[366]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[370]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -23971,7 +24219,7 @@ func (x *UpdatePlaygroundScriptRequest) String() string {
 func (*UpdatePlaygroundScriptRequest) ProtoMessage() {}
 
 func (x *UpdatePlaygroundScriptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[366]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[370]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -23984,7 +24232,7 @@ func (x *UpdatePlaygroundScriptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePlaygroundScriptRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePlaygroundScriptRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{366}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{370}
 }
 
 func (x *UpdatePlaygroundScriptRequest) GetId() string {
@@ -24017,7 +24265,7 @@ type UpdatePlaygroundScriptResponse struct {
 
 func (x *UpdatePlaygroundScriptResponse) Reset() {
 	*x = UpdatePlaygroundScriptResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[367]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[371]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24029,7 +24277,7 @@ func (x *UpdatePlaygroundScriptResponse) String() string {
 func (*UpdatePlaygroundScriptResponse) ProtoMessage() {}
 
 func (x *UpdatePlaygroundScriptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[367]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[371]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24042,7 +24290,7 @@ func (x *UpdatePlaygroundScriptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePlaygroundScriptResponse.ProtoReflect.Descriptor instead.
 func (*UpdatePlaygroundScriptResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{367}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{371}
 }
 
 func (x *UpdatePlaygroundScriptResponse) GetResponse() *Response {
@@ -24061,7 +24309,7 @@ type GetPlaygroundScriptsRequest struct {
 
 func (x *GetPlaygroundScriptsRequest) Reset() {
 	*x = GetPlaygroundScriptsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[368]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[372]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24073,7 +24321,7 @@ func (x *GetPlaygroundScriptsRequest) String() string {
 func (*GetPlaygroundScriptsRequest) ProtoMessage() {}
 
 func (x *GetPlaygroundScriptsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[368]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[372]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24086,7 +24334,7 @@ func (x *GetPlaygroundScriptsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlaygroundScriptsRequest.ProtoReflect.Descriptor instead.
 func (*GetPlaygroundScriptsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{368}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{372}
 }
 
 func (x *GetPlaygroundScriptsRequest) GetType() string {
@@ -24108,7 +24356,7 @@ type PlaygroundScript struct {
 
 func (x *PlaygroundScript) Reset() {
 	*x = PlaygroundScript{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[369]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[373]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24120,7 +24368,7 @@ func (x *PlaygroundScript) String() string {
 func (*PlaygroundScript) ProtoMessage() {}
 
 func (x *PlaygroundScript) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[369]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[373]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24133,7 +24381,7 @@ func (x *PlaygroundScript) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlaygroundScript.ProtoReflect.Descriptor instead.
 func (*PlaygroundScript) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{369}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{373}
 }
 
 func (x *PlaygroundScript) GetId() string {
@@ -24174,7 +24422,7 @@ type GetPlaygroundScriptsResponse struct {
 
 func (x *GetPlaygroundScriptsResponse) Reset() {
 	*x = GetPlaygroundScriptsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[370]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[374]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24186,7 +24434,7 @@ func (x *GetPlaygroundScriptsResponse) String() string {
 func (*GetPlaygroundScriptsResponse) ProtoMessage() {}
 
 func (x *GetPlaygroundScriptsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[370]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[374]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24199,7 +24447,7 @@ func (x *GetPlaygroundScriptsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPlaygroundScriptsResponse.ProtoReflect.Descriptor instead.
 func (*GetPlaygroundScriptsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{370}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{374}
 }
 
 func (x *GetPlaygroundScriptsResponse) GetResponse() *Response {
@@ -24226,7 +24474,7 @@ type GetFederatedGraphByIdRequest struct {
 
 func (x *GetFederatedGraphByIdRequest) Reset() {
 	*x = GetFederatedGraphByIdRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[371]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[375]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24238,7 +24486,7 @@ func (x *GetFederatedGraphByIdRequest) String() string {
 func (*GetFederatedGraphByIdRequest) ProtoMessage() {}
 
 func (x *GetFederatedGraphByIdRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[371]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[375]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24251,7 +24499,7 @@ func (x *GetFederatedGraphByIdRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFederatedGraphByIdRequest.ProtoReflect.Descriptor instead.
 func (*GetFederatedGraphByIdRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{371}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{375}
 }
 
 func (x *GetFederatedGraphByIdRequest) GetId() string {
@@ -24284,7 +24532,7 @@ type GetFederatedGraphByIdResponse struct {
 
 func (x *GetFederatedGraphByIdResponse) Reset() {
 	*x = GetFederatedGraphByIdResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[372]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[376]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24296,7 +24544,7 @@ func (x *GetFederatedGraphByIdResponse) String() string {
 func (*GetFederatedGraphByIdResponse) ProtoMessage() {}
 
 func (x *GetFederatedGraphByIdResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[372]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[376]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24309,7 +24557,7 @@ func (x *GetFederatedGraphByIdResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFederatedGraphByIdResponse.ProtoReflect.Descriptor instead.
 func (*GetFederatedGraphByIdResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{372}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{376}
 }
 
 func (x *GetFederatedGraphByIdResponse) GetResponse() *Response {
@@ -24363,7 +24611,7 @@ type GetSubgraphByIdRequest struct {
 
 func (x *GetSubgraphByIdRequest) Reset() {
 	*x = GetSubgraphByIdRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[373]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[377]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24375,7 +24623,7 @@ func (x *GetSubgraphByIdRequest) String() string {
 func (*GetSubgraphByIdRequest) ProtoMessage() {}
 
 func (x *GetSubgraphByIdRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[373]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[377]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24388,7 +24636,7 @@ func (x *GetSubgraphByIdRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSubgraphByIdRequest.ProtoReflect.Descriptor instead.
 func (*GetSubgraphByIdRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{373}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{377}
 }
 
 func (x *GetSubgraphByIdRequest) GetId() string {
@@ -24409,7 +24657,7 @@ type GetSubgraphByIdResponse struct {
 
 func (x *GetSubgraphByIdResponse) Reset() {
 	*x = GetSubgraphByIdResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[374]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[378]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24421,7 +24669,7 @@ func (x *GetSubgraphByIdResponse) String() string {
 func (*GetSubgraphByIdResponse) ProtoMessage() {}
 
 func (x *GetSubgraphByIdResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[374]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[378]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24434,7 +24682,7 @@ func (x *GetSubgraphByIdResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSubgraphByIdResponse.ProtoReflect.Descriptor instead.
 func (*GetSubgraphByIdResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{374}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{378}
 }
 
 func (x *GetSubgraphByIdResponse) GetResponse() *Response {
@@ -24468,7 +24716,7 @@ type GetNamespaceRequest struct {
 
 func (x *GetNamespaceRequest) Reset() {
 	*x = GetNamespaceRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[375]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[379]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24480,7 +24728,7 @@ func (x *GetNamespaceRequest) String() string {
 func (*GetNamespaceRequest) ProtoMessage() {}
 
 func (x *GetNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[375]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[379]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24493,7 +24741,7 @@ func (x *GetNamespaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamespaceRequest.ProtoReflect.Descriptor instead.
 func (*GetNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{375}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{379}
 }
 
 func (x *GetNamespaceRequest) GetName() string {
@@ -24520,7 +24768,7 @@ type GetNamespaceResponse struct {
 
 func (x *GetNamespaceResponse) Reset() {
 	*x = GetNamespaceResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[376]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[380]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24532,7 +24780,7 @@ func (x *GetNamespaceResponse) String() string {
 func (*GetNamespaceResponse) ProtoMessage() {}
 
 func (x *GetNamespaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[376]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[380]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24545,7 +24793,7 @@ func (x *GetNamespaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamespaceResponse.ProtoReflect.Descriptor instead.
 func (*GetNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{376}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{380}
 }
 
 func (x *GetNamespaceResponse) GetResponse() *Response {
@@ -24573,7 +24821,7 @@ type WorkspaceNamespace struct {
 
 func (x *WorkspaceNamespace) Reset() {
 	*x = WorkspaceNamespace{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[377]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[381]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24585,7 +24833,7 @@ func (x *WorkspaceNamespace) String() string {
 func (*WorkspaceNamespace) ProtoMessage() {}
 
 func (x *WorkspaceNamespace) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[377]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[381]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24598,7 +24846,7 @@ func (x *WorkspaceNamespace) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceNamespace.ProtoReflect.Descriptor instead.
 func (*WorkspaceNamespace) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{377}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{381}
 }
 
 func (x *WorkspaceNamespace) GetId() string {
@@ -24635,7 +24883,7 @@ type WorkspaceFederatedGraph struct {
 
 func (x *WorkspaceFederatedGraph) Reset() {
 	*x = WorkspaceFederatedGraph{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[378]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[382]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24647,7 +24895,7 @@ func (x *WorkspaceFederatedGraph) String() string {
 func (*WorkspaceFederatedGraph) ProtoMessage() {}
 
 func (x *WorkspaceFederatedGraph) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[378]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[382]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24660,7 +24908,7 @@ func (x *WorkspaceFederatedGraph) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceFederatedGraph.ProtoReflect.Descriptor instead.
 func (*WorkspaceFederatedGraph) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{378}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{382}
 }
 
 func (x *WorkspaceFederatedGraph) GetId() string {
@@ -24709,7 +24957,7 @@ type WorkspaceSubgraph struct {
 
 func (x *WorkspaceSubgraph) Reset() {
 	*x = WorkspaceSubgraph{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[379]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[383]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24721,7 +24969,7 @@ func (x *WorkspaceSubgraph) String() string {
 func (*WorkspaceSubgraph) ProtoMessage() {}
 
 func (x *WorkspaceSubgraph) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[379]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[383]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24734,7 +24982,7 @@ func (x *WorkspaceSubgraph) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceSubgraph.ProtoReflect.Descriptor instead.
 func (*WorkspaceSubgraph) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{379}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{383}
 }
 
 func (x *WorkspaceSubgraph) GetId() string {
@@ -24766,7 +25014,7 @@ type GetWorkspaceRequest struct {
 
 func (x *GetWorkspaceRequest) Reset() {
 	*x = GetWorkspaceRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[380]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[384]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24778,7 +25026,7 @@ func (x *GetWorkspaceRequest) String() string {
 func (*GetWorkspaceRequest) ProtoMessage() {}
 
 func (x *GetWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[380]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[384]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24791,7 +25039,7 @@ func (x *GetWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{380}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{384}
 }
 
 type GetWorkspaceResponse struct {
@@ -24804,7 +25052,7 @@ type GetWorkspaceResponse struct {
 
 func (x *GetWorkspaceResponse) Reset() {
 	*x = GetWorkspaceResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[381]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[385]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24816,7 +25064,7 @@ func (x *GetWorkspaceResponse) String() string {
 func (*GetWorkspaceResponse) ProtoMessage() {}
 
 func (x *GetWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[381]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[385]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24829,7 +25077,7 @@ func (x *GetWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{381}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{385}
 }
 
 func (x *GetWorkspaceResponse) GetResponse() *Response {
@@ -24859,7 +25107,7 @@ type PushCacheWarmerOperationRequest struct {
 
 func (x *PushCacheWarmerOperationRequest) Reset() {
 	*x = PushCacheWarmerOperationRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[382]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[386]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24871,7 +25119,7 @@ func (x *PushCacheWarmerOperationRequest) String() string {
 func (*PushCacheWarmerOperationRequest) ProtoMessage() {}
 
 func (x *PushCacheWarmerOperationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[382]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[386]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24884,7 +25132,7 @@ func (x *PushCacheWarmerOperationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PushCacheWarmerOperationRequest.ProtoReflect.Descriptor instead.
 func (*PushCacheWarmerOperationRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{382}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{386}
 }
 
 func (x *PushCacheWarmerOperationRequest) GetFederatedGraphName() string {
@@ -24931,7 +25179,7 @@ type PushCacheWarmerOperationResponse struct {
 
 func (x *PushCacheWarmerOperationResponse) Reset() {
 	*x = PushCacheWarmerOperationResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[383]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[387]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24943,7 +25191,7 @@ func (x *PushCacheWarmerOperationResponse) String() string {
 func (*PushCacheWarmerOperationResponse) ProtoMessage() {}
 
 func (x *PushCacheWarmerOperationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[383]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[387]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -24956,7 +25204,7 @@ func (x *PushCacheWarmerOperationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PushCacheWarmerOperationResponse.ProtoReflect.Descriptor instead.
 func (*PushCacheWarmerOperationResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{383}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{387}
 }
 
 func (x *PushCacheWarmerOperationResponse) GetResponse() *Response {
@@ -24978,7 +25226,7 @@ type GetCacheWarmerOperationsRequest struct {
 
 func (x *GetCacheWarmerOperationsRequest) Reset() {
 	*x = GetCacheWarmerOperationsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[384]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[388]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -24990,7 +25238,7 @@ func (x *GetCacheWarmerOperationsRequest) String() string {
 func (*GetCacheWarmerOperationsRequest) ProtoMessage() {}
 
 func (x *GetCacheWarmerOperationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[384]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[388]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25003,7 +25251,7 @@ func (x *GetCacheWarmerOperationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCacheWarmerOperationsRequest.ProtoReflect.Descriptor instead.
 func (*GetCacheWarmerOperationsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{384}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{388}
 }
 
 func (x *GetCacheWarmerOperationsRequest) GetFederatedGraphName() string {
@@ -25053,7 +25301,7 @@ type CacheWarmerOperation struct {
 
 func (x *CacheWarmerOperation) Reset() {
 	*x = CacheWarmerOperation{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[385]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[389]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25065,7 +25313,7 @@ func (x *CacheWarmerOperation) String() string {
 func (*CacheWarmerOperation) ProtoMessage() {}
 
 func (x *CacheWarmerOperation) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[385]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[389]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25078,7 +25326,7 @@ func (x *CacheWarmerOperation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CacheWarmerOperation.ProtoReflect.Descriptor instead.
 func (*CacheWarmerOperation) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{385}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{389}
 }
 
 func (x *CacheWarmerOperation) GetId() string {
@@ -25170,7 +25418,7 @@ type GetCacheWarmerOperationsResponse struct {
 
 func (x *GetCacheWarmerOperationsResponse) Reset() {
 	*x = GetCacheWarmerOperationsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[386]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[390]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25182,7 +25430,7 @@ func (x *GetCacheWarmerOperationsResponse) String() string {
 func (*GetCacheWarmerOperationsResponse) ProtoMessage() {}
 
 func (x *GetCacheWarmerOperationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[386]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[390]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25195,7 +25443,7 @@ func (x *GetCacheWarmerOperationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCacheWarmerOperationsResponse.ProtoReflect.Descriptor instead.
 func (*GetCacheWarmerOperationsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{386}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{390}
 }
 
 func (x *GetCacheWarmerOperationsResponse) GetResponse() *Response {
@@ -25236,7 +25484,7 @@ type ComputeCacheWarmerOperationsRequest struct {
 
 func (x *ComputeCacheWarmerOperationsRequest) Reset() {
 	*x = ComputeCacheWarmerOperationsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[387]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[391]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25248,7 +25496,7 @@ func (x *ComputeCacheWarmerOperationsRequest) String() string {
 func (*ComputeCacheWarmerOperationsRequest) ProtoMessage() {}
 
 func (x *ComputeCacheWarmerOperationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[387]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[391]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25261,7 +25509,7 @@ func (x *ComputeCacheWarmerOperationsRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ComputeCacheWarmerOperationsRequest.ProtoReflect.Descriptor instead.
 func (*ComputeCacheWarmerOperationsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{387}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{391}
 }
 
 func (x *ComputeCacheWarmerOperationsRequest) GetFederatedGraphName() string {
@@ -25287,7 +25535,7 @@ type ComputeCacheWarmerOperationsResponse struct {
 
 func (x *ComputeCacheWarmerOperationsResponse) Reset() {
 	*x = ComputeCacheWarmerOperationsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[388]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[392]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25299,7 +25547,7 @@ func (x *ComputeCacheWarmerOperationsResponse) String() string {
 func (*ComputeCacheWarmerOperationsResponse) ProtoMessage() {}
 
 func (x *ComputeCacheWarmerOperationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[388]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[392]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25312,7 +25560,7 @@ func (x *ComputeCacheWarmerOperationsResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ComputeCacheWarmerOperationsResponse.ProtoReflect.Descriptor instead.
 func (*ComputeCacheWarmerOperationsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{388}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{392}
 }
 
 func (x *ComputeCacheWarmerOperationsResponse) GetResponse() *Response {
@@ -25333,7 +25581,7 @@ type ConfigureCacheWarmerRequest struct {
 
 func (x *ConfigureCacheWarmerRequest) Reset() {
 	*x = ConfigureCacheWarmerRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[389]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[393]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25345,7 +25593,7 @@ func (x *ConfigureCacheWarmerRequest) String() string {
 func (*ConfigureCacheWarmerRequest) ProtoMessage() {}
 
 func (x *ConfigureCacheWarmerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[389]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[393]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25358,7 +25606,7 @@ func (x *ConfigureCacheWarmerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigureCacheWarmerRequest.ProtoReflect.Descriptor instead.
 func (*ConfigureCacheWarmerRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{389}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{393}
 }
 
 func (x *ConfigureCacheWarmerRequest) GetNamespace() string {
@@ -25391,7 +25639,7 @@ type ConfigureCacheWarmerResponse struct {
 
 func (x *ConfigureCacheWarmerResponse) Reset() {
 	*x = ConfigureCacheWarmerResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[390]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[394]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25403,7 +25651,7 @@ func (x *ConfigureCacheWarmerResponse) String() string {
 func (*ConfigureCacheWarmerResponse) ProtoMessage() {}
 
 func (x *ConfigureCacheWarmerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[390]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[394]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25416,7 +25664,7 @@ func (x *ConfigureCacheWarmerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigureCacheWarmerResponse.ProtoReflect.Descriptor instead.
 func (*ConfigureCacheWarmerResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{390}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{394}
 }
 
 func (x *ConfigureCacheWarmerResponse) GetResponse() *Response {
@@ -25435,7 +25683,7 @@ type GetCacheWarmerConfigRequest struct {
 
 func (x *GetCacheWarmerConfigRequest) Reset() {
 	*x = GetCacheWarmerConfigRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[391]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[395]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25447,7 +25695,7 @@ func (x *GetCacheWarmerConfigRequest) String() string {
 func (*GetCacheWarmerConfigRequest) ProtoMessage() {}
 
 func (x *GetCacheWarmerConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[391]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[395]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25460,7 +25708,7 @@ func (x *GetCacheWarmerConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCacheWarmerConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetCacheWarmerConfigRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{391}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{395}
 }
 
 func (x *GetCacheWarmerConfigRequest) GetNamespace() string {
@@ -25481,7 +25729,7 @@ type GetCacheWarmerConfigResponse struct {
 
 func (x *GetCacheWarmerConfigResponse) Reset() {
 	*x = GetCacheWarmerConfigResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[392]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[396]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25493,7 +25741,7 @@ func (x *GetCacheWarmerConfigResponse) String() string {
 func (*GetCacheWarmerConfigResponse) ProtoMessage() {}
 
 func (x *GetCacheWarmerConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[392]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[396]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25506,7 +25754,7 @@ func (x *GetCacheWarmerConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCacheWarmerConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetCacheWarmerConfigResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{392}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{396}
 }
 
 func (x *GetCacheWarmerConfigResponse) GetResponse() *Response {
@@ -25539,7 +25787,7 @@ type GetSubgraphCheckExtensionsConfigRequest struct {
 
 func (x *GetSubgraphCheckExtensionsConfigRequest) Reset() {
 	*x = GetSubgraphCheckExtensionsConfigRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[393]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[397]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25551,7 +25799,7 @@ func (x *GetSubgraphCheckExtensionsConfigRequest) String() string {
 func (*GetSubgraphCheckExtensionsConfigRequest) ProtoMessage() {}
 
 func (x *GetSubgraphCheckExtensionsConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[393]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[397]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25564,7 +25812,7 @@ func (x *GetSubgraphCheckExtensionsConfigRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use GetSubgraphCheckExtensionsConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetSubgraphCheckExtensionsConfigRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{393}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{397}
 }
 
 func (x *GetSubgraphCheckExtensionsConfigRequest) GetNamespace() string {
@@ -25593,7 +25841,7 @@ type GetSubgraphCheckExtensionsConfigResponse struct {
 
 func (x *GetSubgraphCheckExtensionsConfigResponse) Reset() {
 	*x = GetSubgraphCheckExtensionsConfigResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[394]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[398]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25605,7 +25853,7 @@ func (x *GetSubgraphCheckExtensionsConfigResponse) String() string {
 func (*GetSubgraphCheckExtensionsConfigResponse) ProtoMessage() {}
 
 func (x *GetSubgraphCheckExtensionsConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[394]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[398]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25618,7 +25866,7 @@ func (x *GetSubgraphCheckExtensionsConfigResponse) ProtoReflect() protoreflect.M
 
 // Deprecated: Use GetSubgraphCheckExtensionsConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetSubgraphCheckExtensionsConfigResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{394}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{398}
 }
 
 func (x *GetSubgraphCheckExtensionsConfigResponse) GetResponse() *Response {
@@ -25715,7 +25963,7 @@ type ConfigureSubgraphCheckExtensionsRequest struct {
 
 func (x *ConfigureSubgraphCheckExtensionsRequest) Reset() {
 	*x = ConfigureSubgraphCheckExtensionsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[395]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[399]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25727,7 +25975,7 @@ func (x *ConfigureSubgraphCheckExtensionsRequest) String() string {
 func (*ConfigureSubgraphCheckExtensionsRequest) ProtoMessage() {}
 
 func (x *ConfigureSubgraphCheckExtensionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[395]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[399]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25740,7 +25988,7 @@ func (x *ConfigureSubgraphCheckExtensionsRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use ConfigureSubgraphCheckExtensionsRequest.ProtoReflect.Descriptor instead.
 func (*ConfigureSubgraphCheckExtensionsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{395}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{399}
 }
 
 func (x *ConfigureSubgraphCheckExtensionsRequest) GetNamespace() string {
@@ -25815,7 +26063,7 @@ type ConfigureSubgraphCheckExtensionsResponse struct {
 
 func (x *ConfigureSubgraphCheckExtensionsResponse) Reset() {
 	*x = ConfigureSubgraphCheckExtensionsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[396]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[400]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25827,7 +26075,7 @@ func (x *ConfigureSubgraphCheckExtensionsResponse) String() string {
 func (*ConfigureSubgraphCheckExtensionsResponse) ProtoMessage() {}
 
 func (x *ConfigureSubgraphCheckExtensionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[396]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[400]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25840,7 +26088,7 @@ func (x *ConfigureSubgraphCheckExtensionsResponse) ProtoReflect() protoreflect.M
 
 // Deprecated: Use ConfigureSubgraphCheckExtensionsResponse.ProtoReflect.Descriptor instead.
 func (*ConfigureSubgraphCheckExtensionsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{396}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{400}
 }
 
 func (x *ConfigureSubgraphCheckExtensionsResponse) GetResponse() *Response {
@@ -25861,7 +26109,7 @@ type DeleteCacheWarmerOperationRequest struct {
 
 func (x *DeleteCacheWarmerOperationRequest) Reset() {
 	*x = DeleteCacheWarmerOperationRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[397]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[401]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25873,7 +26121,7 @@ func (x *DeleteCacheWarmerOperationRequest) String() string {
 func (*DeleteCacheWarmerOperationRequest) ProtoMessage() {}
 
 func (x *DeleteCacheWarmerOperationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[397]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[401]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25886,7 +26134,7 @@ func (x *DeleteCacheWarmerOperationRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use DeleteCacheWarmerOperationRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCacheWarmerOperationRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{397}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{401}
 }
 
 func (x *DeleteCacheWarmerOperationRequest) GetId() string {
@@ -25919,7 +26167,7 @@ type DeleteCacheWarmerOperationResponse struct {
 
 func (x *DeleteCacheWarmerOperationResponse) Reset() {
 	*x = DeleteCacheWarmerOperationResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[398]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[402]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25931,7 +26179,7 @@ func (x *DeleteCacheWarmerOperationResponse) String() string {
 func (*DeleteCacheWarmerOperationResponse) ProtoMessage() {}
 
 func (x *DeleteCacheWarmerOperationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[398]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[402]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25944,7 +26192,7 @@ func (x *DeleteCacheWarmerOperationResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use DeleteCacheWarmerOperationResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCacheWarmerOperationResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{398}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{402}
 }
 
 func (x *DeleteCacheWarmerOperationResponse) GetResponse() *Response {
@@ -25962,7 +26210,7 @@ type ListRouterCompatibilityVersionsRequest struct {
 
 func (x *ListRouterCompatibilityVersionsRequest) Reset() {
 	*x = ListRouterCompatibilityVersionsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[399]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[403]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -25974,7 +26222,7 @@ func (x *ListRouterCompatibilityVersionsRequest) String() string {
 func (*ListRouterCompatibilityVersionsRequest) ProtoMessage() {}
 
 func (x *ListRouterCompatibilityVersionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[399]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[403]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -25987,7 +26235,7 @@ func (x *ListRouterCompatibilityVersionsRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ListRouterCompatibilityVersionsRequest.ProtoReflect.Descriptor instead.
 func (*ListRouterCompatibilityVersionsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{399}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{403}
 }
 
 type ListRouterCompatibilityVersionsResponse struct {
@@ -26000,7 +26248,7 @@ type ListRouterCompatibilityVersionsResponse struct {
 
 func (x *ListRouterCompatibilityVersionsResponse) Reset() {
 	*x = ListRouterCompatibilityVersionsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[400]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[404]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26012,7 +26260,7 @@ func (x *ListRouterCompatibilityVersionsResponse) String() string {
 func (*ListRouterCompatibilityVersionsResponse) ProtoMessage() {}
 
 func (x *ListRouterCompatibilityVersionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[400]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[404]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26025,7 +26273,7 @@ func (x *ListRouterCompatibilityVersionsResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use ListRouterCompatibilityVersionsResponse.ProtoReflect.Descriptor instead.
 func (*ListRouterCompatibilityVersionsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{400}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{404}
 }
 
 func (x *ListRouterCompatibilityVersionsResponse) GetResponse() *Response {
@@ -26054,7 +26302,7 @@ type SetGraphRouterCompatibilityVersionRequest struct {
 
 func (x *SetGraphRouterCompatibilityVersionRequest) Reset() {
 	*x = SetGraphRouterCompatibilityVersionRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[401]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[405]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26066,7 +26314,7 @@ func (x *SetGraphRouterCompatibilityVersionRequest) String() string {
 func (*SetGraphRouterCompatibilityVersionRequest) ProtoMessage() {}
 
 func (x *SetGraphRouterCompatibilityVersionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[401]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[405]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26079,7 +26327,7 @@ func (x *SetGraphRouterCompatibilityVersionRequest) ProtoReflect() protoreflect.
 
 // Deprecated: Use SetGraphRouterCompatibilityVersionRequest.ProtoReflect.Descriptor instead.
 func (*SetGraphRouterCompatibilityVersionRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{401}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{405}
 }
 
 func (x *SetGraphRouterCompatibilityVersionRequest) GetName() string {
@@ -26124,7 +26372,7 @@ type SetGraphRouterCompatibilityVersionResponse struct {
 
 func (x *SetGraphRouterCompatibilityVersionResponse) Reset() {
 	*x = SetGraphRouterCompatibilityVersionResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[402]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[406]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26136,7 +26384,7 @@ func (x *SetGraphRouterCompatibilityVersionResponse) String() string {
 func (*SetGraphRouterCompatibilityVersionResponse) ProtoMessage() {}
 
 func (x *SetGraphRouterCompatibilityVersionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[402]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[406]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26149,7 +26397,7 @@ func (x *SetGraphRouterCompatibilityVersionResponse) ProtoReflect() protoreflect
 
 // Deprecated: Use SetGraphRouterCompatibilityVersionResponse.ProtoReflect.Descriptor instead.
 func (*SetGraphRouterCompatibilityVersionResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{402}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{406}
 }
 
 func (x *SetGraphRouterCompatibilityVersionResponse) GetResponse() *Response {
@@ -26205,7 +26453,7 @@ type GetProposedSchemaOfCheckedSubgraphRequest struct {
 
 func (x *GetProposedSchemaOfCheckedSubgraphRequest) Reset() {
 	*x = GetProposedSchemaOfCheckedSubgraphRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[403]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[407]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26217,7 +26465,7 @@ func (x *GetProposedSchemaOfCheckedSubgraphRequest) String() string {
 func (*GetProposedSchemaOfCheckedSubgraphRequest) ProtoMessage() {}
 
 func (x *GetProposedSchemaOfCheckedSubgraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[403]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[407]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26230,7 +26478,7 @@ func (x *GetProposedSchemaOfCheckedSubgraphRequest) ProtoReflect() protoreflect.
 
 // Deprecated: Use GetProposedSchemaOfCheckedSubgraphRequest.ProtoReflect.Descriptor instead.
 func (*GetProposedSchemaOfCheckedSubgraphRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{403}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{407}
 }
 
 func (x *GetProposedSchemaOfCheckedSubgraphRequest) GetCheckId() string {
@@ -26264,7 +26512,7 @@ type GetProposedSchemaOfCheckedSubgraphResponse struct {
 
 func (x *GetProposedSchemaOfCheckedSubgraphResponse) Reset() {
 	*x = GetProposedSchemaOfCheckedSubgraphResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[404]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[408]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26276,7 +26524,7 @@ func (x *GetProposedSchemaOfCheckedSubgraphResponse) String() string {
 func (*GetProposedSchemaOfCheckedSubgraphResponse) ProtoMessage() {}
 
 func (x *GetProposedSchemaOfCheckedSubgraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[404]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[408]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26289,7 +26537,7 @@ func (x *GetProposedSchemaOfCheckedSubgraphResponse) ProtoReflect() protoreflect
 
 // Deprecated: Use GetProposedSchemaOfCheckedSubgraphResponse.ProtoReflect.Descriptor instead.
 func (*GetProposedSchemaOfCheckedSubgraphResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{404}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{408}
 }
 
 func (x *GetProposedSchemaOfCheckedSubgraphResponse) GetResponse() *Response {
@@ -26325,7 +26573,7 @@ type Proposal struct {
 
 func (x *Proposal) Reset() {
 	*x = Proposal{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[405]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[409]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26337,7 +26585,7 @@ func (x *Proposal) String() string {
 func (*Proposal) ProtoMessage() {}
 
 func (x *Proposal) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[405]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[409]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26350,7 +26598,7 @@ func (x *Proposal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Proposal.ProtoReflect.Descriptor instead.
 func (*Proposal) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{405}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{409}
 }
 
 func (x *Proposal) GetId() string {
@@ -26443,7 +26691,7 @@ type ProposalSubgraph struct {
 
 func (x *ProposalSubgraph) Reset() {
 	*x = ProposalSubgraph{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[406]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[410]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26455,7 +26703,7 @@ func (x *ProposalSubgraph) String() string {
 func (*ProposalSubgraph) ProtoMessage() {}
 
 func (x *ProposalSubgraph) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[406]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[410]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26468,7 +26716,7 @@ func (x *ProposalSubgraph) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposalSubgraph.ProtoReflect.Descriptor instead.
 func (*ProposalSubgraph) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{406}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{410}
 }
 
 func (x *ProposalSubgraph) GetName() string {
@@ -26520,7 +26768,7 @@ type CreateProposalRequest struct {
 
 func (x *CreateProposalRequest) Reset() {
 	*x = CreateProposalRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[407]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[411]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26532,7 +26780,7 @@ func (x *CreateProposalRequest) String() string {
 func (*CreateProposalRequest) ProtoMessage() {}
 
 func (x *CreateProposalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[407]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[411]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26545,7 +26793,7 @@ func (x *CreateProposalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProposalRequest.ProtoReflect.Descriptor instead.
 func (*CreateProposalRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{407}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{411}
 }
 
 func (x *CreateProposalRequest) GetFederatedGraphName() string {
@@ -26621,7 +26869,7 @@ type CreateProposalResponse struct {
 
 func (x *CreateProposalResponse) Reset() {
 	*x = CreateProposalResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[408]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[412]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26633,7 +26881,7 @@ func (x *CreateProposalResponse) String() string {
 func (*CreateProposalResponse) ProtoMessage() {}
 
 func (x *CreateProposalResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[408]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[412]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26646,7 +26894,7 @@ func (x *CreateProposalResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProposalResponse.ProtoReflect.Descriptor instead.
 func (*CreateProposalResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{408}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{412}
 }
 
 func (x *CreateProposalResponse) GetResponse() *Response {
@@ -26805,7 +27053,7 @@ type GetProposalRequest struct {
 
 func (x *GetProposalRequest) Reset() {
 	*x = GetProposalRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[409]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[413]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26817,7 +27065,7 @@ func (x *GetProposalRequest) String() string {
 func (*GetProposalRequest) ProtoMessage() {}
 
 func (x *GetProposalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[409]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[413]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26830,7 +27078,7 @@ func (x *GetProposalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProposalRequest.ProtoReflect.Descriptor instead.
 func (*GetProposalRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{409}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{413}
 }
 
 func (x *GetProposalRequest) GetProposalId() string {
@@ -26851,7 +27099,7 @@ type GetProposalResponse struct {
 
 func (x *GetProposalResponse) Reset() {
 	*x = GetProposalResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[410]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[414]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26863,7 +27111,7 @@ func (x *GetProposalResponse) String() string {
 func (*GetProposalResponse) ProtoMessage() {}
 
 func (x *GetProposalResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[410]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[414]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26876,7 +27124,7 @@ func (x *GetProposalResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProposalResponse.ProtoReflect.Descriptor instead.
 func (*GetProposalResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{410}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{414}
 }
 
 func (x *GetProposalResponse) GetResponse() *Response {
@@ -26914,7 +27162,7 @@ type GetProposalsByFederatedGraphRequest struct {
 
 func (x *GetProposalsByFederatedGraphRequest) Reset() {
 	*x = GetProposalsByFederatedGraphRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[411]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[415]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -26926,7 +27174,7 @@ func (x *GetProposalsByFederatedGraphRequest) String() string {
 func (*GetProposalsByFederatedGraphRequest) ProtoMessage() {}
 
 func (x *GetProposalsByFederatedGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[411]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[415]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -26939,7 +27187,7 @@ func (x *GetProposalsByFederatedGraphRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GetProposalsByFederatedGraphRequest.ProtoReflect.Descriptor instead.
 func (*GetProposalsByFederatedGraphRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{411}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{415}
 }
 
 func (x *GetProposalsByFederatedGraphRequest) GetFederatedGraphName() string {
@@ -26995,7 +27243,7 @@ type GetProposalsByFederatedGraphResponse struct {
 
 func (x *GetProposalsByFederatedGraphResponse) Reset() {
 	*x = GetProposalsByFederatedGraphResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[412]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[416]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27007,7 +27255,7 @@ func (x *GetProposalsByFederatedGraphResponse) String() string {
 func (*GetProposalsByFederatedGraphResponse) ProtoMessage() {}
 
 func (x *GetProposalsByFederatedGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[412]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[416]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27020,7 +27268,7 @@ func (x *GetProposalsByFederatedGraphResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetProposalsByFederatedGraphResponse.ProtoReflect.Descriptor instead.
 func (*GetProposalsByFederatedGraphResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{412}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{416}
 }
 
 func (x *GetProposalsByFederatedGraphResponse) GetResponse() *Response {
@@ -27057,7 +27305,7 @@ type GetProposalChecksRequest struct {
 
 func (x *GetProposalChecksRequest) Reset() {
 	*x = GetProposalChecksRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[413]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[417]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27069,7 +27317,7 @@ func (x *GetProposalChecksRequest) String() string {
 func (*GetProposalChecksRequest) ProtoMessage() {}
 
 func (x *GetProposalChecksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[413]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[417]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27082,7 +27330,7 @@ func (x *GetProposalChecksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProposalChecksRequest.ProtoReflect.Descriptor instead.
 func (*GetProposalChecksRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{413}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{417}
 }
 
 func (x *GetProposalChecksRequest) GetProposalId() string {
@@ -27131,7 +27379,7 @@ type GetProposalChecksResponse struct {
 
 func (x *GetProposalChecksResponse) Reset() {
 	*x = GetProposalChecksResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[414]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[418]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27143,7 +27391,7 @@ func (x *GetProposalChecksResponse) String() string {
 func (*GetProposalChecksResponse) ProtoMessage() {}
 
 func (x *GetProposalChecksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[414]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[418]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27156,7 +27404,7 @@ func (x *GetProposalChecksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProposalChecksResponse.ProtoReflect.Descriptor instead.
 func (*GetProposalChecksResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{414}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{418}
 }
 
 func (x *GetProposalChecksResponse) GetResponse() *Response {
@@ -27196,7 +27444,7 @@ type UpdateProposalRequest struct {
 
 func (x *UpdateProposalRequest) Reset() {
 	*x = UpdateProposalRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[415]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[419]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27208,7 +27456,7 @@ func (x *UpdateProposalRequest) String() string {
 func (*UpdateProposalRequest) ProtoMessage() {}
 
 func (x *UpdateProposalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[415]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[419]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27221,7 +27469,7 @@ func (x *UpdateProposalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProposalRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProposalRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{415}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{419}
 }
 
 func (x *UpdateProposalRequest) GetProposalName() string {
@@ -27314,7 +27562,7 @@ type UpdateProposalResponse struct {
 
 func (x *UpdateProposalResponse) Reset() {
 	*x = UpdateProposalResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[416]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[420]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27326,7 +27574,7 @@ func (x *UpdateProposalResponse) String() string {
 func (*UpdateProposalResponse) ProtoMessage() {}
 
 func (x *UpdateProposalResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[416]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[420]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27339,7 +27587,7 @@ func (x *UpdateProposalResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProposalResponse.ProtoReflect.Descriptor instead.
 func (*UpdateProposalResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{416}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{420}
 }
 
 func (x *UpdateProposalResponse) GetResponse() *Response {
@@ -27478,7 +27726,7 @@ type EnableProposalsForNamespaceRequest struct {
 
 func (x *EnableProposalsForNamespaceRequest) Reset() {
 	*x = EnableProposalsForNamespaceRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[417]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[421]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27490,7 +27738,7 @@ func (x *EnableProposalsForNamespaceRequest) String() string {
 func (*EnableProposalsForNamespaceRequest) ProtoMessage() {}
 
 func (x *EnableProposalsForNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[417]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[421]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27503,7 +27751,7 @@ func (x *EnableProposalsForNamespaceRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use EnableProposalsForNamespaceRequest.ProtoReflect.Descriptor instead.
 func (*EnableProposalsForNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{417}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{421}
 }
 
 func (x *EnableProposalsForNamespaceRequest) GetNamespace() string {
@@ -27529,7 +27777,7 @@ type EnableProposalsForNamespaceResponse struct {
 
 func (x *EnableProposalsForNamespaceResponse) Reset() {
 	*x = EnableProposalsForNamespaceResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[418]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[422]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27541,7 +27789,7 @@ func (x *EnableProposalsForNamespaceResponse) String() string {
 func (*EnableProposalsForNamespaceResponse) ProtoMessage() {}
 
 func (x *EnableProposalsForNamespaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[418]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[422]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27554,7 +27802,7 @@ func (x *EnableProposalsForNamespaceResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use EnableProposalsForNamespaceResponse.ProtoReflect.Descriptor instead.
 func (*EnableProposalsForNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{418}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{422}
 }
 
 func (x *EnableProposalsForNamespaceResponse) GetResponse() *Response {
@@ -27575,7 +27823,7 @@ type ConfigureNamespaceProposalConfigRequest struct {
 
 func (x *ConfigureNamespaceProposalConfigRequest) Reset() {
 	*x = ConfigureNamespaceProposalConfigRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[419]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[423]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27587,7 +27835,7 @@ func (x *ConfigureNamespaceProposalConfigRequest) String() string {
 func (*ConfigureNamespaceProposalConfigRequest) ProtoMessage() {}
 
 func (x *ConfigureNamespaceProposalConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[419]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[423]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27600,7 +27848,7 @@ func (x *ConfigureNamespaceProposalConfigRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use ConfigureNamespaceProposalConfigRequest.ProtoReflect.Descriptor instead.
 func (*ConfigureNamespaceProposalConfigRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{419}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{423}
 }
 
 func (x *ConfigureNamespaceProposalConfigRequest) GetNamespace() string {
@@ -27633,7 +27881,7 @@ type ConfigureNamespaceProposalConfigResponse struct {
 
 func (x *ConfigureNamespaceProposalConfigResponse) Reset() {
 	*x = ConfigureNamespaceProposalConfigResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[420]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[424]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27645,7 +27893,7 @@ func (x *ConfigureNamespaceProposalConfigResponse) String() string {
 func (*ConfigureNamespaceProposalConfigResponse) ProtoMessage() {}
 
 func (x *ConfigureNamespaceProposalConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[420]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[424]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27658,7 +27906,7 @@ func (x *ConfigureNamespaceProposalConfigResponse) ProtoReflect() protoreflect.M
 
 // Deprecated: Use ConfigureNamespaceProposalConfigResponse.ProtoReflect.Descriptor instead.
 func (*ConfigureNamespaceProposalConfigResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{420}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{424}
 }
 
 func (x *ConfigureNamespaceProposalConfigResponse) GetResponse() *Response {
@@ -27677,7 +27925,7 @@ type GetNamespaceProposalConfigRequest struct {
 
 func (x *GetNamespaceProposalConfigRequest) Reset() {
 	*x = GetNamespaceProposalConfigRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[421]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[425]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27689,7 +27937,7 @@ func (x *GetNamespaceProposalConfigRequest) String() string {
 func (*GetNamespaceProposalConfigRequest) ProtoMessage() {}
 
 func (x *GetNamespaceProposalConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[421]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[425]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27702,7 +27950,7 @@ func (x *GetNamespaceProposalConfigRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetNamespaceProposalConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetNamespaceProposalConfigRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{421}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{425}
 }
 
 func (x *GetNamespaceProposalConfigRequest) GetNamespace() string {
@@ -27724,7 +27972,7 @@ type GetNamespaceProposalConfigResponse struct {
 
 func (x *GetNamespaceProposalConfigResponse) Reset() {
 	*x = GetNamespaceProposalConfigResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[422]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[426]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27736,7 +27984,7 @@ func (x *GetNamespaceProposalConfigResponse) String() string {
 func (*GetNamespaceProposalConfigResponse) ProtoMessage() {}
 
 func (x *GetNamespaceProposalConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[422]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[426]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27749,7 +27997,7 @@ func (x *GetNamespaceProposalConfigResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GetNamespaceProposalConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetNamespaceProposalConfigResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{422}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{426}
 }
 
 func (x *GetNamespaceProposalConfigResponse) GetResponse() *Response {
@@ -27802,7 +28050,7 @@ type GetOperationsRequest struct {
 
 func (x *GetOperationsRequest) Reset() {
 	*x = GetOperationsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[423]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[427]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27814,7 +28062,7 @@ func (x *GetOperationsRequest) String() string {
 func (*GetOperationsRequest) ProtoMessage() {}
 
 func (x *GetOperationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[423]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[427]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27827,7 +28075,7 @@ func (x *GetOperationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOperationsRequest.ProtoReflect.Descriptor instead.
 func (*GetOperationsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{423}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{427}
 }
 
 func (x *GetOperationsRequest) GetFederatedGraphName() string {
@@ -27939,7 +28187,7 @@ type GetOperationsResponse struct {
 
 func (x *GetOperationsResponse) Reset() {
 	*x = GetOperationsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[424]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[428]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -27951,7 +28199,7 @@ func (x *GetOperationsResponse) String() string {
 func (*GetOperationsResponse) ProtoMessage() {}
 
 func (x *GetOperationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[424]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[428]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -27964,7 +28212,7 @@ func (x *GetOperationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOperationsResponse.ProtoReflect.Descriptor instead.
 func (*GetOperationsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{424}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{428}
 }
 
 func (x *GetOperationsResponse) GetResponse() *Response {
@@ -27998,7 +28246,7 @@ type GetClientsFromAnalyticsRequest struct {
 
 func (x *GetClientsFromAnalyticsRequest) Reset() {
 	*x = GetClientsFromAnalyticsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[425]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[429]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28010,7 +28258,7 @@ func (x *GetClientsFromAnalyticsRequest) String() string {
 func (*GetClientsFromAnalyticsRequest) ProtoMessage() {}
 
 func (x *GetClientsFromAnalyticsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[425]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[429]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28023,7 +28271,7 @@ func (x *GetClientsFromAnalyticsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClientsFromAnalyticsRequest.ProtoReflect.Descriptor instead.
 func (*GetClientsFromAnalyticsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{425}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{429}
 }
 
 func (x *GetClientsFromAnalyticsRequest) GetFederatedGraphName() string {
@@ -28050,7 +28298,7 @@ type GetClientsFromAnalyticsResponse struct {
 
 func (x *GetClientsFromAnalyticsResponse) Reset() {
 	*x = GetClientsFromAnalyticsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[426]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[430]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28062,7 +28310,7 @@ func (x *GetClientsFromAnalyticsResponse) String() string {
 func (*GetClientsFromAnalyticsResponse) ProtoMessage() {}
 
 func (x *GetClientsFromAnalyticsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[426]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[430]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28075,7 +28323,7 @@ func (x *GetClientsFromAnalyticsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClientsFromAnalyticsResponse.ProtoReflect.Descriptor instead.
 func (*GetClientsFromAnalyticsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{426}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{430}
 }
 
 func (x *GetClientsFromAnalyticsResponse) GetResponse() *Response {
@@ -28106,7 +28354,7 @@ type GetOperationClientsRequest struct {
 
 func (x *GetOperationClientsRequest) Reset() {
 	*x = GetOperationClientsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[427]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[431]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28118,7 +28366,7 @@ func (x *GetOperationClientsRequest) String() string {
 func (*GetOperationClientsRequest) ProtoMessage() {}
 
 func (x *GetOperationClientsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[427]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[431]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28131,7 +28379,7 @@ func (x *GetOperationClientsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOperationClientsRequest.ProtoReflect.Descriptor instead.
 func (*GetOperationClientsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{427}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{431}
 }
 
 func (x *GetOperationClientsRequest) GetFederatedGraphName() string {
@@ -28186,7 +28434,7 @@ type GetOperationClientsResponse struct {
 
 func (x *GetOperationClientsResponse) Reset() {
 	*x = GetOperationClientsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[428]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[432]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28198,7 +28446,7 @@ func (x *GetOperationClientsResponse) String() string {
 func (*GetOperationClientsResponse) ProtoMessage() {}
 
 func (x *GetOperationClientsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[428]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[432]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28211,7 +28459,7 @@ func (x *GetOperationClientsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOperationClientsResponse.ProtoReflect.Descriptor instead.
 func (*GetOperationClientsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{428}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{432}
 }
 
 func (x *GetOperationClientsResponse) GetResponse() *Response {
@@ -28242,7 +28490,7 @@ type GetOperationDeprecatedFieldsRequest struct {
 
 func (x *GetOperationDeprecatedFieldsRequest) Reset() {
 	*x = GetOperationDeprecatedFieldsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[429]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[433]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28254,7 +28502,7 @@ func (x *GetOperationDeprecatedFieldsRequest) String() string {
 func (*GetOperationDeprecatedFieldsRequest) ProtoMessage() {}
 
 func (x *GetOperationDeprecatedFieldsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[429]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[433]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28267,7 +28515,7 @@ func (x *GetOperationDeprecatedFieldsRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GetOperationDeprecatedFieldsRequest.ProtoReflect.Descriptor instead.
 func (*GetOperationDeprecatedFieldsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{429}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{433}
 }
 
 func (x *GetOperationDeprecatedFieldsRequest) GetFederatedGraphName() string {
@@ -28322,7 +28570,7 @@ type GetOperationDeprecatedFieldsResponse struct {
 
 func (x *GetOperationDeprecatedFieldsResponse) Reset() {
 	*x = GetOperationDeprecatedFieldsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[430]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[434]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28334,7 +28582,7 @@ func (x *GetOperationDeprecatedFieldsResponse) String() string {
 func (*GetOperationDeprecatedFieldsResponse) ProtoMessage() {}
 
 func (x *GetOperationDeprecatedFieldsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[430]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[434]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28347,7 +28595,7 @@ func (x *GetOperationDeprecatedFieldsResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetOperationDeprecatedFieldsResponse.ProtoReflect.Descriptor instead.
 func (*GetOperationDeprecatedFieldsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{430}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{434}
 }
 
 func (x *GetOperationDeprecatedFieldsResponse) GetResponse() *Response {
@@ -28375,7 +28623,7 @@ type ValidateAndFetchPluginDataRequest struct {
 
 func (x *ValidateAndFetchPluginDataRequest) Reset() {
 	*x = ValidateAndFetchPluginDataRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[431]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[435]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28387,7 +28635,7 @@ func (x *ValidateAndFetchPluginDataRequest) String() string {
 func (*ValidateAndFetchPluginDataRequest) ProtoMessage() {}
 
 func (x *ValidateAndFetchPluginDataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[431]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[435]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28400,7 +28648,7 @@ func (x *ValidateAndFetchPluginDataRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ValidateAndFetchPluginDataRequest.ProtoReflect.Descriptor instead.
 func (*ValidateAndFetchPluginDataRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{431}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{435}
 }
 
 func (x *ValidateAndFetchPluginDataRequest) GetName() string {
@@ -28436,7 +28684,7 @@ type ValidateAndFetchPluginDataResponse struct {
 
 func (x *ValidateAndFetchPluginDataResponse) Reset() {
 	*x = ValidateAndFetchPluginDataResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[432]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[436]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28448,7 +28696,7 @@ func (x *ValidateAndFetchPluginDataResponse) String() string {
 func (*ValidateAndFetchPluginDataResponse) ProtoMessage() {}
 
 func (x *ValidateAndFetchPluginDataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[432]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[436]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28461,7 +28709,7 @@ func (x *ValidateAndFetchPluginDataResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ValidateAndFetchPluginDataResponse.ProtoReflect.Descriptor instead.
 func (*ValidateAndFetchPluginDataResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{432}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{436}
 }
 
 func (x *ValidateAndFetchPluginDataResponse) GetResponse() *Response {
@@ -28504,7 +28752,7 @@ type LinkSubgraphRequest struct {
 
 func (x *LinkSubgraphRequest) Reset() {
 	*x = LinkSubgraphRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[433]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[437]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28516,7 +28764,7 @@ func (x *LinkSubgraphRequest) String() string {
 func (*LinkSubgraphRequest) ProtoMessage() {}
 
 func (x *LinkSubgraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[433]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[437]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28529,7 +28777,7 @@ func (x *LinkSubgraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LinkSubgraphRequest.ProtoReflect.Descriptor instead.
 func (*LinkSubgraphRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{433}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{437}
 }
 
 func (x *LinkSubgraphRequest) GetSourceSubgraphName() string {
@@ -28569,7 +28817,7 @@ type LinkSubgraphResponse struct {
 
 func (x *LinkSubgraphResponse) Reset() {
 	*x = LinkSubgraphResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[434]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[438]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28581,7 +28829,7 @@ func (x *LinkSubgraphResponse) String() string {
 func (*LinkSubgraphResponse) ProtoMessage() {}
 
 func (x *LinkSubgraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[434]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[438]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28594,7 +28842,7 @@ func (x *LinkSubgraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LinkSubgraphResponse.ProtoReflect.Descriptor instead.
 func (*LinkSubgraphResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{434}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{438}
 }
 
 func (x *LinkSubgraphResponse) GetResponse() *Response {
@@ -28614,7 +28862,7 @@ type UnlinkSubgraphRequest struct {
 
 func (x *UnlinkSubgraphRequest) Reset() {
 	*x = UnlinkSubgraphRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[435]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[439]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28626,7 +28874,7 @@ func (x *UnlinkSubgraphRequest) String() string {
 func (*UnlinkSubgraphRequest) ProtoMessage() {}
 
 func (x *UnlinkSubgraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[435]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[439]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28639,7 +28887,7 @@ func (x *UnlinkSubgraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnlinkSubgraphRequest.ProtoReflect.Descriptor instead.
 func (*UnlinkSubgraphRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{435}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{439}
 }
 
 func (x *UnlinkSubgraphRequest) GetSourceSubgraphName() string {
@@ -28665,7 +28913,7 @@ type UnlinkSubgraphResponse struct {
 
 func (x *UnlinkSubgraphResponse) Reset() {
 	*x = UnlinkSubgraphResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[436]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[440]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28677,7 +28925,7 @@ func (x *UnlinkSubgraphResponse) String() string {
 func (*UnlinkSubgraphResponse) ProtoMessage() {}
 
 func (x *UnlinkSubgraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[436]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[440]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28690,7 +28938,7 @@ func (x *UnlinkSubgraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnlinkSubgraphResponse.ProtoReflect.Descriptor instead.
 func (*UnlinkSubgraphResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{436}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{440}
 }
 
 func (x *UnlinkSubgraphResponse) GetResponse() *Response {
@@ -28709,7 +28957,7 @@ type VerifyAPIKeyGraphAccessRequest struct {
 
 func (x *VerifyAPIKeyGraphAccessRequest) Reset() {
 	*x = VerifyAPIKeyGraphAccessRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[437]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[441]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28721,7 +28969,7 @@ func (x *VerifyAPIKeyGraphAccessRequest) String() string {
 func (*VerifyAPIKeyGraphAccessRequest) ProtoMessage() {}
 
 func (x *VerifyAPIKeyGraphAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[437]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[441]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28734,7 +28982,7 @@ func (x *VerifyAPIKeyGraphAccessRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyAPIKeyGraphAccessRequest.ProtoReflect.Descriptor instead.
 func (*VerifyAPIKeyGraphAccessRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{437}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{441}
 }
 
 func (x *VerifyAPIKeyGraphAccessRequest) GetFederatedGraphId() string {
@@ -28755,7 +29003,7 @@ type VerifyAPIKeyGraphAccessResponse struct {
 
 func (x *VerifyAPIKeyGraphAccessResponse) Reset() {
 	*x = VerifyAPIKeyGraphAccessResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[438]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[442]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28767,7 +29015,7 @@ func (x *VerifyAPIKeyGraphAccessResponse) String() string {
 func (*VerifyAPIKeyGraphAccessResponse) ProtoMessage() {}
 
 func (x *VerifyAPIKeyGraphAccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[438]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[442]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28780,7 +29028,7 @@ func (x *VerifyAPIKeyGraphAccessResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyAPIKeyGraphAccessResponse.ProtoReflect.Descriptor instead.
 func (*VerifyAPIKeyGraphAccessResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{438}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{442}
 }
 
 func (x *VerifyAPIKeyGraphAccessResponse) GetResponse() *Response {
@@ -28813,7 +29061,7 @@ type InitializeCosmoUserRequest struct {
 
 func (x *InitializeCosmoUserRequest) Reset() {
 	*x = InitializeCosmoUserRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[439]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[443]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28825,7 +29073,7 @@ func (x *InitializeCosmoUserRequest) String() string {
 func (*InitializeCosmoUserRequest) ProtoMessage() {}
 
 func (x *InitializeCosmoUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[439]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[443]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28838,7 +29086,7 @@ func (x *InitializeCosmoUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitializeCosmoUserRequest.ProtoReflect.Descriptor instead.
 func (*InitializeCosmoUserRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{439}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{443}
 }
 
 func (x *InitializeCosmoUserRequest) GetToken() string {
@@ -28857,7 +29105,7 @@ type InitializeCosmoUserResponse struct {
 
 func (x *InitializeCosmoUserResponse) Reset() {
 	*x = InitializeCosmoUserResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[440]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[444]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28869,7 +29117,7 @@ func (x *InitializeCosmoUserResponse) String() string {
 func (*InitializeCosmoUserResponse) ProtoMessage() {}
 
 func (x *InitializeCosmoUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[440]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[444]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28882,7 +29130,7 @@ func (x *InitializeCosmoUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitializeCosmoUserResponse.ProtoReflect.Descriptor instead.
 func (*InitializeCosmoUserResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{440}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{444}
 }
 
 func (x *InitializeCosmoUserResponse) GetResponse() *Response {
@@ -28900,7 +29148,7 @@ type ListOrganizationsRequest struct {
 
 func (x *ListOrganizationsRequest) Reset() {
 	*x = ListOrganizationsRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[441]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[445]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28912,7 +29160,7 @@ func (x *ListOrganizationsRequest) String() string {
 func (*ListOrganizationsRequest) ProtoMessage() {}
 
 func (x *ListOrganizationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[441]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[445]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28925,7 +29173,7 @@ func (x *ListOrganizationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOrganizationsRequest.ProtoReflect.Descriptor instead.
 func (*ListOrganizationsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{441}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{445}
 }
 
 type ListOrganizationsResponse struct {
@@ -28938,7 +29186,7 @@ type ListOrganizationsResponse struct {
 
 func (x *ListOrganizationsResponse) Reset() {
 	*x = ListOrganizationsResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[442]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[446]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28950,7 +29198,7 @@ func (x *ListOrganizationsResponse) String() string {
 func (*ListOrganizationsResponse) ProtoMessage() {}
 
 func (x *ListOrganizationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[442]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[446]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28963,7 +29211,7 @@ func (x *ListOrganizationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOrganizationsResponse.ProtoReflect.Descriptor instead.
 func (*ListOrganizationsResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{442}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{446}
 }
 
 func (x *ListOrganizationsResponse) GetResponse() *Response {
@@ -28993,7 +29241,7 @@ type RecomposeGraphRequest struct {
 
 func (x *RecomposeGraphRequest) Reset() {
 	*x = RecomposeGraphRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[443]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[447]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29005,7 +29253,7 @@ func (x *RecomposeGraphRequest) String() string {
 func (*RecomposeGraphRequest) ProtoMessage() {}
 
 func (x *RecomposeGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[443]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[447]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29018,7 +29266,7 @@ func (x *RecomposeGraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecomposeGraphRequest.ProtoReflect.Descriptor instead.
 func (*RecomposeGraphRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{443}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{447}
 }
 
 func (x *RecomposeGraphRequest) GetName() string {
@@ -29069,7 +29317,7 @@ type RecomposeGraphResponse struct {
 
 func (x *RecomposeGraphResponse) Reset() {
 	*x = RecomposeGraphResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[444]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[448]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29081,7 +29329,7 @@ func (x *RecomposeGraphResponse) String() string {
 func (*RecomposeGraphResponse) ProtoMessage() {}
 
 func (x *RecomposeGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[444]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[448]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29094,7 +29342,7 @@ func (x *RecomposeGraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecomposeGraphResponse.ProtoReflect.Descriptor instead.
 func (*RecomposeGraphResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{444}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{448}
 }
 
 func (x *RecomposeGraphResponse) GetResponse() *Response {
@@ -29144,7 +29392,7 @@ type RecomposeFeatureFlagRequest struct {
 
 func (x *RecomposeFeatureFlagRequest) Reset() {
 	*x = RecomposeFeatureFlagRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[445]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[449]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29156,7 +29404,7 @@ func (x *RecomposeFeatureFlagRequest) String() string {
 func (*RecomposeFeatureFlagRequest) ProtoMessage() {}
 
 func (x *RecomposeFeatureFlagRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[445]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[449]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29169,7 +29417,7 @@ func (x *RecomposeFeatureFlagRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecomposeFeatureFlagRequest.ProtoReflect.Descriptor instead.
 func (*RecomposeFeatureFlagRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{445}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{449}
 }
 
 func (x *RecomposeFeatureFlagRequest) GetName() string {
@@ -29213,7 +29461,7 @@ type RecomposeFeatureFlagResponse struct {
 
 func (x *RecomposeFeatureFlagResponse) Reset() {
 	*x = RecomposeFeatureFlagResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[446]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[450]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29225,7 +29473,7 @@ func (x *RecomposeFeatureFlagResponse) String() string {
 func (*RecomposeFeatureFlagResponse) ProtoMessage() {}
 
 func (x *RecomposeFeatureFlagResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[446]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[450]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29238,7 +29486,7 @@ func (x *RecomposeFeatureFlagResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecomposeFeatureFlagResponse.ProtoReflect.Descriptor instead.
 func (*RecomposeFeatureFlagResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{446}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{450}
 }
 
 func (x *RecomposeFeatureFlagResponse) GetResponse() *Response {
@@ -29284,7 +29532,7 @@ type GetOnboardingRequest struct {
 
 func (x *GetOnboardingRequest) Reset() {
 	*x = GetOnboardingRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[447]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[451]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29296,7 +29544,7 @@ func (x *GetOnboardingRequest) String() string {
 func (*GetOnboardingRequest) ProtoMessage() {}
 
 func (x *GetOnboardingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[447]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[451]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29309,7 +29557,7 @@ func (x *GetOnboardingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOnboardingRequest.ProtoReflect.Descriptor instead.
 func (*GetOnboardingRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{447}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{451}
 }
 
 type GetOnboardingResponse struct {
@@ -29326,7 +29574,7 @@ type GetOnboardingResponse struct {
 
 func (x *GetOnboardingResponse) Reset() {
 	*x = GetOnboardingResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[448]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[452]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29338,7 +29586,7 @@ func (x *GetOnboardingResponse) String() string {
 func (*GetOnboardingResponse) ProtoMessage() {}
 
 func (x *GetOnboardingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[448]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[452]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29351,7 +29599,7 @@ func (x *GetOnboardingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOnboardingResponse.ProtoReflect.Descriptor instead.
 func (*GetOnboardingResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{448}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{452}
 }
 
 func (x *GetOnboardingResponse) GetResponse() *Response {
@@ -29406,7 +29654,7 @@ type CreateOnboardingRequest struct {
 
 func (x *CreateOnboardingRequest) Reset() {
 	*x = CreateOnboardingRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[449]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[453]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29418,7 +29666,7 @@ func (x *CreateOnboardingRequest) String() string {
 func (*CreateOnboardingRequest) ProtoMessage() {}
 
 func (x *CreateOnboardingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[449]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[453]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29431,7 +29679,7 @@ func (x *CreateOnboardingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOnboardingRequest.ProtoReflect.Descriptor instead.
 func (*CreateOnboardingRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{449}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{453}
 }
 
 func (x *CreateOnboardingRequest) GetSlack() bool {
@@ -29461,7 +29709,7 @@ type CreateOnboardingResponse struct {
 
 func (x *CreateOnboardingResponse) Reset() {
 	*x = CreateOnboardingResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[450]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[454]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29473,7 +29721,7 @@ func (x *CreateOnboardingResponse) String() string {
 func (*CreateOnboardingResponse) ProtoMessage() {}
 
 func (x *CreateOnboardingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[450]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[454]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29486,7 +29734,7 @@ func (x *CreateOnboardingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOnboardingResponse.ProtoReflect.Descriptor instead.
 func (*CreateOnboardingResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{450}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{454}
 }
 
 func (x *CreateOnboardingResponse) GetResponse() *Response {
@@ -29532,7 +29780,7 @@ type FinishOnboardingRequest struct {
 
 func (x *FinishOnboardingRequest) Reset() {
 	*x = FinishOnboardingRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[451]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[455]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29544,7 +29792,7 @@ func (x *FinishOnboardingRequest) String() string {
 func (*FinishOnboardingRequest) ProtoMessage() {}
 
 func (x *FinishOnboardingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[451]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[455]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29557,7 +29805,7 @@ func (x *FinishOnboardingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishOnboardingRequest.ProtoReflect.Descriptor instead.
 func (*FinishOnboardingRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{451}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{455}
 }
 
 type FinishOnboardingResponse struct {
@@ -29571,7 +29819,7 @@ type FinishOnboardingResponse struct {
 
 func (x *FinishOnboardingResponse) Reset() {
 	*x = FinishOnboardingResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[452]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[456]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29583,7 +29831,7 @@ func (x *FinishOnboardingResponse) String() string {
 func (*FinishOnboardingResponse) ProtoMessage() {}
 
 func (x *FinishOnboardingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[452]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[456]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29596,7 +29844,7 @@ func (x *FinishOnboardingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishOnboardingResponse.ProtoReflect.Descriptor instead.
 func (*FinishOnboardingResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{452}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{456}
 }
 
 func (x *FinishOnboardingResponse) GetResponse() *Response {
@@ -29630,7 +29878,7 @@ type Subgraph_PluginData struct {
 
 func (x *Subgraph_PluginData) Reset() {
 	*x = Subgraph_PluginData{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[453]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[457]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29642,7 +29890,7 @@ func (x *Subgraph_PluginData) String() string {
 func (*Subgraph_PluginData) ProtoMessage() {}
 
 func (x *Subgraph_PluginData) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[453]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[457]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29683,7 +29931,7 @@ type GetSubgraphByNameResponse_LinkedSubgraph struct {
 
 func (x *GetSubgraphByNameResponse_LinkedSubgraph) Reset() {
 	*x = GetSubgraphByNameResponse_LinkedSubgraph{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[454]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[458]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29695,7 +29943,7 @@ func (x *GetSubgraphByNameResponse_LinkedSubgraph) String() string {
 func (*GetSubgraphByNameResponse_LinkedSubgraph) ProtoMessage() {}
 
 func (x *GetSubgraphByNameResponse_LinkedSubgraph) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[454]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[458]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29743,7 +29991,7 @@ type SchemaCheck_GhDetails struct {
 
 func (x *SchemaCheck_GhDetails) Reset() {
 	*x = SchemaCheck_GhDetails{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[455]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[459]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29755,7 +30003,7 @@ func (x *SchemaCheck_GhDetails) String() string {
 func (*SchemaCheck_GhDetails) ProtoMessage() {}
 
 func (x *SchemaCheck_GhDetails) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[455]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[459]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29808,7 +30056,7 @@ type SchemaCheck_CheckedSubgraph struct {
 
 func (x *SchemaCheck_CheckedSubgraph) Reset() {
 	*x = SchemaCheck_CheckedSubgraph{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[456]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[460]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29820,7 +30068,7 @@ func (x *SchemaCheck_CheckedSubgraph) String() string {
 func (*SchemaCheck_CheckedSubgraph) ProtoMessage() {}
 
 func (x *SchemaCheck_CheckedSubgraph) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[456]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[460]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -29896,7 +30144,7 @@ type SchemaCheck_LinkedCheck struct {
 
 func (x *SchemaCheck_LinkedCheck) Reset() {
 	*x = SchemaCheck_LinkedCheck{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[457]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[461]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -29908,7 +30156,7 @@ func (x *SchemaCheck_LinkedCheck) String() string {
 func (*SchemaCheck_LinkedCheck) ProtoMessage() {}
 
 func (x *SchemaCheck_LinkedCheck) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[457]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[461]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30011,7 +30259,7 @@ type GetCheckSummaryResponse_AffectedGraph struct {
 
 func (x *GetCheckSummaryResponse_AffectedGraph) Reset() {
 	*x = GetCheckSummaryResponse_AffectedGraph{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[458]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[462]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30023,7 +30271,7 @@ func (x *GetCheckSummaryResponse_AffectedGraph) String() string {
 func (*GetCheckSummaryResponse_AffectedGraph) ProtoMessage() {}
 
 func (x *GetCheckSummaryResponse_AffectedGraph) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[458]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[462]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30113,7 +30361,7 @@ type GetCheckSummaryResponse_ProposalSchemaMatch struct {
 
 func (x *GetCheckSummaryResponse_ProposalSchemaMatch) Reset() {
 	*x = GetCheckSummaryResponse_ProposalSchemaMatch{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[459]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[463]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30125,7 +30373,7 @@ func (x *GetCheckSummaryResponse_ProposalSchemaMatch) String() string {
 func (*GetCheckSummaryResponse_ProposalSchemaMatch) ProtoMessage() {}
 
 func (x *GetCheckSummaryResponse_ProposalSchemaMatch) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[459]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[463]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30178,7 +30426,7 @@ type GetCheckOperationsResponse_CheckOperation struct {
 
 func (x *GetCheckOperationsResponse_CheckOperation) Reset() {
 	*x = GetCheckOperationsResponse_CheckOperation{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[460]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[464]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30190,7 +30438,7 @@ func (x *GetCheckOperationsResponse_CheckOperation) String() string {
 func (*GetCheckOperationsResponse_CheckOperation) ProtoMessage() {}
 
 func (x *GetCheckOperationsResponse_CheckOperation) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[460]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[464]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30273,7 +30521,7 @@ type GetOrganizationGroupMembersResponse_GroupMember struct {
 
 func (x *GetOrganizationGroupMembersResponse_GroupMember) Reset() {
 	*x = GetOrganizationGroupMembersResponse_GroupMember{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[462]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[466]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30285,7 +30533,7 @@ func (x *GetOrganizationGroupMembersResponse_GroupMember) String() string {
 func (*GetOrganizationGroupMembersResponse_GroupMember) ProtoMessage() {}
 
 func (x *GetOrganizationGroupMembersResponse_GroupMember) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[462]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[466]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30333,7 +30581,7 @@ type GetOrganizationGroupMembersResponse_GroupApiKey struct {
 
 func (x *GetOrganizationGroupMembersResponse_GroupApiKey) Reset() {
 	*x = GetOrganizationGroupMembersResponse_GroupApiKey{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[463]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[467]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30345,7 +30593,7 @@ func (x *GetOrganizationGroupMembersResponse_GroupApiKey) String() string {
 func (*GetOrganizationGroupMembersResponse_GroupApiKey) ProtoMessage() {}
 
 func (x *GetOrganizationGroupMembersResponse_GroupApiKey) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[463]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[467]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30393,7 +30641,7 @@ type UpdateOrganizationGroupRequest_GroupRule struct {
 
 func (x *UpdateOrganizationGroupRequest_GroupRule) Reset() {
 	*x = UpdateOrganizationGroupRequest_GroupRule{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[464]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[468]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30405,7 +30653,7 @@ func (x *UpdateOrganizationGroupRequest_GroupRule) String() string {
 func (*UpdateOrganizationGroupRequest_GroupRule) ProtoMessage() {}
 
 func (x *UpdateOrganizationGroupRequest_GroupRule) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[464]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[468]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30452,7 +30700,7 @@ type OrgMember_Group struct {
 
 func (x *OrgMember_Group) Reset() {
 	*x = OrgMember_Group{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[465]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[469]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30464,7 +30712,7 @@ func (x *OrgMember_Group) String() string {
 func (*OrgMember_Group) ProtoMessage() {}
 
 func (x *OrgMember_Group) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[465]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[469]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30504,7 +30752,7 @@ type APIKey_Group struct {
 
 func (x *APIKey_Group) Reset() {
 	*x = APIKey_Group{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[466]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[470]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30516,7 +30764,7 @@ func (x *APIKey_Group) String() string {
 func (*APIKey_Group) ProtoMessage() {}
 
 func (x *APIKey_Group) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[466]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[470]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30558,7 +30806,7 @@ type DeletePersistedOperationResponse_Operation struct {
 
 func (x *DeletePersistedOperationResponse_Operation) Reset() {
 	*x = DeletePersistedOperationResponse_Operation{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[468]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[472]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30570,7 +30818,7 @@ func (x *DeletePersistedOperationResponse_Operation) String() string {
 func (*DeletePersistedOperationResponse_Operation) ProtoMessage() {}
 
 func (x *DeletePersistedOperationResponse_Operation) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[468]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[472]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30627,7 +30875,7 @@ type CheckPersistedOperationTrafficResponse_Operation struct {
 
 func (x *CheckPersistedOperationTrafficResponse_Operation) Reset() {
 	*x = CheckPersistedOperationTrafficResponse_Operation{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[469]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[473]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30639,7 +30887,7 @@ func (x *CheckPersistedOperationTrafficResponse_Operation) String() string {
 func (*CheckPersistedOperationTrafficResponse_Operation) ProtoMessage() {}
 
 func (x *CheckPersistedOperationTrafficResponse_Operation) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[469]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[473]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30703,7 +30951,7 @@ type GetPersistedOperationsResponse_Operation struct {
 
 func (x *GetPersistedOperationsResponse_Operation) Reset() {
 	*x = GetPersistedOperationsResponse_Operation{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[470]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[474]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30715,7 +30963,7 @@ func (x *GetPersistedOperationsResponse_Operation) String() string {
 func (*GetPersistedOperationsResponse_Operation) ProtoMessage() {}
 
 func (x *GetPersistedOperationsResponse_Operation) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[470]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[474]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30777,7 +31025,7 @@ type GetOrganizationWebhookConfigsResponse_Config struct {
 
 func (x *GetOrganizationWebhookConfigsResponse_Config) Reset() {
 	*x = GetOrganizationWebhookConfigsResponse_Config{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[471]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[475]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30789,7 +31037,7 @@ func (x *GetOrganizationWebhookConfigsResponse_Config) String() string {
 func (*GetOrganizationWebhookConfigsResponse_Config) ProtoMessage() {}
 
 func (x *GetOrganizationWebhookConfigsResponse_Config) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[471]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[475]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30837,7 +31085,7 @@ type GetBillingPlansResponse_BillingPlanFeature struct {
 
 func (x *GetBillingPlansResponse_BillingPlanFeature) Reset() {
 	*x = GetBillingPlansResponse_BillingPlanFeature{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[472]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[476]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30849,7 +31097,7 @@ func (x *GetBillingPlansResponse_BillingPlanFeature) String() string {
 func (*GetBillingPlansResponse_BillingPlanFeature) ProtoMessage() {}
 
 func (x *GetBillingPlansResponse_BillingPlanFeature) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[472]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[476]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30898,7 +31146,7 @@ type GetBillingPlansResponse_BillingPlan struct {
 
 func (x *GetBillingPlansResponse_BillingPlan) Reset() {
 	*x = GetBillingPlansResponse_BillingPlan{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[473]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[477]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30910,7 +31158,7 @@ func (x *GetBillingPlansResponse_BillingPlan) String() string {
 func (*GetBillingPlansResponse_BillingPlan) ProtoMessage() {}
 
 func (x *GetBillingPlansResponse_BillingPlan) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[473]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[477]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -30967,7 +31215,7 @@ type GetAllOverridesResponse_Override struct {
 
 func (x *GetAllOverridesResponse_Override) Reset() {
 	*x = GetAllOverridesResponse_Override{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[474]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[478]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -30979,7 +31227,7 @@ func (x *GetAllOverridesResponse_Override) String() string {
 func (*GetAllOverridesResponse_Override) ProtoMessage() {}
 
 func (x *GetAllOverridesResponse_Override) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[474]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[478]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31040,7 +31288,7 @@ type GetUserAccessibleResourcesResponse_Namespace struct {
 
 func (x *GetUserAccessibleResourcesResponse_Namespace) Reset() {
 	*x = GetUserAccessibleResourcesResponse_Namespace{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[475]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[479]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31052,7 +31300,7 @@ func (x *GetUserAccessibleResourcesResponse_Namespace) String() string {
 func (*GetUserAccessibleResourcesResponse_Namespace) ProtoMessage() {}
 
 func (x *GetUserAccessibleResourcesResponse_Namespace) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[475]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[479]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31093,7 +31341,7 @@ type GetUserAccessibleResourcesResponse_FederatedGraph struct {
 
 func (x *GetUserAccessibleResourcesResponse_FederatedGraph) Reset() {
 	*x = GetUserAccessibleResourcesResponse_FederatedGraph{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[476]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[480]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31105,7 +31353,7 @@ func (x *GetUserAccessibleResourcesResponse_FederatedGraph) String() string {
 func (*GetUserAccessibleResourcesResponse_FederatedGraph) ProtoMessage() {}
 
 func (x *GetUserAccessibleResourcesResponse_FederatedGraph) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[476]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[480]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31154,7 +31402,7 @@ type GetUserAccessibleResourcesResponse_SubGraph struct {
 
 func (x *GetUserAccessibleResourcesResponse_SubGraph) Reset() {
 	*x = GetUserAccessibleResourcesResponse_SubGraph{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[477]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[481]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31166,7 +31414,7 @@ func (x *GetUserAccessibleResourcesResponse_SubGraph) String() string {
 func (*GetUserAccessibleResourcesResponse_SubGraph) ProtoMessage() {}
 
 func (x *GetUserAccessibleResourcesResponse_SubGraph) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[477]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[481]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31210,6 +31458,66 @@ func (x *GetUserAccessibleResourcesResponse_SubGraph) GetFederatedGraphId() stri
 	return ""
 }
 
+type DeleteClientResponse_Operation struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OperationId    string                 `protobuf:"bytes,2,opt,name=operationId,proto3" json:"operationId,omitempty"`
+	OperationNames []string               `protobuf:"bytes,3,rep,name=operationNames,proto3" json:"operationNames,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *DeleteClientResponse_Operation) Reset() {
+	*x = DeleteClientResponse_Operation{}
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[482]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteClientResponse_Operation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteClientResponse_Operation) ProtoMessage() {}
+
+func (x *DeleteClientResponse_Operation) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[482]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteClientResponse_Operation.ProtoReflect.Descriptor instead.
+func (*DeleteClientResponse_Operation) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{289, 0}
+}
+
+func (x *DeleteClientResponse_Operation) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DeleteClientResponse_Operation) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *DeleteClientResponse_Operation) GetOperationNames() []string {
+	if x != nil {
+		return x.OperationNames
+	}
+	return nil
+}
+
 type ClientWithOperations_Operation struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Hash          string                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
@@ -31221,7 +31529,7 @@ type ClientWithOperations_Operation struct {
 
 func (x *ClientWithOperations_Operation) Reset() {
 	*x = ClientWithOperations_Operation{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[478]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[483]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31233,7 +31541,7 @@ func (x *ClientWithOperations_Operation) String() string {
 func (*ClientWithOperations_Operation) ProtoMessage() {}
 
 func (x *ClientWithOperations_Operation) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[478]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[483]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31246,7 +31554,7 @@ func (x *ClientWithOperations_Operation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientWithOperations_Operation.ProtoReflect.Descriptor instead.
 func (*ClientWithOperations_Operation) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{287, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{291, 0}
 }
 
 func (x *ClientWithOperations_Operation) GetHash() string {
@@ -31280,7 +31588,7 @@ type GetFeatureFlagByNameResponse_FfFederatedGraph struct {
 
 func (x *GetFeatureFlagByNameResponse_FfFederatedGraph) Reset() {
 	*x = GetFeatureFlagByNameResponse_FfFederatedGraph{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[479]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[484]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31292,7 +31600,7 @@ func (x *GetFeatureFlagByNameResponse_FfFederatedGraph) String() string {
 func (*GetFeatureFlagByNameResponse_FfFederatedGraph) ProtoMessage() {}
 
 func (x *GetFeatureFlagByNameResponse_FfFederatedGraph) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[479]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[484]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31305,7 +31613,7 @@ func (x *GetFeatureFlagByNameResponse_FfFederatedGraph) ProtoReflect() protorefl
 
 // Deprecated: Use GetFeatureFlagByNameResponse_FfFederatedGraph.ProtoReflect.Descriptor instead.
 func (*GetFeatureFlagByNameResponse_FfFederatedGraph) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{344, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{348, 0}
 }
 
 func (x *GetFeatureFlagByNameResponse_FfFederatedGraph) GetFederatedGraph() *FederatedGraph {
@@ -31332,7 +31640,7 @@ type GetProposalResponse_CurrentSubgraph struct {
 
 func (x *GetProposalResponse_CurrentSubgraph) Reset() {
 	*x = GetProposalResponse_CurrentSubgraph{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[480]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[485]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31344,7 +31652,7 @@ func (x *GetProposalResponse_CurrentSubgraph) String() string {
 func (*GetProposalResponse_CurrentSubgraph) ProtoMessage() {}
 
 func (x *GetProposalResponse_CurrentSubgraph) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[480]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[485]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31357,7 +31665,7 @@ func (x *GetProposalResponse_CurrentSubgraph) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GetProposalResponse_CurrentSubgraph.ProtoReflect.Descriptor instead.
 func (*GetProposalResponse_CurrentSubgraph) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{410, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{414, 0}
 }
 
 func (x *GetProposalResponse_CurrentSubgraph) GetName() string {
@@ -31383,7 +31691,7 @@ type UpdateProposalRequest_UpdateProposalSubgraphs struct {
 
 func (x *UpdateProposalRequest_UpdateProposalSubgraphs) Reset() {
 	*x = UpdateProposalRequest_UpdateProposalSubgraphs{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[481]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[486]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31395,7 +31703,7 @@ func (x *UpdateProposalRequest_UpdateProposalSubgraphs) String() string {
 func (*UpdateProposalRequest_UpdateProposalSubgraphs) ProtoMessage() {}
 
 func (x *UpdateProposalRequest_UpdateProposalSubgraphs) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[481]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[486]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31408,7 +31716,7 @@ func (x *UpdateProposalRequest_UpdateProposalSubgraphs) ProtoReflect() protorefl
 
 // Deprecated: Use UpdateProposalRequest_UpdateProposalSubgraphs.ProtoReflect.Descriptor instead.
 func (*UpdateProposalRequest_UpdateProposalSubgraphs) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{415, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{419, 0}
 }
 
 func (x *UpdateProposalRequest_UpdateProposalSubgraphs) GetSubgraphs() []*ProposalSubgraph {
@@ -31437,7 +31745,7 @@ type GetOperationsResponse_Operation struct {
 
 func (x *GetOperationsResponse_Operation) Reset() {
 	*x = GetOperationsResponse_Operation{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[482]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[487]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31449,7 +31757,7 @@ func (x *GetOperationsResponse_Operation) String() string {
 func (*GetOperationsResponse_Operation) ProtoMessage() {}
 
 func (x *GetOperationsResponse_Operation) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[482]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[487]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31462,7 +31770,7 @@ func (x *GetOperationsResponse_Operation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOperationsResponse_Operation.ProtoReflect.Descriptor instead.
 func (*GetOperationsResponse_Operation) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{424, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{428, 0}
 }
 
 func (x *GetOperationsResponse_Operation) GetHash() string {
@@ -31565,7 +31873,7 @@ type GetClientsFromAnalyticsResponse_Client struct {
 
 func (x *GetClientsFromAnalyticsResponse_Client) Reset() {
 	*x = GetClientsFromAnalyticsResponse_Client{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[483]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[488]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31577,7 +31885,7 @@ func (x *GetClientsFromAnalyticsResponse_Client) String() string {
 func (*GetClientsFromAnalyticsResponse_Client) ProtoMessage() {}
 
 func (x *GetClientsFromAnalyticsResponse_Client) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[483]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[488]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31590,7 +31898,7 @@ func (x *GetClientsFromAnalyticsResponse_Client) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use GetClientsFromAnalyticsResponse_Client.ProtoReflect.Descriptor instead.
 func (*GetClientsFromAnalyticsResponse_Client) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{426, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{430, 0}
 }
 
 func (x *GetClientsFromAnalyticsResponse_Client) GetName() string {
@@ -31612,7 +31920,7 @@ type GetOperationClientsResponse_Client struct {
 
 func (x *GetOperationClientsResponse_Client) Reset() {
 	*x = GetOperationClientsResponse_Client{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[484]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[489]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31624,7 +31932,7 @@ func (x *GetOperationClientsResponse_Client) String() string {
 func (*GetOperationClientsResponse_Client) ProtoMessage() {}
 
 func (x *GetOperationClientsResponse_Client) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[484]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[489]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31637,7 +31945,7 @@ func (x *GetOperationClientsResponse_Client) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GetOperationClientsResponse_Client.ProtoReflect.Descriptor instead.
 func (*GetOperationClientsResponse_Client) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{428, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{432, 0}
 }
 
 func (x *GetOperationClientsResponse_Client) GetName() string {
@@ -31680,7 +31988,7 @@ type GetOperationDeprecatedFieldsResponse_DeprecatedField struct {
 
 func (x *GetOperationDeprecatedFieldsResponse_DeprecatedField) Reset() {
 	*x = GetOperationDeprecatedFieldsResponse_DeprecatedField{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[485]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[490]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31692,7 +32000,7 @@ func (x *GetOperationDeprecatedFieldsResponse_DeprecatedField) String() string {
 func (*GetOperationDeprecatedFieldsResponse_DeprecatedField) ProtoMessage() {}
 
 func (x *GetOperationDeprecatedFieldsResponse_DeprecatedField) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[485]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[490]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31705,7 +32013,7 @@ func (x *GetOperationDeprecatedFieldsResponse_DeprecatedField) ProtoReflect() pr
 
 // Deprecated: Use GetOperationDeprecatedFieldsResponse_DeprecatedField.ProtoReflect.Descriptor instead.
 func (*GetOperationDeprecatedFieldsResponse_DeprecatedField) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{430, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{434, 0}
 }
 
 func (x *GetOperationDeprecatedFieldsResponse_DeprecatedField) GetFieldName() string {
@@ -31748,7 +32056,7 @@ type ListOrganizationsResponse_OrganizationMembership struct {
 
 func (x *ListOrganizationsResponse_OrganizationMembership) Reset() {
 	*x = ListOrganizationsResponse_OrganizationMembership{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[486]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[491]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -31760,7 +32068,7 @@ func (x *ListOrganizationsResponse_OrganizationMembership) String() string {
 func (*ListOrganizationsResponse_OrganizationMembership) ProtoMessage() {}
 
 func (x *ListOrganizationsResponse_OrganizationMembership) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[486]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[491]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -31773,7 +32081,7 @@ func (x *ListOrganizationsResponse_OrganizationMembership) ProtoReflect() protor
 
 // Deprecated: Use ListOrganizationsResponse_OrganizationMembership.ProtoReflect.Descriptor instead.
 func (*ListOrganizationsResponse_OrganizationMembership) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{442, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{446, 0}
 }
 
 func (x *ListOrganizationsResponse_OrganizationMembership) GetId() string {
@@ -33567,7 +33875,32 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\"\x8c\x01\n" +
 	"\x12GetClientsResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12:\n" +
-	"\aclients\x18\x02 \x03(\v2 .wg.cosmo.platform.v1.ClientInfoR\aclients\"\xbe\x03\n" +
+	"\aclients\x18\x02 \x03(\v2 .wg.cosmo.platform.v1.ClientInfoR\aclients\"~\n" +
+	"\x1aPreviewDeleteClientRequest\x12\"\n" +
+	"\ffedGraphName\x18\x01 \x01(\tR\ffedGraphName\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1e\n" +
+	"\n" +
+	"clientName\x18\x03 \x01(\tR\n" +
+	"clientName\"\xcf\x01\n" +
+	"\x1bPreviewDeleteClientResponse\x12:\n" +
+	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x128\n" +
+	"\x06client\x18\x02 \x01(\v2 .wg.cosmo.platform.v1.ClientInfoR\x06client\x12:\n" +
+	"\x18persistedOperationsCount\x18\x03 \x01(\x05R\x18persistedOperationsCount\"w\n" +
+	"\x13DeleteClientRequest\x12\"\n" +
+	"\ffedGraphName\x18\x01 \x01(\tR\ffedGraphName\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1e\n" +
+	"\n" +
+	"clientName\x18\x03 \x01(\tR\n" +
+	"clientName\"\x8f\x03\n" +
+	"\x14DeleteClientResponse\x12:\n" +
+	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x128\n" +
+	"\x06client\x18\x02 \x01(\v2 .wg.cosmo.platform.v1.ClientInfoR\x06client\x126\n" +
+	"\x16deletedOperationsCount\x18\x03 \x01(\x05R\x16deletedOperationsCount\x12b\n" +
+	"\x11deletedOperations\x18\x04 \x03(\v24.wg.cosmo.platform.v1.DeleteClientResponse.OperationR\x11deletedOperations\x1ae\n" +
+	"\tOperation\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12 \n" +
+	"\voperationId\x18\x02 \x01(\tR\voperationId\x12&\n" +
+	"\x0eoperationNames\x18\x03 \x03(\tR\x0eoperationNames\"\xbe\x03\n" +
 	"\x14GetFieldUsageRequest\x12\x1d\n" +
 	"\n" +
 	"graph_name\x18\x01 \x01(\tR\tgraphName\x12!\n" +
@@ -34549,7 +34882,7 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x06ERRORS\x10\x02*\"\n" +
 	"\rSortDirection\x12\a\n" +
 	"\x03ASC\x10\x00\x12\b\n" +
-	"\x04DESC\x10\x012߾\x01\n" +
+	"\x04DESC\x10\x012\xc6\xc0\x01\n" +
 	"\x0fPlatformService\x12\x85\x01\n" +
 	"\x16CreatePlaygroundScript\x123.wg.cosmo.platform.v1.CreatePlaygroundScriptRequest\x1a4.wg.cosmo.platform.v1.CreatePlaygroundScriptResponse\"\x00\x12\x85\x01\n" +
 	"\x16DeletePlaygroundScript\x123.wg.cosmo.platform.v1.DeletePlaygroundScriptRequest\x1a4.wg.cosmo.platform.v1.DeletePlaygroundScriptResponse\"\x00\x12\x85\x01\n" +
@@ -34661,7 +34994,9 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x12DeleteOIDCProvider\x12/.wg.cosmo.platform.v1.DeleteOIDCProviderRequest\x1a0.wg.cosmo.platform.v1.DeleteOIDCProviderResponse\"\x00\x12s\n" +
 	"\x10UpdateIDPMappers\x12-.wg.cosmo.platform.v1.UpdateIDPMappersRequest\x1a..wg.cosmo.platform.v1.UpdateIDPMappersResponse\"\x00\x12a\n" +
 	"\n" +
-	"GetClients\x12'.wg.cosmo.platform.v1.GetClientsRequest\x1a(.wg.cosmo.platform.v1.GetClientsResponse\"\x00\x12a\n" +
+	"GetClients\x12'.wg.cosmo.platform.v1.GetClientsRequest\x1a(.wg.cosmo.platform.v1.GetClientsResponse\"\x00\x12|\n" +
+	"\x13PreviewDeleteClient\x120.wg.cosmo.platform.v1.PreviewDeleteClientRequest\x1a1.wg.cosmo.platform.v1.PreviewDeleteClientResponse\"\x00\x12g\n" +
+	"\fDeleteClient\x12).wg.cosmo.platform.v1.DeleteClientRequest\x1a*.wg.cosmo.platform.v1.DeleteClientResponse\"\x00\x12a\n" +
 	"\n" +
 	"GetRouters\x12'.wg.cosmo.platform.v1.GetRoutersRequest\x1a(.wg.cosmo.platform.v1.GetRoutersResponse\"\x00\x12m\n" +
 	"\x0eGetInvitations\x12+.wg.cosmo.platform.v1.GetInvitationsRequest\x1a,.wg.cosmo.platform.v1.GetInvitationsResponse\"\x00\x12\x8e\x01\n" +
@@ -34756,7 +35091,7 @@ func file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP() []byte {
 }
 
 var file_wg_cosmo_platform_v1_platform_proto_enumTypes = make([]protoimpl.EnumInfo, 15)
-var file_wg_cosmo_platform_v1_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 487)
+var file_wg_cosmo_platform_v1_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 492)
 var file_wg_cosmo_platform_v1_platform_proto_goTypes = []any{
 	(LintSeverity)(0),                                                  // 0: wg.cosmo.platform.v1.LintSeverity
 	(SubgraphType)(0),                                                  // 1: wg.cosmo.platform.v1.SubgraphType
@@ -35059,221 +35394,226 @@ var file_wg_cosmo_platform_v1_platform_proto_goTypes = []any{
 	(*ClientInfo)(nil),                                                 // 298: wg.cosmo.platform.v1.ClientInfo
 	(*GetClientsRequest)(nil),                                          // 299: wg.cosmo.platform.v1.GetClientsRequest
 	(*GetClientsResponse)(nil),                                         // 300: wg.cosmo.platform.v1.GetClientsResponse
-	(*GetFieldUsageRequest)(nil),                                       // 301: wg.cosmo.platform.v1.GetFieldUsageRequest
-	(*ClientWithOperations)(nil),                                       // 302: wg.cosmo.platform.v1.ClientWithOperations
-	(*FieldUsageMeta)(nil),                                             // 303: wg.cosmo.platform.v1.FieldUsageMeta
-	(*GetFieldUsageResponse)(nil),                                      // 304: wg.cosmo.platform.v1.GetFieldUsageResponse
-	(*CreateNamespaceRequest)(nil),                                     // 305: wg.cosmo.platform.v1.CreateNamespaceRequest
-	(*CreateNamespaceResponse)(nil),                                    // 306: wg.cosmo.platform.v1.CreateNamespaceResponse
-	(*DeleteNamespaceRequest)(nil),                                     // 307: wg.cosmo.platform.v1.DeleteNamespaceRequest
-	(*DeleteNamespaceResponse)(nil),                                    // 308: wg.cosmo.platform.v1.DeleteNamespaceResponse
-	(*RenameNamespaceRequest)(nil),                                     // 309: wg.cosmo.platform.v1.RenameNamespaceRequest
-	(*RenameNamespaceResponse)(nil),                                    // 310: wg.cosmo.platform.v1.RenameNamespaceResponse
-	(*Namespace)(nil),                                                  // 311: wg.cosmo.platform.v1.Namespace
-	(*GetNamespacesRequest)(nil),                                       // 312: wg.cosmo.platform.v1.GetNamespacesRequest
-	(*GetNamespacesResponse)(nil),                                      // 313: wg.cosmo.platform.v1.GetNamespacesResponse
-	(*MoveGraphRequest)(nil),                                           // 314: wg.cosmo.platform.v1.MoveGraphRequest
-	(*MoveGraphResponse)(nil),                                          // 315: wg.cosmo.platform.v1.MoveGraphResponse
-	(*GetNamespaceLintConfigRequest)(nil),                              // 316: wg.cosmo.platform.v1.GetNamespaceLintConfigRequest
-	(*GetNamespaceLintConfigResponse)(nil),                             // 317: wg.cosmo.platform.v1.GetNamespaceLintConfigResponse
-	(*GetNamespaceChecksConfigurationRequest)(nil),                     // 318: wg.cosmo.platform.v1.GetNamespaceChecksConfigurationRequest
-	(*GetNamespaceChecksConfigurationResponse)(nil),                    // 319: wg.cosmo.platform.v1.GetNamespaceChecksConfigurationResponse
-	(*UpdateNamespaceChecksConfigurationRequest)(nil),                  // 320: wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationRequest
-	(*UpdateNamespaceChecksConfigurationResponse)(nil),                 // 321: wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationResponse
-	(*EnableLintingForTheNamespaceRequest)(nil),                        // 322: wg.cosmo.platform.v1.EnableLintingForTheNamespaceRequest
-	(*EnableLintingForTheNamespaceResponse)(nil),                       // 323: wg.cosmo.platform.v1.EnableLintingForTheNamespaceResponse
-	(*LintConfig)(nil),                                                 // 324: wg.cosmo.platform.v1.LintConfig
-	(*ConfigureNamespaceLintConfigRequest)(nil),                        // 325: wg.cosmo.platform.v1.ConfigureNamespaceLintConfigRequest
-	(*ConfigureNamespaceLintConfigResponse)(nil),                       // 326: wg.cosmo.platform.v1.ConfigureNamespaceLintConfigResponse
-	(*EnableGraphPruningRequest)(nil),                                  // 327: wg.cosmo.platform.v1.EnableGraphPruningRequest
-	(*EnableGraphPruningResponse)(nil),                                 // 328: wg.cosmo.platform.v1.EnableGraphPruningResponse
-	(*GraphPruningConfig)(nil),                                         // 329: wg.cosmo.platform.v1.GraphPruningConfig
-	(*ConfigureNamespaceGraphPruningConfigRequest)(nil),                // 330: wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigRequest
-	(*ConfigureNamespaceGraphPruningConfigResponse)(nil),               // 331: wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigResponse
-	(*GetNamespaceGraphPruningConfigRequest)(nil),                      // 332: wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigRequest
-	(*GetNamespaceGraphPruningConfigResponse)(nil),                     // 333: wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigResponse
-	(*MigrateMonographRequest)(nil),                                    // 334: wg.cosmo.platform.v1.MigrateMonographRequest
-	(*MigrateMonographResponse)(nil),                                   // 335: wg.cosmo.platform.v1.MigrateMonographResponse
-	(*GetUserAccessiblePermissionsRequest)(nil),                        // 336: wg.cosmo.platform.v1.GetUserAccessiblePermissionsRequest
-	(*Permission)(nil),                                                 // 337: wg.cosmo.platform.v1.Permission
-	(*GetUserAccessiblePermissionsResponse)(nil),                       // 338: wg.cosmo.platform.v1.GetUserAccessiblePermissionsResponse
-	(*CreateContractRequest)(nil),                                      // 339: wg.cosmo.platform.v1.CreateContractRequest
-	(*CreateContractResponse)(nil),                                     // 340: wg.cosmo.platform.v1.CreateContractResponse
-	(*UpdateContractRequest)(nil),                                      // 341: wg.cosmo.platform.v1.UpdateContractRequest
-	(*UpdateContractResponse)(nil),                                     // 342: wg.cosmo.platform.v1.UpdateContractResponse
-	(*IsMemberLimitReachedRequest)(nil),                                // 343: wg.cosmo.platform.v1.IsMemberLimitReachedRequest
-	(*IsMemberLimitReachedResponse)(nil),                               // 344: wg.cosmo.platform.v1.IsMemberLimitReachedResponse
-	(*DeleteUserRequest)(nil),                                          // 345: wg.cosmo.platform.v1.DeleteUserRequest
-	(*DeleteUserResponse)(nil),                                         // 346: wg.cosmo.platform.v1.DeleteUserResponse
-	(*CreateFeatureFlagRequest)(nil),                                   // 347: wg.cosmo.platform.v1.CreateFeatureFlagRequest
-	(*CreateFeatureFlagResponse)(nil),                                  // 348: wg.cosmo.platform.v1.CreateFeatureFlagResponse
-	(*UpdateFeatureFlagRequest)(nil),                                   // 349: wg.cosmo.platform.v1.UpdateFeatureFlagRequest
-	(*UpdateFeatureFlagResponse)(nil),                                  // 350: wg.cosmo.platform.v1.UpdateFeatureFlagResponse
-	(*EnableFeatureFlagRequest)(nil),                                   // 351: wg.cosmo.platform.v1.EnableFeatureFlagRequest
-	(*EnableFeatureFlagResponse)(nil),                                  // 352: wg.cosmo.platform.v1.EnableFeatureFlagResponse
-	(*DeleteFeatureFlagRequest)(nil),                                   // 353: wg.cosmo.platform.v1.DeleteFeatureFlagRequest
-	(*DeleteFeatureFlagResponse)(nil),                                  // 354: wg.cosmo.platform.v1.DeleteFeatureFlagResponse
-	(*FeatureFlag)(nil),                                                // 355: wg.cosmo.platform.v1.FeatureFlag
-	(*GetFeatureFlagsRequest)(nil),                                     // 356: wg.cosmo.platform.v1.GetFeatureFlagsRequest
-	(*GetFeatureFlagsResponse)(nil),                                    // 357: wg.cosmo.platform.v1.GetFeatureFlagsResponse
-	(*GetFeatureFlagByNameRequest)(nil),                                // 358: wg.cosmo.platform.v1.GetFeatureFlagByNameRequest
-	(*GetFeatureFlagByNameResponse)(nil),                               // 359: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse
-	(*GetFeatureSubgraphsByFeatureFlagRequest)(nil),                    // 360: wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagRequest
-	(*GetFeatureSubgraphsByFeatureFlagResponse)(nil),                   // 361: wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagResponse
-	(*GetFeatureSubgraphsRequest)(nil),                                 // 362: wg.cosmo.platform.v1.GetFeatureSubgraphsRequest
-	(*GetFeatureSubgraphsResponse)(nil),                                // 363: wg.cosmo.platform.v1.GetFeatureSubgraphsResponse
-	(*GetFeatureFlagsByFederatedGraphRequest)(nil),                     // 364: wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphRequest
-	(*GetFeatureFlagsByFederatedGraphResponse)(nil),                    // 365: wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphResponse
-	(*GetFeatureFlagsInLatestCompositionByFederatedGraphRequest)(nil),  // 366: wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest
-	(*GetFeatureFlagsInLatestCompositionByFederatedGraphResponse)(nil), // 367: wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse
-	(*GetFeatureSubgraphsByFederatedGraphRequest)(nil),                 // 368: wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphRequest
-	(*GetFeatureSubgraphsByFederatedGraphResponse)(nil),                // 369: wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphResponse
-	(*GetOrganizationWebhookHistoryRequest)(nil),                       // 370: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryRequest
-	(*WebhookDelivery)(nil),                                            // 371: wg.cosmo.platform.v1.WebhookDelivery
-	(*GetOrganizationWebhookHistoryResponse)(nil),                      // 372: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryResponse
-	(*RedeliverWebhookRequest)(nil),                                    // 373: wg.cosmo.platform.v1.RedeliverWebhookRequest
-	(*RedeliverWebhookResponse)(nil),                                   // 374: wg.cosmo.platform.v1.RedeliverWebhookResponse
-	(*GetWebhookDeliveryDetailsRequest)(nil),                           // 375: wg.cosmo.platform.v1.GetWebhookDeliveryDetailsRequest
-	(*GetWebhookDeliveryDetailsResponse)(nil),                          // 376: wg.cosmo.platform.v1.GetWebhookDeliveryDetailsResponse
-	(*CreatePlaygroundScriptRequest)(nil),                              // 377: wg.cosmo.platform.v1.CreatePlaygroundScriptRequest
-	(*CreatePlaygroundScriptResponse)(nil),                             // 378: wg.cosmo.platform.v1.CreatePlaygroundScriptResponse
-	(*DeletePlaygroundScriptRequest)(nil),                              // 379: wg.cosmo.platform.v1.DeletePlaygroundScriptRequest
-	(*DeletePlaygroundScriptResponse)(nil),                             // 380: wg.cosmo.platform.v1.DeletePlaygroundScriptResponse
-	(*UpdatePlaygroundScriptRequest)(nil),                              // 381: wg.cosmo.platform.v1.UpdatePlaygroundScriptRequest
-	(*UpdatePlaygroundScriptResponse)(nil),                             // 382: wg.cosmo.platform.v1.UpdatePlaygroundScriptResponse
-	(*GetPlaygroundScriptsRequest)(nil),                                // 383: wg.cosmo.platform.v1.GetPlaygroundScriptsRequest
-	(*PlaygroundScript)(nil),                                           // 384: wg.cosmo.platform.v1.PlaygroundScript
-	(*GetPlaygroundScriptsResponse)(nil),                               // 385: wg.cosmo.platform.v1.GetPlaygroundScriptsResponse
-	(*GetFederatedGraphByIdRequest)(nil),                               // 386: wg.cosmo.platform.v1.GetFederatedGraphByIdRequest
-	(*GetFederatedGraphByIdResponse)(nil),                              // 387: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse
-	(*GetSubgraphByIdRequest)(nil),                                     // 388: wg.cosmo.platform.v1.GetSubgraphByIdRequest
-	(*GetSubgraphByIdResponse)(nil),                                    // 389: wg.cosmo.platform.v1.GetSubgraphByIdResponse
-	(*GetNamespaceRequest)(nil),                                        // 390: wg.cosmo.platform.v1.GetNamespaceRequest
-	(*GetNamespaceResponse)(nil),                                       // 391: wg.cosmo.platform.v1.GetNamespaceResponse
-	(*WorkspaceNamespace)(nil),                                         // 392: wg.cosmo.platform.v1.WorkspaceNamespace
-	(*WorkspaceFederatedGraph)(nil),                                    // 393: wg.cosmo.platform.v1.WorkspaceFederatedGraph
-	(*WorkspaceSubgraph)(nil),                                          // 394: wg.cosmo.platform.v1.WorkspaceSubgraph
-	(*GetWorkspaceRequest)(nil),                                        // 395: wg.cosmo.platform.v1.GetWorkspaceRequest
-	(*GetWorkspaceResponse)(nil),                                       // 396: wg.cosmo.platform.v1.GetWorkspaceResponse
-	(*PushCacheWarmerOperationRequest)(nil),                            // 397: wg.cosmo.platform.v1.PushCacheWarmerOperationRequest
-	(*PushCacheWarmerOperationResponse)(nil),                           // 398: wg.cosmo.platform.v1.PushCacheWarmerOperationResponse
-	(*GetCacheWarmerOperationsRequest)(nil),                            // 399: wg.cosmo.platform.v1.GetCacheWarmerOperationsRequest
-	(*CacheWarmerOperation)(nil),                                       // 400: wg.cosmo.platform.v1.CacheWarmerOperation
-	(*GetCacheWarmerOperationsResponse)(nil),                           // 401: wg.cosmo.platform.v1.GetCacheWarmerOperationsResponse
-	(*ComputeCacheWarmerOperationsRequest)(nil),                        // 402: wg.cosmo.platform.v1.ComputeCacheWarmerOperationsRequest
-	(*ComputeCacheWarmerOperationsResponse)(nil),                       // 403: wg.cosmo.platform.v1.ComputeCacheWarmerOperationsResponse
-	(*ConfigureCacheWarmerRequest)(nil),                                // 404: wg.cosmo.platform.v1.ConfigureCacheWarmerRequest
-	(*ConfigureCacheWarmerResponse)(nil),                               // 405: wg.cosmo.platform.v1.ConfigureCacheWarmerResponse
-	(*GetCacheWarmerConfigRequest)(nil),                                // 406: wg.cosmo.platform.v1.GetCacheWarmerConfigRequest
-	(*GetCacheWarmerConfigResponse)(nil),                               // 407: wg.cosmo.platform.v1.GetCacheWarmerConfigResponse
-	(*GetSubgraphCheckExtensionsConfigRequest)(nil),                    // 408: wg.cosmo.platform.v1.GetSubgraphCheckExtensionsConfigRequest
-	(*GetSubgraphCheckExtensionsConfigResponse)(nil),                   // 409: wg.cosmo.platform.v1.GetSubgraphCheckExtensionsConfigResponse
-	(*ConfigureSubgraphCheckExtensionsRequest)(nil),                    // 410: wg.cosmo.platform.v1.ConfigureSubgraphCheckExtensionsRequest
-	(*ConfigureSubgraphCheckExtensionsResponse)(nil),                   // 411: wg.cosmo.platform.v1.ConfigureSubgraphCheckExtensionsResponse
-	(*DeleteCacheWarmerOperationRequest)(nil),                          // 412: wg.cosmo.platform.v1.DeleteCacheWarmerOperationRequest
-	(*DeleteCacheWarmerOperationResponse)(nil),                         // 413: wg.cosmo.platform.v1.DeleteCacheWarmerOperationResponse
-	(*ListRouterCompatibilityVersionsRequest)(nil),                     // 414: wg.cosmo.platform.v1.ListRouterCompatibilityVersionsRequest
-	(*ListRouterCompatibilityVersionsResponse)(nil),                    // 415: wg.cosmo.platform.v1.ListRouterCompatibilityVersionsResponse
-	(*SetGraphRouterCompatibilityVersionRequest)(nil),                  // 416: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionRequest
-	(*SetGraphRouterCompatibilityVersionResponse)(nil),                 // 417: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse
-	(*GetProposedSchemaOfCheckedSubgraphRequest)(nil),                  // 418: wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphRequest
-	(*GetProposedSchemaOfCheckedSubgraphResponse)(nil),                 // 419: wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphResponse
-	(*Proposal)(nil),                                                   // 420: wg.cosmo.platform.v1.Proposal
-	(*ProposalSubgraph)(nil),                                           // 421: wg.cosmo.platform.v1.ProposalSubgraph
-	(*CreateProposalRequest)(nil),                                      // 422: wg.cosmo.platform.v1.CreateProposalRequest
-	(*CreateProposalResponse)(nil),                                     // 423: wg.cosmo.platform.v1.CreateProposalResponse
-	(*GetProposalRequest)(nil),                                         // 424: wg.cosmo.platform.v1.GetProposalRequest
-	(*GetProposalResponse)(nil),                                        // 425: wg.cosmo.platform.v1.GetProposalResponse
-	(*GetProposalsByFederatedGraphRequest)(nil),                        // 426: wg.cosmo.platform.v1.GetProposalsByFederatedGraphRequest
-	(*GetProposalsByFederatedGraphResponse)(nil),                       // 427: wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse
-	(*GetProposalChecksRequest)(nil),                                   // 428: wg.cosmo.platform.v1.GetProposalChecksRequest
-	(*GetProposalChecksResponse)(nil),                                  // 429: wg.cosmo.platform.v1.GetProposalChecksResponse
-	(*UpdateProposalRequest)(nil),                                      // 430: wg.cosmo.platform.v1.UpdateProposalRequest
-	(*UpdateProposalResponse)(nil),                                     // 431: wg.cosmo.platform.v1.UpdateProposalResponse
-	(*EnableProposalsForNamespaceRequest)(nil),                         // 432: wg.cosmo.platform.v1.EnableProposalsForNamespaceRequest
-	(*EnableProposalsForNamespaceResponse)(nil),                        // 433: wg.cosmo.platform.v1.EnableProposalsForNamespaceResponse
-	(*ConfigureNamespaceProposalConfigRequest)(nil),                    // 434: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest
-	(*ConfigureNamespaceProposalConfigResponse)(nil),                   // 435: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse
-	(*GetNamespaceProposalConfigRequest)(nil),                          // 436: wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest
-	(*GetNamespaceProposalConfigResponse)(nil),                         // 437: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse
-	(*GetOperationsRequest)(nil),                                       // 438: wg.cosmo.platform.v1.GetOperationsRequest
-	(*GetOperationsResponse)(nil),                                      // 439: wg.cosmo.platform.v1.GetOperationsResponse
-	(*GetClientsFromAnalyticsRequest)(nil),                             // 440: wg.cosmo.platform.v1.GetClientsFromAnalyticsRequest
-	(*GetClientsFromAnalyticsResponse)(nil),                            // 441: wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse
-	(*GetOperationClientsRequest)(nil),                                 // 442: wg.cosmo.platform.v1.GetOperationClientsRequest
-	(*GetOperationClientsResponse)(nil),                                // 443: wg.cosmo.platform.v1.GetOperationClientsResponse
-	(*GetOperationDeprecatedFieldsRequest)(nil),                        // 444: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsRequest
-	(*GetOperationDeprecatedFieldsResponse)(nil),                       // 445: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse
-	(*ValidateAndFetchPluginDataRequest)(nil),                          // 446: wg.cosmo.platform.v1.ValidateAndFetchPluginDataRequest
-	(*ValidateAndFetchPluginDataResponse)(nil),                         // 447: wg.cosmo.platform.v1.ValidateAndFetchPluginDataResponse
-	(*LinkSubgraphRequest)(nil),                                        // 448: wg.cosmo.platform.v1.LinkSubgraphRequest
-	(*LinkSubgraphResponse)(nil),                                       // 449: wg.cosmo.platform.v1.LinkSubgraphResponse
-	(*UnlinkSubgraphRequest)(nil),                                      // 450: wg.cosmo.platform.v1.UnlinkSubgraphRequest
-	(*UnlinkSubgraphResponse)(nil),                                     // 451: wg.cosmo.platform.v1.UnlinkSubgraphResponse
-	(*VerifyAPIKeyGraphAccessRequest)(nil),                             // 452: wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessRequest
-	(*VerifyAPIKeyGraphAccessResponse)(nil),                            // 453: wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessResponse
-	(*InitializeCosmoUserRequest)(nil),                                 // 454: wg.cosmo.platform.v1.InitializeCosmoUserRequest
-	(*InitializeCosmoUserResponse)(nil),                                // 455: wg.cosmo.platform.v1.InitializeCosmoUserResponse
-	(*ListOrganizationsRequest)(nil),                                   // 456: wg.cosmo.platform.v1.ListOrganizationsRequest
-	(*ListOrganizationsResponse)(nil),                                  // 457: wg.cosmo.platform.v1.ListOrganizationsResponse
-	(*RecomposeGraphRequest)(nil),                                      // 458: wg.cosmo.platform.v1.RecomposeGraphRequest
-	(*RecomposeGraphResponse)(nil),                                     // 459: wg.cosmo.platform.v1.RecomposeGraphResponse
-	(*RecomposeFeatureFlagRequest)(nil),                                // 460: wg.cosmo.platform.v1.RecomposeFeatureFlagRequest
-	(*RecomposeFeatureFlagResponse)(nil),                               // 461: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse
-	(*GetOnboardingRequest)(nil),                                       // 462: wg.cosmo.platform.v1.GetOnboardingRequest
-	(*GetOnboardingResponse)(nil),                                      // 463: wg.cosmo.platform.v1.GetOnboardingResponse
-	(*CreateOnboardingRequest)(nil),                                    // 464: wg.cosmo.platform.v1.CreateOnboardingRequest
-	(*CreateOnboardingResponse)(nil),                                   // 465: wg.cosmo.platform.v1.CreateOnboardingResponse
-	(*FinishOnboardingRequest)(nil),                                    // 466: wg.cosmo.platform.v1.FinishOnboardingRequest
-	(*FinishOnboardingResponse)(nil),                                   // 467: wg.cosmo.platform.v1.FinishOnboardingResponse
-	(*Subgraph_PluginData)(nil),                                        // 468: wg.cosmo.platform.v1.Subgraph.PluginData
-	(*GetSubgraphByNameResponse_LinkedSubgraph)(nil),                   // 469: wg.cosmo.platform.v1.GetSubgraphByNameResponse.LinkedSubgraph
-	(*SchemaCheck_GhDetails)(nil),                                      // 470: wg.cosmo.platform.v1.SchemaCheck.GhDetails
-	(*SchemaCheck_CheckedSubgraph)(nil),                                // 471: wg.cosmo.platform.v1.SchemaCheck.CheckedSubgraph
-	(*SchemaCheck_LinkedCheck)(nil),                                    // 472: wg.cosmo.platform.v1.SchemaCheck.LinkedCheck
-	(*GetCheckSummaryResponse_AffectedGraph)(nil),                      // 473: wg.cosmo.platform.v1.GetCheckSummaryResponse.AffectedGraph
-	(*GetCheckSummaryResponse_ProposalSchemaMatch)(nil),                // 474: wg.cosmo.platform.v1.GetCheckSummaryResponse.ProposalSchemaMatch
-	(*GetCheckOperationsResponse_CheckOperation)(nil),                  // 475: wg.cosmo.platform.v1.GetCheckOperationsResponse.CheckOperation
-	nil, // 476: wg.cosmo.platform.v1.AnalyticsViewRow.ValueEntry
-	(*GetOrganizationGroupMembersResponse_GroupMember)(nil),      // 477: wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.GroupMember
-	(*GetOrganizationGroupMembersResponse_GroupApiKey)(nil),      // 478: wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.GroupApiKey
-	(*UpdateOrganizationGroupRequest_GroupRule)(nil),             // 479: wg.cosmo.platform.v1.UpdateOrganizationGroupRequest.GroupRule
-	(*OrgMember_Group)(nil),                                      // 480: wg.cosmo.platform.v1.OrgMember.Group
-	(*APIKey_Group)(nil),                                         // 481: wg.cosmo.platform.v1.APIKey.Group
-	nil,                                                          // 482: wg.cosmo.platform.v1.Span.AttributesEntry
-	(*DeletePersistedOperationResponse_Operation)(nil),           // 483: wg.cosmo.platform.v1.DeletePersistedOperationResponse.Operation
-	(*CheckPersistedOperationTrafficResponse_Operation)(nil),     // 484: wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.Operation
-	(*GetPersistedOperationsResponse_Operation)(nil),             // 485: wg.cosmo.platform.v1.GetPersistedOperationsResponse.Operation
-	(*GetOrganizationWebhookConfigsResponse_Config)(nil),         // 486: wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.Config
-	(*GetBillingPlansResponse_BillingPlanFeature)(nil),           // 487: wg.cosmo.platform.v1.GetBillingPlansResponse.BillingPlanFeature
-	(*GetBillingPlansResponse_BillingPlan)(nil),                  // 488: wg.cosmo.platform.v1.GetBillingPlansResponse.BillingPlan
-	(*GetAllOverridesResponse_Override)(nil),                     // 489: wg.cosmo.platform.v1.GetAllOverridesResponse.Override
-	(*GetUserAccessibleResourcesResponse_Namespace)(nil),         // 490: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Namespace
-	(*GetUserAccessibleResourcesResponse_FederatedGraph)(nil),    // 491: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.FederatedGraph
-	(*GetUserAccessibleResourcesResponse_SubGraph)(nil),          // 492: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.SubGraph
-	(*ClientWithOperations_Operation)(nil),                       // 493: wg.cosmo.platform.v1.ClientWithOperations.Operation
-	(*GetFeatureFlagByNameResponse_FfFederatedGraph)(nil),        // 494: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.FfFederatedGraph
-	(*GetProposalResponse_CurrentSubgraph)(nil),                  // 495: wg.cosmo.platform.v1.GetProposalResponse.CurrentSubgraph
-	(*UpdateProposalRequest_UpdateProposalSubgraphs)(nil),        // 496: wg.cosmo.platform.v1.UpdateProposalRequest.UpdateProposalSubgraphs
-	(*GetOperationsResponse_Operation)(nil),                      // 497: wg.cosmo.platform.v1.GetOperationsResponse.Operation
-	(*GetClientsFromAnalyticsResponse_Client)(nil),               // 498: wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.Client
-	(*GetOperationClientsResponse_Client)(nil),                   // 499: wg.cosmo.platform.v1.GetOperationClientsResponse.Client
-	(*GetOperationDeprecatedFieldsResponse_DeprecatedField)(nil), // 500: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse.DeprecatedField
-	(*ListOrganizationsResponse_OrganizationMembership)(nil),     // 501: wg.cosmo.platform.v1.ListOrganizationsResponse.OrganizationMembership
-	(common.EnumStatusCode)(0),                                   // 502: wg.cosmo.common.EnumStatusCode
-	(common.GraphQLSubscriptionProtocol)(0),                      // 503: wg.cosmo.common.GraphQLSubscriptionProtocol
-	(common.GraphQLWebsocketSubprotocol)(0),                      // 504: wg.cosmo.common.GraphQLWebsocketSubprotocol
-	(*notifications.EventMeta)(nil),                              // 505: wg.cosmo.notifications.EventMeta
+	(*PreviewDeleteClientRequest)(nil),                                 // 301: wg.cosmo.platform.v1.PreviewDeleteClientRequest
+	(*PreviewDeleteClientResponse)(nil),                                // 302: wg.cosmo.platform.v1.PreviewDeleteClientResponse
+	(*DeleteClientRequest)(nil),                                        // 303: wg.cosmo.platform.v1.DeleteClientRequest
+	(*DeleteClientResponse)(nil),                                       // 304: wg.cosmo.platform.v1.DeleteClientResponse
+	(*GetFieldUsageRequest)(nil),                                       // 305: wg.cosmo.platform.v1.GetFieldUsageRequest
+	(*ClientWithOperations)(nil),                                       // 306: wg.cosmo.platform.v1.ClientWithOperations
+	(*FieldUsageMeta)(nil),                                             // 307: wg.cosmo.platform.v1.FieldUsageMeta
+	(*GetFieldUsageResponse)(nil),                                      // 308: wg.cosmo.platform.v1.GetFieldUsageResponse
+	(*CreateNamespaceRequest)(nil),                                     // 309: wg.cosmo.platform.v1.CreateNamespaceRequest
+	(*CreateNamespaceResponse)(nil),                                    // 310: wg.cosmo.platform.v1.CreateNamespaceResponse
+	(*DeleteNamespaceRequest)(nil),                                     // 311: wg.cosmo.platform.v1.DeleteNamespaceRequest
+	(*DeleteNamespaceResponse)(nil),                                    // 312: wg.cosmo.platform.v1.DeleteNamespaceResponse
+	(*RenameNamespaceRequest)(nil),                                     // 313: wg.cosmo.platform.v1.RenameNamespaceRequest
+	(*RenameNamespaceResponse)(nil),                                    // 314: wg.cosmo.platform.v1.RenameNamespaceResponse
+	(*Namespace)(nil),                                                  // 315: wg.cosmo.platform.v1.Namespace
+	(*GetNamespacesRequest)(nil),                                       // 316: wg.cosmo.platform.v1.GetNamespacesRequest
+	(*GetNamespacesResponse)(nil),                                      // 317: wg.cosmo.platform.v1.GetNamespacesResponse
+	(*MoveGraphRequest)(nil),                                           // 318: wg.cosmo.platform.v1.MoveGraphRequest
+	(*MoveGraphResponse)(nil),                                          // 319: wg.cosmo.platform.v1.MoveGraphResponse
+	(*GetNamespaceLintConfigRequest)(nil),                              // 320: wg.cosmo.platform.v1.GetNamespaceLintConfigRequest
+	(*GetNamespaceLintConfigResponse)(nil),                             // 321: wg.cosmo.platform.v1.GetNamespaceLintConfigResponse
+	(*GetNamespaceChecksConfigurationRequest)(nil),                     // 322: wg.cosmo.platform.v1.GetNamespaceChecksConfigurationRequest
+	(*GetNamespaceChecksConfigurationResponse)(nil),                    // 323: wg.cosmo.platform.v1.GetNamespaceChecksConfigurationResponse
+	(*UpdateNamespaceChecksConfigurationRequest)(nil),                  // 324: wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationRequest
+	(*UpdateNamespaceChecksConfigurationResponse)(nil),                 // 325: wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationResponse
+	(*EnableLintingForTheNamespaceRequest)(nil),                        // 326: wg.cosmo.platform.v1.EnableLintingForTheNamespaceRequest
+	(*EnableLintingForTheNamespaceResponse)(nil),                       // 327: wg.cosmo.platform.v1.EnableLintingForTheNamespaceResponse
+	(*LintConfig)(nil),                                                 // 328: wg.cosmo.platform.v1.LintConfig
+	(*ConfigureNamespaceLintConfigRequest)(nil),                        // 329: wg.cosmo.platform.v1.ConfigureNamespaceLintConfigRequest
+	(*ConfigureNamespaceLintConfigResponse)(nil),                       // 330: wg.cosmo.platform.v1.ConfigureNamespaceLintConfigResponse
+	(*EnableGraphPruningRequest)(nil),                                  // 331: wg.cosmo.platform.v1.EnableGraphPruningRequest
+	(*EnableGraphPruningResponse)(nil),                                 // 332: wg.cosmo.platform.v1.EnableGraphPruningResponse
+	(*GraphPruningConfig)(nil),                                         // 333: wg.cosmo.platform.v1.GraphPruningConfig
+	(*ConfigureNamespaceGraphPruningConfigRequest)(nil),                // 334: wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigRequest
+	(*ConfigureNamespaceGraphPruningConfigResponse)(nil),               // 335: wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigResponse
+	(*GetNamespaceGraphPruningConfigRequest)(nil),                      // 336: wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigRequest
+	(*GetNamespaceGraphPruningConfigResponse)(nil),                     // 337: wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigResponse
+	(*MigrateMonographRequest)(nil),                                    // 338: wg.cosmo.platform.v1.MigrateMonographRequest
+	(*MigrateMonographResponse)(nil),                                   // 339: wg.cosmo.platform.v1.MigrateMonographResponse
+	(*GetUserAccessiblePermissionsRequest)(nil),                        // 340: wg.cosmo.platform.v1.GetUserAccessiblePermissionsRequest
+	(*Permission)(nil),                                                 // 341: wg.cosmo.platform.v1.Permission
+	(*GetUserAccessiblePermissionsResponse)(nil),                       // 342: wg.cosmo.platform.v1.GetUserAccessiblePermissionsResponse
+	(*CreateContractRequest)(nil),                                      // 343: wg.cosmo.platform.v1.CreateContractRequest
+	(*CreateContractResponse)(nil),                                     // 344: wg.cosmo.platform.v1.CreateContractResponse
+	(*UpdateContractRequest)(nil),                                      // 345: wg.cosmo.platform.v1.UpdateContractRequest
+	(*UpdateContractResponse)(nil),                                     // 346: wg.cosmo.platform.v1.UpdateContractResponse
+	(*IsMemberLimitReachedRequest)(nil),                                // 347: wg.cosmo.platform.v1.IsMemberLimitReachedRequest
+	(*IsMemberLimitReachedResponse)(nil),                               // 348: wg.cosmo.platform.v1.IsMemberLimitReachedResponse
+	(*DeleteUserRequest)(nil),                                          // 349: wg.cosmo.platform.v1.DeleteUserRequest
+	(*DeleteUserResponse)(nil),                                         // 350: wg.cosmo.platform.v1.DeleteUserResponse
+	(*CreateFeatureFlagRequest)(nil),                                   // 351: wg.cosmo.platform.v1.CreateFeatureFlagRequest
+	(*CreateFeatureFlagResponse)(nil),                                  // 352: wg.cosmo.platform.v1.CreateFeatureFlagResponse
+	(*UpdateFeatureFlagRequest)(nil),                                   // 353: wg.cosmo.platform.v1.UpdateFeatureFlagRequest
+	(*UpdateFeatureFlagResponse)(nil),                                  // 354: wg.cosmo.platform.v1.UpdateFeatureFlagResponse
+	(*EnableFeatureFlagRequest)(nil),                                   // 355: wg.cosmo.platform.v1.EnableFeatureFlagRequest
+	(*EnableFeatureFlagResponse)(nil),                                  // 356: wg.cosmo.platform.v1.EnableFeatureFlagResponse
+	(*DeleteFeatureFlagRequest)(nil),                                   // 357: wg.cosmo.platform.v1.DeleteFeatureFlagRequest
+	(*DeleteFeatureFlagResponse)(nil),                                  // 358: wg.cosmo.platform.v1.DeleteFeatureFlagResponse
+	(*FeatureFlag)(nil),                                                // 359: wg.cosmo.platform.v1.FeatureFlag
+	(*GetFeatureFlagsRequest)(nil),                                     // 360: wg.cosmo.platform.v1.GetFeatureFlagsRequest
+	(*GetFeatureFlagsResponse)(nil),                                    // 361: wg.cosmo.platform.v1.GetFeatureFlagsResponse
+	(*GetFeatureFlagByNameRequest)(nil),                                // 362: wg.cosmo.platform.v1.GetFeatureFlagByNameRequest
+	(*GetFeatureFlagByNameResponse)(nil),                               // 363: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse
+	(*GetFeatureSubgraphsByFeatureFlagRequest)(nil),                    // 364: wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagRequest
+	(*GetFeatureSubgraphsByFeatureFlagResponse)(nil),                   // 365: wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagResponse
+	(*GetFeatureSubgraphsRequest)(nil),                                 // 366: wg.cosmo.platform.v1.GetFeatureSubgraphsRequest
+	(*GetFeatureSubgraphsResponse)(nil),                                // 367: wg.cosmo.platform.v1.GetFeatureSubgraphsResponse
+	(*GetFeatureFlagsByFederatedGraphRequest)(nil),                     // 368: wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphRequest
+	(*GetFeatureFlagsByFederatedGraphResponse)(nil),                    // 369: wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphResponse
+	(*GetFeatureFlagsInLatestCompositionByFederatedGraphRequest)(nil),  // 370: wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest
+	(*GetFeatureFlagsInLatestCompositionByFederatedGraphResponse)(nil), // 371: wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse
+	(*GetFeatureSubgraphsByFederatedGraphRequest)(nil),                 // 372: wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphRequest
+	(*GetFeatureSubgraphsByFederatedGraphResponse)(nil),                // 373: wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphResponse
+	(*GetOrganizationWebhookHistoryRequest)(nil),                       // 374: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryRequest
+	(*WebhookDelivery)(nil),                                            // 375: wg.cosmo.platform.v1.WebhookDelivery
+	(*GetOrganizationWebhookHistoryResponse)(nil),                      // 376: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryResponse
+	(*RedeliverWebhookRequest)(nil),                                    // 377: wg.cosmo.platform.v1.RedeliverWebhookRequest
+	(*RedeliverWebhookResponse)(nil),                                   // 378: wg.cosmo.platform.v1.RedeliverWebhookResponse
+	(*GetWebhookDeliveryDetailsRequest)(nil),                           // 379: wg.cosmo.platform.v1.GetWebhookDeliveryDetailsRequest
+	(*GetWebhookDeliveryDetailsResponse)(nil),                          // 380: wg.cosmo.platform.v1.GetWebhookDeliveryDetailsResponse
+	(*CreatePlaygroundScriptRequest)(nil),                              // 381: wg.cosmo.platform.v1.CreatePlaygroundScriptRequest
+	(*CreatePlaygroundScriptResponse)(nil),                             // 382: wg.cosmo.platform.v1.CreatePlaygroundScriptResponse
+	(*DeletePlaygroundScriptRequest)(nil),                              // 383: wg.cosmo.platform.v1.DeletePlaygroundScriptRequest
+	(*DeletePlaygroundScriptResponse)(nil),                             // 384: wg.cosmo.platform.v1.DeletePlaygroundScriptResponse
+	(*UpdatePlaygroundScriptRequest)(nil),                              // 385: wg.cosmo.platform.v1.UpdatePlaygroundScriptRequest
+	(*UpdatePlaygroundScriptResponse)(nil),                             // 386: wg.cosmo.platform.v1.UpdatePlaygroundScriptResponse
+	(*GetPlaygroundScriptsRequest)(nil),                                // 387: wg.cosmo.platform.v1.GetPlaygroundScriptsRequest
+	(*PlaygroundScript)(nil),                                           // 388: wg.cosmo.platform.v1.PlaygroundScript
+	(*GetPlaygroundScriptsResponse)(nil),                               // 389: wg.cosmo.platform.v1.GetPlaygroundScriptsResponse
+	(*GetFederatedGraphByIdRequest)(nil),                               // 390: wg.cosmo.platform.v1.GetFederatedGraphByIdRequest
+	(*GetFederatedGraphByIdResponse)(nil),                              // 391: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse
+	(*GetSubgraphByIdRequest)(nil),                                     // 392: wg.cosmo.platform.v1.GetSubgraphByIdRequest
+	(*GetSubgraphByIdResponse)(nil),                                    // 393: wg.cosmo.platform.v1.GetSubgraphByIdResponse
+	(*GetNamespaceRequest)(nil),                                        // 394: wg.cosmo.platform.v1.GetNamespaceRequest
+	(*GetNamespaceResponse)(nil),                                       // 395: wg.cosmo.platform.v1.GetNamespaceResponse
+	(*WorkspaceNamespace)(nil),                                         // 396: wg.cosmo.platform.v1.WorkspaceNamespace
+	(*WorkspaceFederatedGraph)(nil),                                    // 397: wg.cosmo.platform.v1.WorkspaceFederatedGraph
+	(*WorkspaceSubgraph)(nil),                                          // 398: wg.cosmo.platform.v1.WorkspaceSubgraph
+	(*GetWorkspaceRequest)(nil),                                        // 399: wg.cosmo.platform.v1.GetWorkspaceRequest
+	(*GetWorkspaceResponse)(nil),                                       // 400: wg.cosmo.platform.v1.GetWorkspaceResponse
+	(*PushCacheWarmerOperationRequest)(nil),                            // 401: wg.cosmo.platform.v1.PushCacheWarmerOperationRequest
+	(*PushCacheWarmerOperationResponse)(nil),                           // 402: wg.cosmo.platform.v1.PushCacheWarmerOperationResponse
+	(*GetCacheWarmerOperationsRequest)(nil),                            // 403: wg.cosmo.platform.v1.GetCacheWarmerOperationsRequest
+	(*CacheWarmerOperation)(nil),                                       // 404: wg.cosmo.platform.v1.CacheWarmerOperation
+	(*GetCacheWarmerOperationsResponse)(nil),                           // 405: wg.cosmo.platform.v1.GetCacheWarmerOperationsResponse
+	(*ComputeCacheWarmerOperationsRequest)(nil),                        // 406: wg.cosmo.platform.v1.ComputeCacheWarmerOperationsRequest
+	(*ComputeCacheWarmerOperationsResponse)(nil),                       // 407: wg.cosmo.platform.v1.ComputeCacheWarmerOperationsResponse
+	(*ConfigureCacheWarmerRequest)(nil),                                // 408: wg.cosmo.platform.v1.ConfigureCacheWarmerRequest
+	(*ConfigureCacheWarmerResponse)(nil),                               // 409: wg.cosmo.platform.v1.ConfigureCacheWarmerResponse
+	(*GetCacheWarmerConfigRequest)(nil),                                // 410: wg.cosmo.platform.v1.GetCacheWarmerConfigRequest
+	(*GetCacheWarmerConfigResponse)(nil),                               // 411: wg.cosmo.platform.v1.GetCacheWarmerConfigResponse
+	(*GetSubgraphCheckExtensionsConfigRequest)(nil),                    // 412: wg.cosmo.platform.v1.GetSubgraphCheckExtensionsConfigRequest
+	(*GetSubgraphCheckExtensionsConfigResponse)(nil),                   // 413: wg.cosmo.platform.v1.GetSubgraphCheckExtensionsConfigResponse
+	(*ConfigureSubgraphCheckExtensionsRequest)(nil),                    // 414: wg.cosmo.platform.v1.ConfigureSubgraphCheckExtensionsRequest
+	(*ConfigureSubgraphCheckExtensionsResponse)(nil),                   // 415: wg.cosmo.platform.v1.ConfigureSubgraphCheckExtensionsResponse
+	(*DeleteCacheWarmerOperationRequest)(nil),                          // 416: wg.cosmo.platform.v1.DeleteCacheWarmerOperationRequest
+	(*DeleteCacheWarmerOperationResponse)(nil),                         // 417: wg.cosmo.platform.v1.DeleteCacheWarmerOperationResponse
+	(*ListRouterCompatibilityVersionsRequest)(nil),                     // 418: wg.cosmo.platform.v1.ListRouterCompatibilityVersionsRequest
+	(*ListRouterCompatibilityVersionsResponse)(nil),                    // 419: wg.cosmo.platform.v1.ListRouterCompatibilityVersionsResponse
+	(*SetGraphRouterCompatibilityVersionRequest)(nil),                  // 420: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionRequest
+	(*SetGraphRouterCompatibilityVersionResponse)(nil),                 // 421: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse
+	(*GetProposedSchemaOfCheckedSubgraphRequest)(nil),                  // 422: wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphRequest
+	(*GetProposedSchemaOfCheckedSubgraphResponse)(nil),                 // 423: wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphResponse
+	(*Proposal)(nil),                                                   // 424: wg.cosmo.platform.v1.Proposal
+	(*ProposalSubgraph)(nil),                                           // 425: wg.cosmo.platform.v1.ProposalSubgraph
+	(*CreateProposalRequest)(nil),                                      // 426: wg.cosmo.platform.v1.CreateProposalRequest
+	(*CreateProposalResponse)(nil),                                     // 427: wg.cosmo.platform.v1.CreateProposalResponse
+	(*GetProposalRequest)(nil),                                         // 428: wg.cosmo.platform.v1.GetProposalRequest
+	(*GetProposalResponse)(nil),                                        // 429: wg.cosmo.platform.v1.GetProposalResponse
+	(*GetProposalsByFederatedGraphRequest)(nil),                        // 430: wg.cosmo.platform.v1.GetProposalsByFederatedGraphRequest
+	(*GetProposalsByFederatedGraphResponse)(nil),                       // 431: wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse
+	(*GetProposalChecksRequest)(nil),                                   // 432: wg.cosmo.platform.v1.GetProposalChecksRequest
+	(*GetProposalChecksResponse)(nil),                                  // 433: wg.cosmo.platform.v1.GetProposalChecksResponse
+	(*UpdateProposalRequest)(nil),                                      // 434: wg.cosmo.platform.v1.UpdateProposalRequest
+	(*UpdateProposalResponse)(nil),                                     // 435: wg.cosmo.platform.v1.UpdateProposalResponse
+	(*EnableProposalsForNamespaceRequest)(nil),                         // 436: wg.cosmo.platform.v1.EnableProposalsForNamespaceRequest
+	(*EnableProposalsForNamespaceResponse)(nil),                        // 437: wg.cosmo.platform.v1.EnableProposalsForNamespaceResponse
+	(*ConfigureNamespaceProposalConfigRequest)(nil),                    // 438: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest
+	(*ConfigureNamespaceProposalConfigResponse)(nil),                   // 439: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse
+	(*GetNamespaceProposalConfigRequest)(nil),                          // 440: wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest
+	(*GetNamespaceProposalConfigResponse)(nil),                         // 441: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse
+	(*GetOperationsRequest)(nil),                                       // 442: wg.cosmo.platform.v1.GetOperationsRequest
+	(*GetOperationsResponse)(nil),                                      // 443: wg.cosmo.platform.v1.GetOperationsResponse
+	(*GetClientsFromAnalyticsRequest)(nil),                             // 444: wg.cosmo.platform.v1.GetClientsFromAnalyticsRequest
+	(*GetClientsFromAnalyticsResponse)(nil),                            // 445: wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse
+	(*GetOperationClientsRequest)(nil),                                 // 446: wg.cosmo.platform.v1.GetOperationClientsRequest
+	(*GetOperationClientsResponse)(nil),                                // 447: wg.cosmo.platform.v1.GetOperationClientsResponse
+	(*GetOperationDeprecatedFieldsRequest)(nil),                        // 448: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsRequest
+	(*GetOperationDeprecatedFieldsResponse)(nil),                       // 449: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse
+	(*ValidateAndFetchPluginDataRequest)(nil),                          // 450: wg.cosmo.platform.v1.ValidateAndFetchPluginDataRequest
+	(*ValidateAndFetchPluginDataResponse)(nil),                         // 451: wg.cosmo.platform.v1.ValidateAndFetchPluginDataResponse
+	(*LinkSubgraphRequest)(nil),                                        // 452: wg.cosmo.platform.v1.LinkSubgraphRequest
+	(*LinkSubgraphResponse)(nil),                                       // 453: wg.cosmo.platform.v1.LinkSubgraphResponse
+	(*UnlinkSubgraphRequest)(nil),                                      // 454: wg.cosmo.platform.v1.UnlinkSubgraphRequest
+	(*UnlinkSubgraphResponse)(nil),                                     // 455: wg.cosmo.platform.v1.UnlinkSubgraphResponse
+	(*VerifyAPIKeyGraphAccessRequest)(nil),                             // 456: wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessRequest
+	(*VerifyAPIKeyGraphAccessResponse)(nil),                            // 457: wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessResponse
+	(*InitializeCosmoUserRequest)(nil),                                 // 458: wg.cosmo.platform.v1.InitializeCosmoUserRequest
+	(*InitializeCosmoUserResponse)(nil),                                // 459: wg.cosmo.platform.v1.InitializeCosmoUserResponse
+	(*ListOrganizationsRequest)(nil),                                   // 460: wg.cosmo.platform.v1.ListOrganizationsRequest
+	(*ListOrganizationsResponse)(nil),                                  // 461: wg.cosmo.platform.v1.ListOrganizationsResponse
+	(*RecomposeGraphRequest)(nil),                                      // 462: wg.cosmo.platform.v1.RecomposeGraphRequest
+	(*RecomposeGraphResponse)(nil),                                     // 463: wg.cosmo.platform.v1.RecomposeGraphResponse
+	(*RecomposeFeatureFlagRequest)(nil),                                // 464: wg.cosmo.platform.v1.RecomposeFeatureFlagRequest
+	(*RecomposeFeatureFlagResponse)(nil),                               // 465: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse
+	(*GetOnboardingRequest)(nil),                                       // 466: wg.cosmo.platform.v1.GetOnboardingRequest
+	(*GetOnboardingResponse)(nil),                                      // 467: wg.cosmo.platform.v1.GetOnboardingResponse
+	(*CreateOnboardingRequest)(nil),                                    // 468: wg.cosmo.platform.v1.CreateOnboardingRequest
+	(*CreateOnboardingResponse)(nil),                                   // 469: wg.cosmo.platform.v1.CreateOnboardingResponse
+	(*FinishOnboardingRequest)(nil),                                    // 470: wg.cosmo.platform.v1.FinishOnboardingRequest
+	(*FinishOnboardingResponse)(nil),                                   // 471: wg.cosmo.platform.v1.FinishOnboardingResponse
+	(*Subgraph_PluginData)(nil),                                        // 472: wg.cosmo.platform.v1.Subgraph.PluginData
+	(*GetSubgraphByNameResponse_LinkedSubgraph)(nil),                   // 473: wg.cosmo.platform.v1.GetSubgraphByNameResponse.LinkedSubgraph
+	(*SchemaCheck_GhDetails)(nil),                                      // 474: wg.cosmo.platform.v1.SchemaCheck.GhDetails
+	(*SchemaCheck_CheckedSubgraph)(nil),                                // 475: wg.cosmo.platform.v1.SchemaCheck.CheckedSubgraph
+	(*SchemaCheck_LinkedCheck)(nil),                                    // 476: wg.cosmo.platform.v1.SchemaCheck.LinkedCheck
+	(*GetCheckSummaryResponse_AffectedGraph)(nil),                      // 477: wg.cosmo.platform.v1.GetCheckSummaryResponse.AffectedGraph
+	(*GetCheckSummaryResponse_ProposalSchemaMatch)(nil),                // 478: wg.cosmo.platform.v1.GetCheckSummaryResponse.ProposalSchemaMatch
+	(*GetCheckOperationsResponse_CheckOperation)(nil),                  // 479: wg.cosmo.platform.v1.GetCheckOperationsResponse.CheckOperation
+	nil, // 480: wg.cosmo.platform.v1.AnalyticsViewRow.ValueEntry
+	(*GetOrganizationGroupMembersResponse_GroupMember)(nil),      // 481: wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.GroupMember
+	(*GetOrganizationGroupMembersResponse_GroupApiKey)(nil),      // 482: wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.GroupApiKey
+	(*UpdateOrganizationGroupRequest_GroupRule)(nil),             // 483: wg.cosmo.platform.v1.UpdateOrganizationGroupRequest.GroupRule
+	(*OrgMember_Group)(nil),                                      // 484: wg.cosmo.platform.v1.OrgMember.Group
+	(*APIKey_Group)(nil),                                         // 485: wg.cosmo.platform.v1.APIKey.Group
+	nil,                                                          // 486: wg.cosmo.platform.v1.Span.AttributesEntry
+	(*DeletePersistedOperationResponse_Operation)(nil),           // 487: wg.cosmo.platform.v1.DeletePersistedOperationResponse.Operation
+	(*CheckPersistedOperationTrafficResponse_Operation)(nil),     // 488: wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.Operation
+	(*GetPersistedOperationsResponse_Operation)(nil),             // 489: wg.cosmo.platform.v1.GetPersistedOperationsResponse.Operation
+	(*GetOrganizationWebhookConfigsResponse_Config)(nil),         // 490: wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.Config
+	(*GetBillingPlansResponse_BillingPlanFeature)(nil),           // 491: wg.cosmo.platform.v1.GetBillingPlansResponse.BillingPlanFeature
+	(*GetBillingPlansResponse_BillingPlan)(nil),                  // 492: wg.cosmo.platform.v1.GetBillingPlansResponse.BillingPlan
+	(*GetAllOverridesResponse_Override)(nil),                     // 493: wg.cosmo.platform.v1.GetAllOverridesResponse.Override
+	(*GetUserAccessibleResourcesResponse_Namespace)(nil),         // 494: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Namespace
+	(*GetUserAccessibleResourcesResponse_FederatedGraph)(nil),    // 495: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.FederatedGraph
+	(*GetUserAccessibleResourcesResponse_SubGraph)(nil),          // 496: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.SubGraph
+	(*DeleteClientResponse_Operation)(nil),                       // 497: wg.cosmo.platform.v1.DeleteClientResponse.Operation
+	(*ClientWithOperations_Operation)(nil),                       // 498: wg.cosmo.platform.v1.ClientWithOperations.Operation
+	(*GetFeatureFlagByNameResponse_FfFederatedGraph)(nil),        // 499: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.FfFederatedGraph
+	(*GetProposalResponse_CurrentSubgraph)(nil),                  // 500: wg.cosmo.platform.v1.GetProposalResponse.CurrentSubgraph
+	(*UpdateProposalRequest_UpdateProposalSubgraphs)(nil),        // 501: wg.cosmo.platform.v1.UpdateProposalRequest.UpdateProposalSubgraphs
+	(*GetOperationsResponse_Operation)(nil),                      // 502: wg.cosmo.platform.v1.GetOperationsResponse.Operation
+	(*GetClientsFromAnalyticsResponse_Client)(nil),               // 503: wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.Client
+	(*GetOperationClientsResponse_Client)(nil),                   // 504: wg.cosmo.platform.v1.GetOperationClientsResponse.Client
+	(*GetOperationDeprecatedFieldsResponse_DeprecatedField)(nil), // 505: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse.DeprecatedField
+	(*ListOrganizationsResponse_OrganizationMembership)(nil),     // 506: wg.cosmo.platform.v1.ListOrganizationsResponse.OrganizationMembership
+	(common.EnumStatusCode)(0),                                   // 507: wg.cosmo.common.EnumStatusCode
+	(common.GraphQLSubscriptionProtocol)(0),                      // 508: wg.cosmo.common.GraphQLSubscriptionProtocol
+	(common.GraphQLWebsocketSubprotocol)(0),                      // 509: wg.cosmo.common.GraphQLWebsocketSubprotocol
+	(*notifications.EventMeta)(nil),                              // 510: wg.cosmo.notifications.EventMeta
 }
 var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
-	502, // 0: wg.cosmo.platform.v1.Response.code:type_name -> wg.cosmo.common.EnumStatusCode
+	507, // 0: wg.cosmo.platform.v1.Response.code:type_name -> wg.cosmo.common.EnumStatusCode
 	16,  // 1: wg.cosmo.platform.v1.PublishMonographResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	38,  // 2: wg.cosmo.platform.v1.PublishMonographResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
 	40,  // 3: wg.cosmo.platform.v1.PublishMonographResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
 	39,  // 4: wg.cosmo.platform.v1.PublishMonographResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
 	15,  // 5: wg.cosmo.platform.v1.PublishFederatedSubgraphRequest.labels:type_name -> wg.cosmo.platform.v1.Label
-	503, // 6: wg.cosmo.platform.v1.PublishFederatedSubgraphRequest.subscription_protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
-	504, // 7: wg.cosmo.platform.v1.PublishFederatedSubgraphRequest.websocket_subprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
+	508, // 6: wg.cosmo.platform.v1.PublishFederatedSubgraphRequest.subscription_protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
+	509, // 7: wg.cosmo.platform.v1.PublishFederatedSubgraphRequest.websocket_subprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
 	1,   // 8: wg.cosmo.platform.v1.PublishFederatedSubgraphRequest.type:type_name -> wg.cosmo.platform.v1.SubgraphType
 	20,  // 9: wg.cosmo.platform.v1.PublishFederatedSubgraphRequest.proto:type_name -> wg.cosmo.platform.v1.ProtoInput
 	16,  // 10: wg.cosmo.platform.v1.PublishFederatedSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -35284,12 +35624,12 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	24,  // 15: wg.cosmo.platform.v1.CheckSubgraphSchemaRequest.gitInfo:type_name -> wg.cosmo.platform.v1.GitInfo
 	25,  // 16: wg.cosmo.platform.v1.CheckSubgraphSchemaRequest.vcsContext:type_name -> wg.cosmo.platform.v1.VCSContext
 	15,  // 17: wg.cosmo.platform.v1.CheckSubgraphSchemaRequest.labels:type_name -> wg.cosmo.platform.v1.Label
-	503, // 18: wg.cosmo.platform.v1.CreateMonographRequest.subscription_protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
-	504, // 19: wg.cosmo.platform.v1.CreateMonographRequest.websocket_subprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
+	508, // 18: wg.cosmo.platform.v1.CreateMonographRequest.subscription_protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
+	509, // 19: wg.cosmo.platform.v1.CreateMonographRequest.websocket_subprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
 	16,  // 20: wg.cosmo.platform.v1.CreateMonographResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	15,  // 21: wg.cosmo.platform.v1.CreateFederatedSubgraphRequest.labels:type_name -> wg.cosmo.platform.v1.Label
-	503, // 22: wg.cosmo.platform.v1.CreateFederatedSubgraphRequest.subscription_protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
-	504, // 23: wg.cosmo.platform.v1.CreateFederatedSubgraphRequest.websocket_subprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
+	508, // 22: wg.cosmo.platform.v1.CreateFederatedSubgraphRequest.subscription_protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
+	509, // 23: wg.cosmo.platform.v1.CreateFederatedSubgraphRequest.websocket_subprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
 	1,   // 24: wg.cosmo.platform.v1.CreateFederatedSubgraphRequest.type:type_name -> wg.cosmo.platform.v1.SubgraphType
 	16,  // 25: wg.cosmo.platform.v1.DeleteMonographResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	0,   // 26: wg.cosmo.platform.v1.LintIssue.severity:type_name -> wg.cosmo.platform.v1.LintSeverity
@@ -35328,7 +35668,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	55,  // 59: wg.cosmo.platform.v1.GetFederatedGraphsBySubgraphLabelsResponse.graphs:type_name -> wg.cosmo.platform.v1.FederatedGraph
 	15,  // 60: wg.cosmo.platform.v1.Subgraph.labels:type_name -> wg.cosmo.platform.v1.Label
 	1,   // 61: wg.cosmo.platform.v1.Subgraph.type:type_name -> wg.cosmo.platform.v1.SubgraphType
-	468, // 62: wg.cosmo.platform.v1.Subgraph.pluginData:type_name -> wg.cosmo.platform.v1.Subgraph.PluginData
+	472, // 62: wg.cosmo.platform.v1.Subgraph.pluginData:type_name -> wg.cosmo.platform.v1.Subgraph.PluginData
 	16,  // 63: wg.cosmo.platform.v1.GetSubgraphsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	60,  // 64: wg.cosmo.platform.v1.GetSubgraphsResponse.graphs:type_name -> wg.cosmo.platform.v1.Subgraph
 	16,  // 65: wg.cosmo.platform.v1.GetFederatedGraphByNameResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -35338,26 +35678,26 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	16,  // 69: wg.cosmo.platform.v1.GetSubgraphByNameResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	60,  // 70: wg.cosmo.platform.v1.GetSubgraphByNameResponse.graph:type_name -> wg.cosmo.platform.v1.Subgraph
 	291, // 71: wg.cosmo.platform.v1.GetSubgraphByNameResponse.members:type_name -> wg.cosmo.platform.v1.SubgraphMember
-	469, // 72: wg.cosmo.platform.v1.GetSubgraphByNameResponse.linkedSubgraph:type_name -> wg.cosmo.platform.v1.GetSubgraphByNameResponse.LinkedSubgraph
+	473, // 72: wg.cosmo.platform.v1.GetSubgraphByNameResponse.linkedSubgraph:type_name -> wg.cosmo.platform.v1.GetSubgraphByNameResponse.LinkedSubgraph
 	16,  // 73: wg.cosmo.platform.v1.GetSubgraphSDLFromLatestCompositionResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 74: wg.cosmo.platform.v1.GetLatestSubgraphSDLResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	72,  // 75: wg.cosmo.platform.v1.GetChecksByFederatedGraphNameRequest.filters:type_name -> wg.cosmo.platform.v1.GetChecksByFederatedGraphNameFilters
-	470, // 76: wg.cosmo.platform.v1.SchemaCheck.ghDetails:type_name -> wg.cosmo.platform.v1.SchemaCheck.GhDetails
+	474, // 76: wg.cosmo.platform.v1.SchemaCheck.ghDetails:type_name -> wg.cosmo.platform.v1.SchemaCheck.GhDetails
 	25,  // 77: wg.cosmo.platform.v1.SchemaCheck.vcsContext:type_name -> wg.cosmo.platform.v1.VCSContext
-	471, // 78: wg.cosmo.platform.v1.SchemaCheck.checkedSubgraphs:type_name -> wg.cosmo.platform.v1.SchemaCheck.CheckedSubgraph
-	472, // 79: wg.cosmo.platform.v1.SchemaCheck.linkedChecks:type_name -> wg.cosmo.platform.v1.SchemaCheck.LinkedCheck
+	475, // 78: wg.cosmo.platform.v1.SchemaCheck.checkedSubgraphs:type_name -> wg.cosmo.platform.v1.SchemaCheck.CheckedSubgraph
+	476, // 79: wg.cosmo.platform.v1.SchemaCheck.linkedChecks:type_name -> wg.cosmo.platform.v1.SchemaCheck.LinkedCheck
 	16,  // 80: wg.cosmo.platform.v1.GetChecksByFederatedGraphNameResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	74,  // 81: wg.cosmo.platform.v1.GetChecksByFederatedGraphNameResponse.checks:type_name -> wg.cosmo.platform.v1.SchemaCheck
 	16,  // 82: wg.cosmo.platform.v1.GetCheckSummaryResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	74,  // 83: wg.cosmo.platform.v1.GetCheckSummaryResponse.check:type_name -> wg.cosmo.platform.v1.SchemaCheck
-	473, // 84: wg.cosmo.platform.v1.GetCheckSummaryResponse.affected_graphs:type_name -> wg.cosmo.platform.v1.GetCheckSummaryResponse.AffectedGraph
+	477, // 84: wg.cosmo.platform.v1.GetCheckSummaryResponse.affected_graphs:type_name -> wg.cosmo.platform.v1.GetCheckSummaryResponse.AffectedGraph
 	36,  // 85: wg.cosmo.platform.v1.GetCheckSummaryResponse.changes:type_name -> wg.cosmo.platform.v1.SchemaChange
 	44,  // 86: wg.cosmo.platform.v1.GetCheckSummaryResponse.lintIssues:type_name -> wg.cosmo.platform.v1.LintIssue
 	45,  // 87: wg.cosmo.platform.v1.GetCheckSummaryResponse.graphPruningIssues:type_name -> wg.cosmo.platform.v1.GraphPruningIssue
-	474, // 88: wg.cosmo.platform.v1.GetCheckSummaryResponse.proposalMatches:type_name -> wg.cosmo.platform.v1.GetCheckSummaryResponse.ProposalSchemaMatch
+	478, // 88: wg.cosmo.platform.v1.GetCheckSummaryResponse.proposalMatches:type_name -> wg.cosmo.platform.v1.GetCheckSummaryResponse.ProposalSchemaMatch
 	37,  // 89: wg.cosmo.platform.v1.GetCheckSummaryResponse.composedSchemaBreakingChanges:type_name -> wg.cosmo.platform.v1.FederatedGraphSchemaChange
 	16,  // 90: wg.cosmo.platform.v1.GetCheckOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	475, // 91: wg.cosmo.platform.v1.GetCheckOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.GetCheckOperationsResponse.CheckOperation
+	479, // 91: wg.cosmo.platform.v1.GetCheckOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.GetCheckOperationsResponse.CheckOperation
 	16,  // 92: wg.cosmo.platform.v1.GetOperationContentResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	96,  // 93: wg.cosmo.platform.v1.GetFederatedGraphChangelogRequest.pagination:type_name -> wg.cosmo.platform.v1.Pagination
 	100, // 94: wg.cosmo.platform.v1.GetFederatedGraphChangelogRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
@@ -35366,8 +35706,8 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	85,  // 97: wg.cosmo.platform.v1.GetFederatedGraphChangelogResponse.federatedGraphChangelogOutput:type_name -> wg.cosmo.platform.v1.FederatedGraphChangelogOutput
 	16,  // 98: wg.cosmo.platform.v1.GetFederatedResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	15,  // 99: wg.cosmo.platform.v1.UpdateSubgraphRequest.labels:type_name -> wg.cosmo.platform.v1.Label
-	503, // 100: wg.cosmo.platform.v1.UpdateSubgraphRequest.subscription_protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
-	504, // 101: wg.cosmo.platform.v1.UpdateSubgraphRequest.websocket_subprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
+	508, // 100: wg.cosmo.platform.v1.UpdateSubgraphRequest.subscription_protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
+	509, // 101: wg.cosmo.platform.v1.UpdateSubgraphRequest.websocket_subprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
 	16,  // 102: wg.cosmo.platform.v1.UpdateSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	38,  // 103: wg.cosmo.platform.v1.UpdateSubgraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
 	40,  // 104: wg.cosmo.platform.v1.UpdateSubgraphResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
@@ -35376,8 +35716,8 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	38,  // 107: wg.cosmo.platform.v1.UpdateFederatedGraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
 	40,  // 108: wg.cosmo.platform.v1.UpdateFederatedGraphResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
 	39,  // 109: wg.cosmo.platform.v1.UpdateFederatedGraphResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	503, // 110: wg.cosmo.platform.v1.UpdateMonographRequest.subscription_protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
-	504, // 111: wg.cosmo.platform.v1.UpdateMonographRequest.websocket_subprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
+	508, // 110: wg.cosmo.platform.v1.UpdateMonographRequest.subscription_protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
+	509, // 111: wg.cosmo.platform.v1.UpdateMonographRequest.websocket_subprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
 	16,  // 112: wg.cosmo.platform.v1.UpdateMonographResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 113: wg.cosmo.platform.v1.CheckFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	38,  // 114: wg.cosmo.platform.v1.CheckFederatedGraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
@@ -35398,7 +35738,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	105, // 129: wg.cosmo.platform.v1.AnalyticsViewResultFilter.options:type_name -> wg.cosmo.platform.v1.AnalyticsViewResultFilterOption
 	3,   // 130: wg.cosmo.platform.v1.AnalyticsViewResultFilter.custom_options:type_name -> wg.cosmo.platform.v1.CustomOptions
 	5,   // 131: wg.cosmo.platform.v1.AnalyticsViewResultFilterOption.operator:type_name -> wg.cosmo.platform.v1.AnalyticsViewFilterOperator
-	476, // 132: wg.cosmo.platform.v1.AnalyticsViewRow.value:type_name -> wg.cosmo.platform.v1.AnalyticsViewRow.ValueEntry
+	480, // 132: wg.cosmo.platform.v1.AnalyticsViewRow.value:type_name -> wg.cosmo.platform.v1.AnalyticsViewRow.ValueEntry
 	16,  // 133: wg.cosmo.platform.v1.GetAnalyticsViewResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	102, // 134: wg.cosmo.platform.v1.GetAnalyticsViewResponse.view:type_name -> wg.cosmo.platform.v1.AnalyticsViewResult
 	16,  // 135: wg.cosmo.platform.v1.GetDashboardAnalyticsViewResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -35413,12 +35753,12 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	16,  // 144: wg.cosmo.platform.v1.GetOrganizationGroupsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	118, // 145: wg.cosmo.platform.v1.GetOrganizationGroupsResponse.groups:type_name -> wg.cosmo.platform.v1.OrganizationGroup
 	16,  // 146: wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	477, // 147: wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.members:type_name -> wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.GroupMember
-	478, // 148: wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.apiKeys:type_name -> wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.GroupApiKey
-	479, // 149: wg.cosmo.platform.v1.UpdateOrganizationGroupRequest.rules:type_name -> wg.cosmo.platform.v1.UpdateOrganizationGroupRequest.GroupRule
+	481, // 147: wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.members:type_name -> wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.GroupMember
+	482, // 148: wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.apiKeys:type_name -> wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse.GroupApiKey
+	483, // 149: wg.cosmo.platform.v1.UpdateOrganizationGroupRequest.rules:type_name -> wg.cosmo.platform.v1.UpdateOrganizationGroupRequest.GroupRule
 	16,  // 150: wg.cosmo.platform.v1.UpdateOrganizationGroupResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 151: wg.cosmo.platform.v1.DeleteOrganizationGroupResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	480, // 152: wg.cosmo.platform.v1.OrgMember.groups:type_name -> wg.cosmo.platform.v1.OrgMember.Group
+	484, // 152: wg.cosmo.platform.v1.OrgMember.groups:type_name -> wg.cosmo.platform.v1.OrgMember.Group
 	96,  // 153: wg.cosmo.platform.v1.GetPendingOrganizationMembersRequest.pagination:type_name -> wg.cosmo.platform.v1.Pagination
 	16,  // 154: wg.cosmo.platform.v1.GetPendingOrganizationMembersResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	130, // 155: wg.cosmo.platform.v1.GetPendingOrganizationMembersResponse.pendingInvitations:type_name -> wg.cosmo.platform.v1.PendingOrgInvitation
@@ -35428,7 +35768,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	16,  // 159: wg.cosmo.platform.v1.InviteUserResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 160: wg.cosmo.platform.v1.InviteUsersResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	138, // 161: wg.cosmo.platform.v1.InviteUsersResponse.invitationErrors:type_name -> wg.cosmo.platform.v1.InviteUsersInvitationError
-	481, // 162: wg.cosmo.platform.v1.APIKey.group:type_name -> wg.cosmo.platform.v1.APIKey.Group
+	485, // 162: wg.cosmo.platform.v1.APIKey.group:type_name -> wg.cosmo.platform.v1.APIKey.Group
 	16,  // 163: wg.cosmo.platform.v1.GetAPIKeysResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	140, // 164: wg.cosmo.platform.v1.GetAPIKeysResponse.apiKeys:type_name -> wg.cosmo.platform.v1.APIKey
 	6,   // 165: wg.cosmo.platform.v1.CreateAPIKeyRequest.expires:type_name -> wg.cosmo.platform.v1.ExpiresAt
@@ -35438,7 +35778,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	16,  // 169: wg.cosmo.platform.v1.RemoveOrganizationMemberResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 170: wg.cosmo.platform.v1.RemoveInvitationResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 171: wg.cosmo.platform.v1.MigrateFromApolloResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	482, // 172: wg.cosmo.platform.v1.Span.attributes:type_name -> wg.cosmo.platform.v1.Span.AttributesEntry
+	486, // 172: wg.cosmo.platform.v1.Span.attributes:type_name -> wg.cosmo.platform.v1.Span.AttributesEntry
 	16,  // 173: wg.cosmo.platform.v1.GetTraceResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	155, // 174: wg.cosmo.platform.v1.GetTraceResponse.spans:type_name -> wg.cosmo.platform.v1.Span
 	16,  // 175: wg.cosmo.platform.v1.WhoAmIResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -35451,29 +35791,29 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	16,  // 182: wg.cosmo.platform.v1.PublishPersistedOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	169, // 183: wg.cosmo.platform.v1.PublishPersistedOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.PublishedOperation
 	16,  // 184: wg.cosmo.platform.v1.DeletePersistedOperationResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	483, // 185: wg.cosmo.platform.v1.DeletePersistedOperationResponse.operation:type_name -> wg.cosmo.platform.v1.DeletePersistedOperationResponse.Operation
+	487, // 185: wg.cosmo.platform.v1.DeletePersistedOperationResponse.operation:type_name -> wg.cosmo.platform.v1.DeletePersistedOperationResponse.Operation
 	16,  // 186: wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	484, // 187: wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.operation:type_name -> wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.Operation
+	488, // 187: wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.operation:type_name -> wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.Operation
 	16,  // 188: wg.cosmo.platform.v1.GetPersistedOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	485, // 189: wg.cosmo.platform.v1.GetPersistedOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.GetPersistedOperationsResponse.Operation
-	505, // 190: wg.cosmo.platform.v1.CreateOrganizationWebhookConfigRequest.events_meta:type_name -> wg.cosmo.notifications.EventMeta
+	489, // 189: wg.cosmo.platform.v1.GetPersistedOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.GetPersistedOperationsResponse.Operation
+	510, // 190: wg.cosmo.platform.v1.CreateOrganizationWebhookConfigRequest.events_meta:type_name -> wg.cosmo.notifications.EventMeta
 	16,  // 191: wg.cosmo.platform.v1.CreateOrganizationWebhookConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 192: wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	486, // 193: wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.configs:type_name -> wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.Config
+	490, // 193: wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.configs:type_name -> wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.Config
 	16,  // 194: wg.cosmo.platform.v1.GetOrganizationWebhookMetaResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	505, // 195: wg.cosmo.platform.v1.GetOrganizationWebhookMetaResponse.events_meta:type_name -> wg.cosmo.notifications.EventMeta
-	505, // 196: wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigRequest.events_meta:type_name -> wg.cosmo.notifications.EventMeta
+	510, // 195: wg.cosmo.platform.v1.GetOrganizationWebhookMetaResponse.events_meta:type_name -> wg.cosmo.notifications.EventMeta
+	510, // 196: wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigRequest.events_meta:type_name -> wg.cosmo.notifications.EventMeta
 	16,  // 197: wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 198: wg.cosmo.platform.v1.DeleteOrganizationWebhookConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	505, // 199: wg.cosmo.platform.v1.CreateIntegrationRequest.eventsMeta:type_name -> wg.cosmo.notifications.EventMeta
+	510, // 199: wg.cosmo.platform.v1.CreateIntegrationRequest.eventsMeta:type_name -> wg.cosmo.notifications.EventMeta
 	16,  // 200: wg.cosmo.platform.v1.CreateIntegrationResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	8,   // 201: wg.cosmo.platform.v1.IntegrationConfig.type:type_name -> wg.cosmo.platform.v1.IntegrationType
 	191, // 202: wg.cosmo.platform.v1.IntegrationConfig.slackIntegrationConfig:type_name -> wg.cosmo.platform.v1.SlackIntegrationConfig
 	192, // 203: wg.cosmo.platform.v1.Integration.integrationConfig:type_name -> wg.cosmo.platform.v1.IntegrationConfig
-	505, // 204: wg.cosmo.platform.v1.Integration.eventsMeta:type_name -> wg.cosmo.notifications.EventMeta
+	510, // 204: wg.cosmo.platform.v1.Integration.eventsMeta:type_name -> wg.cosmo.notifications.EventMeta
 	16,  // 205: wg.cosmo.platform.v1.GetOrganizationIntegrationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	193, // 206: wg.cosmo.platform.v1.GetOrganizationIntegrationsResponse.integrations:type_name -> wg.cosmo.platform.v1.Integration
-	505, // 207: wg.cosmo.platform.v1.UpdateIntegrationConfigRequest.events_meta:type_name -> wg.cosmo.notifications.EventMeta
+	510, // 207: wg.cosmo.platform.v1.UpdateIntegrationConfigRequest.events_meta:type_name -> wg.cosmo.notifications.EventMeta
 	16,  // 208: wg.cosmo.platform.v1.UpdateIntegrationConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 209: wg.cosmo.platform.v1.DeleteIntegrationResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 210: wg.cosmo.platform.v1.DeleteOrganizationResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -35486,7 +35826,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	16,  // 217: wg.cosmo.platform.v1.GetOrganizationBySlugResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	211, // 218: wg.cosmo.platform.v1.GetOrganizationBySlugResponse.organization:type_name -> wg.cosmo.platform.v1.Organization
 	16,  // 219: wg.cosmo.platform.v1.GetBillingPlansResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	488, // 220: wg.cosmo.platform.v1.GetBillingPlansResponse.plans:type_name -> wg.cosmo.platform.v1.GetBillingPlansResponse.BillingPlan
+	492, // 220: wg.cosmo.platform.v1.GetBillingPlansResponse.plans:type_name -> wg.cosmo.platform.v1.GetBillingPlansResponse.BillingPlan
 	16,  // 221: wg.cosmo.platform.v1.CreateCheckoutSessionResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 222: wg.cosmo.platform.v1.CreateBillingPortalSessionResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 223: wg.cosmo.platform.v1.UpgradePlanResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -35527,7 +35867,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	16,  // 258: wg.cosmo.platform.v1.GetOperationOverridesResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	241, // 259: wg.cosmo.platform.v1.GetOperationOverridesResponse.changes:type_name -> wg.cosmo.platform.v1.OverrideChange
 	16,  // 260: wg.cosmo.platform.v1.GetAllOverridesResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	489, // 261: wg.cosmo.platform.v1.GetAllOverridesResponse.overrides:type_name -> wg.cosmo.platform.v1.GetAllOverridesResponse.Override
+	493, // 261: wg.cosmo.platform.v1.GetAllOverridesResponse.overrides:type_name -> wg.cosmo.platform.v1.GetAllOverridesResponse.Override
 	24,  // 262: wg.cosmo.platform.v1.IsGitHubAppInstalledRequest.git_info:type_name -> wg.cosmo.platform.v1.GitInfo
 	16,  // 263: wg.cosmo.platform.v1.IsGitHubAppInstalledResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	256, // 264: wg.cosmo.platform.v1.CreateOIDCProviderRequest.mappers:type_name -> wg.cosmo.platform.v1.GroupMapper
@@ -35555,9 +35895,9 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	16,  // 286: wg.cosmo.platform.v1.GetChangelogBySchemaVersionResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	85,  // 287: wg.cosmo.platform.v1.GetChangelogBySchemaVersionResponse.changelog:type_name -> wg.cosmo.platform.v1.FederatedGraphChangelogOutput
 	16,  // 288: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	490, // 289: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.namespaces:type_name -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Namespace
-	491, // 290: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.federatedGraphs:type_name -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.FederatedGraph
-	492, // 291: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.subgraphs:type_name -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.SubGraph
+	494, // 289: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.namespaces:type_name -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Namespace
+	495, // 290: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.federatedGraphs:type_name -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.FederatedGraph
+	496, // 291: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.subgraphs:type_name -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.SubGraph
 	9,   // 292: wg.cosmo.platform.v1.UpdateFeatureSettingsRequest.featureId:type_name -> wg.cosmo.platform.v1.Feature
 	16,  // 293: wg.cosmo.platform.v1.UpdateFeatureSettingsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	16,  // 294: wg.cosmo.platform.v1.GetSubgraphMembersResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -35567,583 +35907,592 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	295, // 298: wg.cosmo.platform.v1.GetRoutersResponse.routers:type_name -> wg.cosmo.platform.v1.Router
 	16,  // 299: wg.cosmo.platform.v1.GetClientsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	298, // 300: wg.cosmo.platform.v1.GetClientsResponse.clients:type_name -> wg.cosmo.platform.v1.ClientInfo
-	100, // 301: wg.cosmo.platform.v1.GetFieldUsageRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
-	493, // 302: wg.cosmo.platform.v1.ClientWithOperations.operations:type_name -> wg.cosmo.platform.v1.ClientWithOperations.Operation
-	16,  // 303: wg.cosmo.platform.v1.GetFieldUsageResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	110, // 304: wg.cosmo.platform.v1.GetFieldUsageResponse.request_series:type_name -> wg.cosmo.platform.v1.RequestSeriesItem
-	302, // 305: wg.cosmo.platform.v1.GetFieldUsageResponse.clients:type_name -> wg.cosmo.platform.v1.ClientWithOperations
-	303, // 306: wg.cosmo.platform.v1.GetFieldUsageResponse.meta:type_name -> wg.cosmo.platform.v1.FieldUsageMeta
-	16,  // 307: wg.cosmo.platform.v1.CreateNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 308: wg.cosmo.platform.v1.DeleteNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 309: wg.cosmo.platform.v1.RenameNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 310: wg.cosmo.platform.v1.GetNamespacesResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	311, // 311: wg.cosmo.platform.v1.GetNamespacesResponse.namespaces:type_name -> wg.cosmo.platform.v1.Namespace
-	16,  // 312: wg.cosmo.platform.v1.MoveGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	38,  // 313: wg.cosmo.platform.v1.MoveGraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	40,  // 314: wg.cosmo.platform.v1.MoveGraphResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
-	39,  // 315: wg.cosmo.platform.v1.MoveGraphResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	16,  // 316: wg.cosmo.platform.v1.GetNamespaceLintConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	324, // 317: wg.cosmo.platform.v1.GetNamespaceLintConfigResponse.configs:type_name -> wg.cosmo.platform.v1.LintConfig
-	16,  // 318: wg.cosmo.platform.v1.GetNamespaceChecksConfigurationResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 319: wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 320: wg.cosmo.platform.v1.EnableLintingForTheNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	0,   // 321: wg.cosmo.platform.v1.LintConfig.severityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
-	324, // 322: wg.cosmo.platform.v1.ConfigureNamespaceLintConfigRequest.configs:type_name -> wg.cosmo.platform.v1.LintConfig
-	16,  // 323: wg.cosmo.platform.v1.ConfigureNamespaceLintConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 324: wg.cosmo.platform.v1.EnableGraphPruningResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	0,   // 325: wg.cosmo.platform.v1.GraphPruningConfig.severityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
-	329, // 326: wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigRequest.configs:type_name -> wg.cosmo.platform.v1.GraphPruningConfig
-	16,  // 327: wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 328: wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	329, // 329: wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigResponse.configs:type_name -> wg.cosmo.platform.v1.GraphPruningConfig
-	16,  // 330: wg.cosmo.platform.v1.MigrateMonographResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 331: wg.cosmo.platform.v1.GetUserAccessiblePermissionsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	337, // 332: wg.cosmo.platform.v1.GetUserAccessiblePermissionsResponse.permissions:type_name -> wg.cosmo.platform.v1.Permission
-	16,  // 333: wg.cosmo.platform.v1.CreateContractResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	38,  // 334: wg.cosmo.platform.v1.CreateContractResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	40,  // 335: wg.cosmo.platform.v1.CreateContractResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
-	39,  // 336: wg.cosmo.platform.v1.CreateContractResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	16,  // 337: wg.cosmo.platform.v1.UpdateContractResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	38,  // 338: wg.cosmo.platform.v1.UpdateContractResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	40,  // 339: wg.cosmo.platform.v1.UpdateContractResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
-	39,  // 340: wg.cosmo.platform.v1.UpdateContractResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	16,  // 341: wg.cosmo.platform.v1.IsMemberLimitReachedResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 342: wg.cosmo.platform.v1.DeleteUserResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	15,  // 343: wg.cosmo.platform.v1.CreateFeatureFlagRequest.labels:type_name -> wg.cosmo.platform.v1.Label
-	16,  // 344: wg.cosmo.platform.v1.CreateFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	38,  // 345: wg.cosmo.platform.v1.CreateFeatureFlagResponse.composition_errors:type_name -> wg.cosmo.platform.v1.CompositionError
-	40,  // 346: wg.cosmo.platform.v1.CreateFeatureFlagResponse.deployment_errors:type_name -> wg.cosmo.platform.v1.DeploymentError
-	39,  // 347: wg.cosmo.platform.v1.CreateFeatureFlagResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	15,  // 348: wg.cosmo.platform.v1.UpdateFeatureFlagRequest.labels:type_name -> wg.cosmo.platform.v1.Label
-	16,  // 349: wg.cosmo.platform.v1.UpdateFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	38,  // 350: wg.cosmo.platform.v1.UpdateFeatureFlagResponse.composition_errors:type_name -> wg.cosmo.platform.v1.CompositionError
-	40,  // 351: wg.cosmo.platform.v1.UpdateFeatureFlagResponse.deployment_errors:type_name -> wg.cosmo.platform.v1.DeploymentError
-	39,  // 352: wg.cosmo.platform.v1.UpdateFeatureFlagResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	16,  // 353: wg.cosmo.platform.v1.EnableFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	38,  // 354: wg.cosmo.platform.v1.EnableFeatureFlagResponse.composition_errors:type_name -> wg.cosmo.platform.v1.CompositionError
-	40,  // 355: wg.cosmo.platform.v1.EnableFeatureFlagResponse.deployment_errors:type_name -> wg.cosmo.platform.v1.DeploymentError
-	39,  // 356: wg.cosmo.platform.v1.EnableFeatureFlagResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	16,  // 357: wg.cosmo.platform.v1.DeleteFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	38,  // 358: wg.cosmo.platform.v1.DeleteFeatureFlagResponse.composition_errors:type_name -> wg.cosmo.platform.v1.CompositionError
-	40,  // 359: wg.cosmo.platform.v1.DeleteFeatureFlagResponse.deployment_errors:type_name -> wg.cosmo.platform.v1.DeploymentError
-	39,  // 360: wg.cosmo.platform.v1.DeleteFeatureFlagResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	15,  // 361: wg.cosmo.platform.v1.FeatureFlag.labels:type_name -> wg.cosmo.platform.v1.Label
-	16,  // 362: wg.cosmo.platform.v1.GetFeatureFlagsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	355, // 363: wg.cosmo.platform.v1.GetFeatureFlagsResponse.feature_flags:type_name -> wg.cosmo.platform.v1.FeatureFlag
-	16,  // 364: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	355, // 365: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.feature_flag:type_name -> wg.cosmo.platform.v1.FeatureFlag
-	494, // 366: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.federated_graphs:type_name -> wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.FfFederatedGraph
-	60,  // 367: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.feature_subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
-	16,  // 368: wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	60,  // 369: wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagResponse.feature_subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
-	16,  // 370: wg.cosmo.platform.v1.GetFeatureSubgraphsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	60,  // 371: wg.cosmo.platform.v1.GetFeatureSubgraphsResponse.feature_subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
-	16,  // 372: wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	355, // 373: wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphResponse.feature_flags:type_name -> wg.cosmo.platform.v1.FeatureFlag
-	16,  // 374: wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	355, // 375: wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse.feature_flags:type_name -> wg.cosmo.platform.v1.FeatureFlag
-	16,  // 376: wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	60,  // 377: wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphResponse.feature_subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
-	96,  // 378: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryRequest.pagination:type_name -> wg.cosmo.platform.v1.Pagination
-	100, // 379: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryRequest.date_range:type_name -> wg.cosmo.platform.v1.DateRange
-	16,  // 380: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	371, // 381: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryResponse.deliveries:type_name -> wg.cosmo.platform.v1.WebhookDelivery
-	16,  // 382: wg.cosmo.platform.v1.RedeliverWebhookResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 383: wg.cosmo.platform.v1.GetWebhookDeliveryDetailsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	371, // 384: wg.cosmo.platform.v1.GetWebhookDeliveryDetailsResponse.delivery:type_name -> wg.cosmo.platform.v1.WebhookDelivery
-	16,  // 385: wg.cosmo.platform.v1.CreatePlaygroundScriptResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 386: wg.cosmo.platform.v1.DeletePlaygroundScriptResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 387: wg.cosmo.platform.v1.UpdatePlaygroundScriptResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 388: wg.cosmo.platform.v1.GetPlaygroundScriptsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	384, // 389: wg.cosmo.platform.v1.GetPlaygroundScriptsResponse.scripts:type_name -> wg.cosmo.platform.v1.PlaygroundScript
-	16,  // 390: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	55,  // 391: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse.graph:type_name -> wg.cosmo.platform.v1.FederatedGraph
-	60,  // 392: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse.subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
-	355, // 393: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse.featureFlagsInLatestValidComposition:type_name -> wg.cosmo.platform.v1.FeatureFlag
-	60,  // 394: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse.featureSubgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
-	16,  // 395: wg.cosmo.platform.v1.GetSubgraphByIdResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	60,  // 396: wg.cosmo.platform.v1.GetSubgraphByIdResponse.graph:type_name -> wg.cosmo.platform.v1.Subgraph
-	291, // 397: wg.cosmo.platform.v1.GetSubgraphByIdResponse.members:type_name -> wg.cosmo.platform.v1.SubgraphMember
-	16,  // 398: wg.cosmo.platform.v1.GetNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	311, // 399: wg.cosmo.platform.v1.GetNamespaceResponse.namespace:type_name -> wg.cosmo.platform.v1.Namespace
-	393, // 400: wg.cosmo.platform.v1.WorkspaceNamespace.graphs:type_name -> wg.cosmo.platform.v1.WorkspaceFederatedGraph
-	394, // 401: wg.cosmo.platform.v1.WorkspaceFederatedGraph.subgraphs:type_name -> wg.cosmo.platform.v1.WorkspaceSubgraph
-	16,  // 402: wg.cosmo.platform.v1.GetWorkspaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	392, // 403: wg.cosmo.platform.v1.GetWorkspaceResponse.namespaces:type_name -> wg.cosmo.platform.v1.WorkspaceNamespace
-	16,  // 404: wg.cosmo.platform.v1.PushCacheWarmerOperationResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 405: wg.cosmo.platform.v1.GetCacheWarmerOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	400, // 406: wg.cosmo.platform.v1.GetCacheWarmerOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.CacheWarmerOperation
-	16,  // 407: wg.cosmo.platform.v1.ComputeCacheWarmerOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 408: wg.cosmo.platform.v1.ConfigureCacheWarmerResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 409: wg.cosmo.platform.v1.GetCacheWarmerConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 410: wg.cosmo.platform.v1.GetSubgraphCheckExtensionsConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 411: wg.cosmo.platform.v1.ConfigureSubgraphCheckExtensionsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 412: wg.cosmo.platform.v1.DeleteCacheWarmerOperationResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 413: wg.cosmo.platform.v1.ListRouterCompatibilityVersionsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 414: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	38,  // 415: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	40,  // 416: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
-	39,  // 417: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	16,  // 418: wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	421, // 419: wg.cosmo.platform.v1.Proposal.subgraphs:type_name -> wg.cosmo.platform.v1.ProposalSubgraph
-	10,  // 420: wg.cosmo.platform.v1.Proposal.origin:type_name -> wg.cosmo.platform.v1.ProposalOrigin
-	15,  // 421: wg.cosmo.platform.v1.ProposalSubgraph.labels:type_name -> wg.cosmo.platform.v1.Label
-	421, // 422: wg.cosmo.platform.v1.CreateProposalRequest.subgraphs:type_name -> wg.cosmo.platform.v1.ProposalSubgraph
-	11,  // 423: wg.cosmo.platform.v1.CreateProposalRequest.namingConvention:type_name -> wg.cosmo.platform.v1.ProposalNamingConvention
-	10,  // 424: wg.cosmo.platform.v1.CreateProposalRequest.origin:type_name -> wg.cosmo.platform.v1.ProposalOrigin
-	16,  // 425: wg.cosmo.platform.v1.CreateProposalResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	36,  // 426: wg.cosmo.platform.v1.CreateProposalResponse.breakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
-	36,  // 427: wg.cosmo.platform.v1.CreateProposalResponse.nonBreakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
-	38,  // 428: wg.cosmo.platform.v1.CreateProposalResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	39,  // 429: wg.cosmo.platform.v1.CreateProposalResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	44,  // 430: wg.cosmo.platform.v1.CreateProposalResponse.lintErrors:type_name -> wg.cosmo.platform.v1.LintIssue
-	44,  // 431: wg.cosmo.platform.v1.CreateProposalResponse.lintWarnings:type_name -> wg.cosmo.platform.v1.LintIssue
-	45,  // 432: wg.cosmo.platform.v1.CreateProposalResponse.graphPruneErrors:type_name -> wg.cosmo.platform.v1.GraphPruningIssue
-	45,  // 433: wg.cosmo.platform.v1.CreateProposalResponse.graphPruneWarnings:type_name -> wg.cosmo.platform.v1.GraphPruningIssue
-	41,  // 434: wg.cosmo.platform.v1.CreateProposalResponse.operationUsageStats:type_name -> wg.cosmo.platform.v1.CheckOperationUsageStats
-	37,  // 435: wg.cosmo.platform.v1.CreateProposalResponse.composedSchemaBreakingChanges:type_name -> wg.cosmo.platform.v1.FederatedGraphSchemaChange
-	16,  // 436: wg.cosmo.platform.v1.GetProposalResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	420, // 437: wg.cosmo.platform.v1.GetProposalResponse.proposal:type_name -> wg.cosmo.platform.v1.Proposal
-	495, // 438: wg.cosmo.platform.v1.GetProposalResponse.currentSubgraphs:type_name -> wg.cosmo.platform.v1.GetProposalResponse.CurrentSubgraph
-	16,  // 439: wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	420, // 440: wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse.proposals:type_name -> wg.cosmo.platform.v1.Proposal
-	16,  // 441: wg.cosmo.platform.v1.GetProposalChecksResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	74,  // 442: wg.cosmo.platform.v1.GetProposalChecksResponse.checks:type_name -> wg.cosmo.platform.v1.SchemaCheck
-	496, // 443: wg.cosmo.platform.v1.UpdateProposalRequest.updatedSubgraphs:type_name -> wg.cosmo.platform.v1.UpdateProposalRequest.UpdateProposalSubgraphs
-	16,  // 444: wg.cosmo.platform.v1.UpdateProposalResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	36,  // 445: wg.cosmo.platform.v1.UpdateProposalResponse.breakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
-	36,  // 446: wg.cosmo.platform.v1.UpdateProposalResponse.nonBreakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
-	38,  // 447: wg.cosmo.platform.v1.UpdateProposalResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	39,  // 448: wg.cosmo.platform.v1.UpdateProposalResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	44,  // 449: wg.cosmo.platform.v1.UpdateProposalResponse.lintErrors:type_name -> wg.cosmo.platform.v1.LintIssue
-	44,  // 450: wg.cosmo.platform.v1.UpdateProposalResponse.lintWarnings:type_name -> wg.cosmo.platform.v1.LintIssue
-	45,  // 451: wg.cosmo.platform.v1.UpdateProposalResponse.graphPruneErrors:type_name -> wg.cosmo.platform.v1.GraphPruningIssue
-	45,  // 452: wg.cosmo.platform.v1.UpdateProposalResponse.graphPruneWarnings:type_name -> wg.cosmo.platform.v1.GraphPruningIssue
-	41,  // 453: wg.cosmo.platform.v1.UpdateProposalResponse.operationUsageStats:type_name -> wg.cosmo.platform.v1.CheckOperationUsageStats
-	37,  // 454: wg.cosmo.platform.v1.UpdateProposalResponse.composedSchemaBreakingChanges:type_name -> wg.cosmo.platform.v1.FederatedGraphSchemaChange
-	16,  // 455: wg.cosmo.platform.v1.EnableProposalsForNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	0,   // 456: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest.checkSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
-	0,   // 457: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest.publishSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
-	16,  // 458: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 459: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	0,   // 460: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.checkSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
-	0,   // 461: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.publishSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
-	12,  // 462: wg.cosmo.platform.v1.GetOperationsRequest.fetchBasedOn:type_name -> wg.cosmo.platform.v1.OperationsFetchBasedOn
-	100, // 463: wg.cosmo.platform.v1.GetOperationsRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
-	13,  // 464: wg.cosmo.platform.v1.GetOperationsRequest.sortDirection:type_name -> wg.cosmo.platform.v1.SortDirection
-	16,  // 465: wg.cosmo.platform.v1.GetOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	497, // 466: wg.cosmo.platform.v1.GetOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.GetOperationsResponse.Operation
-	16,  // 467: wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	498, // 468: wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.clients:type_name -> wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.Client
-	100, // 469: wg.cosmo.platform.v1.GetOperationClientsRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
-	16,  // 470: wg.cosmo.platform.v1.GetOperationClientsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	499, // 471: wg.cosmo.platform.v1.GetOperationClientsResponse.clients:type_name -> wg.cosmo.platform.v1.GetOperationClientsResponse.Client
-	100, // 472: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
-	16,  // 473: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	500, // 474: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse.deprecatedFields:type_name -> wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse.DeprecatedField
-	15,  // 475: wg.cosmo.platform.v1.ValidateAndFetchPluginDataRequest.labels:type_name -> wg.cosmo.platform.v1.Label
-	16,  // 476: wg.cosmo.platform.v1.ValidateAndFetchPluginDataResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 477: wg.cosmo.platform.v1.LinkSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 478: wg.cosmo.platform.v1.UnlinkSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 479: wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 480: wg.cosmo.platform.v1.InitializeCosmoUserResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 481: wg.cosmo.platform.v1.ListOrganizationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	501, // 482: wg.cosmo.platform.v1.ListOrganizationsResponse.organizations:type_name -> wg.cosmo.platform.v1.ListOrganizationsResponse.OrganizationMembership
-	16,  // 483: wg.cosmo.platform.v1.RecomposeGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	38,  // 484: wg.cosmo.platform.v1.RecomposeGraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	40,  // 485: wg.cosmo.platform.v1.RecomposeGraphResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
-	39,  // 486: wg.cosmo.platform.v1.RecomposeGraphResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	23,  // 487: wg.cosmo.platform.v1.RecomposeGraphResponse.errorCounts:type_name -> wg.cosmo.platform.v1.SubgraphPublishStats
-	16,  // 488: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	38,  // 489: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	40,  // 490: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
-	39,  // 491: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
-	23,  // 492: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse.errorCounts:type_name -> wg.cosmo.platform.v1.SubgraphPublishStats
-	16,  // 493: wg.cosmo.platform.v1.GetOnboardingResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 494: wg.cosmo.platform.v1.CreateOnboardingResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	16,  // 495: wg.cosmo.platform.v1.FinishOnboardingResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	15,  // 496: wg.cosmo.platform.v1.SchemaCheck.CheckedSubgraph.labels:type_name -> wg.cosmo.platform.v1.Label
-	36,  // 497: wg.cosmo.platform.v1.GetCheckOperationsResponse.CheckOperation.impacting_changes:type_name -> wg.cosmo.platform.v1.SchemaChange
-	107, // 498: wg.cosmo.platform.v1.AnalyticsViewRow.ValueEntry.value:type_name -> wg.cosmo.platform.v1.AnalyticsViewRowValue
-	487, // 499: wg.cosmo.platform.v1.GetBillingPlansResponse.BillingPlan.features:type_name -> wg.cosmo.platform.v1.GetBillingPlansResponse.BillingPlanFeature
-	55,  // 500: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.FfFederatedGraph.federated_graph:type_name -> wg.cosmo.platform.v1.FederatedGraph
-	421, // 501: wg.cosmo.platform.v1.UpdateProposalRequest.UpdateProposalSubgraphs.subgraphs:type_name -> wg.cosmo.platform.v1.ProposalSubgraph
-	14,  // 502: wg.cosmo.platform.v1.GetOperationsResponse.Operation.type:type_name -> wg.cosmo.platform.v1.GetOperationsResponse.OperationType
-	377, // 503: wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript:input_type -> wg.cosmo.platform.v1.CreatePlaygroundScriptRequest
-	379, // 504: wg.cosmo.platform.v1.PlatformService.DeletePlaygroundScript:input_type -> wg.cosmo.platform.v1.DeletePlaygroundScriptRequest
-	381, // 505: wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundScript:input_type -> wg.cosmo.platform.v1.UpdatePlaygroundScriptRequest
-	383, // 506: wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts:input_type -> wg.cosmo.platform.v1.GetPlaygroundScriptsRequest
-	305, // 507: wg.cosmo.platform.v1.PlatformService.CreateNamespace:input_type -> wg.cosmo.platform.v1.CreateNamespaceRequest
-	307, // 508: wg.cosmo.platform.v1.PlatformService.DeleteNamespace:input_type -> wg.cosmo.platform.v1.DeleteNamespaceRequest
-	309, // 509: wg.cosmo.platform.v1.PlatformService.RenameNamespace:input_type -> wg.cosmo.platform.v1.RenameNamespaceRequest
-	312, // 510: wg.cosmo.platform.v1.PlatformService.GetNamespaces:input_type -> wg.cosmo.platform.v1.GetNamespacesRequest
-	390, // 511: wg.cosmo.platform.v1.PlatformService.GetNamespace:input_type -> wg.cosmo.platform.v1.GetNamespaceRequest
-	395, // 512: wg.cosmo.platform.v1.PlatformService.GetWorkspace:input_type -> wg.cosmo.platform.v1.GetWorkspaceRequest
-	339, // 513: wg.cosmo.platform.v1.PlatformService.CreateContract:input_type -> wg.cosmo.platform.v1.CreateContractRequest
-	341, // 514: wg.cosmo.platform.v1.PlatformService.UpdateContract:input_type -> wg.cosmo.platform.v1.UpdateContractRequest
-	314, // 515: wg.cosmo.platform.v1.PlatformService.MoveFederatedGraph:input_type -> wg.cosmo.platform.v1.MoveGraphRequest
-	314, // 516: wg.cosmo.platform.v1.PlatformService.MoveSubgraph:input_type -> wg.cosmo.platform.v1.MoveGraphRequest
-	314, // 517: wg.cosmo.platform.v1.PlatformService.MoveMonograph:input_type -> wg.cosmo.platform.v1.MoveGraphRequest
-	28,  // 518: wg.cosmo.platform.v1.PlatformService.CreateMonograph:input_type -> wg.cosmo.platform.v1.CreateMonographRequest
-	18,  // 519: wg.cosmo.platform.v1.PlatformService.PublishMonograph:input_type -> wg.cosmo.platform.v1.PublishMonographRequest
-	33,  // 520: wg.cosmo.platform.v1.PlatformService.DeleteMonograph:input_type -> wg.cosmo.platform.v1.DeleteMonographRequest
-	92,  // 521: wg.cosmo.platform.v1.PlatformService.UpdateMonograph:input_type -> wg.cosmo.platform.v1.UpdateMonographRequest
-	334, // 522: wg.cosmo.platform.v1.PlatformService.MigrateMonograph:input_type -> wg.cosmo.platform.v1.MigrateMonographRequest
-	31,  // 523: wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph:input_type -> wg.cosmo.platform.v1.CreateFederatedSubgraphRequest
-	21,  // 524: wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph:input_type -> wg.cosmo.platform.v1.PublishFederatedSubgraphRequest
-	30,  // 525: wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph:input_type -> wg.cosmo.platform.v1.CreateFederatedGraphRequest
-	32,  // 526: wg.cosmo.platform.v1.PlatformService.DeleteFederatedGraph:input_type -> wg.cosmo.platform.v1.DeleteFederatedGraphRequest
-	35,  // 527: wg.cosmo.platform.v1.PlatformService.DeleteFederatedSubgraph:input_type -> wg.cosmo.platform.v1.DeleteFederatedSubgraphRequest
-	26,  // 528: wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema:input_type -> wg.cosmo.platform.v1.CheckSubgraphSchemaRequest
-	418, // 529: wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph:input_type -> wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphRequest
-	27,  // 530: wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema:input_type -> wg.cosmo.platform.v1.FixSubgraphSchemaRequest
-	90,  // 531: wg.cosmo.platform.v1.PlatformService.UpdateFederatedGraph:input_type -> wg.cosmo.platform.v1.UpdateFederatedGraphRequest
-	88,  // 532: wg.cosmo.platform.v1.PlatformService.UpdateSubgraph:input_type -> wg.cosmo.platform.v1.UpdateSubgraphRequest
-	94,  // 533: wg.cosmo.platform.v1.PlatformService.CheckFederatedGraph:input_type -> wg.cosmo.platform.v1.CheckFederatedGraphRequest
-	158, // 534: wg.cosmo.platform.v1.PlatformService.WhoAmI:input_type -> wg.cosmo.platform.v1.WhoAmIRequest
-	161, // 535: wg.cosmo.platform.v1.PlatformService.GenerateRouterToken:input_type -> wg.cosmo.platform.v1.GenerateRouterTokenRequest
-	163, // 536: wg.cosmo.platform.v1.PlatformService.GetRouterTokens:input_type -> wg.cosmo.platform.v1.GetRouterTokensRequest
-	165, // 537: wg.cosmo.platform.v1.PlatformService.DeleteRouterToken:input_type -> wg.cosmo.platform.v1.DeleteRouterTokenRequest
-	168, // 538: wg.cosmo.platform.v1.PlatformService.PublishPersistedOperations:input_type -> wg.cosmo.platform.v1.PublishPersistedOperationsRequest
-	173, // 539: wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic:input_type -> wg.cosmo.platform.v1.CheckPersistedOperationTrafficRequest
-	171, // 540: wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation:input_type -> wg.cosmo.platform.v1.DeletePersistedOperationRequest
-	175, // 541: wg.cosmo.platform.v1.PlatformService.GetPersistedOperations:input_type -> wg.cosmo.platform.v1.GetPersistedOperationsRequest
-	268, // 542: wg.cosmo.platform.v1.PlatformService.GetAuditLogs:input_type -> wg.cosmo.platform.v1.GetAuditLogsRequest
-	454, // 543: wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser:input_type -> wg.cosmo.platform.v1.InitializeCosmoUserRequest
-	456, // 544: wg.cosmo.platform.v1.PlatformService.ListOrganizations:input_type -> wg.cosmo.platform.v1.ListOrganizationsRequest
-	53,  // 545: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphs:input_type -> wg.cosmo.platform.v1.GetFederatedGraphsRequest
-	57,  // 546: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphsBySubgraphLabels:input_type -> wg.cosmo.platform.v1.GetFederatedGraphsBySubgraphLabelsRequest
-	62,  // 547: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphByName:input_type -> wg.cosmo.platform.v1.GetFederatedGraphByNameRequest
-	64,  // 548: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphSDLByName:input_type -> wg.cosmo.platform.v1.GetFederatedGraphSDLByNameRequest
-	59,  // 549: wg.cosmo.platform.v1.PlatformService.GetSubgraphs:input_type -> wg.cosmo.platform.v1.GetSubgraphsRequest
-	66,  // 550: wg.cosmo.platform.v1.PlatformService.GetSubgraphByName:input_type -> wg.cosmo.platform.v1.GetSubgraphByNameRequest
-	68,  // 551: wg.cosmo.platform.v1.PlatformService.GetSubgraphSDLFromLatestComposition:input_type -> wg.cosmo.platform.v1.GetSubgraphSDLFromLatestCompositionRequest
-	70,  // 552: wg.cosmo.platform.v1.PlatformService.GetLatestSubgraphSDL:input_type -> wg.cosmo.platform.v1.GetLatestSubgraphSDLRequest
-	73,  // 553: wg.cosmo.platform.v1.PlatformService.GetChecksByFederatedGraphName:input_type -> wg.cosmo.platform.v1.GetChecksByFederatedGraphNameRequest
-	76,  // 554: wg.cosmo.platform.v1.PlatformService.GetCheckSummary:input_type -> wg.cosmo.platform.v1.GetCheckSummaryRequest
-	79,  // 555: wg.cosmo.platform.v1.PlatformService.GetCheckOperations:input_type -> wg.cosmo.platform.v1.GetCheckOperationsRequest
-	235, // 556: wg.cosmo.platform.v1.PlatformService.ForceCheckSuccess:input_type -> wg.cosmo.platform.v1.ForceCheckSuccessRequest
-	242, // 557: wg.cosmo.platform.v1.PlatformService.CreateOperationOverrides:input_type -> wg.cosmo.platform.v1.CreateOperationOverridesRequest
-	246, // 558: wg.cosmo.platform.v1.PlatformService.RemoveOperationOverrides:input_type -> wg.cosmo.platform.v1.RemoveOperationOverridesRequest
-	244, // 559: wg.cosmo.platform.v1.PlatformService.CreateOperationIgnoreAllOverride:input_type -> wg.cosmo.platform.v1.CreateOperationIgnoreAllOverrideRequest
-	248, // 560: wg.cosmo.platform.v1.PlatformService.RemoveOperationIgnoreAllOverride:input_type -> wg.cosmo.platform.v1.RemoveOperationIgnoreAllOverrideRequest
-	250, // 561: wg.cosmo.platform.v1.PlatformService.GetOperationOverrides:input_type -> wg.cosmo.platform.v1.GetOperationOverridesRequest
-	252, // 562: wg.cosmo.platform.v1.PlatformService.GetAllOverrides:input_type -> wg.cosmo.platform.v1.GetAllOverridesRequest
-	237, // 563: wg.cosmo.platform.v1.PlatformService.ToggleChangeOverridesForAllOperations:input_type -> wg.cosmo.platform.v1.ToggleChangeOverridesForAllOperationsRequest
-	239, // 564: wg.cosmo.platform.v1.PlatformService.CreateIgnoreOverridesForAllOperations:input_type -> wg.cosmo.platform.v1.CreateIgnoreOverridesForAllOperationsRequest
-	81,  // 565: wg.cosmo.platform.v1.PlatformService.GetOperationContent:input_type -> wg.cosmo.platform.v1.GetOperationContentRequest
-	83,  // 566: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphChangelog:input_type -> wg.cosmo.platform.v1.GetFederatedGraphChangelogRequest
-	115, // 567: wg.cosmo.platform.v1.PlatformService.CreateFederatedGraphToken:input_type -> wg.cosmo.platform.v1.CreateFederatedGraphTokenRequest
-	212, // 568: wg.cosmo.platform.v1.PlatformService.GetOrganizationBySlug:input_type -> wg.cosmo.platform.v1.GetOrganizationBySlugRequest
-	133, // 569: wg.cosmo.platform.v1.PlatformService.GetOrganizationMembers:input_type -> wg.cosmo.platform.v1.GetOrganizationMembersRequest
-	131, // 570: wg.cosmo.platform.v1.PlatformService.GetPendingOrganizationMembers:input_type -> wg.cosmo.platform.v1.GetPendingOrganizationMembersRequest
-	343, // 571: wg.cosmo.platform.v1.PlatformService.IsMemberLimitReached:input_type -> wg.cosmo.platform.v1.IsMemberLimitReachedRequest
-	135, // 572: wg.cosmo.platform.v1.PlatformService.InviteUser:input_type -> wg.cosmo.platform.v1.InviteUserRequest
-	137, // 573: wg.cosmo.platform.v1.PlatformService.InviteUsers:input_type -> wg.cosmo.platform.v1.InviteUsersRequest
-	141, // 574: wg.cosmo.platform.v1.PlatformService.GetAPIKeys:input_type -> wg.cosmo.platform.v1.GetAPIKeysRequest
-	143, // 575: wg.cosmo.platform.v1.PlatformService.CreateAPIKey:input_type -> wg.cosmo.platform.v1.CreateAPIKeyRequest
-	147, // 576: wg.cosmo.platform.v1.PlatformService.UpdateAPIKey:input_type -> wg.cosmo.platform.v1.UpdateAPIKeyRequest
-	145, // 577: wg.cosmo.platform.v1.PlatformService.DeleteAPIKey:input_type -> wg.cosmo.platform.v1.DeleteAPIKeyRequest
-	149, // 578: wg.cosmo.platform.v1.PlatformService.RemoveOrganizationMember:input_type -> wg.cosmo.platform.v1.RemoveOrganizationMemberRequest
-	151, // 579: wg.cosmo.platform.v1.PlatformService.RemoveInvitation:input_type -> wg.cosmo.platform.v1.RemoveInvitationRequest
-	153, // 580: wg.cosmo.platform.v1.PlatformService.MigrateFromApollo:input_type -> wg.cosmo.platform.v1.MigrateFromApolloRequest
-	119, // 581: wg.cosmo.platform.v1.PlatformService.CreateOrganizationGroup:input_type -> wg.cosmo.platform.v1.CreateOrganizationGroupRequest
-	121, // 582: wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups:input_type -> wg.cosmo.platform.v1.GetOrganizationGroupsRequest
-	123, // 583: wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers:input_type -> wg.cosmo.platform.v1.GetOrganizationGroupMembersRequest
-	125, // 584: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroup:input_type -> wg.cosmo.platform.v1.UpdateOrganizationGroupRequest
-	127, // 585: wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup:input_type -> wg.cosmo.platform.v1.DeleteOrganizationGroupRequest
-	178, // 586: wg.cosmo.platform.v1.PlatformService.CreateOrganizationWebhookConfig:input_type -> wg.cosmo.platform.v1.CreateOrganizationWebhookConfigRequest
-	180, // 587: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookConfigs:input_type -> wg.cosmo.platform.v1.GetOrganizationWebhookConfigsRequest
-	182, // 588: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookMeta:input_type -> wg.cosmo.platform.v1.GetOrganizationWebhookMetaRequest
-	184, // 589: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationWebhookConfig:input_type -> wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigRequest
-	186, // 590: wg.cosmo.platform.v1.PlatformService.DeleteOrganizationWebhookConfig:input_type -> wg.cosmo.platform.v1.DeleteOrganizationWebhookConfigRequest
-	370, // 591: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookHistory:input_type -> wg.cosmo.platform.v1.GetOrganizationWebhookHistoryRequest
-	375, // 592: wg.cosmo.platform.v1.PlatformService.GetWebhookDeliveryDetails:input_type -> wg.cosmo.platform.v1.GetWebhookDeliveryDetailsRequest
-	373, // 593: wg.cosmo.platform.v1.PlatformService.RedeliverWebhook:input_type -> wg.cosmo.platform.v1.RedeliverWebhookRequest
-	188, // 594: wg.cosmo.platform.v1.PlatformService.CreateIntegration:input_type -> wg.cosmo.platform.v1.CreateIntegrationRequest
-	190, // 595: wg.cosmo.platform.v1.PlatformService.GetOrganizationIntegrations:input_type -> wg.cosmo.platform.v1.GetOrganizationIntegrationsRequest
-	195, // 596: wg.cosmo.platform.v1.PlatformService.UpdateIntegrationConfig:input_type -> wg.cosmo.platform.v1.UpdateIntegrationConfigRequest
-	197, // 597: wg.cosmo.platform.v1.PlatformService.DeleteIntegration:input_type -> wg.cosmo.platform.v1.DeleteIntegrationRequest
-	345, // 598: wg.cosmo.platform.v1.PlatformService.DeleteUser:input_type -> wg.cosmo.platform.v1.DeleteUserRequest
-	199, // 599: wg.cosmo.platform.v1.PlatformService.DeleteOrganization:input_type -> wg.cosmo.platform.v1.DeleteOrganizationRequest
-	201, // 600: wg.cosmo.platform.v1.PlatformService.RestoreOrganization:input_type -> wg.cosmo.platform.v1.RestoreOrganizationRequest
-	203, // 601: wg.cosmo.platform.v1.PlatformService.LeaveOrganization:input_type -> wg.cosmo.platform.v1.LeaveOrganizationRequest
-	205, // 602: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationDetails:input_type -> wg.cosmo.platform.v1.UpdateOrganizationDetailsRequest
-	207, // 603: wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberGroup:input_type -> wg.cosmo.platform.v1.UpdateOrgMemberGroupRequest
-	254, // 604: wg.cosmo.platform.v1.PlatformService.IsGitHubAppInstalled:input_type -> wg.cosmo.platform.v1.IsGitHubAppInstalledRequest
-	257, // 605: wg.cosmo.platform.v1.PlatformService.CreateOIDCProvider:input_type -> wg.cosmo.platform.v1.CreateOIDCProviderRequest
-	259, // 606: wg.cosmo.platform.v1.PlatformService.GetOIDCProvider:input_type -> wg.cosmo.platform.v1.GetOIDCProviderRequest
-	261, // 607: wg.cosmo.platform.v1.PlatformService.DeleteOIDCProvider:input_type -> wg.cosmo.platform.v1.DeleteOIDCProviderRequest
-	263, // 608: wg.cosmo.platform.v1.PlatformService.UpdateIDPMappers:input_type -> wg.cosmo.platform.v1.UpdateIDPMappersRequest
-	299, // 609: wg.cosmo.platform.v1.PlatformService.GetClients:input_type -> wg.cosmo.platform.v1.GetClientsRequest
-	296, // 610: wg.cosmo.platform.v1.PlatformService.GetRouters:input_type -> wg.cosmo.platform.v1.GetRoutersRequest
-	271, // 611: wg.cosmo.platform.v1.PlatformService.GetInvitations:input_type -> wg.cosmo.platform.v1.GetInvitationsRequest
-	273, // 612: wg.cosmo.platform.v1.PlatformService.AcceptOrDeclineInvitation:input_type -> wg.cosmo.platform.v1.AcceptOrDeclineInvitationRequest
-	277, // 613: wg.cosmo.platform.v1.PlatformService.GetCompositions:input_type -> wg.cosmo.platform.v1.GetCompositionsRequest
-	279, // 614: wg.cosmo.platform.v1.PlatformService.GetCompositionDetails:input_type -> wg.cosmo.platform.v1.GetCompositionDetailsRequest
-	282, // 615: wg.cosmo.platform.v1.PlatformService.GetSdlBySchemaVersion:input_type -> wg.cosmo.platform.v1.GetSdlBySchemaVersionRequest
-	284, // 616: wg.cosmo.platform.v1.PlatformService.GetChangelogBySchemaVersion:input_type -> wg.cosmo.platform.v1.GetChangelogBySchemaVersionRequest
-	286, // 617: wg.cosmo.platform.v1.PlatformService.GetUserAccessibleResources:input_type -> wg.cosmo.platform.v1.GetUserAccessibleResourcesRequest
-	288, // 618: wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings:input_type -> wg.cosmo.platform.v1.UpdateFeatureSettingsRequest
-	290, // 619: wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers:input_type -> wg.cosmo.platform.v1.GetSubgraphMembersRequest
-	293, // 620: wg.cosmo.platform.v1.PlatformService.AddReadme:input_type -> wg.cosmo.platform.v1.AddReadmeRequest
-	336, // 621: wg.cosmo.platform.v1.PlatformService.GetUserAccessiblePermissions:input_type -> wg.cosmo.platform.v1.GetUserAccessiblePermissionsRequest
-	347, // 622: wg.cosmo.platform.v1.PlatformService.CreateFeatureFlag:input_type -> wg.cosmo.platform.v1.CreateFeatureFlagRequest
-	353, // 623: wg.cosmo.platform.v1.PlatformService.DeleteFeatureFlag:input_type -> wg.cosmo.platform.v1.DeleteFeatureFlagRequest
-	349, // 624: wg.cosmo.platform.v1.PlatformService.UpdateFeatureFlag:input_type -> wg.cosmo.platform.v1.UpdateFeatureFlagRequest
-	351, // 625: wg.cosmo.platform.v1.PlatformService.EnableFeatureFlag:input_type -> wg.cosmo.platform.v1.EnableFeatureFlagRequest
-	101, // 626: wg.cosmo.platform.v1.PlatformService.GetAnalyticsView:input_type -> wg.cosmo.platform.v1.GetAnalyticsViewRequest
-	109, // 627: wg.cosmo.platform.v1.PlatformService.GetDashboardAnalyticsView:input_type -> wg.cosmo.platform.v1.GetDashboardAnalyticsViewRequest
-	156, // 628: wg.cosmo.platform.v1.PlatformService.GetTrace:input_type -> wg.cosmo.platform.v1.GetTraceRequest
-	222, // 629: wg.cosmo.platform.v1.PlatformService.GetGraphMetrics:input_type -> wg.cosmo.platform.v1.GetGraphMetricsRequest
-	228, // 630: wg.cosmo.platform.v1.PlatformService.GetMetricsErrorRate:input_type -> wg.cosmo.platform.v1.GetMetricsErrorRateRequest
-	231, // 631: wg.cosmo.platform.v1.PlatformService.GetSubgraphMetrics:input_type -> wg.cosmo.platform.v1.GetSubgraphMetricsRequest
-	233, // 632: wg.cosmo.platform.v1.PlatformService.GetSubgraphMetricsErrorRate:input_type -> wg.cosmo.platform.v1.GetSubgraphMetricsErrorRateRequest
-	301, // 633: wg.cosmo.platform.v1.PlatformService.GetFieldUsage:input_type -> wg.cosmo.platform.v1.GetFieldUsageRequest
-	265, // 634: wg.cosmo.platform.v1.PlatformService.GetOrganizationRequestsCount:input_type -> wg.cosmo.platform.v1.GetOrganizationRequestsCountRequest
-	209, // 635: wg.cosmo.platform.v1.PlatformService.CreateOrganization:input_type -> wg.cosmo.platform.v1.CreateOrganizationRequest
-	322, // 636: wg.cosmo.platform.v1.PlatformService.EnableLintingForTheNamespace:input_type -> wg.cosmo.platform.v1.EnableLintingForTheNamespaceRequest
-	325, // 637: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceLintConfig:input_type -> wg.cosmo.platform.v1.ConfigureNamespaceLintConfigRequest
-	316, // 638: wg.cosmo.platform.v1.PlatformService.GetNamespaceLintConfig:input_type -> wg.cosmo.platform.v1.GetNamespaceLintConfigRequest
-	318, // 639: wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig:input_type -> wg.cosmo.platform.v1.GetNamespaceChecksConfigurationRequest
-	320, // 640: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig:input_type -> wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationRequest
-	327, // 641: wg.cosmo.platform.v1.PlatformService.EnableGraphPruning:input_type -> wg.cosmo.platform.v1.EnableGraphPruningRequest
-	330, // 642: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceGraphPruningConfig:input_type -> wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigRequest
-	332, // 643: wg.cosmo.platform.v1.PlatformService.GetNamespaceGraphPruningConfig:input_type -> wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigRequest
-	356, // 644: wg.cosmo.platform.v1.PlatformService.GetFeatureFlags:input_type -> wg.cosmo.platform.v1.GetFeatureFlagsRequest
-	358, // 645: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagByName:input_type -> wg.cosmo.platform.v1.GetFeatureFlagByNameRequest
-	360, // 646: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFeatureFlag:input_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagRequest
-	362, // 647: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphs:input_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsRequest
-	364, // 648: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsByFederatedGraph:input_type -> wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphRequest
-	366, // 649: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsInLatestCompositionByFederatedGraph:input_type -> wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest
-	368, // 650: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFederatedGraph:input_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphRequest
-	386, // 651: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphById:input_type -> wg.cosmo.platform.v1.GetFederatedGraphByIdRequest
-	388, // 652: wg.cosmo.platform.v1.PlatformService.GetSubgraphById:input_type -> wg.cosmo.platform.v1.GetSubgraphByIdRequest
-	397, // 653: wg.cosmo.platform.v1.PlatformService.PushCacheWarmerOperation:input_type -> wg.cosmo.platform.v1.PushCacheWarmerOperationRequest
-	399, // 654: wg.cosmo.platform.v1.PlatformService.GetCacheWarmerOperations:input_type -> wg.cosmo.platform.v1.GetCacheWarmerOperationsRequest
-	402, // 655: wg.cosmo.platform.v1.PlatformService.ComputeCacheWarmerOperations:input_type -> wg.cosmo.platform.v1.ComputeCacheWarmerOperationsRequest
-	404, // 656: wg.cosmo.platform.v1.PlatformService.ConfigureCacheWarmer:input_type -> wg.cosmo.platform.v1.ConfigureCacheWarmerRequest
-	406, // 657: wg.cosmo.platform.v1.PlatformService.GetCacheWarmerConfig:input_type -> wg.cosmo.platform.v1.GetCacheWarmerConfigRequest
-	412, // 658: wg.cosmo.platform.v1.PlatformService.DeleteCacheWarmerOperation:input_type -> wg.cosmo.platform.v1.DeleteCacheWarmerOperationRequest
-	408, // 659: wg.cosmo.platform.v1.PlatformService.GetSubgraphCheckExtensionsConfig:input_type -> wg.cosmo.platform.v1.GetSubgraphCheckExtensionsConfigRequest
-	410, // 660: wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions:input_type -> wg.cosmo.platform.v1.ConfigureSubgraphCheckExtensionsRequest
-	214, // 661: wg.cosmo.platform.v1.PlatformService.GetBillingPlans:input_type -> wg.cosmo.platform.v1.GetBillingPlansRequest
-	216, // 662: wg.cosmo.platform.v1.PlatformService.CreateCheckoutSession:input_type -> wg.cosmo.platform.v1.CreateCheckoutSessionRequest
-	218, // 663: wg.cosmo.platform.v1.PlatformService.CreateBillingPortalSession:input_type -> wg.cosmo.platform.v1.CreateBillingPortalSessionRequest
-	220, // 664: wg.cosmo.platform.v1.PlatformService.UpgradePlan:input_type -> wg.cosmo.platform.v1.UpgradePlanRequest
-	414, // 665: wg.cosmo.platform.v1.PlatformService.ListRouterCompatibilityVersions:input_type -> wg.cosmo.platform.v1.ListRouterCompatibilityVersionsRequest
-	416, // 666: wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion:input_type -> wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionRequest
-	422, // 667: wg.cosmo.platform.v1.PlatformService.CreateProposal:input_type -> wg.cosmo.platform.v1.CreateProposalRequest
-	424, // 668: wg.cosmo.platform.v1.PlatformService.GetProposal:input_type -> wg.cosmo.platform.v1.GetProposalRequest
-	430, // 669: wg.cosmo.platform.v1.PlatformService.UpdateProposal:input_type -> wg.cosmo.platform.v1.UpdateProposalRequest
-	432, // 670: wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace:input_type -> wg.cosmo.platform.v1.EnableProposalsForNamespaceRequest
-	434, // 671: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig:input_type -> wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest
-	436, // 672: wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig:input_type -> wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest
-	426, // 673: wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph:input_type -> wg.cosmo.platform.v1.GetProposalsByFederatedGraphRequest
-	428, // 674: wg.cosmo.platform.v1.PlatformService.GetProposalChecks:input_type -> wg.cosmo.platform.v1.GetProposalChecksRequest
-	438, // 675: wg.cosmo.platform.v1.PlatformService.GetOperations:input_type -> wg.cosmo.platform.v1.GetOperationsRequest
-	440, // 676: wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics:input_type -> wg.cosmo.platform.v1.GetClientsFromAnalyticsRequest
-	442, // 677: wg.cosmo.platform.v1.PlatformService.GetOperationClients:input_type -> wg.cosmo.platform.v1.GetOperationClientsRequest
-	444, // 678: wg.cosmo.platform.v1.PlatformService.GetOperationDeprecatedFields:input_type -> wg.cosmo.platform.v1.GetOperationDeprecatedFieldsRequest
-	446, // 679: wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData:input_type -> wg.cosmo.platform.v1.ValidateAndFetchPluginDataRequest
-	448, // 680: wg.cosmo.platform.v1.PlatformService.LinkSubgraph:input_type -> wg.cosmo.platform.v1.LinkSubgraphRequest
-	450, // 681: wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph:input_type -> wg.cosmo.platform.v1.UnlinkSubgraphRequest
-	452, // 682: wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess:input_type -> wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessRequest
-	458, // 683: wg.cosmo.platform.v1.PlatformService.RecomposeGraph:input_type -> wg.cosmo.platform.v1.RecomposeGraphRequest
-	460, // 684: wg.cosmo.platform.v1.PlatformService.RecomposeFeatureFlag:input_type -> wg.cosmo.platform.v1.RecomposeFeatureFlagRequest
-	462, // 685: wg.cosmo.platform.v1.PlatformService.GetOnboarding:input_type -> wg.cosmo.platform.v1.GetOnboardingRequest
-	464, // 686: wg.cosmo.platform.v1.PlatformService.CreateOnboarding:input_type -> wg.cosmo.platform.v1.CreateOnboardingRequest
-	466, // 687: wg.cosmo.platform.v1.PlatformService.FinishOnboarding:input_type -> wg.cosmo.platform.v1.FinishOnboardingRequest
-	378, // 688: wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript:output_type -> wg.cosmo.platform.v1.CreatePlaygroundScriptResponse
-	380, // 689: wg.cosmo.platform.v1.PlatformService.DeletePlaygroundScript:output_type -> wg.cosmo.platform.v1.DeletePlaygroundScriptResponse
-	382, // 690: wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundScript:output_type -> wg.cosmo.platform.v1.UpdatePlaygroundScriptResponse
-	385, // 691: wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts:output_type -> wg.cosmo.platform.v1.GetPlaygroundScriptsResponse
-	306, // 692: wg.cosmo.platform.v1.PlatformService.CreateNamespace:output_type -> wg.cosmo.platform.v1.CreateNamespaceResponse
-	308, // 693: wg.cosmo.platform.v1.PlatformService.DeleteNamespace:output_type -> wg.cosmo.platform.v1.DeleteNamespaceResponse
-	310, // 694: wg.cosmo.platform.v1.PlatformService.RenameNamespace:output_type -> wg.cosmo.platform.v1.RenameNamespaceResponse
-	313, // 695: wg.cosmo.platform.v1.PlatformService.GetNamespaces:output_type -> wg.cosmo.platform.v1.GetNamespacesResponse
-	391, // 696: wg.cosmo.platform.v1.PlatformService.GetNamespace:output_type -> wg.cosmo.platform.v1.GetNamespaceResponse
-	396, // 697: wg.cosmo.platform.v1.PlatformService.GetWorkspace:output_type -> wg.cosmo.platform.v1.GetWorkspaceResponse
-	340, // 698: wg.cosmo.platform.v1.PlatformService.CreateContract:output_type -> wg.cosmo.platform.v1.CreateContractResponse
-	342, // 699: wg.cosmo.platform.v1.PlatformService.UpdateContract:output_type -> wg.cosmo.platform.v1.UpdateContractResponse
-	315, // 700: wg.cosmo.platform.v1.PlatformService.MoveFederatedGraph:output_type -> wg.cosmo.platform.v1.MoveGraphResponse
-	315, // 701: wg.cosmo.platform.v1.PlatformService.MoveSubgraph:output_type -> wg.cosmo.platform.v1.MoveGraphResponse
-	315, // 702: wg.cosmo.platform.v1.PlatformService.MoveMonograph:output_type -> wg.cosmo.platform.v1.MoveGraphResponse
-	29,  // 703: wg.cosmo.platform.v1.PlatformService.CreateMonograph:output_type -> wg.cosmo.platform.v1.CreateMonographResponse
-	19,  // 704: wg.cosmo.platform.v1.PlatformService.PublishMonograph:output_type -> wg.cosmo.platform.v1.PublishMonographResponse
-	34,  // 705: wg.cosmo.platform.v1.PlatformService.DeleteMonograph:output_type -> wg.cosmo.platform.v1.DeleteMonographResponse
-	93,  // 706: wg.cosmo.platform.v1.PlatformService.UpdateMonograph:output_type -> wg.cosmo.platform.v1.UpdateMonographResponse
-	335, // 707: wg.cosmo.platform.v1.PlatformService.MigrateMonograph:output_type -> wg.cosmo.platform.v1.MigrateMonographResponse
-	50,  // 708: wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph:output_type -> wg.cosmo.platform.v1.CreateFederatedSubgraphResponse
-	22,  // 709: wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph:output_type -> wg.cosmo.platform.v1.PublishFederatedSubgraphResponse
-	49,  // 710: wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph:output_type -> wg.cosmo.platform.v1.CreateFederatedGraphResponse
-	52,  // 711: wg.cosmo.platform.v1.PlatformService.DeleteFederatedGraph:output_type -> wg.cosmo.platform.v1.DeleteFederatedGraphResponse
-	51,  // 712: wg.cosmo.platform.v1.PlatformService.DeleteFederatedSubgraph:output_type -> wg.cosmo.platform.v1.DeleteFederatedSubgraphResponse
-	46,  // 713: wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema:output_type -> wg.cosmo.platform.v1.CheckSubgraphSchemaResponse
-	419, // 714: wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph:output_type -> wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphResponse
-	48,  // 715: wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema:output_type -> wg.cosmo.platform.v1.FixSubgraphSchemaResponse
-	91,  // 716: wg.cosmo.platform.v1.PlatformService.UpdateFederatedGraph:output_type -> wg.cosmo.platform.v1.UpdateFederatedGraphResponse
-	89,  // 717: wg.cosmo.platform.v1.PlatformService.UpdateSubgraph:output_type -> wg.cosmo.platform.v1.UpdateSubgraphResponse
-	95,  // 718: wg.cosmo.platform.v1.PlatformService.CheckFederatedGraph:output_type -> wg.cosmo.platform.v1.CheckFederatedGraphResponse
-	159, // 719: wg.cosmo.platform.v1.PlatformService.WhoAmI:output_type -> wg.cosmo.platform.v1.WhoAmIResponse
-	162, // 720: wg.cosmo.platform.v1.PlatformService.GenerateRouterToken:output_type -> wg.cosmo.platform.v1.GenerateRouterTokenResponse
-	164, // 721: wg.cosmo.platform.v1.PlatformService.GetRouterTokens:output_type -> wg.cosmo.platform.v1.GetRouterTokensResponse
-	166, // 722: wg.cosmo.platform.v1.PlatformService.DeleteRouterToken:output_type -> wg.cosmo.platform.v1.DeleteRouterTokenResponse
-	170, // 723: wg.cosmo.platform.v1.PlatformService.PublishPersistedOperations:output_type -> wg.cosmo.platform.v1.PublishPersistedOperationsResponse
-	174, // 724: wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic:output_type -> wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse
-	172, // 725: wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation:output_type -> wg.cosmo.platform.v1.DeletePersistedOperationResponse
-	176, // 726: wg.cosmo.platform.v1.PlatformService.GetPersistedOperations:output_type -> wg.cosmo.platform.v1.GetPersistedOperationsResponse
-	270, // 727: wg.cosmo.platform.v1.PlatformService.GetAuditLogs:output_type -> wg.cosmo.platform.v1.GetAuditLogsResponse
-	455, // 728: wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser:output_type -> wg.cosmo.platform.v1.InitializeCosmoUserResponse
-	457, // 729: wg.cosmo.platform.v1.PlatformService.ListOrganizations:output_type -> wg.cosmo.platform.v1.ListOrganizationsResponse
-	56,  // 730: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphs:output_type -> wg.cosmo.platform.v1.GetFederatedGraphsResponse
-	58,  // 731: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphsBySubgraphLabels:output_type -> wg.cosmo.platform.v1.GetFederatedGraphsBySubgraphLabelsResponse
-	63,  // 732: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphByName:output_type -> wg.cosmo.platform.v1.GetFederatedGraphByNameResponse
-	65,  // 733: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphSDLByName:output_type -> wg.cosmo.platform.v1.GetFederatedGraphSDLByNameResponse
-	61,  // 734: wg.cosmo.platform.v1.PlatformService.GetSubgraphs:output_type -> wg.cosmo.platform.v1.GetSubgraphsResponse
-	67,  // 735: wg.cosmo.platform.v1.PlatformService.GetSubgraphByName:output_type -> wg.cosmo.platform.v1.GetSubgraphByNameResponse
-	69,  // 736: wg.cosmo.platform.v1.PlatformService.GetSubgraphSDLFromLatestComposition:output_type -> wg.cosmo.platform.v1.GetSubgraphSDLFromLatestCompositionResponse
-	71,  // 737: wg.cosmo.platform.v1.PlatformService.GetLatestSubgraphSDL:output_type -> wg.cosmo.platform.v1.GetLatestSubgraphSDLResponse
-	75,  // 738: wg.cosmo.platform.v1.PlatformService.GetChecksByFederatedGraphName:output_type -> wg.cosmo.platform.v1.GetChecksByFederatedGraphNameResponse
-	78,  // 739: wg.cosmo.platform.v1.PlatformService.GetCheckSummary:output_type -> wg.cosmo.platform.v1.GetCheckSummaryResponse
-	80,  // 740: wg.cosmo.platform.v1.PlatformService.GetCheckOperations:output_type -> wg.cosmo.platform.v1.GetCheckOperationsResponse
-	236, // 741: wg.cosmo.platform.v1.PlatformService.ForceCheckSuccess:output_type -> wg.cosmo.platform.v1.ForceCheckSuccessResponse
-	243, // 742: wg.cosmo.platform.v1.PlatformService.CreateOperationOverrides:output_type -> wg.cosmo.platform.v1.CreateOperationOverridesResponse
-	247, // 743: wg.cosmo.platform.v1.PlatformService.RemoveOperationOverrides:output_type -> wg.cosmo.platform.v1.RemoveOperationOverridesResponse
-	245, // 744: wg.cosmo.platform.v1.PlatformService.CreateOperationIgnoreAllOverride:output_type -> wg.cosmo.platform.v1.CreateOperationIgnoreAllOverrideResponse
-	249, // 745: wg.cosmo.platform.v1.PlatformService.RemoveOperationIgnoreAllOverride:output_type -> wg.cosmo.platform.v1.RemoveOperationIgnoreAllOverrideResponse
-	251, // 746: wg.cosmo.platform.v1.PlatformService.GetOperationOverrides:output_type -> wg.cosmo.platform.v1.GetOperationOverridesResponse
-	253, // 747: wg.cosmo.platform.v1.PlatformService.GetAllOverrides:output_type -> wg.cosmo.platform.v1.GetAllOverridesResponse
-	238, // 748: wg.cosmo.platform.v1.PlatformService.ToggleChangeOverridesForAllOperations:output_type -> wg.cosmo.platform.v1.ToggleChangeOverridesForAllOperationsResponse
-	240, // 749: wg.cosmo.platform.v1.PlatformService.CreateIgnoreOverridesForAllOperations:output_type -> wg.cosmo.platform.v1.CreateIgnoreOverridesForAllOperationsResponse
-	82,  // 750: wg.cosmo.platform.v1.PlatformService.GetOperationContent:output_type -> wg.cosmo.platform.v1.GetOperationContentResponse
-	86,  // 751: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphChangelog:output_type -> wg.cosmo.platform.v1.GetFederatedGraphChangelogResponse
-	116, // 752: wg.cosmo.platform.v1.PlatformService.CreateFederatedGraphToken:output_type -> wg.cosmo.platform.v1.CreateFederatedGraphTokenResponse
-	213, // 753: wg.cosmo.platform.v1.PlatformService.GetOrganizationBySlug:output_type -> wg.cosmo.platform.v1.GetOrganizationBySlugResponse
-	134, // 754: wg.cosmo.platform.v1.PlatformService.GetOrganizationMembers:output_type -> wg.cosmo.platform.v1.GetOrganizationMembersResponse
-	132, // 755: wg.cosmo.platform.v1.PlatformService.GetPendingOrganizationMembers:output_type -> wg.cosmo.platform.v1.GetPendingOrganizationMembersResponse
-	344, // 756: wg.cosmo.platform.v1.PlatformService.IsMemberLimitReached:output_type -> wg.cosmo.platform.v1.IsMemberLimitReachedResponse
-	136, // 757: wg.cosmo.platform.v1.PlatformService.InviteUser:output_type -> wg.cosmo.platform.v1.InviteUserResponse
-	139, // 758: wg.cosmo.platform.v1.PlatformService.InviteUsers:output_type -> wg.cosmo.platform.v1.InviteUsersResponse
-	142, // 759: wg.cosmo.platform.v1.PlatformService.GetAPIKeys:output_type -> wg.cosmo.platform.v1.GetAPIKeysResponse
-	144, // 760: wg.cosmo.platform.v1.PlatformService.CreateAPIKey:output_type -> wg.cosmo.platform.v1.CreateAPIKeyResponse
-	148, // 761: wg.cosmo.platform.v1.PlatformService.UpdateAPIKey:output_type -> wg.cosmo.platform.v1.UpdateAPIKeyResponse
-	146, // 762: wg.cosmo.platform.v1.PlatformService.DeleteAPIKey:output_type -> wg.cosmo.platform.v1.DeleteAPIKeyResponse
-	150, // 763: wg.cosmo.platform.v1.PlatformService.RemoveOrganizationMember:output_type -> wg.cosmo.platform.v1.RemoveOrganizationMemberResponse
-	152, // 764: wg.cosmo.platform.v1.PlatformService.RemoveInvitation:output_type -> wg.cosmo.platform.v1.RemoveInvitationResponse
-	154, // 765: wg.cosmo.platform.v1.PlatformService.MigrateFromApollo:output_type -> wg.cosmo.platform.v1.MigrateFromApolloResponse
-	120, // 766: wg.cosmo.platform.v1.PlatformService.CreateOrganizationGroup:output_type -> wg.cosmo.platform.v1.CreateOrganizationGroupResponse
-	122, // 767: wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups:output_type -> wg.cosmo.platform.v1.GetOrganizationGroupsResponse
-	124, // 768: wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers:output_type -> wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse
-	126, // 769: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroup:output_type -> wg.cosmo.platform.v1.UpdateOrganizationGroupResponse
-	128, // 770: wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup:output_type -> wg.cosmo.platform.v1.DeleteOrganizationGroupResponse
-	179, // 771: wg.cosmo.platform.v1.PlatformService.CreateOrganizationWebhookConfig:output_type -> wg.cosmo.platform.v1.CreateOrganizationWebhookConfigResponse
-	181, // 772: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookConfigs:output_type -> wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse
-	183, // 773: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookMeta:output_type -> wg.cosmo.platform.v1.GetOrganizationWebhookMetaResponse
-	185, // 774: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationWebhookConfig:output_type -> wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigResponse
-	187, // 775: wg.cosmo.platform.v1.PlatformService.DeleteOrganizationWebhookConfig:output_type -> wg.cosmo.platform.v1.DeleteOrganizationWebhookConfigResponse
-	372, // 776: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookHistory:output_type -> wg.cosmo.platform.v1.GetOrganizationWebhookHistoryResponse
-	376, // 777: wg.cosmo.platform.v1.PlatformService.GetWebhookDeliveryDetails:output_type -> wg.cosmo.platform.v1.GetWebhookDeliveryDetailsResponse
-	374, // 778: wg.cosmo.platform.v1.PlatformService.RedeliverWebhook:output_type -> wg.cosmo.platform.v1.RedeliverWebhookResponse
-	189, // 779: wg.cosmo.platform.v1.PlatformService.CreateIntegration:output_type -> wg.cosmo.platform.v1.CreateIntegrationResponse
-	194, // 780: wg.cosmo.platform.v1.PlatformService.GetOrganizationIntegrations:output_type -> wg.cosmo.platform.v1.GetOrganizationIntegrationsResponse
-	196, // 781: wg.cosmo.platform.v1.PlatformService.UpdateIntegrationConfig:output_type -> wg.cosmo.platform.v1.UpdateIntegrationConfigResponse
-	198, // 782: wg.cosmo.platform.v1.PlatformService.DeleteIntegration:output_type -> wg.cosmo.platform.v1.DeleteIntegrationResponse
-	346, // 783: wg.cosmo.platform.v1.PlatformService.DeleteUser:output_type -> wg.cosmo.platform.v1.DeleteUserResponse
-	200, // 784: wg.cosmo.platform.v1.PlatformService.DeleteOrganization:output_type -> wg.cosmo.platform.v1.DeleteOrganizationResponse
-	202, // 785: wg.cosmo.platform.v1.PlatformService.RestoreOrganization:output_type -> wg.cosmo.platform.v1.RestoreOrganizationResponse
-	204, // 786: wg.cosmo.platform.v1.PlatformService.LeaveOrganization:output_type -> wg.cosmo.platform.v1.LeaveOrganizationResponse
-	206, // 787: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationDetails:output_type -> wg.cosmo.platform.v1.UpdateOrganizationDetailsResponse
-	208, // 788: wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberGroup:output_type -> wg.cosmo.platform.v1.UpdateOrgMemberGroupResponse
-	255, // 789: wg.cosmo.platform.v1.PlatformService.IsGitHubAppInstalled:output_type -> wg.cosmo.platform.v1.IsGitHubAppInstalledResponse
-	258, // 790: wg.cosmo.platform.v1.PlatformService.CreateOIDCProvider:output_type -> wg.cosmo.platform.v1.CreateOIDCProviderResponse
-	260, // 791: wg.cosmo.platform.v1.PlatformService.GetOIDCProvider:output_type -> wg.cosmo.platform.v1.GetOIDCProviderResponse
-	262, // 792: wg.cosmo.platform.v1.PlatformService.DeleteOIDCProvider:output_type -> wg.cosmo.platform.v1.DeleteOIDCProviderResponse
-	264, // 793: wg.cosmo.platform.v1.PlatformService.UpdateIDPMappers:output_type -> wg.cosmo.platform.v1.UpdateIDPMappersResponse
-	300, // 794: wg.cosmo.platform.v1.PlatformService.GetClients:output_type -> wg.cosmo.platform.v1.GetClientsResponse
-	297, // 795: wg.cosmo.platform.v1.PlatformService.GetRouters:output_type -> wg.cosmo.platform.v1.GetRoutersResponse
-	272, // 796: wg.cosmo.platform.v1.PlatformService.GetInvitations:output_type -> wg.cosmo.platform.v1.GetInvitationsResponse
-	274, // 797: wg.cosmo.platform.v1.PlatformService.AcceptOrDeclineInvitation:output_type -> wg.cosmo.platform.v1.AcceptOrDeclineInvitationResponse
-	278, // 798: wg.cosmo.platform.v1.PlatformService.GetCompositions:output_type -> wg.cosmo.platform.v1.GetCompositionsResponse
-	281, // 799: wg.cosmo.platform.v1.PlatformService.GetCompositionDetails:output_type -> wg.cosmo.platform.v1.GetCompositionDetailsResponse
-	283, // 800: wg.cosmo.platform.v1.PlatformService.GetSdlBySchemaVersion:output_type -> wg.cosmo.platform.v1.GetSdlBySchemaVersionResponse
-	285, // 801: wg.cosmo.platform.v1.PlatformService.GetChangelogBySchemaVersion:output_type -> wg.cosmo.platform.v1.GetChangelogBySchemaVersionResponse
-	287, // 802: wg.cosmo.platform.v1.PlatformService.GetUserAccessibleResources:output_type -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse
-	289, // 803: wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings:output_type -> wg.cosmo.platform.v1.UpdateFeatureSettingsResponse
-	292, // 804: wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers:output_type -> wg.cosmo.platform.v1.GetSubgraphMembersResponse
-	294, // 805: wg.cosmo.platform.v1.PlatformService.AddReadme:output_type -> wg.cosmo.platform.v1.AddReadmeResponse
-	338, // 806: wg.cosmo.platform.v1.PlatformService.GetUserAccessiblePermissions:output_type -> wg.cosmo.platform.v1.GetUserAccessiblePermissionsResponse
-	348, // 807: wg.cosmo.platform.v1.PlatformService.CreateFeatureFlag:output_type -> wg.cosmo.platform.v1.CreateFeatureFlagResponse
-	354, // 808: wg.cosmo.platform.v1.PlatformService.DeleteFeatureFlag:output_type -> wg.cosmo.platform.v1.DeleteFeatureFlagResponse
-	350, // 809: wg.cosmo.platform.v1.PlatformService.UpdateFeatureFlag:output_type -> wg.cosmo.platform.v1.UpdateFeatureFlagResponse
-	352, // 810: wg.cosmo.platform.v1.PlatformService.EnableFeatureFlag:output_type -> wg.cosmo.platform.v1.EnableFeatureFlagResponse
-	108, // 811: wg.cosmo.platform.v1.PlatformService.GetAnalyticsView:output_type -> wg.cosmo.platform.v1.GetAnalyticsViewResponse
-	114, // 812: wg.cosmo.platform.v1.PlatformService.GetDashboardAnalyticsView:output_type -> wg.cosmo.platform.v1.GetDashboardAnalyticsViewResponse
-	157, // 813: wg.cosmo.platform.v1.PlatformService.GetTrace:output_type -> wg.cosmo.platform.v1.GetTraceResponse
-	223, // 814: wg.cosmo.platform.v1.PlatformService.GetGraphMetrics:output_type -> wg.cosmo.platform.v1.GetGraphMetricsResponse
-	229, // 815: wg.cosmo.platform.v1.PlatformService.GetMetricsErrorRate:output_type -> wg.cosmo.platform.v1.GetMetricsErrorRateResponse
-	232, // 816: wg.cosmo.platform.v1.PlatformService.GetSubgraphMetrics:output_type -> wg.cosmo.platform.v1.GetSubgraphMetricsResponse
-	234, // 817: wg.cosmo.platform.v1.PlatformService.GetSubgraphMetricsErrorRate:output_type -> wg.cosmo.platform.v1.GetSubgraphMetricsErrorRateResponse
-	304, // 818: wg.cosmo.platform.v1.PlatformService.GetFieldUsage:output_type -> wg.cosmo.platform.v1.GetFieldUsageResponse
-	266, // 819: wg.cosmo.platform.v1.PlatformService.GetOrganizationRequestsCount:output_type -> wg.cosmo.platform.v1.GetOrganizationRequestsCountResponse
-	210, // 820: wg.cosmo.platform.v1.PlatformService.CreateOrganization:output_type -> wg.cosmo.platform.v1.CreateOrganizationResponse
-	323, // 821: wg.cosmo.platform.v1.PlatformService.EnableLintingForTheNamespace:output_type -> wg.cosmo.platform.v1.EnableLintingForTheNamespaceResponse
-	326, // 822: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceLintConfig:output_type -> wg.cosmo.platform.v1.ConfigureNamespaceLintConfigResponse
-	317, // 823: wg.cosmo.platform.v1.PlatformService.GetNamespaceLintConfig:output_type -> wg.cosmo.platform.v1.GetNamespaceLintConfigResponse
-	319, // 824: wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig:output_type -> wg.cosmo.platform.v1.GetNamespaceChecksConfigurationResponse
-	321, // 825: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig:output_type -> wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationResponse
-	328, // 826: wg.cosmo.platform.v1.PlatformService.EnableGraphPruning:output_type -> wg.cosmo.platform.v1.EnableGraphPruningResponse
-	331, // 827: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceGraphPruningConfig:output_type -> wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigResponse
-	333, // 828: wg.cosmo.platform.v1.PlatformService.GetNamespaceGraphPruningConfig:output_type -> wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigResponse
-	357, // 829: wg.cosmo.platform.v1.PlatformService.GetFeatureFlags:output_type -> wg.cosmo.platform.v1.GetFeatureFlagsResponse
-	359, // 830: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagByName:output_type -> wg.cosmo.platform.v1.GetFeatureFlagByNameResponse
-	361, // 831: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFeatureFlag:output_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagResponse
-	363, // 832: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphs:output_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsResponse
-	365, // 833: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsByFederatedGraph:output_type -> wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphResponse
-	367, // 834: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsInLatestCompositionByFederatedGraph:output_type -> wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse
-	369, // 835: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFederatedGraph:output_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphResponse
-	387, // 836: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphById:output_type -> wg.cosmo.platform.v1.GetFederatedGraphByIdResponse
-	389, // 837: wg.cosmo.platform.v1.PlatformService.GetSubgraphById:output_type -> wg.cosmo.platform.v1.GetSubgraphByIdResponse
-	398, // 838: wg.cosmo.platform.v1.PlatformService.PushCacheWarmerOperation:output_type -> wg.cosmo.platform.v1.PushCacheWarmerOperationResponse
-	401, // 839: wg.cosmo.platform.v1.PlatformService.GetCacheWarmerOperations:output_type -> wg.cosmo.platform.v1.GetCacheWarmerOperationsResponse
-	403, // 840: wg.cosmo.platform.v1.PlatformService.ComputeCacheWarmerOperations:output_type -> wg.cosmo.platform.v1.ComputeCacheWarmerOperationsResponse
-	405, // 841: wg.cosmo.platform.v1.PlatformService.ConfigureCacheWarmer:output_type -> wg.cosmo.platform.v1.ConfigureCacheWarmerResponse
-	407, // 842: wg.cosmo.platform.v1.PlatformService.GetCacheWarmerConfig:output_type -> wg.cosmo.platform.v1.GetCacheWarmerConfigResponse
-	413, // 843: wg.cosmo.platform.v1.PlatformService.DeleteCacheWarmerOperation:output_type -> wg.cosmo.platform.v1.DeleteCacheWarmerOperationResponse
-	409, // 844: wg.cosmo.platform.v1.PlatformService.GetSubgraphCheckExtensionsConfig:output_type -> wg.cosmo.platform.v1.GetSubgraphCheckExtensionsConfigResponse
-	411, // 845: wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions:output_type -> wg.cosmo.platform.v1.ConfigureSubgraphCheckExtensionsResponse
-	215, // 846: wg.cosmo.platform.v1.PlatformService.GetBillingPlans:output_type -> wg.cosmo.platform.v1.GetBillingPlansResponse
-	217, // 847: wg.cosmo.platform.v1.PlatformService.CreateCheckoutSession:output_type -> wg.cosmo.platform.v1.CreateCheckoutSessionResponse
-	219, // 848: wg.cosmo.platform.v1.PlatformService.CreateBillingPortalSession:output_type -> wg.cosmo.platform.v1.CreateBillingPortalSessionResponse
-	221, // 849: wg.cosmo.platform.v1.PlatformService.UpgradePlan:output_type -> wg.cosmo.platform.v1.UpgradePlanResponse
-	415, // 850: wg.cosmo.platform.v1.PlatformService.ListRouterCompatibilityVersions:output_type -> wg.cosmo.platform.v1.ListRouterCompatibilityVersionsResponse
-	417, // 851: wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion:output_type -> wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse
-	423, // 852: wg.cosmo.platform.v1.PlatformService.CreateProposal:output_type -> wg.cosmo.platform.v1.CreateProposalResponse
-	425, // 853: wg.cosmo.platform.v1.PlatformService.GetProposal:output_type -> wg.cosmo.platform.v1.GetProposalResponse
-	431, // 854: wg.cosmo.platform.v1.PlatformService.UpdateProposal:output_type -> wg.cosmo.platform.v1.UpdateProposalResponse
-	433, // 855: wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace:output_type -> wg.cosmo.platform.v1.EnableProposalsForNamespaceResponse
-	435, // 856: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig:output_type -> wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse
-	437, // 857: wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig:output_type -> wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse
-	427, // 858: wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph:output_type -> wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse
-	429, // 859: wg.cosmo.platform.v1.PlatformService.GetProposalChecks:output_type -> wg.cosmo.platform.v1.GetProposalChecksResponse
-	439, // 860: wg.cosmo.platform.v1.PlatformService.GetOperations:output_type -> wg.cosmo.platform.v1.GetOperationsResponse
-	441, // 861: wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics:output_type -> wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse
-	443, // 862: wg.cosmo.platform.v1.PlatformService.GetOperationClients:output_type -> wg.cosmo.platform.v1.GetOperationClientsResponse
-	445, // 863: wg.cosmo.platform.v1.PlatformService.GetOperationDeprecatedFields:output_type -> wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse
-	447, // 864: wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData:output_type -> wg.cosmo.platform.v1.ValidateAndFetchPluginDataResponse
-	449, // 865: wg.cosmo.platform.v1.PlatformService.LinkSubgraph:output_type -> wg.cosmo.platform.v1.LinkSubgraphResponse
-	451, // 866: wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph:output_type -> wg.cosmo.platform.v1.UnlinkSubgraphResponse
-	453, // 867: wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess:output_type -> wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessResponse
-	459, // 868: wg.cosmo.platform.v1.PlatformService.RecomposeGraph:output_type -> wg.cosmo.platform.v1.RecomposeGraphResponse
-	461, // 869: wg.cosmo.platform.v1.PlatformService.RecomposeFeatureFlag:output_type -> wg.cosmo.platform.v1.RecomposeFeatureFlagResponse
-	463, // 870: wg.cosmo.platform.v1.PlatformService.GetOnboarding:output_type -> wg.cosmo.platform.v1.GetOnboardingResponse
-	465, // 871: wg.cosmo.platform.v1.PlatformService.CreateOnboarding:output_type -> wg.cosmo.platform.v1.CreateOnboardingResponse
-	467, // 872: wg.cosmo.platform.v1.PlatformService.FinishOnboarding:output_type -> wg.cosmo.platform.v1.FinishOnboardingResponse
-	688, // [688:873] is the sub-list for method output_type
-	503, // [503:688] is the sub-list for method input_type
-	503, // [503:503] is the sub-list for extension type_name
-	503, // [503:503] is the sub-list for extension extendee
-	0,   // [0:503] is the sub-list for field type_name
+	16,  // 301: wg.cosmo.platform.v1.PreviewDeleteClientResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	298, // 302: wg.cosmo.platform.v1.PreviewDeleteClientResponse.client:type_name -> wg.cosmo.platform.v1.ClientInfo
+	16,  // 303: wg.cosmo.platform.v1.DeleteClientResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	298, // 304: wg.cosmo.platform.v1.DeleteClientResponse.client:type_name -> wg.cosmo.platform.v1.ClientInfo
+	497, // 305: wg.cosmo.platform.v1.DeleteClientResponse.deletedOperations:type_name -> wg.cosmo.platform.v1.DeleteClientResponse.Operation
+	100, // 306: wg.cosmo.platform.v1.GetFieldUsageRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
+	498, // 307: wg.cosmo.platform.v1.ClientWithOperations.operations:type_name -> wg.cosmo.platform.v1.ClientWithOperations.Operation
+	16,  // 308: wg.cosmo.platform.v1.GetFieldUsageResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	110, // 309: wg.cosmo.platform.v1.GetFieldUsageResponse.request_series:type_name -> wg.cosmo.platform.v1.RequestSeriesItem
+	306, // 310: wg.cosmo.platform.v1.GetFieldUsageResponse.clients:type_name -> wg.cosmo.platform.v1.ClientWithOperations
+	307, // 311: wg.cosmo.platform.v1.GetFieldUsageResponse.meta:type_name -> wg.cosmo.platform.v1.FieldUsageMeta
+	16,  // 312: wg.cosmo.platform.v1.CreateNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 313: wg.cosmo.platform.v1.DeleteNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 314: wg.cosmo.platform.v1.RenameNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 315: wg.cosmo.platform.v1.GetNamespacesResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	315, // 316: wg.cosmo.platform.v1.GetNamespacesResponse.namespaces:type_name -> wg.cosmo.platform.v1.Namespace
+	16,  // 317: wg.cosmo.platform.v1.MoveGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	38,  // 318: wg.cosmo.platform.v1.MoveGraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
+	40,  // 319: wg.cosmo.platform.v1.MoveGraphResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
+	39,  // 320: wg.cosmo.platform.v1.MoveGraphResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	16,  // 321: wg.cosmo.platform.v1.GetNamespaceLintConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	328, // 322: wg.cosmo.platform.v1.GetNamespaceLintConfigResponse.configs:type_name -> wg.cosmo.platform.v1.LintConfig
+	16,  // 323: wg.cosmo.platform.v1.GetNamespaceChecksConfigurationResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 324: wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 325: wg.cosmo.platform.v1.EnableLintingForTheNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	0,   // 326: wg.cosmo.platform.v1.LintConfig.severityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
+	328, // 327: wg.cosmo.platform.v1.ConfigureNamespaceLintConfigRequest.configs:type_name -> wg.cosmo.platform.v1.LintConfig
+	16,  // 328: wg.cosmo.platform.v1.ConfigureNamespaceLintConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 329: wg.cosmo.platform.v1.EnableGraphPruningResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	0,   // 330: wg.cosmo.platform.v1.GraphPruningConfig.severityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
+	333, // 331: wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigRequest.configs:type_name -> wg.cosmo.platform.v1.GraphPruningConfig
+	16,  // 332: wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 333: wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	333, // 334: wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigResponse.configs:type_name -> wg.cosmo.platform.v1.GraphPruningConfig
+	16,  // 335: wg.cosmo.platform.v1.MigrateMonographResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 336: wg.cosmo.platform.v1.GetUserAccessiblePermissionsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	341, // 337: wg.cosmo.platform.v1.GetUserAccessiblePermissionsResponse.permissions:type_name -> wg.cosmo.platform.v1.Permission
+	16,  // 338: wg.cosmo.platform.v1.CreateContractResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	38,  // 339: wg.cosmo.platform.v1.CreateContractResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
+	40,  // 340: wg.cosmo.platform.v1.CreateContractResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
+	39,  // 341: wg.cosmo.platform.v1.CreateContractResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	16,  // 342: wg.cosmo.platform.v1.UpdateContractResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	38,  // 343: wg.cosmo.platform.v1.UpdateContractResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
+	40,  // 344: wg.cosmo.platform.v1.UpdateContractResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
+	39,  // 345: wg.cosmo.platform.v1.UpdateContractResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	16,  // 346: wg.cosmo.platform.v1.IsMemberLimitReachedResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 347: wg.cosmo.platform.v1.DeleteUserResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	15,  // 348: wg.cosmo.platform.v1.CreateFeatureFlagRequest.labels:type_name -> wg.cosmo.platform.v1.Label
+	16,  // 349: wg.cosmo.platform.v1.CreateFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	38,  // 350: wg.cosmo.platform.v1.CreateFeatureFlagResponse.composition_errors:type_name -> wg.cosmo.platform.v1.CompositionError
+	40,  // 351: wg.cosmo.platform.v1.CreateFeatureFlagResponse.deployment_errors:type_name -> wg.cosmo.platform.v1.DeploymentError
+	39,  // 352: wg.cosmo.platform.v1.CreateFeatureFlagResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	15,  // 353: wg.cosmo.platform.v1.UpdateFeatureFlagRequest.labels:type_name -> wg.cosmo.platform.v1.Label
+	16,  // 354: wg.cosmo.platform.v1.UpdateFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	38,  // 355: wg.cosmo.platform.v1.UpdateFeatureFlagResponse.composition_errors:type_name -> wg.cosmo.platform.v1.CompositionError
+	40,  // 356: wg.cosmo.platform.v1.UpdateFeatureFlagResponse.deployment_errors:type_name -> wg.cosmo.platform.v1.DeploymentError
+	39,  // 357: wg.cosmo.platform.v1.UpdateFeatureFlagResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	16,  // 358: wg.cosmo.platform.v1.EnableFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	38,  // 359: wg.cosmo.platform.v1.EnableFeatureFlagResponse.composition_errors:type_name -> wg.cosmo.platform.v1.CompositionError
+	40,  // 360: wg.cosmo.platform.v1.EnableFeatureFlagResponse.deployment_errors:type_name -> wg.cosmo.platform.v1.DeploymentError
+	39,  // 361: wg.cosmo.platform.v1.EnableFeatureFlagResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	16,  // 362: wg.cosmo.platform.v1.DeleteFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	38,  // 363: wg.cosmo.platform.v1.DeleteFeatureFlagResponse.composition_errors:type_name -> wg.cosmo.platform.v1.CompositionError
+	40,  // 364: wg.cosmo.platform.v1.DeleteFeatureFlagResponse.deployment_errors:type_name -> wg.cosmo.platform.v1.DeploymentError
+	39,  // 365: wg.cosmo.platform.v1.DeleteFeatureFlagResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	15,  // 366: wg.cosmo.platform.v1.FeatureFlag.labels:type_name -> wg.cosmo.platform.v1.Label
+	16,  // 367: wg.cosmo.platform.v1.GetFeatureFlagsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	359, // 368: wg.cosmo.platform.v1.GetFeatureFlagsResponse.feature_flags:type_name -> wg.cosmo.platform.v1.FeatureFlag
+	16,  // 369: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	359, // 370: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.feature_flag:type_name -> wg.cosmo.platform.v1.FeatureFlag
+	499, // 371: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.federated_graphs:type_name -> wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.FfFederatedGraph
+	60,  // 372: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.feature_subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
+	16,  // 373: wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	60,  // 374: wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagResponse.feature_subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
+	16,  // 375: wg.cosmo.platform.v1.GetFeatureSubgraphsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	60,  // 376: wg.cosmo.platform.v1.GetFeatureSubgraphsResponse.feature_subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
+	16,  // 377: wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	359, // 378: wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphResponse.feature_flags:type_name -> wg.cosmo.platform.v1.FeatureFlag
+	16,  // 379: wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	359, // 380: wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse.feature_flags:type_name -> wg.cosmo.platform.v1.FeatureFlag
+	16,  // 381: wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	60,  // 382: wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphResponse.feature_subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
+	96,  // 383: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryRequest.pagination:type_name -> wg.cosmo.platform.v1.Pagination
+	100, // 384: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryRequest.date_range:type_name -> wg.cosmo.platform.v1.DateRange
+	16,  // 385: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	375, // 386: wg.cosmo.platform.v1.GetOrganizationWebhookHistoryResponse.deliveries:type_name -> wg.cosmo.platform.v1.WebhookDelivery
+	16,  // 387: wg.cosmo.platform.v1.RedeliverWebhookResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 388: wg.cosmo.platform.v1.GetWebhookDeliveryDetailsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	375, // 389: wg.cosmo.platform.v1.GetWebhookDeliveryDetailsResponse.delivery:type_name -> wg.cosmo.platform.v1.WebhookDelivery
+	16,  // 390: wg.cosmo.platform.v1.CreatePlaygroundScriptResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 391: wg.cosmo.platform.v1.DeletePlaygroundScriptResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 392: wg.cosmo.platform.v1.UpdatePlaygroundScriptResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 393: wg.cosmo.platform.v1.GetPlaygroundScriptsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	388, // 394: wg.cosmo.platform.v1.GetPlaygroundScriptsResponse.scripts:type_name -> wg.cosmo.platform.v1.PlaygroundScript
+	16,  // 395: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	55,  // 396: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse.graph:type_name -> wg.cosmo.platform.v1.FederatedGraph
+	60,  // 397: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse.subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
+	359, // 398: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse.featureFlagsInLatestValidComposition:type_name -> wg.cosmo.platform.v1.FeatureFlag
+	60,  // 399: wg.cosmo.platform.v1.GetFederatedGraphByIdResponse.featureSubgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
+	16,  // 400: wg.cosmo.platform.v1.GetSubgraphByIdResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	60,  // 401: wg.cosmo.platform.v1.GetSubgraphByIdResponse.graph:type_name -> wg.cosmo.platform.v1.Subgraph
+	291, // 402: wg.cosmo.platform.v1.GetSubgraphByIdResponse.members:type_name -> wg.cosmo.platform.v1.SubgraphMember
+	16,  // 403: wg.cosmo.platform.v1.GetNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	315, // 404: wg.cosmo.platform.v1.GetNamespaceResponse.namespace:type_name -> wg.cosmo.platform.v1.Namespace
+	397, // 405: wg.cosmo.platform.v1.WorkspaceNamespace.graphs:type_name -> wg.cosmo.platform.v1.WorkspaceFederatedGraph
+	398, // 406: wg.cosmo.platform.v1.WorkspaceFederatedGraph.subgraphs:type_name -> wg.cosmo.platform.v1.WorkspaceSubgraph
+	16,  // 407: wg.cosmo.platform.v1.GetWorkspaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	396, // 408: wg.cosmo.platform.v1.GetWorkspaceResponse.namespaces:type_name -> wg.cosmo.platform.v1.WorkspaceNamespace
+	16,  // 409: wg.cosmo.platform.v1.PushCacheWarmerOperationResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 410: wg.cosmo.platform.v1.GetCacheWarmerOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	404, // 411: wg.cosmo.platform.v1.GetCacheWarmerOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.CacheWarmerOperation
+	16,  // 412: wg.cosmo.platform.v1.ComputeCacheWarmerOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 413: wg.cosmo.platform.v1.ConfigureCacheWarmerResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 414: wg.cosmo.platform.v1.GetCacheWarmerConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 415: wg.cosmo.platform.v1.GetSubgraphCheckExtensionsConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 416: wg.cosmo.platform.v1.ConfigureSubgraphCheckExtensionsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 417: wg.cosmo.platform.v1.DeleteCacheWarmerOperationResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 418: wg.cosmo.platform.v1.ListRouterCompatibilityVersionsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 419: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	38,  // 420: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
+	40,  // 421: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
+	39,  // 422: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	16,  // 423: wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	425, // 424: wg.cosmo.platform.v1.Proposal.subgraphs:type_name -> wg.cosmo.platform.v1.ProposalSubgraph
+	10,  // 425: wg.cosmo.platform.v1.Proposal.origin:type_name -> wg.cosmo.platform.v1.ProposalOrigin
+	15,  // 426: wg.cosmo.platform.v1.ProposalSubgraph.labels:type_name -> wg.cosmo.platform.v1.Label
+	425, // 427: wg.cosmo.platform.v1.CreateProposalRequest.subgraphs:type_name -> wg.cosmo.platform.v1.ProposalSubgraph
+	11,  // 428: wg.cosmo.platform.v1.CreateProposalRequest.namingConvention:type_name -> wg.cosmo.platform.v1.ProposalNamingConvention
+	10,  // 429: wg.cosmo.platform.v1.CreateProposalRequest.origin:type_name -> wg.cosmo.platform.v1.ProposalOrigin
+	16,  // 430: wg.cosmo.platform.v1.CreateProposalResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	36,  // 431: wg.cosmo.platform.v1.CreateProposalResponse.breakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
+	36,  // 432: wg.cosmo.platform.v1.CreateProposalResponse.nonBreakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
+	38,  // 433: wg.cosmo.platform.v1.CreateProposalResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
+	39,  // 434: wg.cosmo.platform.v1.CreateProposalResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	44,  // 435: wg.cosmo.platform.v1.CreateProposalResponse.lintErrors:type_name -> wg.cosmo.platform.v1.LintIssue
+	44,  // 436: wg.cosmo.platform.v1.CreateProposalResponse.lintWarnings:type_name -> wg.cosmo.platform.v1.LintIssue
+	45,  // 437: wg.cosmo.platform.v1.CreateProposalResponse.graphPruneErrors:type_name -> wg.cosmo.platform.v1.GraphPruningIssue
+	45,  // 438: wg.cosmo.platform.v1.CreateProposalResponse.graphPruneWarnings:type_name -> wg.cosmo.platform.v1.GraphPruningIssue
+	41,  // 439: wg.cosmo.platform.v1.CreateProposalResponse.operationUsageStats:type_name -> wg.cosmo.platform.v1.CheckOperationUsageStats
+	37,  // 440: wg.cosmo.platform.v1.CreateProposalResponse.composedSchemaBreakingChanges:type_name -> wg.cosmo.platform.v1.FederatedGraphSchemaChange
+	16,  // 441: wg.cosmo.platform.v1.GetProposalResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	424, // 442: wg.cosmo.platform.v1.GetProposalResponse.proposal:type_name -> wg.cosmo.platform.v1.Proposal
+	500, // 443: wg.cosmo.platform.v1.GetProposalResponse.currentSubgraphs:type_name -> wg.cosmo.platform.v1.GetProposalResponse.CurrentSubgraph
+	16,  // 444: wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	424, // 445: wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse.proposals:type_name -> wg.cosmo.platform.v1.Proposal
+	16,  // 446: wg.cosmo.platform.v1.GetProposalChecksResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	74,  // 447: wg.cosmo.platform.v1.GetProposalChecksResponse.checks:type_name -> wg.cosmo.platform.v1.SchemaCheck
+	501, // 448: wg.cosmo.platform.v1.UpdateProposalRequest.updatedSubgraphs:type_name -> wg.cosmo.platform.v1.UpdateProposalRequest.UpdateProposalSubgraphs
+	16,  // 449: wg.cosmo.platform.v1.UpdateProposalResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	36,  // 450: wg.cosmo.platform.v1.UpdateProposalResponse.breakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
+	36,  // 451: wg.cosmo.platform.v1.UpdateProposalResponse.nonBreakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
+	38,  // 452: wg.cosmo.platform.v1.UpdateProposalResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
+	39,  // 453: wg.cosmo.platform.v1.UpdateProposalResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	44,  // 454: wg.cosmo.platform.v1.UpdateProposalResponse.lintErrors:type_name -> wg.cosmo.platform.v1.LintIssue
+	44,  // 455: wg.cosmo.platform.v1.UpdateProposalResponse.lintWarnings:type_name -> wg.cosmo.platform.v1.LintIssue
+	45,  // 456: wg.cosmo.platform.v1.UpdateProposalResponse.graphPruneErrors:type_name -> wg.cosmo.platform.v1.GraphPruningIssue
+	45,  // 457: wg.cosmo.platform.v1.UpdateProposalResponse.graphPruneWarnings:type_name -> wg.cosmo.platform.v1.GraphPruningIssue
+	41,  // 458: wg.cosmo.platform.v1.UpdateProposalResponse.operationUsageStats:type_name -> wg.cosmo.platform.v1.CheckOperationUsageStats
+	37,  // 459: wg.cosmo.platform.v1.UpdateProposalResponse.composedSchemaBreakingChanges:type_name -> wg.cosmo.platform.v1.FederatedGraphSchemaChange
+	16,  // 460: wg.cosmo.platform.v1.EnableProposalsForNamespaceResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	0,   // 461: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest.checkSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
+	0,   // 462: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest.publishSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
+	16,  // 463: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 464: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	0,   // 465: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.checkSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
+	0,   // 466: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.publishSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
+	12,  // 467: wg.cosmo.platform.v1.GetOperationsRequest.fetchBasedOn:type_name -> wg.cosmo.platform.v1.OperationsFetchBasedOn
+	100, // 468: wg.cosmo.platform.v1.GetOperationsRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
+	13,  // 469: wg.cosmo.platform.v1.GetOperationsRequest.sortDirection:type_name -> wg.cosmo.platform.v1.SortDirection
+	16,  // 470: wg.cosmo.platform.v1.GetOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	502, // 471: wg.cosmo.platform.v1.GetOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.GetOperationsResponse.Operation
+	16,  // 472: wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	503, // 473: wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.clients:type_name -> wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.Client
+	100, // 474: wg.cosmo.platform.v1.GetOperationClientsRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
+	16,  // 475: wg.cosmo.platform.v1.GetOperationClientsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	504, // 476: wg.cosmo.platform.v1.GetOperationClientsResponse.clients:type_name -> wg.cosmo.platform.v1.GetOperationClientsResponse.Client
+	100, // 477: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
+	16,  // 478: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	505, // 479: wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse.deprecatedFields:type_name -> wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse.DeprecatedField
+	15,  // 480: wg.cosmo.platform.v1.ValidateAndFetchPluginDataRequest.labels:type_name -> wg.cosmo.platform.v1.Label
+	16,  // 481: wg.cosmo.platform.v1.ValidateAndFetchPluginDataResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 482: wg.cosmo.platform.v1.LinkSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 483: wg.cosmo.platform.v1.UnlinkSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 484: wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 485: wg.cosmo.platform.v1.InitializeCosmoUserResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 486: wg.cosmo.platform.v1.ListOrganizationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	506, // 487: wg.cosmo.platform.v1.ListOrganizationsResponse.organizations:type_name -> wg.cosmo.platform.v1.ListOrganizationsResponse.OrganizationMembership
+	16,  // 488: wg.cosmo.platform.v1.RecomposeGraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	38,  // 489: wg.cosmo.platform.v1.RecomposeGraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
+	40,  // 490: wg.cosmo.platform.v1.RecomposeGraphResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
+	39,  // 491: wg.cosmo.platform.v1.RecomposeGraphResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	23,  // 492: wg.cosmo.platform.v1.RecomposeGraphResponse.errorCounts:type_name -> wg.cosmo.platform.v1.SubgraphPublishStats
+	16,  // 493: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	38,  // 494: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
+	40,  // 495: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse.deploymentErrors:type_name -> wg.cosmo.platform.v1.DeploymentError
+	39,  // 496: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
+	23,  // 497: wg.cosmo.platform.v1.RecomposeFeatureFlagResponse.errorCounts:type_name -> wg.cosmo.platform.v1.SubgraphPublishStats
+	16,  // 498: wg.cosmo.platform.v1.GetOnboardingResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 499: wg.cosmo.platform.v1.CreateOnboardingResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	16,  // 500: wg.cosmo.platform.v1.FinishOnboardingResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	15,  // 501: wg.cosmo.platform.v1.SchemaCheck.CheckedSubgraph.labels:type_name -> wg.cosmo.platform.v1.Label
+	36,  // 502: wg.cosmo.platform.v1.GetCheckOperationsResponse.CheckOperation.impacting_changes:type_name -> wg.cosmo.platform.v1.SchemaChange
+	107, // 503: wg.cosmo.platform.v1.AnalyticsViewRow.ValueEntry.value:type_name -> wg.cosmo.platform.v1.AnalyticsViewRowValue
+	491, // 504: wg.cosmo.platform.v1.GetBillingPlansResponse.BillingPlan.features:type_name -> wg.cosmo.platform.v1.GetBillingPlansResponse.BillingPlanFeature
+	55,  // 505: wg.cosmo.platform.v1.GetFeatureFlagByNameResponse.FfFederatedGraph.federated_graph:type_name -> wg.cosmo.platform.v1.FederatedGraph
+	425, // 506: wg.cosmo.platform.v1.UpdateProposalRequest.UpdateProposalSubgraphs.subgraphs:type_name -> wg.cosmo.platform.v1.ProposalSubgraph
+	14,  // 507: wg.cosmo.platform.v1.GetOperationsResponse.Operation.type:type_name -> wg.cosmo.platform.v1.GetOperationsResponse.OperationType
+	381, // 508: wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript:input_type -> wg.cosmo.platform.v1.CreatePlaygroundScriptRequest
+	383, // 509: wg.cosmo.platform.v1.PlatformService.DeletePlaygroundScript:input_type -> wg.cosmo.platform.v1.DeletePlaygroundScriptRequest
+	385, // 510: wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundScript:input_type -> wg.cosmo.platform.v1.UpdatePlaygroundScriptRequest
+	387, // 511: wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts:input_type -> wg.cosmo.platform.v1.GetPlaygroundScriptsRequest
+	309, // 512: wg.cosmo.platform.v1.PlatformService.CreateNamespace:input_type -> wg.cosmo.platform.v1.CreateNamespaceRequest
+	311, // 513: wg.cosmo.platform.v1.PlatformService.DeleteNamespace:input_type -> wg.cosmo.platform.v1.DeleteNamespaceRequest
+	313, // 514: wg.cosmo.platform.v1.PlatformService.RenameNamespace:input_type -> wg.cosmo.platform.v1.RenameNamespaceRequest
+	316, // 515: wg.cosmo.platform.v1.PlatformService.GetNamespaces:input_type -> wg.cosmo.platform.v1.GetNamespacesRequest
+	394, // 516: wg.cosmo.platform.v1.PlatformService.GetNamespace:input_type -> wg.cosmo.platform.v1.GetNamespaceRequest
+	399, // 517: wg.cosmo.platform.v1.PlatformService.GetWorkspace:input_type -> wg.cosmo.platform.v1.GetWorkspaceRequest
+	343, // 518: wg.cosmo.platform.v1.PlatformService.CreateContract:input_type -> wg.cosmo.platform.v1.CreateContractRequest
+	345, // 519: wg.cosmo.platform.v1.PlatformService.UpdateContract:input_type -> wg.cosmo.platform.v1.UpdateContractRequest
+	318, // 520: wg.cosmo.platform.v1.PlatformService.MoveFederatedGraph:input_type -> wg.cosmo.platform.v1.MoveGraphRequest
+	318, // 521: wg.cosmo.platform.v1.PlatformService.MoveSubgraph:input_type -> wg.cosmo.platform.v1.MoveGraphRequest
+	318, // 522: wg.cosmo.platform.v1.PlatformService.MoveMonograph:input_type -> wg.cosmo.platform.v1.MoveGraphRequest
+	28,  // 523: wg.cosmo.platform.v1.PlatformService.CreateMonograph:input_type -> wg.cosmo.platform.v1.CreateMonographRequest
+	18,  // 524: wg.cosmo.platform.v1.PlatformService.PublishMonograph:input_type -> wg.cosmo.platform.v1.PublishMonographRequest
+	33,  // 525: wg.cosmo.platform.v1.PlatformService.DeleteMonograph:input_type -> wg.cosmo.platform.v1.DeleteMonographRequest
+	92,  // 526: wg.cosmo.platform.v1.PlatformService.UpdateMonograph:input_type -> wg.cosmo.platform.v1.UpdateMonographRequest
+	338, // 527: wg.cosmo.platform.v1.PlatformService.MigrateMonograph:input_type -> wg.cosmo.platform.v1.MigrateMonographRequest
+	31,  // 528: wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph:input_type -> wg.cosmo.platform.v1.CreateFederatedSubgraphRequest
+	21,  // 529: wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph:input_type -> wg.cosmo.platform.v1.PublishFederatedSubgraphRequest
+	30,  // 530: wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph:input_type -> wg.cosmo.platform.v1.CreateFederatedGraphRequest
+	32,  // 531: wg.cosmo.platform.v1.PlatformService.DeleteFederatedGraph:input_type -> wg.cosmo.platform.v1.DeleteFederatedGraphRequest
+	35,  // 532: wg.cosmo.platform.v1.PlatformService.DeleteFederatedSubgraph:input_type -> wg.cosmo.platform.v1.DeleteFederatedSubgraphRequest
+	26,  // 533: wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema:input_type -> wg.cosmo.platform.v1.CheckSubgraphSchemaRequest
+	422, // 534: wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph:input_type -> wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphRequest
+	27,  // 535: wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema:input_type -> wg.cosmo.platform.v1.FixSubgraphSchemaRequest
+	90,  // 536: wg.cosmo.platform.v1.PlatformService.UpdateFederatedGraph:input_type -> wg.cosmo.platform.v1.UpdateFederatedGraphRequest
+	88,  // 537: wg.cosmo.platform.v1.PlatformService.UpdateSubgraph:input_type -> wg.cosmo.platform.v1.UpdateSubgraphRequest
+	94,  // 538: wg.cosmo.platform.v1.PlatformService.CheckFederatedGraph:input_type -> wg.cosmo.platform.v1.CheckFederatedGraphRequest
+	158, // 539: wg.cosmo.platform.v1.PlatformService.WhoAmI:input_type -> wg.cosmo.platform.v1.WhoAmIRequest
+	161, // 540: wg.cosmo.platform.v1.PlatformService.GenerateRouterToken:input_type -> wg.cosmo.platform.v1.GenerateRouterTokenRequest
+	163, // 541: wg.cosmo.platform.v1.PlatformService.GetRouterTokens:input_type -> wg.cosmo.platform.v1.GetRouterTokensRequest
+	165, // 542: wg.cosmo.platform.v1.PlatformService.DeleteRouterToken:input_type -> wg.cosmo.platform.v1.DeleteRouterTokenRequest
+	168, // 543: wg.cosmo.platform.v1.PlatformService.PublishPersistedOperations:input_type -> wg.cosmo.platform.v1.PublishPersistedOperationsRequest
+	173, // 544: wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic:input_type -> wg.cosmo.platform.v1.CheckPersistedOperationTrafficRequest
+	171, // 545: wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation:input_type -> wg.cosmo.platform.v1.DeletePersistedOperationRequest
+	175, // 546: wg.cosmo.platform.v1.PlatformService.GetPersistedOperations:input_type -> wg.cosmo.platform.v1.GetPersistedOperationsRequest
+	268, // 547: wg.cosmo.platform.v1.PlatformService.GetAuditLogs:input_type -> wg.cosmo.platform.v1.GetAuditLogsRequest
+	458, // 548: wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser:input_type -> wg.cosmo.platform.v1.InitializeCosmoUserRequest
+	460, // 549: wg.cosmo.platform.v1.PlatformService.ListOrganizations:input_type -> wg.cosmo.platform.v1.ListOrganizationsRequest
+	53,  // 550: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphs:input_type -> wg.cosmo.platform.v1.GetFederatedGraphsRequest
+	57,  // 551: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphsBySubgraphLabels:input_type -> wg.cosmo.platform.v1.GetFederatedGraphsBySubgraphLabelsRequest
+	62,  // 552: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphByName:input_type -> wg.cosmo.platform.v1.GetFederatedGraphByNameRequest
+	64,  // 553: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphSDLByName:input_type -> wg.cosmo.platform.v1.GetFederatedGraphSDLByNameRequest
+	59,  // 554: wg.cosmo.platform.v1.PlatformService.GetSubgraphs:input_type -> wg.cosmo.platform.v1.GetSubgraphsRequest
+	66,  // 555: wg.cosmo.platform.v1.PlatformService.GetSubgraphByName:input_type -> wg.cosmo.platform.v1.GetSubgraphByNameRequest
+	68,  // 556: wg.cosmo.platform.v1.PlatformService.GetSubgraphSDLFromLatestComposition:input_type -> wg.cosmo.platform.v1.GetSubgraphSDLFromLatestCompositionRequest
+	70,  // 557: wg.cosmo.platform.v1.PlatformService.GetLatestSubgraphSDL:input_type -> wg.cosmo.platform.v1.GetLatestSubgraphSDLRequest
+	73,  // 558: wg.cosmo.platform.v1.PlatformService.GetChecksByFederatedGraphName:input_type -> wg.cosmo.platform.v1.GetChecksByFederatedGraphNameRequest
+	76,  // 559: wg.cosmo.platform.v1.PlatformService.GetCheckSummary:input_type -> wg.cosmo.platform.v1.GetCheckSummaryRequest
+	79,  // 560: wg.cosmo.platform.v1.PlatformService.GetCheckOperations:input_type -> wg.cosmo.platform.v1.GetCheckOperationsRequest
+	235, // 561: wg.cosmo.platform.v1.PlatformService.ForceCheckSuccess:input_type -> wg.cosmo.platform.v1.ForceCheckSuccessRequest
+	242, // 562: wg.cosmo.platform.v1.PlatformService.CreateOperationOverrides:input_type -> wg.cosmo.platform.v1.CreateOperationOverridesRequest
+	246, // 563: wg.cosmo.platform.v1.PlatformService.RemoveOperationOverrides:input_type -> wg.cosmo.platform.v1.RemoveOperationOverridesRequest
+	244, // 564: wg.cosmo.platform.v1.PlatformService.CreateOperationIgnoreAllOverride:input_type -> wg.cosmo.platform.v1.CreateOperationIgnoreAllOverrideRequest
+	248, // 565: wg.cosmo.platform.v1.PlatformService.RemoveOperationIgnoreAllOverride:input_type -> wg.cosmo.platform.v1.RemoveOperationIgnoreAllOverrideRequest
+	250, // 566: wg.cosmo.platform.v1.PlatformService.GetOperationOverrides:input_type -> wg.cosmo.platform.v1.GetOperationOverridesRequest
+	252, // 567: wg.cosmo.platform.v1.PlatformService.GetAllOverrides:input_type -> wg.cosmo.platform.v1.GetAllOverridesRequest
+	237, // 568: wg.cosmo.platform.v1.PlatformService.ToggleChangeOverridesForAllOperations:input_type -> wg.cosmo.platform.v1.ToggleChangeOverridesForAllOperationsRequest
+	239, // 569: wg.cosmo.platform.v1.PlatformService.CreateIgnoreOverridesForAllOperations:input_type -> wg.cosmo.platform.v1.CreateIgnoreOverridesForAllOperationsRequest
+	81,  // 570: wg.cosmo.platform.v1.PlatformService.GetOperationContent:input_type -> wg.cosmo.platform.v1.GetOperationContentRequest
+	83,  // 571: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphChangelog:input_type -> wg.cosmo.platform.v1.GetFederatedGraphChangelogRequest
+	115, // 572: wg.cosmo.platform.v1.PlatformService.CreateFederatedGraphToken:input_type -> wg.cosmo.platform.v1.CreateFederatedGraphTokenRequest
+	212, // 573: wg.cosmo.platform.v1.PlatformService.GetOrganizationBySlug:input_type -> wg.cosmo.platform.v1.GetOrganizationBySlugRequest
+	133, // 574: wg.cosmo.platform.v1.PlatformService.GetOrganizationMembers:input_type -> wg.cosmo.platform.v1.GetOrganizationMembersRequest
+	131, // 575: wg.cosmo.platform.v1.PlatformService.GetPendingOrganizationMembers:input_type -> wg.cosmo.platform.v1.GetPendingOrganizationMembersRequest
+	347, // 576: wg.cosmo.platform.v1.PlatformService.IsMemberLimitReached:input_type -> wg.cosmo.platform.v1.IsMemberLimitReachedRequest
+	135, // 577: wg.cosmo.platform.v1.PlatformService.InviteUser:input_type -> wg.cosmo.platform.v1.InviteUserRequest
+	137, // 578: wg.cosmo.platform.v1.PlatformService.InviteUsers:input_type -> wg.cosmo.platform.v1.InviteUsersRequest
+	141, // 579: wg.cosmo.platform.v1.PlatformService.GetAPIKeys:input_type -> wg.cosmo.platform.v1.GetAPIKeysRequest
+	143, // 580: wg.cosmo.platform.v1.PlatformService.CreateAPIKey:input_type -> wg.cosmo.platform.v1.CreateAPIKeyRequest
+	147, // 581: wg.cosmo.platform.v1.PlatformService.UpdateAPIKey:input_type -> wg.cosmo.platform.v1.UpdateAPIKeyRequest
+	145, // 582: wg.cosmo.platform.v1.PlatformService.DeleteAPIKey:input_type -> wg.cosmo.platform.v1.DeleteAPIKeyRequest
+	149, // 583: wg.cosmo.platform.v1.PlatformService.RemoveOrganizationMember:input_type -> wg.cosmo.platform.v1.RemoveOrganizationMemberRequest
+	151, // 584: wg.cosmo.platform.v1.PlatformService.RemoveInvitation:input_type -> wg.cosmo.platform.v1.RemoveInvitationRequest
+	153, // 585: wg.cosmo.platform.v1.PlatformService.MigrateFromApollo:input_type -> wg.cosmo.platform.v1.MigrateFromApolloRequest
+	119, // 586: wg.cosmo.platform.v1.PlatformService.CreateOrganizationGroup:input_type -> wg.cosmo.platform.v1.CreateOrganizationGroupRequest
+	121, // 587: wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups:input_type -> wg.cosmo.platform.v1.GetOrganizationGroupsRequest
+	123, // 588: wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers:input_type -> wg.cosmo.platform.v1.GetOrganizationGroupMembersRequest
+	125, // 589: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroup:input_type -> wg.cosmo.platform.v1.UpdateOrganizationGroupRequest
+	127, // 590: wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup:input_type -> wg.cosmo.platform.v1.DeleteOrganizationGroupRequest
+	178, // 591: wg.cosmo.platform.v1.PlatformService.CreateOrganizationWebhookConfig:input_type -> wg.cosmo.platform.v1.CreateOrganizationWebhookConfigRequest
+	180, // 592: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookConfigs:input_type -> wg.cosmo.platform.v1.GetOrganizationWebhookConfigsRequest
+	182, // 593: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookMeta:input_type -> wg.cosmo.platform.v1.GetOrganizationWebhookMetaRequest
+	184, // 594: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationWebhookConfig:input_type -> wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigRequest
+	186, // 595: wg.cosmo.platform.v1.PlatformService.DeleteOrganizationWebhookConfig:input_type -> wg.cosmo.platform.v1.DeleteOrganizationWebhookConfigRequest
+	374, // 596: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookHistory:input_type -> wg.cosmo.platform.v1.GetOrganizationWebhookHistoryRequest
+	379, // 597: wg.cosmo.platform.v1.PlatformService.GetWebhookDeliveryDetails:input_type -> wg.cosmo.platform.v1.GetWebhookDeliveryDetailsRequest
+	377, // 598: wg.cosmo.platform.v1.PlatformService.RedeliverWebhook:input_type -> wg.cosmo.platform.v1.RedeliverWebhookRequest
+	188, // 599: wg.cosmo.platform.v1.PlatformService.CreateIntegration:input_type -> wg.cosmo.platform.v1.CreateIntegrationRequest
+	190, // 600: wg.cosmo.platform.v1.PlatformService.GetOrganizationIntegrations:input_type -> wg.cosmo.platform.v1.GetOrganizationIntegrationsRequest
+	195, // 601: wg.cosmo.platform.v1.PlatformService.UpdateIntegrationConfig:input_type -> wg.cosmo.platform.v1.UpdateIntegrationConfigRequest
+	197, // 602: wg.cosmo.platform.v1.PlatformService.DeleteIntegration:input_type -> wg.cosmo.platform.v1.DeleteIntegrationRequest
+	349, // 603: wg.cosmo.platform.v1.PlatformService.DeleteUser:input_type -> wg.cosmo.platform.v1.DeleteUserRequest
+	199, // 604: wg.cosmo.platform.v1.PlatformService.DeleteOrganization:input_type -> wg.cosmo.platform.v1.DeleteOrganizationRequest
+	201, // 605: wg.cosmo.platform.v1.PlatformService.RestoreOrganization:input_type -> wg.cosmo.platform.v1.RestoreOrganizationRequest
+	203, // 606: wg.cosmo.platform.v1.PlatformService.LeaveOrganization:input_type -> wg.cosmo.platform.v1.LeaveOrganizationRequest
+	205, // 607: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationDetails:input_type -> wg.cosmo.platform.v1.UpdateOrganizationDetailsRequest
+	207, // 608: wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberGroup:input_type -> wg.cosmo.platform.v1.UpdateOrgMemberGroupRequest
+	254, // 609: wg.cosmo.platform.v1.PlatformService.IsGitHubAppInstalled:input_type -> wg.cosmo.platform.v1.IsGitHubAppInstalledRequest
+	257, // 610: wg.cosmo.platform.v1.PlatformService.CreateOIDCProvider:input_type -> wg.cosmo.platform.v1.CreateOIDCProviderRequest
+	259, // 611: wg.cosmo.platform.v1.PlatformService.GetOIDCProvider:input_type -> wg.cosmo.platform.v1.GetOIDCProviderRequest
+	261, // 612: wg.cosmo.platform.v1.PlatformService.DeleteOIDCProvider:input_type -> wg.cosmo.platform.v1.DeleteOIDCProviderRequest
+	263, // 613: wg.cosmo.platform.v1.PlatformService.UpdateIDPMappers:input_type -> wg.cosmo.platform.v1.UpdateIDPMappersRequest
+	299, // 614: wg.cosmo.platform.v1.PlatformService.GetClients:input_type -> wg.cosmo.platform.v1.GetClientsRequest
+	301, // 615: wg.cosmo.platform.v1.PlatformService.PreviewDeleteClient:input_type -> wg.cosmo.platform.v1.PreviewDeleteClientRequest
+	303, // 616: wg.cosmo.platform.v1.PlatformService.DeleteClient:input_type -> wg.cosmo.platform.v1.DeleteClientRequest
+	296, // 617: wg.cosmo.platform.v1.PlatformService.GetRouters:input_type -> wg.cosmo.platform.v1.GetRoutersRequest
+	271, // 618: wg.cosmo.platform.v1.PlatformService.GetInvitations:input_type -> wg.cosmo.platform.v1.GetInvitationsRequest
+	273, // 619: wg.cosmo.platform.v1.PlatformService.AcceptOrDeclineInvitation:input_type -> wg.cosmo.platform.v1.AcceptOrDeclineInvitationRequest
+	277, // 620: wg.cosmo.platform.v1.PlatformService.GetCompositions:input_type -> wg.cosmo.platform.v1.GetCompositionsRequest
+	279, // 621: wg.cosmo.platform.v1.PlatformService.GetCompositionDetails:input_type -> wg.cosmo.platform.v1.GetCompositionDetailsRequest
+	282, // 622: wg.cosmo.platform.v1.PlatformService.GetSdlBySchemaVersion:input_type -> wg.cosmo.platform.v1.GetSdlBySchemaVersionRequest
+	284, // 623: wg.cosmo.platform.v1.PlatformService.GetChangelogBySchemaVersion:input_type -> wg.cosmo.platform.v1.GetChangelogBySchemaVersionRequest
+	286, // 624: wg.cosmo.platform.v1.PlatformService.GetUserAccessibleResources:input_type -> wg.cosmo.platform.v1.GetUserAccessibleResourcesRequest
+	288, // 625: wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings:input_type -> wg.cosmo.platform.v1.UpdateFeatureSettingsRequest
+	290, // 626: wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers:input_type -> wg.cosmo.platform.v1.GetSubgraphMembersRequest
+	293, // 627: wg.cosmo.platform.v1.PlatformService.AddReadme:input_type -> wg.cosmo.platform.v1.AddReadmeRequest
+	340, // 628: wg.cosmo.platform.v1.PlatformService.GetUserAccessiblePermissions:input_type -> wg.cosmo.platform.v1.GetUserAccessiblePermissionsRequest
+	351, // 629: wg.cosmo.platform.v1.PlatformService.CreateFeatureFlag:input_type -> wg.cosmo.platform.v1.CreateFeatureFlagRequest
+	357, // 630: wg.cosmo.platform.v1.PlatformService.DeleteFeatureFlag:input_type -> wg.cosmo.platform.v1.DeleteFeatureFlagRequest
+	353, // 631: wg.cosmo.platform.v1.PlatformService.UpdateFeatureFlag:input_type -> wg.cosmo.platform.v1.UpdateFeatureFlagRequest
+	355, // 632: wg.cosmo.platform.v1.PlatformService.EnableFeatureFlag:input_type -> wg.cosmo.platform.v1.EnableFeatureFlagRequest
+	101, // 633: wg.cosmo.platform.v1.PlatformService.GetAnalyticsView:input_type -> wg.cosmo.platform.v1.GetAnalyticsViewRequest
+	109, // 634: wg.cosmo.platform.v1.PlatformService.GetDashboardAnalyticsView:input_type -> wg.cosmo.platform.v1.GetDashboardAnalyticsViewRequest
+	156, // 635: wg.cosmo.platform.v1.PlatformService.GetTrace:input_type -> wg.cosmo.platform.v1.GetTraceRequest
+	222, // 636: wg.cosmo.platform.v1.PlatformService.GetGraphMetrics:input_type -> wg.cosmo.platform.v1.GetGraphMetricsRequest
+	228, // 637: wg.cosmo.platform.v1.PlatformService.GetMetricsErrorRate:input_type -> wg.cosmo.platform.v1.GetMetricsErrorRateRequest
+	231, // 638: wg.cosmo.platform.v1.PlatformService.GetSubgraphMetrics:input_type -> wg.cosmo.platform.v1.GetSubgraphMetricsRequest
+	233, // 639: wg.cosmo.platform.v1.PlatformService.GetSubgraphMetricsErrorRate:input_type -> wg.cosmo.platform.v1.GetSubgraphMetricsErrorRateRequest
+	305, // 640: wg.cosmo.platform.v1.PlatformService.GetFieldUsage:input_type -> wg.cosmo.platform.v1.GetFieldUsageRequest
+	265, // 641: wg.cosmo.platform.v1.PlatformService.GetOrganizationRequestsCount:input_type -> wg.cosmo.platform.v1.GetOrganizationRequestsCountRequest
+	209, // 642: wg.cosmo.platform.v1.PlatformService.CreateOrganization:input_type -> wg.cosmo.platform.v1.CreateOrganizationRequest
+	326, // 643: wg.cosmo.platform.v1.PlatformService.EnableLintingForTheNamespace:input_type -> wg.cosmo.platform.v1.EnableLintingForTheNamespaceRequest
+	329, // 644: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceLintConfig:input_type -> wg.cosmo.platform.v1.ConfigureNamespaceLintConfigRequest
+	320, // 645: wg.cosmo.platform.v1.PlatformService.GetNamespaceLintConfig:input_type -> wg.cosmo.platform.v1.GetNamespaceLintConfigRequest
+	322, // 646: wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig:input_type -> wg.cosmo.platform.v1.GetNamespaceChecksConfigurationRequest
+	324, // 647: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig:input_type -> wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationRequest
+	331, // 648: wg.cosmo.platform.v1.PlatformService.EnableGraphPruning:input_type -> wg.cosmo.platform.v1.EnableGraphPruningRequest
+	334, // 649: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceGraphPruningConfig:input_type -> wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigRequest
+	336, // 650: wg.cosmo.platform.v1.PlatformService.GetNamespaceGraphPruningConfig:input_type -> wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigRequest
+	360, // 651: wg.cosmo.platform.v1.PlatformService.GetFeatureFlags:input_type -> wg.cosmo.platform.v1.GetFeatureFlagsRequest
+	362, // 652: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagByName:input_type -> wg.cosmo.platform.v1.GetFeatureFlagByNameRequest
+	364, // 653: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFeatureFlag:input_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagRequest
+	366, // 654: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphs:input_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsRequest
+	368, // 655: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsByFederatedGraph:input_type -> wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphRequest
+	370, // 656: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsInLatestCompositionByFederatedGraph:input_type -> wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphRequest
+	372, // 657: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFederatedGraph:input_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphRequest
+	390, // 658: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphById:input_type -> wg.cosmo.platform.v1.GetFederatedGraphByIdRequest
+	392, // 659: wg.cosmo.platform.v1.PlatformService.GetSubgraphById:input_type -> wg.cosmo.platform.v1.GetSubgraphByIdRequest
+	401, // 660: wg.cosmo.platform.v1.PlatformService.PushCacheWarmerOperation:input_type -> wg.cosmo.platform.v1.PushCacheWarmerOperationRequest
+	403, // 661: wg.cosmo.platform.v1.PlatformService.GetCacheWarmerOperations:input_type -> wg.cosmo.platform.v1.GetCacheWarmerOperationsRequest
+	406, // 662: wg.cosmo.platform.v1.PlatformService.ComputeCacheWarmerOperations:input_type -> wg.cosmo.platform.v1.ComputeCacheWarmerOperationsRequest
+	408, // 663: wg.cosmo.platform.v1.PlatformService.ConfigureCacheWarmer:input_type -> wg.cosmo.platform.v1.ConfigureCacheWarmerRequest
+	410, // 664: wg.cosmo.platform.v1.PlatformService.GetCacheWarmerConfig:input_type -> wg.cosmo.platform.v1.GetCacheWarmerConfigRequest
+	416, // 665: wg.cosmo.platform.v1.PlatformService.DeleteCacheWarmerOperation:input_type -> wg.cosmo.platform.v1.DeleteCacheWarmerOperationRequest
+	412, // 666: wg.cosmo.platform.v1.PlatformService.GetSubgraphCheckExtensionsConfig:input_type -> wg.cosmo.platform.v1.GetSubgraphCheckExtensionsConfigRequest
+	414, // 667: wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions:input_type -> wg.cosmo.platform.v1.ConfigureSubgraphCheckExtensionsRequest
+	214, // 668: wg.cosmo.platform.v1.PlatformService.GetBillingPlans:input_type -> wg.cosmo.platform.v1.GetBillingPlansRequest
+	216, // 669: wg.cosmo.platform.v1.PlatformService.CreateCheckoutSession:input_type -> wg.cosmo.platform.v1.CreateCheckoutSessionRequest
+	218, // 670: wg.cosmo.platform.v1.PlatformService.CreateBillingPortalSession:input_type -> wg.cosmo.platform.v1.CreateBillingPortalSessionRequest
+	220, // 671: wg.cosmo.platform.v1.PlatformService.UpgradePlan:input_type -> wg.cosmo.platform.v1.UpgradePlanRequest
+	418, // 672: wg.cosmo.platform.v1.PlatformService.ListRouterCompatibilityVersions:input_type -> wg.cosmo.platform.v1.ListRouterCompatibilityVersionsRequest
+	420, // 673: wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion:input_type -> wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionRequest
+	426, // 674: wg.cosmo.platform.v1.PlatformService.CreateProposal:input_type -> wg.cosmo.platform.v1.CreateProposalRequest
+	428, // 675: wg.cosmo.platform.v1.PlatformService.GetProposal:input_type -> wg.cosmo.platform.v1.GetProposalRequest
+	434, // 676: wg.cosmo.platform.v1.PlatformService.UpdateProposal:input_type -> wg.cosmo.platform.v1.UpdateProposalRequest
+	436, // 677: wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace:input_type -> wg.cosmo.platform.v1.EnableProposalsForNamespaceRequest
+	438, // 678: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig:input_type -> wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest
+	440, // 679: wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig:input_type -> wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest
+	430, // 680: wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph:input_type -> wg.cosmo.platform.v1.GetProposalsByFederatedGraphRequest
+	432, // 681: wg.cosmo.platform.v1.PlatformService.GetProposalChecks:input_type -> wg.cosmo.platform.v1.GetProposalChecksRequest
+	442, // 682: wg.cosmo.platform.v1.PlatformService.GetOperations:input_type -> wg.cosmo.platform.v1.GetOperationsRequest
+	444, // 683: wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics:input_type -> wg.cosmo.platform.v1.GetClientsFromAnalyticsRequest
+	446, // 684: wg.cosmo.platform.v1.PlatformService.GetOperationClients:input_type -> wg.cosmo.platform.v1.GetOperationClientsRequest
+	448, // 685: wg.cosmo.platform.v1.PlatformService.GetOperationDeprecatedFields:input_type -> wg.cosmo.platform.v1.GetOperationDeprecatedFieldsRequest
+	450, // 686: wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData:input_type -> wg.cosmo.platform.v1.ValidateAndFetchPluginDataRequest
+	452, // 687: wg.cosmo.platform.v1.PlatformService.LinkSubgraph:input_type -> wg.cosmo.platform.v1.LinkSubgraphRequest
+	454, // 688: wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph:input_type -> wg.cosmo.platform.v1.UnlinkSubgraphRequest
+	456, // 689: wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess:input_type -> wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessRequest
+	462, // 690: wg.cosmo.platform.v1.PlatformService.RecomposeGraph:input_type -> wg.cosmo.platform.v1.RecomposeGraphRequest
+	464, // 691: wg.cosmo.platform.v1.PlatformService.RecomposeFeatureFlag:input_type -> wg.cosmo.platform.v1.RecomposeFeatureFlagRequest
+	466, // 692: wg.cosmo.platform.v1.PlatformService.GetOnboarding:input_type -> wg.cosmo.platform.v1.GetOnboardingRequest
+	468, // 693: wg.cosmo.platform.v1.PlatformService.CreateOnboarding:input_type -> wg.cosmo.platform.v1.CreateOnboardingRequest
+	470, // 694: wg.cosmo.platform.v1.PlatformService.FinishOnboarding:input_type -> wg.cosmo.platform.v1.FinishOnboardingRequest
+	382, // 695: wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript:output_type -> wg.cosmo.platform.v1.CreatePlaygroundScriptResponse
+	384, // 696: wg.cosmo.platform.v1.PlatformService.DeletePlaygroundScript:output_type -> wg.cosmo.platform.v1.DeletePlaygroundScriptResponse
+	386, // 697: wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundScript:output_type -> wg.cosmo.platform.v1.UpdatePlaygroundScriptResponse
+	389, // 698: wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts:output_type -> wg.cosmo.platform.v1.GetPlaygroundScriptsResponse
+	310, // 699: wg.cosmo.platform.v1.PlatformService.CreateNamespace:output_type -> wg.cosmo.platform.v1.CreateNamespaceResponse
+	312, // 700: wg.cosmo.platform.v1.PlatformService.DeleteNamespace:output_type -> wg.cosmo.platform.v1.DeleteNamespaceResponse
+	314, // 701: wg.cosmo.platform.v1.PlatformService.RenameNamespace:output_type -> wg.cosmo.platform.v1.RenameNamespaceResponse
+	317, // 702: wg.cosmo.platform.v1.PlatformService.GetNamespaces:output_type -> wg.cosmo.platform.v1.GetNamespacesResponse
+	395, // 703: wg.cosmo.platform.v1.PlatformService.GetNamespace:output_type -> wg.cosmo.platform.v1.GetNamespaceResponse
+	400, // 704: wg.cosmo.platform.v1.PlatformService.GetWorkspace:output_type -> wg.cosmo.platform.v1.GetWorkspaceResponse
+	344, // 705: wg.cosmo.platform.v1.PlatformService.CreateContract:output_type -> wg.cosmo.platform.v1.CreateContractResponse
+	346, // 706: wg.cosmo.platform.v1.PlatformService.UpdateContract:output_type -> wg.cosmo.platform.v1.UpdateContractResponse
+	319, // 707: wg.cosmo.platform.v1.PlatformService.MoveFederatedGraph:output_type -> wg.cosmo.platform.v1.MoveGraphResponse
+	319, // 708: wg.cosmo.platform.v1.PlatformService.MoveSubgraph:output_type -> wg.cosmo.platform.v1.MoveGraphResponse
+	319, // 709: wg.cosmo.platform.v1.PlatformService.MoveMonograph:output_type -> wg.cosmo.platform.v1.MoveGraphResponse
+	29,  // 710: wg.cosmo.platform.v1.PlatformService.CreateMonograph:output_type -> wg.cosmo.platform.v1.CreateMonographResponse
+	19,  // 711: wg.cosmo.platform.v1.PlatformService.PublishMonograph:output_type -> wg.cosmo.platform.v1.PublishMonographResponse
+	34,  // 712: wg.cosmo.platform.v1.PlatformService.DeleteMonograph:output_type -> wg.cosmo.platform.v1.DeleteMonographResponse
+	93,  // 713: wg.cosmo.platform.v1.PlatformService.UpdateMonograph:output_type -> wg.cosmo.platform.v1.UpdateMonographResponse
+	339, // 714: wg.cosmo.platform.v1.PlatformService.MigrateMonograph:output_type -> wg.cosmo.platform.v1.MigrateMonographResponse
+	50,  // 715: wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph:output_type -> wg.cosmo.platform.v1.CreateFederatedSubgraphResponse
+	22,  // 716: wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph:output_type -> wg.cosmo.platform.v1.PublishFederatedSubgraphResponse
+	49,  // 717: wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph:output_type -> wg.cosmo.platform.v1.CreateFederatedGraphResponse
+	52,  // 718: wg.cosmo.platform.v1.PlatformService.DeleteFederatedGraph:output_type -> wg.cosmo.platform.v1.DeleteFederatedGraphResponse
+	51,  // 719: wg.cosmo.platform.v1.PlatformService.DeleteFederatedSubgraph:output_type -> wg.cosmo.platform.v1.DeleteFederatedSubgraphResponse
+	46,  // 720: wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema:output_type -> wg.cosmo.platform.v1.CheckSubgraphSchemaResponse
+	423, // 721: wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph:output_type -> wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphResponse
+	48,  // 722: wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema:output_type -> wg.cosmo.platform.v1.FixSubgraphSchemaResponse
+	91,  // 723: wg.cosmo.platform.v1.PlatformService.UpdateFederatedGraph:output_type -> wg.cosmo.platform.v1.UpdateFederatedGraphResponse
+	89,  // 724: wg.cosmo.platform.v1.PlatformService.UpdateSubgraph:output_type -> wg.cosmo.platform.v1.UpdateSubgraphResponse
+	95,  // 725: wg.cosmo.platform.v1.PlatformService.CheckFederatedGraph:output_type -> wg.cosmo.platform.v1.CheckFederatedGraphResponse
+	159, // 726: wg.cosmo.platform.v1.PlatformService.WhoAmI:output_type -> wg.cosmo.platform.v1.WhoAmIResponse
+	162, // 727: wg.cosmo.platform.v1.PlatformService.GenerateRouterToken:output_type -> wg.cosmo.platform.v1.GenerateRouterTokenResponse
+	164, // 728: wg.cosmo.platform.v1.PlatformService.GetRouterTokens:output_type -> wg.cosmo.platform.v1.GetRouterTokensResponse
+	166, // 729: wg.cosmo.platform.v1.PlatformService.DeleteRouterToken:output_type -> wg.cosmo.platform.v1.DeleteRouterTokenResponse
+	170, // 730: wg.cosmo.platform.v1.PlatformService.PublishPersistedOperations:output_type -> wg.cosmo.platform.v1.PublishPersistedOperationsResponse
+	174, // 731: wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic:output_type -> wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse
+	172, // 732: wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation:output_type -> wg.cosmo.platform.v1.DeletePersistedOperationResponse
+	176, // 733: wg.cosmo.platform.v1.PlatformService.GetPersistedOperations:output_type -> wg.cosmo.platform.v1.GetPersistedOperationsResponse
+	270, // 734: wg.cosmo.platform.v1.PlatformService.GetAuditLogs:output_type -> wg.cosmo.platform.v1.GetAuditLogsResponse
+	459, // 735: wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser:output_type -> wg.cosmo.platform.v1.InitializeCosmoUserResponse
+	461, // 736: wg.cosmo.platform.v1.PlatformService.ListOrganizations:output_type -> wg.cosmo.platform.v1.ListOrganizationsResponse
+	56,  // 737: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphs:output_type -> wg.cosmo.platform.v1.GetFederatedGraphsResponse
+	58,  // 738: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphsBySubgraphLabels:output_type -> wg.cosmo.platform.v1.GetFederatedGraphsBySubgraphLabelsResponse
+	63,  // 739: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphByName:output_type -> wg.cosmo.platform.v1.GetFederatedGraphByNameResponse
+	65,  // 740: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphSDLByName:output_type -> wg.cosmo.platform.v1.GetFederatedGraphSDLByNameResponse
+	61,  // 741: wg.cosmo.platform.v1.PlatformService.GetSubgraphs:output_type -> wg.cosmo.platform.v1.GetSubgraphsResponse
+	67,  // 742: wg.cosmo.platform.v1.PlatformService.GetSubgraphByName:output_type -> wg.cosmo.platform.v1.GetSubgraphByNameResponse
+	69,  // 743: wg.cosmo.platform.v1.PlatformService.GetSubgraphSDLFromLatestComposition:output_type -> wg.cosmo.platform.v1.GetSubgraphSDLFromLatestCompositionResponse
+	71,  // 744: wg.cosmo.platform.v1.PlatformService.GetLatestSubgraphSDL:output_type -> wg.cosmo.platform.v1.GetLatestSubgraphSDLResponse
+	75,  // 745: wg.cosmo.platform.v1.PlatformService.GetChecksByFederatedGraphName:output_type -> wg.cosmo.platform.v1.GetChecksByFederatedGraphNameResponse
+	78,  // 746: wg.cosmo.platform.v1.PlatformService.GetCheckSummary:output_type -> wg.cosmo.platform.v1.GetCheckSummaryResponse
+	80,  // 747: wg.cosmo.platform.v1.PlatformService.GetCheckOperations:output_type -> wg.cosmo.platform.v1.GetCheckOperationsResponse
+	236, // 748: wg.cosmo.platform.v1.PlatformService.ForceCheckSuccess:output_type -> wg.cosmo.platform.v1.ForceCheckSuccessResponse
+	243, // 749: wg.cosmo.platform.v1.PlatformService.CreateOperationOverrides:output_type -> wg.cosmo.platform.v1.CreateOperationOverridesResponse
+	247, // 750: wg.cosmo.platform.v1.PlatformService.RemoveOperationOverrides:output_type -> wg.cosmo.platform.v1.RemoveOperationOverridesResponse
+	245, // 751: wg.cosmo.platform.v1.PlatformService.CreateOperationIgnoreAllOverride:output_type -> wg.cosmo.platform.v1.CreateOperationIgnoreAllOverrideResponse
+	249, // 752: wg.cosmo.platform.v1.PlatformService.RemoveOperationIgnoreAllOverride:output_type -> wg.cosmo.platform.v1.RemoveOperationIgnoreAllOverrideResponse
+	251, // 753: wg.cosmo.platform.v1.PlatformService.GetOperationOverrides:output_type -> wg.cosmo.platform.v1.GetOperationOverridesResponse
+	253, // 754: wg.cosmo.platform.v1.PlatformService.GetAllOverrides:output_type -> wg.cosmo.platform.v1.GetAllOverridesResponse
+	238, // 755: wg.cosmo.platform.v1.PlatformService.ToggleChangeOverridesForAllOperations:output_type -> wg.cosmo.platform.v1.ToggleChangeOverridesForAllOperationsResponse
+	240, // 756: wg.cosmo.platform.v1.PlatformService.CreateIgnoreOverridesForAllOperations:output_type -> wg.cosmo.platform.v1.CreateIgnoreOverridesForAllOperationsResponse
+	82,  // 757: wg.cosmo.platform.v1.PlatformService.GetOperationContent:output_type -> wg.cosmo.platform.v1.GetOperationContentResponse
+	86,  // 758: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphChangelog:output_type -> wg.cosmo.platform.v1.GetFederatedGraphChangelogResponse
+	116, // 759: wg.cosmo.platform.v1.PlatformService.CreateFederatedGraphToken:output_type -> wg.cosmo.platform.v1.CreateFederatedGraphTokenResponse
+	213, // 760: wg.cosmo.platform.v1.PlatformService.GetOrganizationBySlug:output_type -> wg.cosmo.platform.v1.GetOrganizationBySlugResponse
+	134, // 761: wg.cosmo.platform.v1.PlatformService.GetOrganizationMembers:output_type -> wg.cosmo.platform.v1.GetOrganizationMembersResponse
+	132, // 762: wg.cosmo.platform.v1.PlatformService.GetPendingOrganizationMembers:output_type -> wg.cosmo.platform.v1.GetPendingOrganizationMembersResponse
+	348, // 763: wg.cosmo.platform.v1.PlatformService.IsMemberLimitReached:output_type -> wg.cosmo.platform.v1.IsMemberLimitReachedResponse
+	136, // 764: wg.cosmo.platform.v1.PlatformService.InviteUser:output_type -> wg.cosmo.platform.v1.InviteUserResponse
+	139, // 765: wg.cosmo.platform.v1.PlatformService.InviteUsers:output_type -> wg.cosmo.platform.v1.InviteUsersResponse
+	142, // 766: wg.cosmo.platform.v1.PlatformService.GetAPIKeys:output_type -> wg.cosmo.platform.v1.GetAPIKeysResponse
+	144, // 767: wg.cosmo.platform.v1.PlatformService.CreateAPIKey:output_type -> wg.cosmo.platform.v1.CreateAPIKeyResponse
+	148, // 768: wg.cosmo.platform.v1.PlatformService.UpdateAPIKey:output_type -> wg.cosmo.platform.v1.UpdateAPIKeyResponse
+	146, // 769: wg.cosmo.platform.v1.PlatformService.DeleteAPIKey:output_type -> wg.cosmo.platform.v1.DeleteAPIKeyResponse
+	150, // 770: wg.cosmo.platform.v1.PlatformService.RemoveOrganizationMember:output_type -> wg.cosmo.platform.v1.RemoveOrganizationMemberResponse
+	152, // 771: wg.cosmo.platform.v1.PlatformService.RemoveInvitation:output_type -> wg.cosmo.platform.v1.RemoveInvitationResponse
+	154, // 772: wg.cosmo.platform.v1.PlatformService.MigrateFromApollo:output_type -> wg.cosmo.platform.v1.MigrateFromApolloResponse
+	120, // 773: wg.cosmo.platform.v1.PlatformService.CreateOrganizationGroup:output_type -> wg.cosmo.platform.v1.CreateOrganizationGroupResponse
+	122, // 774: wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups:output_type -> wg.cosmo.platform.v1.GetOrganizationGroupsResponse
+	124, // 775: wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers:output_type -> wg.cosmo.platform.v1.GetOrganizationGroupMembersResponse
+	126, // 776: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroup:output_type -> wg.cosmo.platform.v1.UpdateOrganizationGroupResponse
+	128, // 777: wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup:output_type -> wg.cosmo.platform.v1.DeleteOrganizationGroupResponse
+	179, // 778: wg.cosmo.platform.v1.PlatformService.CreateOrganizationWebhookConfig:output_type -> wg.cosmo.platform.v1.CreateOrganizationWebhookConfigResponse
+	181, // 779: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookConfigs:output_type -> wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse
+	183, // 780: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookMeta:output_type -> wg.cosmo.platform.v1.GetOrganizationWebhookMetaResponse
+	185, // 781: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationWebhookConfig:output_type -> wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigResponse
+	187, // 782: wg.cosmo.platform.v1.PlatformService.DeleteOrganizationWebhookConfig:output_type -> wg.cosmo.platform.v1.DeleteOrganizationWebhookConfigResponse
+	376, // 783: wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookHistory:output_type -> wg.cosmo.platform.v1.GetOrganizationWebhookHistoryResponse
+	380, // 784: wg.cosmo.platform.v1.PlatformService.GetWebhookDeliveryDetails:output_type -> wg.cosmo.platform.v1.GetWebhookDeliveryDetailsResponse
+	378, // 785: wg.cosmo.platform.v1.PlatformService.RedeliverWebhook:output_type -> wg.cosmo.platform.v1.RedeliverWebhookResponse
+	189, // 786: wg.cosmo.platform.v1.PlatformService.CreateIntegration:output_type -> wg.cosmo.platform.v1.CreateIntegrationResponse
+	194, // 787: wg.cosmo.platform.v1.PlatformService.GetOrganizationIntegrations:output_type -> wg.cosmo.platform.v1.GetOrganizationIntegrationsResponse
+	196, // 788: wg.cosmo.platform.v1.PlatformService.UpdateIntegrationConfig:output_type -> wg.cosmo.platform.v1.UpdateIntegrationConfigResponse
+	198, // 789: wg.cosmo.platform.v1.PlatformService.DeleteIntegration:output_type -> wg.cosmo.platform.v1.DeleteIntegrationResponse
+	350, // 790: wg.cosmo.platform.v1.PlatformService.DeleteUser:output_type -> wg.cosmo.platform.v1.DeleteUserResponse
+	200, // 791: wg.cosmo.platform.v1.PlatformService.DeleteOrganization:output_type -> wg.cosmo.platform.v1.DeleteOrganizationResponse
+	202, // 792: wg.cosmo.platform.v1.PlatformService.RestoreOrganization:output_type -> wg.cosmo.platform.v1.RestoreOrganizationResponse
+	204, // 793: wg.cosmo.platform.v1.PlatformService.LeaveOrganization:output_type -> wg.cosmo.platform.v1.LeaveOrganizationResponse
+	206, // 794: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationDetails:output_type -> wg.cosmo.platform.v1.UpdateOrganizationDetailsResponse
+	208, // 795: wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberGroup:output_type -> wg.cosmo.platform.v1.UpdateOrgMemberGroupResponse
+	255, // 796: wg.cosmo.platform.v1.PlatformService.IsGitHubAppInstalled:output_type -> wg.cosmo.platform.v1.IsGitHubAppInstalledResponse
+	258, // 797: wg.cosmo.platform.v1.PlatformService.CreateOIDCProvider:output_type -> wg.cosmo.platform.v1.CreateOIDCProviderResponse
+	260, // 798: wg.cosmo.platform.v1.PlatformService.GetOIDCProvider:output_type -> wg.cosmo.platform.v1.GetOIDCProviderResponse
+	262, // 799: wg.cosmo.platform.v1.PlatformService.DeleteOIDCProvider:output_type -> wg.cosmo.platform.v1.DeleteOIDCProviderResponse
+	264, // 800: wg.cosmo.platform.v1.PlatformService.UpdateIDPMappers:output_type -> wg.cosmo.platform.v1.UpdateIDPMappersResponse
+	300, // 801: wg.cosmo.platform.v1.PlatformService.GetClients:output_type -> wg.cosmo.platform.v1.GetClientsResponse
+	302, // 802: wg.cosmo.platform.v1.PlatformService.PreviewDeleteClient:output_type -> wg.cosmo.platform.v1.PreviewDeleteClientResponse
+	304, // 803: wg.cosmo.platform.v1.PlatformService.DeleteClient:output_type -> wg.cosmo.platform.v1.DeleteClientResponse
+	297, // 804: wg.cosmo.platform.v1.PlatformService.GetRouters:output_type -> wg.cosmo.platform.v1.GetRoutersResponse
+	272, // 805: wg.cosmo.platform.v1.PlatformService.GetInvitations:output_type -> wg.cosmo.platform.v1.GetInvitationsResponse
+	274, // 806: wg.cosmo.platform.v1.PlatformService.AcceptOrDeclineInvitation:output_type -> wg.cosmo.platform.v1.AcceptOrDeclineInvitationResponse
+	278, // 807: wg.cosmo.platform.v1.PlatformService.GetCompositions:output_type -> wg.cosmo.platform.v1.GetCompositionsResponse
+	281, // 808: wg.cosmo.platform.v1.PlatformService.GetCompositionDetails:output_type -> wg.cosmo.platform.v1.GetCompositionDetailsResponse
+	283, // 809: wg.cosmo.platform.v1.PlatformService.GetSdlBySchemaVersion:output_type -> wg.cosmo.platform.v1.GetSdlBySchemaVersionResponse
+	285, // 810: wg.cosmo.platform.v1.PlatformService.GetChangelogBySchemaVersion:output_type -> wg.cosmo.platform.v1.GetChangelogBySchemaVersionResponse
+	287, // 811: wg.cosmo.platform.v1.PlatformService.GetUserAccessibleResources:output_type -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse
+	289, // 812: wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings:output_type -> wg.cosmo.platform.v1.UpdateFeatureSettingsResponse
+	292, // 813: wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers:output_type -> wg.cosmo.platform.v1.GetSubgraphMembersResponse
+	294, // 814: wg.cosmo.platform.v1.PlatformService.AddReadme:output_type -> wg.cosmo.platform.v1.AddReadmeResponse
+	342, // 815: wg.cosmo.platform.v1.PlatformService.GetUserAccessiblePermissions:output_type -> wg.cosmo.platform.v1.GetUserAccessiblePermissionsResponse
+	352, // 816: wg.cosmo.platform.v1.PlatformService.CreateFeatureFlag:output_type -> wg.cosmo.platform.v1.CreateFeatureFlagResponse
+	358, // 817: wg.cosmo.platform.v1.PlatformService.DeleteFeatureFlag:output_type -> wg.cosmo.platform.v1.DeleteFeatureFlagResponse
+	354, // 818: wg.cosmo.platform.v1.PlatformService.UpdateFeatureFlag:output_type -> wg.cosmo.platform.v1.UpdateFeatureFlagResponse
+	356, // 819: wg.cosmo.platform.v1.PlatformService.EnableFeatureFlag:output_type -> wg.cosmo.platform.v1.EnableFeatureFlagResponse
+	108, // 820: wg.cosmo.platform.v1.PlatformService.GetAnalyticsView:output_type -> wg.cosmo.platform.v1.GetAnalyticsViewResponse
+	114, // 821: wg.cosmo.platform.v1.PlatformService.GetDashboardAnalyticsView:output_type -> wg.cosmo.platform.v1.GetDashboardAnalyticsViewResponse
+	157, // 822: wg.cosmo.platform.v1.PlatformService.GetTrace:output_type -> wg.cosmo.platform.v1.GetTraceResponse
+	223, // 823: wg.cosmo.platform.v1.PlatformService.GetGraphMetrics:output_type -> wg.cosmo.platform.v1.GetGraphMetricsResponse
+	229, // 824: wg.cosmo.platform.v1.PlatformService.GetMetricsErrorRate:output_type -> wg.cosmo.platform.v1.GetMetricsErrorRateResponse
+	232, // 825: wg.cosmo.platform.v1.PlatformService.GetSubgraphMetrics:output_type -> wg.cosmo.platform.v1.GetSubgraphMetricsResponse
+	234, // 826: wg.cosmo.platform.v1.PlatformService.GetSubgraphMetricsErrorRate:output_type -> wg.cosmo.platform.v1.GetSubgraphMetricsErrorRateResponse
+	308, // 827: wg.cosmo.platform.v1.PlatformService.GetFieldUsage:output_type -> wg.cosmo.platform.v1.GetFieldUsageResponse
+	266, // 828: wg.cosmo.platform.v1.PlatformService.GetOrganizationRequestsCount:output_type -> wg.cosmo.platform.v1.GetOrganizationRequestsCountResponse
+	210, // 829: wg.cosmo.platform.v1.PlatformService.CreateOrganization:output_type -> wg.cosmo.platform.v1.CreateOrganizationResponse
+	327, // 830: wg.cosmo.platform.v1.PlatformService.EnableLintingForTheNamespace:output_type -> wg.cosmo.platform.v1.EnableLintingForTheNamespaceResponse
+	330, // 831: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceLintConfig:output_type -> wg.cosmo.platform.v1.ConfigureNamespaceLintConfigResponse
+	321, // 832: wg.cosmo.platform.v1.PlatformService.GetNamespaceLintConfig:output_type -> wg.cosmo.platform.v1.GetNamespaceLintConfigResponse
+	323, // 833: wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig:output_type -> wg.cosmo.platform.v1.GetNamespaceChecksConfigurationResponse
+	325, // 834: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig:output_type -> wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationResponse
+	332, // 835: wg.cosmo.platform.v1.PlatformService.EnableGraphPruning:output_type -> wg.cosmo.platform.v1.EnableGraphPruningResponse
+	335, // 836: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceGraphPruningConfig:output_type -> wg.cosmo.platform.v1.ConfigureNamespaceGraphPruningConfigResponse
+	337, // 837: wg.cosmo.platform.v1.PlatformService.GetNamespaceGraphPruningConfig:output_type -> wg.cosmo.platform.v1.GetNamespaceGraphPruningConfigResponse
+	361, // 838: wg.cosmo.platform.v1.PlatformService.GetFeatureFlags:output_type -> wg.cosmo.platform.v1.GetFeatureFlagsResponse
+	363, // 839: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagByName:output_type -> wg.cosmo.platform.v1.GetFeatureFlagByNameResponse
+	365, // 840: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFeatureFlag:output_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsByFeatureFlagResponse
+	367, // 841: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphs:output_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsResponse
+	369, // 842: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsByFederatedGraph:output_type -> wg.cosmo.platform.v1.GetFeatureFlagsByFederatedGraphResponse
+	371, // 843: wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsInLatestCompositionByFederatedGraph:output_type -> wg.cosmo.platform.v1.GetFeatureFlagsInLatestCompositionByFederatedGraphResponse
+	373, // 844: wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFederatedGraph:output_type -> wg.cosmo.platform.v1.GetFeatureSubgraphsByFederatedGraphResponse
+	391, // 845: wg.cosmo.platform.v1.PlatformService.GetFederatedGraphById:output_type -> wg.cosmo.platform.v1.GetFederatedGraphByIdResponse
+	393, // 846: wg.cosmo.platform.v1.PlatformService.GetSubgraphById:output_type -> wg.cosmo.platform.v1.GetSubgraphByIdResponse
+	402, // 847: wg.cosmo.platform.v1.PlatformService.PushCacheWarmerOperation:output_type -> wg.cosmo.platform.v1.PushCacheWarmerOperationResponse
+	405, // 848: wg.cosmo.platform.v1.PlatformService.GetCacheWarmerOperations:output_type -> wg.cosmo.platform.v1.GetCacheWarmerOperationsResponse
+	407, // 849: wg.cosmo.platform.v1.PlatformService.ComputeCacheWarmerOperations:output_type -> wg.cosmo.platform.v1.ComputeCacheWarmerOperationsResponse
+	409, // 850: wg.cosmo.platform.v1.PlatformService.ConfigureCacheWarmer:output_type -> wg.cosmo.platform.v1.ConfigureCacheWarmerResponse
+	411, // 851: wg.cosmo.platform.v1.PlatformService.GetCacheWarmerConfig:output_type -> wg.cosmo.platform.v1.GetCacheWarmerConfigResponse
+	417, // 852: wg.cosmo.platform.v1.PlatformService.DeleteCacheWarmerOperation:output_type -> wg.cosmo.platform.v1.DeleteCacheWarmerOperationResponse
+	413, // 853: wg.cosmo.platform.v1.PlatformService.GetSubgraphCheckExtensionsConfig:output_type -> wg.cosmo.platform.v1.GetSubgraphCheckExtensionsConfigResponse
+	415, // 854: wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions:output_type -> wg.cosmo.platform.v1.ConfigureSubgraphCheckExtensionsResponse
+	215, // 855: wg.cosmo.platform.v1.PlatformService.GetBillingPlans:output_type -> wg.cosmo.platform.v1.GetBillingPlansResponse
+	217, // 856: wg.cosmo.platform.v1.PlatformService.CreateCheckoutSession:output_type -> wg.cosmo.platform.v1.CreateCheckoutSessionResponse
+	219, // 857: wg.cosmo.platform.v1.PlatformService.CreateBillingPortalSession:output_type -> wg.cosmo.platform.v1.CreateBillingPortalSessionResponse
+	221, // 858: wg.cosmo.platform.v1.PlatformService.UpgradePlan:output_type -> wg.cosmo.platform.v1.UpgradePlanResponse
+	419, // 859: wg.cosmo.platform.v1.PlatformService.ListRouterCompatibilityVersions:output_type -> wg.cosmo.platform.v1.ListRouterCompatibilityVersionsResponse
+	421, // 860: wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion:output_type -> wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse
+	427, // 861: wg.cosmo.platform.v1.PlatformService.CreateProposal:output_type -> wg.cosmo.platform.v1.CreateProposalResponse
+	429, // 862: wg.cosmo.platform.v1.PlatformService.GetProposal:output_type -> wg.cosmo.platform.v1.GetProposalResponse
+	435, // 863: wg.cosmo.platform.v1.PlatformService.UpdateProposal:output_type -> wg.cosmo.platform.v1.UpdateProposalResponse
+	437, // 864: wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace:output_type -> wg.cosmo.platform.v1.EnableProposalsForNamespaceResponse
+	439, // 865: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig:output_type -> wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse
+	441, // 866: wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig:output_type -> wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse
+	431, // 867: wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph:output_type -> wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse
+	433, // 868: wg.cosmo.platform.v1.PlatformService.GetProposalChecks:output_type -> wg.cosmo.platform.v1.GetProposalChecksResponse
+	443, // 869: wg.cosmo.platform.v1.PlatformService.GetOperations:output_type -> wg.cosmo.platform.v1.GetOperationsResponse
+	445, // 870: wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics:output_type -> wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse
+	447, // 871: wg.cosmo.platform.v1.PlatformService.GetOperationClients:output_type -> wg.cosmo.platform.v1.GetOperationClientsResponse
+	449, // 872: wg.cosmo.platform.v1.PlatformService.GetOperationDeprecatedFields:output_type -> wg.cosmo.platform.v1.GetOperationDeprecatedFieldsResponse
+	451, // 873: wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData:output_type -> wg.cosmo.platform.v1.ValidateAndFetchPluginDataResponse
+	453, // 874: wg.cosmo.platform.v1.PlatformService.LinkSubgraph:output_type -> wg.cosmo.platform.v1.LinkSubgraphResponse
+	455, // 875: wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph:output_type -> wg.cosmo.platform.v1.UnlinkSubgraphResponse
+	457, // 876: wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess:output_type -> wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessResponse
+	463, // 877: wg.cosmo.platform.v1.PlatformService.RecomposeGraph:output_type -> wg.cosmo.platform.v1.RecomposeGraphResponse
+	465, // 878: wg.cosmo.platform.v1.PlatformService.RecomposeFeatureFlag:output_type -> wg.cosmo.platform.v1.RecomposeFeatureFlagResponse
+	467, // 879: wg.cosmo.platform.v1.PlatformService.GetOnboarding:output_type -> wg.cosmo.platform.v1.GetOnboardingResponse
+	469, // 880: wg.cosmo.platform.v1.PlatformService.CreateOnboarding:output_type -> wg.cosmo.platform.v1.CreateOnboardingResponse
+	471, // 881: wg.cosmo.platform.v1.PlatformService.FinishOnboarding:output_type -> wg.cosmo.platform.v1.FinishOnboardingResponse
+	695, // [695:882] is the sub-list for method output_type
+	508, // [508:695] is the sub-list for method input_type
+	508, // [508:508] is the sub-list for extension type_name
+	508, // [508:508] is the sub-list for extension extendee
+	0,   // [0:508] is the sub-list for field type_name
 }
 
 func init() { file_wg_cosmo_platform_v1_platform_proto_init() }
@@ -36220,43 +36569,43 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[252].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[260].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[265].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[286].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[299].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[314].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[324].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[326].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[332].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[334].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[290].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[303].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[318].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[328].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[330].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[336].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[337].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[338].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[340].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[341].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[347].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[349].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[342].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[345].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[351].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[353].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[355].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[356].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[395].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[401].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[408].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[415].OneofWrappers = []any{
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[357].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[359].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[360].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[399].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[405].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[412].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[419].OneofWrappers = []any{
 		(*UpdateProposalRequest_State)(nil),
 		(*UpdateProposalRequest_UpdatedSubgraphs)(nil),
 	}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[416].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[423].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[424].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[420].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[427].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[429].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[443].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[444].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[445].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[446].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[428].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[431].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[433].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[447].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[448].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[449].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[450].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[456].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[472].OneofWrappers = []any{}
-	file_wg_cosmo_platform_v1_platform_proto_msgTypes[482].OneofWrappers = []any{
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[452].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[454].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[460].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[476].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[487].OneofWrappers = []any{
 		(*GetOperationsResponse_Operation_Latency)(nil),
 		(*GetOperationsResponse_Operation_RequestCount)(nil),
 		(*GetOperationsResponse_Operation_ErrorPercentage)(nil),
@@ -36267,7 +36616,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wg_cosmo_platform_v1_platform_proto_rawDesc), len(file_wg_cosmo_platform_v1_platform_proto_rawDesc)),
 			NumEnums:      15,
-			NumMessages:   487,
+			NumMessages:   492,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
