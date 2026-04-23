@@ -684,11 +684,19 @@ type NatsAuthentication struct {
 	NatsTokenBasedAuthentication `yaml:"token,inline"`
 }
 
+type NatsTLSConfiguration struct {
+	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification,omitempty"`
+	CaFile                     string `yaml:"ca_file,omitempty"`
+	CertFile                   string `yaml:"cert_file,omitempty"`
+	KeyFile                    string `yaml:"key_file,omitempty"`
+}
+
 type NatsEventSource struct {
-	ID                               string              `yaml:"id,omitempty"`
-	URL                              string              `yaml:"url,omitempty"`
-	Authentication                   *NatsAuthentication `yaml:"authentication,omitempty"`
-	DeleteDurableConsumersOnShutdown bool                `yaml:"experiment_delete_durable_consumers_on_shutdown"`
+	ID                               string                `yaml:"id,omitempty"`
+	URL                              string                `yaml:"url,omitempty"`
+	Authentication                   *NatsAuthentication   `yaml:"authentication,omitempty"`
+	TLS                              *NatsTLSConfiguration `yaml:"tls,omitempty"`
+	DeleteDurableConsumersOnShutdown bool                  `yaml:"experiment_delete_durable_consumers_on_shutdown"`
 }
 
 func (n NatsEventSource) GetID() string {

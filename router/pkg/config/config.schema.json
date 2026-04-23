@@ -2794,6 +2794,37 @@
                       }
                     ]
                   },
+                  "tls": {
+                    "type": "object",
+                    "description": "TLS configuration for the NATS provider.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "insecure_skip_ca_verification": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Skip server certificate verification. Not recommended for production use."
+                      },
+                      "ca_file": {
+                        "type": "string",
+                        "description": "Path to a custom CA certificate file (PEM) used to verify the server certificate.",
+                        "format": "file-path"
+                      },
+                      "cert_file": {
+                        "type": "string",
+                        "description": "Path to the client certificate file (PEM) for mTLS. If set 'key_file' has to be set as well.",
+                        "format": "file-path"
+                      },
+                      "key_file": {
+                        "type": "string",
+                        "description": "Path to the client private key file (PEM) for mTLS. If set 'cert_file' has to be set as well.",
+                        "format": "file-path"
+                      }
+                    },
+                    "dependencies": {
+                      "cert_file": ["key_file"],
+                      "key_file": ["cert_file"]
+                    }
+                  },
                   "experiment_delete_durable_consumers_on_shutdown": {
                     "type": "boolean",
                     "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down normally. Defaults to false. NOTE: This option is experimental and may change in future versions.",
