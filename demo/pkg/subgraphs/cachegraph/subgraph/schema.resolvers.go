@@ -12,15 +12,6 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model"
 )
 
-// userProfileIDByAuthorizationToken maps the demo Authorization bearer tokens to
-// user ids. Used by the UserProfile resolver to vary its response per caller so
-// that @openfed__queryCache(includeHeaders: true) has a detectable signal.
-var userProfileIDByAuthorizationToken = map[string]string{
-	"Bearer token-alice":   "u1",
-	"Bearer token-bob":     "u2",
-	"Bearer token-charlie": "u3",
-}
-
 // UpdateArticle is the resolver for the updateArticle field.
 func (r *mutationResolver) UpdateArticle(ctx context.Context, id string, title string) (*model.Article, error) {
 	return r.articles.update(id, title), nil

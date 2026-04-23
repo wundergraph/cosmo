@@ -3914,13 +3914,7 @@ export class NormalizationFactory {
 
     const isListReturn = isTypeNodeListType(fieldData.node.type);
     const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
-    const mappings = this.buildArgumentKeyMappings(
-      fieldData,
-      fieldCoords,
-      returnTypeName,
-      keyFieldSets,
-      isListReturn,
-    );
+    const mappings = this.buildArgumentKeyMappings(fieldData, fieldCoords, returnTypeName, keyFieldSets, isListReturn);
 
     const configData = this.getCacheConfigurationData(parentTypeName, false);
     if (!configData.rootFieldCacheConfigurations) {
