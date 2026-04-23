@@ -2,11 +2,11 @@
 * @wundergraph/Cosmo @wundergraph/Router
 
 # Protect the CODEOWNERS file
-/.github/CODEOWNERS @StarpTech
+/.github/CODEOWNERS @StarpTech @Aenimus
 
 /admission-server/ @JivusAyrus @StarpTech @thisisnithin @wilsonrivera @Aenimus
 /cdn-server/ @JivusAyrus @StarpTech @thisisnithin @wilsonrivera @Aenimus
-/cli/ @endigma @JivusAyrus @StarpTech @jensneuse @wilsonrivera @wilsonrivera @aenimus
+/cli/ @endigma @JivusAyrus @StarpTech @jensneuse @wilsonrivera @wilsonrivera @Aenimus
 /composition/ @Aenimus @JivusAyrus @StarpTech @thisisnithin @wilsonrivera
 /composition-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @thisisnithin @wilsonrivera
 /connect/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera
