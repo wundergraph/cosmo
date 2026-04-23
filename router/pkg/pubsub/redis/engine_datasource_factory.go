@@ -121,6 +121,9 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, 
 func (c *EngineDataSourceFactory) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
 	switch c.eventType {
 	case EventTypePublish:
+		if len(c.channels) != 1 {
+			return fmt.Errorf("publish event definition should define one channel but has %d", len(c.channels))
+		}
 		extractedChannel, err := extractFn(c.channels[0])
 		if err != nil {
 			return fmt.Errorf("unable to parse channel with id %s", c.channels[0])
