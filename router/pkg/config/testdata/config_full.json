@@ -618,6 +618,7 @@
           "Audiences": null
         }
       ],
+      "ScopeClaim": "customscp",
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": [
@@ -689,6 +690,7 @@
           "ID": "default",
           "URL": "nats://localhost:4222",
           "Authentication": null,
+          "TLS": null,
           "DeleteDurableConsumersOnShutdown": false
         },
         {
@@ -701,6 +703,7 @@
             },
             "Token": null
           },
+          "TLS": null,
           "DeleteDurableConsumersOnShutdown": false
         }
       ],

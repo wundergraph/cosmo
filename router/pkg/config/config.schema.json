@@ -2108,6 +2108,12 @@
                 ]
               }
             },
+            "scope_claim": {
+              "type": "string",
+              "description": "The JWT claim to use when reading scopes for authorization. Only top level claims are supported. The default value is 'scope'.",
+              "default": "scope",
+              "minLength": 1
+            },
             "header_name": {
               "type": "string",
               "description": "The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.",
@@ -2787,6 +2793,37 @@
                         }
                       }
                     ]
+                  },
+                  "tls": {
+                    "type": "object",
+                    "description": "TLS configuration for the NATS provider.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "insecure_skip_ca_verification": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Skip server certificate verification. Not recommended for production use."
+                      },
+                      "ca_file": {
+                        "type": "string",
+                        "description": "Path to a custom CA certificate file (PEM) used to verify the server certificate.",
+                        "format": "file-path"
+                      },
+                      "cert_file": {
+                        "type": "string",
+                        "description": "Path to the client certificate file (PEM) for mTLS. If set 'key_file' has to be set as well.",
+                        "format": "file-path"
+                      },
+                      "key_file": {
+                        "type": "string",
+                        "description": "Path to the client private key file (PEM) for mTLS. If set 'cert_file' has to be set as well.",
+                        "format": "file-path"
+                      }
+                    },
+                    "dependencies": {
+                      "cert_file": ["key_file"],
+                      "key_file": ["cert_file"]
+                    }
                   },
                   "experiment_delete_durable_consumers_on_shutdown": {
                     "type": "boolean",

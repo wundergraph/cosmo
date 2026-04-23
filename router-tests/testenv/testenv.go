@@ -1804,23 +1804,33 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
-			require.NoError(t, err)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(requestLog)
-			require.NoError(t, err)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			return
 		}
+
 		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
-		if authorization == "" {
-			require.NotEmpty(t, authorization, "missing authorization header")
+		token, ok := strings.CutPrefix(authorization, "Bearer ")
+		if !ok {
+			http.Error(w, "missing or malformed Bearer token", http.StatusUnauthorized)
+			return
 		}
-		token := authorization[len("Bearer "):]
 		parsedClaims := make(jwt.MapClaims)
 		jwtParser := new(jwt.Parser)
-		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		require.NoError(t, err)
+		if _, _, err := jwtParser.ParseUnverified(token, parsedClaims); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
 		cdnFileServer.ServeHTTP(w, r)
 	})
 	cdnServer = httptest.NewServer(handler)

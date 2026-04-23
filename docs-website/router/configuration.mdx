@@ -1563,6 +1563,7 @@ In addition to the above JWKS configuration flavours, you can define a list of a
 
 | YAML                | Required               | Description                                                                                                                   | Default Value |
 | ------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| scope_claim         | <Icon icon="square" /> | The JWT claim used to read scopes for authorization. Use this when your identity provider stores scopes in a claim other than `scope`. Only top level claims are supported. | scope         |
 | header_name         | <Icon icon="square" /> | The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.       | Authorization |
 | header_value_prefix | <Icon icon="square" /> | The prefix of the header value. The prefix is used to extract the token from the header value. The default value is 'Bearer'. | Bearer        |
 
@@ -1598,6 +1599,7 @@ authentication:
           interval: 30s
           burst: 2
     header_name: Authorization # This is the default value
+    scope_claim: scope # This is the default value
     header_value_prefix: Bearer # This is the default value
     header_sources:
       - type: header
@@ -1709,6 +1711,10 @@ events:
           user_info:
             username: "username"
             password: "password"
+        tls:
+          ca_file: /path/to/ca.crt
+          cert_file: /path/to/client.crt
+          key_file: /path/to/client.key
     kafka:
       - id: my-kafka
         tls:
@@ -1742,6 +1748,60 @@ events:
 |                      | authentication.user_info          | <Icon icon="square" />                        | User-Info based authentication.                                                          |               |
 |                      | authentication.user_info.username | <Icon icon="square" />                        | Username.                                                                                |               |
 |                      | authentication.user_info.password | <Icon icon="square" />                        | Password.                                                                                |               |
+|                      | tls                               | <Icon icon="square" />                        | TLS configuration for the NATS provider.                                                 |               |
+|                      | tls.insecure_skip_ca_verification | <Icon icon="square" />                        | Skip server certificate verification. Not recommended for production.                    | false         |
+|                      | tls.ca_file                       | <Icon icon="square" />                        | Path to a custom CA certificate file (PEM) used to verify the server certificate. Defaults to the host's system trust store. |               |
+|                      | tls.cert_file                     | <Icon icon="square" />                        | Path to the client certificate file (PEM) for mTLS. Must be set together with `key_file`.             |               |
+|                      | tls.key_file                      | <Icon icon="square" />                        | Path to the client private key file (PEM) for mTLS. Must be set together with `cert_file`.            |               |
+
+#### TLS
+
+The NATS provider supports four TLS modes:
+
+| Mode | Config |
+|---|---|
+| No TLS | Omit the `tls` block |
+| TLS with skip verify | `insecure_skip_ca_verification: true` |
+| TLS with custom CA | `ca_file: /path/to/ca.crt` |
+| Mutual TLS (mTLS) | `cert_file` + `key_file` (plus optional `ca_file`) |
+
+<CodeGroup>
+  ```yaml Skip verify (dev/self-signed)
+  events:
+    providers:
+      nats:
+        - id: my-nats
+          url: "nats://localhost:4222"
+          tls:
+            insecure_skip_ca_verification: true
+  ```
+
+  ```yaml Custom CA (1-way TLS)
+  events:
+    providers:
+      nats:
+        - id: my-nats
+          url: "nats://localhost:4222"
+          tls:
+            ca_file: /path/to/ca.crt
+  ```
+
+  ```yaml Mutual TLS (mTLS)
+  events:
+    providers:
+      nats:
+        - id: my-nats
+          url: "nats://localhost:4222"
+          tls:
+            ca_file: /path/to/ca.crt
+            cert_file: /path/to/client.crt
+            key_file: /path/to/client.key
+  ```
+</CodeGroup>
+
+<Warning>
+  `insecure_skip_ca_verification: true` disables server certificate verification. Do not use in production.
+</Warning>
 
 ### Kafka Provider
 
