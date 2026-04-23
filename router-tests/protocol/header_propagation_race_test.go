@@ -119,8 +119,8 @@ func TestHeaderPropagationConcurrentMapWrites(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 			require.Equal(t, expectedResponse, res.Body)
 
-			require.Equal(t, "", res.Response.Header.Get("X-Header-A"), "set response headers should not be forwarded to the client")
-			require.Equal(t, "", res.Response.Header.Get("X-Header-B"), "set response headers should not be forwarded to the client")
+			require.Empty(t, res.Response.Header.Get("X-Header-A"), "set response headers should not be forwarded to the client")
+			require.Empty(t, res.Response.Header.Get("X-Header-B"), "set response headers should not be forwarded to the client")
 		})
 	})
 }

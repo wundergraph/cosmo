@@ -166,9 +166,5 @@ cache_control_policy:
 ```
 
 <Warning>
-As such we recommend not using this method and simply sticking to using the `subgraph` configuration in `cache_control_policy`, as it makes things more explicit and clearer.
+    We do not recommend using this method, simply sticking to using the `subgraph` configuration in `cache_control_policy` makes things more explicit and clearer.
 </Warning>
-
-<Note>
-  Until router version VERSION, setting a `Cache-Control` header would do a hard override of whatever value would be computed by the `cache_control_policy` configuration. This has been changed since.
-</Note>

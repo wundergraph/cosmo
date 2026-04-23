@@ -86,6 +86,8 @@ Currently, we support the following header rules:
 
   * `default` - Fallback to this value when the `named`, `matching` or `rename` header could not be found.
 
+* **set** - Sets a header on the response from the subgraph to the router.
+
 <Note>
   Go canonicalizes headers by default e.g. `x-my-header` to `X-My-Header.` Write your rule accordingly or use `(?i)``^X-Test-.*` flags to make your regex case insensitive.
 </Note>
@@ -104,13 +106,8 @@ Within each scope, rules execute in definition order. This means a `set` rule de
 
 The `set` operation injects a header value into the subgraph response, making it appear as if the subgraph returned it. This value is then processed by downstream rules (e.g., `propagate` rules or the [restrictive cache control algorithm](/router/proxy-capabilities/adjusting-cache-control)).
 
-<Note>
-The `set` value is **not** forwarded to the client response.
-</Note>
-
-
 <Warning>
-You can use `set` to set a header value and then use a `propagate` rule to forward that same header to the client. However, we would caution against this, as the header will not be propagated if no subgraph was actually called.
+    The `set` value is **not** forwarded to the client response unless a `propagate` rule explicitly forwards it. We caution against relying on this pattern, as the header will not be propagated if no subgraph is actually called.
 </Warning>
 
 ### Configuration
@@ -120,25 +117,4 @@ You can use `set` to set a header value and then use a `propagate` rule to forwa
 
 ### Example: Setting Cache Control on a Subgraph Response
 
-```yaml
-cache_control_policy:
-  enabled: true
-  value: "max-age=180, public"
-
-headers:
-  subgraphs:
-    specific-subgraph:
-      response:
-        - op: "set"
-          name: "Cache-Control"
-          value: "max-age=5400"
-```
-
-In this example, when a request hits `specific-subgraph`, the `Cache-Control: max-age=5400` value is injected into the subgraph response. The restrictive cache control algorithm then processes this value alongside other subgraph responses to compute the final `Cache-Control` header sent to the client. This is equivalent to doing
-
-```
-cache_control_policy:
-  enabled: true
-  value: "max-age=180, public"
-
-```
+While users can use `set` on to set `Cache-Control` headers on subgraph responses, we instead recommend using the [`cache_control_policy` configuration](/router/proxy-capabilities/adjusting-cache-control).
