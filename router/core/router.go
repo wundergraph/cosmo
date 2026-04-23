@@ -319,7 +319,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defaultCorsHeaders := []string{
 		// Common headers
 		"authorization",
