@@ -10,7 +10,7 @@ import {
 } from '../../schema-building/types';
 import { type ConstDirectiveNode, type DocumentNode, type InputValueDefinitionNode, type ValueNode } from 'graphql';
 import { type RequiredFieldConfiguration } from '../../router-configuration/types';
-import { type DirectiveArgumentCoords, type SubgraphName } from '../../types/types';
+import { type DirectiveArgumentCoords, type DirectiveName, type SubgraphName } from '../../types/types';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -85,7 +85,7 @@ export type HandleListSizeDirectiveParams = {
 export type RecordDirectiveWeightOnFieldParams = {
   data: FieldData;
   definitionData: DirectiveDefinitionData;
-  directiveName: string;
+  directiveName: DirectiveName;
   directiveNode: ConstDirectiveNode;
 };
 
