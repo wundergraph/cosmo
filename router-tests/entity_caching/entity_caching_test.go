@@ -29,7 +29,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
@@ -57,7 +57,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			reqItem1 := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
@@ -88,7 +88,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{ items { id description rating } }`,
@@ -115,7 +115,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			require.Equal(t, 0, cache.Len())
 
@@ -161,7 +161,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Fetch description (from details subgraph)
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -199,7 +199,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description available } }`,
@@ -254,7 +254,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
 				setEntityCachePartialLoad(routerConfig, true)
 			},
@@ -302,7 +302,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
 				setEntityCacheTTL(routerConfig, 1)
 			},
@@ -369,7 +369,7 @@ func TestEntityCaching(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions: append(
-				entityCachingOptions(cache),
+				entityCachingL2OnlyOptions(cache),
 				core.WithHeaderRules(config.HeaderRules{
 					All: &config.GlobalHeaderRule{
 						Request: []*config.RequestHeaderRule{
@@ -428,7 +428,7 @@ func TestEntityCaching(t *testing.T) {
 		// has no record for the new id — entity hydration will return null.
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
 				setNotFoundCacheTTL(routerConfig, 60)
 			},
@@ -475,7 +475,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
@@ -512,7 +512,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{ items { id name description } }`,
@@ -552,7 +552,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Different arguments must produce different cache keys (two entries).
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -620,7 +620,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
@@ -653,7 +653,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			lenBefore := cache.Len()
 
@@ -692,71 +692,6 @@ func TestEntityCaching(t *testing.T) {
 				readRes.Body)
 			require.Equal(t, itemsAfterMutation, counters.items.Load(),
 				"follow-up read must be a cache hit (items subgraph not called); with L2 disabled this counter would be itemsAfterMutation+1")
-		})
-	})
-
-	t.Run("L1/deduplicates repeated entity loads", func(t *testing.T) {
-		// This test was originally `a: item(id:"1") b: item(id:"1")` asserting
-		// "L1 dedupes the details fetch to one call". SkArchon (review comment
-		// 2987855765) correctly pointed out that the engine planner merges
-		// identical subgraph selections into a single `_entities` call, so the
-		// assertion is vacuous — it passes with L1 disabled.
-		//
-		// Attempting to work around this with DIFFERENT root fields
-		// (`viaItem: item(id:)` + `viaPid: itemByPid(pid:)`) also fails to
-		// distinguish L1 on/off: both root fields funnel into ONE details
-		// `_entities([Item#1])` batch at the planner level, regardless of L1.
-		//
-		// The only schema shapes that force SEPARATE entity fetches to the
-		// same subgraph within a single request involve sequential dependent
-		// fetches (e.g. `@requires` chains via Viewer/Article in the
-		// articles subgraph). Those are already covered by:
-		//   - request_scoped_nested_dedup
-		//   - request_scoped_widening_refetch
-		// which test the COORDINATE L1 (per-request `@requestScoped` cache)
-		// rather than the per-entity-key L1.
-		//
-		// Rather than ship a second vacuous assertion, this test now just
-		// pins the `a/b` alias query's correctness (no duplicate data, no
-		// crash). The truthful L1 coordinate dedup assertion lives in
-		// request_scoped_nested_dedup.
-		t.Parallel()
-
-		servers, counters := startSubgraphServers(t)
-		configJSON := buildConfigJSON(servers)
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: configJSON,
-			RouterOptions: []core.Option{
-				core.WithEntityCaching(config.EntityCachingConfiguration{
-					Enabled: true,
-					L1: config.EntityCachingL1Configuration{
-						Enabled: true,
-					},
-					L2: config.EntityCachingL2Configuration{
-						Enabled: false,
-					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{
-					a: item(id: "1") { id name description }
-					b: item(id: "1") { id name description }
-				}`,
-			})
-			require.Equal(t,
-				`{"data":{"a":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"},`+
-					`"b":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`,
-				res.Body,
-				"aliased reads of the same entity must return identical data")
-
-			// Planner-level merging collapses the two aliased selections into
-			// one subgraph call. This assertion only documents the planner
-			// behavior; see the header comment for why this is not a truthful
-			// L1-on-vs-off assertion.
-			require.Equal(t, int64(1), counters.details.Load(),
-				"planner merges the aliased _entities fetch into one call")
 		})
 	})
 
@@ -881,7 +816,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
@@ -950,7 +885,7 @@ func TestEntityCaching(t *testing.T) {
 		var itemCreatedPopulate *nodev1.CachePopulateConfiguration
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 			ModifyRouterConfig: func(rc *nodev1.RouterConfig) {
 				for _, ds := range rc.EngineConfig.DatasourceConfigurations {
 					for _, cp := range ds.CachePopulateConfigurations {
@@ -977,7 +912,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Start subscription via WebSocket (itemCreated has @cachePopulate)
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
@@ -1022,7 +957,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Warm cache with extension OFF
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -1067,7 +1002,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// createItem has @cachePopulate(maxAge: 60). The truthful signal is
 			// that the follow-up read-by-id is served from cache — i.e. the
@@ -1169,7 +1104,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Warm cache: first request populates both the root-field L2 entry and
 			// the Item entity L2 entry.
@@ -1252,7 +1187,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Query using @is-mapped argument (pid maps to @key field "id")
 			// Include cross-subgraph field (description from details) to trigger entity caching
@@ -1329,7 +1264,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
 				setNotFoundCacheTTL(routerConfig, 1) // 1 second not-found cache TTL
 			},
@@ -1397,7 +1332,7 @@ func TestEntityCaching(t *testing.T) {
 		// its zero default to exercise the unset-fallback path.
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Create an id that exists in items-subgraph but not in details.
 			createRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -1453,7 +1388,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
 				setEntityCachePartialLoad(routerConfig, true)
 			},
@@ -1490,7 +1425,7 @@ func TestEntityCaching(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions: append(
-				entityCachingOptions(cache),
+				entityCachingL2OnlyOptions(cache),
 				core.WithHeaderRules(config.HeaderRules{
 					All: &config.GlobalHeaderRule{
 						Request: []*config.RequestHeaderRule{
@@ -1542,7 +1477,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
 				// Override @cachePopulate(maxAge:60) down to 1 second.
 				setCachePopulateTTL(routerConfig, 1)
@@ -1608,7 +1543,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// itemsByIds uses @is(fields: "id") with a list argument → batch cache lookup.
 			// Each element in the ids list maps to one entity cache key.
@@ -1642,7 +1577,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Warm cache for id:"1" only
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -1672,7 +1607,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// product(id, region) auto-maps both args to @key(fields: "id region").
 			// The cache key includes both id AND region.
@@ -1708,7 +1643,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Product has @key(fields: "id region") and @key(fields: "sku").
 			// productBySku only provides sku → only the sku key is satisfiable.
@@ -1745,7 +1680,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// productByName(name) — "name" doesn't match any @key field.
 			// No entity key mapping is emitted, so no per-entity cache keys
@@ -1778,7 +1713,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// productByKey uses an input object argument with @is(fields: "id region").
 			// The composition decomposes this into argumentPath ["key","id"] and ["key","region"],
@@ -1818,7 +1753,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// warehouse(locationId) uses @is(fields: "location.id") to map a scalar
 			// argument to the nested key path @key(fields: "location { id }").
@@ -1854,7 +1789,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// productByKey uses an input object argument with @is(fields: "id region").
 			// Querying only items-subgraph fields (id, region, name) verifies that
@@ -1888,7 +1823,7 @@ func TestEntityCaching(t *testing.T) {
 	// and the planner generates RequestScopedExports/Hints), this test should
 	// be extended to verify that the details subgraph is called fewer times
 	// across multiple entity batches within a single request.
-	t.Run("L1/request-scoped field deduplication", func(t *testing.T) {
+	t.Run("L2/list entity batch caches across requests", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1897,11 +1832,10 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Query a list of items. Each item triggers entity resolution to
-			// the details subgraph for description. Without @requestScoped,
-			// all entities are batched into one _entities call.
+			// the details subgraph for description, batched into one _entities call.
 			req := testenv.GraphQLRequest{
 				Query: `{ items { id name description } }`,
 			}
@@ -1926,7 +1860,7 @@ func TestEntityCaching(t *testing.T) {
 	// a subset of fields (e.g., description only), a subsequent request
 	// asking for additional fields from the same subgraph (e.g., description
 	// + rating) correctly fetches the wider field set from the subgraph.
-	t.Run("L1/field widening across requests", func(t *testing.T) {
+	t.Run("L2/field widening across requests", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -1935,7 +1869,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Request 1: fetch only description from details subgraph
 			res1 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -1983,7 +1917,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Warm cache: fetch extension fields for entity 1 and entity 2
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -2030,7 +1964,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{ itemsByIds(ids: ["1", "2"]) { id name description } }`,
@@ -2109,11 +2043,10 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL1OnlyOptions(),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{
@@ -2186,11 +2119,10 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL1OnlyOptions(),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req := testenv.GraphQLRequest{
 				Query: `{
@@ -2238,6 +2170,62 @@ func TestEntityCaching(t *testing.T) {
 					"(currently fails: the planner launches BatchEntity viewer fetches "+
 					"for deeper Article.currentViewer sites in parallel with the L1 "+
 					"injection check, paying the subgraph round-trip unnecessarily)")
+		})
+	})
+
+	// Inverse of L1/request-scoped nested dedup: when the coordinate L1 cache
+	// is disabled, every Article.currentViewer site must issue its own BatchEntity
+	// fetch to the viewer subgraph. Without this counter-assertion, the dedup
+	// test above could silently turn into a no-op if the planner ever started
+	// merging the three selection sites on its own.
+	t.Run("L1-disabled/request-scoped nested no-dedup baseline", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingDisabledOptions(),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req := testenv.GraphQLRequest{
+				Query: `{
+					currentViewer {
+						id
+						name
+						email
+						recommendedArticles {
+							id
+							title
+							currentViewer {
+								id
+								name
+								email
+							}
+							relatedArticles {
+								id
+								title
+								currentViewer {
+									id
+									name
+									email
+								}
+							}
+						}
+					}
+				}`,
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Contains(t, res.Body, `"currentViewer":{"id":"v1","name":"Alice","email":"alice@example.com"}`)
+
+			// Without L1 coordinate caching, the viewer subgraph is hit three times:
+			//   1. Root Query.currentViewer
+			//   2. Viewer._entities for recommendedArticles[].currentViewer (batched)
+			//   3. Viewer._entities for relatedArticles[].currentViewer (batched)
+			require.Equal(t, int64(3), counters.viewer.Load(),
+				"with L1 disabled, each Article.currentViewer site must hit the "+
+					"viewer subgraph; if this ever drops below 3 the companion dedup "+
+					"test is no longer proving anything")
 		})
 	})
 
@@ -2434,7 +2422,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// createItem has @cachePopulate(maxAge: 60). The mutation must populate L2
 			// with the returned Item entity under its @key("id") cache key.
@@ -2495,7 +2483,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			warmReq := testenv.GraphQLRequest{
 				Query: `{ product(id: "p1", region: "US") { id region sku name } }`,
@@ -2549,7 +2537,7 @@ func TestEntityCaching(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(cache),
+			RouterOptions:            entityCachingL2OnlyOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// IMPORTANT: this query does NOT select the @key field (`location { id }`).
 			// Reproduces the cache-demo Venue failure where queries that omit the
@@ -2660,7 +2648,7 @@ func TestEntityCaching(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions: append(
-				entityCachingOptions(cache),
+				entityCachingL2OnlyOptions(cache),
 				core.WithHeaderRules(config.HeaderRules{
 					All: &config.GlobalHeaderRule{
 						Request: []*config.RequestHeaderRule{

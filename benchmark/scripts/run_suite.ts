@@ -40,7 +40,7 @@ function validate(): void {
   }
 }
 
-function parseArgs(): {
+export function parseArgs(argv: string[] = process.argv.slice(2)): {
   scenario?: string;
   all: boolean;
   vus: number;
@@ -48,13 +48,40 @@ function parseArgs(): {
   rampUp: string;
   rampDown: string;
 } {
-  const args = process.argv.slice(2);
+  const args = argv;
   let scenario: string | undefined;
   let all = false;
   let vus = 20;
   let duration = "2m";
   let rampUp = "30s";
   let rampDown = "10s";
+
+  const takeValue = (flag: string, idx: number): string => {
+    const raw = args[idx + 1];
+    if (raw === undefined || raw.startsWith("--")) {
+      throw new Error(`missing value for ${flag}`);
+    }
+    return raw;
+  };
+
+  const parsePositiveInt = (flag: string, raw: string): number => {
+    const n = Number(raw);
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+      throw new Error(`${flag} must be a positive integer, got "${raw}"`);
+    }
+    return n;
+  };
+
+  // Loose but enough to catch typos and missing values: "1s", "30s", "2m", "1h",
+  // or a plain integer millisecond count ("500"). Rejects empty strings and
+  // obviously malformed input like "30" with no unit followed by a letter.
+  const durationPattern = /^\d+(ms|s|m|h)?$/;
+  const parseDuration = (flag: string, raw: string): string => {
+    if (!durationPattern.test(raw)) {
+      throw new Error(`${flag} must look like 30s / 2m / 1h / 500ms, got "${raw}"`);
+    }
+    return raw;
+  };
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
@@ -63,29 +90,31 @@ function parseArgs(): {
       continue;
     }
     if (arg === "--scenario") {
-      scenario = args[i + 1];
+      scenario = takeValue(arg, i);
       i += 1;
       continue;
     }
     if (arg === "--vus") {
-      vus = Number(args[i + 1]);
+      vus = parsePositiveInt(arg, takeValue(arg, i));
       i += 1;
       continue;
     }
     if (arg === "--duration") {
-      duration = args[i + 1] ?? duration;
+      duration = parseDuration(arg, takeValue(arg, i));
       i += 1;
       continue;
     }
     if (arg === "--ramp-up") {
-      rampUp = args[i + 1] ?? rampUp;
+      rampUp = parseDuration(arg, takeValue(arg, i));
       i += 1;
       continue;
     }
     if (arg === "--ramp-down") {
-      rampDown = args[i + 1] ?? rampDown;
+      rampDown = parseDuration(arg, takeValue(arg, i));
       i += 1;
+      continue;
     }
+    throw new Error(`unknown argument: ${arg}`);
   }
 
   return { scenario, all, vus, duration, rampUp, rampDown };
@@ -484,38 +513,64 @@ async function runScenarios(args: {
   }
 }
 
-const subcommand = process.argv[2];
-
-if (subcommand === "validate") {
-  validate();
-} else if (subcommand === "summarize") {
-  const resultsRoot = process.argv[3];
-  if (!resultsRoot) {
-    console.error(
-      "usage: pnpm dlx tsx benchmark/scripts/run_suite.ts summarize <results-root>",
-    );
-    process.exit(1);
+// Only run the CLI entry when this module is executed directly. Importing it
+// (e.g. from run_suite.test.ts) must not parse process.argv or exit.
+function isMainModule(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  // Compare resolved paths so symlinks / "tsx ./scripts/run_suite.ts" /
+  // "tsx scripts/run_suite.ts" all match.
+  try {
+    return path.resolve(entry) === path.resolve(__filename);
+  } catch {
+    // __filename is undefined under ESM; fall back to URL comparison.
+    return import.meta.url === new URL(entry, "file:").href;
   }
-  writeSuiteSummary(path.resolve(resultsRoot));
-} else {
-  const args = parseArgs();
-  if (!args.all && !args.scenario) {
-    console.error(
-      "usage: pnpm dlx tsx benchmark/scripts/run_suite.ts validate | --all | --scenario <name> [--vus <n>] [--duration <dur>] [--ramp-up <dur>] [--ramp-down <dur>]",
-    );
-    process.exit(1);
-  }
+}
 
-  runScenarios({
-    scenarioNames: args.all
-      ? loadManifest().scenarios.map((scenario) => scenario.name)
-      : [args.scenario as string],
-    vus: args.vus,
-    duration: args.duration,
-    rampUp: args.rampUp,
-    rampDown: args.rampDown,
-  }).catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  });
+if (isMainModule()) {
+  const subcommand = process.argv[2];
+
+  if (subcommand === "validate") {
+    validate();
+  } else if (subcommand === "summarize") {
+    const resultsRoot = process.argv[3];
+    if (!resultsRoot) {
+      console.error(
+        "usage: pnpm dlx tsx benchmark/scripts/run_suite.ts summarize <results-root>",
+      );
+      process.exit(1);
+    }
+    writeSuiteSummary(path.resolve(resultsRoot));
+  } else {
+    let args: ReturnType<typeof parseArgs>;
+    try {
+      args = parseArgs();
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      console.error(
+        "usage: pnpm dlx tsx benchmark/scripts/run_suite.ts validate | --all | --scenario <name> [--vus <n>] [--duration <dur>] [--ramp-up <dur>] [--ramp-down <dur>]",
+      );
+      process.exit(1);
+    }
+    if (!args.all && !args.scenario) {
+      console.error(
+        "usage: pnpm dlx tsx benchmark/scripts/run_suite.ts validate | --all | --scenario <name> [--vus <n>] [--duration <dur>] [--ramp-up <dur>] [--ramp-down <dur>]",
+      );
+      process.exit(1);
+    }
+
+    runScenarios({
+      scenarioNames: args.all
+        ? loadManifest().scenarios.map((scenario) => scenario.name)
+        : [args.scenario as string],
+      vus: args.vus,
+      duration: args.duration,
+      rampUp: args.rampUp,
+      rampDown: args.rampDown,
+    }).catch((error: unknown) => {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    });
+  }
 }

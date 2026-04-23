@@ -2,7 +2,7 @@
 
 ## The Schema (3 Subgraphs)
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │  cachegraph (port 4012)                                             │
 │                                                                     │
@@ -87,7 +87,7 @@ Without caching, this would require **7+ subgraph calls**.
 
 ## Request 1 — Cold Cache
 
-```
+```text
  Step  Subgraph          Path                              What Happens
 ═══════════════════════════════════════════════════════════════════════════════════════
   1   ┌─ viewer          /                                 FETCH Query.currentViewer
@@ -125,7 +125,7 @@ Without caching, this would require **7+ subgraph calls**.
 
 ## Request 2 — Warm Cache (Same Query)
 
-```
+```text
  Step  Subgraph          Path                              What Happens
 ═══════════════════════════════════════════════════════════════════════════════════════
   1   ┌─ viewer          /                                 FETCH Query.currentViewer
@@ -156,7 +156,7 @@ Without caching, this would require **7+ subgraph calls**.
 
 ## The Three Cache Layers at Work
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        CLIENT REQUEST                               │
 │  { currentViewer { ... } articles { ... currentViewer { ... } } }   │
@@ -226,7 +226,7 @@ Without caching, this would require **7+ subgraph calls**.
 
 ## Before vs After: Subgraph Calls
 
-```
+```text
                           Without Caching          With Entity Caching
                           ─────────────────        ─────────────────────
 
@@ -257,7 +257,7 @@ Without caching, this would require **7+ subgraph calls**.
 
 ## Key Mapping Examples
 
-```
+```text
  Schema                                     Config Output
  ──────                                     ─────────────
 

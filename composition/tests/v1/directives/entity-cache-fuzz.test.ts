@@ -157,43 +157,29 @@ describe('Entity caching fuzz tests', () => {
       );
     });
 
-    test('6. @openfed__is(fields: "id id") — duplicate field reference in @openfed__is', () => {
-      // The @openfed__is value "id id" references the same key field twice.
-      // This might be treated as a composite @openfed__is spec (contains space).
-      // Expect: either an error about duplicate mapping or a parse failure.
-      // Let's see what actually happens.
-      const sg = subgraph(`
-        type Query {
-          product(key: ProductKey! @openfed__is(fields: "id id")): Product @openfed__queryCache(maxAge: 30)
-        }
-        input ProductKey {
-          id: ID!
-        }
-        type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
-          id: ID!
-          name: String!
-        }
-      `);
-      const result = batchNormalize({ subgraphs: [sg], version });
-      // We just want to know if it silently succeeds with a broken config
-      // or produces a meaningful error. Either is acceptable as long as it's not silent corruption.
-      if (result.success) {
-        const internal = (result as BatchNormalizationSuccess).internalSubgraphBySubgraphName.get(sg.name);
-        const queryConfig = internal!.configurationDataByTypeName.get(QUERY as TypeName);
-        if (queryConfig?.rootFieldCacheConfigurations) {
-          // If it produced a config, the mappings should not have duplicates
-          const mappings = queryConfig.rootFieldCacheConfigurations[0]?.entityKeyMappings;
-          // If mappings exist, they should be sensible
-          if (mappings && mappings.length > 0) {
-            for (const m of mappings) {
-              const keyFields = m.fieldMappings.map((f) => f.entityKeyField);
-              const uniqueKeyFields = new Set(keyFields);
-              expect(keyFields.length).toBe(uniqueKeyFields.size);
-            }
+    test('6. @openfed__is(fields: "id id") — composition error about unknown @key field', () => {
+      // The "id id" fields value is a single field-set string. The field-set
+      // validator resolves it against @key(fields: "id") on Product and reports
+      // an unknown-key-field error rather than accepting a duplicate mapping.
+      const { errors } = normalizeSubgraphFailure(
+        subgraph(`
+          type Query {
+            product(key: ProductKey! @openfed__is(fields: "id id")): Product @openfed__queryCache(maxAge: 30)
           }
-        }
-      }
-      // If it errored, that's fine — just not silent corruption
+          input ProductKey {
+            id: ID!
+          }
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+        `),
+        version,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain(
+        '@openfed__is(fields: "id id") on argument "key" of field "Query.product" references unknown @key field "id id" on type "Product".',
+      );
     });
   });
 
@@ -259,32 +245,24 @@ describe('Entity caching fuzz tests', () => {
       expect(schema).toBeDefined();
     });
 
-    test('10. Multiple @openfed__entityCache on same type (repeated directive) — only first is used', () => {
-      // @openfed__entityCache is NOT marked repeatable, so GraphQL validation should reject this.
-      // But if it gets past parsing, only the first directive is processed.
-      // Let's see what happens.
-      const sg = subgraph(`
-        type Query { product(id: ID!): Product }
-        type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) @openfed__entityCache(maxAge: 120) {
-          id: ID!
-          name: String!
-        }
-      `);
-      const result = batchNormalize({ subgraphs: [sg], version });
-      if (result.success) {
-        const internal = (result as BatchNormalizationSuccess).internalSubgraphBySubgraphName.get(sg.name);
-        const productConfig = internal!.configurationDataByTypeName.get('Product' as TypeName);
-        // If it succeeds, the second @openfed__entityCache should be silently ignored
-        // (the code processes entityCacheDirectives[0] only).
-        // This is technically correct but could be surprising — the user might expect
-        // the second TTL to win or get an error about duplicates.
-        if (productConfig?.entityCacheConfigurations) {
-          expect(productConfig.entityCacheConfigurations).toHaveLength(1);
-          // Should be the first directive's value (60), not the second (120)
-          expect(productConfig.entityCacheConfigurations[0].maxAgeSeconds).toBe(60);
-        }
-      }
-      // If it errors about non-repeatable directive, that's also correct
+    test('10. Multiple @openfed__entityCache on same type — composition error (non-repeatable)', () => {
+      // @openfed__entityCache is not marked repeatable. Declaring it twice on
+      // the same type must produce the standard "not repeatable" composition
+      // error, not silently pick one TTL.
+      const { errors } = normalizeSubgraphFailure(
+        subgraph(`
+          type Query { product(id: ID!): Product }
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) @openfed__entityCache(maxAge: 120) {
+            id: ID!
+            name: String!
+          }
+        `),
+        version,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain(
+        'The definition for the directive "@openfed__entityCache" does not define it as repeatable, but it is declared more than once on these coordinates.',
+      );
     });
   });
 
@@ -409,9 +387,12 @@ describe('Entity caching fuzz tests', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('@openfed__is with input objects', () => {
-    test('15. @openfed__is(fields: "id sku") with input object having EXTRA fields — should error', () => {
-      // Input object has "id", "sku", and "extra". The "extra" field is not a key field.
-      // With explicit @openfed__is, extra non-key arguments should be an error.
+    test('15. @openfed__is(fields: "id sku") with input object having EXTRA fields — succeeds, extra field ignored', () => {
+      // Extra non-key fields on the input object are tolerated when the
+      // @openfed__is spec names only the key fields. The mapping is emitted
+      // exactly for "id" and "sku"; the "extra" field is not part of the
+      // cache key. Any future change that starts rejecting this case, or
+      // starts including "extra" in the mapping, must update this assertion.
       const sg = subgraph(`
         type Query {
           product(key: ProductKey! @openfed__is(fields: "id sku")): Product @openfed__queryCache(maxAge: 30)
@@ -428,63 +409,52 @@ describe('Entity caching fuzz tests', () => {
         }
       `);
       const result = batchNormalize({ subgraphs: [sg], version });
-      // Extra fields in the input object beyond key fields should cause an error
-      // about additional non-key arguments, since they make the cache key incomplete.
-      if (result.success) {
-        const internal = (result as BatchNormalizationSuccess).internalSubgraphBySubgraphName.get(sg.name);
-        const queryConfig = internal!.configurationDataByTypeName.get(QUERY as TypeName);
-        // If it succeeded, check if the extra field was silently ignored
-        // (which would be a bug — the cache key would be incomplete)
-        if (queryConfig?.rootFieldCacheConfigurations) {
-          const mappings = queryConfig.rootFieldCacheConfigurations[0]?.entityKeyMappings;
-          if (mappings && mappings.length > 0) {
-            // The mapping should only have id and sku, not extra
-            for (const m of mappings) {
-              for (const f of m.fieldMappings) {
-                expect(f.entityKeyField).not.toBe('extra');
-              }
-            }
-          }
-        }
-      }
+      expect(result.success).toBe(true);
+      const internal = (result as BatchNormalizationSuccess).internalSubgraphBySubgraphName.get(sg.name);
+      const queryConfig = internal!.configurationDataByTypeName.get(QUERY as TypeName);
+      expect(queryConfig?.rootFieldCacheConfigurations).toEqual([
+        {
+          fieldName: 'product',
+          maxAgeSeconds: 30,
+          includeHeaders: false,
+          shadowMode: false,
+          entityTypeName: 'Product',
+          entityKeyMappings: [
+            {
+              entityTypeName: 'Product',
+              fieldMappings: [
+                { entityKeyField: 'id', argumentPath: ['key', 'id'] },
+                { entityKeyField: 'sku', argumentPath: ['key', 'sku'] },
+              ],
+            },
+          ],
+        },
+      ]);
     });
 
-    test('16. @openfed__is(fields: "id sku") with input object MISSING one field — should error', () => {
-      // Input object has "id" but not "sku". The @openfed__is says it maps to both.
-      // Expect: error about missing field in input object.
-      const sg = subgraph(`
-        type Query {
-          product(key: ProductKey! @openfed__is(fields: "id sku")): Product @openfed__queryCache(maxAge: 30)
-        }
-        input ProductKey {
-          id: ID!
-        }
-        type Product @key(fields: "id sku") @openfed__entityCache(maxAge: 60) {
-          id: ID!
-          sku: String!
-          name: String!
-        }
-      `);
-      const result = batchNormalize({ subgraphs: [sg], version });
-      // This should produce an error — the input object can't satisfy the @openfed__is spec.
-      // If it silently succeeds with broken mappings, that's a bug.
-      if (result.success) {
-        const internal = (result as BatchNormalizationSuccess).internalSubgraphBySubgraphName.get(sg.name);
-        const queryConfig = internal!.configurationDataByTypeName.get(QUERY as TypeName);
-        if (queryConfig?.rootFieldCacheConfigurations) {
-          const mappings = queryConfig.rootFieldCacheConfigurations[0]?.entityKeyMappings;
-          // If we got here with mappings, the "sku" field is missing from the input object
-          // so the mapping is incomplete — that's a bug if no error was raised.
-          if (mappings && mappings.length > 0) {
-            for (const m of mappings) {
-              const keyFields = m.fieldMappings.map((f) => f.entityKeyField);
-              // BUG if "sku" is in the mapping but not in the input object
-              // Or if the mapping is emitted at all without "sku"
-            }
+    test('16. @openfed__is(fields: "id sku") with input object MISSING one field — composition error', () => {
+      // The input object is missing "sku", so the @openfed__is spec cannot be
+      // satisfied. This must produce an explicit error naming the missing field.
+      const { errors } = normalizeSubgraphFailure(
+        subgraph(`
+          type Query {
+            product(key: ProductKey! @openfed__is(fields: "id sku")): Product @openfed__queryCache(maxAge: 30)
           }
-        }
-      }
-      // If it errored, that's the correct behavior
+          input ProductKey {
+            id: ID!
+          }
+          type Product @key(fields: "id sku") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            sku: String!
+            name: String!
+          }
+        `),
+        version,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain(
+        'Argument "key" on field "Query.product" uses @openfed__is(fields: "id sku") mapping to composite @key on entity "Product", but input type "ProductKey" is missing required key field "sku".',
+      );
     });
   });
 

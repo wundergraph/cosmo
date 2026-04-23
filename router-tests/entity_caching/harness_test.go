@@ -230,6 +230,58 @@ func entityCachingOptions(cache resolve.LoaderCache) []core.Option {
 	}
 }
 
+// entityCachingL1OnlyOptions enables only the per-request L1 cache.
+// Use in subtests named L1/... so the assertion depends on L1 behavior alone,
+// not on L2 coincidentally helping.
+func entityCachingL1OnlyOptions() []core.Option {
+	return []core.Option{
+		core.WithEntityCaching(config.EntityCachingConfiguration{
+			Enabled: true,
+			L1: config.EntityCachingL1Configuration{
+				Enabled: true,
+			},
+			L2: config.EntityCachingL2Configuration{
+				Enabled: false,
+			},
+		}),
+	}
+}
+
+// entityCachingL2OnlyOptions enables only the cross-request L2 cache.
+// Use in subtests named L2/... so the assertion depends on L2 behavior alone.
+func entityCachingL2OnlyOptions(cache resolve.LoaderCache) []core.Option {
+	return []core.Option{
+		core.WithEntityCaching(config.EntityCachingConfiguration{
+			Enabled: true,
+			L1: config.EntityCachingL1Configuration{
+				Enabled: false,
+			},
+			L2: config.EntityCachingL2Configuration{
+				Enabled: true,
+			},
+		}),
+		core.WithEntityCacheInstances(map[string]resolve.LoaderCache{
+			"default": cache,
+		}),
+	}
+}
+
+// entityCachingDisabledOptions turns both layers off.
+// Use as the baseline for inverse "L1 disabled → N calls" assertions.
+func entityCachingDisabledOptions() []core.Option {
+	return []core.Option{
+		core.WithEntityCaching(config.EntityCachingConfiguration{
+			Enabled: true,
+			L1: config.EntityCachingL1Configuration{
+				Enabled: false,
+			},
+			L2: config.EntityCachingL2Configuration{
+				Enabled: false,
+			},
+		}),
+	}
+}
+
 // clearEntityCacheConfigs removes all entity cache configs from the router config.
 func clearEntityCacheConfigs(rc *nodev1.RouterConfig) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {

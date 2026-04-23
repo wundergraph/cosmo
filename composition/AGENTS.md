@@ -57,15 +57,15 @@ These are independent — a resolver only needs to satisfy ONE key. Each key is 
 | 3    | maxAge must be positive                                                      | Phase 1                  |
 | 4    | @openfed\_\_queryCache only on Query fields                                  | Phase 2                  |
 | 5    | @openfed\_\_queryCache return type must have @key                            | Phase 2                  |
-| 6    | @openfed**queryCache return type must have @openfed**entityCache             | Phase 2                  |
+| 6    | @openfed\_\_queryCache return type must have @openfed\_\_entityCache         | Phase 2                  |
 | 7    | Warning: incomplete key mapping (non-list only)                              | Phase 2                  |
 | 9    | @openfed\_\_queryCache maxAge must be positive                               | Phase 2                  |
-| 10   | @openfed**is only with @openfed**queryCache                                  | Phase 2                  |
+| 10   | @openfed\_\_is only with @openfed\_\_queryCache                              | Phase 2                  |
 | 11   | `@openfed__is(fields: "...")` must reference an existing `@key` field path   | buildArgumentKeyMappings |
 | 12   | No duplicate key field mappings                                              | buildArgumentKeyMappings |
 | 13   | Warning: redundant @openfed\_\_is when arg name matches key field            | buildArgumentKeyMappings |
 | 14   | @openfed\_\_cacheInvalidate only on Mutation/Subscription                    | Phase 2                  |
-| 16   | @openfed**cacheInvalidate and @openfed**cachePopulate are mutually exclusive | Phase 2                  |
+| 16   | @openfed\_\_cacheInvalidate and @openfed\_\_cachePopulate are mutually exclusive | Phase 2              |
 
 ### Protobuf Mapping
 

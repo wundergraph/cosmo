@@ -219,7 +219,7 @@ Maps a query field argument to an entity `@key` field when the names don't match
 
 ```graphql
 directive @openfed__is(
-  field: String!
+  fields: String!
 ) on ARGUMENT_DEFINITION
 ```
 
@@ -227,7 +227,7 @@ directive @openfed__is(
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
-| `field` | String! | required | The `@key` field name on the return entity type that this argument maps to. |
+| `fields` | String! | required | The `@key` field name (or composite/nested field set) on the return entity type that this argument maps to. |
 
 **Example:**
 

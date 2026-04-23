@@ -169,7 +169,7 @@ type Subscription {
 | `@openfed__queryCache` | `FIELD_DEFINITION` | `maxAge: Int!`, `includeHeaders: Boolean`, `shadowMode: Boolean` | Enables cache reads for Query root fields returning cached entities |
 | `@openfed__cacheInvalidate` | `FIELD_DEFINITION` | (none) | Evicts the returned entity from cache after Mutation/Subscription |
 | `@openfed__cachePopulate` | `FIELD_DEFINITION` | `maxAge: Int` (optional override) | Writes the returned entity to cache after Mutation/Subscription |
-| `@openfed__is` | `ARGUMENT_DEFINITION` | `field: String!` | Maps a query argument to an entity `@key` field name |
+| `@openfed__is` | `ARGUMENT_DEFINITION` | `fields: String!` | Maps a query argument to an entity `@key` field name (or composite/nested field set) |
 
 ---
 
