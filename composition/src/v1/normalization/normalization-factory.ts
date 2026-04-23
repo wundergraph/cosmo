@@ -734,7 +734,10 @@ export class NormalizationFactory {
       if (isAuthenticated) {
         this.handleAuthenticatedDirective(data, parentTypeName);
       }
-      if (isSemanticNonNull && isField) {
+      if (!isField) {
+        return errorMessages;
+      }
+      if (isSemanticNonNull) {
         // The default argument for levels is [0], so a non-null wrapper is invalid.
         if (isTypeRequired(data.type)) {
           errorMessages.push(
@@ -747,12 +750,12 @@ export class NormalizationFactory {
           data.nullLevelsBySubgraphName.set(this.subgraphName, new Set<number>([0]));
         }
       }
-      if (isListSize && isField && !isTypeNodeListType(data.type)) {
+      if (isListSize && !isTypeNodeListType(data.type)) {
         errorMessages.push(
           listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(directiveCoords, printTypeNode(data.type)),
         );
       }
-      if (!isCost && !isListSize && isField) {
+      if (!isCost && !isListSize) {
         this.recordDirectiveWeightOnField({ data: data as FieldData, definitionData, directiveName, directiveNode });
       }
       return errorMessages;
@@ -2555,19 +2558,17 @@ export class NormalizationFactory {
   }: RecordDirectiveWeightOnFieldParams) {
     const typeName = data.renamedParentTypeName || data.originalParentTypeName;
     const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
-    // Directive argument weights should only be on concrete type fields.
+    // Directive argument weights should only be recorded for concrete type fields.
     if (!parentTypeData || parentTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION) {
       return;
     }
 
-    // Determine which arguments are active (non-null) on this directive usage.
-    // An argument is active if it has an explicit non-null value or
+    // Determine which arguments are non-null on this directive usage.
+    // Record the DirectiveArgument coords if its argument has an explicit non-null value or
     // if it has a default value and was not explicitly set to null.
-    const explicitArgs = new Map<string, ConstValueNode>();
-    if (directiveNode.arguments) {
-      for (const arg of directiveNode.arguments) {
-        explicitArgs.set(arg.name.value, arg.value);
-      }
+    const requiredArgNodeByName = new Map<string, ConstValueNode>();
+    for (const arg of directiveNode.arguments ?? []) {
+      requiredArgNodeByName.set(arg.name.value, arg.value);
     }
 
     for (const [argName, argData] of definitionData.argumentTypeNodeByName) {
@@ -2576,10 +2577,10 @@ export class NormalizationFactory {
       if (argWeight === undefined) {
         continue;
       }
-      // Check if this argument is active (non-null) at the usage site
-      const explicitValue = explicitArgs.get(argName);
-      if (explicitValue) {
-        if (explicitValue.kind === Kind.NULL) {
+      // Check if this argument is non-null at the usage site:
+      const requiredArgNode = requiredArgNodeByName.get(argName);
+      if (requiredArgNode) {
+        if (requiredArgNode.kind === Kind.NULL) {
           continue;
         }
       } else if (!argData.defaultValue || argData.defaultValue.kind === Kind.NULL) {
