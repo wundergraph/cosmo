@@ -806,10 +806,24 @@ func (h *WebSocketConnectionHandler) requestError(err error) error {
 }
 
 func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err error) error {
-	gqlErrors := []graphqlError{
-		{Message: err.Error()},
+	var gqlErr graphqlError
+
+	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
+	switch {
+	case errors.As(err, &poNotFoundErr):
+		// We follow the same pattern of not mentioning the sha256hash
+		// in the normal http requests for the same case
+		gqlErr = graphqlError{
+			Message: "PersistedQueryNotFound",
+			Extensions: &Extensions{
+				Code: "PERSISTED_QUERY_NOT_FOUND",
+			},
+		}
+	default:
+		gqlErr = graphqlError{Message: err.Error()}
 	}
-	payload, err := json.Marshal(gqlErrors)
+
+	payload, err := json.Marshal([]graphqlError{gqlErr})
 	if err != nil {
 		return fmt.Errorf("encoding GraphQL errors: %w", err)
 	}
