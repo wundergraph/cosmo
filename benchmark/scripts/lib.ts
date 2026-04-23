@@ -644,22 +644,41 @@ function isRetryableFetchError(error: unknown): boolean {
   return code === "EPIPE" || code === "ECONNRESET" || code === "UND_ERR_SOCKET";
 }
 
+function isTimeoutAbortError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const name = (error as { name?: unknown }).name;
+  return name === "TimeoutError" || name === "AbortError";
+}
+
 async function delay(milliseconds: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
+
+export const FETCH_JSON_DEFAULT_TIMEOUT_MS = 30_000;
 
 export async function fetchJsonWithRetry(input: {
   url: string;
   init: RequestInit;
   fetchImpl?: typeof fetch;
   retries?: number;
+  timeoutMs?: number;
 }): Promise<unknown> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const retries = input.retries ?? 1;
+  const timeoutMs = input.timeoutMs ?? FETCH_JSON_DEFAULT_TIMEOUT_MS;
+  const callerSignal = input.init.signal ?? undefined;
 
   for (let attempt = 0; ; attempt += 1) {
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const signal = callerSignal
+      ? AbortSignal.any([callerSignal, timeoutSignal])
+      : timeoutSignal;
+
     try {
-      const response = await fetchImpl(input.url, input.init);
+      const response = await fetchImpl(input.url, { ...input.init, signal });
       const body = await response.text();
 
       if (!response.ok) {
@@ -668,7 +687,15 @@ export async function fetchJsonWithRetry(input: {
 
       return JSON.parse(body);
     } catch (error) {
-      if (attempt >= retries || !isRetryableFetchError(error)) {
+      // Caller explicitly cancelled — bubble immediately without retry.
+      if (callerSignal?.aborted) {
+        throw error;
+      }
+
+      const retryable =
+        isRetryableFetchError(error) || isTimeoutAbortError(error);
+
+      if (attempt >= retries || !retryable) {
         throw error;
       }
 

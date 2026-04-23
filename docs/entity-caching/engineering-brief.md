@@ -120,7 +120,7 @@ But sometimes argument names don't match entity key fields. A subgraph might exp
 
 ```graphql
 type Query {
-  productByPid(pid: ID! @openfed__is(field: "id")): Product @openfed__queryCache(maxAge: 300)
+  productByPid(pid: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 300)
 }
 ```
 
@@ -143,7 +143,7 @@ type Product @key(fields: "id") @openfed__entityCache(maxAge: 300) {
 # Enable root field caching with argument-to-key mapping
 type Query {
   product(id: ID!): Product @openfed__queryCache(maxAge: 300)
-  productByPid(pid: ID! @openfed__is(field: "id")): Product @openfed__queryCache(maxAge: 300)
+  productByPid(pid: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 300)
   products: [Product!]! @openfed__queryCache(maxAge: 300)
 }
 
@@ -344,12 +344,18 @@ Fields with arguments (e.g., `friends(first:5)` vs `friends(first:10)`) coexist 
 ### `@openfed__is` Directive and Key Mapping
 
 Two strategies for mapping query arguments to `@key` fields:
-1. **Explicit:** `@openfed__is(field: "keyFieldName")` on an argument
+1. **Explicit:** `@openfed__is(fields: "keyFieldName")` on an argument
 2. **Auto-mapping:** Argument name matches a `@key` field name
 
-Example: `product(pid: ID! @openfed__is(field: "id")): Product @openfed__queryCache(maxAge: 30)` maps argument `pid` to `@key(fields: "id")`.
+Example: `product(pid: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)` maps argument `pid` to `@key(fields: "id")`.
 
-List-returning fields skip key mapping entirely (no key-based lookups, only cache population). Incomplete mappings produce warnings, not errors. Nested `@key` fields (e.g., `store { id }`) are filtered out since they can't map to flat arguments.
+List-returning fields support batch key mapping.
+A list-valued argument whose inner type matches a `@key` field auto-maps into an `isBatch: true` `FieldMappingConfig`,
+and `@openfed__is(fields: "...")` also resolves on list-returning fields when the argument is list-shaped.
+Incomplete mappings on singular returns produce warnings (cache reads disabled for that field),
+not composition errors.
+Nested `@key` fields (e.g., `store { id }`) can be mapped through input-object arguments that mirror the nested shape,
+or via `@openfed__is(fields: "store.id")` on a flat argument.
 
 ### Validation Rules Summary
 

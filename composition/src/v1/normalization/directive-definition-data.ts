@@ -55,6 +55,7 @@ import {
   LIST_SIZE,
   MAX_AGE,
   NAME,
+  NEGATIVE_CACHE_TTL,
   OBJECT_UPPER,
   ONE_OF,
   OVERRIDE,
@@ -993,6 +994,14 @@ export const ENTITY_CACHE_DEFINITION_DATA: DirectiveDefinitionData = {
       },
     ],
     [
+      NEGATIVE_CACHE_TTL,
+      {
+        name: NEGATIVE_CACHE_TTL,
+        typeNode: stringToNamedTypeNode(INT_SCALAR),
+        defaultValue: { kind: Kind.INT, value: '0' },
+      },
+    ],
+    [
       INCLUDE_HEADERS,
       {
         name: INCLUDE_HEADERS,
@@ -1021,7 +1030,7 @@ export const ENTITY_CACHE_DEFINITION_DATA: DirectiveDefinitionData = {
   locations: new Set<string>([OBJECT_UPPER]),
   name: ENTITY_CACHE,
   node: ENTITY_CACHE_DEFINITION,
-  optionalArgumentNames: new Set<string>([INCLUDE_HEADERS, PARTIAL_CACHE_LOAD, SHADOW_MODE]),
+  optionalArgumentNames: new Set<string>([NEGATIVE_CACHE_TTL, INCLUDE_HEADERS, PARTIAL_CACHE_LOAD, SHADOW_MODE]),
   requiredArgumentNames: new Set<string>([MAX_AGE]),
 };
 

@@ -6,6 +6,7 @@ extend schema
 
 directive @openfed__entityCache(
   maxAge: Int!
+  negativeCacheTTL: Int = 0
   includeHeaders: Boolean = false
   partialCacheLoad: Boolean = false
   shadowMode: Boolean = false
@@ -69,7 +70,7 @@ type Subscription {
   itemCreated: Item @openfed__cachePopulate
 }
 
-type Item @key(fields: "id") @openfed__entityCache(maxAge: 300) {
+type Item @key(fields: "id") @openfed__entityCache(maxAge: 300, negativeCacheTTL: 30) {
   id: ID!
   name: String!
   category: String!

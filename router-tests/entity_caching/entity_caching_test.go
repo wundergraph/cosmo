@@ -409,7 +409,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("L2/negative cache stores null", func(t *testing.T) {
+	t.Run("L2/negative TTL caches not-found response within window", func(t *testing.T) {
 		// Exercises the entity-level not-found cache: items subgraph has an id
 		// that details subgraph does NOT have. On first fetch, details'
 		// _entities resolver returns null for that key. With notFoundCacheTtl
@@ -1315,7 +1315,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("L2/negative cache TTL expiry", func(t *testing.T) {
+	t.Run("L2/negative TTL expires and refetches", func(t *testing.T) {
 		// Companion to negative_cache_caches_null: asserts the not-found entity
 		// cache also EXPIRES after its configured TTL. Like the sister test, the
 		// signal is counters.details (the entity-hydration subgraph) because
@@ -1372,6 +1372,75 @@ func TestEntityCaching(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, int64(2), counters.details.Load(),
 				"after not-found TTL expiry, the next request must re-hit details exactly once")
+		})
+	})
+
+	t.Run("L2/negative TTL falls back to positive TTL when unset", func(t *testing.T) {
+		// Regression guard against the new negativeCacheTTL field clobbering
+		// the two existing code paths.
+		// With notFoundCacheTtlSeconds unset (directive default 0) on the
+		// details subgraph's Item,
+		// both pre-existing behaviors must hold:
+		//   (1) not-found entity fetches are NOT negatively cached —
+		//       a second request for a missing id re-hits details.
+		//   (2) found-entity positive caching (maxAge: 300) still works —
+		//       a second request for a known id serves from cache.
+		// Signals: counters.details climbs on each not-found request,
+		// then stays flat on a repeated known-id request.
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		// Deliberately do NOT call setNotFoundCacheTTL — leave the field at
+		// its zero default to exercise the unset-fallback path.
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Create an id that exists in items-subgraph but not in details.
+			createRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { createItem(name: "Missing", category: "void") { id } }`,
+			})
+			var created struct {
+				Data struct {
+					CreateItem struct {
+						ID string `json:"id"`
+					} `json:"createItem"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(createRes.Body), &created))
+			newID := created.Data.CreateItem.ID
+			require.NotEmpty(t, newID)
+
+			missingReq := testenv.GraphQLRequest{
+				Query: `{ item(id: "` + newID + `") { id description } }`,
+			}
+			// First not-found request: details is hit once.
+			xEnv.MakeGraphQLRequestOK(missingReq)
+			require.Equal(t, int64(1), counters.details.Load(),
+				"first not-found request must hit details")
+
+			// Second not-found request: negative cache is OFF, so details
+			// must be hit again. With a negative-TTL leak here, this would
+			// stay at 1.
+			xEnv.MakeGraphQLRequestOK(missingReq)
+			require.Equal(t, int64(2), counters.details.Load(),
+				"without notFoundCacheTtlSeconds, not-found results must NOT be cached; details must re-hit")
+
+			// Positive-TTL sanity check: a known id must still be entity-cached.
+			foundReq := testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id description } }`,
+			}
+			xEnv.MakeGraphQLRequestOK(foundReq)
+			detailsAfterFoundFirst := counters.details.Load()
+			require.Equal(t, int64(3), detailsAfterFoundFirst,
+				"first request for a known id must hit details once")
+
+			xEnv.MakeGraphQLRequestOK(foundReq)
+			require.Equal(t, detailsAfterFoundFirst, counters.details.Load(),
+				"positive-TTL entity cache must hit on the second request for a known id")
 		})
 	})
 

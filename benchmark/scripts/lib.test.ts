@@ -210,6 +210,140 @@ test("fetchJsonWithRetry retries once for retryable fetch pipe errors", async ()
   assert.deepEqual(result, { data: { ok: true } });
 });
 
+test("fetchJsonWithRetry aborts a slow attempt via per-attempt timeout and retries", async () => {
+  let calls = 0;
+
+  const result = await fetchJsonWithRetry({
+    url: "http://example.test/graphql",
+    init: {
+      method: "POST",
+      body: "{}",
+    },
+    timeoutMs: 50,
+    retries: 2,
+    fetchImpl: async (_url, opts) => {
+      calls += 1;
+      const signal = (opts as RequestInit | undefined)?.signal;
+
+      if (calls === 1) {
+        // Simulate a hang that only resolves when the per-attempt timeout fires.
+        await new Promise((_resolve, reject) => {
+          if (!signal) {
+            return;
+          }
+          signal.addEventListener("abort", () => {
+            reject(signal.reason ?? new DOMException("aborted", "AbortError"));
+          });
+        });
+        throw new Error("unreachable");
+      }
+
+      return new Response(JSON.stringify({ data: { ok: true } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+  });
+
+  assert.equal(calls, 2);
+  assert.deepEqual(result, { data: { ok: true } });
+});
+
+test("fetchJsonWithRetry gives up after exhausting retries on repeated timeouts", async () => {
+  let calls = 0;
+
+  await assert.rejects(
+    () =>
+      fetchJsonWithRetry({
+        url: "http://example.test/graphql",
+        init: {
+          method: "POST",
+          body: "{}",
+        },
+        timeoutMs: 20,
+        retries: 2,
+        fetchImpl: async (_url, opts) => {
+          calls += 1;
+          const signal = (opts as RequestInit | undefined)?.signal;
+          await new Promise((_resolve, reject) => {
+            if (!signal) {
+              return;
+            }
+            signal.addEventListener("abort", () => {
+              reject(signal.reason ?? new DOMException("aborted", "AbortError"));
+            });
+          });
+          throw new Error("unreachable");
+        },
+      }),
+    (error: unknown) => {
+      const name = (error as { name?: string } | null)?.name;
+      return name === "TimeoutError" || name === "AbortError";
+    },
+  );
+
+  // retries=2 → attempts 0, 1, 2 → 3 total calls
+  assert.equal(calls, 3);
+});
+
+test("fetchJsonWithRetry bubbles AbortError when the caller cancels", async () => {
+  const controller = new AbortController();
+  let calls = 0;
+
+  const pending = fetchJsonWithRetry({
+    url: "http://example.test/graphql",
+    init: {
+      method: "POST",
+      body: "{}",
+      signal: controller.signal,
+    },
+    timeoutMs: 5_000,
+    retries: 3,
+    fetchImpl: async (_url, opts) => {
+      calls += 1;
+      const signal = (opts as RequestInit | undefined)?.signal;
+      await new Promise((_resolve, reject) => {
+        if (!signal) {
+          return;
+        }
+        signal.addEventListener("abort", () => {
+          reject(signal.reason ?? new DOMException("aborted", "AbortError"));
+        });
+      });
+      throw new Error("unreachable");
+    },
+  });
+
+  // Cancel shortly after dispatch.
+  setTimeout(() => controller.abort(new DOMException("caller cancelled", "AbortError")), 20);
+
+  await assert.rejects(pending, (error: unknown) => {
+    return (error as { name?: string } | null)?.name === "AbortError";
+  });
+
+  // Caller cancellation must NOT trigger further retry attempts.
+  assert.equal(calls, 1);
+});
+
+test("fetchJsonWithRetry returns parsed JSON on happy path without retries", async () => {
+  let calls = 0;
+
+  const result = await fetchJsonWithRetry({
+    url: "http://example.test/graphql",
+    init: { method: "POST", body: "{}" },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ data: { hello: "world" } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+  });
+
+  assert.equal(calls, 1);
+  assert.deepEqual(result, { data: { hello: "world" } });
+});
+
 test("fetchJsonWithRetry does not retry non-retryable fetch failures", async () => {
   let calls = 0;
 

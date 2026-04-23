@@ -20,7 +20,11 @@ import {
   queryCacheOnNonEntityReturnTypeErrorMessage,
   queryCacheOnNonQueryFieldErrorMessage,
 } from '../../../src/errors/errors';
-import { incompleteQueryCacheKeyMappingWarning } from '../../../src/v1/warnings/warnings';
+import {
+  incompleteQueryCacheKeyMappingWarning,
+  queryCacheReturnEntityMissingEntityCacheWarning,
+  redundantIsDirectiveWarning,
+} from '../../../src/v1/warnings/warnings';
 import { normalizeSubgraphFailure, normalizeSubgraphSuccess } from '../../utils/utils';
 
 const version = ROUTER_COMPATIBILITY_VERSION_ONE;
@@ -361,9 +365,11 @@ describe('Entity cache mapping rules tests', () => {
       );
     });
 
-    test('rule 0b: @openfed__queryCache without @openfed__entityCache keeps only root-field caching and emits no entity mappings', () => {
-      const rootFieldConfig = getSingleQueryRootFieldConfig(
-        `
+    // Expectation updated to new correct behavior: @openfed__queryCache on a field returning
+    // a @key entity without @openfed__entityCache emits a warning and does NOT extract any
+    // queryCache config — there is no entity-cache backing store to point at.
+    test('rule 0b: @openfed__queryCache on a @key entity without @openfed__entityCache warns and extracts no config', () => {
+      const sdl = `
           type Product @key(fields: "id") {
             id: ID!
             name: String!
@@ -372,17 +378,51 @@ describe('Entity cache mapping rules tests', () => {
           type Query {
             product(id: ID!): Product @openfed__queryCache(maxAge: 30)
           }
-        `,
-        'product',
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        queryCacheReturnEntityMissingEntityCacheWarning({
+          subgraphName: 'subgraph-a',
+          fieldCoords: 'Query.product',
+          entityType: 'Product',
+        }),
       );
 
+      const config = getConfigForType(subgraph(sdl), QUERY);
+      expect(config).toBeDefined();
+      expect(config!.rootFieldCacheConfigurations).toBeUndefined();
+    });
+
+    test('rule 0b-positive: @openfed__queryCache on a @key entity WITH @openfed__entityCache extracts the config and emits no warning', () => {
+      const sdl = `
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+
+          type Query {
+            product(id: ID!): Product @openfed__queryCache(maxAge: 30)
+          }
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+      expect(warnings).toHaveLength(0);
+
+      const rootFieldConfig = getSingleQueryRootFieldConfig(sdl, 'product');
       expect(rootFieldConfig).toStrictEqual({
         fieldName: 'product',
         maxAgeSeconds: 30,
         includeHeaders: false,
         shadowMode: false,
         entityTypeName: 'Product',
-        entityKeyMappings: [],
+        entityKeyMappings: [
+          {
+            entityTypeName: 'Product',
+            fieldMappings: [{ entityKeyField: 'id', argumentPath: ['id'] }],
+          },
+        ],
       } satisfies RootFieldCacheConfig);
     });
 
@@ -1062,9 +1102,10 @@ describe('Entity cache mapping rules tests', () => {
       );
     });
 
-    test('rule 28: redundant @openfed__is(fields: "id") is accepted silently when the argument already matches the key field name', () => {
-      const { warnings } = normalizeSubgraphSuccess(
-        subgraph(`
+    // Expectation updated (bug b fix): redundant @openfed__is(fields: "id") on argument "id"
+    // now emits a warning — auto-mapping produces the same result, so the directive is noise.
+    test('rule 28: redundant @openfed__is(fields: "id") on matching argument name emits a redundancy warning', () => {
+      const sdl = `
           type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
             id: ID!
             name: String!
@@ -1073,25 +1114,22 @@ describe('Entity cache mapping rules tests', () => {
           type Query {
             product(id: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)
           }
-        `),
-        version,
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        redundantIsDirectiveWarning({
+          subgraphName: 'subgraph-a',
+          argumentName: 'id',
+          fieldCoords: 'Query.product',
+          keyField: 'id',
+          entityType: 'Product',
+        }),
       );
 
-      expect(warnings).toHaveLength(0);
-
-      const rootFieldConfig = getSingleQueryRootFieldConfig(
-        `
-          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
-            id: ID!
-            name: String!
-          }
-
-          type Query {
-            product(id: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)
-          }
-        `,
-        'product',
-      );
+      const rootFieldConfig = getSingleQueryRootFieldConfig(sdl, 'product');
 
       expect(rootFieldConfig.entityKeyMappings).toStrictEqual([
         {
@@ -1478,9 +1516,10 @@ describe('Entity cache mapping rules tests', () => {
       ]);
     });
 
-    test('rule 21: an auto-mapping type mismatch makes the argument non-key and blocks alternative-key mappings', () => {
-      const { warnings } = normalizeSubgraphSuccess(
-        subgraph(`
+    // Expectation updated to new correct behavior: a failed auto-map candidate on one @key
+    // must not abort evaluation of the remaining @key alternatives. The "sku" key still maps.
+    test('rule 21: an auto-mapping type mismatch on one @key does NOT block alternative-key mappings', () => {
+      const sdl = `
           type Product @key(fields: "id") @key(fields: "sku") @openfed__entityCache(maxAge: 60) {
             id: ID!
             sku: String!
@@ -1490,31 +1529,23 @@ describe('Entity cache mapping rules tests', () => {
           type Query {
             product(id: String!, sku: String!): Product @openfed__queryCache(maxAge: 30)
           }
-        `),
-        version,
-      );
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe(
         autoMappingTypeMismatchWarningMessage('id', 'Query.product', 'String!', 'id', 'Product', 'ID!'),
       );
 
-      const rootFieldConfig = getSingleQueryRootFieldConfig(
-        `
-          type Product @key(fields: "id") @key(fields: "sku") @openfed__entityCache(maxAge: 60) {
-            id: ID!
-            sku: String!
-            name: String!
-          }
+      const rootFieldConfig = getSingleQueryRootFieldConfig(sdl, 'product');
 
-          type Query {
-            product(id: String!, sku: String!): Product @openfed__queryCache(maxAge: 30)
-          }
-        `,
-        'product',
-      );
-
-      expect(rootFieldConfig.entityKeyMappings).toStrictEqual([]);
+      expect(rootFieldConfig.entityKeyMappings).toStrictEqual([
+        {
+          entityTypeName: 'Product',
+          fieldMappings: [{ entityKeyField: 'sku', argumentPath: ['sku'] }],
+        },
+      ]);
     });
 
     test('rule 22: flat and nested fields can be combined in one composite key mapping', () => {
@@ -2442,6 +2473,431 @@ describe('Entity cache mapping rules tests', () => {
           ),
         ]),
       );
+    });
+
+    test('rule 36: redundant @openfed__is on an argument that already auto-maps emits a warning (mapping still extracted)', () => {
+      // Bug (b): `@openfed__is(fields: "id")` on argument `id` is redundant — auto-map would produce the same result.
+      const sdl = `
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+
+          type Query {
+            product(id: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)
+          }
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        redundantIsDirectiveWarning({
+          subgraphName: 'subgraph-a',
+          argumentName: 'id',
+          fieldCoords: 'Query.product',
+          keyField: 'id',
+          entityType: 'Product',
+        }),
+      );
+
+      // Mapping is still extracted — redundancy is a lint, not a correctness break.
+      const rootFieldConfig = getSingleQueryRootFieldConfig(sdl, 'product');
+      expect(rootFieldConfig.entityKeyMappings).toStrictEqual([
+        {
+          entityTypeName: 'Product',
+          fieldMappings: [{ entityKeyField: 'id', argumentPath: ['id'] }],
+        },
+      ]);
+    });
+
+    test('rule 36-positive: @openfed__is renaming a differently-named argument to a key field is NOT redundant', () => {
+      // Sanity: when arg name differs from key field, @openfed__is is required and not a warning.
+      const sdl = `
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+
+          type Query {
+            product(pid: ID! @openfed__is(fields: "id")): Product @openfed__queryCache(maxAge: 30)
+          }
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+      expect(warnings).toHaveLength(0);
+
+      const rootFieldConfig = getSingleQueryRootFieldConfig(sdl, 'product');
+      expect(rootFieldConfig.entityKeyMappings).toStrictEqual([
+        {
+          entityTypeName: 'Product',
+          fieldMappings: [{ entityKeyField: 'id', argumentPath: ['pid'] }],
+        },
+      ]);
+    });
+
+    test('rule 34: nested composite-key leaf checks list/NonNull wrapping in addition to named type', () => {
+      // Bug (c): key expects `[ID!]!` at the leaf; input has scalar `ID`. Old code only compared named types
+      // and silently accepted the shape mismatch. New code rejects it.
+      const { errors } = normalizeSubgraphFailure(
+        subgraph(`
+          type Location {
+            id: [ID!]!
+            region: String!
+          }
+
+          type Store {
+            id: ID!
+            location: Location!
+          }
+
+          input LocationInput {
+            id: ID!
+            region: String!
+          }
+
+          input StoreInput {
+            id: ID!
+            location: LocationInput!
+          }
+
+          type Product @key(fields: "store { id location { id region } }") @openfed__entityCache(maxAge: 60) {
+            store: Store!
+            name: String!
+          }
+
+          type Query {
+            product(store: StoreInput!): Product @openfed__queryCache(maxAge: 30)
+          }
+        `),
+        version,
+      );
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(QUERY_CACHE, 'Query.product', FIRST_ORDINAL, [
+          nestedInputObjectTypeMismatchErrorMessage(
+            'store',
+            'Query.product',
+            'store { id location { id region } }',
+            'Product',
+            'LocationInput',
+            'id',
+            'ID!',
+            'Location.id',
+            '[ID!]!',
+          ),
+        ]),
+      );
+    });
+
+    test('rule 34-positive: nested composite-key leaf with matching list shape succeeds', () => {
+      const sdl = `
+          type Location {
+            id: [ID!]!
+            region: String!
+          }
+
+          type Store {
+            id: ID!
+            location: Location!
+          }
+
+          input LocationInput {
+            id: [ID!]!
+            region: String!
+          }
+
+          input StoreInput {
+            id: ID!
+            location: LocationInput!
+          }
+
+          type Product @key(fields: "store { id location { id region } }") @openfed__entityCache(maxAge: 60) {
+            store: Store!
+            name: String!
+          }
+
+          type Query {
+            product(store: StoreInput!): Product @openfed__queryCache(maxAge: 30)
+          }
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+      expect(warnings).toHaveLength(0);
+
+      const rootFieldConfig = getSingleQueryRootFieldConfig(sdl, 'product');
+      expect(rootFieldConfig.entityKeyMappings).toStrictEqual([
+        {
+          entityTypeName: 'Product',
+          fieldMappings: [
+            { entityKeyField: 'store.id', argumentPath: ['store', 'id'] },
+            { entityKeyField: 'store.location.id', argumentPath: ['store', 'location', 'id'] },
+            { entityKeyField: 'store.location.region', argumentPath: ['store', 'location', 'region'] },
+          ],
+        },
+      ]);
+    });
+
+    test('rule 35: a failed auto-map on one @key does not abort evaluation of remaining @keys (missing arg)', () => {
+      // Bug (d): the first @key has no matching arg (region missing); the second @key still auto-maps.
+      const sdl = `
+          type Product @key(fields: "id region") @key(fields: "sku") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            region: String!
+            sku: String!
+            name: String!
+          }
+
+          type Query {
+            product(id: ID!, sku: String!): Product @openfed__queryCache(maxAge: 30)
+          }
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+      // Incomplete composite key warning for the "id region" key — NOT a fatal abort.
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        incompleteQueryCacheKeyMappingWarning({
+          subgraphName: 'subgraph-a',
+          fieldCoords: 'Query.product',
+          entityType: 'Product',
+          unmappedKeyField: 'region',
+        }),
+      );
+
+      const rootFieldConfig = getSingleQueryRootFieldConfig(sdl, 'product');
+      expect(rootFieldConfig.entityKeyMappings).toStrictEqual([
+        {
+          entityTypeName: 'Product',
+          fieldMappings: [{ entityKeyField: 'sku', argumentPath: ['sku'] }],
+        },
+      ]);
+    });
+
+    test('rule 35b: when NO @key auto-maps, no mappings are emitted', () => {
+      // Sanity: bug (d)'s "overall failure only if NO key auto-maps" — here both keys fail to map.
+      const sdl = `
+          type Product @key(fields: "id") @key(fields: "sku") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            sku: String!
+            name: String!
+          }
+
+          type Query {
+            product(foo: String!): Product @openfed__queryCache(maxAge: 30)
+          }
+        `;
+
+      const rootFieldConfig = getSingleQueryRootFieldConfig(sdl, 'product');
+      expect(rootFieldConfig.entityKeyMappings).toStrictEqual([]);
+    });
+
+    // Codex P1 #1 regression: the missing-@openfed__entityCache warning only applies to OBJECT
+    // returns. @openfed__entityCache is OBJECT-only, so flagging an interface/union return with
+    // the same remediation ("add @openfed__entityCache to the type") would be unactionable.
+    test('rule 37: @openfed__queryCache on an entity-interface return without @openfed__entityCache does not emit the missing-entityCache warning', () => {
+      const sdl = `
+          interface Product @key(fields: "id") {
+            id: ID!
+          }
+
+          type Book implements Product @key(fields: "id") {
+            id: ID!
+            title: String!
+          }
+
+          type Query {
+            product(id: ID!): Product @openfed__queryCache(maxAge: 30)
+          }
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+      // Must NOT emit queryCacheReturnEntityMissingEntityCacheWarning for an interface return —
+      // users cannot add @openfed__entityCache to an interface.
+      for (const w of warnings) {
+        expect(w.message).not.toContain('has no @openfed__entityCache directive');
+      }
+    });
+
+    test('rule 37b: @openfed__queryCache on a list-of-entity-interface return without @openfed__entityCache does not emit the missing-entityCache warning', () => {
+      const sdl = `
+          interface Product @key(fields: "id") {
+            id: ID!
+          }
+
+          type Book implements Product @key(fields: "id") {
+            id: ID!
+            title: String!
+          }
+
+          type Query {
+            products(id: ID!): [Product!]! @openfed__queryCache(maxAge: 30)
+          }
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+      for (const w of warnings) {
+        expect(w.message).not.toContain('has no @openfed__entityCache directive');
+      }
+    });
+
+    // Codex P1 #2 regression: on a list-return field with a list-valued key field, auto-mapping
+    // cannot batch-map (buildAutoMappings skips `argIsList && keyIsList` on list returns). The
+    // explicit @openfed__is is REQUIRED — redundantIsDirectiveWarning must not fire.
+    test('rule 38: @openfed__is is NOT redundant when the key field is list-valued on a list-return field', () => {
+      const sdl = `
+          type Product @key(fields: "tags") @openfed__entityCache(maxAge: 60) {
+            tags: [String!]!
+            name: String!
+          }
+
+          type Query {
+            products(tags: [[String!]!]! @openfed__is(fields: "tags")): [Product!]! @openfed__queryCache(maxAge: 30)
+          }
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+      // No redundancy warning — auto-map cannot reach the list-key path on a list return.
+      for (const w of warnings) {
+        expect(w.message).not.toContain('is redundant and can be removed');
+      }
+
+      const rootFieldConfig = getSingleQueryRootFieldConfig(sdl, 'products');
+      expect(rootFieldConfig.entityKeyMappings).toStrictEqual([
+        {
+          entityTypeName: 'Product',
+          fieldMappings: [{ entityKeyField: 'tags', argumentPath: ['tags'], isBatch: true }],
+        },
+      ]);
+    });
+
+    // Codex P1 #3 regression: with one satisfiable nested @key AND one flat @key that hits the
+    // "extra non-key argument" global-invalidation path, NO auto-mapping may survive. The
+    // singular-return rule (extra non-key arg → reject whole set) must hold.
+    test('rule 39: an extra non-key argument globally invalidates all auto-mappings, including earlier nested-key results', () => {
+      const sdl = `
+          input StoreInput {
+            id: ID!
+            region: String!
+          }
+
+          type Product
+            @key(fields: "store { id region }")
+            @key(fields: "id")
+            @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            store: StoreRef!
+            name: String!
+          }
+
+          type StoreRef {
+            id: ID!
+            region: String!
+          }
+
+          type Query {
+            product(store: StoreInput!, id: ID!, extra: String!): Product @openfed__queryCache(maxAge: 30)
+          }
+        `;
+
+      const { warnings } = normalizeSubgraphSuccess(subgraph(sdl), version);
+      // Must include the auto-mapping "additional argument" warning for the flat key.
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0].message).toBe(
+        autoMappingAdditionalNonKeyArgumentWarningMessage('id', 'Query.product', 'id', 'Product', 'store'),
+      );
+
+      // Crucial assertion: NO mappings survive — the nested-key success must not leak through.
+      const rootFieldConfig = getSingleQueryRootFieldConfig(sdl, 'product');
+      expect(rootFieldConfig.entityKeyMappings).toStrictEqual([]);
+    });
+
+    // Codex P2 #2 regression: pinning pure-nullability-only mismatches for typesMatchIncludingListShape.
+    // The helper is used in buildExplicitMappings nested composite-key leaves, where strict list-shape
+    // comparison (including NonNull wrapping) applies — any nullability difference must be rejected.
+    test('rule 40: nested composite-key leaf rejects nullable-vs-non-null scalar mismatch (ID vs ID!)', () => {
+      // key leaf requires `ID!`, input supplies `ID` — must be rejected.
+      const { errors } = normalizeSubgraphFailure(
+        subgraph(`
+          type Store {
+            id: ID!
+            region: String!
+          }
+
+          input StoreInput {
+            id: ID
+            region: String!
+          }
+
+          type Product @key(fields: "store { id region }") @openfed__entityCache(maxAge: 60) {
+            store: Store!
+            name: String!
+          }
+
+          type Query {
+            product(store: StoreInput!): Product @openfed__queryCache(maxAge: 30)
+          }
+        `),
+        version,
+      );
+
+      expect(errors.length).toBeGreaterThan(0);
+    });
+
+    test('rule 40b: nested composite-key leaf rejects inner-list nullability mismatch ([ID]! vs [ID!]!)', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraph(`
+          type Store {
+            ids: [ID!]!
+            region: String!
+          }
+
+          input StoreInput {
+            ids: [ID]!
+            region: String!
+          }
+
+          type Product @key(fields: "store { ids region }") @openfed__entityCache(maxAge: 60) {
+            store: Store!
+            name: String!
+          }
+
+          type Query {
+            product(store: StoreInput!): Product @openfed__queryCache(maxAge: 30)
+          }
+        `),
+        version,
+      );
+
+      expect(errors.length).toBeGreaterThan(0);
+    });
+
+    test('rule 40c: nested composite-key leaf rejects outer-list nullability mismatch ([ID!] vs [ID!]!)', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraph(`
+          type Store {
+            ids: [ID!]!
+            region: String!
+          }
+
+          input StoreInput {
+            ids: [ID!]
+            region: String!
+          }
+
+          type Product @key(fields: "store { ids region }") @openfed__entityCache(maxAge: 60) {
+            store: Store!
+            name: String!
+          }
+
+          type Query {
+            product(store: StoreInput!): Product @openfed__queryCache(maxAge: 30)
+          }
+        `),
+        version,
+      );
+
+      expect(errors.length).toBeGreaterThan(0);
     });
   });
 });

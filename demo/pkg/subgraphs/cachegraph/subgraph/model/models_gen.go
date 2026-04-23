@@ -14,6 +14,7 @@ type Address struct {
 
 type Article struct {
 	ID          string   `json:"id"`
+	Slug        string   `json:"slug"`
 	Title       string   `json:"title"`
 	Body        string   `json:"body"`
 	AuthorName  string   `json:"authorName"`

@@ -238,6 +238,7 @@ export function configurationDatasToDataSourceConfiguration(
           new EntityCacheConfiguration({
             typeName: ec.typeName,
             maxAgeSeconds: BigInt(ec.maxAgeSeconds),
+            notFoundCacheTtlSeconds: BigInt(ec.notFoundCacheTtlSeconds),
             includeHeaders: ec.includeHeaders,
             partialCacheLoad: ec.partialCacheLoad,
             shadowMode: ec.shadowMode,

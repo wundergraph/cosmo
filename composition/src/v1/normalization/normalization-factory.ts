@@ -177,6 +177,7 @@ import {
   queryCacheOnNonQueryFieldErrorMessage,
   queryCacheOnNonEntityReturnTypeErrorMessage,
   maxAgeNotPositiveIntegerErrorMessage,
+  negativeCacheTTLNotNonNegativeIntegerErrorMessage,
   isWithoutQueryCacheErrorMessage,
   isReferencesUnknownKeyFieldErrorMessage,
   duplicateKeyFieldMappingErrorMessage,
@@ -235,6 +236,8 @@ import {
   autoMappingTypeMismatchWarning,
   autoMappingAdditionalNonKeyArgumentWarning,
   autoBatchAdditionalNonKeyArgumentWarning,
+  queryCacheReturnEntityMissingEntityCacheWarning,
+  redundantIsDirectiveWarning,
   nonExternalConditionalFieldWarning,
   requestScopedSingleFieldWarning,
   singleSubgraphInputFieldOneOfWarning,
@@ -359,6 +362,7 @@ import {
   LITERAL_SPACE,
   MAX_AGE,
   MUTATION,
+  NEGATIVE_CACHE_TTL,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
   NON_NULLABLE_INT,
@@ -509,7 +513,13 @@ export class NormalizationFactory {
   // fields return entity types that have opted into caching.
   entityCacheConfigByTypeName = new Map<
     TypeName,
-    { maxAgeSeconds: number; includeHeaders: boolean; partialCacheLoad: boolean; shadowMode: boolean }
+    {
+      maxAgeSeconds: number;
+      notFoundCacheTtlSeconds: number;
+      includeHeaders: boolean;
+      partialCacheLoad: boolean;
+      shadowMode: boolean;
+    }
   >();
   errors = new Array<Error>();
   entityDataByTypeName = new Map<TypeName, EntityData>();
@@ -3770,6 +3780,7 @@ export class NormalizationFactory {
       }
       const directive = entityCacheDirectives[0];
       const maxAgeSeconds = this.extractCacheIntArg(directive, MAX_AGE) ?? 0;
+      const notFoundCacheTtlSeconds = this.extractCacheIntArg(directive, NEGATIVE_CACHE_TTL) ?? 0;
       const includeHeaders = this.extractCacheBoolArg(directive, INCLUDE_HEADERS);
       const partialCacheLoad = this.extractCacheBoolArg(directive, PARTIAL_CACHE_LOAD);
       const shadowMode = this.extractCacheBoolArg(directive, SHADOW_MODE);
@@ -3781,7 +3792,22 @@ export class NormalizationFactory {
         );
         continue;
       }
-      const config: EntityCacheConfig = { typeName, maxAgeSeconds, includeHeaders, partialCacheLoad, shadowMode };
+      if (notFoundCacheTtlSeconds < 0) {
+        this.errors.push(
+          invalidDirectiveError(ENTITY_CACHE, typeName, FIRST_ORDINAL, [
+            negativeCacheTTLNotNonNegativeIntegerErrorMessage(ENTITY_CACHE, notFoundCacheTtlSeconds),
+          ]),
+        );
+        continue;
+      }
+      const config: EntityCacheConfig = {
+        typeName,
+        maxAgeSeconds,
+        notFoundCacheTtlSeconds,
+        includeHeaders,
+        partialCacheLoad,
+        shadowMode,
+      };
       this.entityCacheConfigByTypeName.set(typeName, config);
       const configData = this.getCacheConfigurationData(typeName, true);
       if (!configData.entityCacheConfigurations) {
@@ -3854,8 +3880,6 @@ export class NormalizationFactory {
       );
       return;
     }
-    // Return entity without @openfed__entityCache — still emit root-field config but skip entity key mappings.
-    const hasEntityCache = this.entityCacheConfigByTypeName.has(returnTypeName);
     const queryCacheDirective = fieldData.directivesByName.get(QUERY_CACHE)![0];
     const maxAgeSeconds = this.extractCacheIntArg(queryCacheDirective, MAX_AGE) ?? 0;
     const includeHeaders = this.extractCacheBoolArg(queryCacheDirective, INCLUDE_HEADERS);
@@ -3869,12 +3893,34 @@ export class NormalizationFactory {
       return;
     }
 
-    let mappings: EntityKeyMappingConfig[] = [];
-    if (hasEntityCache) {
-      const isListReturn = isTypeNodeListType(fieldData.node.type);
-      const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
-      mappings = this.buildArgumentKeyMappings(fieldData, fieldCoords, returnTypeName, keyFieldSets, isListReturn);
+    // Bug (a): the return entity must have @openfed__entityCache — otherwise there is no L1/L2
+    // backing store for queryCache to read from. Warn and skip extraction.
+    // The warning is only actionable when the return type is an OBJECT — @openfed__entityCache is
+    // OBJECT-only (extractEntityCacheDirectives() skips interfaces/unions), so emitting the warning
+    // for an interface/union return would point the user at an impossible remediation. For those
+    // cases we skip the prereq check; the mapping pipeline handles the non-object path.
+    const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
+    const isObjectReturn = returnTypeData?.kind === Kind.OBJECT_TYPE_DEFINITION;
+    if (isObjectReturn && !this.entityCacheConfigByTypeName.has(returnTypeName)) {
+      this.warnings.push(
+        queryCacheReturnEntityMissingEntityCacheWarning({
+          subgraphName: this.subgraphName,
+          fieldCoords,
+          entityType: returnTypeName,
+        }),
+      );
+      return;
     }
+
+    const isListReturn = isTypeNodeListType(fieldData.node.type);
+    const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
+    const mappings = this.buildArgumentKeyMappings(
+      fieldData,
+      fieldCoords,
+      returnTypeName,
+      keyFieldSets,
+      isListReturn,
+    );
 
     const configData = this.getCacheConfigurationData(parentTypeName, false);
     if (!configData.rootFieldCacheConfigurations) {
@@ -4076,6 +4122,22 @@ export class NormalizationFactory {
     return aIsList === bIsList;
   }
 
+  // Structurally compare two TypeNodes: named type AND list/NonNull wrapping must match.
+  // Used at nested composite-key leaves where a printer-level mismatch (e.g., "[ID!]!" vs "ID")
+  // must be rejected even though the named type ("ID") agrees.
+  typesMatchIncludingListShape(expected: TypeNode, got: TypeNode): boolean {
+    if (expected.kind !== got.kind) {
+      return false;
+    }
+    if (expected.kind === Kind.NAMED_TYPE) {
+      return expected.name.value === (got as typeof expected).name.value;
+    }
+    if (expected.kind === Kind.NON_NULL_TYPE || expected.kind === Kind.LIST_TYPE) {
+      return this.typesMatchIncludingListShape(expected.type, (got as typeof expected).type);
+    }
+    return false;
+  }
+
   // Get @openfed__is field value from an argument's directives.
   getIsFieldValue(argumentData: InputValueData): string | undefined {
     const isDirectives = argumentData.directivesByName.get(IS);
@@ -4183,9 +4245,10 @@ export class NormalizationFactory {
         }
         fieldMappings.push(...nestedMappings);
       } else {
-        // Leaf: check type match
+        // Leaf: check type match — both named type AND list/NonNull wrapping must agree.
+        // Bug (c): prior code compared only named types, letting `[ID!]!` be satisfied by `ID`.
         const keyTypeNode = infos[0].typeNode;
-        if (!this.namedTypesMatch(inputFieldData.type, keyTypeNode)) {
+        if (!this.typesMatchIncludingListShape(keyTypeNode, inputFieldData.type)) {
           // Resolve the entity field's parent type for the error message
           // We need to walk the full entity key path to find the parent of the leaf
           const fullPath = entityKeyPathPrefix ? `${entityKeyPathPrefix}.${topField}` : topField;
@@ -4519,6 +4582,38 @@ export class NormalizationFactory {
             ]),
           );
           return [];
+        }
+      }
+
+      // Bug (b): @openfed__is(fields: "X") on argument "X" duplicates what auto-mapping would produce.
+      // This is a lint/noise issue — mapping is still extracted.
+      //
+      // Only emit the warning when auto-mapping WOULD have produced the same mapping:
+      //  - Singular return: auto-map requires matching list shape; we already verified named types
+      //    and list shape above, so if arg/key list shape agrees auto-map would succeed.
+      //  - List return: auto-map only batch-maps when the arg is a list AND the key field is scalar
+      //    (argIsList && !keyIsList). When the key field is list-valued, auto-map skips the field
+      //    (see buildAutoMappings: keyIsList path on isListReturn marks keyFullyMapped=false), so
+      //    @openfed__is is REQUIRED and must not be flagged redundant.
+      if (argInfo.name === isFieldValue) {
+        const keyIsList = isTypeNodeListType(keyFieldTypeNode);
+        const argIsList = argInfo.isList;
+        let autoMapWouldProduceSameMapping: boolean;
+        if (!isListReturn) {
+          autoMapWouldProduceSameMapping = argIsList === keyIsList;
+        } else {
+          autoMapWouldProduceSameMapping = argIsList && !keyIsList;
+        }
+        if (autoMapWouldProduceSameMapping) {
+          this.warnings.push(
+            redundantIsDirectiveWarning({
+              subgraphName: this.subgraphName,
+              argumentName: argInfo.name,
+              fieldCoords,
+              keyField: isFieldValue,
+              entityType: entityTypeName,
+            }),
+          );
         }
       }
 
@@ -4899,8 +4994,19 @@ export class NormalizationFactory {
       }
     }
 
-    // Per-key independent evaluation for flat keys
+    // Per-key independent evaluation for flat keys.
+    // Two classes of failure:
+    //   (1) Per-key failure (type mismatch on a field) → continue to the next @key; earlier
+    //       satisfiable @keys (including the nested ones above) are preserved.
+    //   (2) Global-invalidation failure (extra non-key argument — singular OR batch rule violation)
+    //       → clear ALL accumulated mappings and stop evaluating further keys. This preserves the
+    //       pre-bug-(d) behavior where an extra non-key argument rejects the whole set because the
+    //       cache key would be incomplete.
+    let globallyInvalidated = false;
     for (const keyData of keyFieldSets.values()) {
+      if (globallyInvalidated) {
+        break;
+      }
       const keyInfos = this.extractKeyFieldInfos(keyData.documentNode, entityTypeName);
       if (keyInfos.length === 0) {
         continue;
@@ -4908,6 +5014,7 @@ export class NormalizationFactory {
 
       const fieldMappings: FieldMappingConfig[] = [];
       let keyFullyMapped = true;
+      let keyFailed = false;
       let firstMatchedArg: string | undefined;
       let firstMatchedKeyField: string | undefined;
       let unmappedField: string | undefined;
@@ -4943,8 +5050,11 @@ export class NormalizationFactory {
             );
             typeMismatchWarningEmitted = true;
           }
+          // Bug (d): a failed candidate on this @key must not abort the remaining @key alternatives.
+          // Mark this key as unmappable and let the outer loop move on to the next @key.
           keyFullyMapped = false;
-          return [];
+          keyFailed = true;
+          break;
         }
 
         if (!firstMatchedArg) {
@@ -4977,10 +5087,17 @@ export class NormalizationFactory {
         }
       }
 
+      // Bug (d): type mismatch on this @key aborted the inner loop — skip to the next @key
+      // without emitting further warnings or blocking other alternatives.
+      if (keyFailed) {
+        continue;
+      }
+
       // Check for extra non-key arguments (args not in ANY key across all keys)
       const extraArgs = argumentInfos.filter((a) => !allKeyFieldPaths.has(a.name));
 
-      // On list return, if a scalar matched but was skipped and there are extra args, warn
+      // On list return, if a scalar matched but was skipped and there are extra args, warn.
+      // Class (2): an extra non-key argument on a list-return field rejects the whole mapping set.
       if (
         isListReturn &&
         scalarMatchedOnListReturn &&
@@ -4998,7 +5115,10 @@ export class NormalizationFactory {
             extraArgument: extraArgs[0].name,
           }),
         );
-        return [];
+        // Class (2) global invalidation: clear accumulated results and stop evaluating further keys.
+        results.length = 0;
+        globallyInvalidated = true;
+        continue;
       }
 
       if (!keyFullyMapped && fieldMappings.length > 0 && unmappedField) {
@@ -5040,7 +5160,13 @@ export class NormalizationFactory {
               }),
             );
           }
-          return [];
+          // Class (2) global invalidation: an extra non-key argument on a fully-mapped key
+          // (list or singular return) must suppress auto-mapping across all @key alternatives,
+          // including earlier accumulated nested-key results. A per-key `continue` would leave
+          // mappings tied to a result set still filtered by an unkeyed argument — unsafe.
+          results.length = 0;
+          globallyInvalidated = true;
+          continue;
         }
 
         results.push({ entityTypeName, fieldMappings });

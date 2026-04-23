@@ -8,5 +8,5 @@ import (
 )
 
 func NewSchema() graphql.ExecutableSchema {
-	return generated.NewExecutableSchema(generated.Config{Resolvers: &subgraph.Resolver{}})
+	return generated.NewExecutableSchema(generated.Config{Resolvers: subgraph.NewResolver()})
 }

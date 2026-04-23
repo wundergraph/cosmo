@@ -124,11 +124,15 @@ export type ConfigurationData = {
   cacheInvalidateConfigurations?: Array<CacheInvalidateConfig>;
 };
 
-// Extracted from @openfed__entityCache(maxAge: Int!, includeHeaders: Boolean, partialCacheLoad: Boolean, shadowMode: Boolean)
+// Extracted from @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int, includeHeaders: Boolean, partialCacheLoad: Boolean, shadowMode: Boolean)
 // on OBJECT types. Defines per-entity cache TTL and behavior.
 export type EntityCacheConfig = {
   typeName: TypeName;
   maxAgeSeconds: number;
+  // TTL (in seconds) for caching "not found" entity responses (entity returned null
+  // from _entities without errors). 0 disables negative caching; composition rejects
+  // negative values at validation time.
+  notFoundCacheTtlSeconds: number;
   // When true, request headers are included in the cache key (useful for user-specific entities)
   includeHeaders: boolean;
   // When true, allows partial cache hits — the router fetches only missing entities from the subgraph

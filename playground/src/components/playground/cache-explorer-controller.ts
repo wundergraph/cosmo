@@ -12,6 +12,7 @@ type Listener = (state: CacheExplorerState) => void;
 let currentState: CacheExplorerState = { status: 'idle' };
 const listeners = new Set<Listener>();
 let currentController: AbortController | null = null;
+let currentRunId = 0;
 
 const emit = (next: CacheExplorerState) => {
   currentState = next;
@@ -33,17 +34,28 @@ export const cacheExplorerController = {
     if (currentController) {
       currentController.abort();
     }
-    currentController = new AbortController();
+    const controller = new AbortController();
+    currentController = controller;
+    const runId = ++currentRunId;
+    const emitIfCurrent = (next: CacheExplorerState) => {
+      if (runId === currentRunId) emit(next);
+    };
     try {
-      await runCacheExplorer(config, emit, currentController.signal);
+      await runCacheExplorer(config, emitIfCurrent, controller.signal);
     } catch (err: any) {
+      if (runId !== currentRunId) {
+        // A newer run has taken over — do not clobber its state.
+        return;
+      }
       if (err?.message === 'aborted' || err?.name === 'AbortError') {
         emit({ status: 'idle' });
       } else {
         emit({ status: 'error', message: err?.message || 'Cache explorer failed' });
       }
     } finally {
-      currentController = null;
+      if (currentController === controller) {
+        currentController = null;
+      }
     }
   },
 

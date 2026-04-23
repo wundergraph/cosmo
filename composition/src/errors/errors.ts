@@ -1739,6 +1739,11 @@ export function maxAgeNotPositiveIntegerErrorMessage(directiveName: string, valu
   return `@${directiveName} maxAge must be a positive integer, got "${value}".`;
 }
 
+// Validation for @openfed__entityCache negativeCacheTTL. 0 disables negative caching; negative values rejected.
+export function negativeCacheTTLNotNonNegativeIntegerErrorMessage(directiveName: string, value: number): string {
+  return `@${directiveName} negativeCacheTTL must be a non-negative integer, got "${value}".`;
+}
+
 // @openfed__is maps arguments to @key fields — it's meaningless without @openfed__queryCache since only @openfed__queryCache uses argument-to-key mappings
 export function isWithoutQueryCacheErrorMessage(argumentName: string, fieldCoords: string): string {
   return `@openfed__is on argument "${argumentName}" of field "${fieldCoords}" has no effect without @openfed__queryCache.`;

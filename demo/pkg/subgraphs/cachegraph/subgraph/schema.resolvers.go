@@ -6,94 +6,64 @@ package subgraph
 
 import (
 	"context"
-	"fmt"
-	"time"
 
+	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/model"
 )
 
+// userProfileIDByAuthorizationToken maps the demo Authorization bearer tokens to
+// user ids. Used by the UserProfile resolver to vary its response per caller so
+// that @openfed__queryCache(includeHeaders: true) has a detectable signal.
+var userProfileIDByAuthorizationToken = map[string]string{
+	"Bearer token-alice":   "u1",
+	"Bearer token-bob":     "u2",
+	"Bearer token-charlie": "u3",
+}
+
 // UpdateArticle is the resolver for the updateArticle field.
 func (r *mutationResolver) UpdateArticle(ctx context.Context, id string, title string) (*model.Article, error) {
-	for _, a := range articlesData {
-		if a.ID == id {
-			a.Title = title
-			return a, nil
-		}
-	}
-	return nil, nil
+	return r.articles.update(id, title), nil
 }
 
 // CreateArticle is the resolver for the createArticle field.
 func (r *mutationResolver) CreateArticle(ctx context.Context, title string, body string, authorName string) (*model.Article, error) {
-	a := &model.Article{
-		ID:          fmt.Sprintf("%d", len(articlesData)+1),
-		Title:       title,
-		Body:        body,
-		AuthorName:  authorName,
-		PublishedAt: time.Now().Format(time.RFC3339),
-		Tags:        []string{},
-	}
-	articlesData = append(articlesData, a)
-	return a, nil
+	return r.articles.create(title, body, authorName), nil
 }
 
 // DeleteListing is the resolver for the deleteListing field.
 func (r *mutationResolver) DeleteListing(ctx context.Context, key model.ListingKey) (*model.Listing, error) {
-	k := listingKey{SellerID: key.SellerID, SKU: key.Sku}
-	l := listingsData[k]
-	delete(listingsData, k)
-	return l, nil
+	return r.listings.delete(key.SellerID, key.Sku), nil
 }
 
 // Article is the resolver for the article field.
 func (r *queryResolver) Article(ctx context.Context, id string) (*model.Article, error) {
-	for _, a := range articlesData {
-		if a.ID == id {
-			return a, nil
-		}
-	}
-	return nil, nil
+	return r.articles.find(id), nil
 }
 
 // Articles is the resolver for the articles field.
 func (r *queryResolver) Articles(ctx context.Context) ([]*model.Article, error) {
-	return articlesData, nil
+	return r.articles.all(), nil
 }
 
 // ArticlesByIds is the resolver for the articlesByIds field.
 func (r *queryResolver) ArticlesByIds(ctx context.Context, ids []string) ([]*model.Article, error) {
-	idSet := make(map[string]struct{}, len(ids))
-	for _, id := range ids {
-		idSet[id] = struct{}{}
-	}
-	var result []*model.Article
-	for _, a := range articlesData {
-		if _, ok := idSet[a.ID]; ok {
-			result = append(result, a)
-		}
-	}
-	return result, nil
+	return r.articles.byIDs(ids), nil
 }
 
 // ArticleBySlug is the resolver for the articleBySlug field.
 func (r *queryResolver) ArticleBySlug(ctx context.Context, slug string) (*model.Article, error) {
-	for _, a := range articlesData {
-		if a.ID == slug {
-			return a, nil
-		}
-	}
-	return nil, nil
+	return r.articles.findBySlug(slug), nil
 }
 
 // Listing is the resolver for the listing field.
 func (r *queryResolver) Listing(ctx context.Context, key model.ListingKey) (*model.Listing, error) {
-	return listingsData[listingKey{SellerID: key.SellerID, SKU: key.Sku}], nil
+	return r.listings.get(key.SellerID, key.Sku), nil
 }
 
 // Listings is the resolver for the listings field.
 func (r *queryResolver) Listings(ctx context.Context) ([]*model.Listing, error) {
-	return allListings(), nil
+	return r.listings.all(), nil
 }
 
 // Venue is the resolver for the venue field.
@@ -107,7 +77,18 @@ func (r *queryResolver) Venues(ctx context.Context) ([]*model.Venue, error) {
 }
 
 // UserProfile is the resolver for the userProfile field.
+// The schema declares @openfed__queryCache(includeHeaders: true) so the cache
+// key varies by Authorization header. Mirror that on the response side: when a
+// known bearer token is present, return that viewer's profile rather than the
+// id-based lookup. Without this, different headers would produce identical
+// responses and the cache-explorer + benchmark suites could not detect a
+// header-variance regression.
 func (r *queryResolver) UserProfile(ctx context.Context, id string) (*model.UserProfile, error) {
+	if hdr := injector.Header(ctx); hdr != nil {
+		if viewerID, ok := userProfileIDByAuthorizationToken[hdr.Get("Authorization")]; ok {
+			return userProfilesData[viewerID], nil
+		}
+	}
 	return userProfilesData[id], nil
 }
 
@@ -128,20 +109,7 @@ func (r *queryResolver) Metric(ctx context.Context, id string) (*model.Metric, e
 
 // RecommendedArticles is the resolver for the recommendedArticles field.
 func (r *viewerResolver) RecommendedArticles(ctx context.Context, obj *model.Viewer) ([]*model.Article, error) {
-	ids := recommendedArticlesByViewer[obj.ID]
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	var articles []*model.Article
-	for _, id := range ids {
-		for _, a := range articlesData {
-			if a.ID == id {
-				articles = append(articles, a)
-				break
-			}
-		}
-	}
-	return articles, nil
+	return r.articles.recommendedForViewer(obj.ID), nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

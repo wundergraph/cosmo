@@ -58,6 +58,7 @@ type ComplexityRoot struct {
 		Body        func(childComplexity int) int
 		ID          func(childComplexity int) int
 		PublishedAt func(childComplexity int) int
+		Slug        func(childComplexity int) int
 		Tags        func(childComplexity int) int
 		Title       func(childComplexity int) int
 	}
@@ -71,6 +72,7 @@ type ComplexityRoot struct {
 
 	Entity struct {
 		FindArticleByID             func(childComplexity int, id string) int
+		FindArticleBySlug           func(childComplexity int, slug string) int
 		FindCatalogByID             func(childComplexity int, id string) int
 		FindListingBySellerIDAndSku func(childComplexity int, sellerID string, sku string) int
 		FindMetricByID              func(childComplexity int, id string) int
@@ -145,6 +147,7 @@ type ComplexityRoot struct {
 
 type EntityResolver interface {
 	FindArticleByID(ctx context.Context, id string) (*model.Article, error)
+	FindArticleBySlug(ctx context.Context, slug string) (*model.Article, error)
 	FindCatalogByID(ctx context.Context, id string) (*model.Catalog, error)
 	FindListingBySellerIDAndSku(ctx context.Context, sellerID string, sku string) (*model.Listing, error)
 	FindMetricByID(ctx context.Context, id string) (*model.Metric, error)
@@ -230,6 +233,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Article.PublishedAt(childComplexity), true
 
+	case "Article.slug":
+		if e.complexity.Article.Slug == nil {
+			break
+		}
+
+		return e.complexity.Article.Slug(childComplexity), true
+
 	case "Article.tags":
 		if e.complexity.Article.Tags == nil {
 			break
@@ -283,6 +293,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Entity.FindArticleByID(childComplexity, args["id"].(string)), true
+
+	case "Entity.findArticleBySlug":
+		if e.complexity.Entity.FindArticleBySlug == nil {
+			break
+		}
+
+		args, err := ec.field_Entity_findArticleBySlug_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Entity.FindArticleBySlug(childComplexity, args["slug"].(string)), true
 
 	case "Entity.findCatalogByID":
 		if e.complexity.Entity.FindCatalogByID == nil {
@@ -835,7 +857,7 @@ type Query {
   """Batch lookup with @openfed__is"""
   articlesByIds(ids: [ID!]! @openfed__is(fields: "id")): [Article!]! @openfed__queryCache(maxAge: 120)
   """Argument remapping via @openfed__is"""
-  articleBySlug(slug: ID! @openfed__is(fields: "id")): Article @openfed__queryCache(maxAge: 120)
+  articleBySlug(slug: String! @openfed__is(fields: "slug")): Article @openfed__queryCache(maxAge: 120)
 
   """Composite key lookup via input object with @openfed__is"""
   listing(key: ListingKey! @openfed__is(fields: "sellerId sku")): Listing @openfed__queryCache(maxAge: 60)
@@ -911,8 +933,9 @@ type Viewer @key(fields: "id") {
   recommendedArticles: [Article!]!
 }
 
-type Article implements Personalized @key(fields: "id") @openfed__entityCache(maxAge: 120) {
+type Article implements Personalized @key(fields: "id") @key(fields: "slug") @openfed__entityCache(maxAge: 120) {
   id: ID!
+  slug: String!
   title: String!
   body: String!
   authorName: String!
@@ -998,6 +1021,7 @@ union _Entity = Article | Catalog | Listing | Metric | UserProfile | Venue | Vie
 # fake type to build resolver interfaces for users to implement
 type Entity {
 	findArticleByID(id: ID!,): Article!
+	findArticleBySlug(slug: String!,): Article!
 	findCatalogByID(id: ID!,): Catalog!
 	findListingBySellerIDAndSku(sellerID: ID!,sku: String!,): Listing!
 	findMetricByID(id: ID!,): Metric!
@@ -1045,6 +1069,34 @@ func (ec *executionContext) field_Entity_findArticleByID_argsID(
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
 	if tmp, ok := rawArgs["id"]; ok {
 		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Entity_findArticleBySlug_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Entity_findArticleBySlug_argsSlug(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["slug"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Entity_findArticleBySlug_argsSlug(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["slug"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
+	if tmp, ok := rawArgs["slug"]; ok {
+		return ec.unmarshalNString2string(ctx, tmp)
 	}
 
 	var zeroVal string
@@ -1500,7 +1552,7 @@ func (ec *executionContext) field_Query_articleBySlug_argsSlug(
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("slug"))
 	if tmp, ok := rawArgs["slug"]; ok {
-		return ec.unmarshalNID2string(ctx, tmp)
+		return ec.unmarshalNString2string(ctx, tmp)
 	}
 
 	var zeroVal string
@@ -1906,6 +1958,50 @@ func (ec *executionContext) fieldContext_Article_id(_ context.Context, field gra
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Article_slug(ctx context.Context, field graphql.CollectedField, obj *model.Article) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Article_slug(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Slug, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Article_slug(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Article",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2348,6 +2444,8 @@ func (ec *executionContext) fieldContext_Entity_findArticleByID(ctx context.Cont
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Article_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Article_slug(ctx, field)
 			case "title":
 				return ec.fieldContext_Article_title(ctx, field)
 			case "body":
@@ -2370,6 +2468,77 @@ func (ec *executionContext) fieldContext_Entity_findArticleByID(ctx context.Cont
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Entity_findArticleByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Entity_findArticleBySlug(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Entity_findArticleBySlug(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindArticleBySlug(rctx, fc.Args["slug"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Article)
+	fc.Result = res
+	return ec.marshalNArticle2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋcachegraphᚋsubgraphᚋmodelᚐArticle(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Entity_findArticleBySlug(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Entity",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Article_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Article_slug(ctx, field)
+			case "title":
+				return ec.fieldContext_Article_title(ctx, field)
+			case "body":
+				return ec.fieldContext_Article_body(ctx, field)
+			case "authorName":
+				return ec.fieldContext_Article_authorName(ctx, field)
+			case "publishedAt":
+				return ec.fieldContext_Article_publishedAt(ctx, field)
+			case "tags":
+				return ec.fieldContext_Article_tags(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Article", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Entity_findArticleBySlug_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3299,6 +3468,8 @@ func (ec *executionContext) fieldContext_Mutation_updateArticle(ctx context.Cont
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Article_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Article_slug(ctx, field)
 			case "title":
 				return ec.fieldContext_Article_title(ctx, field)
 			case "body":
@@ -3368,6 +3539,8 @@ func (ec *executionContext) fieldContext_Mutation_createArticle(ctx context.Cont
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Article_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Article_slug(ctx, field)
 			case "title":
 				return ec.fieldContext_Article_title(ctx, field)
 			case "body":
@@ -3500,6 +3673,8 @@ func (ec *executionContext) fieldContext_Query_article(ctx context.Context, fiel
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Article_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Article_slug(ctx, field)
 			case "title":
 				return ec.fieldContext_Article_title(ctx, field)
 			case "body":
@@ -3569,6 +3744,8 @@ func (ec *executionContext) fieldContext_Query_articles(_ context.Context, field
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Article_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Article_slug(ctx, field)
 			case "title":
 				return ec.fieldContext_Article_title(ctx, field)
 			case "body":
@@ -3627,6 +3804,8 @@ func (ec *executionContext) fieldContext_Query_articlesByIds(ctx context.Context
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Article_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Article_slug(ctx, field)
 			case "title":
 				return ec.fieldContext_Article_title(ctx, field)
 			case "body":
@@ -3693,6 +3872,8 @@ func (ec *executionContext) fieldContext_Query_articleBySlug(ctx context.Context
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Article_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Article_slug(ctx, field)
 			case "title":
 				return ec.fieldContext_Article_title(ctx, field)
 			case "body":
@@ -4876,6 +5057,8 @@ func (ec *executionContext) fieldContext_Viewer_recommendedArticles(_ context.Co
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Article_id(ctx, field)
+			case "slug":
+				return ec.fieldContext_Article_slug(ctx, field)
 			case "title":
 				return ec.fieldContext_Article_title(ctx, field)
 			case "body":
@@ -7110,6 +7293,11 @@ func (ec *executionContext) _Article(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "slug":
+			out.Values[i] = ec._Article_slug(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "title":
 			out.Values[i] = ec._Article_title(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -7241,6 +7429,28 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 					}
 				}()
 				res = ec._Entity_findArticleByID(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "findArticleBySlug":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Entity_findArticleBySlug(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

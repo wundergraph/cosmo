@@ -159,6 +159,7 @@ const extractMetricsFromTrace = (
       }
 
       const ct = t.cache_trace;
+      const sourceName: string = node.source_name || 'unknown';
       if (ct) {
         const l1h = ct.l1_hit || 0;
         const l1m = ct.l1_miss || 0;
@@ -172,7 +173,6 @@ const extractMetricsFromTrace = (
         // exactly one of: L1 cached, L2 cached, or HTTP call. The source
         // breakdown counts fetch nodes (not entity keys) so the cache ratio
         // uses the same unit as "Subgraph HTTP Requests".
-        const sourceName: string = node.source_name || 'unknown';
         if (sourceName !== 'unknown') {
           let entry = sourceMap.get(sourceName);
           if (!entry) {
@@ -193,6 +193,17 @@ const extractMetricsFromTrace = (
             entry.httpCalls += 1;
           }
         }
+      } else if (sourceName !== 'unknown' && !t.load_skipped) {
+        // Pass-through fetch: no cache_trace means the cache was not consulted
+        // at all. If the fetch actually ran (not load_skipped), count it as
+        // an HTTP call so the source breakdown reflects reality.
+        let entry = sourceMap.get(sourceName);
+        if (!entry) {
+          entry = { totalFetches: 0, l1Cached: 0, l2Cached: 0, httpCalls: 0 };
+          sourceMap.set(sourceName, entry);
+        }
+        entry.totalFetches += 1;
+        entry.httpCalls += 1;
       }
     }
 
@@ -290,10 +301,15 @@ const runOne = async (
   };
   if (config.operationName) body.operationName = config.operationName;
   if (config.variables) {
-    try {
-      body.variables = JSON.parse(config.variables);
-    } catch {
-      // ignore parse errors; send as-is if it's already an object-ish string
+    const trimmed = config.variables.trim();
+    if (trimmed.length > 0) {
+      try {
+        body.variables = JSON.parse(trimmed);
+      } catch (err: any) {
+        throw new Error(
+          `Invalid variables JSON: ${err?.message || 'could not parse'}`,
+        );
+      }
     }
   }
 
@@ -307,8 +323,21 @@ const runOne = async (
     body: JSON.stringify(body),
     signal,
   });
-  const clientDurationMs = performance.now() - start;
   const parsed = await resp.json();
+  const clientDurationMs = performance.now() - start;
+
+  if (resp.status < 200 || resp.status >= 300) {
+    throw new Error(
+      `HTTP ${resp.status} ${resp.statusText || ''}`.trim(),
+    );
+  }
+  if (Array.isArray(parsed?.errors) && parsed.errors.length > 0) {
+    const first = parsed.errors[0];
+    const message =
+      typeof first?.message === 'string' ? first.message : 'GraphQL error';
+    throw new Error(`GraphQL error: ${message}`);
+  }
+
   const trace = parsed?.extensions?.trace;
 
   const metrics = trace

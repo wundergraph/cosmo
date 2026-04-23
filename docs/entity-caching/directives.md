@@ -11,7 +11,10 @@ This document defines the GraphQL directives for configuring entity caching in c
 3. **Seconds for TTL.** All frameworks (Apollo `@cacheControl`, Stellate `@stellate_cache`, Hasura `@cached`) use seconds. We follow this convention.
 4. **Separate directives per concern.** Each directive has a single, clear purpose rather than one overloaded directive with context-dependent behavior.
 5. **Mutual exclusivity.** A field either invalidates or populates the cache — never both.
-6. **No prefix.** Like `@authenticated` and `@requiresScopes`, entity caching is a first-class cosmo feature and uses unprefixed directive names.
+6. **`@openfed__` prefix.** All entity-caching directives use the `@openfed__` prefix (e.g.
+`@openfed__entityCache`,
+`@openfed__queryCache`,
+`@openfed__is`).
 
 ---
 
@@ -125,7 +128,10 @@ When a `@openfed__queryCache` field returns an entity, composition maps field ar
 
 1. **Auto-mapping**: If a field argument name matches a `@key` field name exactly, the mapping is automatic.
 2. **Explicit mapping with `@openfed__is`**: When argument names differ from `@key` field names, use the `@openfed__is` directive on the argument to declare the mapping.
-3. **Composition error**: If any `@key` field cannot be mapped to an argument (neither by name match nor `@openfed__is`), composition fails with an error listing the unmapped fields.
+3. **Composition warning (cache reads disabled for this field)**: If any `@key` field cannot be mapped to an argument (neither by name match nor `@openfed__is`),
+composition emits a warning and disables cache reads/population for this field.
+The subgraph still composes successfully,
+but the field behaves as if it had no `@openfed__queryCache` directive at runtime.
 
 **Single Entity Return:**
 
@@ -170,7 +176,7 @@ type Query {
   # Explicit mapping: argument "userId" does NOT match User @key field "id"
   # @openfed__is maps "userId" → "id"
   # Cache key: {"__typename":"User","key":{"id":"123"}}
-  userById(userId: ID! @openfed__is(field: "id")): User @openfed__queryCache(maxAge: 300)
+  userById(userId: ID! @openfed__is(fields: "id")): User @openfed__queryCache(maxAge: 300)
 
   # Auto-mapped composite key: both argument names match @key fields
   # Cache key: {"__typename":"OrderItem","key":{"orderId":"1","itemId":"42"}}
@@ -234,11 +240,11 @@ type Product @key(fields: "upc") @openfed__entityCache(maxAge: 600) {
 type Query {
   # Argument "productUpc" does not match @key field "upc"
   # @openfed__is explicitly maps it
-  product(productUpc: String! @openfed__is(field: "upc")): Product @openfed__queryCache(maxAge: 600)
+  product(productUpc: String! @openfed__is(fields: "upc")): Product @openfed__queryCache(maxAge: 600)
 
   # Without @openfed__is, this would be a composition error:
   # "Field 'Query.product' has @openfed__queryCache but argument 'productUpc'
-  #  cannot be mapped to Product @key field 'upc'. Use @openfed__is(field: "upc")
+  #  cannot be mapped to Product @key field 'upc'. Use @openfed__is(fields: "upc")
   #  on the argument to declare the mapping."
 }
 ```
@@ -340,13 +346,13 @@ This section consolidates all composition-time validation rules.
 4. Only on fields of root `Query` type. Error: `"@openfed__queryCache is only valid on Query fields, found on Mutation.X / Subscription.X."`
 5. Return type must be an entity (type with `@key`), or a list of entities. Error: `"Field 'Query.X' has @openfed__queryCache but returns non-entity type 'Y'. @openfed__queryCache requires the return type to be an entity with @key."`
 6. The return entity type must have `@openfed__entityCache`. Error: `"Field 'Query.X' returns entity type 'Y' which does not have @openfed__entityCache."`
-7. When returning a single entity: all `@key` fields must be mappable to field arguments (by name match or `@openfed__is`). Error: `"Field 'Query.X' has @openfed__queryCache returning 'Y' but @key field 'Z' cannot be mapped to any argument. Add an argument named 'Z' or use @openfed__is(field: \"Z\") on an existing argument."`
+7. When returning a single entity: all `@key` fields must be mappable to field arguments (by name match or `@openfed__is`). Error: `"Field 'Query.X' has @openfed__queryCache returning 'Y' but @key field 'Z' cannot be mapped to any argument. Add an argument named 'Z' or use @openfed__is(fields: \"Z\") on an existing argument."`
 8. When returning a list of entities: all `@key` fields must be mappable to field arguments (by name match or `@openfed__is`). Error: same as rule 7. Entity keys are extracted per-entity from the response, but the mapping must be complete for composition to validate correctness.
 9. `maxAge` must be a positive integer.
 
 ### `@openfed__is`
 10. Only on arguments of fields that have `@openfed__queryCache`. Error: `"@openfed__is on argument 'X' of field 'Query.Y' has no effect without @openfed__queryCache."`
-11. The `field` value must reference a `@key` field on the return entity type. Error: `"@openfed__is(field: \"X\") on argument 'Y' of field 'Query.Z' references unknown @key field 'X' on type 'W'."`
+11. The `fields` value must reference a `@key` field on the return entity type. Error: `"@openfed__is(fields: \"X\") on argument 'Y' of field 'Query.Z' references unknown @key field 'X' on type 'W'."`
 12. No duplicate mappings — two arguments must not map to the same `@key` field. Error: `"Multiple arguments on field 'Query.X' map to @key field 'Y'."`
 13. An argument must not have `@openfed__is` if its name already matches a `@key` field. Error: `"Argument 'X' on field 'Query.Y' already matches @key field 'X' by name — @openfed__is is redundant."`
 
@@ -443,7 +449,7 @@ type Review @key(fields: "id") @openfed__entityCache(maxAge: 120) {
 type Query {
   topProducts(first: Int = 5): [Product!]! @openfed__queryCache(maxAge: 30)
   product(upc: String!): Product @openfed__queryCache(maxAge: 600)
-  productByUpc(productUpc: String! @openfed__is(field: "upc")): Product @openfed__queryCache(maxAge: 600)
+  productByUpc(productUpc: String! @openfed__is(fields: "upc")): Product @openfed__queryCache(maxAge: 600)
 }
 
 type Mutation {

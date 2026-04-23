@@ -171,6 +171,17 @@ func (ec *executionContext) resolveEntity(
 			}
 
 			return entity, nil
+		case "findArticleBySlug":
+			id0, err := ec.unmarshalNString2string(ctx, rep["slug"])
+			if err != nil {
+				return nil, fmt.Errorf(`unmarshalling param 0 for findArticleBySlug(): %w`, err)
+			}
+			entity, err := ec.resolvers.Entity().FindArticleBySlug(ctx, id0)
+			if err != nil {
+				return nil, fmt.Errorf(`resolving Entity "Article": %w`, err)
+			}
+
+			return entity, nil
 		}
 	case "Catalog":
 		resolverName, err := entityResolverNameForCatalog(ctx, rep)
@@ -365,6 +376,33 @@ func entityResolverNameForArticle(ctx context.Context, rep EntityRepresentation)
 			break
 		}
 		return "findArticleByID", nil
+	}
+	for {
+		var (
+			m   EntityRepresentation
+			val any
+			ok  bool
+		)
+		_ = val
+		// if all of the KeyFields values for this resolver are null,
+		// we shouldn't use use it
+		allNull := true
+		m = rep
+		val, ok = m["slug"]
+		if !ok {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to missing Key Field \"slug\" for Article", ErrTypeNotFound))
+			break
+		}
+		if allNull {
+			allNull = val == nil
+		}
+		if allNull {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to all null value KeyFields for Article", ErrTypeNotFound))
+			break
+		}
+		return "findArticleBySlug", nil
 	}
 	return "", fmt.Errorf("%w for Article due to %v", ErrTypeNotFound,
 		errors.Join(entityResolverErrs...).Error())

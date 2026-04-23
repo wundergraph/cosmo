@@ -5,6 +5,7 @@ import {
   CACHE_POPULATE,
   CacheInvalidateConfig,
   CachePopulateConfig,
+  DIRECTIVE_DEFINITION_BY_NAME,
   ENTITY_CACHE,
   EntityCacheConfig,
   entityCacheWithoutKeyErrorMessage,
@@ -21,6 +22,8 @@ import {
   QUERY_CACHE,
   queryCacheOnNonEntityReturnTypeErrorMessage,
   queryCacheOnNonQueryFieldErrorMessage,
+  REQUEST_SCOPED,
+  REQUEST_SCOPED_DEFINITION,
   RootFieldCacheConfig,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
@@ -159,6 +162,7 @@ describe('Entity caching directive tests', () => {
         {
           typeName: 'Product',
           maxAgeSeconds: 60,
+          notFoundCacheTtlSeconds: 0,
           includeHeaders: false,
           partialCacheLoad: false,
           shadowMode: false,
@@ -185,11 +189,52 @@ describe('Entity caching directive tests', () => {
         {
           typeName: 'Product',
           maxAgeSeconds: 120,
+          notFoundCacheTtlSeconds: 0,
           includeHeaders: true,
           partialCacheLoad: true,
           shadowMode: true,
         },
       ] satisfies EntityCacheConfig[]);
+    });
+
+    test('config: @openfed__entityCache negativeCacheTTL propagates to notFoundCacheTtlSeconds', () => {
+      // negativeCacheTTL caches "not found" entity responses (null from _entities without errors)
+      // for the specified TTL in seconds. 0 (default) disables negative caching.
+      const config = getConfigForType(
+        subgraph(`
+          type Query { product(id: ID!): Product }
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 300, negativeCacheTTL: 10) {
+            id: ID!
+            name: String!
+          }
+        `),
+        'Product',
+      );
+      expect(config).toBeDefined();
+      expect(config!.entityCacheConfigurations).toStrictEqual([
+        {
+          typeName: 'Product',
+          maxAgeSeconds: 300,
+          notFoundCacheTtlSeconds: 10,
+          includeHeaders: false,
+          partialCacheLoad: false,
+          shadowMode: false,
+        },
+      ] satisfies EntityCacheConfig[]);
+    });
+
+    test('error: @openfed__entityCache negativeCacheTTL must be non-negative', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraph(`
+          type Query { product(id: ID!): Product }
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 300, negativeCacheTTL: -1) {
+            id: ID!
+            name: String!
+          }
+        `),
+      );
+      expect(errors).toBeDefined();
+      expect(errors!.some((e) => e.message.includes('negativeCacheTTL must be a non-negative integer'))).toBe(true);
     });
   });
 
@@ -243,7 +288,10 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('success: return entity can omit @openfed__entityCache and still keep root-field caching without mappings', () => {
+    // Expectation updated (bug a fix): @openfed__queryCache on a @key entity without
+    // @openfed__entityCache warns and does NOT extract a queryCache config — the cache
+    // would have no entity-cache backing store.
+    test('warning: return entity omits @openfed__entityCache — queryCache config is NOT extracted', () => {
       const config = getConfigForType(
         subgraph(`
           type Query {
@@ -257,16 +305,7 @@ describe('Entity caching directive tests', () => {
         QUERY,
       );
       expect(config).toBeDefined();
-      expect(config!.rootFieldCacheConfigurations).toStrictEqual([
-        {
-          fieldName: 'product',
-          maxAgeSeconds: 60,
-          includeHeaders: false,
-          shadowMode: false,
-          entityTypeName: 'Product',
-          entityKeyMappings: [],
-        },
-      ] satisfies RootFieldCacheConfig[]);
+      expect(config!.rootFieldCacheConfigurations).toBeUndefined();
     });
 
     test('error: maxAge of zero', () => {
@@ -536,7 +575,9 @@ describe('Entity caching directive tests', () => {
       );
     });
 
-    test('success: redundant @openfed__is(fields: "id") on argument named "id" is accepted silently', () => {
+    // Expectation updated (bug b fix): redundant @openfed__is(fields: "id") on argument
+    // named "id" now emits a warning (the directive duplicates the auto-map).
+    test('warning: redundant @openfed__is(fields: "id") on argument named "id" emits a redundancy warning', () => {
       const { warnings } = normalizeSubgraphSuccess(
         subgraph(`
           type Query {
@@ -549,7 +590,11 @@ describe('Entity caching directive tests', () => {
         `),
         version,
       );
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0].message).toBe(
+        `Argument "id" on field "Query.product" has @openfed__is(fields: "id"), but "id" already auto-maps to` +
+          ` @key field "id" on entity "Product". The @openfed__is directive is redundant and can be removed.`,
+      );
     });
 
     test('success: @openfed__is maps differently-named argument to @key field', () => {
@@ -1259,6 +1304,7 @@ describe('Entity caching directive tests', () => {
         {
           typeName: 'Product',
           maxAgeSeconds: 60,
+          notFoundCacheTtlSeconds: 0,
           includeHeaders: false,
           partialCacheLoad: false,
           shadowMode: false,
@@ -1286,11 +1332,149 @@ describe('Entity caching directive tests', () => {
         {
           typeName: 'Product',
           maxAgeSeconds: 60,
+          notFoundCacheTtlSeconds: 0,
           includeHeaders: false,
           partialCacheLoad: false,
           shadowMode: false,
         },
       ]);
+    });
+  });
+
+  // ─── @openfed__requestScoped registry membership ─────────────────────────────────────────
+  // The DIRECTIVE_DEFINITION_BY_NAME registry is the lookup used by normalization to resolve
+  // directive AST definitions by name. A missing entry silently breaks discovery.
+  describe('@openfed__requestScoped registry', () => {
+    test('DIRECTIVE_DEFINITION_BY_NAME[REQUEST_SCOPED] is the REQUEST_SCOPED_DEFINITION AST node', () => {
+      expect(DIRECTIVE_DEFINITION_BY_NAME.get(REQUEST_SCOPED)).toBe(REQUEST_SCOPED_DEFINITION);
+    });
+
+    test('success: @openfed__requestScoped directive is materialized in the normalized subgraph output', () => {
+      // The registry map DIRECTIVE_DEFINITION_BY_NAME is consumed by
+      // NormalizationFactory#addDirectiveDefinitionsToDocument when producing the normalized
+      // output: every directive name seen in the SDL (tracked in referencedDirectiveNames)
+      // is looked up in the registry, and the resolved AST node is set into
+      // directiveDefinitionByName. If REQUEST_SCOPED is missing from the registry, the
+      // resulting NormalizationSuccess.directiveDefinitionByName will NOT contain it —
+      // this assertion fails under that regression.
+      const { directiveDefinitionByName } = normalizeSubgraphSuccess(
+        subgraph(`
+          type Query {
+            product(id: ID!): Product
+            other(id: ID!): Product
+          }
+          type Product @key(fields: "id") {
+            id: ID! @openfed__requestScoped(key: "productId")
+            name: String! @openfed__requestScoped(key: "productName")
+          }
+        `),
+        version,
+      );
+      expect(directiveDefinitionByName.has(REQUEST_SCOPED)).toBe(true);
+      expect(directiveDefinitionByName.get(REQUEST_SCOPED)).toBe(REQUEST_SCOPED_DEFINITION);
+    });
+  });
+
+  // ─── Renamed root types ──────────────────────────────────────────────────────
+  // Regression coverage: when a subgraph explicitly renames its root operation types
+  // via `schema { query: MyQueryRoot mutation: MyMutationRoot }` (or via
+  // `extend schema { ... }`), cache directives on those root fields must be extracted.
+  // The first walker pass (`upsertDirectiveSchemaAndEntityDefinitions`) populates
+  // `operationTypeNodeByTypeName` from every `OperationTypeDefinition` node (inside
+  // SchemaDefinition and SchemaExtension), which runs before
+  // `validateAndExtractEntityCachingConfigs()`. If that walker population is ever
+  // removed or re-ordered, every cache config attached to renamed root types would
+  // silently drop. These tests pin that wiring.
+  describe('renamed root operation types', () => {
+    test('config: @openfed__queryCache on a renamed Query root is extracted', () => {
+      const config = getConfigForType(
+        subgraph(`
+          schema { query: MyQueryRoot }
+          type MyQueryRoot {
+            product(id: ID!): Product @openfed__queryCache(maxAge: 30)
+          }
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+        `),
+        'MyQueryRoot',
+      );
+      expect(config).toBeDefined();
+      expect(config!.rootFieldCacheConfigurations).toStrictEqual([
+        {
+          fieldName: 'product',
+          maxAgeSeconds: 30,
+          includeHeaders: false,
+          shadowMode: false,
+          entityTypeName: 'Product',
+          entityKeyMappings: [
+            {
+              entityTypeName: 'Product',
+              fieldMappings: [{ entityKeyField: 'id', argumentPath: ['id'] }],
+            },
+          ],
+        },
+      ] satisfies RootFieldCacheConfig[]);
+    });
+
+    test('config: @openfed__queryCache on a renamed Query root via schema extension', () => {
+      const config = getConfigForType(
+        subgraph(`
+          extend schema { query: MyQueryRoot }
+          type MyQueryRoot {
+            product(id: ID!): Product @openfed__queryCache(maxAge: 30)
+          }
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+        `),
+        'MyQueryRoot',
+      );
+      expect(config).toBeDefined();
+      expect(config!.rootFieldCacheConfigurations).toStrictEqual([
+        {
+          fieldName: 'product',
+          maxAgeSeconds: 30,
+          includeHeaders: false,
+          shadowMode: false,
+          entityTypeName: 'Product',
+          entityKeyMappings: [
+            {
+              entityTypeName: 'Product',
+              fieldMappings: [{ entityKeyField: 'id', argumentPath: ['id'] }],
+            },
+          ],
+        },
+      ] satisfies RootFieldCacheConfig[]);
+    });
+
+    test('config: @openfed__cacheInvalidate on a renamed Mutation root is extracted', () => {
+      const config = getConfigForType(
+        subgraph(`
+          schema { query: MyQueryRoot mutation: MyMutationRoot }
+          type MyQueryRoot {
+            product(id: ID!): Product
+          }
+          type MyMutationRoot {
+            deleteProduct(id: ID!): Product @openfed__cacheInvalidate
+          }
+          type Product @key(fields: "id") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            name: String!
+          }
+        `),
+        'MyMutationRoot',
+      );
+      expect(config).toBeDefined();
+      expect(config!.cacheInvalidateConfigurations).toStrictEqual([
+        {
+          fieldName: 'deleteProduct',
+          operationType: MUTATION,
+          entityTypeName: 'Product',
+        },
+      ] satisfies CacheInvalidateConfig[]);
     });
   });
 });

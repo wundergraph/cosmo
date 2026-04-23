@@ -31,7 +31,7 @@ type Query {
   """Batch lookup with @openfed__is"""
   articlesByIds(ids: [ID!]! @openfed__is(fields: "id")): [Article!]! @openfed__queryCache(maxAge: 120)
   """Argument remapping via @openfed__is"""
-  articleBySlug(slug: ID! @openfed__is(fields: "id")): Article @openfed__queryCache(maxAge: 120)
+  articleBySlug(slug: String! @openfed__is(fields: "slug")): Article @openfed__queryCache(maxAge: 120)
 
   """Composite key lookup via input object with @openfed__is"""
   listing(key: ListingKey! @openfed__is(fields: "sellerId sku")): Listing @openfed__queryCache(maxAge: 60)
@@ -107,8 +107,9 @@ type Viewer @key(fields: "id") {
   recommendedArticles: [Article!]!
 }
 
-type Article implements Personalized @key(fields: "id") @openfed__entityCache(maxAge: 120) {
+type Article implements Personalized @key(fields: "id") @key(fields: "slug") @openfed__entityCache(maxAge: 120) {
   id: ID!
+  slug: String!
   title: String!
   body: String!
   authorName: String!

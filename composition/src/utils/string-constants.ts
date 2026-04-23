@@ -97,6 +97,7 @@ export const LITERAL_SPACE = ' ';
 export const LITERAL_NEW_LINE = '\n';
 export const LITERAL_PERIOD = '.';
 export const MAX_AGE = 'maxAge';
+export const NEGATIVE_CACHE_TTL = 'negativeCacheTTL';
 export const NUMBER = 'number';
 export const MUTATION = 'Mutation';
 export const MUTATION_UPPER = 'MUTATION';

@@ -312,7 +312,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	if config.Ports.Viewer != 0 {
 		servers = append(servers, &http.Server{
 			Addr:    ":" + strconv.Itoa(config.Ports.Viewer),
-			Handler: viewer.NewHandler(),
+			Handler: injector.Latency(injector.HTTP(viewer.NewHandler())),
 		})
 	}
 	return &Subgraphs{

@@ -44,12 +44,12 @@ func gqlServer(name string, port int, schema graphql.ExecutableSchema) *http.Ser
 	mux := http.NewServeMux()
 	mux.Handle("/", playground.Handler(name, "/graphql"))
 	mux.Handle("/graphql", srv)
-	return &http.Server{Addr: ":" + strconv.Itoa(port), Handler: injector.Latency(mux)}
+	return &http.Server{Addr: ":" + strconv.Itoa(port), Handler: injector.Latency(injector.HTTP(mux))}
 }
 
 func viewerServer(port int) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/", playground.Handler("viewer", "/graphql"))
 	mux.Handle("/graphql", viewer.NewHandler())
-	return &http.Server{Addr: ":" + strconv.Itoa(port), Handler: injector.Latency(mux)}
+	return &http.Server{Addr: ":" + strconv.Itoa(port), Handler: injector.Latency(injector.HTTP(mux))}
 }

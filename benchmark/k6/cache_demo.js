@@ -60,6 +60,11 @@ export const options = payload.options || {
 };
 
 export default function () {
+  const mergedHeaders = Object.assign(
+    { "content-type": "application/json" },
+    payload.headers || {},
+  );
+
   const response = http.post(
     payload.url,
     JSON.stringify({
@@ -68,7 +73,7 @@ export default function () {
       variables: payload.variables || {},
     }),
     {
-      headers: payload.headers || { "content-type": "application/json" },
+      headers: mergedHeaders,
     },
   );
 
@@ -79,10 +84,22 @@ export default function () {
   if (!ok) {
     mismatchRate.add(true);
     mismatchCount.add(1);
+    graphqlErrorRate.add(false);
     return;
   }
 
-  const body = response.json();
+  let body;
+  try {
+    body = response.json();
+  } catch (_err) {
+    // Parse failure is both a response mismatch and a graphql-error-equivalent
+    // (the server returned a non-JSON body or truncated JSON under load).
+    mismatchRate.add(true);
+    mismatchCount.add(1);
+    graphqlErrorRate.add(true);
+    return;
+  }
+
   const hasGraphqlErrors = Array.isArray(body?.errors) && body.errors.length > 0;
   graphqlErrorRate.add(hasGraphqlErrors);
 

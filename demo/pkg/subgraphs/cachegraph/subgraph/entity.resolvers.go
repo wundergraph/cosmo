@@ -13,12 +13,12 @@ import (
 
 // FindArticleByID is the resolver for the findArticleByID field.
 func (r *entityResolver) FindArticleByID(ctx context.Context, id string) (*model.Article, error) {
-	for _, a := range articlesData {
-		if a.ID == id {
-			return a, nil
-		}
-	}
-	return nil, nil
+	return r.articles.find(id), nil
+}
+
+// FindArticleBySlug is the resolver for the findArticleBySlug field.
+func (r *entityResolver) FindArticleBySlug(ctx context.Context, slug string) (*model.Article, error) {
+	return r.articles.findBySlug(slug), nil
 }
 
 // FindCatalogByID is the resolver for the findCatalogByID field.
@@ -28,8 +28,7 @@ func (r *entityResolver) FindCatalogByID(ctx context.Context, id string) (*model
 
 // FindListingBySellerIDAndSku is the resolver for the findListingBySellerIDAndSku field.
 func (r *entityResolver) FindListingBySellerIDAndSku(ctx context.Context, sellerID string, sku string) (*model.Listing, error) {
-	l := listingsData[listingKey{SellerID: sellerID, SKU: sku}]
-	return l, nil
+	return r.listings.get(sellerID, sku), nil
 }
 
 // FindMetricByID is the resolver for the findMetricByID field.
@@ -40,10 +39,8 @@ func (r *entityResolver) FindMetricByID(ctx context.Context, id string) (*model.
 // FindPersonalizedByID is the resolver for the findPersonalizedByID field.
 // Returns the Article matching the ID (Article implements Personalized).
 func (r *entityResolver) FindPersonalizedByID(ctx context.Context, id string) (model.Personalized, error) {
-	for _, a := range articlesData {
-		if a.ID == id {
-			return a, nil
-		}
+	if a := r.articles.find(id); a != nil {
+		return a, nil
 	}
 	return nil, nil
 }

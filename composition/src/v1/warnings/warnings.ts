@@ -5,6 +5,8 @@ import {
   type AutoMappingAdditionalNonKeyArgumentWarningParams,
   type AutoMappingTypeMismatchWarningParams,
   type IncompleteQueryCacheKeyMappingWarningParams,
+  type QueryCacheReturnEntityMissingEntityCacheWarningParams,
+  type RedundantIsDirectiveWarningParams,
   type RequestScopedSingleFieldWarningParams,
   type SingleFederatedInputFieldOneOfWarningParams,
   type SingleSubgraphInputFieldOneOfWarningParams,
@@ -277,6 +279,48 @@ export function singleFederatedInputFieldOneOfWarning({
       ` to a required type, and removing any other remaining optional Input fields instead.`,
     subgraph: {
       name: '',
+    },
+  });
+}
+
+// Warns when @openfed__queryCache is declared on a field returning an entity (has @key)
+// that lacks @openfed__entityCache. Without @openfed__entityCache the entity has no L1/L2
+// backing store, so the queryCache root-field config would point at a missing cache.
+// The queryCache config is NOT extracted for this field.
+export function queryCacheReturnEntityMissingEntityCacheWarning({
+  subgraphName,
+  fieldCoords,
+  entityType,
+}: QueryCacheReturnEntityMissingEntityCacheWarningParams): Warning {
+  return new Warning({
+    message:
+      `Field "${fieldCoords}" has @openfed__queryCache and returns entity "${entityType}",` +
+      ` but "${entityType}" has no @openfed__entityCache directive. Add @openfed__entityCache(maxAge: ...)` +
+      ` to "${entityType}" to enable caching, or remove @openfed__queryCache from "${fieldCoords}".` +
+      ' The @openfed__queryCache config for this field was not extracted.',
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+// Warns when @openfed__is(fields: "X") is declared on an argument whose name already equals
+// X and X is a @key field. Auto-mapping would produce the same result, so the directive is
+// redundant noise. The mapping is still extracted successfully.
+export function redundantIsDirectiveWarning({
+  subgraphName,
+  argumentName,
+  fieldCoords,
+  keyField,
+  entityType,
+}: RedundantIsDirectiveWarningParams): Warning {
+  return new Warning({
+    message:
+      `Argument "${argumentName}" on field "${fieldCoords}" has @openfed__is(fields: "${keyField}"),` +
+      ` but "${argumentName}" already auto-maps to @key field "${keyField}" on entity "${entityType}".` +
+      ' The @openfed__is directive is redundant and can be removed.',
+    subgraph: {
+      name: subgraphName,
     },
   });
 }

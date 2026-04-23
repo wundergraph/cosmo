@@ -57,6 +57,7 @@ import {
   LIST_SIZE,
   MAX_AGE,
   NAME,
+  NEGATIVE_CACHE_TTL,
   OBJECT_UPPER,
   ONE_OF,
   OVERRIDE,
@@ -288,13 +289,19 @@ export const DEPRECATED_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// @openfed__entityCache(maxAge: Int!, includeHeaders: Boolean = false, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT
+// @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int = 0, includeHeaders: Boolean = false, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT
 export const ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(MAX_AGE),
       type: REQUIRED_INT_TYPE_NODE,
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(NEGATIVE_CACHE_TTL),
+      type: stringToNamedTypeNode(INT_SCALAR),
+      defaultValue: { kind: Kind.INT, value: '0' },
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,

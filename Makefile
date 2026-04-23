@@ -192,8 +192,18 @@ demo:
 	cd demo && $(MAKE) compose-cache
 	@echo "Starting subgraphs and router..."
 	@echo "Playground will be at http://localhost:3002/"
+	@set -e; \
 	cd demo && go run cmd/all/main.go & \
-	sleep 2 && cd router && go run cmd/router/main.go --config ../demo/router-cache.yaml
+	pid=$$!; \
+	trap 'kill $$pid 2>/dev/null || true' EXIT INT TERM HUP; \
+	for p in 4012 4013 4014; do \
+		for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do \
+			nc -z 127.0.0.1 $$p && break; \
+			sleep 0.5; \
+		done; \
+		nc -z 127.0.0.1 $$p || { echo "subgraph $$p did not start" >&2; exit 1; }; \
+	done; \
+	cd router && go run cmd/router/main.go --config ../demo/router-cache.yaml
 
 benchmark-cache-demo:
 	pnpm dlx tsx benchmark/scripts/run_suite.ts --all \

@@ -51,3 +51,17 @@ export type RequestScopedSingleFieldWarningParams = {
   key: string;
   fieldCoords: FieldName;
 };
+
+export type QueryCacheReturnEntityMissingEntityCacheWarningParams = {
+  subgraphName: SubgraphName;
+  fieldCoords: FieldName;
+  entityType: TypeName;
+};
+
+export type RedundantIsDirectiveWarningParams = {
+  subgraphName: SubgraphName;
+  argumentName: string;
+  fieldCoords: FieldName;
+  keyField: FieldName;
+  entityType: TypeName;
+};

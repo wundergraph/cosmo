@@ -51,7 +51,9 @@ async function main(): Promise<void> {
     );
   }
 
-  const response = await fetch("http://127.0.0.1:8088/metrics");
+  const response = await fetch("http://127.0.0.1:8088/metrics", {
+    signal: AbortSignal.timeout(15_000),
+  });
   if (!response.ok) {
     throw new Error(`failed to fetch router metrics: ${response.status}`);
   }

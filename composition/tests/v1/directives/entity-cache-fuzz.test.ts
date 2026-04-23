@@ -1169,8 +1169,9 @@ describe('Entity caching fuzz tests', () => {
     test('45. @openfed__queryCache on field returning entity that exists only in another subgraph', () => {
       // The entity type Product is defined in subgraph-b but not in subgraph-a.
       // However, subgraph-a references it as a return type and adds @openfed__queryCache.
-      // This should work in a multi-subgraph setup — the entity is resolved by subgraph-b.
-      // In a single-subgraph normalization, Product would need at least a stub.
+      // Expectation updated (bug a fix): without @openfed__entityCache on Product, the
+      // queryCache config is NOT extracted — we warn the subgraph author that they need
+      // to either add @openfed__entityCache or remove @openfed__queryCache.
       const sg = subgraph(`
         type Query {
           product(id: ID!): Product @openfed__queryCache(maxAge: 30)
@@ -1179,13 +1180,9 @@ describe('Entity caching fuzz tests', () => {
           id: ID!
         }
       `);
-      // Without @openfed__entityCache on Product, the mapping still produces a root field config
-      // but with empty key mappings (since hasEntityCache is false).
       const config = getConfigForType(sg, QUERY);
       expect(config).toBeDefined();
-      expect(config!.rootFieldCacheConfigurations).toHaveLength(1);
-      // entityKeyMappings should be empty since Product lacks @openfed__entityCache
-      expect(config!.rootFieldCacheConfigurations![0].entityKeyMappings).toStrictEqual([]);
+      expect(config!.rootFieldCacheConfigurations).toBeUndefined();
     });
   });
 });
