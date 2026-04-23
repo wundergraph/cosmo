@@ -1,0 +1,41 @@
+---
+title: "List"
+description: "List registered GraphQL clients of a federated graph or monograph"
+icon: list
+---
+
+## Usage
+
+```bash
+npx wgc clients list <graph-name>
+```
+
+## Description
+
+The `npx wgc clients list` command lists the registered GraphQL clients of a federated graph or monograph.
+
+Clients are registered when persisted operations are pushed for a given client name.
+
+## Parameters
+
+* `<graph-name>`: The name of the federated graph or monograph.
+
+## Options
+
+* `-n, --namespace` : The namespace of the federated graph or monograph. Defaults to `default`.
+
+* `-j, --json` : Prints structured JSON instead of a table.
+
+## Examples
+
+```bash
+npx wgc clients list production
+```
+
+Lists all registered clients of the graph named `production`.
+
+```bash
+npx wgc clients list production --namespace staging --json
+```
+
+Lists all registered clients of the graph named `production` in the `staging` namespace and prints JSON output.
