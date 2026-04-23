@@ -4,28 +4,28 @@
 # Protect the CODEOWNERS file
 /.github/CODEOWNERS @StarpTech
 
-/admission-server/ @JivusAyrus @StarpTech @thisisnithin
-/cdn-server/ @JivusAyrus @StarpTech @thisisnithin
-/cli/ @endigma @JivusAyrus @StarpTech @jensneuse @wilsonrivera
-/composition/ @Aenimus @JivusAyrus @StarpTech @thisisnithin
-/composition-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @thisisnithin
+/admission-server/ @JivusAyrus @StarpTech @thisisnithin @wilsonrivera @Aenimus
+/cdn-server/ @JivusAyrus @StarpTech @thisisnithin @wilsonrivera @Aenimus
+/cli/ @endigma @JivusAyrus @StarpTech @jensneuse @wilsonrivera @wilsonrivera @aenimus
+/composition/ @Aenimus @JivusAyrus @StarpTech @thisisnithin @wilsonrivera
+/composition-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @thisisnithin @wilsonrivera
 /connect/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera
 /connect-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera
-/controlplane/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
+/controlplane/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin @Aenimus
 /graphqlmetrics/ @Noroth @pepol @StarpTech
 /helm/ @Noroth @pepol @StarpTech
 /infrastructure/ @Noroth @pepol @StarpTech
-/keycloak/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
+/keycloak/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin @Aenimus
 /otelcollector/ @Noroth @pepol @StarpTech
-/playground/ @wundergraph/Router @thisisnithin @StarpTech
+/playground/ @wundergraph/Router @thisisnithin @StarpTech @Aenimus @JivusAyrus
 /proto/ @JivusAyrus @wilsonrivera @StarpTech @endigma
 /protographic/ @Noroth @StarpTech @endigma @dkorittki
 # Same owner for router and tests to avoid requesting too many reviewers
 /router/ @Noroth @devsergiy @StarpTech @jensneuse @endigma @SkArchon
 /router-tests/ @Noroth @devsergiy @StarpTech @jensneuse @endigma @SkArchon
 /router-plugin/ @Noroth @StarpTech @endigma @devsergiy @SkArchon
-/shared/ @Aenimus @JivusAyrus @StarpTech @thisisnithin
-/studio/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
+/shared/ @Aenimus @JivusAyrus @StarpTech @thisisnithin @wilsonrivera
+/studio/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin @Aenimus
 # Cosmo Streams / EDFS
 /router/pkg/pubsub @alepane21 @StarpTech @jensneuse @dkorittki
 
