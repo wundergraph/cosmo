@@ -1,5 +1,5 @@
 /* eslint-disable import/named */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import {
   CompositionOptions,
   federateSubgraphs,
@@ -19,7 +19,7 @@ import {
   WebsocketSubprotocol,
 } from '@wundergraph/cosmo-shared';
 import { SubgraphPublishStats } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { config, configFile } from './core/config.js';
+import { config, configDir, configFile } from './core/config.js';
 import { KeycloakToken } from './commands/auth/utils.js';
 
 export interface Header {
@@ -209,10 +209,12 @@ export const updateConfigFile = (newData: ConfigData) => {
 };
 
 export const checkForUpdates = async () => {
+  if (config.disableUpdateCheck === 'true') {
+    return;
+  }
+
   try {
-    if (config.disableUpdateCheck === 'true') {
-      return;
-    }
+    mkdirSync(configDir, { recursive: true });
 
     const currentTime = Date.now();
 

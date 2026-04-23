@@ -18,7 +18,13 @@ import {
 } from '../schema-building/types';
 import { type Graph } from '../resolvability-graph/graph';
 import { type InternalSubgraph } from '../subgraph/types';
-import { type DirectiveName, type TypeName } from '../types/types';
+import {
+  type AbstractTypeName,
+  type DirectiveName,
+  type InterfaceTypeName,
+  type SubgraphName,
+  type TypeName,
+} from '../types/types';
 
 export type NormalizationFailure = {
   errors: Array<Error>;
@@ -36,9 +42,10 @@ export type NormalizationSuccess = {
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityDataByTypeName: Map<string, EntityData>;
   fieldCoordsByNamedTypeName: Map<string, Set<string>>;
-  originalTypeNameByRenamedTypeName: Map<string, string>;
+  interfaceImplementationTypeNamesByInterfaceTypeName: Map<InterfaceTypeName, Set<InterfaceTypeName>>;
   isEventDrivenGraph: boolean;
   isVersionTwo: boolean;
+  originalTypeNameByRenamedTypeName: Map<string, string>;
   keyFieldNamesByParentTypeName: Map<string, Set<string>>;
   keyFieldSetsByEntityTypeNameByKeyFieldCoords: Map<string, Map<string, Set<string>>>;
   operationTypes: Map<string, OperationTypeNode>;
@@ -63,11 +70,12 @@ export type BatchNormalizationFailure = {
 
 export type BatchNormalizationSuccess = {
   success: true;
-  authorizationDataByParentTypeName: Map<string, AuthorizationData>;
-  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
-  entityDataByTypeName: Map<string, EntityData>;
-  fieldCoordsByNamedTypeName: Map<string, Set<string>>;
-  internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
+  authorizationDataByParentTypeName: Map<TypeName, AuthorizationData>;
+  concreteTypeNamesByAbstractTypeName: Map<AbstractTypeName, Set<TypeName>>;
+  entityDataByTypeName: Map<TypeName, EntityData>;
+  fieldCoordsByNamedTypeName: Map<TypeName, Set<string>>;
+  interfaceImplementationTypeNamesByInterfaceTypeName: Map<InterfaceTypeName, Set<InterfaceTypeName>>;
+  internalSubgraphBySubgraphName: Map<SubgraphName, InternalSubgraph>;
   internalGraph: Graph;
   warnings: Array<Warning>;
 };

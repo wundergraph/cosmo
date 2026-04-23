@@ -3,8 +3,10 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphDTO } from '../../types/index.js';
+import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
+@traced
 export class ContractRepository {
   constructor(
     private logger: FastifyBaseLogger,

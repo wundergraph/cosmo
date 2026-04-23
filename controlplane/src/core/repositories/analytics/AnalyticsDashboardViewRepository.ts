@@ -14,7 +14,9 @@ import {
   SubgraphRequestRateResult,
   TimeFilters,
 } from '../../../types/index.js';
+import { traced } from '../../tracing.js';
 
+@traced
 export class AnalyticsDashboardViewRepository {
   constructor(private client: ClickHouseClient) {}
 

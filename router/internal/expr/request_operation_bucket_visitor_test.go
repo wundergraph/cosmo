@@ -152,6 +152,20 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 			description:    "Hash with bracket notation should use hash bucket",
 		},
 
+		// BucketQueryPlanHash - request.operation.queryPlanHash
+		{
+			name:           "operation queryPlanHash",
+			expression:     `request.operation.queryPlanHash == "12345"`,
+			expectedBucket: BucketQueryPlanHash,
+			description:    "Query plan hash access should use query plan hash bucket",
+		},
+		{
+			name:           "queryPlanHash with bracket notation",
+			expression:     `request["operation"]["queryPlanHash"]`,
+			expectedBucket: BucketQueryPlanHash,
+			description:    "Query plan hash with bracket notation should use query plan hash bucket",
+		},
+
 		// BucketValidationTime - request.operation.validationTime
 		{
 			name:           "validationTime",
@@ -335,6 +349,8 @@ func bucketName(bucket AttributeBucket) string {
 		return "BucketNormalizationTime"
 	case BucketHash:
 		return "BucketHash"
+	case BucketQueryPlanHash:
+		return "BucketQueryPlanHash"
 	case BucketValidationTime:
 		return "BucketValidationTime"
 	case BucketPlanningTime:
@@ -360,7 +376,8 @@ func TestBucketPriority(t *testing.T) {
 	assert.True(t, BucketNameOrType < BucketPersistedID, "NameOrType should be lower priority than PersistedID")
 	assert.True(t, BucketPersistedID < BucketNormalizationTime, "PersistedID should be lower priority than NormalizationTime")
 	assert.True(t, BucketNormalizationTime < BucketHash, "NormalizationTime should be lower priority than Hash")
-	assert.True(t, BucketHash < BucketValidationTime, "Hash should be lower priority than ValidationTime")
+	assert.True(t, BucketHash < BucketQueryPlanHash, "Hash should be lower priority than QueryPlanHash")
+	assert.True(t, BucketQueryPlanHash < BucketValidationTime, "QueryPlanHash should be lower priority than ValidationTime")
 	assert.True(t, BucketValidationTime < BucketPlanningTime, "ValidationTime should be lower priority than PlanningTime")
 	assert.True(t, BucketPlanningTime < BucketSubgraph, "PlanningTime should be lower priority than Subgraph")
 }

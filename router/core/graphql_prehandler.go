@@ -419,14 +419,19 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		})
 		if err != nil {
 			requestContext.SetError(err)
-			// Mark the root span of the router as failed, so we can easily identify failed requests
-			rtrace.AttachErrToSpan(routerSpan, err)
-
-			if h.operationProcessor.costControl != nil && h.operationProcessor.costControl.ExposeHeaders &&
-				// Report the estimated cost in case of errors.
-				// The actual cost is only available for successful requests.
-				requestContext.operation != nil && requestContext.operation.costEstimatedSet {
-				ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
+			if errors.Is(err, context.Canceled) {
+				// Client disconnections are not server-side errors and should not mark the root span as ERROR
+				// or write error responses (which would produce a 500 status code visible to otelhttp).
+				routerSpan.RecordError(err)
+			} else {
+				// Mark the root span of the router as failed, so we can easily identify failed requests.
+				rtrace.AttachErrToSpan(routerSpan, err)
+				if h.operationProcessor.costControl != nil && h.operationProcessor.costControl.ExposeHeaders &&
+					// Report the estimated cost in case of errors.
+					// The actual cost is only available for successful requests.
+					requestContext.operation != nil && requestContext.operation.costEstimatedSet {
+					ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
+				}
 			}
 
 			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
@@ -624,16 +629,23 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
 		if err != nil {
 			span.RecordError(err)
-			rtrace.SetSanitizedSpanStatus(span, codes.Error, err.Error())
+			if !errors.Is(err, context.Canceled) {
+				rtrace.SetSanitizedSpanStatus(span, codes.Error, err.Error())
+			}
 
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
 				requestContext.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
-				if h.operationBlocker.safelistEnabled {
-					span.End()
-					return err
+				// When log_unknown is enabled, ad-hoc queries whose hash doesn't match a
+				// persisted operation are logged above. We only allow execution to continue
+				// when the request includes a query body (the ad-hoc query to run) and
+				// safelist is not enforced. Hash-only requests without a body have nothing
+				// to execute, so we always return the not-found error in that case.
+				if !h.operationBlocker.safelistEnabled && operationKit.parsedOperation.Request.Query != "" {
+					err = nil
 				}
-			} else {
+			}
+			if err != nil {
 				span.End()
 				return err
 			}
@@ -972,6 +984,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	requestContext.expressionContext.Request.Operation.Hash = operationHash
 	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketHash)
+
+	requestContext.expressionContext.Request.Operation.QueryPlanHash = strconv.FormatUint(requestContext.operation.internalHash, 10)
+	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketQueryPlanHash)
 
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 		httpOperation.traceTimings.EndNormalize()

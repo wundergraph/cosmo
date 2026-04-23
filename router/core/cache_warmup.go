@@ -119,11 +119,11 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	}
 
 	if len(items) == 0 {
-		w.log.Debug("No items to process")
+		w.log.Info("No items to process")
 		return 0, nil
 	}
 
-	w.log.Info("Starting processing",
+	w.log.Debug("Starting processing",
 		zap.Int("items", len(items)),
 	)
 
@@ -175,7 +175,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 						)
 					}
 
-					if err == nil && w.afterOperation != nil {
+					if err == nil && res != nil && w.afterOperation != nil {
 						w.afterOperation(res)
 					}
 
@@ -252,6 +252,7 @@ type CacheWarmupOperationPlanResult struct {
 	ClientName    string
 	ClientVersion string
 	PlanningTime  time.Duration
+	PlanCacheHit  bool
 }
 
 type CacheWarmupPlanningProcessor struct {
@@ -382,5 +383,6 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		ClientName:    item.Client.Name,
 		ClientVersion: item.Client.Version,
 		PlanningTime:  time.Since(planningStart),
+		PlanCacheHit:  opContext.planCacheHit,
 	}, nil
 }

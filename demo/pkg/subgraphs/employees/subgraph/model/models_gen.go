@@ -11,6 +11,12 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 )
 
+type EmployeeWorkItem interface {
+	IsEmployeeWorkItem()
+	GetName() string
+	GetPriority() int
+}
+
 type IProduct interface {
 	IsIProduct()
 	GetUpc() string
@@ -31,6 +37,10 @@ type RoleType interface {
 	GetDepartments() []Department
 	GetTitle() []string
 	GetEmployees() []*Employee
+}
+
+type WorkReviewResult interface {
+	IsWorkReviewResult()
 }
 
 type City struct {
@@ -95,19 +105,22 @@ type Details struct {
 }
 
 type Employee struct {
-	Details               *Details      `json:"details"`
-	ID                    int           `json:"id"`
-	Tag                   string        `json:"tag"`
-	Expertise             string        `json:"expertise"`
-	Role                  RoleType      `json:"role"`
-	Notes                 *string       `json:"notes,omitempty"`
-	UpdatedAt             string        `json:"updatedAt"`
-	StartDate             string        `json:"startDate"`
-	CurrentMood           Mood          `json:"currentMood"`
-	DerivedMood           Mood          `json:"derivedMood"`
-	IsAvailable           *bool         `json:"isAvailable,omitempty"`
-	RootFieldThrowsError  *string       `json:"rootFieldThrowsError,omitempty"`
-	RootFieldErrorWrapper *ErrorWrapper `json:"rootFieldErrorWrapper,omitempty"`
+	Details               *Details         `json:"details"`
+	ID                    int              `json:"id"`
+	Tag                   string           `json:"tag"`
+	Expertise             string           `json:"expertise"`
+	Role                  RoleType         `json:"role"`
+	Notes                 *string          `json:"notes,omitempty"`
+	UpdatedAt             string           `json:"updatedAt"`
+	StartDate             string           `json:"startDate"`
+	CurrentMood           Mood             `json:"currentMood"`
+	DerivedMood           Mood             `json:"derivedMood"`
+	IsAvailable           *bool            `json:"isAvailable,omitempty"`
+	RootFieldThrowsError  *string          `json:"rootFieldThrowsError,omitempty"`
+	RootFieldErrorWrapper *ErrorWrapper    `json:"rootFieldErrorWrapper,omitempty"`
+	PrimaryWorkItem       EmployeeWorkItem `json:"primaryWorkItem,omitempty"`
+	LastWorkReview        WorkReviewResult `json:"lastWorkReview,omitempty"`
+	WorkSetup             *WorkSetup       `json:"workSetup,omitempty"`
 }
 
 func (Employee) IsIdentifiable() {}
@@ -169,6 +182,24 @@ type FindEmployeeCriteria struct {
 	Department *Department `json:"department,omitempty"`
 	Title      *string     `json:"title,omitempty"`
 }
+
+type ManagementSpecs struct {
+	Name    string       `json:"name"`
+	Scope   float64      `json:"scope"`
+	Metrics *WorkMetrics `json:"metrics"`
+}
+
+type ManagementWorkItem struct {
+	Name     string           `json:"name"`
+	Priority int              `json:"priority"`
+	TeamSize string           `json:"teamSize"`
+	Handler  *WorkItemHandler `json:"handler"`
+	Specs    *ManagementSpecs `json:"specs"`
+}
+
+func (ManagementWorkItem) IsEmployeeWorkItem()   {}
+func (this ManagementWorkItem) GetName() string  { return this.Name }
+func (this ManagementWorkItem) GetPriority() int { return this.Priority }
 
 type Marketer struct {
 	Departments []Department `json:"departments"`
@@ -280,9 +311,56 @@ func (Sdk) IsEntity() {}
 type Subscription struct {
 }
 
+type TechnicalSpecs struct {
+	Name       string       `json:"name"`
+	Complexity float64      `json:"complexity"`
+	Metrics    *WorkMetrics `json:"metrics"`
+}
+
+type TechnicalWorkItem struct {
+	Name      string           `json:"name"`
+	Priority  int              `json:"priority"`
+	CodeCount int              `json:"codeCount"`
+	Handler   *WorkItemHandler `json:"handler"`
+	Specs     *TechnicalSpecs  `json:"specs"`
+}
+
+func (TechnicalWorkItem) IsEmployeeWorkItem()   {}
+func (this TechnicalWorkItem) GetName() string  { return this.Name }
+func (this TechnicalWorkItem) GetPriority() int { return this.Priority }
+
 type Time struct {
 	UnixTime  int    `json:"unixTime"`
 	TimeStamp string `json:"timeStamp"`
+}
+
+type WorkApproval struct {
+	Comment    string `json:"comment"`
+	ApprovedAt string `json:"approvedAt"`
+}
+
+func (WorkApproval) IsWorkReviewResult() {}
+
+type WorkItemHandler struct {
+	Name         string           `json:"name"`
+	AssignedItem EmployeeWorkItem `json:"assignedItem"`
+}
+
+type WorkMetrics struct {
+	Score      float64 `json:"score"`
+	Efficiency float64 `json:"efficiency"`
+}
+
+type WorkRejection struct {
+	Reason        string `json:"reason"`
+	RejectionCode string `json:"rejectionCode"`
+}
+
+func (WorkRejection) IsWorkReviewResult() {}
+
+type WorkSetup struct {
+	Priority    string           `json:"priority"`
+	PrimaryItem EmployeeWorkItem `json:"primaryItem"`
 }
 
 type Department string

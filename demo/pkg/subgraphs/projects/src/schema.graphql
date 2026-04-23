@@ -222,7 +222,69 @@ union ProjectSearchResult = Project | Milestone | Task
 
 union ProjectActivity = ProjectUpdate | Milestone | Task
 
-# Federated types (unchanged)
+# Abstract types for @requires composite type testing
+
+interface EmployeeWorkItem {
+  name: String!
+  priority: Int!
+}
+
+type TechnicalWorkItem implements EmployeeWorkItem @shareable {
+  name: String!
+  priority: Int!
+  codeCount: Int!
+  handler: WorkItemHandler!
+  specs: TechnicalSpecs!
+}
+
+type ManagementWorkItem implements EmployeeWorkItem @shareable {
+  name: String!
+  priority: Int!
+  teamSize: String!
+  handler: WorkItemHandler!
+  specs: ManagementSpecs!
+}
+
+type WorkItemHandler @shareable {
+  name: String!
+  assignedItem: EmployeeWorkItem!
+}
+
+type TechnicalSpecs @shareable {
+  name: String!
+  complexity: Float!
+  metrics: WorkMetrics!
+}
+
+type ManagementSpecs @shareable {
+  name: String!
+  scope: Float!
+  metrics: WorkMetrics!
+}
+
+type WorkMetrics @shareable {
+  score: Float!
+  efficiency: Float!
+}
+
+union WorkReviewResult = WorkApproval | WorkRejection
+
+type WorkApproval @shareable {
+  comment: String!
+  approvedAt: String!
+}
+
+type WorkRejection @shareable {
+  reason: String!
+  rejectionCode: String!
+}
+
+type WorkSetup @shareable {
+  priority: String!
+  primaryItem: EmployeeWorkItem!
+}
+
+# Federated types
 type Employee @key(fields: "id") {
   id: Int!
   expertise: String! @external
@@ -239,6 +301,26 @@ type Employee @key(fields: "id") {
 
   # Field requiring expertise from employees subgraph
   taggedProjectSummary: String! @requires(fields: "expertise")
+  filteredProjectSummary(tag: String!): String! @requires(fields: "expertise")
+
+  # External abstract type fields for @requires testing
+  primaryWorkItem: EmployeeWorkItem @external
+  lastWorkReview: WorkReviewResult @external
+  workSetup: WorkSetup @external
+
+  # @requires fields using abstract types
+  # Pattern 1: Flat abstract — interface
+  workItemInfo: String! @requires(fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { name codeCount } ... on ManagementWorkItem { name teamSize } }")
+  # Pattern 2: Flat abstract — union
+  reviewReport: String! @requires(fields: "lastWorkReview { ... on WorkApproval { __typename comment approvedAt } ... on WorkRejection { __typename reason rejectionCode } }")
+  # Pattern 3: Concrete wrapping abstract
+  workSetupSummary: String! @requires(fields: "workSetup { priority primaryItem { __typename ... on TechnicalWorkItem { name codeCount } ... on ManagementWorkItem { name teamSize } } }")
+  # Pattern 4: Concrete message inside fragment
+  workItemHandlerInfo: String! @requires(fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { handler { name } } ... on ManagementWorkItem { handler { name } } }")
+  # Pattern 5: Deep concrete nesting inside fragment (specs → metrics)
+  workItemSpecsInfo: String! @requires(fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { specs { name metrics { score efficiency } } } ... on ManagementWorkItem { specs { name metrics { score efficiency } } } }")
+  # Pattern 6: Nested abstract through concrete intermediary (handler → assignedItem)
+  deepWorkItemInfo: String! @requires(fields: "primaryWorkItem { __typename ... on TechnicalWorkItem { handler { assignedItem { __typename ... on ManagementWorkItem { name teamSize } ... on TechnicalWorkItem { name codeCount } } } } ... on ManagementWorkItem { handler { name } } }")
 
   # Computed fields with @connect__fieldResolver
   currentWorkload(includeCompleted: Boolean, projectId: ID): Int! @connect__fieldResolver(context: "id")

@@ -3,7 +3,9 @@ import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications
 import pino from 'pino';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { webhookAxiosRetryCond } from '../util.js';
+import { traced } from '../tracing.js';
 import { makeWebhookRequest } from './utils.js';
 
 interface User {
@@ -42,18 +44,30 @@ export interface IPlatformWebhookService {
   send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]): Promise<void>;
 }
 
+@traced
 export class PlatformWebhookService implements IPlatformWebhookService {
   private url: string;
   private key: string;
   private logger: pino.Logger;
   private httpClient: AxiosInstance;
 
-  constructor(webhookURL = '', webhookKey = '', logger: pino.Logger) {
+  constructor(webhookURL = '', webhookKey = '', logger: pino.Logger, proxyUrl?: string) {
     this.url = webhookURL;
     this.key = webhookKey;
     this.logger = logger;
 
+    let agent: HttpsProxyAgent<string> | undefined;
+    if (proxyUrl) {
+      try {
+        agent = new HttpsProxyAgent(proxyUrl);
+      } catch (e) {
+        logger.error(e, 'Could not create proxy agent');
+      }
+    }
+
     this.httpClient = axios.create({
+      httpAgent: agent,
+      httpsAgent: agent,
       timeout: 10_000,
     });
     axiosRetry(this.httpClient, {
@@ -95,6 +109,7 @@ export class PlatformWebhookService implements IPlatformWebhookService {
   }
 }
 
+@traced
 export class MockPlatformWebhookService implements IPlatformWebhookService {
   public sentEvents: Array<{ eventName: keyof EventMap; eventPayload: PlainMessage<any> }> = [];
 

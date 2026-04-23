@@ -1,7 +1,6 @@
-import { mkdirSync } from 'node:fs';
 import { Command } from 'commander';
 import { CreateClient } from '../core/client/client.js';
-import { config, configDir } from '../core/config.js';
+import { config } from '../core/config.js';
 import { checkForUpdates } from '../utils.js';
 import { capture } from '../core/telemetry.js';
 import AuthCommands from './auth/index.js';
@@ -116,7 +115,6 @@ program.addCommand(
 );
 
 program.hook('preAction', async () => {
-  mkdirSync(configDir, { recursive: true });
   await checkForUpdates();
 });
 

@@ -142,6 +142,25 @@ type Query {
 }
 ```
 
+When specified **on input object fields** — weights on nested input fields are accumulated
+based on which fields the client provides in the query.
+Only the fields present in the input contribute to the cost:
+
+```graphql
+input FindEmployeeCriteria {
+  id: Int
+  department: Department @cost(weight: 4)
+  title: String @cost(weight: 3)
+}
+
+type Query {
+  findEmployeesBy(criteria: FindEmployeeCriteria): [Employee]
+}
+```
+
+Input object weights are evaluated per request, not cached with the query plan.
+Two requests using the same query but different input fields produce different cost estimates.
+
 When specified **on a field returning a list** — the list size multiplies the weight of this field:
 
 ```graphql
@@ -422,7 +441,5 @@ Use `@listSize` to provide realistic estimates for deeply nested structures.
 
 ## Features Not Yet Implemented
 
-- `requireOneSlicingArgument` in `@listSize` for validation that exactly one slicing argument is provided
-- **Weights on input object fields** — when an argument accepts an input object, the `@cost` weights on its nested fields are not yet accumulated recursively
 - **Weights on directive arguments** — `@cost` placed on arguments of custom directives is not accounted for
 
