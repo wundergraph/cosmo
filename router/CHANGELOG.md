@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.310.0](https://github.com/wundergraph/cosmo/compare/router@0.309.0...router@0.310.0) (2026-04-23)
+
+### Bug Fixes
+
+* request aborted shoudn't result in a fetch error ([#2741](https://github.com/wundergraph/cosmo/issues/2741)) ([b712757](https://github.com/wundergraph/cosmo/commit/b712757f521f9da13405cdf19eccbf1655e02bdd)) (@SkArchon)
+
+### Features
+
+* **router:** add TLS support for NATS event source ([#2749](https://github.com/wundergraph/cosmo/issues/2749)) ([a73636b](https://github.com/wundergraph/cosmo/commit/a73636bc687540bd83109cdf8845a83de5f97cee)) (@vatsalpatel)
+
 # [0.309.0](https://github.com/wundergraph/cosmo/compare/router@0.308.0...router@0.309.0) (2026-04-21)
 
 ### Features
