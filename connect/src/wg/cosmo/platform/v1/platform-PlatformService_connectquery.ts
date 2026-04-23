@@ -5,8 +5,369 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddReadmeRequest, AddReadmeResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckPersistedOperationTrafficRequest, CheckPersistedOperationTrafficResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, ComputeCacheWarmerOperationsRequest, ComputeCacheWarmerOperationsResponse, ConfigureCacheWarmerRequest, ConfigureCacheWarmerResponse, ConfigureNamespaceGraphPruningConfigRequest, ConfigureNamespaceGraphPruningConfigResponse, ConfigureNamespaceLintConfigRequest, ConfigureNamespaceLintConfigResponse, ConfigureNamespaceProposalConfigRequest, ConfigureNamespaceProposalConfigResponse, ConfigureSubgraphCheckExtensionsRequest, ConfigureSubgraphCheckExtensionsResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateBillingPortalSessionRequest, CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateContractRequest, CreateContractResponse, CreateFeatureFlagRequest, CreateFeatureFlagResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIgnoreOverridesForAllOperationsRequest, CreateIgnoreOverridesForAllOperationsResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateMonographRequest, CreateMonographResponse, CreateNamespaceRequest, CreateNamespaceResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse, CreateOperationOverridesRequest, CreateOperationOverridesResponse, CreateOrganizationGroupRequest, CreateOrganizationGroupResponse, CreateOrganizationRequest, CreateOrganizationResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, CreatePlaygroundScriptRequest, CreatePlaygroundScriptResponse, CreateProposalRequest, CreateProposalResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteCacheWarmerOperationRequest, DeleteCacheWarmerOperationResponse, DeleteFeatureFlagRequest, DeleteFeatureFlagResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteMonographRequest, DeleteMonographResponse, DeleteNamespaceRequest, DeleteNamespaceResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationGroupRequest, DeleteOrganizationGroupResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeletePersistedOperationRequest, DeletePersistedOperationResponse, DeletePlaygroundScriptRequest, DeletePlaygroundScriptResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, DeleteUserRequest, DeleteUserResponse, EnableFeatureFlagRequest, EnableFeatureFlagResponse, EnableGraphPruningRequest, EnableGraphPruningResponse, EnableLintingForTheNamespaceRequest, EnableLintingForTheNamespaceResponse, EnableProposalsForNamespaceRequest, EnableProposalsForNamespaceResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GenerateRouterTokenRequest, GenerateRouterTokenResponse, GetAllOverridesRequest, GetAllOverridesResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetAuditLogsRequest, GetAuditLogsResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetCacheWarmerConfigRequest, GetCacheWarmerConfigResponse, GetCacheWarmerOperationsRequest, GetCacheWarmerOperationsResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsFromAnalyticsRequest, GetClientsFromAnalyticsResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFeatureFlagByNameRequest, GetFeatureFlagByNameResponse, GetFeatureFlagsByFederatedGraphRequest, GetFeatureFlagsByFederatedGraphResponse, GetFeatureFlagsInLatestCompositionByFederatedGraphRequest, GetFeatureFlagsInLatestCompositionByFederatedGraphResponse, GetFeatureFlagsRequest, GetFeatureFlagsResponse, GetFeatureSubgraphsByFeatureFlagRequest, GetFeatureSubgraphsByFeatureFlagResponse, GetFeatureSubgraphsByFederatedGraphRequest, GetFeatureSubgraphsByFederatedGraphResponse, GetFeatureSubgraphsRequest, GetFeatureSubgraphsResponse, GetFederatedGraphByIdRequest, GetFederatedGraphByIdResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphsBySubgraphLabelsRequest, GetFederatedGraphsBySubgraphLabelsResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestSubgraphSDLRequest, GetLatestSubgraphSDLResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetNamespaceChecksConfigurationRequest, GetNamespaceChecksConfigurationResponse, GetNamespaceGraphPruningConfigRequest, GetNamespaceGraphPruningConfigResponse, GetNamespaceLintConfigRequest, GetNamespaceLintConfigResponse, GetNamespaceProposalConfigRequest, GetNamespaceProposalConfigResponse, GetNamespaceRequest, GetNamespaceResponse, GetNamespacesRequest, GetNamespacesResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationClientsRequest, GetOperationClientsResponse, GetOperationContentRequest, GetOperationContentResponse, GetOperationDeprecatedFieldsRequest, GetOperationDeprecatedFieldsResponse, GetOperationOverridesRequest, GetOperationOverridesResponse, GetOperationsRequest, GetOperationsResponse, GetOrganizationBySlugRequest, GetOrganizationBySlugResponse, GetOrganizationGroupMembersRequest, GetOrganizationGroupMembersResponse, GetOrganizationGroupsRequest, GetOrganizationGroupsResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookHistoryRequest, GetOrganizationWebhookHistoryResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPendingOrganizationMembersRequest, GetPendingOrganizationMembersResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetPlaygroundScriptsRequest, GetPlaygroundScriptsResponse, GetProposalChecksRequest, GetProposalChecksResponse, GetProposalRequest, GetProposalResponse, GetProposalsByFederatedGraphRequest, GetProposalsByFederatedGraphResponse, GetProposedSchemaOfCheckedSubgraphRequest, GetProposedSchemaOfCheckedSubgraphResponse, GetRoutersRequest, GetRoutersResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByIdRequest, GetSubgraphByIdResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphCheckExtensionsConfigRequest, GetSubgraphCheckExtensionsConfigResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphMetricsErrorRateRequest, GetSubgraphMetricsErrorRateResponse, GetSubgraphMetricsRequest, GetSubgraphMetricsResponse, GetSubgraphSDLFromLatestCompositionRequest, GetSubgraphSDLFromLatestCompositionResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessiblePermissionsRequest, GetUserAccessiblePermissionsResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, GetWebhookDeliveryDetailsRequest, GetWebhookDeliveryDetailsResponse, GetWorkspaceRequest, GetWorkspaceResponse, InitializeCosmoUserRequest, InitializeCosmoUserResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, IsMemberLimitReachedRequest, IsMemberLimitReachedResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, LinkSubgraphRequest, LinkSubgraphResponse, ListOrganizationsRequest, ListOrganizationsResponse, ListRouterCompatibilityVersionsRequest, ListRouterCompatibilityVersionsResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, MigrateMonographRequest, MigrateMonographResponse, MoveGraphRequest, MoveGraphResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishMonographRequest, PublishMonographResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, PushCacheWarmerOperationRequest, PushCacheWarmerOperationResponse, RecomposeGraphRequest, RecomposeGraphResponse, RedeliverWebhookRequest, RedeliverWebhookResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse, RemoveOperationOverridesRequest, RemoveOperationOverridesResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RenameNamespaceRequest, RenameNamespaceResponse, RestoreOrganizationRequest, RestoreOrganizationResponse, SetGraphRouterCompatibilityVersionRequest, SetGraphRouterCompatibilityVersionResponse, ToggleChangeOverridesForAllOperationsRequest, ToggleChangeOverridesForAllOperationsResponse, UnlinkSubgraphRequest, UnlinkSubgraphResponse, UpdateAPIKeyRequest, UpdateAPIKeyResponse, UpdateContractRequest, UpdateContractResponse, UpdateFeatureFlagRequest, UpdateFeatureFlagResponse, UpdateFeatureSettingsRequest, UpdateFeatureSettingsResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIDPMappersRequest, UpdateIDPMappersResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateMonographRequest, UpdateMonographResponse, UpdateNamespaceChecksConfigurationRequest, UpdateNamespaceChecksConfigurationResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationGroupRequest, UpdateOrganizationGroupResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberGroupRequest, UpdateOrgMemberGroupResponse, UpdatePlaygroundScriptRequest, UpdatePlaygroundScriptResponse, UpdateProposalRequest, UpdateProposalResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, UpgradePlanRequest, UpgradePlanResponse, ValidateAndFetchPluginDataRequest, ValidateAndFetchPluginDataResponse, VerifyAPIKeyGraphAccessRequest, VerifyAPIKeyGraphAccessResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { MethodIdempotency, MethodKind } from '@bufbuild/protobuf';
+import {
+  AcceptOrDeclineInvitationRequest,
+  AcceptOrDeclineInvitationResponse,
+  AddReadmeRequest,
+  AddReadmeResponse,
+  CheckFederatedGraphRequest,
+  CheckFederatedGraphResponse,
+  CheckPersistedOperationTrafficRequest,
+  CheckPersistedOperationTrafficResponse,
+  CheckSubgraphSchemaRequest,
+  CheckSubgraphSchemaResponse,
+  ComputeCacheWarmerOperationsRequest,
+  ComputeCacheWarmerOperationsResponse,
+  ConfigureCacheWarmerRequest,
+  ConfigureCacheWarmerResponse,
+  ConfigureNamespaceGraphPruningConfigRequest,
+  ConfigureNamespaceGraphPruningConfigResponse,
+  ConfigureNamespaceLintConfigRequest,
+  ConfigureNamespaceLintConfigResponse,
+  ConfigureNamespaceProposalConfigRequest,
+  ConfigureNamespaceProposalConfigResponse,
+  ConfigureSubgraphCheckExtensionsRequest,
+  ConfigureSubgraphCheckExtensionsResponse,
+  CreateAPIKeyRequest,
+  CreateAPIKeyResponse,
+  CreateBillingPortalSessionRequest,
+  CreateBillingPortalSessionResponse,
+  CreateCheckoutSessionRequest,
+  CreateCheckoutSessionResponse,
+  CreateContractRequest,
+  CreateContractResponse,
+  CreateFeatureFlagRequest,
+  CreateFeatureFlagResponse,
+  CreateFederatedGraphRequest,
+  CreateFederatedGraphResponse,
+  CreateFederatedGraphTokenRequest,
+  CreateFederatedGraphTokenResponse,
+  CreateFederatedSubgraphRequest,
+  CreateFederatedSubgraphResponse,
+  CreateIgnoreOverridesForAllOperationsRequest,
+  CreateIgnoreOverridesForAllOperationsResponse,
+  CreateIntegrationRequest,
+  CreateIntegrationResponse,
+  CreateMonographRequest,
+  CreateMonographResponse,
+  CreateNamespaceRequest,
+  CreateNamespaceResponse,
+  CreateOIDCProviderRequest,
+  CreateOIDCProviderResponse,
+  CreateOperationIgnoreAllOverrideRequest,
+  CreateOperationIgnoreAllOverrideResponse,
+  CreateOperationOverridesRequest,
+  CreateOperationOverridesResponse,
+  CreateOrganizationGroupRequest,
+  CreateOrganizationGroupResponse,
+  CreateOrganizationRequest,
+  CreateOrganizationResponse,
+  CreateOrganizationWebhookConfigRequest,
+  CreateOrganizationWebhookConfigResponse,
+  CreatePlaygroundScriptRequest,
+  CreatePlaygroundScriptResponse,
+  CreateProposalRequest,
+  CreateProposalResponse,
+  DeleteAPIKeyRequest,
+  DeleteAPIKeyResponse,
+  DeleteCacheWarmerOperationRequest,
+  DeleteCacheWarmerOperationResponse,
+  DeleteClientRequest,
+  DeleteClientResponse,
+  DeleteFeatureFlagRequest,
+  DeleteFeatureFlagResponse,
+  DeleteFederatedGraphRequest,
+  DeleteFederatedGraphResponse,
+  DeleteFederatedSubgraphRequest,
+  DeleteFederatedSubgraphResponse,
+  DeleteIntegrationRequest,
+  DeleteIntegrationResponse,
+  DeleteMonographRequest,
+  DeleteMonographResponse,
+  DeleteNamespaceRequest,
+  DeleteNamespaceResponse,
+  DeleteOIDCProviderRequest,
+  DeleteOIDCProviderResponse,
+  DeleteOrganizationGroupRequest,
+  DeleteOrganizationGroupResponse,
+  DeleteOrganizationRequest,
+  DeleteOrganizationResponse,
+  DeleteOrganizationWebhookConfigRequest,
+  DeleteOrganizationWebhookConfigResponse,
+  DeletePersistedOperationRequest,
+  DeletePersistedOperationResponse,
+  DeletePlaygroundScriptRequest,
+  DeletePlaygroundScriptResponse,
+  DeleteRouterTokenRequest,
+  DeleteRouterTokenResponse,
+  DeleteUserRequest,
+  DeleteUserResponse,
+  EnableFeatureFlagRequest,
+  EnableFeatureFlagResponse,
+  EnableGraphPruningRequest,
+  EnableGraphPruningResponse,
+  EnableLintingForTheNamespaceRequest,
+  EnableLintingForTheNamespaceResponse,
+  EnableProposalsForNamespaceRequest,
+  EnableProposalsForNamespaceResponse,
+  FixSubgraphSchemaRequest,
+  FixSubgraphSchemaResponse,
+  ForceCheckSuccessRequest,
+  ForceCheckSuccessResponse,
+  GenerateRouterTokenRequest,
+  GenerateRouterTokenResponse,
+  GetAllOverridesRequest,
+  GetAllOverridesResponse,
+  GetAnalyticsViewRequest,
+  GetAnalyticsViewResponse,
+  GetAPIKeysRequest,
+  GetAPIKeysResponse,
+  GetAuditLogsRequest,
+  GetAuditLogsResponse,
+  GetBillingPlansRequest,
+  GetBillingPlansResponse,
+  GetCacheWarmerConfigRequest,
+  GetCacheWarmerConfigResponse,
+  GetCacheWarmerOperationsRequest,
+  GetCacheWarmerOperationsResponse,
+  GetChangelogBySchemaVersionRequest,
+  GetChangelogBySchemaVersionResponse,
+  GetCheckOperationsRequest,
+  GetCheckOperationsResponse,
+  GetChecksByFederatedGraphNameRequest,
+  GetChecksByFederatedGraphNameResponse,
+  GetCheckSummaryRequest,
+  GetCheckSummaryResponse,
+  GetClientsFromAnalyticsRequest,
+  GetClientsFromAnalyticsResponse,
+  GetClientsRequest,
+  GetClientsResponse,
+  GetCompositionDetailsRequest,
+  GetCompositionDetailsResponse,
+  GetCompositionsRequest,
+  GetCompositionsResponse,
+  GetDashboardAnalyticsViewRequest,
+  GetDashboardAnalyticsViewResponse,
+  GetFeatureFlagByNameRequest,
+  GetFeatureFlagByNameResponse,
+  GetFeatureFlagsByFederatedGraphRequest,
+  GetFeatureFlagsByFederatedGraphResponse,
+  GetFeatureFlagsInLatestCompositionByFederatedGraphRequest,
+  GetFeatureFlagsInLatestCompositionByFederatedGraphResponse,
+  GetFeatureFlagsRequest,
+  GetFeatureFlagsResponse,
+  GetFeatureSubgraphsByFeatureFlagRequest,
+  GetFeatureSubgraphsByFeatureFlagResponse,
+  GetFeatureSubgraphsByFederatedGraphRequest,
+  GetFeatureSubgraphsByFederatedGraphResponse,
+  GetFeatureSubgraphsRequest,
+  GetFeatureSubgraphsResponse,
+  GetFederatedGraphByIdRequest,
+  GetFederatedGraphByIdResponse,
+  GetFederatedGraphByNameRequest,
+  GetFederatedGraphByNameResponse,
+  GetFederatedGraphChangelogRequest,
+  GetFederatedGraphChangelogResponse,
+  GetFederatedGraphsBySubgraphLabelsRequest,
+  GetFederatedGraphsBySubgraphLabelsResponse,
+  GetFederatedGraphSDLByNameRequest,
+  GetFederatedGraphSDLByNameResponse,
+  GetFederatedGraphsRequest,
+  GetFederatedGraphsResponse,
+  GetFieldUsageRequest,
+  GetFieldUsageResponse,
+  GetGraphMetricsRequest,
+  GetGraphMetricsResponse,
+  GetInvitationsRequest,
+  GetInvitationsResponse,
+  GetLatestSubgraphSDLRequest,
+  GetLatestSubgraphSDLResponse,
+  GetMetricsErrorRateRequest,
+  GetMetricsErrorRateResponse,
+  GetNamespaceChecksConfigurationRequest,
+  GetNamespaceChecksConfigurationResponse,
+  GetNamespaceGraphPruningConfigRequest,
+  GetNamespaceGraphPruningConfigResponse,
+  GetNamespaceLintConfigRequest,
+  GetNamespaceLintConfigResponse,
+  GetNamespaceProposalConfigRequest,
+  GetNamespaceProposalConfigResponse,
+  GetNamespaceRequest,
+  GetNamespaceResponse,
+  GetNamespacesRequest,
+  GetNamespacesResponse,
+  GetOIDCProviderRequest,
+  GetOIDCProviderResponse,
+  GetOperationClientsRequest,
+  GetOperationClientsResponse,
+  GetOperationContentRequest,
+  GetOperationContentResponse,
+  GetOperationDeprecatedFieldsRequest,
+  GetOperationDeprecatedFieldsResponse,
+  GetOperationOverridesRequest,
+  GetOperationOverridesResponse,
+  GetOperationsRequest,
+  GetOperationsResponse,
+  GetOrganizationBySlugRequest,
+  GetOrganizationBySlugResponse,
+  GetOrganizationGroupMembersRequest,
+  GetOrganizationGroupMembersResponse,
+  GetOrganizationGroupsRequest,
+  GetOrganizationGroupsResponse,
+  GetOrganizationIntegrationsRequest,
+  GetOrganizationIntegrationsResponse,
+  GetOrganizationMembersRequest,
+  GetOrganizationMembersResponse,
+  GetOrganizationRequestsCountRequest,
+  GetOrganizationRequestsCountResponse,
+  GetOrganizationWebhookConfigsRequest,
+  GetOrganizationWebhookConfigsResponse,
+  GetOrganizationWebhookHistoryRequest,
+  GetOrganizationWebhookHistoryResponse,
+  GetOrganizationWebhookMetaRequest,
+  GetOrganizationWebhookMetaResponse,
+  GetPendingOrganizationMembersRequest,
+  GetPendingOrganizationMembersResponse,
+  GetPersistedOperationsRequest,
+  GetPersistedOperationsResponse,
+  GetPlaygroundScriptsRequest,
+  GetPlaygroundScriptsResponse,
+  GetProposalChecksRequest,
+  GetProposalChecksResponse,
+  GetProposalRequest,
+  GetProposalResponse,
+  GetProposalsByFederatedGraphRequest,
+  GetProposalsByFederatedGraphResponse,
+  GetProposedSchemaOfCheckedSubgraphRequest,
+  GetProposedSchemaOfCheckedSubgraphResponse,
+  GetRoutersRequest,
+  GetRoutersResponse,
+  GetRouterTokensRequest,
+  GetRouterTokensResponse,
+  GetSdlBySchemaVersionRequest,
+  GetSdlBySchemaVersionResponse,
+  GetSubgraphByIdRequest,
+  GetSubgraphByIdResponse,
+  GetSubgraphByNameRequest,
+  GetSubgraphByNameResponse,
+  GetSubgraphCheckExtensionsConfigRequest,
+  GetSubgraphCheckExtensionsConfigResponse,
+  GetSubgraphMembersRequest,
+  GetSubgraphMembersResponse,
+  GetSubgraphMetricsErrorRateRequest,
+  GetSubgraphMetricsErrorRateResponse,
+  GetSubgraphMetricsRequest,
+  GetSubgraphMetricsResponse,
+  GetSubgraphSDLFromLatestCompositionRequest,
+  GetSubgraphSDLFromLatestCompositionResponse,
+  GetSubgraphsRequest,
+  GetSubgraphsResponse,
+  GetTraceRequest,
+  GetTraceResponse,
+  GetUserAccessiblePermissionsRequest,
+  GetUserAccessiblePermissionsResponse,
+  GetUserAccessibleResourcesRequest,
+  GetUserAccessibleResourcesResponse,
+  GetWebhookDeliveryDetailsRequest,
+  GetWebhookDeliveryDetailsResponse,
+  GetWorkspaceRequest,
+  GetWorkspaceResponse,
+  InitializeCosmoUserRequest,
+  InitializeCosmoUserResponse,
+  InviteUserRequest,
+  InviteUserResponse,
+  IsGitHubAppInstalledRequest,
+  IsGitHubAppInstalledResponse,
+  IsMemberLimitReachedRequest,
+  IsMemberLimitReachedResponse,
+  LeaveOrganizationRequest,
+  LeaveOrganizationResponse,
+  LinkSubgraphRequest,
+  LinkSubgraphResponse,
+  ListOrganizationsRequest,
+  ListOrganizationsResponse,
+  ListRouterCompatibilityVersionsRequest,
+  ListRouterCompatibilityVersionsResponse,
+  MigrateFromApolloRequest,
+  MigrateFromApolloResponse,
+  MigrateMonographRequest,
+  MigrateMonographResponse,
+  MoveGraphRequest,
+  MoveGraphResponse,
+  PreviewDeleteClientRequest,
+  PreviewDeleteClientResponse,
+  PublishFederatedSubgraphRequest,
+  PublishFederatedSubgraphResponse,
+  PublishMonographRequest,
+  PublishMonographResponse,
+  PublishPersistedOperationsRequest,
+  PublishPersistedOperationsResponse,
+  PushCacheWarmerOperationRequest,
+  PushCacheWarmerOperationResponse,
+  RecomposeGraphRequest,
+  RecomposeGraphResponse,
+  RedeliverWebhookRequest,
+  RedeliverWebhookResponse,
+  RemoveInvitationRequest,
+  RemoveInvitationResponse,
+  RemoveOperationIgnoreAllOverrideRequest,
+  RemoveOperationIgnoreAllOverrideResponse,
+  RemoveOperationOverridesRequest,
+  RemoveOperationOverridesResponse,
+  RemoveOrganizationMemberRequest,
+  RemoveOrganizationMemberResponse,
+  RenameNamespaceRequest,
+  RenameNamespaceResponse,
+  RestoreOrganizationRequest,
+  RestoreOrganizationResponse,
+  SetGraphRouterCompatibilityVersionRequest,
+  SetGraphRouterCompatibilityVersionResponse,
+  ToggleChangeOverridesForAllOperationsRequest,
+  ToggleChangeOverridesForAllOperationsResponse,
+  UnlinkSubgraphRequest,
+  UnlinkSubgraphResponse,
+  UpdateAPIKeyRequest,
+  UpdateAPIKeyResponse,
+  UpdateContractRequest,
+  UpdateContractResponse,
+  UpdateFeatureFlagRequest,
+  UpdateFeatureFlagResponse,
+  UpdateFeatureSettingsRequest,
+  UpdateFeatureSettingsResponse,
+  UpdateFederatedGraphRequest,
+  UpdateFederatedGraphResponse,
+  UpdateIDPMappersRequest,
+  UpdateIDPMappersResponse,
+  UpdateIntegrationConfigRequest,
+  UpdateIntegrationConfigResponse,
+  UpdateMonographRequest,
+  UpdateMonographResponse,
+  UpdateNamespaceChecksConfigurationRequest,
+  UpdateNamespaceChecksConfigurationResponse,
+  UpdateOrganizationDetailsRequest,
+  UpdateOrganizationDetailsResponse,
+  UpdateOrganizationGroupRequest,
+  UpdateOrganizationGroupResponse,
+  UpdateOrganizationWebhookConfigRequest,
+  UpdateOrganizationWebhookConfigResponse,
+  UpdateOrgMemberGroupRequest,
+  UpdateOrgMemberGroupResponse,
+  UpdatePlaygroundScriptRequest,
+  UpdatePlaygroundScriptResponse,
+  UpdateProposalRequest,
+  UpdateProposalResponse,
+  UpdateSubgraphRequest,
+  UpdateSubgraphResponse,
+  UpgradePlanRequest,
+  UpgradePlanResponse,
+  ValidateAndFetchPluginDataRequest,
+  ValidateAndFetchPluginDataResponse,
+  VerifyAPIKeyGraphAccessRequest,
+  VerifyAPIKeyGraphAccessResponse,
+  WhoAmIRequest,
+  WhoAmIResponse,
+} from './platform_pb.js';
 
 /**
  * PlaygroundScripts
@@ -14,56 +375,56 @@ import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, Ad
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript
  */
 export const createPlaygroundScript = {
-  localName: "createPlaygroundScript",
-  name: "CreatePlaygroundScript",
+  localName: 'createPlaygroundScript',
+  name: 'CreatePlaygroundScript',
   kind: MethodKind.Unary,
   I: CreatePlaygroundScriptRequest,
   O: CreatePlaygroundScriptResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeletePlaygroundScript
  */
 export const deletePlaygroundScript = {
-  localName: "deletePlaygroundScript",
-  name: "DeletePlaygroundScript",
+  localName: 'deletePlaygroundScript',
+  name: 'DeletePlaygroundScript',
   kind: MethodKind.Unary,
   I: DeletePlaygroundScriptRequest,
   O: DeletePlaygroundScriptResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdatePlaygroundScript
  */
 export const updatePlaygroundScript = {
-  localName: "updatePlaygroundScript",
-  name: "UpdatePlaygroundScript",
+  localName: 'updatePlaygroundScript',
+  name: 'UpdatePlaygroundScript',
   kind: MethodKind.Unary,
   I: UpdatePlaygroundScriptRequest,
   O: UpdatePlaygroundScriptResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetPlaygroundScripts
  */
 export const getPlaygroundScripts = {
-  localName: "getPlaygroundScripts",
-  name: "GetPlaygroundScripts",
+  localName: 'getPlaygroundScripts',
+  name: 'GetPlaygroundScripts',
   kind: MethodKind.Unary,
   I: GetPlaygroundScriptsRequest,
   O: GetPlaygroundScriptsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -72,70 +433,70 @@ export const getPlaygroundScripts = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateNamespace
  */
 export const createNamespace = {
-  localName: "createNamespace",
-  name: "CreateNamespace",
+  localName: 'createNamespace',
+  name: 'CreateNamespace',
   kind: MethodKind.Unary,
   I: CreateNamespaceRequest,
   O: CreateNamespaceResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteNamespace
  */
 export const deleteNamespace = {
-  localName: "deleteNamespace",
-  name: "DeleteNamespace",
+  localName: 'deleteNamespace',
+  name: 'DeleteNamespace',
   kind: MethodKind.Unary,
   I: DeleteNamespaceRequest,
   O: DeleteNamespaceResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RenameNamespace
  */
 export const renameNamespace = {
-  localName: "renameNamespace",
-  name: "RenameNamespace",
+  localName: 'renameNamespace',
+  name: 'RenameNamespace',
   kind: MethodKind.Unary,
   I: RenameNamespaceRequest,
   O: RenameNamespaceResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaces
  */
 export const getNamespaces = {
-  localName: "getNamespaces",
-  name: "GetNamespaces",
+  localName: 'getNamespaces',
+  name: 'GetNamespaces',
   kind: MethodKind.Unary,
   I: GetNamespacesRequest,
   O: GetNamespacesResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespace
  */
 export const getNamespace = {
-  localName: "getNamespace",
-  name: "GetNamespace",
+  localName: 'getNamespace',
+  name: 'GetNamespace',
   kind: MethodKind.Unary,
   I: GetNamespaceRequest,
   O: GetNamespaceResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -144,14 +505,14 @@ export const getNamespace = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetWorkspace
  */
 export const getWorkspace = {
-  localName: "getWorkspace",
-  name: "GetWorkspace",
+  localName: 'getWorkspace',
+  name: 'GetWorkspace',
   kind: MethodKind.Unary,
   I: GetWorkspaceRequest,
   O: GetWorkspaceResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -160,70 +521,70 @@ export const getWorkspace = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateContract
  */
 export const createContract = {
-  localName: "createContract",
-  name: "CreateContract",
+  localName: 'createContract',
+  name: 'CreateContract',
   kind: MethodKind.Unary,
   I: CreateContractRequest,
   O: CreateContractResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateContract
  */
 export const updateContract = {
-  localName: "updateContract",
-  name: "UpdateContract",
+  localName: 'updateContract',
+  name: 'UpdateContract',
   kind: MethodKind.Unary,
   I: UpdateContractRequest,
   O: UpdateContractResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.MoveFederatedGraph
  */
 export const moveFederatedGraph = {
-  localName: "moveFederatedGraph",
-  name: "MoveFederatedGraph",
+  localName: 'moveFederatedGraph',
+  name: 'MoveFederatedGraph',
   kind: MethodKind.Unary,
   I: MoveGraphRequest,
   O: MoveGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.MoveSubgraph
  */
 export const moveSubgraph = {
-  localName: "moveSubgraph",
-  name: "MoveSubgraph",
+  localName: 'moveSubgraph',
+  name: 'MoveSubgraph',
   kind: MethodKind.Unary,
   I: MoveGraphRequest,
   O: MoveGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.MoveMonograph
  */
 export const moveMonograph = {
-  localName: "moveMonograph",
-  name: "MoveMonograph",
+  localName: 'moveMonograph',
+  name: 'MoveMonograph',
   kind: MethodKind.Unary,
   I: MoveGraphRequest,
   O: MoveGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -232,14 +593,14 @@ export const moveMonograph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateMonograph
  */
 export const createMonograph = {
-  localName: "createMonograph",
-  name: "CreateMonograph",
+  localName: 'createMonograph',
+  name: 'CreateMonograph',
   kind: MethodKind.Unary,
   I: CreateMonographRequest,
   O: CreateMonographResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -248,14 +609,14 @@ export const createMonograph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.PublishMonograph
  */
 export const publishMonograph = {
-  localName: "publishMonograph",
-  name: "PublishMonograph",
+  localName: 'publishMonograph',
+  name: 'PublishMonograph',
   kind: MethodKind.Unary,
   I: PublishMonographRequest,
   O: PublishMonographResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -264,14 +625,14 @@ export const publishMonograph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteMonograph
  */
 export const deleteMonograph = {
-  localName: "deleteMonograph",
-  name: "DeleteMonograph",
+  localName: 'deleteMonograph',
+  name: 'DeleteMonograph',
   kind: MethodKind.Unary,
   I: DeleteMonographRequest,
   O: DeleteMonographResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -280,14 +641,14 @@ export const deleteMonograph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateMonograph
  */
 export const updateMonograph = {
-  localName: "updateMonograph",
-  name: "UpdateMonograph",
+  localName: 'updateMonograph',
+  name: 'UpdateMonograph',
   kind: MethodKind.Unary,
   I: UpdateMonographRequest,
   O: UpdateMonographResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -296,14 +657,14 @@ export const updateMonograph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.MigrateMonograph
  */
 export const migrateMonograph = {
-  localName: "migrateMonograph",
-  name: "MigrateMonograph",
+  localName: 'migrateMonograph',
+  name: 'MigrateMonograph',
   kind: MethodKind.Unary,
   I: MigrateMonographRequest,
   O: MigrateMonographResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -312,14 +673,14 @@ export const migrateMonograph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFederatedSubgraph
  */
 export const createFederatedSubgraph = {
-  localName: "createFederatedSubgraph",
-  name: "CreateFederatedSubgraph",
+  localName: 'createFederatedSubgraph',
+  name: 'CreateFederatedSubgraph',
   kind: MethodKind.Unary,
   I: CreateFederatedSubgraphRequest,
   O: CreateFederatedSubgraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -328,14 +689,14 @@ export const createFederatedSubgraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.PublishFederatedSubgraph
  */
 export const publishFederatedSubgraph = {
-  localName: "publishFederatedSubgraph",
-  name: "PublishFederatedSubgraph",
+  localName: 'publishFederatedSubgraph',
+  name: 'PublishFederatedSubgraph',
   kind: MethodKind.Unary,
   I: PublishFederatedSubgraphRequest,
   O: PublishFederatedSubgraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -344,14 +705,14 @@ export const publishFederatedSubgraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph
  */
 export const createFederatedGraph = {
-  localName: "createFederatedGraph",
-  name: "CreateFederatedGraph",
+  localName: 'createFederatedGraph',
+  name: 'CreateFederatedGraph',
   kind: MethodKind.Unary,
   I: CreateFederatedGraphRequest,
   O: CreateFederatedGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -360,14 +721,14 @@ export const createFederatedGraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteFederatedGraph
  */
 export const deleteFederatedGraph = {
-  localName: "deleteFederatedGraph",
-  name: "DeleteFederatedGraph",
+  localName: 'deleteFederatedGraph',
+  name: 'DeleteFederatedGraph',
   kind: MethodKind.Unary,
   I: DeleteFederatedGraphRequest,
   O: DeleteFederatedGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -376,14 +737,14 @@ export const deleteFederatedGraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteFederatedSubgraph
  */
 export const deleteFederatedSubgraph = {
-  localName: "deleteFederatedSubgraph",
-  name: "DeleteFederatedSubgraph",
+  localName: 'deleteFederatedSubgraph',
+  name: 'DeleteFederatedSubgraph',
   kind: MethodKind.Unary,
   I: DeleteFederatedSubgraphRequest,
   O: DeleteFederatedSubgraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -392,42 +753,42 @@ export const deleteFederatedSubgraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema
  */
 export const checkSubgraphSchema = {
-  localName: "checkSubgraphSchema",
-  name: "CheckSubgraphSchema",
+  localName: 'checkSubgraphSchema',
+  name: 'CheckSubgraphSchema',
   kind: MethodKind.Unary,
   I: CheckSubgraphSchemaRequest,
   O: CheckSubgraphSchemaResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph
  */
 export const getProposedSchemaOfCheckedSubgraph = {
-  localName: "getProposedSchemaOfCheckedSubgraph",
-  name: "GetProposedSchemaOfCheckedSubgraph",
+  localName: 'getProposedSchemaOfCheckedSubgraph',
+  name: 'GetProposedSchemaOfCheckedSubgraph',
   kind: MethodKind.Unary,
   I: GetProposedSchemaOfCheckedSubgraphRequest,
   O: GetProposedSchemaOfCheckedSubgraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema
  */
 export const fixSubgraphSchema = {
-  localName: "fixSubgraphSchema",
-  name: "FixSubgraphSchema",
+  localName: 'fixSubgraphSchema',
+  name: 'FixSubgraphSchema',
   kind: MethodKind.Unary,
   I: FixSubgraphSchemaRequest,
   O: FixSubgraphSchemaResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -436,14 +797,14 @@ export const fixSubgraphSchema = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateFederatedGraph
  */
 export const updateFederatedGraph = {
-  localName: "updateFederatedGraph",
-  name: "UpdateFederatedGraph",
+  localName: 'updateFederatedGraph',
+  name: 'UpdateFederatedGraph',
   kind: MethodKind.Unary,
   I: UpdateFederatedGraphRequest,
   O: UpdateFederatedGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -452,14 +813,14 @@ export const updateFederatedGraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateSubgraph
  */
 export const updateSubgraph = {
-  localName: "updateSubgraph",
-  name: "UpdateSubgraph",
+  localName: 'updateSubgraph',
+  name: 'UpdateSubgraph',
   kind: MethodKind.Unary,
   I: UpdateSubgraphRequest,
   O: UpdateSubgraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -468,14 +829,14 @@ export const updateSubgraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CheckFederatedGraph
  */
 export const checkFederatedGraph = {
-  localName: "checkFederatedGraph",
-  name: "CheckFederatedGraph",
+  localName: 'checkFederatedGraph',
+  name: 'CheckFederatedGraph',
   kind: MethodKind.Unary,
   I: CheckFederatedGraphRequest,
   O: CheckFederatedGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -484,14 +845,14 @@ export const checkFederatedGraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.WhoAmI
  */
 export const whoAmI = {
-  localName: "whoAmI",
-  name: "WhoAmI",
+  localName: 'whoAmI',
+  name: 'WhoAmI',
   kind: MethodKind.Unary,
   I: WhoAmIRequest,
   O: WhoAmIResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -500,14 +861,14 @@ export const whoAmI = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GenerateRouterToken
  */
 export const generateRouterToken = {
-  localName: "generateRouterToken",
-  name: "GenerateRouterToken",
+  localName: 'generateRouterToken',
+  name: 'GenerateRouterToken',
   kind: MethodKind.Unary,
   I: GenerateRouterTokenRequest,
   O: GenerateRouterTokenResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -516,14 +877,14 @@ export const generateRouterToken = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetRouterTokens
  */
 export const getRouterTokens = {
-  localName: "getRouterTokens",
-  name: "GetRouterTokens",
+  localName: 'getRouterTokens',
+  name: 'GetRouterTokens',
   kind: MethodKind.Unary,
   I: GetRouterTokensRequest,
   O: GetRouterTokensResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -532,14 +893,14 @@ export const getRouterTokens = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteRouterToken
  */
 export const deleteRouterToken = {
-  localName: "deleteRouterToken",
-  name: "DeleteRouterToken",
+  localName: 'deleteRouterToken',
+  name: 'DeleteRouterToken',
   kind: MethodKind.Unary,
   I: DeleteRouterTokenRequest,
   O: DeleteRouterTokenResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -548,14 +909,14 @@ export const deleteRouterToken = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.PublishPersistedOperations
  */
 export const publishPersistedOperations = {
-  localName: "publishPersistedOperations",
-  name: "PublishPersistedOperations",
+  localName: 'publishPersistedOperations',
+  name: 'PublishPersistedOperations',
   kind: MethodKind.Unary,
   I: PublishPersistedOperationsRequest,
   O: PublishPersistedOperationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -564,14 +925,14 @@ export const publishPersistedOperations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic
  */
 export const checkPersistedOperationTraffic = {
-  localName: "checkPersistedOperationTraffic",
-  name: "CheckPersistedOperationTraffic",
+  localName: 'checkPersistedOperationTraffic',
+  name: 'CheckPersistedOperationTraffic',
   kind: MethodKind.Unary,
   I: CheckPersistedOperationTrafficRequest,
   O: CheckPersistedOperationTrafficResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -580,14 +941,14 @@ export const checkPersistedOperationTraffic = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation
  */
 export const deletePersistedOperation = {
-  localName: "deletePersistedOperation",
-  name: "DeletePersistedOperation",
+  localName: 'deletePersistedOperation',
+  name: 'DeletePersistedOperation',
   kind: MethodKind.Unary,
   I: DeletePersistedOperationRequest,
   O: DeletePersistedOperationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -596,14 +957,14 @@ export const deletePersistedOperation = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetPersistedOperations
  */
 export const getPersistedOperations = {
-  localName: "getPersistedOperations",
-  name: "GetPersistedOperations",
+  localName: 'getPersistedOperations',
+  name: 'GetPersistedOperations',
   kind: MethodKind.Unary,
   I: GetPersistedOperationsRequest,
   O: GetPersistedOperationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -612,14 +973,14 @@ export const getPersistedOperations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAuditLogs
  */
 export const getAuditLogs = {
-  localName: "getAuditLogs",
-  name: "GetAuditLogs",
+  localName: 'getAuditLogs',
+  name: 'GetAuditLogs',
   kind: MethodKind.Unary,
   I: GetAuditLogsRequest,
   O: GetAuditLogsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -628,14 +989,14 @@ export const getAuditLogs = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser
  */
 export const initializeCosmoUser = {
-  localName: "initializeCosmoUser",
-  name: "InitializeCosmoUser",
+  localName: 'initializeCosmoUser',
+  name: 'InitializeCosmoUser',
   kind: MethodKind.Unary,
   I: InitializeCosmoUserRequest,
   O: InitializeCosmoUserResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -644,14 +1005,14 @@ export const initializeCosmoUser = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ListOrganizations
  */
 export const listOrganizations = {
-  localName: "listOrganizations",
-  name: "ListOrganizations",
+  localName: 'listOrganizations',
+  name: 'ListOrganizations',
   kind: MethodKind.Unary,
   I: ListOrganizationsRequest,
   O: ListOrganizationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -660,14 +1021,14 @@ export const listOrganizations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphs
  */
 export const getFederatedGraphs = {
-  localName: "getFederatedGraphs",
-  name: "GetFederatedGraphs",
+  localName: 'getFederatedGraphs',
+  name: 'GetFederatedGraphs',
   kind: MethodKind.Unary,
   I: GetFederatedGraphsRequest,
   O: GetFederatedGraphsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -676,14 +1037,14 @@ export const getFederatedGraphs = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphsBySubgraphLabels
  */
 export const getFederatedGraphsBySubgraphLabels = {
-  localName: "getFederatedGraphsBySubgraphLabels",
-  name: "GetFederatedGraphsBySubgraphLabels",
+  localName: 'getFederatedGraphsBySubgraphLabels',
+  name: 'GetFederatedGraphsBySubgraphLabels',
   kind: MethodKind.Unary,
   I: GetFederatedGraphsBySubgraphLabelsRequest,
   O: GetFederatedGraphsBySubgraphLabelsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -692,14 +1053,14 @@ export const getFederatedGraphsBySubgraphLabels = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphByName
  */
 export const getFederatedGraphByName = {
-  localName: "getFederatedGraphByName",
-  name: "GetFederatedGraphByName",
+  localName: 'getFederatedGraphByName',
+  name: 'GetFederatedGraphByName',
   kind: MethodKind.Unary,
   I: GetFederatedGraphByNameRequest,
   O: GetFederatedGraphByNameResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -708,14 +1069,14 @@ export const getFederatedGraphByName = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphSDLByName
  */
 export const getFederatedGraphSDLByName = {
-  localName: "getFederatedGraphSDLByName",
-  name: "GetFederatedGraphSDLByName",
+  localName: 'getFederatedGraphSDLByName',
+  name: 'GetFederatedGraphSDLByName',
   kind: MethodKind.Unary,
   I: GetFederatedGraphSDLByNameRequest,
   O: GetFederatedGraphSDLByNameResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -724,14 +1085,14 @@ export const getFederatedGraphSDLByName = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphs
  */
 export const getSubgraphs = {
-  localName: "getSubgraphs",
-  name: "GetSubgraphs",
+  localName: 'getSubgraphs',
+  name: 'GetSubgraphs',
   kind: MethodKind.Unary,
   I: GetSubgraphsRequest,
   O: GetSubgraphsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -740,14 +1101,14 @@ export const getSubgraphs = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphByName
  */
 export const getSubgraphByName = {
-  localName: "getSubgraphByName",
-  name: "GetSubgraphByName",
+  localName: 'getSubgraphByName',
+  name: 'GetSubgraphByName',
   kind: MethodKind.Unary,
   I: GetSubgraphByNameRequest,
   O: GetSubgraphByNameResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -756,14 +1117,14 @@ export const getSubgraphByName = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphSDLFromLatestComposition
  */
 export const getSubgraphSDLFromLatestComposition = {
-  localName: "getSubgraphSDLFromLatestComposition",
-  name: "GetSubgraphSDLFromLatestComposition",
+  localName: 'getSubgraphSDLFromLatestComposition',
+  name: 'GetSubgraphSDLFromLatestComposition',
   kind: MethodKind.Unary,
   I: GetSubgraphSDLFromLatestCompositionRequest,
   O: GetSubgraphSDLFromLatestCompositionResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -772,14 +1133,14 @@ export const getSubgraphSDLFromLatestComposition = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetLatestSubgraphSDL
  */
 export const getLatestSubgraphSDL = {
-  localName: "getLatestSubgraphSDL",
-  name: "GetLatestSubgraphSDL",
+  localName: 'getLatestSubgraphSDL',
+  name: 'GetLatestSubgraphSDL',
   kind: MethodKind.Unary,
   I: GetLatestSubgraphSDLRequest,
   O: GetLatestSubgraphSDLResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -788,14 +1149,14 @@ export const getLatestSubgraphSDL = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetChecksByFederatedGraphName
  */
 export const getChecksByFederatedGraphName = {
-  localName: "getChecksByFederatedGraphName",
-  name: "GetChecksByFederatedGraphName",
+  localName: 'getChecksByFederatedGraphName',
+  name: 'GetChecksByFederatedGraphName',
   kind: MethodKind.Unary,
   I: GetChecksByFederatedGraphNameRequest,
   O: GetChecksByFederatedGraphNameResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -804,14 +1165,14 @@ export const getChecksByFederatedGraphName = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCheckSummary
  */
 export const getCheckSummary = {
-  localName: "getCheckSummary",
-  name: "GetCheckSummary",
+  localName: 'getCheckSummary',
+  name: 'GetCheckSummary',
   kind: MethodKind.Unary,
   I: GetCheckSummaryRequest,
   O: GetCheckSummaryResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -820,14 +1181,14 @@ export const getCheckSummary = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCheckOperations
  */
 export const getCheckOperations = {
-  localName: "getCheckOperations",
-  name: "GetCheckOperations",
+  localName: 'getCheckOperations',
+  name: 'GetCheckOperations',
   kind: MethodKind.Unary,
   I: GetCheckOperationsRequest,
   O: GetCheckOperationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -836,14 +1197,14 @@ export const getCheckOperations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ForceCheckSuccess
  */
 export const forceCheckSuccess = {
-  localName: "forceCheckSuccess",
-  name: "ForceCheckSuccess",
+  localName: 'forceCheckSuccess',
+  name: 'ForceCheckSuccess',
   kind: MethodKind.Unary,
   I: ForceCheckSuccessRequest,
   O: ForceCheckSuccessResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -852,14 +1213,14 @@ export const forceCheckSuccess = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOperationOverrides
  */
 export const createOperationOverrides = {
-  localName: "createOperationOverrides",
-  name: "CreateOperationOverrides",
+  localName: 'createOperationOverrides',
+  name: 'CreateOperationOverrides',
   kind: MethodKind.Unary,
   I: CreateOperationOverridesRequest,
   O: CreateOperationOverridesResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -868,14 +1229,14 @@ export const createOperationOverrides = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationOverrides
  */
 export const removeOperationOverrides = {
-  localName: "removeOperationOverrides",
-  name: "RemoveOperationOverrides",
+  localName: 'removeOperationOverrides',
+  name: 'RemoveOperationOverrides',
   kind: MethodKind.Unary,
   I: RemoveOperationOverridesRequest,
   O: RemoveOperationOverridesResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -884,14 +1245,14 @@ export const removeOperationOverrides = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOperationIgnoreAllOverride
  */
 export const createOperationIgnoreAllOverride = {
-  localName: "createOperationIgnoreAllOverride",
-  name: "CreateOperationIgnoreAllOverride",
+  localName: 'createOperationIgnoreAllOverride',
+  name: 'CreateOperationIgnoreAllOverride',
   kind: MethodKind.Unary,
   I: CreateOperationIgnoreAllOverrideRequest,
   O: CreateOperationIgnoreAllOverrideResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -900,14 +1261,14 @@ export const createOperationIgnoreAllOverride = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOperationIgnoreAllOverride
  */
 export const removeOperationIgnoreAllOverride = {
-  localName: "removeOperationIgnoreAllOverride",
-  name: "RemoveOperationIgnoreAllOverride",
+  localName: 'removeOperationIgnoreAllOverride',
+  name: 'RemoveOperationIgnoreAllOverride',
   kind: MethodKind.Unary,
   I: RemoveOperationIgnoreAllOverrideRequest,
   O: RemoveOperationIgnoreAllOverrideResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -916,14 +1277,14 @@ export const removeOperationIgnoreAllOverride = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationOverrides
  */
 export const getOperationOverrides = {
-  localName: "getOperationOverrides",
-  name: "GetOperationOverrides",
+  localName: 'getOperationOverrides',
+  name: 'GetOperationOverrides',
   kind: MethodKind.Unary,
   I: GetOperationOverridesRequest,
   O: GetOperationOverridesResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -932,14 +1293,14 @@ export const getOperationOverrides = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAllOverrides
  */
 export const getAllOverrides = {
-  localName: "getAllOverrides",
-  name: "GetAllOverrides",
+  localName: 'getAllOverrides',
+  name: 'GetAllOverrides',
   kind: MethodKind.Unary,
   I: GetAllOverridesRequest,
   O: GetAllOverridesResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -948,14 +1309,14 @@ export const getAllOverrides = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ToggleChangeOverridesForAllOperations
  */
 export const toggleChangeOverridesForAllOperations = {
-  localName: "toggleChangeOverridesForAllOperations",
-  name: "ToggleChangeOverridesForAllOperations",
+  localName: 'toggleChangeOverridesForAllOperations',
+  name: 'ToggleChangeOverridesForAllOperations',
   kind: MethodKind.Unary,
   I: ToggleChangeOverridesForAllOperationsRequest,
   O: ToggleChangeOverridesForAllOperationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -964,14 +1325,14 @@ export const toggleChangeOverridesForAllOperations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateIgnoreOverridesForAllOperations
  */
 export const createIgnoreOverridesForAllOperations = {
-  localName: "createIgnoreOverridesForAllOperations",
-  name: "CreateIgnoreOverridesForAllOperations",
+  localName: 'createIgnoreOverridesForAllOperations',
+  name: 'CreateIgnoreOverridesForAllOperations',
   kind: MethodKind.Unary,
   I: CreateIgnoreOverridesForAllOperationsRequest,
   O: CreateIgnoreOverridesForAllOperationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -980,14 +1341,14 @@ export const createIgnoreOverridesForAllOperations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationContent
  */
 export const getOperationContent = {
-  localName: "getOperationContent",
-  name: "GetOperationContent",
+  localName: 'getOperationContent',
+  name: 'GetOperationContent',
   kind: MethodKind.Unary,
   I: GetOperationContentRequest,
   O: GetOperationContentResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -996,14 +1357,14 @@ export const getOperationContent = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphChangelog
  */
 export const getFederatedGraphChangelog = {
-  localName: "getFederatedGraphChangelog",
-  name: "GetFederatedGraphChangelog",
+  localName: 'getFederatedGraphChangelog',
+  name: 'GetFederatedGraphChangelog',
   kind: MethodKind.Unary,
   I: GetFederatedGraphChangelogRequest,
   O: GetFederatedGraphChangelogResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1012,14 +1373,14 @@ export const getFederatedGraphChangelog = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFederatedGraphToken
  */
 export const createFederatedGraphToken = {
-  localName: "createFederatedGraphToken",
-  name: "CreateFederatedGraphToken",
+  localName: 'createFederatedGraphToken',
+  name: 'CreateFederatedGraphToken',
   kind: MethodKind.Unary,
   I: CreateFederatedGraphTokenRequest,
   O: CreateFederatedGraphTokenResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1028,14 +1389,14 @@ export const createFederatedGraphToken = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationBySlug
  */
 export const getOrganizationBySlug = {
-  localName: "getOrganizationBySlug",
-  name: "GetOrganizationBySlug",
+  localName: 'getOrganizationBySlug',
+  name: 'GetOrganizationBySlug',
   kind: MethodKind.Unary,
   I: GetOrganizationBySlugRequest,
   O: GetOrganizationBySlugResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1044,14 +1405,14 @@ export const getOrganizationBySlug = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationMembers
  */
 export const getOrganizationMembers = {
-  localName: "getOrganizationMembers",
-  name: "GetOrganizationMembers",
+  localName: 'getOrganizationMembers',
+  name: 'GetOrganizationMembers',
   kind: MethodKind.Unary,
   I: GetOrganizationMembersRequest,
   O: GetOrganizationMembersResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1060,14 +1421,14 @@ export const getOrganizationMembers = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetPendingOrganizationMembers
  */
 export const getPendingOrganizationMembers = {
-  localName: "getPendingOrganizationMembers",
-  name: "GetPendingOrganizationMembers",
+  localName: 'getPendingOrganizationMembers',
+  name: 'GetPendingOrganizationMembers',
   kind: MethodKind.Unary,
   I: GetPendingOrganizationMembersRequest,
   O: GetPendingOrganizationMembersResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1076,14 +1437,14 @@ export const getPendingOrganizationMembers = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.IsMemberLimitReached
  */
 export const isMemberLimitReached = {
-  localName: "isMemberLimitReached",
-  name: "IsMemberLimitReached",
+  localName: 'isMemberLimitReached',
+  name: 'IsMemberLimitReached',
   kind: MethodKind.Unary,
   I: IsMemberLimitReachedRequest,
   O: IsMemberLimitReachedResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1092,14 +1453,14 @@ export const isMemberLimitReached = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.InviteUser
  */
 export const inviteUser = {
-  localName: "inviteUser",
-  name: "InviteUser",
+  localName: 'inviteUser',
+  name: 'InviteUser',
   kind: MethodKind.Unary,
   I: InviteUserRequest,
   O: InviteUserResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1108,14 +1469,14 @@ export const inviteUser = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAPIKeys
  */
 export const getAPIKeys = {
-  localName: "getAPIKeys",
-  name: "GetAPIKeys",
+  localName: 'getAPIKeys',
+  name: 'GetAPIKeys',
   kind: MethodKind.Unary,
   I: GetAPIKeysRequest,
   O: GetAPIKeysResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1124,14 +1485,14 @@ export const getAPIKeys = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateAPIKey
  */
 export const createAPIKey = {
-  localName: "createAPIKey",
-  name: "CreateAPIKey",
+  localName: 'createAPIKey',
+  name: 'CreateAPIKey',
   kind: MethodKind.Unary,
   I: CreateAPIKeyRequest,
   O: CreateAPIKeyResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1140,14 +1501,14 @@ export const createAPIKey = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateAPIKey
  */
 export const updateAPIKey = {
-  localName: "updateAPIKey",
-  name: "UpdateAPIKey",
+  localName: 'updateAPIKey',
+  name: 'UpdateAPIKey',
   kind: MethodKind.Unary,
   I: UpdateAPIKeyRequest,
   O: UpdateAPIKeyResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1156,14 +1517,14 @@ export const updateAPIKey = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteAPIKey
  */
 export const deleteAPIKey = {
-  localName: "deleteAPIKey",
-  name: "DeleteAPIKey",
+  localName: 'deleteAPIKey',
+  name: 'DeleteAPIKey',
   kind: MethodKind.Unary,
   I: DeleteAPIKeyRequest,
   O: DeleteAPIKeyResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1172,14 +1533,14 @@ export const deleteAPIKey = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveOrganizationMember
  */
 export const removeOrganizationMember = {
-  localName: "removeOrganizationMember",
-  name: "RemoveOrganizationMember",
+  localName: 'removeOrganizationMember',
+  name: 'RemoveOrganizationMember',
   kind: MethodKind.Unary,
   I: RemoveOrganizationMemberRequest,
   O: RemoveOrganizationMemberResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1188,14 +1549,14 @@ export const removeOrganizationMember = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveInvitation
  */
 export const removeInvitation = {
-  localName: "removeInvitation",
-  name: "RemoveInvitation",
+  localName: 'removeInvitation',
+  name: 'RemoveInvitation',
   kind: MethodKind.Unary,
   I: RemoveInvitationRequest,
   O: RemoveInvitationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1204,14 +1565,14 @@ export const removeInvitation = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.MigrateFromApollo
  */
 export const migrateFromApollo = {
-  localName: "migrateFromApollo",
-  name: "MigrateFromApollo",
+  localName: 'migrateFromApollo',
+  name: 'MigrateFromApollo',
   kind: MethodKind.Unary,
   I: MigrateFromApolloRequest,
   O: MigrateFromApolloResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1221,14 +1582,14 @@ export const migrateFromApollo = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOrganizationGroup
  */
 export const createOrganizationGroup = {
-  localName: "createOrganizationGroup",
-  name: "CreateOrganizationGroup",
+  localName: 'createOrganizationGroup',
+  name: 'CreateOrganizationGroup',
   kind: MethodKind.Unary,
   I: CreateOrganizationGroupRequest,
   O: CreateOrganizationGroupResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1237,14 +1598,14 @@ export const createOrganizationGroup = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups
  */
 export const getOrganizationGroups = {
-  localName: "getOrganizationGroups",
-  name: "GetOrganizationGroups",
+  localName: 'getOrganizationGroups',
+  name: 'GetOrganizationGroups',
   kind: MethodKind.Unary,
   I: GetOrganizationGroupsRequest,
   O: GetOrganizationGroupsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1253,14 +1614,14 @@ export const getOrganizationGroups = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers
  */
 export const getOrganizationGroupMembers = {
-  localName: "getOrganizationGroupMembers",
-  name: "GetOrganizationGroupMembers",
+  localName: 'getOrganizationGroupMembers',
+  name: 'GetOrganizationGroupMembers',
   kind: MethodKind.Unary,
   I: GetOrganizationGroupMembersRequest,
   O: GetOrganizationGroupMembersResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1269,14 +1630,14 @@ export const getOrganizationGroupMembers = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroup
  */
 export const updateOrganizationGroup = {
-  localName: "updateOrganizationGroup",
-  name: "UpdateOrganizationGroup",
+  localName: 'updateOrganizationGroup',
+  name: 'UpdateOrganizationGroup',
   kind: MethodKind.Unary,
   I: UpdateOrganizationGroupRequest,
   O: UpdateOrganizationGroupResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1285,14 +1646,14 @@ export const updateOrganizationGroup = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup
  */
 export const deleteOrganizationGroup = {
-  localName: "deleteOrganizationGroup",
-  name: "DeleteOrganizationGroup",
+  localName: 'deleteOrganizationGroup',
+  name: 'DeleteOrganizationGroup',
   kind: MethodKind.Unary,
   I: DeleteOrganizationGroupRequest,
   O: DeleteOrganizationGroupResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1301,14 +1662,14 @@ export const deleteOrganizationGroup = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOrganizationWebhookConfig
  */
 export const createOrganizationWebhookConfig = {
-  localName: "createOrganizationWebhookConfig",
-  name: "CreateOrganizationWebhookConfig",
+  localName: 'createOrganizationWebhookConfig',
+  name: 'CreateOrganizationWebhookConfig',
   kind: MethodKind.Unary,
   I: CreateOrganizationWebhookConfigRequest,
   O: CreateOrganizationWebhookConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1317,14 +1678,14 @@ export const createOrganizationWebhookConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookConfigs
  */
 export const getOrganizationWebhookConfigs = {
-  localName: "getOrganizationWebhookConfigs",
-  name: "GetOrganizationWebhookConfigs",
+  localName: 'getOrganizationWebhookConfigs',
+  name: 'GetOrganizationWebhookConfigs',
   kind: MethodKind.Unary,
   I: GetOrganizationWebhookConfigsRequest,
   O: GetOrganizationWebhookConfigsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1333,14 +1694,14 @@ export const getOrganizationWebhookConfigs = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookMeta
  */
 export const getOrganizationWebhookMeta = {
-  localName: "getOrganizationWebhookMeta",
-  name: "GetOrganizationWebhookMeta",
+  localName: 'getOrganizationWebhookMeta',
+  name: 'GetOrganizationWebhookMeta',
   kind: MethodKind.Unary,
   I: GetOrganizationWebhookMetaRequest,
   O: GetOrganizationWebhookMetaResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1349,14 +1710,14 @@ export const getOrganizationWebhookMeta = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationWebhookConfig
  */
 export const updateOrganizationWebhookConfig = {
-  localName: "updateOrganizationWebhookConfig",
-  name: "UpdateOrganizationWebhookConfig",
+  localName: 'updateOrganizationWebhookConfig',
+  name: 'UpdateOrganizationWebhookConfig',
   kind: MethodKind.Unary,
   I: UpdateOrganizationWebhookConfigRequest,
   O: UpdateOrganizationWebhookConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1365,14 +1726,14 @@ export const updateOrganizationWebhookConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganizationWebhookConfig
  */
 export const deleteOrganizationWebhookConfig = {
-  localName: "deleteOrganizationWebhookConfig",
-  name: "DeleteOrganizationWebhookConfig",
+  localName: 'deleteOrganizationWebhookConfig',
+  name: 'DeleteOrganizationWebhookConfig',
   kind: MethodKind.Unary,
   I: DeleteOrganizationWebhookConfigRequest,
   O: DeleteOrganizationWebhookConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1381,14 +1742,14 @@ export const deleteOrganizationWebhookConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookHistory
  */
 export const getOrganizationWebhookHistory = {
-  localName: "getOrganizationWebhookHistory",
-  name: "GetOrganizationWebhookHistory",
+  localName: 'getOrganizationWebhookHistory',
+  name: 'GetOrganizationWebhookHistory',
   kind: MethodKind.Unary,
   I: GetOrganizationWebhookHistoryRequest,
   O: GetOrganizationWebhookHistoryResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1397,14 +1758,14 @@ export const getOrganizationWebhookHistory = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetWebhookDeliveryDetails
  */
 export const getWebhookDeliveryDetails = {
-  localName: "getWebhookDeliveryDetails",
-  name: "GetWebhookDeliveryDetails",
+  localName: 'getWebhookDeliveryDetails',
+  name: 'GetWebhookDeliveryDetails',
   kind: MethodKind.Unary,
   I: GetWebhookDeliveryDetailsRequest,
   O: GetWebhookDeliveryDetailsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1413,14 +1774,14 @@ export const getWebhookDeliveryDetails = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RedeliverWebhook
  */
 export const redeliverWebhook = {
-  localName: "redeliverWebhook",
-  name: "RedeliverWebhook",
+  localName: 'redeliverWebhook',
+  name: 'RedeliverWebhook',
   kind: MethodKind.Unary,
   I: RedeliverWebhookRequest,
   O: RedeliverWebhookResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1429,14 +1790,14 @@ export const redeliverWebhook = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateIntegration
  */
 export const createIntegration = {
-  localName: "createIntegration",
-  name: "CreateIntegration",
+  localName: 'createIntegration',
+  name: 'CreateIntegration',
   kind: MethodKind.Unary,
   I: CreateIntegrationRequest,
   O: CreateIntegrationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1445,14 +1806,14 @@ export const createIntegration = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationIntegrations
  */
 export const getOrganizationIntegrations = {
-  localName: "getOrganizationIntegrations",
-  name: "GetOrganizationIntegrations",
+  localName: 'getOrganizationIntegrations',
+  name: 'GetOrganizationIntegrations',
   kind: MethodKind.Unary,
   I: GetOrganizationIntegrationsRequest,
   O: GetOrganizationIntegrationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1461,14 +1822,14 @@ export const getOrganizationIntegrations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateIntegrationConfig
  */
 export const updateIntegrationConfig = {
-  localName: "updateIntegrationConfig",
-  name: "UpdateIntegrationConfig",
+  localName: 'updateIntegrationConfig',
+  name: 'UpdateIntegrationConfig',
   kind: MethodKind.Unary,
   I: UpdateIntegrationConfigRequest,
   O: UpdateIntegrationConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1477,14 +1838,14 @@ export const updateIntegrationConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteIntegration
  */
 export const deleteIntegration = {
-  localName: "deleteIntegration",
-  name: "DeleteIntegration",
+  localName: 'deleteIntegration',
+  name: 'DeleteIntegration',
   kind: MethodKind.Unary,
   I: DeleteIntegrationRequest,
   O: DeleteIntegrationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1493,14 +1854,14 @@ export const deleteIntegration = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteUser
  */
 export const deleteUser = {
-  localName: "deleteUser",
-  name: "DeleteUser",
+  localName: 'deleteUser',
+  name: 'DeleteUser',
   kind: MethodKind.Unary,
   I: DeleteUserRequest,
   O: DeleteUserResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1509,14 +1870,14 @@ export const deleteUser = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganization
  */
 export const deleteOrganization = {
-  localName: "deleteOrganization",
-  name: "DeleteOrganization",
+  localName: 'deleteOrganization',
+  name: 'DeleteOrganization',
   kind: MethodKind.Unary,
   I: DeleteOrganizationRequest,
   O: DeleteOrganizationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1525,14 +1886,14 @@ export const deleteOrganization = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RestoreOrganization
  */
 export const restoreOrganization = {
-  localName: "restoreOrganization",
-  name: "RestoreOrganization",
+  localName: 'restoreOrganization',
+  name: 'RestoreOrganization',
   kind: MethodKind.Unary,
   I: RestoreOrganizationRequest,
   O: RestoreOrganizationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1541,14 +1902,14 @@ export const restoreOrganization = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.LeaveOrganization
  */
 export const leaveOrganization = {
-  localName: "leaveOrganization",
-  name: "LeaveOrganization",
+  localName: 'leaveOrganization',
+  name: 'LeaveOrganization',
   kind: MethodKind.Unary,
   I: LeaveOrganizationRequest,
   O: LeaveOrganizationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1557,14 +1918,14 @@ export const leaveOrganization = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationDetails
  */
 export const updateOrganizationDetails = {
-  localName: "updateOrganizationDetails",
-  name: "UpdateOrganizationDetails",
+  localName: 'updateOrganizationDetails',
+  name: 'UpdateOrganizationDetails',
   kind: MethodKind.Unary,
   I: UpdateOrganizationDetailsRequest,
   O: UpdateOrganizationDetailsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1573,14 +1934,14 @@ export const updateOrganizationDetails = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberGroup
  */
 export const updateOrgMemberGroup = {
-  localName: "updateOrgMemberGroup",
-  name: "UpdateOrgMemberGroup",
+  localName: 'updateOrgMemberGroup',
+  name: 'UpdateOrgMemberGroup',
   kind: MethodKind.Unary,
   I: UpdateOrgMemberGroupRequest,
   O: UpdateOrgMemberGroupResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1589,14 +1950,14 @@ export const updateOrgMemberGroup = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.IsGitHubAppInstalled
  */
 export const isGitHubAppInstalled = {
-  localName: "isGitHubAppInstalled",
-  name: "IsGitHubAppInstalled",
+  localName: 'isGitHubAppInstalled',
+  name: 'IsGitHubAppInstalled',
   kind: MethodKind.Unary,
   I: IsGitHubAppInstalledRequest,
   O: IsGitHubAppInstalledResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1605,14 +1966,14 @@ export const isGitHubAppInstalled = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOIDCProvider
  */
 export const createOIDCProvider = {
-  localName: "createOIDCProvider",
-  name: "CreateOIDCProvider",
+  localName: 'createOIDCProvider',
+  name: 'CreateOIDCProvider',
   kind: MethodKind.Unary,
   I: CreateOIDCProviderRequest,
   O: CreateOIDCProviderResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1621,14 +1982,14 @@ export const createOIDCProvider = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOIDCProvider
  */
 export const getOIDCProvider = {
-  localName: "getOIDCProvider",
-  name: "GetOIDCProvider",
+  localName: 'getOIDCProvider',
+  name: 'GetOIDCProvider',
   kind: MethodKind.Unary,
   I: GetOIDCProviderRequest,
   O: GetOIDCProviderResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1637,14 +1998,14 @@ export const getOIDCProvider = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOIDCProvider
  */
 export const deleteOIDCProvider = {
-  localName: "deleteOIDCProvider",
-  name: "DeleteOIDCProvider",
+  localName: 'deleteOIDCProvider',
+  name: 'DeleteOIDCProvider',
   kind: MethodKind.Unary,
   I: DeleteOIDCProviderRequest,
   O: DeleteOIDCProviderResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1653,14 +2014,14 @@ export const deleteOIDCProvider = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateIDPMappers
  */
 export const updateIDPMappers = {
-  localName: "updateIDPMappers",
-  name: "UpdateIDPMappers",
+  localName: 'updateIDPMappers',
+  name: 'UpdateIDPMappers',
   kind: MethodKind.Unary,
   I: UpdateIDPMappersRequest,
   O: UpdateIDPMappersResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1669,14 +2030,46 @@ export const updateIDPMappers = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetClients
  */
 export const getClients = {
-  localName: "getClients",
-  name: "GetClients",
+  localName: 'getClients',
+  name: 'GetClients',
   kind: MethodKind.Unary,
   I: GetClientsRequest,
   O: GetClientsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
+} as const;
+
+/**
+ * PreviewDeleteClient returns the affected operation count for deleting a client
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.PreviewDeleteClient
+ */
+export const previewDeleteClient = {
+  localName: 'previewDeleteClient',
+  name: 'PreviewDeleteClient',
+  kind: MethodKind.Unary,
+  I: PreviewDeleteClientRequest,
+  O: PreviewDeleteClientResponse,
+  service: {
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
+} as const;
+
+/**
+ * DeleteClient deletes a registered client and its persisted operations
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteClient
+ */
+export const deleteClient = {
+  localName: 'deleteClient',
+  name: 'DeleteClient',
+  kind: MethodKind.Unary,
+  I: DeleteClientRequest,
+  O: DeleteClientResponse,
+  service: {
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1685,14 +2078,14 @@ export const getClients = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetRouters
  */
 export const getRouters = {
-  localName: "getRouters",
-  name: "GetRouters",
+  localName: 'getRouters',
+  name: 'GetRouters',
   kind: MethodKind.Unary,
   I: GetRoutersRequest,
   O: GetRoutersResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1701,14 +2094,14 @@ export const getRouters = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetInvitations
  */
 export const getInvitations = {
-  localName: "getInvitations",
-  name: "GetInvitations",
+  localName: 'getInvitations',
+  name: 'GetInvitations',
   kind: MethodKind.Unary,
   I: GetInvitationsRequest,
   O: GetInvitationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1717,14 +2110,14 @@ export const getInvitations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.AcceptOrDeclineInvitation
  */
 export const acceptOrDeclineInvitation = {
-  localName: "acceptOrDeclineInvitation",
-  name: "AcceptOrDeclineInvitation",
+  localName: 'acceptOrDeclineInvitation',
+  name: 'AcceptOrDeclineInvitation',
   kind: MethodKind.Unary,
   I: AcceptOrDeclineInvitationRequest,
   O: AcceptOrDeclineInvitationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1733,14 +2126,14 @@ export const acceptOrDeclineInvitation = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCompositions
  */
 export const getCompositions = {
-  localName: "getCompositions",
-  name: "GetCompositions",
+  localName: 'getCompositions',
+  name: 'GetCompositions',
   kind: MethodKind.Unary,
   I: GetCompositionsRequest,
   O: GetCompositionsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1749,14 +2142,14 @@ export const getCompositions = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCompositionDetails
  */
 export const getCompositionDetails = {
-  localName: "getCompositionDetails",
-  name: "GetCompositionDetails",
+  localName: 'getCompositionDetails',
+  name: 'GetCompositionDetails',
   kind: MethodKind.Unary,
   I: GetCompositionDetailsRequest,
   O: GetCompositionDetailsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1765,14 +2158,14 @@ export const getCompositionDetails = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSdlBySchemaVersion
  */
 export const getSdlBySchemaVersion = {
-  localName: "getSdlBySchemaVersion",
-  name: "GetSdlBySchemaVersion",
+  localName: 'getSdlBySchemaVersion',
+  name: 'GetSdlBySchemaVersion',
   kind: MethodKind.Unary,
   I: GetSdlBySchemaVersionRequest,
   O: GetSdlBySchemaVersionResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1781,14 +2174,14 @@ export const getSdlBySchemaVersion = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetChangelogBySchemaVersion
  */
 export const getChangelogBySchemaVersion = {
-  localName: "getChangelogBySchemaVersion",
-  name: "GetChangelogBySchemaVersion",
+  localName: 'getChangelogBySchemaVersion',
+  name: 'GetChangelogBySchemaVersion',
   kind: MethodKind.Unary,
   I: GetChangelogBySchemaVersionRequest,
   O: GetChangelogBySchemaVersionResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1797,14 +2190,14 @@ export const getChangelogBySchemaVersion = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetUserAccessibleResources
  */
 export const getUserAccessibleResources = {
-  localName: "getUserAccessibleResources",
-  name: "GetUserAccessibleResources",
+  localName: 'getUserAccessibleResources',
+  name: 'GetUserAccessibleResources',
   kind: MethodKind.Unary,
   I: GetUserAccessibleResourcesRequest,
   O: GetUserAccessibleResourcesResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1813,14 +2206,14 @@ export const getUserAccessibleResources = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings
  */
 export const updateFeatureSettings = {
-  localName: "updateFeatureSettings",
-  name: "UpdateFeatureSettings",
+  localName: 'updateFeatureSettings',
+  name: 'UpdateFeatureSettings',
   kind: MethodKind.Unary,
   I: UpdateFeatureSettingsRequest,
   O: UpdateFeatureSettingsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1829,14 +2222,14 @@ export const updateFeatureSettings = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers
  */
 export const getSubgraphMembers = {
-  localName: "getSubgraphMembers",
-  name: "GetSubgraphMembers",
+  localName: 'getSubgraphMembers',
+  name: 'GetSubgraphMembers',
   kind: MethodKind.Unary,
   I: GetSubgraphMembersRequest,
   O: GetSubgraphMembersResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1845,14 +2238,14 @@ export const getSubgraphMembers = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.AddReadme
  */
 export const addReadme = {
-  localName: "addReadme",
-  name: "AddReadme",
+  localName: 'addReadme',
+  name: 'AddReadme',
   kind: MethodKind.Unary,
   I: AddReadmeRequest,
   O: AddReadmeResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1861,14 +2254,14 @@ export const addReadme = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetUserAccessiblePermissions
  */
 export const getUserAccessiblePermissions = {
-  localName: "getUserAccessiblePermissions",
-  name: "GetUserAccessiblePermissions",
+  localName: 'getUserAccessiblePermissions',
+  name: 'GetUserAccessiblePermissions',
   kind: MethodKind.Unary,
   I: GetUserAccessiblePermissionsRequest,
   O: GetUserAccessiblePermissionsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1877,14 +2270,14 @@ export const getUserAccessiblePermissions = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateFeatureFlag
  */
 export const createFeatureFlag = {
-  localName: "createFeatureFlag",
-  name: "CreateFeatureFlag",
+  localName: 'createFeatureFlag',
+  name: 'CreateFeatureFlag',
   kind: MethodKind.Unary,
   I: CreateFeatureFlagRequest,
   O: CreateFeatureFlagResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1893,14 +2286,14 @@ export const createFeatureFlag = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteFeatureFlag
  */
 export const deleteFeatureFlag = {
-  localName: "deleteFeatureFlag",
-  name: "DeleteFeatureFlag",
+  localName: 'deleteFeatureFlag',
+  name: 'DeleteFeatureFlag',
   kind: MethodKind.Unary,
   I: DeleteFeatureFlagRequest,
   O: DeleteFeatureFlagResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1909,14 +2302,14 @@ export const deleteFeatureFlag = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateFeatureFlag
  */
 export const updateFeatureFlag = {
-  localName: "updateFeatureFlag",
-  name: "UpdateFeatureFlag",
+  localName: 'updateFeatureFlag',
+  name: 'UpdateFeatureFlag',
   kind: MethodKind.Unary,
   I: UpdateFeatureFlagRequest,
   O: UpdateFeatureFlagResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1925,14 +2318,14 @@ export const updateFeatureFlag = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.EnableFeatureFlag
  */
 export const enableFeatureFlag = {
-  localName: "enableFeatureFlag",
-  name: "EnableFeatureFlag",
+  localName: 'enableFeatureFlag',
+  name: 'EnableFeatureFlag',
   kind: MethodKind.Unary,
   I: EnableFeatureFlagRequest,
   O: EnableFeatureFlagResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -1941,147 +2334,147 @@ export const enableFeatureFlag = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAnalyticsView
  */
 export const getAnalyticsView = {
-  localName: "getAnalyticsView",
-  name: "GetAnalyticsView",
+  localName: 'getAnalyticsView',
+  name: 'GetAnalyticsView',
   kind: MethodKind.Unary,
   I: GetAnalyticsViewRequest,
   O: GetAnalyticsViewResponse,
-      idempotency: MethodIdempotency.NoSideEffects,
+  idempotency: MethodIdempotency.NoSideEffects,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetDashboardAnalyticsView
  */
 export const getDashboardAnalyticsView = {
-  localName: "getDashboardAnalyticsView",
-  name: "GetDashboardAnalyticsView",
+  localName: 'getDashboardAnalyticsView',
+  name: 'GetDashboardAnalyticsView',
   kind: MethodKind.Unary,
   I: GetDashboardAnalyticsViewRequest,
   O: GetDashboardAnalyticsViewResponse,
-      idempotency: MethodIdempotency.NoSideEffects,
+  idempotency: MethodIdempotency.NoSideEffects,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetTrace
  */
 export const getTrace = {
-  localName: "getTrace",
-  name: "GetTrace",
+  localName: 'getTrace',
+  name: 'GetTrace',
   kind: MethodKind.Unary,
   I: GetTraceRequest,
   O: GetTraceResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetGraphMetrics
  */
 export const getGraphMetrics = {
-  localName: "getGraphMetrics",
-  name: "GetGraphMetrics",
+  localName: 'getGraphMetrics',
+  name: 'GetGraphMetrics',
   kind: MethodKind.Unary,
   I: GetGraphMetricsRequest,
   O: GetGraphMetricsResponse,
-      idempotency: MethodIdempotency.NoSideEffects,
+  idempotency: MethodIdempotency.NoSideEffects,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetMetricsErrorRate
  */
 export const getMetricsErrorRate = {
-  localName: "getMetricsErrorRate",
-  name: "GetMetricsErrorRate",
+  localName: 'getMetricsErrorRate',
+  name: 'GetMetricsErrorRate',
   kind: MethodKind.Unary,
   I: GetMetricsErrorRateRequest,
   O: GetMetricsErrorRateResponse,
-      idempotency: MethodIdempotency.NoSideEffects,
+  idempotency: MethodIdempotency.NoSideEffects,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphMetrics
  */
 export const getSubgraphMetrics = {
-  localName: "getSubgraphMetrics",
-  name: "GetSubgraphMetrics",
+  localName: 'getSubgraphMetrics',
+  name: 'GetSubgraphMetrics',
   kind: MethodKind.Unary,
   I: GetSubgraphMetricsRequest,
   O: GetSubgraphMetricsResponse,
-      idempotency: MethodIdempotency.NoSideEffects,
+  idempotency: MethodIdempotency.NoSideEffects,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphMetricsErrorRate
  */
 export const getSubgraphMetricsErrorRate = {
-  localName: "getSubgraphMetricsErrorRate",
-  name: "GetSubgraphMetricsErrorRate",
+  localName: 'getSubgraphMetricsErrorRate',
+  name: 'GetSubgraphMetricsErrorRate',
   kind: MethodKind.Unary,
   I: GetSubgraphMetricsErrorRateRequest,
   O: GetSubgraphMetricsErrorRateResponse,
-      idempotency: MethodIdempotency.NoSideEffects,
+  idempotency: MethodIdempotency.NoSideEffects,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFieldUsage
  */
 export const getFieldUsage = {
-  localName: "getFieldUsage",
-  name: "GetFieldUsage",
+  localName: 'getFieldUsage',
+  name: 'GetFieldUsage',
   kind: MethodKind.Unary,
   I: GetFieldUsageRequest,
   O: GetFieldUsageResponse,
-      idempotency: MethodIdempotency.NoSideEffects,
+  idempotency: MethodIdempotency.NoSideEffects,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationRequestsCount
  */
 export const getOrganizationRequestsCount = {
-  localName: "getOrganizationRequestsCount",
-  name: "GetOrganizationRequestsCount",
+  localName: 'getOrganizationRequestsCount',
+  name: 'GetOrganizationRequestsCount',
   kind: MethodKind.Unary,
   I: GetOrganizationRequestsCountRequest,
   O: GetOrganizationRequestsCountResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOrganization
  */
 export const createOrganization = {
-  localName: "createOrganization",
-  name: "CreateOrganization",
+  localName: 'createOrganization',
+  name: 'CreateOrganization',
   kind: MethodKind.Unary,
   I: CreateOrganizationRequest,
   O: CreateOrganizationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2090,14 +2483,14 @@ export const createOrganization = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.EnableLintingForTheNamespace
  */
 export const enableLintingForTheNamespace = {
-  localName: "enableLintingForTheNamespace",
-  name: "EnableLintingForTheNamespace",
+  localName: 'enableLintingForTheNamespace',
+  name: 'EnableLintingForTheNamespace',
   kind: MethodKind.Unary,
   I: EnableLintingForTheNamespaceRequest,
   O: EnableLintingForTheNamespaceResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2106,14 +2499,14 @@ export const enableLintingForTheNamespace = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceLintConfig
  */
 export const configureNamespaceLintConfig = {
-  localName: "configureNamespaceLintConfig",
-  name: "ConfigureNamespaceLintConfig",
+  localName: 'configureNamespaceLintConfig',
+  name: 'ConfigureNamespaceLintConfig',
   kind: MethodKind.Unary,
   I: ConfigureNamespaceLintConfigRequest,
   O: ConfigureNamespaceLintConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2122,14 +2515,14 @@ export const configureNamespaceLintConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaceLintConfig
  */
 export const getNamespaceLintConfig = {
-  localName: "getNamespaceLintConfig",
-  name: "GetNamespaceLintConfig",
+  localName: 'getNamespaceLintConfig',
+  name: 'GetNamespaceLintConfig',
   kind: MethodKind.Unary,
   I: GetNamespaceLintConfigRequest,
   O: GetNamespaceLintConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2138,14 +2531,14 @@ export const getNamespaceLintConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig
  */
 export const getNamespaceChecksConfig = {
-  localName: "getNamespaceChecksConfig",
-  name: "GetNamespaceChecksConfig",
+  localName: 'getNamespaceChecksConfig',
+  name: 'GetNamespaceChecksConfig',
   kind: MethodKind.Unary,
   I: GetNamespaceChecksConfigurationRequest,
   O: GetNamespaceChecksConfigurationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2154,14 +2547,14 @@ export const getNamespaceChecksConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig
  */
 export const updateNamespaceChecksConfig = {
-  localName: "updateNamespaceChecksConfig",
-  name: "UpdateNamespaceChecksConfig",
+  localName: 'updateNamespaceChecksConfig',
+  name: 'UpdateNamespaceChecksConfig',
   kind: MethodKind.Unary,
   I: UpdateNamespaceChecksConfigurationRequest,
   O: UpdateNamespaceChecksConfigurationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2170,14 +2563,14 @@ export const updateNamespaceChecksConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.EnableGraphPruning
  */
 export const enableGraphPruning = {
-  localName: "enableGraphPruning",
-  name: "EnableGraphPruning",
+  localName: 'enableGraphPruning',
+  name: 'EnableGraphPruning',
   kind: MethodKind.Unary,
   I: EnableGraphPruningRequest,
   O: EnableGraphPruningResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2186,14 +2579,14 @@ export const enableGraphPruning = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceGraphPruningConfig
  */
 export const configureNamespaceGraphPruningConfig = {
-  localName: "configureNamespaceGraphPruningConfig",
-  name: "ConfigureNamespaceGraphPruningConfig",
+  localName: 'configureNamespaceGraphPruningConfig',
+  name: 'ConfigureNamespaceGraphPruningConfig',
   kind: MethodKind.Unary,
   I: ConfigureNamespaceGraphPruningConfigRequest,
   O: ConfigureNamespaceGraphPruningConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2202,14 +2595,14 @@ export const configureNamespaceGraphPruningConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaceGraphPruningConfig
  */
 export const getNamespaceGraphPruningConfig = {
-  localName: "getNamespaceGraphPruningConfig",
-  name: "GetNamespaceGraphPruningConfig",
+  localName: 'getNamespaceGraphPruningConfig',
+  name: 'GetNamespaceGraphPruningConfig',
   kind: MethodKind.Unary,
   I: GetNamespaceGraphPruningConfigRequest,
   O: GetNamespaceGraphPruningConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2218,14 +2611,14 @@ export const getNamespaceGraphPruningConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureFlags
  */
 export const getFeatureFlags = {
-  localName: "getFeatureFlags",
-  name: "GetFeatureFlags",
+  localName: 'getFeatureFlags',
+  name: 'GetFeatureFlags',
   kind: MethodKind.Unary,
   I: GetFeatureFlagsRequest,
   O: GetFeatureFlagsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2234,14 +2627,14 @@ export const getFeatureFlags = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureFlagByName
  */
 export const getFeatureFlagByName = {
-  localName: "getFeatureFlagByName",
-  name: "GetFeatureFlagByName",
+  localName: 'getFeatureFlagByName',
+  name: 'GetFeatureFlagByName',
   kind: MethodKind.Unary,
   I: GetFeatureFlagByNameRequest,
   O: GetFeatureFlagByNameResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2250,14 +2643,14 @@ export const getFeatureFlagByName = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFeatureFlag
  */
 export const getFeatureSubgraphsByFeatureFlag = {
-  localName: "getFeatureSubgraphsByFeatureFlag",
-  name: "GetFeatureSubgraphsByFeatureFlag",
+  localName: 'getFeatureSubgraphsByFeatureFlag',
+  name: 'GetFeatureSubgraphsByFeatureFlag',
   kind: MethodKind.Unary,
   I: GetFeatureSubgraphsByFeatureFlagRequest,
   O: GetFeatureSubgraphsByFeatureFlagResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2266,14 +2659,14 @@ export const getFeatureSubgraphsByFeatureFlag = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphs
  */
 export const getFeatureSubgraphs = {
-  localName: "getFeatureSubgraphs",
-  name: "GetFeatureSubgraphs",
+  localName: 'getFeatureSubgraphs',
+  name: 'GetFeatureSubgraphs',
   kind: MethodKind.Unary,
   I: GetFeatureSubgraphsRequest,
   O: GetFeatureSubgraphsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2282,14 +2675,14 @@ export const getFeatureSubgraphs = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsByFederatedGraph
  */
 export const getFeatureFlagsByFederatedGraph = {
-  localName: "getFeatureFlagsByFederatedGraph",
-  name: "GetFeatureFlagsByFederatedGraph",
+  localName: 'getFeatureFlagsByFederatedGraph',
+  name: 'GetFeatureFlagsByFederatedGraph',
   kind: MethodKind.Unary,
   I: GetFeatureFlagsByFederatedGraphRequest,
   O: GetFeatureFlagsByFederatedGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2298,14 +2691,14 @@ export const getFeatureFlagsByFederatedGraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureFlagsInLatestCompositionByFederatedGraph
  */
 export const getFeatureFlagsInLatestCompositionByFederatedGraph = {
-  localName: "getFeatureFlagsInLatestCompositionByFederatedGraph",
-  name: "GetFeatureFlagsInLatestCompositionByFederatedGraph",
+  localName: 'getFeatureFlagsInLatestCompositionByFederatedGraph',
+  name: 'GetFeatureFlagsInLatestCompositionByFederatedGraph',
   kind: MethodKind.Unary,
   I: GetFeatureFlagsInLatestCompositionByFederatedGraphRequest,
   O: GetFeatureFlagsInLatestCompositionByFederatedGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2314,14 +2707,14 @@ export const getFeatureFlagsInLatestCompositionByFederatedGraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFeatureSubgraphsByFederatedGraph
  */
 export const getFeatureSubgraphsByFederatedGraph = {
-  localName: "getFeatureSubgraphsByFederatedGraph",
-  name: "GetFeatureSubgraphsByFederatedGraph",
+  localName: 'getFeatureSubgraphsByFederatedGraph',
+  name: 'GetFeatureSubgraphsByFederatedGraph',
   kind: MethodKind.Unary,
   I: GetFeatureSubgraphsByFederatedGraphRequest,
   O: GetFeatureSubgraphsByFederatedGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2330,14 +2723,14 @@ export const getFeatureSubgraphsByFederatedGraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphById
  */
 export const getFederatedGraphById = {
-  localName: "getFederatedGraphById",
-  name: "GetFederatedGraphById",
+  localName: 'getFederatedGraphById',
+  name: 'GetFederatedGraphById',
   kind: MethodKind.Unary,
   I: GetFederatedGraphByIdRequest,
   O: GetFederatedGraphByIdResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2346,14 +2739,14 @@ export const getFederatedGraphById = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphById
  */
 export const getSubgraphById = {
-  localName: "getSubgraphById",
-  name: "GetSubgraphById",
+  localName: 'getSubgraphById',
+  name: 'GetSubgraphById',
   kind: MethodKind.Unary,
   I: GetSubgraphByIdRequest,
   O: GetSubgraphByIdResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2362,14 +2755,14 @@ export const getSubgraphById = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.PushCacheWarmerOperation
  */
 export const pushCacheWarmerOperation = {
-  localName: "pushCacheWarmerOperation",
-  name: "PushCacheWarmerOperation",
+  localName: 'pushCacheWarmerOperation',
+  name: 'PushCacheWarmerOperation',
   kind: MethodKind.Unary,
   I: PushCacheWarmerOperationRequest,
   O: PushCacheWarmerOperationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2378,14 +2771,14 @@ export const pushCacheWarmerOperation = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCacheWarmerOperations
  */
 export const getCacheWarmerOperations = {
-  localName: "getCacheWarmerOperations",
-  name: "GetCacheWarmerOperations",
+  localName: 'getCacheWarmerOperations',
+  name: 'GetCacheWarmerOperations',
   kind: MethodKind.Unary,
   I: GetCacheWarmerOperationsRequest,
   O: GetCacheWarmerOperationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2394,14 +2787,14 @@ export const getCacheWarmerOperations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ComputeCacheWarmerOperations
  */
 export const computeCacheWarmerOperations = {
-  localName: "computeCacheWarmerOperations",
-  name: "ComputeCacheWarmerOperations",
+  localName: 'computeCacheWarmerOperations',
+  name: 'ComputeCacheWarmerOperations',
   kind: MethodKind.Unary,
   I: ComputeCacheWarmerOperationsRequest,
   O: ComputeCacheWarmerOperationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2410,14 +2803,14 @@ export const computeCacheWarmerOperations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureCacheWarmer
  */
 export const configureCacheWarmer = {
-  localName: "configureCacheWarmer",
-  name: "ConfigureCacheWarmer",
+  localName: 'configureCacheWarmer',
+  name: 'ConfigureCacheWarmer',
   kind: MethodKind.Unary,
   I: ConfigureCacheWarmerRequest,
   O: ConfigureCacheWarmerResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2426,14 +2819,14 @@ export const configureCacheWarmer = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCacheWarmerConfig
  */
 export const getCacheWarmerConfig = {
-  localName: "getCacheWarmerConfig",
-  name: "GetCacheWarmerConfig",
+  localName: 'getCacheWarmerConfig',
+  name: 'GetCacheWarmerConfig',
   kind: MethodKind.Unary,
   I: GetCacheWarmerConfigRequest,
   O: GetCacheWarmerConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2442,42 +2835,42 @@ export const getCacheWarmerConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteCacheWarmerOperation
  */
 export const deleteCacheWarmerOperation = {
-  localName: "deleteCacheWarmerOperation",
-  name: "DeleteCacheWarmerOperation",
+  localName: 'deleteCacheWarmerOperation',
+  name: 'DeleteCacheWarmerOperation',
   kind: MethodKind.Unary,
   I: DeleteCacheWarmerOperationRequest,
   O: DeleteCacheWarmerOperationResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphCheckExtensionsConfig
  */
 export const getSubgraphCheckExtensionsConfig = {
-  localName: "getSubgraphCheckExtensionsConfig",
-  name: "GetSubgraphCheckExtensionsConfig",
+  localName: 'getSubgraphCheckExtensionsConfig',
+  name: 'GetSubgraphCheckExtensionsConfig',
   kind: MethodKind.Unary,
   I: GetSubgraphCheckExtensionsConfigRequest,
   O: GetSubgraphCheckExtensionsConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions
  */
 export const configureSubgraphCheckExtensions = {
-  localName: "configureSubgraphCheckExtensions",
-  name: "ConfigureSubgraphCheckExtensions",
+  localName: 'configureSubgraphCheckExtensions',
+  name: 'ConfigureSubgraphCheckExtensions',
   kind: MethodKind.Unary,
   I: ConfigureSubgraphCheckExtensionsRequest,
   O: ConfigureSubgraphCheckExtensionsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2489,14 +2882,14 @@ export const configureSubgraphCheckExtensions = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetBillingPlans
  */
 export const getBillingPlans = {
-  localName: "getBillingPlans",
-  name: "GetBillingPlans",
+  localName: 'getBillingPlans',
+  name: 'GetBillingPlans',
   kind: MethodKind.Unary,
   I: GetBillingPlansRequest,
   O: GetBillingPlansResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2505,14 +2898,14 @@ export const getBillingPlans = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateCheckoutSession
  */
 export const createCheckoutSession = {
-  localName: "createCheckoutSession",
-  name: "CreateCheckoutSession",
+  localName: 'createCheckoutSession',
+  name: 'CreateCheckoutSession',
   kind: MethodKind.Unary,
   I: CreateCheckoutSessionRequest,
   O: CreateCheckoutSessionResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2521,14 +2914,14 @@ export const createCheckoutSession = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateBillingPortalSession
  */
 export const createBillingPortalSession = {
-  localName: "createBillingPortalSession",
-  name: "CreateBillingPortalSession",
+  localName: 'createBillingPortalSession',
+  name: 'CreateBillingPortalSession',
   kind: MethodKind.Unary,
   I: CreateBillingPortalSessionRequest,
   O: CreateBillingPortalSessionResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2537,14 +2930,14 @@ export const createBillingPortalSession = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpgradePlan
  */
 export const upgradePlan = {
-  localName: "upgradePlan",
-  name: "UpgradePlan",
+  localName: 'upgradePlan',
+  name: 'UpgradePlan',
   kind: MethodKind.Unary,
   I: UpgradePlanRequest,
   O: UpgradePlanResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2553,14 +2946,14 @@ export const upgradePlan = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ListRouterCompatibilityVersions
  */
 export const listRouterCompatibilityVersions = {
-  localName: "listRouterCompatibilityVersions",
-  name: "ListRouterCompatibilityVersions",
+  localName: 'listRouterCompatibilityVersions',
+  name: 'ListRouterCompatibilityVersions',
   kind: MethodKind.Unary,
   I: ListRouterCompatibilityVersionsRequest,
   O: ListRouterCompatibilityVersionsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2569,14 +2962,14 @@ export const listRouterCompatibilityVersions = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion
  */
 export const setGraphRouterCompatibilityVersion = {
-  localName: "setGraphRouterCompatibilityVersion",
-  name: "SetGraphRouterCompatibilityVersion",
+  localName: 'setGraphRouterCompatibilityVersion',
+  name: 'SetGraphRouterCompatibilityVersion',
   kind: MethodKind.Unary,
   I: SetGraphRouterCompatibilityVersionRequest,
   O: SetGraphRouterCompatibilityVersionResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2586,14 +2979,14 @@ export const setGraphRouterCompatibilityVersion = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateProposal
  */
 export const createProposal = {
-  localName: "createProposal",
-  name: "CreateProposal",
+  localName: 'createProposal',
+  name: 'CreateProposal',
   kind: MethodKind.Unary,
   I: CreateProposalRequest,
   O: CreateProposalResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2602,14 +2995,14 @@ export const createProposal = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposal
  */
 export const getProposal = {
-  localName: "getProposal",
-  name: "GetProposal",
+  localName: 'getProposal',
+  name: 'GetProposal',
   kind: MethodKind.Unary,
   I: GetProposalRequest,
   O: GetProposalResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2618,14 +3011,14 @@ export const getProposal = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateProposal
  */
 export const updateProposal = {
-  localName: "updateProposal",
-  name: "UpdateProposal",
+  localName: 'updateProposal',
+  name: 'UpdateProposal',
   kind: MethodKind.Unary,
   I: UpdateProposalRequest,
   O: UpdateProposalResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2634,14 +3027,14 @@ export const updateProposal = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace
  */
 export const enableProposalsForNamespace = {
-  localName: "enableProposalsForNamespace",
-  name: "EnableProposalsForNamespace",
+  localName: 'enableProposalsForNamespace',
+  name: 'EnableProposalsForNamespace',
   kind: MethodKind.Unary,
   I: EnableProposalsForNamespaceRequest,
   O: EnableProposalsForNamespaceResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2650,14 +3043,14 @@ export const enableProposalsForNamespace = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig
  */
 export const configureNamespaceProposalConfig = {
-  localName: "configureNamespaceProposalConfig",
-  name: "ConfigureNamespaceProposalConfig",
+  localName: 'configureNamespaceProposalConfig',
+  name: 'ConfigureNamespaceProposalConfig',
   kind: MethodKind.Unary,
   I: ConfigureNamespaceProposalConfigRequest,
   O: ConfigureNamespaceProposalConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2666,14 +3059,14 @@ export const configureNamespaceProposalConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig
  */
 export const getNamespaceProposalConfig = {
-  localName: "getNamespaceProposalConfig",
-  name: "GetNamespaceProposalConfig",
+  localName: 'getNamespaceProposalConfig',
+  name: 'GetNamespaceProposalConfig',
   kind: MethodKind.Unary,
   I: GetNamespaceProposalConfigRequest,
   O: GetNamespaceProposalConfigResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2682,14 +3075,14 @@ export const getNamespaceProposalConfig = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph
  */
 export const getProposalsByFederatedGraph = {
-  localName: "getProposalsByFederatedGraph",
-  name: "GetProposalsByFederatedGraph",
+  localName: 'getProposalsByFederatedGraph',
+  name: 'GetProposalsByFederatedGraph',
   kind: MethodKind.Unary,
   I: GetProposalsByFederatedGraphRequest,
   O: GetProposalsByFederatedGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2698,14 +3091,14 @@ export const getProposalsByFederatedGraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposalChecks
  */
 export const getProposalChecks = {
-  localName: "getProposalChecks",
-  name: "GetProposalChecks",
+  localName: 'getProposalChecks',
+  name: 'GetProposalChecks',
   kind: MethodKind.Unary,
   I: GetProposalChecksRequest,
   O: GetProposalChecksResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2714,14 +3107,14 @@ export const getProposalChecks = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperations
  */
 export const getOperations = {
-  localName: "getOperations",
-  name: "GetOperations",
+  localName: 'getOperations',
+  name: 'GetOperations',
   kind: MethodKind.Unary,
   I: GetOperationsRequest,
   O: GetOperationsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2730,14 +3123,14 @@ export const getOperations = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics
  */
 export const getClientsFromAnalytics = {
-  localName: "getClientsFromAnalytics",
-  name: "GetClientsFromAnalytics",
+  localName: 'getClientsFromAnalytics',
+  name: 'GetClientsFromAnalytics',
   kind: MethodKind.Unary,
   I: GetClientsFromAnalyticsRequest,
   O: GetClientsFromAnalyticsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2746,14 +3139,14 @@ export const getClientsFromAnalytics = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationClients
  */
 export const getOperationClients = {
-  localName: "getOperationClients",
-  name: "GetOperationClients",
+  localName: 'getOperationClients',
+  name: 'GetOperationClients',
   kind: MethodKind.Unary,
   I: GetOperationClientsRequest,
   O: GetOperationClientsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2762,14 +3155,14 @@ export const getOperationClients = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperationDeprecatedFields
  */
 export const getOperationDeprecatedFields = {
-  localName: "getOperationDeprecatedFields",
-  name: "GetOperationDeprecatedFields",
+  localName: 'getOperationDeprecatedFields',
+  name: 'GetOperationDeprecatedFields',
   kind: MethodKind.Unary,
   I: GetOperationDeprecatedFieldsRequest,
   O: GetOperationDeprecatedFieldsResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2778,14 +3171,14 @@ export const getOperationDeprecatedFields = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData
  */
 export const validateAndFetchPluginData = {
-  localName: "validateAndFetchPluginData",
-  name: "ValidateAndFetchPluginData",
+  localName: 'validateAndFetchPluginData',
+  name: 'ValidateAndFetchPluginData',
   kind: MethodKind.Unary,
   I: ValidateAndFetchPluginDataRequest,
   O: ValidateAndFetchPluginDataResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2794,14 +3187,14 @@ export const validateAndFetchPluginData = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.LinkSubgraph
  */
 export const linkSubgraph = {
-  localName: "linkSubgraph",
-  name: "LinkSubgraph",
+  localName: 'linkSubgraph',
+  name: 'LinkSubgraph',
   kind: MethodKind.Unary,
   I: LinkSubgraphRequest,
   O: LinkSubgraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2810,14 +3203,14 @@ export const linkSubgraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph
  */
 export const unlinkSubgraph = {
-  localName: "unlinkSubgraph",
-  name: "UnlinkSubgraph",
+  localName: 'unlinkSubgraph',
+  name: 'UnlinkSubgraph',
   kind: MethodKind.Unary,
   I: UnlinkSubgraphRequest,
   O: UnlinkSubgraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2826,14 +3219,14 @@ export const unlinkSubgraph = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess
  */
 export const verifyAPIKeyGraphAccess = {
-  localName: "verifyAPIKeyGraphAccess",
-  name: "VerifyAPIKeyGraphAccess",
+  localName: 'verifyAPIKeyGraphAccess',
+  name: 'VerifyAPIKeyGraphAccess',
   kind: MethodKind.Unary,
   I: VerifyAPIKeyGraphAccessRequest,
   O: VerifyAPIKeyGraphAccessResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;
 
 /**
@@ -2842,12 +3235,12 @@ export const verifyAPIKeyGraphAccess = {
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.RecomposeGraph
  */
 export const recomposeGraph = {
-  localName: "recomposeGraph",
-  name: "RecomposeGraph",
+  localName: 'recomposeGraph',
+  name: 'RecomposeGraph',
   kind: MethodKind.Unary,
   I: RecomposeGraphRequest,
   O: RecomposeGraphResponse,
   service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
+    typeName: 'wg.cosmo.platform.v1.PlatformService',
+  },
 } as const;

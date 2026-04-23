@@ -43,6 +43,12 @@ type IgnoreAllOverride = {
   hash: string;
 };
 
+type DeletedClientOperationDTO = {
+  id: string;
+  operationId: string;
+  operationNames: string[];
+};
+
 @traced
 export class OperationsRepository {
   constructor(
@@ -297,6 +303,127 @@ export class OperationsRepository {
     }
 
     return clients;
+  }
+
+  public async getRegisteredClientByName(clientName: string): Promise<ClientDTO | undefined> {
+    const client = await this.db.query.federatedGraphClients.findFirst({
+      where: and(
+        eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
+        eq(federatedGraphClients.name, clientName),
+      ),
+      with: {
+        createdBy: true,
+        updatedBy: true,
+      },
+    });
+
+    if (!client) {
+      return undefined;
+    }
+
+    return {
+      id: client.id,
+      name: client.name,
+      createdAt: client.createdAt.toISOString(),
+      lastUpdatedAt: client.updatedAt?.toISOString() || '',
+      createdBy: client.createdBy?.email ?? '',
+      lastUpdatedBy: client.updatedBy?.email ?? '',
+    };
+  }
+
+  public async previewDeleteClient(clientName: string): Promise<
+    | {
+        client: ClientDTO;
+        persistedOperationsCount: number;
+      }
+    | undefined
+  > {
+    const client = await this.getRegisteredClientByName(clientName);
+
+    if (!client) {
+      return undefined;
+    }
+
+    const result = await this.db
+      .select({ count: count() })
+      .from(federatedGraphPersistedOperations)
+      .where(
+        and(
+          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+          eq(federatedGraphPersistedOperations.clientId, client.id),
+        ),
+      );
+
+    return {
+      client,
+      persistedOperationsCount: result[0]?.count ?? 0,
+    };
+  }
+
+  public deleteClient(clientName: string): Promise<
+    | {
+        client: ClientDTO;
+        deletedOperationsCount: number;
+        deletedOperations: DeletedClientOperationDTO[];
+      }
+    | undefined
+  > {
+    return this.db.transaction(async (tx) => {
+      const client = await tx.query.federatedGraphClients.findFirst({
+        where: and(
+          eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
+          eq(federatedGraphClients.name, clientName),
+        ),
+        with: {
+          createdBy: true,
+          updatedBy: true,
+        },
+      });
+
+      if (!client) {
+        return undefined;
+      }
+
+      const deletedOperations = await tx
+        .select({
+          id: federatedGraphPersistedOperations.id,
+          operationId: federatedGraphPersistedOperations.operationId,
+          operationNames: federatedGraphPersistedOperations.operationNames,
+        })
+        .from(federatedGraphPersistedOperations)
+        .where(
+          and(
+            eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+            eq(federatedGraphPersistedOperations.clientId, client.id),
+          ),
+        );
+
+      await tx
+        .delete(federatedGraphClients)
+        .where(
+          and(
+            eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
+            eq(federatedGraphClients.id, client.id),
+          ),
+        );
+
+      return {
+        client: {
+          id: client.id,
+          name: client.name,
+          createdAt: client.createdAt.toISOString(),
+          lastUpdatedAt: client.updatedAt?.toISOString() || '',
+          createdBy: client.createdBy?.email ?? '',
+          lastUpdatedBy: client.updatedBy?.email ?? '',
+        },
+        deletedOperationsCount: deletedOperations.length,
+        deletedOperations: deletedOperations.map((operation) => ({
+          id: operation.id,
+          operationId: operation.operationId,
+          operationNames: operation.operationNames ?? [],
+        })),
+      };
+    });
   }
 
   public createOperationOverrides(data: {
