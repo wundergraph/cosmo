@@ -15,6 +15,7 @@ import {
   checkExistingOnboarding,
 } from './api.js';
 import {
+  captureOnboardingEvent,
   checkDockerReadiness,
   clearScreen,
   getDemoLogPath,
@@ -104,7 +105,17 @@ async function cleanupFederatedGraph(
   const deleteResponse = await cleanUpFederatedGraph(client, graphData);
 
   if (deleteResponse.error) {
-    spinner.fail(`Removing federated graph ${graphData.graph.name} failed.`);
+    const failText = `Removing federated graph ${graphData.graph.name} failed.`;
+    spinner.fail(failText);
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'delete_federated_graph',
+        entry_source: 'wgc',
+        error_category: 'resource',
+        error_message: `${failText}\n${deleteResponse.error.message}`,
+      },
+    });
     console.error(deleteResponse.error.message);
 
     await waitForKeyPress(
@@ -116,6 +127,14 @@ async function cleanupFederatedGraph(
       `Failed to delete the federated graph ${pc.bold(graphData.graph.name)}. [ENTER] to continue, [r] to retry. CTRL+C to quit.`,
     );
   }
+
+  captureOnboardingEvent({
+    name: 'onboarding_step_completed',
+    properties: {
+      step_name: 'delete_federated_graph',
+      entry_source: 'wgc',
+    },
+  });
 
   spinner.succeed(`Federated graph ${pc.bold(graphData.graph.name)} removed.`);
 }
@@ -265,7 +284,10 @@ async function handleStep3(
     logPath: string;
   },
 ) {
+  let firedQueries = 0;
+
   function retryFn() {
+    firedQueries = 0;
     resetScreen(userInfo);
     return handleStep3(opts, { userInfo, routerBaseUrl, signal, logPath });
   }
@@ -280,7 +302,17 @@ async function handleStep3(
   // Delete existing token first (idempotent — no error if missing)
   const deleteResult = await deleteRouterToken(tokenParams);
   if (deleteResult.error) {
-    console.error(`Failed to clean up existing router token: ${deleteResult.error.message}`);
+    const errorText = `Failed to clean up existing router token: ${deleteResult.error.message}`;
+    console.error(errorText);
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'run_router_send_metrics',
+        entry_source: 'wgc',
+        error_category: 'router',
+        error_message: errorText,
+      },
+    });
     await waitForKeyPress({ r: retryFn, R: retryFn }, 'Hit [r] to retry. CTRL+C to quit.');
     return;
   }
@@ -289,7 +321,17 @@ async function handleStep3(
   const createResult = await createRouterToken(tokenParams);
 
   if (createResult.error) {
-    spinner.fail(`Failed to generate router token: ${createResult.error.message}`);
+    const failText = `Failed to generate router token: ${createResult.error.message}`;
+    spinner.fail(failText);
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'run_router_send_metrics',
+        entry_source: 'wgc',
+        error_category: 'router',
+        error_message: failText,
+      },
+    });
     await waitForKeyPress({ r: retryFn, R: retryFn }, 'Hit [r] to retry. CTRL+C to quit.');
     return;
   }
@@ -316,8 +358,30 @@ async function handleStep3(
       const body = await res.json();
       querySpinner.succeed('Sample query response:');
       console.log(pc.dim(JSON.stringify(body, null, 2)));
+
+      if (firedQueries === 0) {
+        captureOnboardingEvent({
+          name: 'onboarding_step_completed',
+          properties: {
+            step_name: 'run_router_send_metrics',
+            entry_source: 'wgc',
+          },
+        });
+      }
+
+      firedQueries++;
     } catch (err) {
-      querySpinner.fail(`Sample query failed: ${err instanceof Error ? err.message : String(err)}`);
+      const failText = `Sample query failed: ${err instanceof Error ? err.message : String(err)}`;
+      captureOnboardingEvent({
+        name: 'onboarding_step_failed',
+        properties: {
+          step_name: 'run_router_send_metrics',
+          entry_source: 'wgc',
+          error_category: 'router',
+          error_message: failText,
+        },
+      });
+      querySpinner.fail(failText);
     }
     showQueryPrompt();
   }
@@ -337,7 +401,17 @@ async function handleStep3(
   });
 
   if (routerResult.error) {
-    console.error(`\nRouter exited with error: ${routerResult.error.message}`);
+    const errorText = `Router exited with error: ${routerResult.error.message}`;
+    console.error(`\n${errorText}`);
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'run_router_send_metrics',
+        entry_source: 'wgc',
+        error_category: 'router',
+        error_message: errorText,
+      },
+    });
     await waitForKeyPress({ r: retryFn, R: retryFn }, 'Hit [r] to retry. CTRL+C to quit.');
   } else {
     showQueryPrompt();
@@ -356,13 +430,34 @@ async function handleGetOnboardingResponse(client: BaseCommandOptions['client'],
       return onboardingCheck.onboarding;
     }
     case 'not-allowed': {
-      program.error('Only organization owners can trigger onboarding.');
+      const errorText = 'Only organization owners can trigger onboarding.';
+      captureOnboardingEvent({
+        name: 'onboarding_step_failed',
+        properties: {
+          step_name: 'check_onboarding',
+          entry_source: 'wgc',
+          error_category: 'resource',
+          error_message: errorText,
+        },
+      });
+      program.error(errorText);
 
       break;
     }
     case 'error': {
-      console.error('An issue occured while fetching the onboarding status');
+      const errorText = 'An issue occured while fetching the onboarding status';
+      console.error(errorText);
       console.error(onboardingCheck.error);
+
+      captureOnboardingEvent({
+        name: 'onboarding_step_failed',
+        properties: {
+          step_name: 'check_onboarding',
+          entry_source: 'wgc',
+          error_category: 'resource',
+          error_message: `${errorText}\n${onboardingCheck.error}`,
+        },
+      });
 
       await waitForKeyPress({ Enter: retryFn }, 'Hit Enter to retry. CTRL+C to quit.');
       break;
@@ -383,6 +478,15 @@ async function getUserInfo(client: BaseCommandOptions['client']) {
 
   if (error) {
     spinner.fail(error.message);
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'init',
+        entry_source: 'wgc',
+        error_category: 'resource',
+        error_message: error.message,
+      },
+    });
     program.error(error.message);
   }
 
@@ -405,10 +509,12 @@ export default function (opts: BaseCommandOptions) {
       const userInfo = await getUserInfo(opts.client);
       updateScreenWithUserInfo(userInfo);
 
-      const onboardingUrl = `${config.webURL}/onboarding`;
+      const onboardingUrl = new URL('/onboarding', config.webURL);
 
       async function openOnboardingUrl() {
-        const process = await open(onboardingUrl);
+        const browserUrl = new URL(onboardingUrl);
+        browserUrl.searchParams.set('referrer', 'wgc');
+        const process = await open(browserUrl.toString());
         process.on('error', (error) => {
           console.log(pc.yellow(`\nCouldn't open browser: ${error.message}`));
         });
@@ -425,11 +531,27 @@ export default function (opts: BaseCommandOptions) {
 
       resetScreen(userInfo);
 
+      captureOnboardingEvent({
+        name: 'onboarding_step_completed',
+        properties: {
+          step_name: 'init',
+          entry_source: 'wgc',
+        },
+      });
+
       const onboardingCheck = await handleStep1(opts, userInfo);
 
       if (!onboardingCheck) {
         return;
       }
+
+      captureOnboardingEvent({
+        name: 'onboarding_step_completed',
+        properties: {
+          step_name: 'check_onboarding',
+          entry_source: 'wgc',
+        },
+      });
 
       const logPath = getDemoLogPath();
 
@@ -444,6 +566,14 @@ export default function (opts: BaseCommandOptions) {
       if (!step2Result) {
         return;
       }
+
+      captureOnboardingEvent({
+        name: 'onboarding_step_completed',
+        properties: {
+          step_name: 'create_federated_graph',
+          entry_source: 'wgc',
+        },
+      });
 
       const routerBaseUrl = new URL(step2Result.routingUrl).origin;
       await handleStep3(opts, { userInfo, routerBaseUrl, signal: controller.signal, logPath });

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { usePostHog } from 'posthog-js/react';
 import { OnboardingContainer } from './onboarding-container';
 import { OnboardingNavigation } from './onboarding-navigation';
 import { useMutation } from '@connectrpc/connect-query';
@@ -8,6 +9,7 @@ import { useRouter } from 'next/router';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { useToast } from '../ui/use-toast';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { captureOnboardingEvent } from '@/lib/track';
 import { Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { Form } from '../ui/form';
@@ -33,10 +35,21 @@ const WhyListItem = ({ title, text }: { title: string; text: string }) => (
   </li>
 );
 
+const normalizeReferrer = (referrer: string | string[]): string => {
+  if (Array.isArray(referrer)) {
+    return referrer.join(' ');
+  }
+
+  return referrer;
+};
+
 export const Step1 = () => {
   const router = useRouter();
+  const posthog = usePostHog();
   const { toast } = useToast();
   const { setStep, setSkipped, setOnboarding, onboarding } = useOnboarding();
+  // Referrer can be `wgc` when onboarding is opened via `wgc demo` command
+  const referrer = normalizeReferrer(router.query.referrer || document.referrer);
 
   const form = useZodForm<OnboardingFormValues>({
     mode: 'onChange',
@@ -49,9 +62,18 @@ export const Step1 = () => {
   const { mutate, isPending } = useMutation(createOnboarding, {
     onSuccess: (d) => {
       if (d.response?.code !== EnumStatusCode.OK) {
+        const description = d.response?.details ?? 'We had issues with storing your data. Please try again.';
         toast({
-          description: d.response?.details ?? 'We had issues with storing your data. Please try again.',
+          description,
           duration: 3000,
+        });
+        captureOnboardingEvent(posthog, {
+          name: 'onboarding_step_failed',
+          options: {
+            step_name: 'welcome',
+            error_category: 'resource',
+            error_message: description,
+          },
         });
         return;
       }
@@ -63,12 +85,30 @@ export const Step1 = () => {
         slack: formValues.channels.slack,
         email: formValues.channels.email,
       });
+      captureOnboardingEvent(posthog, {
+        name: 'onboarding_step_completed',
+        options: {
+          step_name: 'welcome',
+          channel: (Object.keys(formValues.channels) as Array<keyof typeof formValues.channels>).filter(
+            (key) => formValues.channels[key],
+          ),
+        },
+      });
       router.push('/onboarding/2');
     },
     onError: (error) => {
+      const description = error.details.toString() ?? 'We had issues with storing your data. Please try again.';
       toast({
-        description: error.details.toString() ?? 'We had issues with storing your data. Please try again.',
+        description,
         duration: 3000,
+      });
+      captureOnboardingEvent(posthog, {
+        name: 'onboarding_step_failed',
+        options: {
+          step_name: 'welcome',
+          error_category: 'resource',
+          error_message: description,
+        },
       });
     },
   });
@@ -79,7 +119,21 @@ export const Step1 = () => {
 
   useEffect(() => {
     setStep(1);
-  }, [setStep]);
+  }, [setStep, posthog, referrer]);
+
+  useEffect(() => {
+    // We want to trigger the onboarding only for the first time when the onboarding record
+    // does not exist in the database yet. Users can navigate to this first step as well
+    // and in that case we want to ignore it.
+    if (onboarding) return;
+
+    captureOnboardingEvent(posthog, {
+      name: 'onboarding_started',
+      options: {
+        entry_source: referrer,
+      },
+    });
+  }, [onboarding, referrer, posthog]);
 
   return (
     <OnboardingContainer>
@@ -156,7 +210,15 @@ export const Step1 = () => {
       </div>
 
       <OnboardingNavigation
-        onSkip={setSkipped}
+        onSkip={() => {
+          captureOnboardingEvent(posthog, {
+            name: 'onboarding_skipped',
+            options: {
+              step_name: 'welcome',
+            },
+          });
+          setSkipped();
+        }}
         forwardLabel="Start the tour"
         forward={{
           onClick: form.handleSubmit(onSubmit),

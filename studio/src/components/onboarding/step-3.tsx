@@ -2,6 +2,8 @@ import { motion } from 'framer-motion';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { useFireworks } from '@/hooks/use-fireworks';
+import { usePostHog } from 'posthog-js/react';
+import { captureOnboardingEvent } from '@/lib/track';
 import { OnboardingContainer } from './onboarding-container';
 import { OnboardingNavigation } from './onboarding-navigation';
 import { StatusIcon, type OnboardingStatus } from './status-icon';
@@ -62,7 +64,11 @@ function pollingReducer(
     case 'METRICS_TIMEOUT':
       return { ...state, metricsTimedOut: true };
     case 'RESTART_METRICS':
-      return { ...state, metricsTimedOut: false, metricsEpoch: state.metricsEpoch + 1 };
+      return {
+        ...state,
+        metricsTimedOut: false,
+        metricsEpoch: state.metricsEpoch + 1,
+      };
   }
 }
 
@@ -120,6 +126,7 @@ export const Step3 = () => {
   const { toast } = useToast();
   const { setStep, setSkipped, setOnboarding } = useOnboarding();
   const currentOrg = useCurrentOrganization();
+  const posthog = usePostHog();
 
   const [polling, dispatch] = useReducer(pollingReducer, {
     routerTimedOut: false,
@@ -190,6 +197,23 @@ export const Step3 = () => {
     setStep(3);
   }, [setStep]);
 
+  useEffect(() => {
+    if (!polling.metricsTimedOut || !polling.routerTimedOut) {
+      return;
+    }
+
+    captureOnboardingEvent(posthog, {
+      name: 'onboarding_step_failed',
+      options: {
+        step_name: 'run_router_send_metrics',
+        error_category: polling.metricsTimedOut ? 'metrics' : 'router',
+        error_message: polling.metricsTimedOut
+          ? 'Metrics not detected within 5 minutes'
+          : 'Router not detected within 5 minutes',
+      },
+    });
+  }, [posthog, polling.routerTimedOut, polling.metricsTimedOut]);
+
   const { mutate, isPending } = useMutation(finishOnboarding, {
     onSuccess: (d) => {
       if (d.response?.code !== EnumStatusCode.OK) {
@@ -208,12 +232,27 @@ export const Step3 = () => {
         email: Boolean(prev?.email),
       }));
 
+      captureOnboardingEvent(posthog, {
+        name: 'onboarding_step_completed',
+        options: {
+          step_name: 'run_router_send_metrics',
+        },
+      });
       setIsFinished(true);
     },
     onError: (error) => {
+      const description = error.details.toString() ?? 'We had issues with finishing the onboarding. Please try again.';
       toast({
-        description: error.details.toString() ?? 'We had issues with finishing the onboarding. Please try again.',
+        description,
         duration: 3000,
+      });
+      captureOnboardingEvent(posthog, {
+        name: 'onboarding_step_failed',
+        options: {
+          step_name: 'run_router_send_metrics',
+          error_category: 'resource',
+          error_message: description,
+        },
       });
     },
   });
@@ -354,7 +393,15 @@ export const Step3 = () => {
 
             <OnboardingNavigation
               className="pt-2"
-              onSkip={setSkipped}
+              onSkip={() => {
+                captureOnboardingEvent(posthog, {
+                  name: 'onboarding_skipped',
+                  options: {
+                    step_name: 'run_router_send_metrics',
+                  },
+                });
+                setSkipped();
+              }}
               backHref="/onboarding/2"
               forward={{
                 onClick: () => mutate({}),
