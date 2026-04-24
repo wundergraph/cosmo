@@ -16,7 +16,7 @@ import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
-import { cloneDeep } from 'lodash';
+import { cloneDeep } from 'lodash-es';
 import pLimit from 'p-limit';
 import { NewSchemaChangeOperationUsage, ProposalMatch, SchemaCheckChangeAction } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
