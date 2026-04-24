@@ -37,9 +37,9 @@ subgraphs:
       file: ./subgraphs/products/schema.graphqls
 ```
 
-The default `products` URL points at the bundled Bun subgraph in [example/subgraphs/products/server.ts](example/subgraphs/products/server.ts). The server uses GraphQL Yoga with Bun's native `fetch` integration, while composition still reads [example/subgraphs/products/schema.graphqls](example/subgraphs/products/schema.graphqls) so the cache directives are explicit and easy to edit. To use your own subgraph, change `routing_url` and edit or replace the SDL files under [example/subgraphs](example/subgraphs). Keep the cache directive definitions in any subgraph SDL that uses them.
+The default `products` URL points at the bundled Bun subgraph in [example/subgraphs/products/server.ts](example/subgraphs/products/server.ts). The server uses GraphQL Yoga with Bun's native `fetch` integration and loads the same [example/subgraphs/products/schema.graphqls](example/subgraphs/products/schema.graphqls) file that local composition uses. To use your own subgraph, change `routing_url` and edit or replace the SDL files under [example/subgraphs](example/subgraphs). Keep the cache directive definitions in any subgraph SDL that uses them.
 
-The runtime schema is intentionally minimal. The cache directives are part of the SDL file consumed by local composition; the router does not need the subgraph runtime to expose those cache directives through `_service`.
+The runtime adds only the minimal federation helper types (`_service`, `_entities`, `_Any`, `_Entity`) around that SDL file.
 
 Use `host.docker.internal` when your subgraphs run on your host and the router runs in Docker. On Linux, the Docker Compose file already adds `host.docker.internal:host-gateway`.
 

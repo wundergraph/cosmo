@@ -20,6 +20,9 @@ const products = new Map<string, Product>([
   ['p2', { id: 'p2', sku: 'sku-2', name: 'Gadget' }],
 ]);
 
+const schemaPath = new URL('./schema.graphqls', import.meta.url);
+const compositionSdl = await Bun.file(schemaPath).text();
+
 const stats = {
   product: 0,
   productBySku: 0,
@@ -29,7 +32,24 @@ const stats = {
   upsertProduct: 0,
 };
 
-const typeDefs = /* GraphQL */ `
+const federationRuntimeSdl = /* GraphQL */ `
+  directive @link(url: String!, import: [String!]) repeatable on SCHEMA
+  directive @key(fields: String!, resolvable: Boolean = true) repeatable on OBJECT | INTERFACE
+  directive @openfed__entityCache(
+    maxAge: Int!
+    includeHeaders: Boolean = false
+    partialCacheLoad: Boolean = false
+    shadowMode: Boolean = false
+  ) on OBJECT
+  directive @openfed__queryCache(
+    maxAge: Int!
+    includeHeaders: Boolean = false
+    shadowMode: Boolean = false
+  ) on FIELD_DEFINITION
+  directive @openfed__cacheInvalidate on FIELD_DEFINITION
+  directive @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
+  directive @openfed__is(fields: String!) on ARGUMENT_DEFINITION
+
   scalar _Any
 
   union _Entity = Product
@@ -38,44 +58,9 @@ const typeDefs = /* GraphQL */ `
     sdl: String!
   }
 
-  type Query {
+  extend type Query {
     _service: _Service!
     _entities(representations: [_Any!]!): [_Entity]!
-    product(id: ID!): Product
-    productBySku(productSku: String!): Product
-    products(ids: [ID!]!): [Product!]!
-  }
-
-  type Mutation {
-    updateProduct(id: ID!, name: String!): Product
-    upsertProduct(id: ID!, sku: String!, name: String!): Product!
-  }
-
-  type Product {
-    id: ID!
-    sku: String!
-    name: String!
-  }
-`;
-
-const serviceSdl = /* GraphQL */ `
-  extend schema @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key"])
-
-  type Product @key(fields: "id") @key(fields: "sku") {
-    id: ID!
-    sku: String!
-    name: String!
-  }
-
-  type Query {
-    product(id: ID!): Product
-    productBySku(productSku: String!): Product
-    products(ids: [ID!]!): [Product!]!
-  }
-
-  type Mutation {
-    updateProduct(id: ID!, name: String!): Product
-    upsertProduct(id: ID!, sku: String!, name: String!): Product!
   }
 `;
 
@@ -101,7 +86,7 @@ function findProductByReference(reference: ProductReference) {
 }
 
 const schema = createSchema({
-  typeDefs,
+  typeDefs: [compositionSdl, federationRuntimeSdl],
   resolvers: {
     _Any: new GraphQLScalarType({
       name: '_Any',
@@ -124,7 +109,7 @@ const schema = createSchema({
       },
     },
     Query: {
-      _service: () => ({ sdl: serviceSdl }),
+      _service: () => ({ sdl: compositionSdl }),
       _entities: (_root: unknown, args: { representations: ProductReference[] }) =>
         args.representations.map(findProductByReference),
       product: (_root: unknown, args: { id: string }) => {
