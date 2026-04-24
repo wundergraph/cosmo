@@ -14,7 +14,7 @@ make setup
 make test
 ```
 
-`make test` composes the bundled graph, starts Redis, starts a tiny Bun/Pothos products subgraph, builds and starts the router from source, sends the same product query twice, and verifies the second request does not hit the products subgraph root resolver again.
+`make test` composes the bundled graph, starts Redis, starts a tiny Bun/TypeScript products subgraph with GraphQL Yoga, builds and starts the router from source, sends the same product query twice, and verifies the second request does not hit the products subgraph root resolver again.
 
 Then open the router playground and Cache Explorer:
 
@@ -37,9 +37,9 @@ subgraphs:
       file: ./subgraphs/products/schema.graphqls
 ```
 
-The default `products` URL points at the bundled Bun subgraph in [example/subgraphs/products/server.js](example/subgraphs/products/server.js). The server uses Pothos with the federation plugin, while composition still reads [example/subgraphs/products/schema.graphqls](example/subgraphs/products/schema.graphqls) so the cache directives are explicit and easy to edit. To use your own subgraph, change `routing_url` and edit or replace the SDL files under [example/subgraphs](example/subgraphs). Keep the cache directive definitions in any subgraph SDL that uses them.
+The default `products` URL points at the bundled Bun subgraph in [example/subgraphs/products/server.ts](example/subgraphs/products/server.ts). The server uses GraphQL Yoga with Bun's native `fetch` integration, while composition still reads [example/subgraphs/products/schema.graphqls](example/subgraphs/products/schema.graphqls) so the cache directives are explicit and easy to edit. To use your own subgraph, change `routing_url` and edit or replace the SDL files under [example/subgraphs](example/subgraphs). Keep the cache directive definitions in any subgraph SDL that uses them.
 
-The Pothos runtime schema is intentionally minimal. The cache directives are part of the SDL file consumed by local composition; the router does not need the subgraph runtime to expose those cache directives through `_service`.
+The runtime schema is intentionally minimal. The cache directives are part of the SDL file consumed by local composition; the router does not need the subgraph runtime to expose those cache directives through `_service`.
 
 Use `host.docker.internal` when your subgraphs run on your host and the router runs in Docker. On Linux, the Docker Compose file already adds `host.docker.internal:host-gateway`.
 
@@ -208,7 +208,7 @@ docker-compose.yml
 config/router.redis.yaml
 example/graph.yaml
 example/subgraphs/products/schema.graphqls
-example/subgraphs/products/server.js
+example/subgraphs/products/server.ts
 package.json
 scripts/setup-pr.sh
 scripts/compose.sh
