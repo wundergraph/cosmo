@@ -190,6 +190,10 @@ export const Step3 = () => {
     setStep(3);
   }, [setStep]);
 
+  useEffect(() => {
+    setStep(3);
+  }, [setStep]);
+
   const { mutate, isPending } = useMutation(finishOnboarding, {
     onSuccess: (d) => {
       if (d.response?.code !== EnumStatusCode.OK) {
