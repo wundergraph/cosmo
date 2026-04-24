@@ -14,7 +14,7 @@ make setup
 make test
 ```
 
-`make test` composes the bundled graph, starts Redis, starts a tiny Bun/TypeScript products subgraph with GraphQL Yoga, builds and starts the router from source, sends the same product query twice, and verifies the second request does not hit the products subgraph root resolver again.
+`make test` composes the bundled graph, starts Redis, starts a tiny Bun/TypeScript products subgraph with GraphQL Yoga, builds and starts the router from source, sends the same product query twice, and verifies the second request does not hit the products subgraph root resolver again. It then restarts the router and sends the query once more to verify Redis-backed L2 serves the cached response after the router's in-memory L1 cache is gone.
 
 Then open the router playground and Cache Explorer:
 
@@ -48,6 +48,7 @@ Use `host.docker.internal` when your subgraphs run on your host and the router r
 ```bash
 make help          # show targets
 make setup         # enable Corepack and install repo dependencies
+make build-cli-deps # build local workspace packages required by wgc router compose
 make subgraph-deps # install Bun dependencies for the bundled example subgraph
 make compose       # compose example/graph.yaml into generated/config.json
 make check-config  # verify the generated router config contains cache metadata

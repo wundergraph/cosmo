@@ -6,13 +6,14 @@ GRAPH ?= $(THIS_DIR)/example/graph.yaml
 CONFIG ?= $(THIS_DIR)/generated/config.json
 COMPOSE_FILE := $(THIS_DIR)/docker-compose.yml
 
-.PHONY: help setup subgraph-deps compose check-config up up-detached wait test logs down clean
+.PHONY: help setup build-cli-deps subgraph-deps compose check-config up up-detached wait test logs down clean
 
 help:
 	@printf '%s\n' \
 		'Entity caching pre-release testing targets:' \
 		'' \
 		'  make setup         Enable Corepack and install repo dependencies' \
+		'  make build-cli-deps Build local workspace packages required by wgc router compose' \
 		'  make subgraph-deps Install Bun dependencies for the bundled example subgraph' \
 		'  make compose       Compose GRAPH into generated/config.json' \
 		'  make check-config  Verify generated config contains cache metadata' \
@@ -29,7 +30,14 @@ help:
 
 setup:
 	cd "$(REPO_ROOT)" && corepack enable && pnpm install
+	$(MAKE) build-cli-deps
 	$(MAKE) subgraph-deps
+
+build-cli-deps:
+	cd "$(REPO_ROOT)" && pnpm --filter @wundergraph/cosmo-connect build
+	cd "$(REPO_ROOT)" && pnpm --filter @wundergraph/composition build
+	cd "$(REPO_ROOT)" && pnpm --filter @wundergraph/protographic build
+	cd "$(REPO_ROOT)" && pnpm --filter @wundergraph/cosmo-shared build
 
 subgraph-deps:
 	@if command -v bun >/dev/null 2>&1; then \
