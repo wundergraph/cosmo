@@ -51,7 +51,7 @@
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
     "@wundergraph/protographic": "workspace:*",
-    "ajv": "8.17.1",
+    "ajv": "8.18.0",
     "axios": "1.13.5",
     "boxen": "7.1.1",
     "cli-progress": "3.12.0",
