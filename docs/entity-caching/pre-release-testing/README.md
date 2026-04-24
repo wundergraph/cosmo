@@ -4,6 +4,52 @@ Use this kit to test entity caching in your own graph with PR [#2777](https://gi
 
 You will compose locally from this checkout and run a source-built router with Redis. This avoids hosted control-plane composition, which may not yet understand the new cache directives.
 
+## Get The PR Checkout
+
+Use PR [#2777](https://github.com/wundergraph/cosmo/pull/2777)'s source branch:
+
+```text
+wundergraph/cosmo:jensneuse/entity-caching-v2
+```
+
+From a fresh directory:
+
+```bash
+git clone https://github.com/wundergraph/cosmo.git
+cd cosmo
+git fetch origin jensneuse/entity-caching-v2
+git checkout -B entity-caching-pre-release origin/jensneuse/entity-caching-v2
+git pull --ff-only origin jensneuse/entity-caching-v2
+```
+
+From an existing Cosmo checkout:
+
+```bash
+git remote set-url origin https://github.com/wundergraph/cosmo.git
+git fetch origin jensneuse/entity-caching-v2
+git checkout -B entity-caching-pre-release origin/jensneuse/entity-caching-v2
+git pull --ff-only origin jensneuse/entity-caching-v2
+```
+
+When you test again later, update the checkout before composing:
+
+```bash
+git checkout entity-caching-pre-release
+git pull --ff-only origin jensneuse/entity-caching-v2
+```
+
+Confirm that you are on the pre-release branch:
+
+```bash
+git status --short --branch
+```
+
+The output should include:
+
+```text
+## entity-caching-pre-release
+```
+
 ## Quick Start
 
 From this directory:
@@ -147,16 +193,6 @@ Suggested checks:
 - Warm an entity, run a mutation with `@openfed__cacheInvalidate`, then query again; the post-mutation read should fetch fresh data.
 - Run a mutation with `@openfed__cachePopulate`, then read the returned entity by key; the read should be cache-served when L2 is enabled.
 - Use `shadowMode: true` to exercise cache reads/writes while still serving subgraph results.
-
-## Optional: Check Out PR #2777 Explicitly
-
-If you are not already in a PR #2777 checkout, run:
-
-```bash
-./scripts/setup-pr.sh
-```
-
-That script clones Cosmo, fetches `pull/2777/merge`, checks it out, enables Corepack, and runs `pnpm install`.
 
 GitHub Actions builds pull request workflows from the PR merge ref, and the PR image tag is:
 
