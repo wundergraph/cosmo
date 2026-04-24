@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.311.0](https://github.com/wundergraph/cosmo/compare/router@0.310.0...router@0.311.0) (2026-04-24)
+
+### Features
+
+* update `lodash` and `lodash-es` ([#2780](https://github.com/wundergraph/cosmo/issues/2780)) ([bbf1e38](https://github.com/wundergraph/cosmo/commit/bbf1e38b3a346363fe742801f2982dbafb267454)) (@wilsonrivera)
+
 # [0.310.0](https://github.com/wundergraph/cosmo/compare/router@0.309.0...router@0.310.0) (2026-04-23)
 
 ### Bug Fixes
