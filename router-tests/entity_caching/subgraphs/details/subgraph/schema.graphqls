@@ -1,0 +1,34 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: ["@key"]
+  )
+
+directive @openfed__entityCache(
+  maxAge: Int!
+  includeHeaders: Boolean = false
+  partialCacheLoad: Boolean = false
+  shadowMode: Boolean = false
+) on OBJECT
+
+type Item @key(fields: "id") @openfed__entityCache(maxAge: 300) {
+  id: ID!
+  description: String!
+  rating: Float!
+  tags: [String!]!
+}
+
+type Product @key(fields: "id region") @openfed__entityCache(maxAge: 300) {
+  id: ID!
+  region: String!
+  info: String!
+}
+
+type Location {
+  id: ID!
+}
+
+type Warehouse @key(fields: "location { id }") @openfed__entityCache(maxAge: 300) {
+  location: Location!
+  capacity: Int!
+}

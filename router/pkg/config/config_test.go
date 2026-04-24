@@ -12,6 +12,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/sebdah/goldie/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -995,6 +996,26 @@ version: "1"
 
 	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
 	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
+}
+
+func TestMetricEntityCachingStatsConfig(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+	c, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	assert.Equal(t, false, c.Config.Telemetry.Metrics.Prometheus.EntityCachingStats)
+	assert.Equal(t, false, c.Config.Telemetry.Metrics.OTLP.EntityCachingStats)
+
+	t.Setenv("PROMETHEUS_ENTITY_CACHING_STATS", "true")
+	t.Setenv("METRICS_OTLP_ENTITY_CACHING_STATS", "true")
+
+	c, err = LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	assert.Equal(t, true, c.Config.Telemetry.Metrics.Prometheus.EntityCachingStats)
+	assert.Equal(t, true, c.Config.Telemetry.Metrics.OTLP.EntityCachingStats)
 }
 
 func TestMatchAndNegateMatch(t *testing.T) {
@@ -2071,6 +2092,218 @@ security:
 `)
 		_, err := LoadConfig([]string{f})
 		require.NoError(t, err)
+	})
+}
+
+func TestMemoryProviderOnlyForEntityCaching(t *testing.T) {
+	t.Parallel()
+
+	t.Run("memory provider allowed for entity caching", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+entity_caching:
+  enabled: true
+  l2:
+    storage:
+      provider_id: "in-memory"
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("memory provider max_size rejects invalid bytes string", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "not-a-byte-string"
+
+entity_caching:
+  enabled: true
+  l2:
+    storage:
+      provider_id: "in-memory"
+`)
+		_, err := LoadConfig([]string{f})
+		// Invalid bytes strings are caught by the BytesString YAML unmarshaler
+		// before json-schema validation runs, so the user-facing error surfaces
+		// as a parse error rather than a schema error. Either shape proves the
+		// value is rejected; assert only that the error path mentions the parse
+		// failure.
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "bytes string")
+	})
+
+	t.Run("config schema annotates memory max_size as bytes-string", func(t *testing.T) {
+		t.Parallel()
+		// The JSON schema itself does not enforce "bytes-string" (not a standard
+		// format), but the annotation is documented and surfaces in tooling that
+		// generates docs/IDE completions. Guard against accidental removal.
+		var schemaMap map[string]any
+		require.NoError(t, yaml.Unmarshal(JSONSchema, &schemaMap))
+		topProps := schemaMap["properties"].(map[string]any)
+		storage := topProps["storage_providers"].(map[string]any)
+		storageProps := storage["properties"].(map[string]any)
+		memory := storageProps["memory"].(map[string]any)
+		items := memory["items"].(map[string]any)
+		itemProps := items["properties"].(map[string]any)
+		maxSize := itemProps["max_size"].(map[string]any)
+		require.Equal(t, "bytes-string", maxSize["format"])
+	})
+
+	t.Run("memory provider rejected for persisted_operations", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+persisted_operations:
+  storage:
+    provider_id: "in-memory"
+    object_prefix: "ops"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for persisted_operations.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+
+	t.Run("memory provider rejected for automatic_persisted_queries", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+automatic_persisted_queries:
+  enabled: true
+  storage:
+    provider_id: "in-memory"
+    object_prefix: "apq"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for automatic_persisted_queries.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+
+	t.Run("memory provider rejected for execution_config storage", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+execution_config:
+  storage:
+    provider_id: "in-memory"
+    object_path: "/config.json"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for execution_config.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+
+	t.Run("memory provider rejected for connect_rpc storage", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+connect_rpc:
+  enabled: true
+  storage:
+    provider_id: "in-memory"
+  graphql_endpoint: "http://localhost:3002/graphql"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for connect_rpc.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+
+	t.Run("memory provider rejected for mcp storage", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+mcp:
+  enabled: true
+  storage:
+    provider_id: "in-memory"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for mcp.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+
+	t.Run("non-memory provider allowed everywhere", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+  redis:
+    - id: "my-redis"
+      urls:
+        - "redis://localhost:6379"
+
+persisted_operations:
+  storage:
+    provider_id: "my-redis"
+    object_prefix: "ops"
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("multiple violations reported together", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+persisted_operations:
+  storage:
+    provider_id: "in-memory"
+    object_prefix: "ops"
+
+automatic_persisted_queries:
+  enabled: true
+  storage:
+    provider_id: "in-memory"
+    object_prefix: "apq"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for persisted_operations.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`+"\n"+`memory storage provider "in-memory" cannot be used for automatic_persisted_queries.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
 	})
 }
 

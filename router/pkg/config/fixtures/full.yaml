@@ -165,6 +165,7 @@ telemetry:
       router_runtime: true
       graphql_cache: true
       connection_stats: true
+      entity_caching_stats: true
       engine_stats:
         subscriptions: true
       cost_stats:
@@ -193,6 +194,7 @@ telemetry:
       listen_addr: '127.0.0.1:8088'
       graphql_cache: true
       connection_stats: true
+      entity_caching_stats: true
       engine_stats:
         subscriptions: true
       cost_stats:

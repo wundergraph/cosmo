@@ -9,6 +9,8 @@ import {
   ASSUMED_SIZE,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CACHE_INVALIDATE,
+  CACHE_POPULATE,
   CHANNEL,
   CHANNELS,
   COMPOSE_DIRECTIVE,
@@ -27,6 +29,7 @@ import {
   EDFS_NATS_REQUEST,
   EDFS_NATS_STREAM_CONFIGURATION,
   EDFS_NATS_SUBSCRIBE,
+  ENTITY_CACHE,
   EDFS_REDIS_PUBLISH,
   EDFS_REDIS_SUBSCRIBE,
   ENUM_UPPER,
@@ -39,25 +42,32 @@ import {
   FROM,
   IMPORT,
   INACCESSIBLE,
+  INCLUDE_HEADERS,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
   INT_SCALAR,
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
+  IS,
   KEY,
   LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
   LIST_SIZE,
+  MAX_AGE,
   NAME,
+  NEGATIVE_CACHE_TTL,
   OBJECT_UPPER,
   ONE_OF,
   OVERRIDE,
+  PARTIAL_CACHE_LOAD,
   PROPAGATE,
   PROVIDER_ID,
   PROVIDES,
+  QUERY_CACHE,
   REASON,
+  REQUEST_SCOPED,
   REQUIRE_FETCH_REASONS,
   REQUIRE_ONE_SLICING_ARGUMENT,
   REQUIRES,
@@ -68,6 +78,7 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SEMANTIC_NON_NULL,
+  SHADOW_MODE,
   SHAREABLE,
   SIZED_FIELDS,
   SLICING_ARGUMENTS,
@@ -85,7 +96,7 @@ import {
   URL_LOWER,
   WEIGHT,
 } from '../../utils/string-constants';
-import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from './type-nodes';
+import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_INT_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from './type-nodes';
 
 // @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 export const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
@@ -98,6 +109,29 @@ export const AUTHENTICATED_DEFINITION: DirectiveDefinitionNode = {
     SCALAR_UPPER,
   ]),
   name: stringToNameNode(AUTHENTICATED),
+  repeatable: false,
+};
+
+// @openfed__cacheInvalidate on FIELD_DEFINITION
+export const CACHE_INVALIDATE_DEFINITION: DirectiveDefinitionNode = {
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(CACHE_INVALIDATE),
+  repeatable: false,
+};
+
+// @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
+export const CACHE_POPULATE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(MAX_AGE),
+      type: stringToNamedTypeNode(INT_SCALAR),
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(CACHE_POPULATE),
   repeatable: false,
 };
 
@@ -252,6 +286,45 @@ export const DEPRECATED_DEFINITION: DirectiveDefinitionNode = {
     INPUT_FIELD_DEFINITION_UPPER,
   ]),
   name: stringToNameNode(DEPRECATED),
+  repeatable: false,
+};
+
+// @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int = 0, includeHeaders: Boolean = false, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT
+export const ENTITY_CACHE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(MAX_AGE),
+      type: REQUIRED_INT_TYPE_NODE,
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(NEGATIVE_CACHE_TTL),
+      type: stringToNamedTypeNode(INT_SCALAR),
+      defaultValue: { kind: Kind.INT, value: '0' },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(INCLUDE_HEADERS),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(PARTIAL_CACHE_LOAD),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(SHADOW_MODE),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([OBJECT_UPPER]),
+  name: stringToNameNode(ENTITY_CACHE),
   repeatable: false,
 };
 
@@ -501,6 +574,21 @@ export const INTERFACE_OBJECT_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
+// @openfed__is(fields: String!) on ARGUMENT_DEFINITION
+export const IS_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(FIELDS),
+      type: REQUIRED_STRING_TYPE_NODE,
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([ARGUMENT_DEFINITION_UPPER]),
+  name: stringToNameNode(IS),
+  repeatable: false,
+};
+
 // directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
 export const KEY_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
@@ -652,6 +740,58 @@ export const PROVIDES_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
   name: stringToNameNode(PROVIDES),
+  repeatable: false,
+};
+
+// @openfed__queryCache(maxAge: Int!, includeHeaders: Boolean = false, shadowMode: Boolean = false) on FIELD_DEFINITION
+export const QUERY_CACHE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(MAX_AGE),
+      type: REQUIRED_INT_TYPE_NODE,
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(INCLUDE_HEADERS),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(SHADOW_MODE),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: { kind: Kind.BOOLEAN, value: false },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(QUERY_CACHE),
+  repeatable: false,
+};
+
+// directive @openfed__requestScoped(key: String!) on FIELD_DEFINITION
+//
+// Marks a field as resolving to the same value for the entire request, shared with
+// all other fields in the same subgraph that use the same `key`. Purely symmetric:
+// every field that participates declares itself with the directive. There is no
+// receiver/provider distinction. Whichever field is resolved first populates the
+// per-request L1 cache under `{subgraphName}.{key}`; subsequent fields with the
+// same key are served from L1 (and can skip the subgraph fetch when possible).
+export const REQUEST_SCOPED_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(KEY),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(REQUEST_SCOPED),
   repeatable: false,
 };
 

@@ -12,9 +12,11 @@ import { CLI, CLISteps } from '../ui/cli';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { ARTCustomEdge, FetchFlow, ReactFlowARTFetchNode, ReactFlowARTMultiFetchNode } from './fetch-flow';
 import { FetchWaterfall } from './fetch-waterfall';
-import { ARTFetchNode, LoadStats, QueryPlan } from './types';
+import { ARTFetchNode, CacheTrace, LoadStats, QueryPlan } from './types';
 
 const initialPaneWidth = 360;
+
+export const minimumVisibleDurationNs = (durationNs?: number) => Math.max(durationNs ?? 0, 1000);
 
 export const TraceContext = createContext<{
   query?: string;
@@ -102,6 +104,29 @@ const Trace = ({
     let gEndTimeNano = BigInt(0);
 
     let executeDurationSinceStart = 0;
+    let plannerEndNs = 0;
+
+    const parseCacheTrace = (ct: any): CacheTrace | undefined => {
+      if (!ct) return undefined;
+      return {
+        l1Enabled: ct.l1_enabled,
+        l2Enabled: ct.l2_enabled,
+        cacheName: ct.cache_name,
+        ttlSeconds: ct.ttl_seconds,
+        entityCount: ct.entity_count ?? 0,
+        l1Hit: ct.l1_hit,
+        l1Miss: ct.l1_miss,
+        l2Hit: ct.l2_hit,
+        l2Miss: ct.l2_miss,
+        durationSinceStart: ct.duration_since_start_nanoseconds,
+        durationSinceStartPretty: ct.duration_since_start_pretty,
+        duration: ct.duration_nanoseconds,
+        durationPretty: ct.duration_pretty,
+        l2GetDurationPretty: ct.l2_get_duration_pretty,
+        l2SetDurationPretty: ct.l2_set_duration_pretty,
+        keys: ct.keys,
+      };
+    };
 
     const fetchMap = new Map<string, ARTFetchNode>();
 
@@ -147,6 +172,8 @@ const Trace = ({
 
         fetchNode.loadStats = mappedData;
       }
+
+      fetchNode.cacheTrace = parseCacheTrace(fetch.datasource_load_trace?.cache_trace);
 
       const fetchOutputTrace = fetch.datasource_load_trace?.output?.extensions?.trace;
       if (fetchOutputTrace) {
@@ -290,6 +317,15 @@ const Trace = ({
         fetchNode.loadStats = mappedData;
       }
 
+      fetchNode.cacheTrace = parseCacheTrace(fetch.trace?.cache_trace);
+
+      // For cache hits with no load timing, synthesize timing from cache trace data
+      if (!fetchNode.durationSinceStart && fetchNode.cacheTrace) {
+        const ct = fetch.trace?.cache_trace;
+        fetchNode.durationSinceStart = ct?.duration_since_start_nanoseconds ?? plannerEndNs;
+        fetchNode.durationLoad = minimumVisibleDurationNs(ct?.duration_nanoseconds); // minimum 1µs so the bar is visible
+      }
+
       const fetchOutputTrace = fetch.trace?.output?.extensions?.trace;
       if (fetchOutputTrace) {
         fetchNode.outputTrace = {
@@ -375,6 +411,7 @@ const Trace = ({
       const normalizeStats = parsedResponse.extensions.trace.info.normalize_stats;
       const validateStats = parsedResponse.extensions.trace.info.validate_stats;
       const plannerStats = parsedResponse.extensions.trace.info.planner_stats;
+      plannerEndNs = plannerStats.duration_since_start_nanoseconds + plannerStats.duration_nanoseconds;
 
       const parse = {
         id: 'parse',
@@ -457,6 +494,15 @@ const Trace = ({
           ...plan,
         },
       });
+
+      // When no fetch had load timing data (e.g. all served from cache),
+      // gEndTimeNano was never updated. Estimate from the planner phase end.
+      if (gEndTimeNano <= gStartTimeNano) {
+        gEndTimeNano = gStartTimeNano + BigInt(plannerEndNs);
+      }
+      if (!executeDurationSinceStart) {
+        executeDurationSinceStart = plannerEndNs;
+      }
 
       const execute = {
         id: 'execute',
@@ -606,7 +652,7 @@ export const TraceView = () => {
 
   const hasTrace = hasTraceHeader && hasTraceInResponse;
 
-  const [view, setView] = useState<'tree' | 'waterfall'>('tree');
+  const [view, setView] = useState<'tree' | 'waterfall'>('waterfall');
 
   const isSubscription = useMemo(() => {
     try {
@@ -669,7 +715,7 @@ export const TraceView = () => {
 
   return (
     <div className="relative flex h-full w-full flex-1 flex-col font-sans">
-      <Tabs defaultValue="tree" className="absolute bottom-3 right-4 z-30 w-max" onValueChange={(v: any) => setView(v)}>
+      <Tabs value={view} className="absolute bottom-3 right-4 z-30 w-max" onValueChange={(v: any) => setView(v)}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="tree">
             <div className="flex items-center gap-x-2">

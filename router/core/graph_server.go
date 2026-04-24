@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -57,8 +59,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 const (
@@ -92,19 +94,31 @@ type (
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections
-		inFlightRequests        *atomic.Uint64
-		graphMuxList            []*graphMux
-		graphMuxListLock        sync.Mutex
-		runtimeMetrics          *rmetric.RuntimeMetrics
-		otlpEngineMetrics       *rmetric.EngineMetrics
-		prometheusEngineMetrics *rmetric.EngineMetrics
-		connectionMetrics       *rmetric.ConnectionMetrics
-		instanceData            InstanceData
-		pubSubProviders         []datasource.Provider
-		traceDialer             *TraceDialer
-		connector               *grpcconnector.Connector
-		circuitBreakerManager   *circuit.Manager
-		headerPropagation       *HeaderPropagation
+		inFlightRequests           *atomic.Uint64
+		graphMuxList               []*graphMux
+		graphMuxListLock           sync.Mutex
+		metrics                    serverMetrics
+		instanceData               InstanceData
+		pubSubProviders            []datasource.Provider
+		traceDialer                *TraceDialer
+		connector                  *grpcconnector.Connector
+		circuitBreakerManager      *circuit.Manager
+		headerPropagation          *HeaderPropagation
+		entityCacheInstances       map[string]resolve.LoaderCache
+		entityCacheKeyInterceptors []EntityCacheKeyInterceptor
+	}
+
+	// serverMetrics groups every metric instrument instantiated at graph-server
+	// scope. Adding a new instrument only requires adding a field here and
+	// extending the setup/shutdown paths, not threading a new *graphServer field
+	// through init/shutdown code.
+	serverMetrics struct {
+		Runtime         *rmetric.RuntimeMetrics
+		OTLPEngine      *rmetric.EngineMetrics
+		PromEngine      *rmetric.EngineMetrics
+		Connection      *rmetric.ConnectionMetrics
+		OTLPEntityCache *rmetric.EntityCacheMetrics
+		PromEntityCache *rmetric.EntityCacheMetrics
 	}
 )
 
@@ -193,8 +207,24 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
 		},
-		storageProviders:  &r.storageProviders,
-		headerPropagation: r.headerPropagation,
+		storageProviders:           &r.storageProviders,
+		headerPropagation:          r.headerPropagation,
+		entityCacheKeyInterceptors: r.entityCacheKeyInterceptors,
+	}
+
+	entityCacheInstances, err := r.buildEntityCacheInstances()
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("failed to build entity cache instances: %w", err)
+	}
+	s.entityCacheInstances = entityCacheInstances
+
+	if entityCacheInstances != nil && r.entityCachingConfig.Enabled {
+		s.logEntityCacheOverrideIssues(
+			&r.entityCachingConfig,
+			routerConfig.GetSubgraphs(),
+			routerConfig.GetEngineConfig(),
+		)
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -219,7 +249,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	if s.metricConfig.OpenTelemetry.RouterRuntime {
 		// We track runtime metrics with base router config version
-		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
+		s.metrics.Runtime = rmetric.NewRuntimeMetrics(
 			s.logger,
 			s.otlpMeterProvider,
 			mappedMetricAttributes,
@@ -227,7 +257,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		)
 
 		// Start runtime metrics
-		if err := s.runtimeMetrics.Start(); err != nil {
+		if err := s.metrics.Runtime.Start(); err != nil {
 			return nil, err
 		}
 	}
@@ -244,11 +274,15 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		if err != nil {
 			return nil, err
 		}
-		s.connectionMetrics = connStore
+		s.metrics.Connection = connStore
 	}
 
 	if err := s.setupEngineStatistics(mappedMetricAttributes); err != nil {
 		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
+	}
+
+	if err := s.setupEntityCacheMetrics(mappedMetricAttributes); err != nil {
+		return nil, fmt.Errorf("failed to setup entity cache metrics: %w", err)
 	}
 
 	if s.registrationInfo != nil {
@@ -518,7 +552,7 @@ func (s *graphServer) buildMultiGraphHandler(
 func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue) (err error) {
 	// We only include the base router config version in the attributes for the engine statistics.
 	// Same approach is used for the runtime metrics.
-	s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(
+	s.metrics.OTLPEngine, err = rmetric.NewEngineMetrics(
 		s.logger,
 		baseAttributes,
 		s.otlpMeterProvider,
@@ -529,7 +563,7 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 		return err
 	}
 
-	s.prometheusEngineMetrics, err = rmetric.NewEngineMetrics(
+	s.metrics.PromEngine, err = rmetric.NewEngineMetrics(
 		s.logger,
 		baseAttributes,
 		s.promMeterProvider,
@@ -538,6 +572,77 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 	)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// logEntityCacheOverrideIssues walks the entity caching overrides and emits
+// warnings for references to unknown subgraphs or unknown entity types. It is
+// non-fatal by design (void+log): startup continues regardless. Renaming from
+// "validate*" to "log*" reflects this shape — it does not gate router startup.
+func (s *graphServer) logEntityCacheOverrideIssues(
+	cfg *config.EntityCachingConfiguration,
+	configSubgraphs []*nodev1.Subgraph,
+	engineConfig *nodev1.EngineConfiguration,
+) {
+	// Build lookup: subgraph name set
+	subgraphNames := make(map[string]bool, len(configSubgraphs))
+	for _, sg := range configSubgraphs {
+		subgraphNames[sg.Name] = true
+	}
+
+	// Build lookup: subgraph name → set of entity type names
+	// Datasources are keyed by ID, not name — map via subgraphNameByID
+	entityTypesBySubgraph := make(map[string]map[string]bool)
+	for _, ds := range engineConfig.DatasourceConfigurations {
+		sgName := subgraphNameByID(configSubgraphs, ds.Id)
+		if sgName == "" {
+			continue
+		}
+		if entityTypesBySubgraph[sgName] == nil {
+			entityTypesBySubgraph[sgName] = make(map[string]bool)
+		}
+		for _, ec := range ds.EntityCacheConfigurations {
+			entityTypesBySubgraph[sgName][ec.TypeName] = true
+		}
+	}
+
+	for _, override := range cfg.SubgraphCacheOverrides {
+		if !subgraphNames[override.Name] {
+			s.logger.Warn("entity caching: subgraph_cache_overrides references unknown subgraph",
+				zap.String("subgraph", override.Name))
+			continue
+		}
+		for _, entity := range override.Entities {
+			if entities := entityTypesBySubgraph[override.Name]; entities == nil || !entities[entity.Type] {
+				s.logger.Warn("entity caching: subgraph_cache_overrides references unknown entity type",
+					zap.String("subgraph", override.Name),
+					zap.String("entity_type", entity.Type))
+			}
+		}
+	}
+}
+
+func (s *graphServer) setupEntityCacheMetrics(baseAttributes []attribute.KeyValue) error {
+	if !s.entityCachingConfig.Enabled {
+		return nil
+	}
+
+	if s.metricConfig.OpenTelemetry.EntityCachingStats {
+		var err error
+		s.metrics.OTLPEntityCache, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.otlpMeterProvider)
+		if err != nil {
+			return fmt.Errorf("failed to create entity cache metrics for OTLP: %w", err)
+		}
+	}
+
+	if s.metricConfig.Prometheus.EntityCachingStats {
+		var err error
+		s.metrics.PromEntityCache, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.promMeterProvider)
+		if err != nil {
+			return fmt.Errorf("failed to create entity cache metrics for Prometheus: %w", err)
+		}
 	}
 
 	return nil
@@ -562,6 +667,65 @@ type graphMux struct {
 	otelCacheMetrics          *rmetric.CacheMetrics
 	streamMetricStore         rmetric.StreamMetricStore
 	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
+}
+
+type cacheMetricSource interface {
+	Metrics() *ristretto.Metrics
+	MaxSizeBytes() int64
+}
+
+type cacheMetricRegistration struct {
+	cacheType string
+	maxCost   int64
+	metrics   *ristretto.Metrics
+}
+
+func entityCacheMetricRegistrations(caches map[string]cacheMetricSource) []cacheMetricRegistration {
+	if len(caches) == 0 {
+		return nil
+	}
+
+	type cacheGroup struct {
+		source cacheMetricSource
+		names  []string
+	}
+
+	grouped := make(map[uintptr]*cacheGroup, len(caches))
+	for name, source := range caches {
+		if source == nil || source.Metrics() == nil || source.MaxSizeBytes() <= 0 {
+			continue
+		}
+		id := reflect.ValueOf(source).Pointer()
+		group := grouped[id]
+		if group == nil {
+			group = &cacheGroup{source: source}
+			grouped[id] = group
+		}
+		group.names = append(group.names, name)
+	}
+
+	registrations := make([]cacheMetricRegistration, 0, len(grouped))
+	for _, group := range grouped {
+		sort.Strings(group.names)
+		name := group.names[0]
+		for _, candidate := range group.names {
+			if candidate != "default" {
+				name = candidate
+				break
+			}
+		}
+		registrations = append(registrations, cacheMetricRegistration{
+			cacheType: "entity_" + name,
+			maxCost:   group.source.MaxSizeBytes(),
+			metrics:   group.source.Metrics(),
+		})
+	}
+
+	sort.Slice(registrations, func(i, j int) bool {
+		return registrations[i].cacheType < registrations[j].cacheType
+	})
+
+	return registrations
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -805,6 +969,18 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 	if s.operationHashCache != nil {
 		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_hash", srv.engineExecutionConfiguration.OperationHashCacheSize, s.operationHashCache.Metrics))
+	}
+
+	entityMetricSources := make(map[string]cacheMetricSource)
+	for name, cache := range srv.entityCacheInstances {
+		source, ok := cache.(cacheMetricSource)
+		if !ok {
+			continue
+		}
+		entityMetricSources[name] = source
+	}
+	for _, registration := range entityCacheMetricRegistrations(entityMetricSources) {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo(registration.cacheType, registration.maxCost, registration.metrics))
 	}
 
 	if s.otelCacheMetrics != nil {
@@ -1283,11 +1459,11 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
-	enableTraceClient := s.connectionMetrics != nil || exprManager.VisitorManager.IsSubgraphTraceUsedInExpressions()
+	enableTraceClient := s.metrics.Connection != nil || exprManager.VisitorManager.IsSubgraphTraceUsedInExpressions()
 
 	var baseConnMetricStore rmetric.ConnectionMetricStore = &rmetric.NoopConnectionMetricStore{}
-	if s.connectionMetrics != nil {
-		baseConnMetricStore = s.connectionMetrics
+	if s.metrics.Connection != nil {
+		baseConnMetricStore = s.metrics.Connection
 	}
 
 	// Build retry options and handle any expression compilation errors
@@ -1339,6 +1515,8 @@ func (s *graphServer) buildGraphMux(
 			HeartbeatInterval:              s.subscriptionHeartbeatInterval,
 			PluginsEnabled:                 s.plugins.Enabled,
 			InstanceData:                   s.instanceData,
+			EntityCacheInstances:           s.entityCacheInstances,
+			EntityCachingConfig:            &s.entityCachingConfig,
 		},
 	)
 	if err != nil {
@@ -1600,6 +1778,22 @@ func (s *graphServer) buildGraphMux(
 
 	if s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled {
 		handlerOpts.ApolloSubscriptionMultipartPrintBoundary = s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled
+	}
+
+	if s.entityCachingConfig.Enabled {
+		handlerOpts.EntityCaching = EntityCachingHandlerOptions{
+			L1Enabled:       s.entityCachingConfig.L1.Enabled,
+			L2Enabled:       s.entityCachingConfig.L2.Enabled,
+			GlobalKeyPrefix: s.entityCachingConfig.GlobalCacheKeyPrefix,
+			KeyInterceptors: s.entityCacheKeyInterceptors,
+		}
+
+		for _, m := range []*rmetric.EntityCacheMetrics{s.metrics.OTLPEntityCache, s.metrics.PromEntityCache} {
+			if m != nil {
+				handlerOpts.EntityCaching.Metrics = append(handlerOpts.EntityCaching.Metrics, m)
+			}
+		}
+		// TODO: Add entity analytics exporter to handler options here once analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
@@ -1958,26 +2152,38 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		ctx = newCtx
 	}
 
-	if s.runtimeMetrics != nil {
-		if err := s.runtimeMetrics.Shutdown(); err != nil {
+	if s.metrics.Runtime != nil {
+		if err := s.metrics.Runtime.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
 
-	if s.connectionMetrics != nil {
-		if aErr := s.connectionMetrics.Shutdown(ctx); aErr != nil {
+	if s.metrics.Connection != nil {
+		if aErr := s.metrics.Connection.Shutdown(ctx); aErr != nil {
 			finalErr = errors.Join(finalErr, aErr)
 		}
 	}
 
-	if s.otlpEngineMetrics != nil {
-		if err := s.otlpEngineMetrics.Shutdown(); err != nil {
+	if s.metrics.OTLPEngine != nil {
+		if err := s.metrics.OTLPEngine.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
 
-	if s.prometheusEngineMetrics != nil {
-		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
+	if s.metrics.PromEngine != nil {
+		if err := s.metrics.PromEngine.Shutdown(); err != nil {
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.metrics.OTLPEntityCache != nil {
+		if err := s.metrics.OTLPEntityCache.Shutdown(); err != nil {
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.metrics.PromEntityCache != nil {
+		if err := s.metrics.PromEntityCache.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
 	}

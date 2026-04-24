@@ -15,3 +15,7 @@ To create new migration run:
 ```bash
 make new-migration <migration_name>
 ```
+
+## Regenerating proto bindings
+
+Run `make generate-go` at the repository root after editing any `.proto` under `proto/wg/cosmo/graphqlmetrics/`.

@@ -1,0 +1,164 @@
+{
+  "scenarios": [
+    {
+      "name": "article_simple",
+      "queryFile": "benchmark/queries/article_simple.graphql",
+      "operationName": "ArticleSimple",
+      "responseFixture": "benchmark/fixtures/article_simple.response.json",
+      "variables": {
+        "id": "1"
+      },
+      "modeFamily": "entity_cache",
+      "warmupRequests": 10,
+      "headers": {
+        "X-Artificial-Latency": "80"
+      },
+      "equivalenceModes": [
+        "cache_enabled",
+        "entity_cache_disabled"
+      ]
+    },
+    {
+      "name": "articles_by_ids_batch",
+      "queryFile": "benchmark/queries/articles_by_ids_batch.graphql",
+      "operationName": "ArticlesByIdsBatch",
+      "responseFixture": "benchmark/fixtures/articles_by_ids_batch.response.json",
+      "variables": {
+        "ids": [
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "modeFamily": "entity_cache",
+      "warmupRequests": 10,
+      "headers": {
+        "X-Artificial-Latency": "80"
+      },
+      "equivalenceModes": [
+        "cache_enabled",
+        "entity_cache_disabled"
+      ]
+    },
+    {
+      "name": "listing_composite_key",
+      "queryFile": "benchmark/queries/listing_composite_key.graphql",
+      "operationName": "ListingCompositeKey",
+      "responseFixture": "benchmark/fixtures/listing_composite_key.response.json",
+      "variables": {
+        "key": {
+          "sellerId": "s1",
+          "sku": "WIDGET-01"
+        }
+      },
+      "modeFamily": "entity_cache",
+      "warmupRequests": 10,
+      "headers": {
+        "X-Artificial-Latency": "80"
+      },
+      "equivalenceModes": [
+        "cache_enabled",
+        "entity_cache_disabled"
+      ]
+    },
+    {
+      "name": "venue_nested_key",
+      "queryFile": "benchmark/queries/venue_nested_key.graphql",
+      "operationName": "VenueNestedKey",
+      "responseFixture": "benchmark/fixtures/venue_nested_key.response.json",
+      "variables": {
+        "location": {
+          "address": {
+            "id": "v1"
+          }
+        }
+      },
+      "modeFamily": "entity_cache",
+      "warmupRequests": 10,
+      "headers": {
+        "X-Artificial-Latency": "80"
+      },
+      "equivalenceModes": [
+        "cache_enabled",
+        "entity_cache_disabled"
+      ]
+    },
+    {
+      "name": "user_profile_header_sensitive",
+      "queryFile": "benchmark/queries/user_profile_header_sensitive.graphql",
+      "operationName": "UserProfileHeaderSensitive",
+      "responseFixtures": {
+        "alice": "benchmark/fixtures/user_profile_header_sensitive.alice.response.json",
+        "bob": "benchmark/fixtures/user_profile_header_sensitive.bob.response.json"
+      },
+      "variables": {
+        "id": "u1"
+      },
+      "modeFamily": "entity_cache",
+      "warmupRequests": 10,
+      "headers": {
+        "X-Artificial-Latency": "80"
+      },
+      "authProfiles": [
+        "alice",
+        "bob"
+      ],
+      "equivalenceModes": [
+        "cache_enabled",
+        "entity_cache_disabled"
+      ]
+    },
+    {
+      "name": "catalogs_partial_load",
+      "queryFile": "benchmark/queries/catalogs_partial_load.graphql",
+      "operationName": "CatalogsPartialLoad",
+      "responseFixture": "benchmark/fixtures/catalogs_partial_load.response.json",
+      "variables": {},
+      "modeFamily": "entity_cache",
+      "warmupRequests": 10,
+      "headers": {
+        "X-Artificial-Latency": "80"
+      },
+      "equivalenceModes": [
+        "cache_enabled",
+        "entity_cache_disabled"
+      ]
+    },
+    {
+      "name": "request_scoped_viewer_articles",
+      "queryFile": "benchmark/queries/request_scoped_viewer_articles.graphql",
+      "operationName": "RequestScopedViewerArticles",
+      "responseFixture": "benchmark/fixtures/request_scoped_viewer_articles.response.json",
+      "variables": {},
+      "modeFamily": "request_scoped",
+      "warmupRequests": 10,
+      "headers": {
+        "X-Artificial-Latency": "80"
+      },
+      "authProfile": "alice",
+      "equivalenceModes": [
+        "request_scoped_default",
+        "request_scoped_l1_disabled"
+      ]
+    },
+    {
+      "name": "viewer_articles_deep_nested",
+      "queryFile": "benchmark/queries/viewer_articles_deep_nested.graphql",
+      "operationName": "ViewerArticles",
+      "responseFixture": "benchmark/fixtures/viewer_articles_deep_nested.response.json",
+      "variables": {},
+      "modeFamily": "request_scoped",
+      "warmupRequests": 10,
+      "headers": {
+        "X-Artificial-Latency": "80"
+      },
+      "authProfile": "alice",
+      "equivalenceModes": [
+        "request_scoped_default",
+        "request_scoped_l1_disabled",
+        "cache_enabled",
+        "entity_cache_disabled"
+      ]
+    }
+  ]
+}

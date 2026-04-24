@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -47,6 +48,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/entitycache"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
@@ -56,6 +58,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
@@ -337,6 +340,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"x-wg-token",
 		"x-wg-skip-loader",
 		"x-wg-include-query-plan",
+		// Required for the studio playground's Cache Explorer (cache-mode dropdown)
+		"x-wg-disable-entity-cache",
+		"x-wg-disable-entity-cache-l1",
+		"x-wg-disable-entity-cache-l2",
+		"x-wg-cache-key-prefix",
 		// Required for Trace Context propagation
 		"traceparent",
 		"tracestate",
@@ -736,6 +744,10 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
 		}
 
+		if interceptor, ok := moduleInstance.(EntityCacheKeyInterceptor); ok {
+			r.entityCacheKeyInterceptors = append(r.entityCacheKeyInterceptors, interceptor)
+		}
+
 		r.modules = append(r.modules, moduleInstance)
 
 		r.logger.Info("Module registered",
@@ -856,21 +868,45 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.traceConfig.Enabled {
-		tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
-			Logger:            r.logger,
-			Config:            r.traceConfig,
-			ServiceInstanceID: r.instanceID,
-			IPAnonymization: &attributeprocessor.IPAnonymizationConfig{
-				Enabled: r.ipAnonymization.Enabled,
-				Method:  attributeprocessor.IPAnonymizationMethod(r.ipAnonymization.Method),
-			},
-			SanitizeUTF8:   r.traceConfig.SanitizeUTF8,
-			MemoryExporter: r.traceConfig.TestMemoryExporter,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to start trace agent: %w", err)
+		// Skip installing a real (recording + exporting) tracer provider when there is
+		// no realistic export destination. Without this, the router records 100%-sampled
+		// spans in memory, runs the BatchSpanProcessor, and attempts to export — work
+		// that's pure overhead when nothing listens on the other end. Observed at 50
+		// sustained VUs on the cache demo: ~60% of all router allocations are OTel span
+		// attribute/snapshot work, which inflates GC pressure and produces p99 tails far
+		// beyond p95. Keeping the NeverSample provider installed at router.go:250 (the
+		// initial placeholder) means `IsRecording()` returns false on every span, and
+		// all the middleware-side `SetAttributes` / span creation short-circuits cheaply.
+		//
+		// "Realistic export destination" = at least one of:
+		//   - a graph API token is set (so the default Cosmo Cloud exporter can ship spans), OR
+		//   - the user has explicitly configured a trace exporter (env or YAML) whose
+		//     endpoint is different from the Cosmo Cloud default.
+		//
+		// A user who self-hosts an OTLP collector at the Cosmo Cloud endpoint URL is an
+		// edge case; they can force recording by setting any exporter explicitly.
+		hasRealExporter := r.graphApiToken != "" ||
+			r.traceConfig.TestMemoryExporter != nil ||
+			rtrace.HasNonDefaultExporter(r.traceConfig)
+		if !hasRealExporter {
+			r.logger.Info("Tracing is enabled but no graph token and no custom exporter are configured; installing no-op tracer provider to avoid span-recording overhead. Configure a trace exporter or set a graph token to enable tracing.")
+		} else {
+			tp, err := rtrace.NewTracerProvider(ctx, &rtrace.ProviderConfig{
+				Logger:            r.logger,
+				Config:            r.traceConfig,
+				ServiceInstanceID: r.instanceID,
+				IPAnonymization: &attributeprocessor.IPAnonymizationConfig{
+					Enabled: r.ipAnonymization.Enabled,
+					Method:  attributeprocessor.IPAnonymizationMethod(r.ipAnonymization.Method),
+				},
+				SanitizeUTF8:   r.traceConfig.SanitizeUTF8,
+				MemoryExporter: r.traceConfig.TestMemoryExporter,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to start trace agent: %w", err)
+			}
+			r.tracerProvider = tp
 		}
-		r.tracerProvider = tp
 	}
 
 	// Prometheus metrics rely on OTLP metrics
@@ -919,6 +955,8 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
+
+	// TODO: Add entity analytics exporter setup here once the analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
 
 	// Create Prometheus metrics exporter for schema field usage
 	// Note: This is separate from the Prometheus meter provider which handles OTEL metrics
@@ -1413,6 +1451,111 @@ func (r *Router) buildConfigPoller(registry *ProviderRegistry) error {
 	return nil
 }
 
+// buildEntityCacheInstances creates Redis-backed LoaderCache instances from storage providers
+// based on the entity caching configuration. If pre-seeded instances are set (via WithEntityCacheInstances),
+// those are returned directly.
+func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, error) {
+	if r.entityCacheInstances != nil {
+		return r.entityCacheInstances, nil
+	}
+	if !r.entityCachingConfig.Enabled || !r.entityCachingConfig.L2.Enabled {
+		return nil, nil
+	}
+
+	caches := make(map[string]resolve.LoaderCache)
+	l2Cfg := r.entityCachingConfig.L2
+
+	// Build default cache from l2.storage.provider_id. Store it under both the
+	// literal "default" key (used when no override matches) and under its real
+	// provider_id so an override that redirects to the same backend reuses the
+	// same instance instead of allocating a second one.
+	if l2Cfg.Storage.ProviderID != "" {
+		cache, err := r.buildSingleEntityCache(l2Cfg.Storage.ProviderID, l2Cfg)
+		if err != nil {
+			return nil, fmt.Errorf("entity caching default provider: %w", err)
+		}
+		caches["default"] = cache
+		caches[l2Cfg.Storage.ProviderID] = cache
+	}
+
+	// Build per-subgraph/entity caches from subgraph_cache_overrides
+	for _, sg := range r.entityCachingConfig.SubgraphCacheOverrides {
+		// Collect unique provider IDs from subgraph-level and entity-level overrides
+		providerIDs := make(map[string]string) // providerID → context (for error messages)
+		if sg.StorageProviderID != "" && sg.StorageProviderID != "default" {
+			providerIDs[sg.StorageProviderID] = sg.Name
+		}
+		for _, entity := range sg.Entities {
+			if entity.StorageProviderID != "" && entity.StorageProviderID != "default" {
+				providerIDs[entity.StorageProviderID] = sg.Name + "." + entity.Type
+			}
+		}
+		for providerID, context := range providerIDs {
+			if _, exists := caches[providerID]; exists {
+				// Already built (either as the default cache's provider alias
+				// or from an earlier override); reuse the same instance.
+				continue
+			}
+			cache, err := r.buildSingleEntityCache(providerID, l2Cfg)
+			if err != nil {
+				return nil, fmt.Errorf("entity caching provider %q for %s: %w",
+					providerID, context, err)
+			}
+			caches[providerID] = cache
+		}
+	}
+
+	return caches, nil
+}
+
+// buildSingleEntityCache creates a cache backed by either Redis or memory, with optional circuit breaker wrapping.
+func (r *Router) buildSingleEntityCache(providerID string, l2Cfg config.EntityCachingL2Configuration) (resolve.LoaderCache, error) {
+	var cache resolve.LoaderCache
+	if memProvider, ok := r.findMemoryProvider(providerID); ok {
+		mc, err := entitycache.NewMemoryEntityCache(int64(memProvider.MaxSize))
+		if err != nil {
+			return nil, fmt.Errorf("creating memory cache: %w", err)
+		}
+		cache = mc
+	} else {
+		client, err := r.buildRedisClient(providerID)
+		if err != nil {
+			return nil, err
+		}
+		cache = entitycache.NewRedisEntityCache(client, l2Cfg.Storage.KeyPrefix)
+	}
+	if l2Cfg.CircuitBreaker.Enabled {
+		cache = entitycache.NewCircuitBreakerCache(cache, entitycache.CircuitBreakerConfig{
+			Enabled:          true,
+			FailureThreshold: l2Cfg.CircuitBreaker.FailureThreshold,
+			CooldownPeriod:   l2Cfg.CircuitBreaker.CooldownPeriod,
+		})
+	}
+	return cache, nil
+}
+
+func (r *Router) buildRedisClient(providerID string) (rd.RDCloser, error) {
+	for _, provider := range r.storageProviders.Redis {
+		if provider.ID == providerID {
+			return rd.NewRedisCloser(&rd.RedisCloserOptions{
+				Logger:         r.logger,
+				URLs:           provider.URLs,
+				ClusterEnabled: provider.ClusterEnabled,
+			})
+		}
+	}
+	return nil, fmt.Errorf("storage provider %q not found in storage_providers (checked redis, memory)", providerID)
+}
+
+func (r *Router) findMemoryProvider(providerID string) (*config.MemoryStorageProvider, bool) {
+	for i := range r.storageProviders.Memory {
+		if r.storageProviders.Memory[i].ID == providerID {
+			return &r.storageProviders.Memory[i], true
+		}
+	}
+	return nil, false
+}
+
 // Start starts the router. It does block until the router has been initialized. After that the server is listening
 // on a separate goroutine. The server can be shutdown with Router.Shutdown(). Not safe for concurrent use.
 // During initialization, the router will register itself with the control plane and poll the config from the CDN
@@ -1786,6 +1929,15 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	}
 	if r.pqlStore != nil {
 		r.pqlStore.Close()
+	}
+
+	// Close entity cache instances that implement io.Closer (e.g. ristretto-backed MemoryEntityCache).
+	for _, cache := range r.entityCacheInstances {
+		if closer, ok := cache.(io.Closer); ok {
+			if closeErr := closer.Close(); closeErr != nil {
+				err.Append(fmt.Errorf("failed to close entity cache: %w", closeErr))
+			}
+		}
 	}
 
 	r.usage.Close()
@@ -2376,6 +2528,18 @@ func WithStorageProviders(cfg config.StorageProviders) Option {
 	}
 }
 
+func WithEntityCaching(cfg config.EntityCachingConfiguration) Option {
+	return func(r *Router) {
+		r.entityCachingConfig = cfg
+	}
+}
+
+func WithEntityCacheInstances(caches map[string]resolve.LoaderCache) Option {
+	return func(r *Router) {
+		r.entityCacheInstances = caches
+	}
+}
+
 func WithClientHeader(cfg config.ClientHeader) Option {
 	return func(r *Router) {
 		r.clientHeader = cfg
@@ -2598,10 +2762,11 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		CardinalityLimit:   cfg.Metrics.CardinalityLimit,
 		OpenTelemetry: rmetric.OpenTelemetry{
-			Enabled:         cfg.Metrics.OTLP.Enabled,
-			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
-			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
-			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
+			Enabled:            cfg.Metrics.OTLP.Enabled,
+			RouterRuntime:      cfg.Metrics.OTLP.RouterRuntime,
+			GraphqlCache:       cfg.Metrics.OTLP.GraphqlCache,
+			ConnectionStats:    cfg.Metrics.OTLP.ConnectionStats,
+			EntityCachingStats: cfg.Metrics.OTLP.EntityCachingStats,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
 			},
@@ -2618,11 +2783,12 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			},
 		},
 		Prometheus: rmetric.PrometheusConfig{
-			Enabled:         cfg.Metrics.Prometheus.Enabled,
-			ListenAddr:      cfg.Metrics.Prometheus.ListenAddr,
-			Path:            cfg.Metrics.Prometheus.Path,
-			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,
-			ConnectionStats: cfg.Metrics.Prometheus.ConnectionStats,
+			Enabled:            cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:         cfg.Metrics.Prometheus.ListenAddr,
+			Path:               cfg.Metrics.Prometheus.Path,
+			GraphqlCache:       cfg.Metrics.Prometheus.GraphqlCache,
+			ConnectionStats:    cfg.Metrics.Prometheus.ConnectionStats,
+			EntityCachingStats: cfg.Metrics.Prometheus.EntityCachingStats,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},

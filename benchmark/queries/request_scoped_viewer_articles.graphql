@@ -1,0 +1,17 @@
+query RequestScopedViewerArticles {
+  currentViewer {
+    id
+    name
+    email
+  }
+  articles {
+    id
+    title
+    currentViewer {
+      id
+      name
+    }
+    viewCount
+    rating
+  }
+}

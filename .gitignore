@@ -27,3 +27,11 @@ go.work.sum
 
 # Serena
 .serena/
+/.playwright-mcp
+
+# PR review workspace — local-only, never commit
+/TODO.md
+/DONE.md
+/FEEDBACK.md
+/COMMENTS.md
+/docs/superpowers/

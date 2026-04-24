@@ -207,8 +207,21 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       engineConfig,
       printSchemaWithDirectives(lexicographicSortSchema(subgraph.schema)),
     );
-    const { childNodes, entityInterfaces, events, interfaceObjects, keys, provides, requires, rootNodes } =
-      configurationDatasToDataSourceConfiguration(subgraph.configurationDataByTypeName);
+    const {
+      childNodes,
+      entityInterfaces,
+      events,
+      interfaceObjects,
+      keys,
+      provides,
+      requestScopedFields,
+      requires,
+      rootNodes,
+      entityCacheConfigurations,
+      rootFieldCacheConfigurations,
+      cachePopulateConfigurations,
+      cacheInvalidateConfigurations,
+    } = configurationDatasToDataSourceConfiguration(subgraph.configurationDataByTypeName);
 
     let grcpConfig: GRPCConfiguration | undefined;
 
@@ -319,9 +332,14 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       kind,
       overrideFieldPathFromAlias: true,
       provides,
+      requestScopedFields,
       requestTimeoutSeconds: BigInt(10),
       requires,
       rootNodes,
+      entityCacheConfigurations,
+      rootFieldCacheConfigurations,
+      cachePopulateConfigurations,
+      cacheInvalidateConfigurations,
     });
     engineConfig.datasourceConfigurations.push(datasourceConfig);
   }

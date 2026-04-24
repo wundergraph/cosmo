@@ -1039,6 +1039,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	resolveCtx.TracingOptions = operationCtx.traceOptions
 	resolveCtx.Extensions = operationCtx.extensions
 	resolveCtx.ExecutionOptions = operationCtx.executionOptions
+	resolveCtx.ExecutionOptions.Caching = h.graphqlHandler.cachingOptions(reqContext)
 
 	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
 		resolveCtx.InitialPayload = operationCtx.initialPayload
@@ -1068,7 +1069,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		_, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
+		_, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)

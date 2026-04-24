@@ -62,6 +62,7 @@
         "RouterRuntime": true,
         "GraphqlCache": true,
         "ConnectionStats": true,
+        "EntityCachingStats": true,
         "EngineStats": {
           "Subscriptions": true
         },
@@ -98,6 +99,7 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
         "ConnectionStats": true,
+        "EntityCachingStats": true,
         "Streams": false,
         "EngineStats": {
           "Subscriptions": true
@@ -970,12 +972,34 @@
         "ClusterEnabled": false
       }
     ],
+    "Memory": null,
     "FileSystem": [
       {
         "ID": "mcp",
         "Path": "operations"
       }
     ]
+  },
+  "EntityCaching": {
+    "Enabled": false,
+    "GlobalCacheKeyPrefix": "",
+    "L1": {
+      "Enabled": true,
+      "MaxSize": 100000000
+    },
+    "L2": {
+      "Enabled": true,
+      "Storage": {
+        "ProviderID": "",
+        "KeyPrefix": "cosmo_entity_cache"
+      },
+      "CircuitBreaker": {
+        "Enabled": false,
+        "FailureThreshold": 5,
+        "CooldownPeriod": 10000000000
+      }
+    },
+    "SubgraphCacheOverrides": null
   },
   "ExecutionConfig": {
     "File": {

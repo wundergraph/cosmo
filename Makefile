@@ -184,6 +184,51 @@ docker-build-minikube: docker-build-local
 
 	rm -f mk-*.tar
 
+demo-compose:
+	cd demo && $(MAKE) compose-cache
+
+DEMO_STARTUP_ATTEMPTS ?= 60
+DEMO_STARTUP_SLEEP ?= 0.5
+
+demo:
+	@echo "Composing subgraph schemas..."
+	cd demo && $(MAKE) compose-cache
+	@echo "Starting subgraphs and router..."
+	@echo "Playground will be at http://localhost:3002/"
+	@set -e; \
+	cd demo && go run cmd/all/main.go & \
+	pid=$$!; \
+	trap 'kill $$pid 2>/dev/null || true' EXIT INT TERM HUP; \
+	for p in 4012 4013 4014; do \
+		for i in $$(seq 1 $(DEMO_STARTUP_ATTEMPTS)); do \
+			nc -z 127.0.0.1 $$p && break; \
+			sleep $(DEMO_STARTUP_SLEEP); \
+		done; \
+		nc -z 127.0.0.1 $$p || { echo "subgraph $$p did not start" >&2; exit 1; }; \
+	done; \
+	cd router && go run cmd/router/main.go --config ../demo/router-cache.yaml
+
+benchmark-cache-demo:
+	pnpm dlx tsx benchmark/scripts/run_suite.ts --all \
+		$(if $(VUS),--vus $(VUS),) \
+		$(if $(DURATION),--duration $(DURATION),) \
+		$(if $(RAMP_UP),--ramp-up $(RAMP_UP),) \
+		$(if $(RAMP_DOWN),--ramp-down $(RAMP_DOWN),)
+
+benchmark-cache-demo-scenario:
+	@if [ -z "$(SCENARIO)" ]; then \
+		echo "Usage: make benchmark-cache-demo-scenario SCENARIO=<scenario_name>"; \
+		exit 1; \
+	fi
+	pnpm dlx tsx benchmark/scripts/run_suite.ts --scenario $(SCENARIO) \
+		$(if $(VUS),--vus $(VUS),) \
+		$(if $(DURATION),--duration $(DURATION),) \
+		$(if $(RAMP_UP),--ramp-up $(RAMP_UP),) \
+		$(if $(RAMP_DOWN),--ramp-down $(RAMP_DOWN),)
+
+benchmark-cache-demo-validate:
+	pnpm dlx tsx benchmark/scripts/run_suite.ts validate
+
 run-subgraphs-local:
 	cd demo && go run cmd/all/main.go
 

@@ -744,6 +744,22 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			retryClient.RetryMax = 10
 			retryClient.RetryWaitMin = 100 * time.Millisecond
 			retryClient.HTTPClient = httpClient
+			// Retry on HTTP 501. The router itself never returns 501 for GraphQL requests —
+			// the only way to see 501 from the router URL is Go's net/http server emitting
+			// isUnsupportedTEError during request parsing before any handler runs. Under
+			// heavy parallel-subtest load this has been observed at ~0.05% rate, enough to
+			// surface as a flake in CI. Retrying is safe because a legitimate router 501
+			// is not possible in this suite.
+			defaultCheckRetry := retryClient.CheckRetry
+			retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+				if resp != nil && resp.StatusCode == http.StatusNotImplemented {
+					return true, nil
+				}
+				if defaultCheckRetry != nil {
+					return defaultCheckRetry(ctx, resp, err)
+				}
+				return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+			}
 
 			client = retryClient.StandardClient()
 		}
@@ -1175,6 +1191,22 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			retryClient.RetryMax = 10
 			retryClient.RetryWaitMin = 100 * time.Millisecond
 			retryClient.HTTPClient = httpClient
+			// Retry on HTTP 501. The router itself never returns 501 for GraphQL requests —
+			// the only way to see 501 from the router URL is Go's net/http server emitting
+			// isUnsupportedTEError during request parsing before any handler runs. Under
+			// heavy parallel-subtest load this has been observed at ~0.05% rate, enough to
+			// surface as a flake in CI. Retrying is safe because a legitimate router 501
+			// is not possible in this suite.
+			defaultCheckRetry := retryClient.CheckRetry
+			retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+				if resp != nil && resp.StatusCode == http.StatusNotImplemented {
+					return true, nil
+				}
+				if defaultCheckRetry != nil {
+					return defaultCheckRetry(ctx, resp, err)
+				}
+				return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+			}
 
 			client = retryClient.StandardClient()
 		}
@@ -1898,6 +1930,12 @@ type Environment struct {
 	metricReader  metric.Reader
 	routerCmd     *exec.Cmd
 	cmdLogChannel chan string
+}
+
+func (e *Environment) WithT(t testing.TB) *Environment {
+	clone := *e
+	clone.t = t
+	return &clone
 }
 
 func GetPubSubNameFn(prefix string) func(name string) string {
