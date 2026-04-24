@@ -4,6 +4,24 @@ Per-request coordinate L1 cache for fields that resolve to the same value within
 Eliminates redundant subgraph calls when multiple fields in a subgraph share an identity
 that only depends on the request context (current viewer, tenant, locale, feature flags, etc.).
 
+## Coordinate L1 vs Entity L1
+
+Cosmo has two distinct per-request L1 caches.
+They solve different problems and key differently:
+
+- **Coordinate L1** (this document).
+  Keyed by `{subgraphName}.{@requestScoped key}`.
+  Caches the value of a field coordinate — every field annotated with `@openfed__requestScoped(key: "X")` in the same subgraph shares one slot.
+  Use for values that are constant within a request regardless of parent entity (current viewer, tenant, locale, feature flags).
+- **Entity L1**.
+  Keyed by `{subgraphName}.{typeName}.{@key values}`.
+  Caches the value of a specific entity instance — two queries for `product(id: "1")` within one request hit the same slot.
+  Use for deduplicating repeated fetches of the same entity within a request.
+
+A field can participate in both systems; they do not interfere.
+Entity L2 (Redis or shared in-memory) exists only for entity caching.
+Coordinate caching is request-scoped only.
+
 ## TL;DR
 
 ```graphql
