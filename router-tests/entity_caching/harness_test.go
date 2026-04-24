@@ -427,24 +427,25 @@ func (c *ControllableCache) Delete(ctx context.Context, keys []string) error {
 	return c.inner.Delete(ctx, keys)
 }
 
-// entityCachingOptionsWithCircuitBreakerRef is like entityCachingOptionsWithCircuitBreaker
-// but also returns the CircuitBreakerCache so tests can inspect its state.
+// entityCachingOptionsWithCircuitBreakerRef returns L2-only router options with
+// a CircuitBreakerCache so tests can inspect its state.
 func entityCachingOptionsWithCircuitBreakerRef(cache resolve.LoaderCache, threshold int, cooldown time.Duration) ([]core.Option, *entitycache.CircuitBreakerCache) {
 	cb := entitycache.NewCircuitBreakerCache(cache, entitycache.CircuitBreakerConfig{
 		Enabled:          true,
 		FailureThreshold: threshold,
 		CooldownPeriod:   cooldown,
 	})
-	return entityCachingOptions(cb), cb
+	return entityCachingL2OnlyOptions(cb), cb
 }
 
-// entityCachingOptionsWithSubgraphConfig returns router options with per-subgraph cache routing.
+// entityCachingOptionsWithSubgraphConfig returns L2-only router options with
+// per-subgraph cache routing.
 func entityCachingOptionsWithSubgraphConfig(caches map[string]resolve.LoaderCache, subgraphs []config.EntityCachingSubgraphCacheOverride) []core.Option {
 	return []core.Option{
 		core.WithEntityCaching(config.EntityCachingConfiguration{
 			Enabled: true,
 			L1: config.EntityCachingL1Configuration{
-				Enabled: true,
+				Enabled: false,
 			},
 			L2: config.EntityCachingL2Configuration{
 				Enabled: true,

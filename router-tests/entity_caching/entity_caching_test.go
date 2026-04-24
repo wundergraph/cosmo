@@ -1149,7 +1149,7 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("L1/deduplicates with warm L2", func(t *testing.T) {
+	t.Run("Combined/L1 deduplicates with warm L2", func(t *testing.T) {
 		t.Parallel()
 
 		servers, counters := startSubgraphServers(t)
@@ -2091,29 +2091,9 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	// request_scoped_nested_dedup asserts that @requestScoped coordinate L1 caching
-	// deduplicates across MULTIPLE nesting levels. Unlike request_scoped_widening_refetch
-	// (which tests the narrow-root / wide-@requires widening-miss scenario), this test
-	// holds the viewer selection CONSTANT at every site — {id, name, email} everywhere.
-	// The only variable is the number of nesting depths at which Article.currentViewer
-	// is selected inline.
-	//
-	// The query selects currentViewer at THREE sites with the same key "currentViewer":
-	//   1. Root: Query.currentViewer
-	//   2. Nested: recommendedArticles[].currentViewer
-	//   3. Deeply nested: recommendedArticles[].relatedArticles[].currentViewer
-	//
-	// All three sites ask for the same field set {id, name, email}. No @requires is
-	// involved (personalizedRecommendation is not selected), so widening is not a
-	// factor. With correct @requestScoped dedup, the viewer subgraph should be
-	// fetched EXACTLY ONCE — the second and third sites should read from the L1
-	// coordinate cache populated by the first.
-	//
-	// Currently expected to FAIL: the planner launches the BatchEntity viewer fetch
-	// for deeper Article.currentViewer sites in parallel with the L1 injection check,
-	// so additional HTTP calls are made even though @requestScoped would serve them.
-	// Reproduced from the cache explorer playground tool — the demo showed 3 viewer
-	// fetches for a query with 2 article nesting levels plus the root currentViewer.
+	// Exercise the same @requestScoped key at the root, nested Article.currentViewer,
+	// and relatedArticles.currentViewer sites. L1 should let the first fetch populate
+	// the coordinate cache so the viewer subgraph is fetched once.
 	t.Run("L1/request-scoped nested dedup", func(t *testing.T) {
 		t.Parallel()
 
