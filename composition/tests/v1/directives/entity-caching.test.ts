@@ -232,6 +232,7 @@ describe('Entity caching directive tests', () => {
             name: String!
           }
         `),
+        version,
       );
       expect(errors).toBeDefined();
       expect(errors!.some((e) => e.message.includes('negativeCacheTTL must be a non-negative integer'))).toBe(true);
@@ -480,6 +481,38 @@ describe('Entity caching directive tests', () => {
       ] satisfies RootFieldCacheConfig[]);
     });
 
+    test('config: nested auto-mapping is discarded when the field has an extra argument', () => {
+      const config = getConfigForType(
+        subgraph(`
+          type Query {
+            product(store: StoreKey!, filter: String): Product @openfed__queryCache(maxAge: 30)
+          }
+          type Product @key(fields: "store { id }") @openfed__entityCache(maxAge: 60) {
+            store: Store!
+            name: String!
+          }
+          type Store {
+            id: ID!
+          }
+          input StoreKey {
+            id: ID!
+          }
+        `),
+        QUERY,
+      );
+      expect(config).toBeDefined();
+      expect(config!.rootFieldCacheConfigurations).toStrictEqual([
+        {
+          fieldName: 'product',
+          maxAgeSeconds: 30,
+          includeHeaders: false,
+          shadowMode: false,
+          entityTypeName: 'Product',
+          entityKeyMappings: [],
+        },
+      ] satisfies RootFieldCacheConfig[]);
+    });
+
     test('config: composite @key with mixed auto and @openfed__is mapping', () => {
       const config = getConfigForType(
         subgraph(`
@@ -641,6 +674,93 @@ describe('Entity caching directive tests', () => {
             {
               entityTypeName: 'Product',
               fieldMappings: [{ entityKeyField: 'id', argumentPath: ['pid'] }],
+            },
+          ],
+        },
+      ] satisfies RootFieldCacheConfig[]);
+    });
+
+    test('config: @openfed__is can map scalar and composite keys on the same field', () => {
+      const config = getConfigForType(
+        subgraph(`
+          type Query {
+            product(
+              pid: ID! @openfed__is(fields: "id")
+              storeKey: ProductStoreKey! @openfed__is(fields: "store { id }")
+            ): Product @openfed__queryCache(maxAge: 30)
+          }
+          type Product @key(fields: "id") @key(fields: "store { id }") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            store: Store!
+            name: String!
+          }
+          type Store {
+            id: ID!
+          }
+          input ProductStoreKey {
+            store: StoreKey!
+          }
+          input StoreKey {
+            id: ID!
+          }
+        `),
+        QUERY,
+      );
+      expect(config).toBeDefined();
+      expect(config!.rootFieldCacheConfigurations).toStrictEqual([
+        {
+          fieldName: 'product',
+          maxAgeSeconds: 30,
+          includeHeaders: false,
+          shadowMode: false,
+          entityTypeName: 'Product',
+          entityKeyMappings: [
+            {
+              entityTypeName: 'Product',
+              fieldMappings: [{ entityKeyField: 'store.id', argumentPath: ['storeKey', 'store', 'id'] }],
+            },
+            {
+              entityTypeName: 'Product',
+              fieldMappings: [{ entityKeyField: 'id', argumentPath: ['pid'] }],
+            },
+          ],
+        },
+      ] satisfies RootFieldCacheConfig[]);
+    });
+
+    test('config: composite @openfed__is matches reordered flat @key fields', () => {
+      const config = getConfigForType(
+        subgraph(`
+          type Query {
+            product(key: ProductKey! @openfed__is(fields: "sku id")): Product @openfed__queryCache(maxAge: 30)
+          }
+          type Product @key(fields: "id sku") @openfed__entityCache(maxAge: 60) {
+            id: ID!
+            sku: String!
+            name: String!
+          }
+          input ProductKey {
+            sku: String!
+            id: ID!
+          }
+        `),
+        QUERY,
+      );
+      expect(config).toBeDefined();
+      expect(config!.rootFieldCacheConfigurations).toStrictEqual([
+        {
+          fieldName: 'product',
+          maxAgeSeconds: 30,
+          includeHeaders: false,
+          shadowMode: false,
+          entityTypeName: 'Product',
+          entityKeyMappings: [
+            {
+              entityTypeName: 'Product',
+              fieldMappings: [
+                { entityKeyField: 'id', argumentPath: ['key', 'id'] },
+                { entityKeyField: 'sku', argumentPath: ['key', 'sku'] },
+              ],
             },
           ],
         },

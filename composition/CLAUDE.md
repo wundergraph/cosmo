@@ -139,11 +139,15 @@ ALL fully-satisfiable keys are emitted as separate `EntityKeyMappingConfig` entr
 
 **Type checking:**
 
-- Auto-mapping compares named types (unwrapping NonNull).
+- Auto-mapping compares types strictly — named type, list shape, AND `NonNull` parity must all match.
   Mismatch → warning, mapping skipped.
-- Explicit `@openfed__is` compares strictly.
-  Mismatch → error.
-- Nullability differences are ignored (nullable arg can map to non-null key).
+  A nullable input cannot auto-map to a non-null key field because the cache key could not be formed from a null input.
+- Explicit `@openfed__is` compares named types and list shape strictly,
+  but nullability differences are tolerated (a nullable argument can target a non-null key field).
+  The user takes responsibility for handling null inputs.
+  Named-type or list-shape mismatch → error.
+- See `entity-cache-mapping-rules.test.ts` for canonical examples
+  (rule 15b: explicit nullable-arg lenient; rules 40/40b/40c: nested auto-mapping strict).
 
 **Nested key paths:**
 `@key(fields: "store { id }")` produces path `"store.id"`.

@@ -4397,6 +4397,7 @@ export class NormalizationFactory {
       isFieldValue: string;
       argumentInfo: (typeof argumentInfos)[0];
     }> = [];
+    const compositeMappings: EntityKeyMappingConfig[] = [];
     const mappedKeyFields = new Set<string>();
 
     for (const argInfo of argumentInfos) {
@@ -4410,7 +4411,18 @@ export class NormalizationFactory {
       const isCompositeIsSpec = isFieldValue.includes(LITERAL_SPACE);
 
       if (isCompositeIsSpec) {
-        return this.buildCompositeIsMapping(fieldCoords, entityTypeName, keyFieldSets, isListReturn, argInfo);
+        const errorCount = this.errors.length;
+        const mappings = this.buildCompositeIsMapping(fieldCoords, entityTypeName, keyFieldSets, isListReturn, argInfo);
+        if (this.errors.length > errorCount) {
+          return [];
+        }
+        for (const mapping of mappings) {
+          for (const fieldMapping of mapping.fieldMappings) {
+            mappedKeyFields.add(fieldMapping.entityKeyField);
+          }
+        }
+        compositeMappings.push(...mappings);
+        continue;
       }
 
       // Check if the field exists on the entity at all but is not a key field
@@ -4616,7 +4628,7 @@ export class NormalizationFactory {
     }
 
     if (explicitMappings.length === 0) {
-      return [];
+      return compositeMappings;
     }
 
     // Check for duplicate: argument name matches a key field that's already explicitly mapped
@@ -4829,7 +4841,7 @@ export class NormalizationFactory {
 
     // Each key remains its own EntityKeyMappingConfig — the router evaluates them
     // independently (OR semantics). Do NOT merge single-field results.
-    return results;
+    return [...compositeMappings, ...results];
   }
 
   buildCompositeIsMapping(
@@ -4846,10 +4858,12 @@ export class NormalizationFactory {
     },
   ): EntityKeyMappingConfig[] {
     const isFieldValue = argInfo.isFieldValue!;
+    const { documentNode } = safeParse('{' + isFieldValue + '}');
+    const normalizedIsFieldValue = documentNode ? getNormalizedFieldSet(documentNode) : isFieldValue;
 
     // Find the matching key
     for (const [normalizedFieldSet, keyData] of keyFieldSets) {
-      if (normalizedFieldSet !== isFieldValue) {
+      if (normalizedFieldSet !== normalizedIsFieldValue) {
         continue;
       }
 
@@ -4903,6 +4917,50 @@ export class NormalizationFactory {
       ]),
     );
     return [];
+  }
+
+  invalidateAutoMappingWithExtraArgument(
+    argumentInfos: Array<{ name: string }>,
+    allKeyFieldPaths: Set<string>,
+    mappedArgumentNames: Set<string>,
+    isListReturn: boolean,
+    fieldCoords: string,
+    entityTypeName: string,
+    argumentName: string | undefined,
+    keyField: string | undefined,
+    emitWarning: boolean = true,
+  ): boolean {
+    const extraArgs = argumentInfos.filter((a) => !allKeyFieldPaths.has(a.name) && !mappedArgumentNames.has(a.name));
+    if (extraArgs.length < 1 || !argumentName || !keyField) {
+      return false;
+    }
+    if (!emitWarning) {
+      return true;
+    }
+    if (isListReturn) {
+      this.warnings.push(
+        autoBatchAdditionalNonKeyArgumentWarning({
+          subgraphName: this.subgraphName,
+          fieldCoords,
+          argumentName,
+          keyField,
+          entityType: entityTypeName,
+          extraArgument: extraArgs[0].name,
+        }),
+      );
+    } else {
+      this.warnings.push(
+        autoMappingAdditionalNonKeyArgumentWarning({
+          subgraphName: this.subgraphName,
+          argumentName,
+          fieldCoords,
+          keyField,
+          entityType: entityTypeName,
+          extraArgument: extraArgs[0].name,
+        }),
+      );
+    }
+    return true;
   }
 
   buildAutoMappings(
@@ -4979,6 +5037,22 @@ export class NormalizationFactory {
             );
 
             if (fieldMappings) {
+              if (
+                this.invalidateAutoMappingWithExtraArgument(
+                  argumentInfos,
+                  allKeyFieldPaths,
+                  new Set([matchingArg.name]),
+                  isListReturn,
+                  fieldCoords,
+                  entityTypeName,
+                  matchingArg.name,
+                  fieldMappings[0]?.entityKeyField,
+                  false,
+                )
+              ) {
+                results.length = 0;
+                continue;
+              }
               results.push({ entityTypeName, fieldMappings });
             }
             // Whether it succeeded or failed, we handled this key
@@ -5130,30 +5204,18 @@ export class NormalizationFactory {
       }
 
       if (keyFullyMapped && fieldMappings.length > 0) {
-        if (extraArgs.length > 0 && firstMatchedArg && firstMatchedKeyField) {
-          if (isListReturn) {
-            this.warnings.push(
-              autoBatchAdditionalNonKeyArgumentWarning({
-                subgraphName: this.subgraphName,
-                fieldCoords,
-                argumentName: firstMatchedArg,
-                keyField: firstMatchedKeyField,
-                entityType: entityTypeName,
-                extraArgument: extraArgs[0].name,
-              }),
-            );
-          } else {
-            this.warnings.push(
-              autoMappingAdditionalNonKeyArgumentWarning({
-                subgraphName: this.subgraphName,
-                argumentName: firstMatchedArg,
-                fieldCoords,
-                keyField: firstMatchedKeyField,
-                entityType: entityTypeName,
-                extraArgument: extraArgs[0].name,
-              }),
-            );
-          }
+        if (
+          this.invalidateAutoMappingWithExtraArgument(
+            argumentInfos,
+            allKeyFieldPaths,
+            new Set(fieldMappings.map((m) => m.argumentPath[0])),
+            isListReturn,
+            fieldCoords,
+            entityTypeName,
+            firstMatchedArg,
+            firstMatchedKeyField,
+          )
+        ) {
           // Class (2) global invalidation: an extra non-key argument on a fully-mapped key
           // (list or singular return) must suppress auto-mapping across all @key alternatives,
           // including earlier accumulated nested-key results. A per-key `continue` would leave
