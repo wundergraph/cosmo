@@ -18,11 +18,13 @@ func TestArticleStoreNoRace(t *testing.T) {
 	t.Parallel()
 
 	store := newArticleStore()
-	deadline := time.Now().Add(100 * time.Millisecond)
+	start := make(chan struct{})
+	var deadline time.Time
 
 	var wg sync.WaitGroup
 	for w := range 4 {
 		wg.Go(func() {
+			<-start
 			for i := 0; time.Now().Before(deadline); i++ {
 				_ = store.create(
 					fmt.Sprintf("writer-%d-%d", w, i),
@@ -35,6 +37,7 @@ func TestArticleStoreNoRace(t *testing.T) {
 
 	for range 4 {
 		wg.Go(func() {
+			<-start
 			for time.Now().Before(deadline) {
 				_ = store.all()
 				_ = store.find("1")
@@ -46,12 +49,15 @@ func TestArticleStoreNoRace(t *testing.T) {
 
 	for range 2 {
 		wg.Go(func() {
+			<-start
 			for time.Now().Before(deadline) {
 				_ = store.update("1", "updated-title")
 			}
 		})
 	}
 
+	deadline = time.Now().Add(100 * time.Millisecond)
+	close(start)
 	wg.Wait()
 }
 
@@ -62,11 +68,13 @@ func TestListingStoreNoRace(t *testing.T) {
 	t.Parallel()
 
 	store := newListingStore()
-	deadline := time.Now().Add(100 * time.Millisecond)
+	start := make(chan struct{})
+	var deadline time.Time
 
 	var wg sync.WaitGroup
 	for range 4 {
 		wg.Go(func() {
+			<-start
 			for time.Now().Before(deadline) {
 				_ = store.all()
 				_ = store.get("s1", "WIDGET-01")
@@ -80,6 +88,7 @@ func TestListingStoreNoRace(t *testing.T) {
 	// shrinking-then-empty map while concurrent iteration happens in all().
 	for range 2 {
 		wg.Go(func() {
+			<-start
 			for time.Now().Before(deadline) {
 				_ = store.delete("s1", "WIDGET-01")
 				_ = store.delete("s1", "GADGET-02")
@@ -89,6 +98,8 @@ func TestListingStoreNoRace(t *testing.T) {
 		})
 	}
 
+	deadline = time.Now().Add(100 * time.Millisecond)
+	close(start)
 	wg.Wait()
 }
 
@@ -105,13 +116,15 @@ func TestResolverPathNoRace(t *testing.T) {
 	qry := &queryResolver{root}
 	vwr := &viewerResolver{root}
 	ctx := context.Background()
-	deadline := time.Now().Add(100 * time.Millisecond)
+	start := make(chan struct{})
+	var deadline time.Time
 
 	var wg sync.WaitGroup
 
 	// Writers: exercise every mutation resolver.
 	for w := range 4 {
 		wg.Go(func() {
+			<-start
 			for i := 0; time.Now().Before(deadline); i++ {
 				_, _ = mut.CreateArticle(
 					ctx,
@@ -129,6 +142,7 @@ func TestResolverPathNoRace(t *testing.T) {
 	viewer := &model.Viewer{ID: "v1"}
 	for range 8 {
 		wg.Go(func() {
+			<-start
 			for time.Now().Before(deadline) {
 				_, _ = qry.Article(ctx, "1")
 				_, _ = qry.Articles(ctx)
@@ -140,5 +154,7 @@ func TestResolverPathNoRace(t *testing.T) {
 		})
 	}
 
+	deadline = time.Now().Add(100 * time.Millisecond)
+	close(start)
 	wg.Wait()
 }

@@ -187,6 +187,9 @@ docker-build-minikube: docker-build-local
 demo-compose:
 	cd demo && $(MAKE) compose-cache
 
+DEMO_STARTUP_ATTEMPTS ?= 60
+DEMO_STARTUP_SLEEP ?= 0.5
+
 demo:
 	@echo "Composing subgraph schemas..."
 	cd demo && $(MAKE) compose-cache
@@ -197,9 +200,9 @@ demo:
 	pid=$$!; \
 	trap 'kill $$pid 2>/dev/null || true' EXIT INT TERM HUP; \
 	for p in 4012 4013 4014; do \
-		for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do \
+		for i in $$(seq 1 $(DEMO_STARTUP_ATTEMPTS)); do \
 			nc -z 127.0.0.1 $$p && break; \
-			sleep 0.5; \
+			sleep $(DEMO_STARTUP_SLEEP); \
 		done; \
 		nc -z 127.0.0.1 $$p || { echo "subgraph $$p did not start" >&2; exit 1; }; \
 	done; \

@@ -6,6 +6,7 @@ package subgraph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/cachegraph/subgraph/generated"
@@ -59,6 +60,9 @@ func (r *queryResolver) Listings(ctx context.Context) ([]*model.Listing, error) 
 
 // Venue is the resolver for the venue field.
 func (r *queryResolver) Venue(ctx context.Context, location model.VenueLocationKey) (*model.Venue, error) {
+	if location.Address == nil {
+		return nil, fmt.Errorf("location.address is required")
+	}
 	return venuesData[location.Address.ID], nil
 }
 
