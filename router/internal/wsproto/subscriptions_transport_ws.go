@@ -58,6 +58,7 @@ func (p *subscriptionsTransportWSProtocol) Initialize() (json.RawMessage, error)
 		return nil, fmt.Errorf("error reading connection_init: %w", err)
 	}
 	if msg.Type != subscriptionsTransportWSMessageTypeConnectionInit {
+		_ = p.Close(4401, "Unauthorized")
 		return nil, fmt.Errorf("first message should be %s, got %s", subscriptionsTransportWSMessageTypeConnectionInit, msg.Type)
 	}
 	if err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeConnectionAck}); err != nil {
@@ -79,7 +80,11 @@ func (p *subscriptionsTransportWSProtocol) ReadMessage() (*Message, error) {
 		messageType = MessageTypeSubscribe
 	case subscriptionsTransportWSMessageTypeStop:
 		messageType = MessageTypeComplete
+	case subscriptionsTransportWSMessageTypeConnectionInit:
+		_ = p.Close(4429, "Too many initialisation requests")
+		return nil, fmt.Errorf("duplicate connection_init")
 	default:
+		_ = p.Close(4400, "Invalid message type")
 		return nil, fmt.Errorf("unsupported message type %s", msg.Type)
 	}
 
@@ -108,7 +113,10 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLData(id string, data json
 }
 
 func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error {
-	// This protocol has errors inside an object, so we need to wrap it
+	// subscriptions-transport-ws reserves "error" for pre-execution failures,
+	// so runtime errors are delivered as a "data" frame with the errors inside
+	// the ExecutionResult. Callers decide whether to follow up with "complete"
+	// (for terminal errors) via Complete.
 	data, err := sjson.SetBytes([]byte(`{}`), "errors", errors)
 	if err != nil {
 		return fmt.Errorf("encoding JSON: %w", err)

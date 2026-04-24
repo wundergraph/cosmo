@@ -60,7 +60,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(config.HeaderRules{
@@ -89,7 +89,6 @@ func TestForwardHeaders(t *testing.T) {
 				Query: `query { headerValue(name:"Cookie") }`,
 			})
 			require.Equal(t, `{"data":{"headerValue":"allowed=allowed; allowed_as_well=allowed"}}`, res.Body)
-
 		})
 	})
 
@@ -98,7 +97,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(config.HeaderRules{
@@ -128,7 +127,6 @@ func TestForwardHeaders(t *testing.T) {
 				Query: `query { headerValue(name:"Cookie") }`,
 			})
 			require.Equal(t, `{"data":{"headerValue":"allowed=allowed; allowed_as_well=allowed"}}`, res.Body)
-
 		})
 	})
 
@@ -137,7 +135,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(config.HeaderRules{
@@ -167,7 +165,6 @@ func TestForwardHeaders(t *testing.T) {
 				Query: `query { headerValue(name:"Cookie") }`,
 			})
 			require.Equal(t, `{"data":{"headerValue":"allowed=allowed"}}`, res.Body)
-
 		})
 	})
 
@@ -184,7 +181,7 @@ func TestForwardHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -200,7 +197,6 @@ func TestForwardHeaders(t *testing.T) {
 						Query: `query { headerValue(name:"` + headerName + `") }`,
 					})
 					require.Equal(t, `{"data":{"headerValue":"`+headerValue+`"}}`, res.Body)
-
 				})
 			}
 		})
@@ -219,7 +215,12 @@ func TestForwardHeaders(t *testing.T) {
 								Name:      headerName,
 								ValueFrom: &config.CustomDynamicAttribute{
 									ContextField: contextField,
-								}}}}})}
+								},
+							},
+						},
+					},
+				}),
+			}
 		}
 		opNameHeader := "x-operation-info"
 
@@ -262,7 +263,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -289,16 +290,14 @@ func TestForwardHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			for _, c := range cases {
-				c := c
 				t.Run(c.testName, func(t *testing.T) {
-
 					header := http.Header{
 						c.headerName: []string{headerValue},
 					}
@@ -323,7 +322,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -333,13 +332,13 @@ func TestForwardHeaders(t *testing.T) {
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { headerValue(name:\"foo\", repeat:3) { value initialPayload }}","extensions":{"token":"123"}}`),
+				Payload: []byte(`{"query":"subscription { headerValue(name:\"foo\", repeat:3) { value extensions }}","extensions":{"token":"123"}}`),
 			})
 			require.NoError(t, err)
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"headerValue":{"value":"","initialPayload":{"extensions":{"token":"123"}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"headerValue":{"value":"","extensions":{"token":"123"}}}}`, string(msg.Payload))
 		})
 	})
 
@@ -357,7 +356,7 @@ func TestForwardHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -590,7 +589,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -609,7 +608,6 @@ func TestForwardRenamedHeaders(t *testing.T) {
 					})
 					log.Println(res.Body)
 					require.Equal(t, `{"data":{"headerValue":"`+headerValue+`"}}`, res.Body)
-
 				})
 			}
 		})
@@ -620,7 +618,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -647,7 +645,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -656,7 +654,6 @@ func TestForwardRenamedHeaders(t *testing.T) {
 			for _, c := range cases {
 				c := c
 				t.Run(c.testName, func(t *testing.T) {
-
 					header := http.Header{
 						c.headerName: []string{headerValue},
 					}
@@ -681,7 +678,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -691,13 +688,13 @@ func TestForwardRenamedHeaders(t *testing.T) {
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { headerValue(name:\"light\", repeat:3) { value initialPayload }}","extensions":{"token":"123"}}`),
+				Payload: []byte(`{"query":"subscription { headerValue(name:\"light\", repeat:3) { value extensions }}","extensions":{"token":"123"}}`),
 			})
 			require.NoError(t, err)
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"headerValue":{"value":"","initialPayload":{"extensions":{"token":"123"}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"headerValue":{"value":"","extensions":{"token":"123"}}}}`, string(msg.Payload))
 		})
 	})
 
@@ -715,7 +712,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -857,6 +854,5 @@ func TestForwardRenamedHeaders(t *testing.T) {
 				require.Equal(t, headerPayloadEntry.Data["val3"], value3)
 			})
 		})
-
 	})
 }
