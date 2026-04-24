@@ -23,8 +23,8 @@ import {
   FeatureFlagRouterExecutionConfigs,
   GRPCMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import Table from 'cli-table3';
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
+import { CLITable } from '../../../cli-table.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
@@ -219,10 +219,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (!result.success) {
-      const compositionErrorsTable = new Table({
+      const compositionErrorsTable = new CLITable({
         head: [pc.bold(pc.white('ERROR_MESSAGE'))],
         colWidths: [120],
-        wordWrap: true,
       });
 
       console.log(
@@ -237,10 +236,9 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (!options.suppressWarnings && result.warnings.length > 0) {
-      const compositionWarningsTable = new Table({
+      const compositionWarningsTable = new CLITable({
         head: [pc.bold(pc.white('WARNING_MESSAGE'))],
         colWidths: [120],
-        wordWrap: true,
       });
 
       console.log(pc.yellow(`The following warnings were produced while composing:`));
@@ -602,10 +600,9 @@ async function buildFeatureFlagsConfig(
     );
 
     if (!featureResult.success) {
-      const compositionErrorsTable = new Table({
+      const compositionErrorsTable = new CLITable({
         head: [pc.bold(pc.white('ERROR_MESSAGE'))],
         colWidths: [120],
-        wordWrap: true,
       });
 
       console.log(
@@ -623,10 +620,9 @@ async function buildFeatureFlagsConfig(
     }
 
     if (!options.suppressWarnings && featureResult.warnings.length > 0) {
-      const compositionWarningsTable = new Table({
+      const compositionWarningsTable = new CLITable({
         head: [pc.bold(pc.white('WARNING_MESSAGE'))],
         colWidths: [120],
-        wordWrap: true,
       });
 
       console.log(

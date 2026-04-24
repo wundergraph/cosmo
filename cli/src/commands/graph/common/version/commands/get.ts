@@ -1,7 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
-import Table from 'cli-table3';
+import { CLITable } from '../../../../../cli-table.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../../../core/types/types.js';
 
@@ -33,10 +33,8 @@ export default (opts: CommonGraphCommandOptions) => {
       program.error(message);
     }
 
-    const versionsTable = new Table({
+    const versionsTable = new CLITable({
       head: [pc.bold(pc.white('GRAPH NAME')), pc.bold(pc.white('NAMESPACE')), pc.bold(pc.white('VERSION'))],
-      wordWrap: true,
-      wrapOnWordBoundary: false,
     });
 
     versionsTable.push([name, response.graph.namespace, response.graph.routerCompatibilityVersion]);

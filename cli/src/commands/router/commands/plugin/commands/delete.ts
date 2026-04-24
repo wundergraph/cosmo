@@ -2,8 +2,8 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import inquirer from 'inquirer';
-import Table from 'cli-table3';
 import ora from 'ora';
+import { CLITable } from '../../../../../cli-table.js';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
 
@@ -57,7 +57,7 @@ export default (opts: BaseCommandOptions) => {
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
         spinner.fail(`The plugin subgraph "${name}" was deleted but with composition errors.`);
 
-        const compositionErrorsTable = new Table({
+        const compositionErrorsTable = new CLITable({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
@@ -65,7 +65,6 @@ export default (opts: BaseCommandOptions) => {
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
           colWidths: [30, 30, 30, 120],
-          wordWrap: true,
         });
 
         console.log(
@@ -95,14 +94,13 @@ export default (opts: BaseCommandOptions) => {
             `\n${pc.bold('Please check the errors below:')}`,
         );
 
-        const deploymentErrorsTable = new Table({
+        const deploymentErrorsTable = new CLITable({
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
           colWidths: [30, 30, 120],
-          wordWrap: true,
         });
 
         for (const deploymentError of resp.deploymentErrors) {
@@ -128,7 +126,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
-      const compositionWarningsTable = new Table({
+      const compositionWarningsTable = new CLITable({
         head: [
           pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
           pc.bold(pc.white('NAMESPACE')),
@@ -136,7 +134,6 @@ export default (opts: BaseCommandOptions) => {
           pc.bold(pc.white('WARNING_MESSAGE')),
         ],
         colWidths: [30, 30, 30, 120],
-        wordWrap: true,
       });
 
       console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));

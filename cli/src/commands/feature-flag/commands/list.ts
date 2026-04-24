@@ -2,9 +2,9 @@ import { writeFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
-import Table from 'cli-table3';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
+import { CLITable } from '../../../cli-table.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
@@ -60,7 +60,7 @@ export default (opts: BaseCommandOptions) => {
       return;
     }
 
-    const featureFlagsTable = new Table({
+    const featureFlagsTable = new CLITable({
       head: [
         pc.bold(pc.white('NAME')),
         pc.bold(pc.white('NAMESPACE')),
@@ -69,7 +69,6 @@ export default (opts: BaseCommandOptions) => {
         pc.bold(pc.white('UPDATED_AT')),
       ],
       colWidths: [20, 20, 30, 15, 30],
-      wordWrap: true,
     });
 
     for (const ff of resp.featureFlags) {
