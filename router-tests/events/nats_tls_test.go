@@ -222,6 +222,7 @@ func TestNATSTLSEvents(t *testing.T) {
 
 		clientErrCh := make(chan error, 1)
 		go func() { clientErrCh <- client.Run() }()
+		t.Cleanup(func() { _ = client.Close() })
 
 		xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
 		xEnv.WaitForTriggerCount(1, EventWaitTimeout)
@@ -360,9 +361,9 @@ func TestNATSTLSEvents(t *testing.T) {
 		// Test client uses nats:// + explicit Secure option to connect to the same server.
 		natsConn := connectInsecureTLSNATSClient(t, natsPlainURL(srv))
 
-		// Router uses the tls:// URL scheme; InsecureSkipCaVerification is required because the
-		// embedded server uses a self-signed cert not in the system trust store.
-		routerTLS := &config.NatsTLSConfiguration{InsecureSkipCaVerification: true}
+		// Router verifies the server certificate against the custom CA. No InsecureSkipVerify is
+		// needed here — the tls:// scheme enables TLS, and the CA file authenticates the server cert.
+		routerTLS := &config.NatsTLSConfiguration{CaFile: certs.CACertFile}
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
