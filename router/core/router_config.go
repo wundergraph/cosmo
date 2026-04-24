@@ -10,7 +10,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -105,12 +104,12 @@ type Config struct {
 	headerRules                     *config.HeaderRules
 	subgraphTransportOptions        *SubgraphTransportOptions
 	subgraphCircuitBreakerOptions   *SubgraphCircuitBreakerOptions
+	retryOptions                    *SubgraphRetryOptions
 	graphqlMetricsConfig            *GraphQLMetricsConfig
 	routerTrafficConfig             *config.RouterTrafficConfiguration
 	batchingConfig                  *BatchingConfig
 	fileUploadConfig                *config.FileUpload
 	accessController                *AccessController
-	retryOptions                    retrytransport.RetryOptions
 	redisClient                     rd.RDCloser
 	mcpServer                       *mcpserver.GraphQLSchemaServer
 	connectRPCServer                *connectrpc.Server
@@ -254,7 +253,7 @@ func (c *Config) Usage() map[string]any {
 		usage["file_upload_max_files"] = c.fileUploadConfig.MaxFiles
 	}
 	usage["access_controller"] = c.accessController != nil
-	usage["retry_options"] = c.retryOptions.Enabled
+	usage["retry_options"] = c.retryOptions.IsEnabled()
 	usage["development_mode"] = c.developmentMode
 	usage["access_logs"] = c.accessLogsConfig != nil
 	usage["localhost_fallback_inside_docker"] = c.localhostFallbackInsideDocker
