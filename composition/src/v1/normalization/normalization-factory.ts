@@ -820,11 +820,12 @@ export class NormalizationFactory {
     }
     if (isCost) {
       this.handleCostDirective({ data, directiveCoords, directiveNode, errorMessages });
-    } else if (isListSize && isField) {
-      this.handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages });
-    }
-    if (!isCost && !isListSize && isField) {
-      this.recordDirectiveWeightOnField({ data: data as FieldData, definitionData, directiveName, directiveNode });
+    } else if (isField) {
+      if (isListSize) {
+        this.handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages });
+      } else {
+        this.recordDirectiveWeightOnField({ data: data as FieldData, definitionData, directiveName, directiveNode });
+      }
     }
     if (duplicateArgumentNames.size > 0) {
       errorMessages.push(duplicateDirectiveArgumentDefinitionsErrorMessage([...duplicateArgumentNames]));
@@ -2594,8 +2595,7 @@ export class NormalizationFactory {
       }
       const fieldWeight = this.getOrCreateFieldWeight(typeName, data.name);
       // Accumulate across directive usages so that repeatable directives on the same
-      // field are charged once per usage. Each call to this method corresponds to a
-      // single directive usage, and within a call each `coords` is visited at most once.
+      // field are charged once per usage.
       const existingWeight = fieldWeight.directiveArgumentWeights.get(coords) ?? 0;
       fieldWeight.directiveArgumentWeights.set(coords, existingWeight + argWeight);
     }
