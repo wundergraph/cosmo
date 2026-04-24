@@ -42,7 +42,7 @@ export const Step1 = () => {
     mode: 'onChange',
     schema: onboardingSchema,
     defaultValues: {
-      channels: { slack: onboarding?.slack ?? false, email: onboarding?.email ?? false },
+      channels: onboarding,
     },
   });
 
@@ -74,10 +74,7 @@ export const Step1 = () => {
   });
 
   const onSubmit: SubmitHandler<OnboardingFormValues> = (data) => {
-    mutate({
-      slack: data.channels.slack,
-      email: data.channels.email,
-    });
+    mutate(data.channels);
   };
 
   useEffect(() => {
