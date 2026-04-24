@@ -1,6 +1,6 @@
 version: 1
 subgraphs:
   - name: products
-    routing_url: http://host.docker.internal:4011/graphql
+    routing_url: http://products:4001/graphql
     schema:
       file: ./subgraphs/products/schema.graphqls

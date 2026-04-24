@@ -3,8 +3,18 @@ name: cosmo-entity-caching-pre-release
 services:
   redis:
     image: redis:7-alpine
+
+  products:
+    image: oven/bun:1
+    working_dir: /work
+    command:
+      - sh
+      - -lc
+      - bun install && bun run start:products
     ports:
-      - '6379:6379'
+      - '4011:4001'
+    volumes:
+      - .:/work
 
   router:
     build:
@@ -19,6 +29,7 @@ services:
       - --config
       - /etc/cosmo/router.yaml
     depends_on:
+      - products
       - redis
     ports:
       - '3002:3002'

@@ -11,17 +11,18 @@ From this directory:
 ```bash
 cd docs/entity-caching/pre-release-testing
 make setup
-make compose
-make up
+make test
 ```
 
-Then open the router playground:
+`make test` composes the bundled graph, starts Redis, starts a tiny Bun/Pothos products subgraph, builds and starts the router from source, sends the same product query twice, and verifies the second request does not hit the products subgraph root resolver again.
+
+Then open the router playground and Cache Explorer:
 
 ```text
 http://localhost:3002/
 ```
 
-The default example includes SDL only. It proves local composition and starts the router, but GraphQL operations need real subgraphs behind the `routing_url` values. Replace the example SDL/routing URLs with your subgraphs before using the playground or Cache Explorer for end-to-end validation.
+The bundled example is fully runnable. After you try it, replace the example SDL/routing URLs with your own subgraphs.
 
 ## What To Edit
 
@@ -31,12 +32,14 @@ Edit [example/graph.yaml](example/graph.yaml) first:
 version: 1
 subgraphs:
   - name: products
-    routing_url: http://host.docker.internal:4011/graphql
+    routing_url: http://products:4001/graphql
     schema:
       file: ./subgraphs/products/schema.graphqls
 ```
 
-Then edit or replace the SDL files under [example/subgraphs](example/subgraphs). Keep the cache directive definitions in any subgraph SDL that uses them.
+The default `products` URL points at the bundled Bun subgraph in [example/subgraphs/products/server.js](example/subgraphs/products/server.js). The server uses Pothos with the federation plugin, while composition still reads [example/subgraphs/products/schema.graphqls](example/subgraphs/products/schema.graphqls) so the cache directives are explicit and easy to edit. To use your own subgraph, change `routing_url` and edit or replace the SDL files under [example/subgraphs](example/subgraphs). Keep the cache directive definitions in any subgraph SDL that uses them.
+
+The Pothos runtime schema is intentionally minimal. The cache directives are part of the SDL file consumed by local composition; the router does not need the subgraph runtime to expose those cache directives through `_service`.
 
 Use `host.docker.internal` when your subgraphs run on your host and the router runs in Docker. On Linux, the Docker Compose file already adds `host.docker.internal:host-gateway`.
 
@@ -45,10 +48,12 @@ Use `host.docker.internal` when your subgraphs run on your host and the router r
 ```bash
 make help          # show targets
 make setup         # enable Corepack and install repo dependencies
+make subgraph-deps # install Bun dependencies for the bundled example subgraph
 make compose       # compose example/graph.yaml into generated/config.json
 make check-config  # verify the generated router config contains cache metadata
 make up            # compose, then build and run router + Redis
 make up-detached   # same as up, but in the background
+make test          # run the self-contained smoke test
 make logs          # follow router logs
 make down          # stop router + Redis
 make clean         # remove generated config
@@ -65,9 +70,9 @@ pnpm tsx src/index.ts router compose \
 
 Do not use a released `wgc` binary for this pre-release test.
 
-## Router + Redis
+## Router + Redis + Bun Subgraph
 
-[docker-compose.yml](docker-compose.yml) builds the router from source and starts Redis:
+[docker-compose.yml](docker-compose.yml) builds the router from source and starts Redis plus the bundled products subgraph:
 
 ```bash
 make up
@@ -88,13 +93,19 @@ generated/config.json -> /etc/cosmo/config.json
 config/router.redis.yaml -> /etc/cosmo/router.yaml
 ```
 
+The products subgraph is exposed on your host at:
+
+```text
+http://localhost:4011/graphql
+http://localhost:4011/stats
+```
+
 ## Try It
 
-After your subgraphs are running and `example/graph.yaml` points at them:
+With the bundled subgraph:
 
 ```bash
-make compose
-make up
+make test
 ```
 
 Open `http://localhost:3002/`, run a query that returns a cacheable entity, then run it again. Use the Cache Explorer to compare cold-cache and warm-cache behavior.
@@ -109,6 +120,13 @@ query Product {
     name
   }
 }
+```
+
+After you replace the bundled subgraph with your own services:
+
+```bash
+make compose
+make up
 ```
 
 Useful request headers for comparison:
@@ -190,9 +208,13 @@ docker-compose.yml
 config/router.redis.yaml
 example/graph.yaml
 example/subgraphs/products/schema.graphqls
+example/subgraphs/products/server.js
+package.json
 scripts/setup-pr.sh
 scripts/compose.sh
 scripts/check-config.sh
+scripts/wait-router.sh
+scripts/smoke-test.sh
 generated/.gitignore
 ```
 
