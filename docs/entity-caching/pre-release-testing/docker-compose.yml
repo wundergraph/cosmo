@@ -1,0 +1,29 @@
+name: cosmo-entity-caching-pre-release
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+
+  router:
+    build:
+      context: ../../../router
+      dockerfile: Dockerfile
+      args:
+        VERSION: entity-caching-pr-2777-local
+        COMMIT: local
+        DATE: local
+    command:
+      - /router
+      - --config
+      - /etc/cosmo/router.yaml
+    depends_on:
+      - redis
+    ports:
+      - '3002:3002'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    volumes:
+      - ./config/router.redis.yaml:/etc/cosmo/router.yaml:ro
+      - ./generated/config.json:/etc/cosmo/config.json:ro
