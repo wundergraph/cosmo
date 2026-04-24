@@ -20,48 +20,12 @@ import { clsx } from 'clsx';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { useWorkspace } from '@/hooks/use-workspace';
 import Link from 'next/link';
+import { absoluteUrlValidator } from '@/lib/zod';
 
 export type SubgraphCheckExtensionsConfig = Omit<PlainMessage<ConfigureSubgraphCheckExtensionsRequest>, 'namespace'>;
 
 const validationSchema = z.object({
-  endpoint: z
-    .string()
-    .trim()
-    .superRefine((val, ctx) => {
-      if (!val) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Must be a valid absolute URL starting with https://',
-        });
-        return;
-      }
-
-      try {
-        const url = new URL(val); // Ensure that the value is a valid absolute URL
-        if (url.hostname === 'localhost') {
-          if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: 'Must be a valid absolute URL starting with http:// or https://',
-            });
-          }
-
-          return;
-        }
-
-        if (url.protocol !== 'https:') {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Must be a valid absolute URL starting with https://',
-          });
-        }
-      } catch {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Must be a valid absolute URL starting with https://',
-        });
-      }
-    }),
+  endpoint: absoluteUrlValidator,
   secretKey: z.string().trim().optional(),
   includeComposedSdl: z.boolean(),
   includeLintingIssues: z.boolean(),
