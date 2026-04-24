@@ -2556,6 +2556,11 @@ export class NormalizationFactory {
     directiveName,
     directiveNode,
   }: RecordDirectiveWeightOnFieldParams) {
+    // This method walks every argument defined on the directive and records a directive weight
+    // on the field only when all these conditions hold:
+    // 1. The argument of the directive has a cost weight assigned
+    // 2. The argument is non-null
+    // 3. The parent field is not the interface type.
     const typeName = data.renamedParentTypeName || data.originalParentTypeName;
     const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
     // Directive argument weights should only be recorded for concrete type fields.
@@ -2574,6 +2579,7 @@ export class NormalizationFactory {
     for (const [argName, argData] of definitionData.argumentTypeNodeByName) {
       const coords = `${directiveName}.${argName}`;
       const argWeight = this.costs.directiveArgumentWeights.get(coords);
+      // Bail if the argName argument does not have cost attached to it.
       if (argWeight === undefined) {
         continue;
       }
