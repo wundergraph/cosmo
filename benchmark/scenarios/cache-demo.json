@@ -15,7 +15,7 @@
       },
       "equivalenceModes": [
         "cache_enabled",
-        "cache_disabled"
+        "entity_cache_disabled"
       ]
     },
     {
@@ -37,7 +37,7 @@
       },
       "equivalenceModes": [
         "cache_enabled",
-        "cache_disabled"
+        "entity_cache_disabled"
       ]
     },
     {
@@ -58,7 +58,7 @@
       },
       "equivalenceModes": [
         "cache_enabled",
-        "cache_disabled"
+        "entity_cache_disabled"
       ]
     },
     {
@@ -80,7 +80,7 @@
       },
       "equivalenceModes": [
         "cache_enabled",
-        "cache_disabled"
+        "entity_cache_disabled"
       ]
     },
     {
@@ -105,7 +105,7 @@
       ],
       "equivalenceModes": [
         "cache_enabled",
-        "cache_disabled"
+        "entity_cache_disabled"
       ]
     },
     {
@@ -121,7 +121,7 @@
       },
       "equivalenceModes": [
         "cache_enabled",
-        "cache_disabled"
+        "entity_cache_disabled"
       ]
     },
     {
@@ -157,7 +157,7 @@
         "request_scoped_default",
         "request_scoped_l1_disabled",
         "cache_enabled",
-        "cache_disabled"
+        "entity_cache_disabled"
       ]
     }
   ]

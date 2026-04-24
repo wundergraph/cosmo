@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 export type Mode =
   | "cache_enabled"
-  | "cache_disabled"
+  | "entity_cache_disabled"
   | "request_scoped_default"
   | "request_scoped_l1_disabled";
 
@@ -113,14 +113,14 @@ export const AUTHORIZATION_BY_PROFILE: Record<AuthProfile, string> = {
 };
 
 const MODE_ORDER: Record<string, number> = {
-  cache_disabled: 0,
+  entity_cache_disabled: 0,
   cache_enabled: 1,
   request_scoped_l1_disabled: 2,
   request_scoped_default: 3,
 };
 
 const COMPARISON_PAIRS: Array<readonly [baselineMode: string, candidateMode: string]> = [
-  ["cache_disabled", "cache_enabled"],
+  ["entity_cache_disabled", "cache_enabled"],
   ["request_scoped_l1_disabled", "request_scoped_default"],
 ];
 
@@ -226,7 +226,7 @@ export function resolveHeaders(
     headers["X-WG-Cache-Key-Prefix"] = cacheKeyPrefix;
   }
 
-  if (mode === "cache_disabled") {
+  if (mode === "entity_cache_disabled") {
     headers["X-WG-Disable-Entity-Cache"] = "true";
   }
 

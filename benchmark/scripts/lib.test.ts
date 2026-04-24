@@ -140,7 +140,7 @@ test("parseDockerStatsSummary keeps the expected docker stats fields", () => {
 test("resolveHeaders enables trace so benchmark cache controls are honored", () => {
   const scenario = resolveScenario("article_simple");
 
-  expectHeaders(resolveHeaders(scenario, "cache_disabled", undefined, "bench-a"), {
+  expectHeaders(resolveHeaders(scenario, "entity_cache_disabled", undefined, "bench-a"), {
     "X-WG-Trace": "enable_predictable_debug_timings",
     "X-WG-Disable-Entity-Cache": "true",
     "X-WG-Cache-Key-Prefix": "bench-a",
@@ -484,10 +484,10 @@ test("buildSuiteSummary groups scenario variants and computes canonical mode com
     modeSummaries: [
       {
         scenario: "article_simple",
-        mode: "cache_disabled",
+        mode: "entity_cache_disabled",
         authProfile: null,
         fixturePath: "benchmark/fixtures/article_simple.response.json",
-        modePath: "/tmp/results/run-1/article_simple/cache_disabled",
+        modePath: "/tmp/results/run-1/article_simple/entity_cache_disabled",
         requests: 100,
         requestRate: 50,
         iterationCount: 100,
@@ -656,14 +656,14 @@ test("buildSuiteSummary groups scenario variants and computes canonical mode com
   assert.deepEqual(suite.scenarios[0], {
     scenario: "article_simple",
     authProfile: null,
-    modes: ["cache_disabled", "cache_enabled"],
+    modes: ["entity_cache_disabled", "cache_enabled"],
     summaries: [
       suite.scenarios[0]?.summaries[0],
       suite.scenarios[0]?.summaries[1],
     ],
     comparisons: [
       {
-        baselineMode: "cache_disabled",
+        baselineMode: "entity_cache_disabled",
         candidateMode: "cache_enabled",
         requestRateMultiplier: 10,
         latencyAvgImprovement: 20,

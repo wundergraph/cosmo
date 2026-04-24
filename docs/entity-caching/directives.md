@@ -379,12 +379,19 @@ During composition, the directives are:
 3. **Output** — cache configurations are serialized into the `DataSourceConfiguration` entries of the router execution config (one config per subgraph)
 4. **Stripped from federated schema** — like `@authenticated`, caching directives do not appear in the final federated/client schema. They are metadata for the router, not for clients.
 
-### Cross-Subgraph Behavior
+### Cross-subgraph TTL divergence
 
-When the same entity type is defined in multiple subgraphs with different `@openfed__entityCache` configurations:
-- Each subgraph's cache configuration applies independently to fetches routed to that subgraph
-- The router caches entity data per-subgraph, using the subgraph-specific TTL
-- Entity key format is consistent across subgraphs (derived from `@key` fields)
+Each subgraph declares its own `@openfed__entityCache(maxAge: N)` for an entity.
+The composed router configuration carries per-datasource TTL entries,
+and does not collapse matching entity type names into a single cache configuration.
+
+At runtime, the router uses the TTL from the datasource that produced the cache entry for that entity.
+In the cache demo, `demo/cachegraph` declares `Article @openfed__entityCache(maxAge: 120)`,
+while `demo/cachegraph-ext` declares `Article @openfed__entityCache(maxAge: 90)`.
+The composed `demo/config-cache-only.json` keeps those as separate `entityCacheConfigurations` entries.
+
+For a shared entity type fetched from multiple subgraphs, align `maxAge` values in SDL when possible.
+Different TTLs are valid, but they can produce surprising freshness skew across fields resolved by different subgraphs.
 
 ---
 
