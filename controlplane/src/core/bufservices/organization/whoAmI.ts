@@ -41,6 +41,7 @@ export function whoAmI(
       userEmail: authContext.userDisplayName,
       organizationName: organization.name,
       organizationSlug: organization.slug,
+      userEmail: authContext.userDisplayName,
     };
   });
 }
