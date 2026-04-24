@@ -212,6 +212,7 @@ import {
   type ConfigureDescriptionData,
   type EntityData,
   type EntityInterfaceSubgraphData,
+  type DirectiveDefinitionData,
   type EnumDefinitionData,
   type EnumValueData,
   ExtensionType,
@@ -378,6 +379,7 @@ import {
   type FieldSetParentResult,
   type HandleCostDirectiveParams,
   type HandleListSizeDirectiveParams,
+  type RecordDirectiveWeightOnFieldParams,
   type HandleOverrideDirectiveParams,
   type HandleRequiresScopesDirectiveParams,
   type HandleSemanticNonNullDirectiveParams,
@@ -732,7 +734,10 @@ export class NormalizationFactory {
       if (isAuthenticated) {
         this.handleAuthenticatedDirective(data, parentTypeName);
       }
-      if (isSemanticNonNull && isField) {
+      if (!isField) {
+        return errorMessages;
+      }
+      if (isSemanticNonNull) {
         // The default argument for levels is [0], so a non-null wrapper is invalid.
         if (isTypeRequired(data.type)) {
           errorMessages.push(
@@ -745,10 +750,13 @@ export class NormalizationFactory {
           data.nullLevelsBySubgraphName.set(this.subgraphName, new Set<number>([0]));
         }
       }
-      if (isListSize && isField && !isTypeNodeListType(data.type)) {
+      if (isListSize && !isTypeNodeListType(data.type)) {
         errorMessages.push(
           listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(directiveCoords, printTypeNode(data.type)),
         );
+      }
+      if (!isCost && !isListSize) {
+        this.recordDirectiveWeightOnField({ data: data as FieldData, definitionData, directiveName, directiveNode });
       }
       return errorMessages;
     }
@@ -812,8 +820,12 @@ export class NormalizationFactory {
     }
     if (isCost) {
       this.handleCostDirective({ data, directiveCoords, directiveNode, errorMessages });
-    } else if (isListSize && isField) {
-      this.handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages });
+    } else if (isField) {
+      if (isListSize) {
+        this.handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages });
+      } else {
+        this.recordDirectiveWeightOnField({ data: data as FieldData, definitionData, directiveName, directiveNode });
+      }
     }
     if (duplicateArgumentNames.size > 0) {
       errorMessages.push(duplicateDirectiveArgumentDefinitionsErrorMessage([...duplicateArgumentNames]));
@@ -2472,6 +2484,20 @@ export class NormalizationFactory {
     data.nullLevelsBySubgraphName.set(this.subgraphName, levels);
   }
 
+  getOrCreateFieldWeight(typeName: TypeName, fieldName: FieldName): FieldWeightConfiguration {
+    const fieldCoords = `${typeName}.${fieldName}`;
+    return getValueOrDefault(
+      this.costs.fieldWeights,
+      fieldCoords,
+      (): FieldWeightConfiguration => ({
+        typeName,
+        fieldName,
+        argumentWeights: new Map(),
+        directiveArgumentWeights: new Map(),
+      }),
+    );
+  }
+
   handleCostDirective({ data, directiveCoords, directiveNode, errorMessages }: HandleCostDirectiveParams) {
     const weightArg = directiveNode.arguments?.find((arg) => arg.name.value === WEIGHT);
     if (!weightArg || weightArg.value.kind !== Kind.INT) {
@@ -2495,16 +2521,7 @@ export class NormalizationFactory {
           errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
           break;
         }
-        const fieldCoords = `${typeName}.${data.name}`;
-        const fieldWeight = getValueOrDefault(
-          this.costs.fieldWeights,
-          fieldCoords,
-          (): FieldWeightConfiguration => ({
-            typeName,
-            fieldName: data.name,
-            argumentWeights: new Map(),
-          }),
-        );
+        const fieldWeight = this.getOrCreateFieldWeight(typeName, data.name);
         fieldWeight.weight = weightValue;
         break;
       }
@@ -2522,33 +2539,65 @@ export class NormalizationFactory {
             errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
             break;
           }
-          const parentFieldCoords = `${typeName}.${ivData.fieldName}`;
-          const fieldWeight = getValueOrDefault(
-            this.costs.fieldWeights,
-            parentFieldCoords,
-            (): FieldWeightConfiguration => ({
-              typeName,
-              fieldName: ivData.fieldName!,
-              argumentWeights: new Map(),
-            }),
-          );
+          const fieldWeight = this.getOrCreateFieldWeight(typeName, ivData.fieldName!);
           fieldWeight.argumentWeights.set(ivData.name, weightValue);
         } else {
           const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
-          const fieldCoords = `${typeName}.${ivData.name}`;
-          const fieldWeight = getValueOrDefault(
-            this.costs.fieldWeights,
-            fieldCoords,
-            (): FieldWeightConfiguration => ({
-              typeName,
-              fieldName: ivData.name,
-              argumentWeights: new Map(),
-            }),
-          );
+          const fieldWeight = this.getOrCreateFieldWeight(typeName, ivData.name);
           fieldWeight.weight = weightValue;
         }
         break;
       }
+    }
+  }
+
+  recordDirectiveWeightOnField({
+    data,
+    definitionData,
+    directiveName,
+    directiveNode,
+  }: RecordDirectiveWeightOnFieldParams) {
+    // This method walks every argument defined on the directive and records a directive weight
+    // on the field only when all these conditions hold:
+    // 1. The argument of the directive has a cost weight assigned
+    // 2. The argument is non-null
+    // 3. The parent type is not the interface type.
+    const typeName = data.renamedParentTypeName || data.originalParentTypeName;
+    const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
+    // Directive argument weights should only be recorded for concrete type fields.
+    if (!parentTypeData || parentTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+      return;
+    }
+
+    // Determine which arguments are non-null on this directive usage.
+    // Record the DirectiveArgument coords if its argument has an explicit non-null value or
+    // if it has a default value and was not explicitly set to null.
+    const suppliedArgNodeByName = new Map<string, ConstValueNode>();
+    for (const arg of directiveNode.arguments ?? []) {
+      suppliedArgNodeByName.set(arg.name.value, arg.value);
+    }
+
+    for (const [argName, argData] of definitionData.argumentTypeNodeByName) {
+      const coords = `${directiveName}.${argName}`;
+      const argWeight = this.costs.directiveArgumentWeights.get(coords);
+      // Bail if the argName argument does not have cost attached to it.
+      if (argWeight === undefined) {
+        continue;
+      }
+      // Check if this argument is non-null at the usage site:
+      const argNode = suppliedArgNodeByName.get(argName);
+      if (argNode) {
+        if (argNode.kind === Kind.NULL) {
+          continue;
+        }
+      } else if (!argData.defaultValue || argData.defaultValue.kind === Kind.NULL) {
+        continue;
+      }
+      const fieldWeight = this.getOrCreateFieldWeight(typeName, data.name);
+      // Accumulate across directive usages so that repeatable directives on the same
+      // field are charged once per usage.
+      const existingWeight = fieldWeight.directiveArgumentWeights.get(coords) ?? 0;
+      fieldWeight.directiveArgumentWeights.set(coords, existingWeight + argWeight);
     }
   }
 

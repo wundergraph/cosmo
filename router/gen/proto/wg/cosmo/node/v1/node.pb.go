@@ -1285,13 +1285,14 @@ func (x *CostConfiguration) GetDirectiveArgumentWeights() map[string]int32 {
 }
 
 type FieldWeightConfiguration struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	TypeName        string                 `protobuf:"bytes,1,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
-	FieldName       string                 `protobuf:"bytes,2,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
-	Weight          *int32                 `protobuf:"varint,3,opt,name=weight,proto3,oneof" json:"weight,omitempty"`
-	ArgumentWeights map[string]int32       `protobuf:"bytes,4,rep,name=argument_weights,json=argumentWeights,proto3" json:"argument_weights,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	TypeName                 string                 `protobuf:"bytes,1,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	FieldName                string                 `protobuf:"bytes,2,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	Weight                   *int32                 `protobuf:"varint,3,opt,name=weight,proto3,oneof" json:"weight,omitempty"`
+	ArgumentWeights          map[string]int32       `protobuf:"bytes,4,rep,name=argument_weights,json=argumentWeights,proto3" json:"argument_weights,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	DirectiveArgumentWeights map[string]int32       `protobuf:"bytes,5,rep,name=directive_argument_weights,json=directiveArgumentWeights,proto3" json:"directive_argument_weights,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *FieldWeightConfiguration) Reset() {
@@ -1348,6 +1349,13 @@ func (x *FieldWeightConfiguration) GetWeight() int32 {
 func (x *FieldWeightConfiguration) GetArgumentWeights() map[string]int32 {
 	if x != nil {
 		return x.ArgumentWeights
+	}
+	return nil
+}
+
+func (x *FieldWeightConfiguration) GetDirectiveArgumentWeights() map[string]int32 {
+	if x != nil {
+		return x.DirectiveArgumentWeights
 	}
 	return nil
 }
@@ -4695,14 +4703,18 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\x1aK\n" +
 	"\x1dDirectiveArgumentWeightsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xae\x02\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\x84\x04\n" +
 	"\x18FieldWeightConfiguration\x12\x1b\n" +
 	"\ttype_name\x18\x01 \x01(\tR\btypeName\x12\x1d\n" +
 	"\n" +
 	"field_name\x18\x02 \x01(\tR\tfieldName\x12\x1b\n" +
 	"\x06weight\x18\x03 \x01(\x05H\x00R\x06weight\x88\x01\x01\x12j\n" +
-	"\x10argument_weights\x18\x04 \x03(\v2?.wg.cosmo.node.v1.FieldWeightConfiguration.ArgumentWeightsEntryR\x0fargumentWeights\x1aB\n" +
+	"\x10argument_weights\x18\x04 \x03(\v2?.wg.cosmo.node.v1.FieldWeightConfiguration.ArgumentWeightsEntryR\x0fargumentWeights\x12\x86\x01\n" +
+	"\x1adirective_argument_weights\x18\x05 \x03(\v2H.wg.cosmo.node.v1.FieldWeightConfiguration.DirectiveArgumentWeightsEntryR\x18directiveArgumentWeights\x1aB\n" +
 	"\x14ArgumentWeightsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\x1aK\n" +
+	"\x1dDirectiveArgumentWeightsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\t\n" +
 	"\a_weight\"\xc8\x02\n" +
@@ -5018,7 +5030,7 @@ func file_wg_cosmo_node_v1_node_proto_rawDescGZIP() []byte {
 }
 
 var file_wg_cosmo_node_v1_node_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_wg_cosmo_node_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 73)
+var file_wg_cosmo_node_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 74)
 var file_wg_cosmo_node_v1_node_proto_goTypes = []any{
 	(ArgumentRenderConfiguration)(0),          // 0: wg.cosmo.node.v1.ArgumentRenderConfiguration
 	(ArgumentSource)(0),                       // 1: wg.cosmo.node.v1.ArgumentSource
@@ -5100,10 +5112,11 @@ var file_wg_cosmo_node_v1_node_proto_goTypes = []any{
 	nil,                                       // 77: wg.cosmo.node.v1.CostConfiguration.TypeWeightsEntry
 	nil,                                       // 78: wg.cosmo.node.v1.CostConfiguration.DirectiveArgumentWeightsEntry
 	nil,                                       // 79: wg.cosmo.node.v1.FieldWeightConfiguration.ArgumentWeightsEntry
-	nil,                                       // 80: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
-	(common.EnumStatusCode)(0),                // 81: wg.cosmo.common.EnumStatusCode
-	(common.GraphQLSubscriptionProtocol)(0),   // 82: wg.cosmo.common.GraphQLSubscriptionProtocol
-	(common.GraphQLWebsocketSubprotocol)(0),   // 83: wg.cosmo.common.GraphQLWebsocketSubprotocol
+	nil,                                       // 80: wg.cosmo.node.v1.FieldWeightConfiguration.DirectiveArgumentWeightsEntry
+	nil,                                       // 81: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
+	(common.EnumStatusCode)(0),                // 82: wg.cosmo.common.EnumStatusCode
+	(common.GraphQLSubscriptionProtocol)(0),   // 83: wg.cosmo.common.GraphQLSubscriptionProtocol
+	(common.GraphQLWebsocketSubprotocol)(0),   // 84: wg.cosmo.common.GraphQLWebsocketSubprotocol
 }
 var file_wg_cosmo_node_v1_node_proto_depIdxs = []int32{
 	75,  // 0: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.config_by_feature_flag_name:type_name -> wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.ConfigByFeatureFlagNameEntry
@@ -5112,7 +5125,7 @@ var file_wg_cosmo_node_v1_node_proto_depIdxs = []int32{
 	18,  // 3: wg.cosmo.node.v1.RouterConfig.engine_config:type_name -> wg.cosmo.node.v1.EngineConfiguration
 	8,   // 4: wg.cosmo.node.v1.RouterConfig.subgraphs:type_name -> wg.cosmo.node.v1.Subgraph
 	9,   // 5: wg.cosmo.node.v1.RouterConfig.feature_flag_configs:type_name -> wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs
-	81,  // 6: wg.cosmo.node.v1.Response.code:type_name -> wg.cosmo.common.EnumStatusCode
+	82,  // 6: wg.cosmo.node.v1.Response.code:type_name -> wg.cosmo.common.EnumStatusCode
 	15,  // 7: wg.cosmo.node.v1.RegistrationInfo.account_limits:type_name -> wg.cosmo.node.v1.AccountLimits
 	12,  // 8: wg.cosmo.node.v1.SelfRegisterResponse.response:type_name -> wg.cosmo.node.v1.Response
 	14,  // 9: wg.cosmo.node.v1.SelfRegisterResponse.registrationInfo:type_name -> wg.cosmo.node.v1.RegistrationInfo
@@ -5138,80 +5151,81 @@ var file_wg_cosmo_node_v1_node_proto_depIdxs = []int32{
 	77,  // 29: wg.cosmo.node.v1.CostConfiguration.type_weights:type_name -> wg.cosmo.node.v1.CostConfiguration.TypeWeightsEntry
 	78,  // 30: wg.cosmo.node.v1.CostConfiguration.directive_argument_weights:type_name -> wg.cosmo.node.v1.CostConfiguration.DirectiveArgumentWeightsEntry
 	79,  // 31: wg.cosmo.node.v1.FieldWeightConfiguration.argument_weights:type_name -> wg.cosmo.node.v1.FieldWeightConfiguration.ArgumentWeightsEntry
-	1,   // 32: wg.cosmo.node.v1.ArgumentConfiguration.source_type:type_name -> wg.cosmo.node.v1.ArgumentSource
-	24,  // 33: wg.cosmo.node.v1.AuthorizationConfiguration.required_or_scopes:type_name -> wg.cosmo.node.v1.Scopes
-	24,  // 34: wg.cosmo.node.v1.AuthorizationConfiguration.required_or_scopes_by_or:type_name -> wg.cosmo.node.v1.Scopes
-	23,  // 35: wg.cosmo.node.v1.FieldConfiguration.arguments_configuration:type_name -> wg.cosmo.node.v1.ArgumentConfiguration
-	25,  // 36: wg.cosmo.node.v1.FieldConfiguration.authorization_configuration:type_name -> wg.cosmo.node.v1.AuthorizationConfiguration
-	68,  // 37: wg.cosmo.node.v1.FieldConfiguration.subscription_filter_condition:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
-	29,  // 38: wg.cosmo.node.v1.FieldSetCondition.field_coordinates_path:type_name -> wg.cosmo.node.v1.FieldCoordinates
-	30,  // 39: wg.cosmo.node.v1.RequiredField.conditions:type_name -> wg.cosmo.node.v1.FieldSetCondition
-	58,  // 40: wg.cosmo.node.v1.FetchConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	7,   // 41: wg.cosmo.node.v1.FetchConfiguration.method:type_name -> wg.cosmo.node.v1.HTTPMethod
-	80,  // 42: wg.cosmo.node.v1.FetchConfiguration.header:type_name -> wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
-	58,  // 43: wg.cosmo.node.v1.FetchConfiguration.body:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	60,  // 44: wg.cosmo.node.v1.FetchConfiguration.query:type_name -> wg.cosmo.node.v1.URLQueryConfiguration
-	62,  // 45: wg.cosmo.node.v1.FetchConfiguration.mtls:type_name -> wg.cosmo.node.v1.MTLSConfiguration
-	58,  // 46: wg.cosmo.node.v1.FetchConfiguration.base_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	58,  // 47: wg.cosmo.node.v1.FetchConfiguration.path:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	58,  // 48: wg.cosmo.node.v1.FetchConfiguration.http_proxy_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	33,  // 49: wg.cosmo.node.v1.DataSourceCustom_GraphQL.fetch:type_name -> wg.cosmo.node.v1.FetchConfiguration
-	63,  // 50: wg.cosmo.node.v1.DataSourceCustom_GraphQL.subscription:type_name -> wg.cosmo.node.v1.GraphQLSubscriptionConfiguration
-	64,  // 51: wg.cosmo.node.v1.DataSourceCustom_GraphQL.federation:type_name -> wg.cosmo.node.v1.GraphQLFederationConfiguration
-	65,  // 52: wg.cosmo.node.v1.DataSourceCustom_GraphQL.upstream_schema:type_name -> wg.cosmo.node.v1.InternedString
-	66,  // 53: wg.cosmo.node.v1.DataSourceCustom_GraphQL.custom_scalar_type_fields:type_name -> wg.cosmo.node.v1.SingleTypeField
-	36,  // 54: wg.cosmo.node.v1.DataSourceCustom_GraphQL.grpc:type_name -> wg.cosmo.node.v1.GRPCConfiguration
-	40,  // 55: wg.cosmo.node.v1.GRPCConfiguration.mapping:type_name -> wg.cosmo.node.v1.GRPCMapping
-	38,  // 56: wg.cosmo.node.v1.GRPCConfiguration.plugin:type_name -> wg.cosmo.node.v1.PluginConfiguration
-	37,  // 57: wg.cosmo.node.v1.PluginConfiguration.image_reference:type_name -> wg.cosmo.node.v1.ImageReference
-	43,  // 58: wg.cosmo.node.v1.GRPCMapping.operation_mappings:type_name -> wg.cosmo.node.v1.OperationMapping
-	44,  // 59: wg.cosmo.node.v1.GRPCMapping.entity_mappings:type_name -> wg.cosmo.node.v1.EntityMapping
-	46,  // 60: wg.cosmo.node.v1.GRPCMapping.type_field_mappings:type_name -> wg.cosmo.node.v1.TypeFieldMapping
-	49,  // 61: wg.cosmo.node.v1.GRPCMapping.enum_mappings:type_name -> wg.cosmo.node.v1.EnumMapping
-	41,  // 62: wg.cosmo.node.v1.GRPCMapping.resolve_mappings:type_name -> wg.cosmo.node.v1.LookupMapping
-	3,   // 63: wg.cosmo.node.v1.LookupMapping.type:type_name -> wg.cosmo.node.v1.LookupType
-	42,  // 64: wg.cosmo.node.v1.LookupMapping.lookup_mapping:type_name -> wg.cosmo.node.v1.LookupFieldMapping
-	47,  // 65: wg.cosmo.node.v1.LookupFieldMapping.field_mapping:type_name -> wg.cosmo.node.v1.FieldMapping
-	4,   // 66: wg.cosmo.node.v1.OperationMapping.type:type_name -> wg.cosmo.node.v1.OperationType
-	45,  // 67: wg.cosmo.node.v1.EntityMapping.required_field_mappings:type_name -> wg.cosmo.node.v1.RequiredFieldMapping
-	47,  // 68: wg.cosmo.node.v1.RequiredFieldMapping.field_mapping:type_name -> wg.cosmo.node.v1.FieldMapping
-	47,  // 69: wg.cosmo.node.v1.TypeFieldMapping.field_mappings:type_name -> wg.cosmo.node.v1.FieldMapping
-	48,  // 70: wg.cosmo.node.v1.FieldMapping.argument_mappings:type_name -> wg.cosmo.node.v1.ArgumentMapping
-	50,  // 71: wg.cosmo.node.v1.EnumMapping.values:type_name -> wg.cosmo.node.v1.EnumValueMapping
-	55,  // 72: wg.cosmo.node.v1.NatsEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
-	51,  // 73: wg.cosmo.node.v1.NatsEventConfiguration.stream_configuration:type_name -> wg.cosmo.node.v1.NatsStreamConfiguration
-	55,  // 74: wg.cosmo.node.v1.KafkaEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
-	55,  // 75: wg.cosmo.node.v1.RedisEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
-	5,   // 76: wg.cosmo.node.v1.EngineEventConfiguration.type:type_name -> wg.cosmo.node.v1.EventType
-	52,  // 77: wg.cosmo.node.v1.DataSourceCustomEvents.nats:type_name -> wg.cosmo.node.v1.NatsEventConfiguration
-	53,  // 78: wg.cosmo.node.v1.DataSourceCustomEvents.kafka:type_name -> wg.cosmo.node.v1.KafkaEventConfiguration
-	54,  // 79: wg.cosmo.node.v1.DataSourceCustomEvents.redis:type_name -> wg.cosmo.node.v1.RedisEventConfiguration
-	58,  // 80: wg.cosmo.node.v1.DataSourceCustom_Static.data:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	6,   // 81: wg.cosmo.node.v1.ConfigurationVariable.kind:type_name -> wg.cosmo.node.v1.ConfigurationVariableKind
-	58,  // 82: wg.cosmo.node.v1.HTTPHeader.values:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	58,  // 83: wg.cosmo.node.v1.MTLSConfiguration.key:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	58,  // 84: wg.cosmo.node.v1.MTLSConfiguration.cert:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	58,  // 85: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	82,  // 86: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
-	83,  // 87: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.websocketSubprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
-	68,  // 88: wg.cosmo.node.v1.SubscriptionFilterCondition.and:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
-	67,  // 89: wg.cosmo.node.v1.SubscriptionFilterCondition.in:type_name -> wg.cosmo.node.v1.SubscriptionFieldCondition
-	68,  // 90: wg.cosmo.node.v1.SubscriptionFilterCondition.not:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
-	68,  // 91: wg.cosmo.node.v1.SubscriptionFilterCondition.or:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
-	70,  // 92: wg.cosmo.node.v1.CacheWarmerOperations.operations:type_name -> wg.cosmo.node.v1.Operation
-	71,  // 93: wg.cosmo.node.v1.Operation.request:type_name -> wg.cosmo.node.v1.OperationRequest
-	74,  // 94: wg.cosmo.node.v1.Operation.client:type_name -> wg.cosmo.node.v1.ClientInfo
-	72,  // 95: wg.cosmo.node.v1.OperationRequest.extensions:type_name -> wg.cosmo.node.v1.Extension
-	73,  // 96: wg.cosmo.node.v1.Extension.persisted_query:type_name -> wg.cosmo.node.v1.PersistedQuery
-	10,  // 97: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.ConfigByFeatureFlagNameEntry.value:type_name -> wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig
-	61,  // 98: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry.value:type_name -> wg.cosmo.node.v1.HTTPHeader
-	16,  // 99: wg.cosmo.node.v1.NodeService.SelfRegister:input_type -> wg.cosmo.node.v1.SelfRegisterRequest
-	17,  // 100: wg.cosmo.node.v1.NodeService.SelfRegister:output_type -> wg.cosmo.node.v1.SelfRegisterResponse
-	100, // [100:101] is the sub-list for method output_type
-	99,  // [99:100] is the sub-list for method input_type
-	99,  // [99:99] is the sub-list for extension type_name
-	99,  // [99:99] is the sub-list for extension extendee
-	0,   // [0:99] is the sub-list for field type_name
+	80,  // 32: wg.cosmo.node.v1.FieldWeightConfiguration.directive_argument_weights:type_name -> wg.cosmo.node.v1.FieldWeightConfiguration.DirectiveArgumentWeightsEntry
+	1,   // 33: wg.cosmo.node.v1.ArgumentConfiguration.source_type:type_name -> wg.cosmo.node.v1.ArgumentSource
+	24,  // 34: wg.cosmo.node.v1.AuthorizationConfiguration.required_or_scopes:type_name -> wg.cosmo.node.v1.Scopes
+	24,  // 35: wg.cosmo.node.v1.AuthorizationConfiguration.required_or_scopes_by_or:type_name -> wg.cosmo.node.v1.Scopes
+	23,  // 36: wg.cosmo.node.v1.FieldConfiguration.arguments_configuration:type_name -> wg.cosmo.node.v1.ArgumentConfiguration
+	25,  // 37: wg.cosmo.node.v1.FieldConfiguration.authorization_configuration:type_name -> wg.cosmo.node.v1.AuthorizationConfiguration
+	68,  // 38: wg.cosmo.node.v1.FieldConfiguration.subscription_filter_condition:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
+	29,  // 39: wg.cosmo.node.v1.FieldSetCondition.field_coordinates_path:type_name -> wg.cosmo.node.v1.FieldCoordinates
+	30,  // 40: wg.cosmo.node.v1.RequiredField.conditions:type_name -> wg.cosmo.node.v1.FieldSetCondition
+	58,  // 41: wg.cosmo.node.v1.FetchConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	7,   // 42: wg.cosmo.node.v1.FetchConfiguration.method:type_name -> wg.cosmo.node.v1.HTTPMethod
+	81,  // 43: wg.cosmo.node.v1.FetchConfiguration.header:type_name -> wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
+	58,  // 44: wg.cosmo.node.v1.FetchConfiguration.body:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	60,  // 45: wg.cosmo.node.v1.FetchConfiguration.query:type_name -> wg.cosmo.node.v1.URLQueryConfiguration
+	62,  // 46: wg.cosmo.node.v1.FetchConfiguration.mtls:type_name -> wg.cosmo.node.v1.MTLSConfiguration
+	58,  // 47: wg.cosmo.node.v1.FetchConfiguration.base_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	58,  // 48: wg.cosmo.node.v1.FetchConfiguration.path:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	58,  // 49: wg.cosmo.node.v1.FetchConfiguration.http_proxy_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	33,  // 50: wg.cosmo.node.v1.DataSourceCustom_GraphQL.fetch:type_name -> wg.cosmo.node.v1.FetchConfiguration
+	63,  // 51: wg.cosmo.node.v1.DataSourceCustom_GraphQL.subscription:type_name -> wg.cosmo.node.v1.GraphQLSubscriptionConfiguration
+	64,  // 52: wg.cosmo.node.v1.DataSourceCustom_GraphQL.federation:type_name -> wg.cosmo.node.v1.GraphQLFederationConfiguration
+	65,  // 53: wg.cosmo.node.v1.DataSourceCustom_GraphQL.upstream_schema:type_name -> wg.cosmo.node.v1.InternedString
+	66,  // 54: wg.cosmo.node.v1.DataSourceCustom_GraphQL.custom_scalar_type_fields:type_name -> wg.cosmo.node.v1.SingleTypeField
+	36,  // 55: wg.cosmo.node.v1.DataSourceCustom_GraphQL.grpc:type_name -> wg.cosmo.node.v1.GRPCConfiguration
+	40,  // 56: wg.cosmo.node.v1.GRPCConfiguration.mapping:type_name -> wg.cosmo.node.v1.GRPCMapping
+	38,  // 57: wg.cosmo.node.v1.GRPCConfiguration.plugin:type_name -> wg.cosmo.node.v1.PluginConfiguration
+	37,  // 58: wg.cosmo.node.v1.PluginConfiguration.image_reference:type_name -> wg.cosmo.node.v1.ImageReference
+	43,  // 59: wg.cosmo.node.v1.GRPCMapping.operation_mappings:type_name -> wg.cosmo.node.v1.OperationMapping
+	44,  // 60: wg.cosmo.node.v1.GRPCMapping.entity_mappings:type_name -> wg.cosmo.node.v1.EntityMapping
+	46,  // 61: wg.cosmo.node.v1.GRPCMapping.type_field_mappings:type_name -> wg.cosmo.node.v1.TypeFieldMapping
+	49,  // 62: wg.cosmo.node.v1.GRPCMapping.enum_mappings:type_name -> wg.cosmo.node.v1.EnumMapping
+	41,  // 63: wg.cosmo.node.v1.GRPCMapping.resolve_mappings:type_name -> wg.cosmo.node.v1.LookupMapping
+	3,   // 64: wg.cosmo.node.v1.LookupMapping.type:type_name -> wg.cosmo.node.v1.LookupType
+	42,  // 65: wg.cosmo.node.v1.LookupMapping.lookup_mapping:type_name -> wg.cosmo.node.v1.LookupFieldMapping
+	47,  // 66: wg.cosmo.node.v1.LookupFieldMapping.field_mapping:type_name -> wg.cosmo.node.v1.FieldMapping
+	4,   // 67: wg.cosmo.node.v1.OperationMapping.type:type_name -> wg.cosmo.node.v1.OperationType
+	45,  // 68: wg.cosmo.node.v1.EntityMapping.required_field_mappings:type_name -> wg.cosmo.node.v1.RequiredFieldMapping
+	47,  // 69: wg.cosmo.node.v1.RequiredFieldMapping.field_mapping:type_name -> wg.cosmo.node.v1.FieldMapping
+	47,  // 70: wg.cosmo.node.v1.TypeFieldMapping.field_mappings:type_name -> wg.cosmo.node.v1.FieldMapping
+	48,  // 71: wg.cosmo.node.v1.FieldMapping.argument_mappings:type_name -> wg.cosmo.node.v1.ArgumentMapping
+	50,  // 72: wg.cosmo.node.v1.EnumMapping.values:type_name -> wg.cosmo.node.v1.EnumValueMapping
+	55,  // 73: wg.cosmo.node.v1.NatsEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
+	51,  // 74: wg.cosmo.node.v1.NatsEventConfiguration.stream_configuration:type_name -> wg.cosmo.node.v1.NatsStreamConfiguration
+	55,  // 75: wg.cosmo.node.v1.KafkaEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
+	55,  // 76: wg.cosmo.node.v1.RedisEventConfiguration.engine_event_configuration:type_name -> wg.cosmo.node.v1.EngineEventConfiguration
+	5,   // 77: wg.cosmo.node.v1.EngineEventConfiguration.type:type_name -> wg.cosmo.node.v1.EventType
+	52,  // 78: wg.cosmo.node.v1.DataSourceCustomEvents.nats:type_name -> wg.cosmo.node.v1.NatsEventConfiguration
+	53,  // 79: wg.cosmo.node.v1.DataSourceCustomEvents.kafka:type_name -> wg.cosmo.node.v1.KafkaEventConfiguration
+	54,  // 80: wg.cosmo.node.v1.DataSourceCustomEvents.redis:type_name -> wg.cosmo.node.v1.RedisEventConfiguration
+	58,  // 81: wg.cosmo.node.v1.DataSourceCustom_Static.data:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	6,   // 82: wg.cosmo.node.v1.ConfigurationVariable.kind:type_name -> wg.cosmo.node.v1.ConfigurationVariableKind
+	58,  // 83: wg.cosmo.node.v1.HTTPHeader.values:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	58,  // 84: wg.cosmo.node.v1.MTLSConfiguration.key:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	58,  // 85: wg.cosmo.node.v1.MTLSConfiguration.cert:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	58,  // 86: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	83,  // 87: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
+	84,  // 88: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.websocketSubprotocol:type_name -> wg.cosmo.common.GraphQLWebsocketSubprotocol
+	68,  // 89: wg.cosmo.node.v1.SubscriptionFilterCondition.and:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
+	67,  // 90: wg.cosmo.node.v1.SubscriptionFilterCondition.in:type_name -> wg.cosmo.node.v1.SubscriptionFieldCondition
+	68,  // 91: wg.cosmo.node.v1.SubscriptionFilterCondition.not:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
+	68,  // 92: wg.cosmo.node.v1.SubscriptionFilterCondition.or:type_name -> wg.cosmo.node.v1.SubscriptionFilterCondition
+	70,  // 93: wg.cosmo.node.v1.CacheWarmerOperations.operations:type_name -> wg.cosmo.node.v1.Operation
+	71,  // 94: wg.cosmo.node.v1.Operation.request:type_name -> wg.cosmo.node.v1.OperationRequest
+	74,  // 95: wg.cosmo.node.v1.Operation.client:type_name -> wg.cosmo.node.v1.ClientInfo
+	72,  // 96: wg.cosmo.node.v1.OperationRequest.extensions:type_name -> wg.cosmo.node.v1.Extension
+	73,  // 97: wg.cosmo.node.v1.Extension.persisted_query:type_name -> wg.cosmo.node.v1.PersistedQuery
+	10,  // 98: wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.ConfigByFeatureFlagNameEntry.value:type_name -> wg.cosmo.node.v1.FeatureFlagRouterExecutionConfig
+	61,  // 99: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry.value:type_name -> wg.cosmo.node.v1.HTTPHeader
+	16,  // 100: wg.cosmo.node.v1.NodeService.SelfRegister:input_type -> wg.cosmo.node.v1.SelfRegisterRequest
+	17,  // 101: wg.cosmo.node.v1.NodeService.SelfRegister:output_type -> wg.cosmo.node.v1.SelfRegisterResponse
+	101, // [101:102] is the sub-list for method output_type
+	100, // [100:101] is the sub-list for method input_type
+	100, // [100:100] is the sub-list for extension type_name
+	100, // [100:100] is the sub-list for extension extendee
+	0,   // [0:100] is the sub-list for field type_name
 }
 
 func init() { file_wg_cosmo_node_v1_node_proto_init() }
@@ -5236,7 +5250,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wg_cosmo_node_v1_node_proto_rawDesc), len(file_wg_cosmo_node_v1_node_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   73,
+			NumMessages:   74,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

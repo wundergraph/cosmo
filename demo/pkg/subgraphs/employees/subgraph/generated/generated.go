@@ -1240,6 +1240,9 @@ directive @goField(
 
 directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
 
+# To demonstrate that cost can be applied to the argument of a directive
+directive @expensiveOp(applied: Boolean = true @cost(weight: 22)) on FIELD_DEFINITION
+
 type Query {
   employee(id: Int! @cost(weight: 2)): Employee @cost(weight: 5) @openfed__requireFetchReasons
   employeeAsList(id: Int!): [Employee]
@@ -1304,14 +1307,14 @@ interface Identifiable @openfed__requireFetchReasons {
 type Engineer implements RoleType {
   departments: [Department!]!
   title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
+  employees: [Employee!]! @goField(forceResolver: true) @expensiveOp
   engineerType: EngineerType!
 }
 
 type Marketer implements RoleType {
   departments: [Department!]!
   title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
+  employees: [Employee!]! @goField(forceResolver: true) @expensiveOp
 }
 
 enum OperationType {
@@ -1322,7 +1325,7 @@ enum OperationType {
 type Operator implements RoleType {
   departments: [Department!]!
   title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
+  employees: [Employee!]! @goField(forceResolver: true) @expensiveOp
   operatorType: [OperationType!]!
 }
 
