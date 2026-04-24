@@ -574,6 +574,44 @@ describe('@cost directive tests', () => {
       );
     });
 
+    test('that a repeatable directive applied multiple times on a field sums directiveArgumentWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        {
+          name: 'subgraph-repeatable-directive',
+          url: '',
+          definitions: parse(`
+          directive @myDirective(arg1: Int @cost(weight: 5)) repeatable on FIELD_DEFINITION
+          type Query {
+            field: String! @myDirective(arg1: 1) @myDirective(arg1: 2) @myDirective(arg1: 3)
+          }
+        `),
+        },
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(costs.fieldWeights.get('Query.field')).toEqual(
+        fieldWeight('Query', 'field', { directiveArgumentWeights: new Map([['myDirective.arg1', 15]]) }),
+      );
+    });
+
+    test('that a repeatable directive skips usages where the priced argument is null when summing', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        {
+          name: 'subgraph-repeatable-directive-with-null',
+          url: '',
+          definitions: parse(`
+          directive @myDirective(arg1: Int @cost(weight: 5)) repeatable on FIELD_DEFINITION
+          type Query {
+            field: String! @myDirective(arg1: 1) @myDirective(arg1: null) @myDirective(arg1: 3)
+          }
+        `),
+        },
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(costs.fieldWeights.get('Query.field')).toEqual(
+        fieldWeight('Query', 'field', { directiveArgumentWeights: new Map([['myDirective.arg1', 10]]) }),
+      );
+    });
+
     test('that costs without directive argument weights has empty directiveArgumentWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.directiveArgumentWeights.size).toBe(0);

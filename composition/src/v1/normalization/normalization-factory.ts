@@ -2560,7 +2560,7 @@ export class NormalizationFactory {
     // on the field only when all these conditions hold:
     // 1. The argument of the directive has a cost weight assigned
     // 2. The argument is non-null
-    // 3. The parent field is not the interface type.
+    // 3. The parent type is not the interface type.
     const typeName = data.renamedParentTypeName || data.originalParentTypeName;
     const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
     // Directive argument weights should only be recorded for concrete type fields.
@@ -2571,9 +2571,9 @@ export class NormalizationFactory {
     // Determine which arguments are non-null on this directive usage.
     // Record the DirectiveArgument coords if its argument has an explicit non-null value or
     // if it has a default value and was not explicitly set to null.
-    const requiredArgNodeByName = new Map<string, ConstValueNode>();
+    const suppliedArgNodeByName = new Map<string, ConstValueNode>();
     for (const arg of directiveNode.arguments ?? []) {
-      requiredArgNodeByName.set(arg.name.value, arg.value);
+      suppliedArgNodeByName.set(arg.name.value, arg.value);
     }
 
     for (const [argName, argData] of definitionData.argumentTypeNodeByName) {
@@ -2584,16 +2584,20 @@ export class NormalizationFactory {
         continue;
       }
       // Check if this argument is non-null at the usage site:
-      const requiredArgNode = requiredArgNodeByName.get(argName);
-      if (requiredArgNode) {
-        if (requiredArgNode.kind === Kind.NULL) {
+      const argNode = suppliedArgNodeByName.get(argName);
+      if (argNode) {
+        if (argNode.kind === Kind.NULL) {
           continue;
         }
       } else if (!argData.defaultValue || argData.defaultValue.kind === Kind.NULL) {
         continue;
       }
       const fieldWeight = this.getOrCreateFieldWeight(typeName, data.name);
-      fieldWeight.directiveArgumentWeights.set(coords, argWeight);
+      // Accumulate across directive usages so that repeatable directives on the same
+      // field are charged once per usage. Each call to this method corresponds to a
+      // single directive usage, and within a call each `coords` is visited at most once.
+      const existingWeight = fieldWeight.directiveArgumentWeights.get(coords) ?? 0;
+      fieldWeight.directiveArgumentWeights.set(coords, existingWeight + argWeight);
     }
   }
 
