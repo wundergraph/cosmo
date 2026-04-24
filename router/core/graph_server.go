@@ -629,15 +629,20 @@ func (s *graphServer) setupEntityCacheMetrics(baseAttributes []attribute.KeyValu
 		return nil
 	}
 
-	var err error
-	s.metrics.OTLPEntityCache, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.otlpMeterProvider)
-	if err != nil {
-		return fmt.Errorf("failed to create entity cache metrics for OTLP: %w", err)
+	if s.metricConfig.OpenTelemetry.EntityCachingStats {
+		var err error
+		s.metrics.OTLPEntityCache, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.otlpMeterProvider)
+		if err != nil {
+			return fmt.Errorf("failed to create entity cache metrics for OTLP: %w", err)
+		}
 	}
 
-	s.metrics.PromEntityCache, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.promMeterProvider)
-	if err != nil {
-		return fmt.Errorf("failed to create entity cache metrics for Prometheus: %w", err)
+	if s.metricConfig.Prometheus.EntityCachingStats {
+		var err error
+		s.metrics.PromEntityCache, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.promMeterProvider)
+		if err != nil {
+			return fmt.Errorf("failed to create entity cache metrics for Prometheus: %w", err)
+		}
 	}
 
 	return nil

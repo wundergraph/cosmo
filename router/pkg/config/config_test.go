@@ -12,6 +12,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/sebdah/goldie/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -995,6 +996,26 @@ version: "1"
 
 	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
 	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
+}
+
+func TestMetricEntityCachingStatsConfig(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+	c, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	assert.Equal(t, false, c.Config.Telemetry.Metrics.Prometheus.EntityCachingStats)
+	assert.Equal(t, false, c.Config.Telemetry.Metrics.OTLP.EntityCachingStats)
+
+	t.Setenv("PROMETHEUS_ENTITY_CACHING_STATS", "true")
+	t.Setenv("METRICS_OTLP_ENTITY_CACHING_STATS", "true")
+
+	c, err = LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	assert.Equal(t, true, c.Config.Telemetry.Metrics.Prometheus.EntityCachingStats)
+	assert.Equal(t, true, c.Config.Telemetry.Metrics.OTLP.EntityCachingStats)
 }
 
 func TestMatchAndNegateMatch(t *testing.T) {
