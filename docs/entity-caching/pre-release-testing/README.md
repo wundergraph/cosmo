@@ -70,9 +70,9 @@ http://localhost:3002/
 
 The bundled example is fully runnable. After you try it, replace the example SDL/routing URLs with your own subgraphs.
 
-## What To Edit
+## Add Your Own Subgraphs
 
-Edit [example/graph.yaml](example/graph.yaml) first:
+The kit composes subgraph SDL from [example/graph.yaml](example/graph.yaml). Start by replacing or extending the bundled `products` subgraph entry:
 
 ```yaml
 version: 1
@@ -83,11 +83,247 @@ subgraphs:
       file: ./subgraphs/products/schema.graphqls
 ```
 
-The default `products` URL points at the bundled Bun subgraph in [example/subgraphs/products/server.ts](example/subgraphs/products/server.ts). The server uses GraphQL Yoga with Bun's native `fetch` integration and loads the same [example/subgraphs/products/schema.graphqls](example/subgraphs/products/schema.graphqls) file that local composition uses. To use your own subgraph, change `routing_url` and edit or replace the SDL files under [example/subgraphs](example/subgraphs). Keep the cache directive definitions in any subgraph SDL that uses them.
+For each subgraph you want to test:
 
-The runtime adds only the minimal federation helper types (`_service`, `_entities`, `_Any`, `_Entity`) around that SDL file.
+1. Put the subgraph SDL under `example/subgraphs/<subgraph-name>/schema.graphqls`.
+2. Add a matching entry to `example/graph.yaml`.
+3. Set `routing_url` to the URL the router container can call.
+4. Add cache directives to your SDL.
+5. Run `make compose`.
+6. Run `make check-config`.
+7. Run `make up`.
 
-Use `host.docker.internal` when your subgraphs run on your host and the router runs in Docker. On Linux, the Docker Compose file already adds `host.docker.internal:host-gateway`.
+Use Docker-internal hostnames when your subgraphs run inside this Compose project. The bundled `products` subgraph uses `http://products:4001/graphql` because the Compose service is named `products`.
+
+Use `host.docker.internal` when your subgraphs run on your host and the router runs in Docker:
+
+```yaml
+version: 1
+subgraphs:
+  - name: accounts
+    routing_url: http://host.docker.internal:4101/graphql
+    schema:
+      file: ./subgraphs/accounts/schema.graphqls
+  - name: products
+    routing_url: http://host.docker.internal:4102/graphql
+    schema:
+      file: ./subgraphs/products/schema.graphqls
+```
+
+On Linux, the Docker Compose file already maps `host.docker.internal` to the host gateway.
+
+Keep the cache directive definitions in each subgraph SDL that uses them. Composition reads the SDL files directly, and your subgraph server must also accept those directives at runtime. If your GraphQL server rejects unknown directives, register the directive definitions or configure the server to ignore them.
+
+The bundled Bun server in [example/subgraphs/products/server.ts](example/subgraphs/products/server.ts) loads the same [example/subgraphs/products/schema.graphqls](example/subgraphs/products/schema.graphqls) file used by local composition. It adds only the minimal federation helper types (`_service`, `_entities`, `_Any`, `_Entity`) around that SDL file.
+
+## Configure Caching In SDL
+
+Add these directive definitions to any subgraph SDL that uses entity caching:
+
+```graphql
+directive @openfed__entityCache(
+  maxAge: Int!
+  negativeCacheTTL: Int = 0
+  includeHeaders: Boolean = false
+  partialCacheLoad: Boolean = false
+  shadowMode: Boolean = false
+) on OBJECT
+
+directive @openfed__queryCache(
+  maxAge: Int!
+  includeHeaders: Boolean = false
+  shadowMode: Boolean = false
+) on FIELD_DEFINITION
+
+directive @openfed__is(fields: String!) on ARGUMENT_DEFINITION
+
+directive @openfed__cacheInvalidate on FIELD_DEFINITION
+
+directive @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
+
+directive @openfed__requestScoped(key: String!) on FIELD_DEFINITION
+```
+
+Available directives:
+
+| Directive                   | Location                                | Purpose                                                                               |
+| --------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------- |
+| `@openfed__entityCache`     | Object type                             | Marks an entity type as cacheable by `@key`.                                          |
+| `@openfed__queryCache`      | Root `Query` field                      | Caches a root query that returns a cacheable entity or list of entities.              |
+| `@openfed__is`              | Query argument                          | Maps a query argument to an entity `@key` field when names do not match.              |
+| `@openfed__cacheInvalidate` | Root `Mutation` or `Subscription` field | Evicts the returned cacheable entity from L2 after the field resolves.                |
+| `@openfed__cachePopulate`   | Root `Mutation` or `Subscription` field | Writes the returned cacheable entity to L2 after the field resolves.                  |
+| `@openfed__requestScoped`   | Field definition                        | Deduplicates fields that resolve to the same request-scoped value within one request. |
+
+### `@openfed__entityCache`
+
+Use this on entity object types that have at least one federation `@key`.
+
+```graphql
+type Product @key(fields: "id") @openfed__entityCache(maxAge: 120, partialCacheLoad: true) {
+  id: ID!
+  name: String!
+}
+```
+
+Arguments:
+
+| Argument           | Required | Default | Use it for                                                                                                       |
+| ------------------ | -------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `maxAge`           | yes      | none    | Entity TTL in seconds. Must be greater than zero.                                                                |
+| `negativeCacheTTL` | no       | `0`     | Cache null entity results for a short time. Use this to avoid repeated lookups for missing entities.             |
+| `includeHeaders`   | no       | `false` | Include forwarded request headers in the cache key. Use this for tenant-, auth-, or locale-specific entity data. |
+| `partialCacheLoad` | no       | `false` | For batch entity fetches, fetch only missing entities instead of refetching the full batch after one miss.       |
+| `shadowMode`       | no       | `false` | Read and write cache metadata without serving cached data. Use this before turning cache serving on.             |
+
+### `@openfed__queryCache`
+
+Use this on root `Query` fields that return an entity or a list of entities. The returned entity type must also have `@openfed__entityCache`.
+
+```graphql
+type Query {
+  product(id: ID!): Product @openfed__queryCache(maxAge: 120)
+  products(ids: [ID!]! @openfed__is(fields: "id")): [Product!]! @openfed__queryCache(maxAge: 120)
+}
+```
+
+Arguments:
+
+| Argument         | Required | Default | Use it for                                                               |
+| ---------------- | -------- | ------- | ------------------------------------------------------------------------ |
+| `maxAge`         | yes      | none    | Root query result TTL in seconds. Must be greater than zero.             |
+| `includeHeaders` | no       | `false` | Include forwarded request headers in the cache key for this query field. |
+| `shadowMode`     | no       | `false` | Exercise reads and writes without serving cached data.                   |
+
+When a query argument has the same name as a key field, composition maps it automatically:
+
+```graphql
+type Product @key(fields: "id") @openfed__entityCache(maxAge: 120) {
+  id: ID!
+  name: String!
+}
+
+type Query {
+  product(id: ID!): Product @openfed__queryCache(maxAge: 120)
+}
+```
+
+When the argument name differs from the key field, add `@openfed__is` to the argument:
+
+```graphql
+type Product @key(fields: "sku") @openfed__entityCache(maxAge: 120) {
+  sku: String!
+  name: String!
+}
+
+type Query {
+  productBySku(productSku: String! @openfed__is(fields: "sku")): Product @openfed__queryCache(maxAge: 120)
+}
+```
+
+For composite or nested keys, map the argument to the same field set shape used by `@key`:
+
+```graphql
+type Warehouse @key(fields: "location { id }") @openfed__entityCache(maxAge: 120) {
+  location: Location!
+  name: String!
+}
+
+type Query {
+  warehouse(input: WarehouseInput! @openfed__is(fields: "location { id }")): Warehouse @openfed__queryCache(maxAge: 120)
+}
+```
+
+### `@openfed__cacheInvalidate`
+
+Use this on root `Mutation` or `Subscription` fields that return a cacheable entity. After the field resolves, the router evicts the returned entity from L2.
+
+```graphql
+type Mutation {
+  updateProduct(id: ID!, name: String!): Product @openfed__cacheInvalidate
+}
+
+type Subscription {
+  productDeleted: Product @openfed__cacheInvalidate
+}
+```
+
+### `@openfed__cachePopulate`
+
+Use this on root `Mutation` or `Subscription` fields that return a cacheable entity. After the field resolves, the router writes the returned entity to L2.
+
+```graphql
+type Mutation {
+  upsertProduct(id: ID!, name: String!): Product @openfed__cachePopulate(maxAge: 60)
+}
+
+type Subscription {
+  productChanged: Product @openfed__cachePopulate
+}
+```
+
+`maxAge` is optional. When you omit it, the router uses the TTL from the returned entity type's `@openfed__entityCache`.
+
+Do not put both `@openfed__cacheInvalidate` and `@openfed__cachePopulate` on the same field.
+
+### `@openfed__requestScoped`
+
+Use this on two or more fields in the same subgraph that resolve to the same value within a single request. This is a per-request L1 cache only; it does not write to Redis and it does not survive across requests.
+
+```graphql
+type Query {
+  currentViewer: Viewer @openfed__requestScoped(key: "currentViewer")
+}
+
+type Personalized @key(fields: "id") @interfaceObject {
+  id: ID!
+  currentViewer: Viewer @inaccessible @openfed__requestScoped(key: "currentViewer")
+}
+```
+
+Fields with the same `key` share one request-local cache entry scoped to the subgraph. The first field that resolves populates the entry, and later fields with the same key can reuse it.
+
+Use it for values like current viewer, current tenant, locale, feature flags, or other data that is identical throughout one request. Do not use it for values that depend on the parent entity; use entity caching for that.
+
+### Minimal Cacheable Entity Example
+
+```graphql
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key"])
+
+directive @openfed__entityCache(
+  maxAge: Int!
+  negativeCacheTTL: Int = 0
+  includeHeaders: Boolean = false
+  partialCacheLoad: Boolean = false
+  shadowMode: Boolean = false
+) on OBJECT
+
+directive @openfed__queryCache(
+  maxAge: Int!
+  includeHeaders: Boolean = false
+  shadowMode: Boolean = false
+) on FIELD_DEFINITION
+directive @openfed__is(fields: String!) on ARGUMENT_DEFINITION
+directive @openfed__cacheInvalidate on FIELD_DEFINITION
+directive @openfed__cachePopulate(maxAge: Int) on FIELD_DEFINITION
+directive @openfed__requestScoped(key: String!) on FIELD_DEFINITION
+
+type Query {
+  product(id: ID!): Product @openfed__queryCache(maxAge: 120)
+  productBySku(productSku: String! @openfed__is(fields: "sku")): Product @openfed__queryCache(maxAge: 120)
+}
+
+type Mutation {
+  updateProduct(id: ID!, name: String!): Product @openfed__cacheInvalidate
+  upsertProduct(id: ID!, sku: String!, name: String!): Product @openfed__cachePopulate(maxAge: 60)
+}
+
+type Product @key(fields: "id") @key(fields: "sku") @openfed__entityCache(maxAge: 120) {
+  id: ID!
+  sku: String!
+  name: String!
+}
+```
 
 ## Make Targets
 
@@ -235,29 +471,3 @@ Use routing URLs that are valid from inside the router container. For host-runni
 ### Header-varying cache entries collide
 
 Confirm `includeHeaders: true` is on the relevant directive and the router YAML forwards the header to that subgraph.
-
-## Files
-
-```text
-README.md
-Makefile
-docker-compose.yml
-config/router.redis.yaml
-example/graph.yaml
-example/subgraphs/products/schema.graphqls
-example/subgraphs/products/server.ts
-package.json
-scripts/setup-pr.sh
-scripts/compose.sh
-scripts/check-config.sh
-scripts/wait-router.sh
-scripts/smoke-test.sh
-generated/.gitignore
-```
-
-## Source References
-
-- PR image tags are produced by the router PR workflow and build-push action: `../../../.github/workflows/router-ci.yaml:450`, `../../../.github/actions/build-push-image/action.yaml:55`, `../../../.github/actions/build-push-image/action.yaml:61`.
-- Local composition command: `../../../cli/src/commands/router/commands/compose.ts:167`, `../../../cli/src/commands/router/commands/compose.ts:190`, `../../../cli/src/commands/router/commands/compose.ts:200`, `../../../cli/src/commands/router/commands/compose.ts:271`.
-- Router YAML schema for entity caching: `../../../router/pkg/config/config.go:1046`.
-- Per-request cache-control headers: `../../../router/core/graphql_handler.go:588`, `../../../router/core/graphql_handler.go:594`.
