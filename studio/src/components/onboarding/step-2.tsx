@@ -49,13 +49,13 @@ const StatusIcon = ({ status }: { status: 'pending' | 'ok' | 'fail' | 'error' })
     case 'pending':
       return (
         <span className="relative -mt-[1px] flex size-6 shrink-0 items-center justify-center">
-          <span className="absolute inline-flex size-3 animate-ping rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex size-3 rounded-full bg-green-500" />
+          <span className="absolute inline-flex size-3 animate-ping rounded-full bg-success opacity-75" />
+          <span className="relative inline-flex size-3 rounded-full bg-success" />
         </span>
       );
     case 'ok':
       return (
-        <span className="-mt-[1px] flex size-6 shrink-0 items-center justify-center text-green-600 dark:text-green-400">
+        <span className="-mt-[1px] flex size-6 shrink-0 items-center justify-center text-success">
           <CheckCircledIcon className="size-5" />
         </span>
       );
@@ -81,7 +81,7 @@ const StatusText = ({ status, onRetry }: { status: 'pending' | 'ok' | 'fail' | '
       );
     case 'ok':
       return (
-        <span className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400">
+        <span className="flex items-center gap-1.5 text-sm text-success">
           Supergraph composed from the <span className="font-medium">products</span> and{' '}
           <span className="font-medium">reviews</span> subgraphs.
           <Tooltip>

@@ -7,13 +7,13 @@ export const StatusIcon = ({ status }: { status: OnboardingStatus }) => {
     case 'pending':
       return (
         <span className="relative -mt-[1px] flex size-6 shrink-0 items-center justify-center">
-          <span className="absolute inline-flex size-3 animate-ping rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex size-3 rounded-full bg-green-500" />
+          <span className="absolute inline-flex size-3 animate-ping rounded-full bg-success opacity-75" />
+          <span className="relative inline-flex size-3 rounded-full bg-success" />
         </span>
       );
     case 'ok':
       return (
-        <span className="-mt-[1px] flex size-6 shrink-0 items-center justify-center text-green-600 dark:text-green-400">
+        <span className="-mt-[1px] flex size-6 shrink-0 items-center justify-center text-success">
           <CheckCircledIcon className="size-5" />
         </span>
       );

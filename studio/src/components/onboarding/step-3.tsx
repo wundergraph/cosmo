@@ -101,11 +101,7 @@ const MetricsStatusText = ({ status, onRetry }: { status: OnboardingStatus; onRe
         </p>
       );
     case 'ok':
-      return (
-        <span className="text-sm text-green-600 dark:text-green-400">
-          Metrics received — your graph is reporting live traffic.
-        </span>
-      );
+      return <span className="text-sm text-success">Metrics received — your graph is reporting live traffic.</span>;
     case 'error':
     case 'fail':
       return (
@@ -256,15 +252,15 @@ export const Step3 = () => {
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold">Start the router</p>
                     {hasActiveRouter ? (
-                      <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                      <span className="flex items-center gap-1.5 text-xs text-success">
                         <CheckCircledIcon className="size-3.5" />
                         Connected
                       </span>
                     ) : routerPolling ? (
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <span className="relative flex size-3.5 items-center justify-center">
-                          <span className="absolute inline-flex size-2 animate-ping rounded-full bg-green-400 opacity-75" />
-                          <span className="relative inline-flex size-2 rounded-full bg-green-500" />
+                          <span className="absolute inline-flex size-2 animate-ping rounded-full bg-success opacity-75" />
+                          <span className="relative inline-flex size-2 rounded-full bg-success" />
                         </span>
                         Waiting…
                       </span>
