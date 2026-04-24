@@ -3,6 +3,7 @@ import {
   COST,
   costOnInterfaceFieldErrorMessage,
   type FieldName,
+  type FieldWeightConfiguration,
   FIRST_ORDINAL,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
@@ -22,7 +23,11 @@ import {
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 
-function fieldWeight(typeName: TypeName, fieldName: FieldName, overrides: Record<string, unknown> = {}) {
+function fieldWeight(
+  typeName: TypeName,
+  fieldName: FieldName,
+  overrides: Record<string, unknown> = {},
+): FieldWeightConfiguration {
   return {
     typeName,
     fieldName,

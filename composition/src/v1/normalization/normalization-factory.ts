@@ -2561,7 +2561,7 @@ export class NormalizationFactory {
     // on the field only when all these conditions hold:
     // 1. The argument of the directive has a cost weight assigned
     // 2. The argument is non-null
-    // 3. The parent type is not the interface type.
+    // 3. The parent type is not an interface type.
     const typeName = data.renamedParentTypeName || data.originalParentTypeName;
     const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
     // Directive argument weights should only be recorded for concrete type fields.
