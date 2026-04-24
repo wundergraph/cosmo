@@ -20,7 +20,7 @@ The operations file might be one of the following formats:
 - An [Apollo operation manifest](https://www.apollographql.com/docs/kotlin/advanced/persisted-queries/#1-generate-operation-manifest)
 - A [Relay Query Map](https://relay.dev/docs/guides/persisted-queries/)
 
-The operations are validated against the graph schema before registering them. If any of the operations is invalid, no operations will be registered.
+Each operation is validated against the base graph schema and all enabled [feature flag](/router/feature-flags) composition schemas. An operation is accepted if it is valid on at least one schema. If any operation is invalid on all schemas, the entire push is rejected.
 
 ### Options
 

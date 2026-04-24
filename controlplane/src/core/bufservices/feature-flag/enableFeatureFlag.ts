@@ -14,6 +14,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -139,6 +140,21 @@ export function enableFeatureFlag(
       deploymentErrors.push(...composition.deploymentErrors);
       compositionWarnings.push(...composition.compositionWarnings);
     });
+
+    // Regenerate PQL manifests for affected graphs so that FF-only operations
+    // are included/excluded based on the feature flag's new enabled state.
+    for (const graph of federatedGraphs) {
+      const opsRepo = new OperationsRepository(opts.db, graph.id);
+      try {
+        await opsRepo.generateAndUploadManifest({
+          organizationId: authContext.organizationId,
+          blobStorage: opts.blobStorage,
+          logger,
+        });
+      } catch (e) {
+        logger.error(e, `Failed to regenerate PQL manifest for graph ${graph.name}`);
+      }
+    }
 
     for (const graph of federatedGraphs) {
       orgWebhooks.send(

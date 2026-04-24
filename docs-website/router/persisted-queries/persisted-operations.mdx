@@ -19,6 +19,8 @@ This not only saves bandwidth but can also help reduce the attack surface by all
 
 Persisted operations are usually registered within Cosmo during your release pipeline, which pushes them to the control plane. This allows you to use GraphQL queries without previously registering them in development while allowing only trusted operations in production.
 
+Each operation is validated against the base graph schema and all enabled [feature flag](/router/feature-flags) composition schemas. An operation is accepted if it is valid on at least one schema. This allows you to persist operations that use fields introduced by a feature flag subgraph.
+
 The control plane replicates these operations in the Cosmo CDN, where the routers can fetch them. All operations in the CDN are protected and only readable by routers running the federated graph to which the operations were registered.
 
 ## Using persisted operations
@@ -127,6 +129,8 @@ persisted_operations:
 ```
 
 The manifest is automatically updated in the Cosmo CDN whenever operations are added or deleted via `wgc operations push` or Studio. The router polls for updates using `poll_interval` and `poll_jitter`, picking up changes without requiring a restart. You can also load the manifest from a custom [storage provider](#using-a-custom-storage-provider).
+
+The manifest is also regenerated when a [feature flag](/router/feature-flags#persisted-operations) is enabled, disabled, or deleted. Operations that are only valid on a feature flag schema are included in the manifest while that flag is enabled and removed when it is disabled.
 
 <Note>
   When the manifest is enabled, it is **authoritative** — the router does not fall back to fetching individual operations from the CDN. Unknown operation hashes are rejected immediately.
