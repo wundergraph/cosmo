@@ -83,6 +83,9 @@ import { migrateMonograph } from './monograph/migrateMonograph.js';
 import { moveMonograph } from './monograph/moveMonograph.js';
 import { publishMonograph } from './monograph/publishMonograph.js';
 import { updateMonograph } from './monograph/updateMonograph.js';
+import { createOnboarding } from './onboarding/createOnboarding.js';
+import { finishOnboarding } from './onboarding/finishOnboarding.js';
+import { getOnboarding } from './onboarding/getOnboarding.js';
 import { createNamespace } from './namespace/createNamespace.js';
 import { deleteNamespace } from './namespace/deleteNamespace.js';
 import { getNamespace } from './namespace/getNamespace.js';
@@ -152,6 +155,7 @@ import { getInvitations } from './user/getInvitations.js';
 import { getUserAccessiblePermissions } from './user/getUserAccessiblePermissions.js';
 import { getUserAccessibleResources } from './user/getUserAccessibleResources.js';
 import { inviteUser } from './user/inviteUser.js';
+import { inviteUsers } from './user/inviteUsers.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberGroup } from './user/updateOrgMemberGroup.js';
@@ -346,6 +350,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     inviteUser: (req, ctx) => {
       return inviteUser(opts, req, ctx);
+    },
+
+    inviteUsers: (req, ctx) => {
+      return inviteUsers(opts, req, ctx);
     },
 
     createAPIKey: (req, ctx) => {
@@ -915,6 +923,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     recomposeGraph: (req, ctx) => {
       return recomposeGraph(opts, req, ctx);
+    },
+
+    getOnboarding: (req, ctx) => {
+      return getOnboarding(opts, req, ctx);
+    },
+
+    createOnboarding: (req, ctx) => {
+      return createOnboarding(opts, req, ctx);
+    },
+
+    finishOnboarding: (req, ctx) => {
+      return finishOnboarding(opts, req, ctx);
     },
   };
 }
