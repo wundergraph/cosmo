@@ -4,7 +4,15 @@ import { Stepper } from '../onboarding/stepper';
 import { ONBOARDING_STEPS } from '../onboarding/onboarding-steps';
 import { useOnboarding } from '@/hooks/use-onboarding';
 
-export const OnboardingLayout = ({ children, title }: { children?: React.ReactNode; title?: string }) => {
+export const OnboardingLayout = ({
+  children,
+  title,
+  bare = false,
+}: {
+  children?: React.ReactNode;
+  title?: string;
+  bare?: boolean;
+}) => {
   const { currentStep } = useOnboarding();
 
   return (
@@ -15,9 +23,13 @@ export const OnboardingLayout = ({ children, title }: { children?: React.ReactNo
         <Stepper steps={ONBOARDING_STEPS} currentStep={(currentStep ?? 1) - 1} className="ml-auto" />
       </header>
       <main className="w-full flex-1 px-6 pb-4 pt-12">
-        <Card className="mx-auto w-full max-w-2xl">
-          <CardContent className="flex min-h-[788px] flex-col p-6">{children}</CardContent>
-        </Card>
+        {bare ? (
+          <div className="mx-auto w-full max-w-2xl">{children}</div>
+        ) : (
+          <Card className="mx-auto w-full max-w-2xl">
+            <CardContent className="flex min-h-[788px] flex-col p-6">{children}</CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );

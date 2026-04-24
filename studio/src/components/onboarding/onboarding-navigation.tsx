@@ -1,4 +1,5 @@
 import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { cn } from '@/lib/utils';
 import { Link } from '../ui/link';
 import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -8,14 +9,16 @@ export const OnboardingNavigation = ({
   forward,
   forwardLabel = 'Next',
   onSkip,
+  className,
 }: {
   backHref?: string;
   forward: { href: string } | { onClick: () => void; isLoading?: boolean; disabled?: boolean };
   forwardLabel?: string;
   onSkip: () => void;
+  className?: string;
 }) => {
   return (
-    <div className="mt-auto flex w-full justify-between pt-8">
+    <div className={cn('mt-auto flex w-full justify-between pt-8', className)}>
       <div className="flex items-center gap-1">
         <Button asChild variant="outline" onClick={onSkip}>
           <Link href="/">Skip</Link>
