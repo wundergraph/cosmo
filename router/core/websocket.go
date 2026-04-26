@@ -816,7 +816,7 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 		gqlErr = graphqlError{
 			Message: "PersistedQueryNotFound",
 			Extensions: &Extensions{
-				Code: "PERSISTED_QUERY_NOT_FOUND",
+				Code: ExtCodeErrPersistedQueryNotFound,
 			},
 		}
 	default:
