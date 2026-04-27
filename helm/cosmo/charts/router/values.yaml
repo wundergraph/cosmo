@@ -143,7 +143,7 @@ autoscaling:
   maxReplicas: 100
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
-  behavior:
+  behavior: {}
     # Configures the HPA scaling behavior. When unset, Kubernetes applies its defaults
     # (300s scale-down stabilization window, no scale-up window).
     # Example of a custom scale up and scale down behavior:

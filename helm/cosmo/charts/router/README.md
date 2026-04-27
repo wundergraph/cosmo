@@ -69,7 +69,7 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | priorityClassName | string | `""` | Set to existing PriorityClass name to control pod preemption by the scheduler |
 | probes.liveness | object | `{"httpGet":{"path":"/health/live","port":"http"},"initialDelaySeconds":10}` | Configure liveness probe |
 | probes.readiness | object | `{"httpGet":{"path":"/health/ready","port":"http"},"initialDelaySeconds":5}` | Configure readiness probe |
-| probes.startup | object | `{}` |  |
+| probes.startup | object | `{}` | Configure startup probe |
 | replicaCount | int | `1` |  |
 | resources | object | `{}` |  |
 | securityContext | object | `{}` |  |
