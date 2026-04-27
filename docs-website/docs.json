@@ -614,7 +614,7 @@
               {
                 "group": "Clients",
                 "icon": "laptop-mobile",
-                "pages": ["cli/clients", "cli/clients/list"]
+                "pages": ["cli/clients", "cli/clients/list", "cli/clients/delete"]
               },
               {
                 "group": "Schema Contracts",
