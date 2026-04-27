@@ -25,10 +25,10 @@ deploymentStrategy: {}
 imagePullSecrets: []
 
 # -- String to partially override common.names.fullname template (will maintain the release name)
-nameOverride: ''
+nameOverride: ""
 
 # -- String to fully override common.names.fullname template
-fullnameOverride: ''
+fullnameOverride: ""
 
 # -- Allows to set additional environment / runtime variables on the container. Useful for global application non-specific settings.
 extraEnvVars: []
@@ -46,10 +46,10 @@ extraVolumes: []
 extraVolumeMounts: []
 
 # -- Name of existing ConfigMap containing extra env vars
-extraEnvVarsCM: ''
+extraEnvVarsCM: ""
 
 # -- Name of existing Secret containing extra env vars
-extraEnvVarsSecret: ''
+extraEnvVarsSecret: ""
 
 serviceAccount:
   # -- Specifies whether a service account should be created
@@ -58,7 +58,7 @@ serviceAccount:
   annotations: {}
   # -- The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: ''
+  name: ""
 
 serviceAnnotations: {}
 
@@ -80,16 +80,16 @@ service:
   port: 3002
 
 ingress:
-  #  enabled: true
-  #  className: ""
-  #  annotations: {}
-  # kubernetes.io/ingress.class: nginx
-  # kubernetes.io/tls-acme: "true"
+#  enabled: true
+#  className: ""
+#  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
   hosts:
-  #    - host: router.wundergraph.local
-  #      paths:
-  #        - path: /
-  #          pathType: ImplementationSpecific
+#    - host: router.wundergraph.local
+#      paths:
+#        - path: /
+#          pathType: ImplementationSpecific
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
@@ -143,7 +143,7 @@ autoscaling:
   maxReplicas: 100
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
-  behavior: {}
+  behavior:
     # Configures the HPA scaling behavior. When unset, Kubernetes applies its defaults
     # (300s scale-down stabilization window, no scale-up window).
     # Example of a custom scale up and scale down behavior:
@@ -174,7 +174,7 @@ affinity: {}
 podDisruptionBudget: {}
 
 # -- Set to existing PriorityClass name to control pod preemption by the scheduler
-priorityClassName: ''
+priorityClassName: ""
 
 # -- Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods
 terminationGracePeriodSeconds: 30
@@ -209,10 +209,10 @@ global:
 
 # -- The name of the configmap to use for the router configuration. The key "config.yaml" is required in the configmap.
 # If this is set, the commonConfiguration section is ignored.
-existingConfigmap: ''
+existingConfigmap: ""
 
 # -- Existing secret in the same namespace containing the graphApiToken. The secret key has to match with current secret.
-existingSecret: ''
+existingSecret: ""
 
 # Use this section to pass the graphApiToken or to configure simple settings.
 # -- You can use this to provide the router configuration via yaml. Values here have precedence over the configurations section.
@@ -225,30 +225,30 @@ commonConfiguration: |-
 # -- Path to a configuration file to embed. If set, this takes precedence over commonConfiguration.
 # The file path is relative to the chart directory and will be processed with the helm `tpl` function.
 # Example: "configs/router-config.yaml"
-commonConfigurationPath: ''
+commonConfigurationPath: ""
 
 # Use this section to pass the graphApiToken or to configure simple settings.
 configuration:
   # -- The router token is used to authenticate the router against the controlplane (required)
-  graphApiToken: 'replace-me'
+  graphApiToken: "replace-me"
   # -- The execution config file to statically configure the router. If set, polling of the config is disabled.
   # If your config exceeds 1MB (Kubernetes limit), you have to mount it as a file and set the path in routerConfigPath instead
-  executionConfig: ''
+  executionConfig: ""
   # -- The log level of the router. Default to info if not set.
-  logLevel: 'info'
+  logLevel: "info"
   # -- The URL of the Cosmo Controlplane. Should be internal to the cluster. Default to cloud if not set.
-  controlplaneUrl: ''
+  controlplaneUrl: ""
   # -- The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. Default to cloud if not set.
-  otelCollectorUrl: ''
+  otelCollectorUrl: ""
   # -- The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. Default to cloud if not set.
-  graphqlMetricsCollectorUrl: ''
+  graphqlMetricsCollectorUrl: ""
   # -- Set to true to enable the development mode. This allows for Advanced Request Tracing (ART) in the GraphQL Playground
   devMode: false
   #-- The URL of the Cosmo CDN. Should be internal to the cluster. Default to cloud if not set.
-  cdnUrl: ''
+  cdnUrl: ""
   # -- The path to the router execution config file. Before, you have to mount the file as a volume and set the path here.
   # A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled.
-  routerConfigPath: ''
+  routerConfigPath: ""
 
   # -- The path to the router config file. This does not refer to the execution config.
   # See: https://cosmo-docs.wundergraph.com/router/configuration#config-file
@@ -260,7 +260,7 @@ configuration:
     # -- The port where metrics are exposed. Default is port 8088.
     port: 8088
     # -- The HTTP path where metrics are exposed. Default is "/metrics".
-    path: '/metrics'
+    path: "/metrics"
 
   # Use this section to configure the router's HTTP(S) proxy settings.
   # When set the proxy is enabled.
@@ -270,7 +270,7 @@ configuration:
   httpProxy: ''
   # -- NO_PROXY is a comma-separated list of hosts or domains for which the proxy should not be used.
   noProxy: ''
-
+  
   # Use this section to disable/enable and configure the MCP server.
   mcp:
     # -- Enables MCP server support. Default is false.
