@@ -54,6 +54,13 @@ type (
 	}
 )
 
+const (
+	ExtCodeErrPersistedQueryNotFound        = "PERSISTED_QUERY_NOT_FOUND"
+	ExtCodeErrErrorRequestCanceled          = "REQUEST_CANCELED"
+	ExtCodeErrBatchSizeExceeded             = "BATCH_LIMIT_EXCEEDED"
+	ExtCodeErrBatchSubscriptionsUnsupported = "BATCHING_SUBSCRIPTION_UNSUPPORTED"
+)
+
 func getErrorType(err error) errorType {
 	if errors.Is(err, ErrRateLimitExceeded) {
 		return errorTypeRateLimit
@@ -343,7 +350,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 	switch {
 	case errors.Is(err, context.Canceled):
-		newErr := NewHttpGraphqlError("request canceled", "REQUEST_CANCELED", http.StatusOK)
+		newErr := NewHttpGraphqlError("request canceled", ExtCodeErrErrorRequestCanceled, http.StatusOK)
 		writeRequestErrors(writeRequestErrorsParams{
 			request:           r,
 			writer:            w,
@@ -362,7 +369,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 			headerPropagation: propagation,
 		})
 	case errors.As(err, &poNotFoundErr):
-		newErr := NewHttpGraphqlError("PersistedQueryNotFound", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
+		newErr := NewHttpGraphqlError("PersistedQueryNotFound", ExtCodeErrPersistedQueryNotFound, http.StatusOK)
 		writeRequestErrors(writeRequestErrorsParams{
 			request:           r,
 			writer:            w,

@@ -45,6 +45,6 @@
     "@wundergraph/cosmo-connect": "workspace:*",
     "graphql": "catalog:",
     "lodash-es": "catalog:",
-    "protobufjs": "^7.5.0"
+    "protobufjs": "^7.5.5"
   }
 }
