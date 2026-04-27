@@ -30,6 +30,9 @@ import {
   subscriptionFilterConditionDepthExceededErrorMessage,
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
+  subscriptionFilterInterfaceImplementerInvalidErrorMessage,
+  subscriptionFilterUnionMemberInvalidErrorMessage,
+  undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
 } from '../../../src';
 import {
   federateSubgraphsFailure,
@@ -451,6 +454,136 @@ describe('@openfed__subscriptionFilter tests', () => {
           subscriptionFilterConditionDepthExceededErrorMessage('condition.NOT.NOT.NOT.NOT.NOT.IN'),
         ]),
       ]);
+    });
+
+    test('that a subscription filter is emitted when the return type is a union', () => {
+      const result = federateSubgraphsSuccess(
+        [subgraphUnionResolver, subgraphUnionEDG],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(result.success).toBe(true);
+      const subscriptionField = result.fieldConfigurations.find(
+        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onTaskEvent',
+      );
+      expect(subscriptionField).toStrictEqual({
+        argumentNames: ['phoneChannelId'],
+        fieldName: 'onTaskEvent',
+        typeName: SUBSCRIPTION,
+        subscriptionFilterCondition: {
+          in: {
+            fieldPath: ['phoneChannelId'],
+            values: ['{{ args.phoneChannelId }}'],
+          },
+        },
+      });
+    });
+
+    test('that a subscription filter is emitted when the return type is an interface', () => {
+      const result = federateSubgraphsSuccess(
+        [subgraphInterfaceResolver, subgraphInterfaceEDG],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(result.success).toBe(true);
+      const subscriptionField = result.fieldConfigurations.find(
+        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onTaskEvent',
+      );
+      expect(subscriptionField).toStrictEqual({
+        argumentNames: ['phoneChannelId'],
+        fieldName: 'onTaskEvent',
+        typeName: SUBSCRIPTION,
+        subscriptionFilterCondition: {
+          in: {
+            fieldPath: ['phoneChannelId'],
+            values: ['{{ args.phoneChannelId }}'],
+          },
+        },
+      });
+    });
+
+    test('that composition fails when a union member is missing the filter fieldPath', () => {
+      const result = federateSubgraphsFailure(
+        [subgraphUnionResolverPartial, subgraphUnionMemberMissingField],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(result.success).toBe(false);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors![0]).toStrictEqual(
+        invalidSubscriptionFilterDirectiveError(`Subscription.onTaskEvent`, [
+          subscriptionFilterUnionMemberInvalidErrorMessage(
+            'TaskEvent',
+            'TaskDeleted',
+            subscriptionFieldConditionInvalidInputFieldErrorMessage(
+              'condition.IN',
+              [],
+              [],
+              [],
+              [
+                undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage(
+                  'condition.IN.fieldPath',
+                  'phoneChannelId',
+                  'phoneChannelId',
+                  'phoneChannelId',
+                  'TaskDeleted',
+                ),
+              ],
+            ),
+          ),
+        ]),
+      );
+    });
+
+    test('that composition fails when an interface implementer is missing the filter fieldPath', () => {
+      const result = federateSubgraphsFailure(
+        [subgraphInterfaceResolverPartial, subgraphInterfaceImplementerMissingField],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(result.success).toBe(false);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors![0]).toStrictEqual(
+        invalidSubscriptionFilterDirectiveError(`Subscription.onTaskEvent`, [
+          subscriptionFilterInterfaceImplementerInvalidErrorMessage(
+            'TaskEvent',
+            'TaskDeleted',
+            subscriptionFieldConditionInvalidInputFieldErrorMessage(
+              'condition.IN',
+              [],
+              [],
+              [],
+              [
+                undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage(
+                  'condition.IN.fieldPath',
+                  'phoneChannelId',
+                  'phoneChannelId',
+                  'phoneChannelId',
+                  'TaskDeleted',
+                ),
+              ],
+            ),
+          ),
+        ]),
+      );
+    });
+
+    test('that composition succeeds when an @inaccessible union member is missing the filter fieldPath', () => {
+      const result = federateSubgraphsSuccess(
+        [subgraphUnionResolverPartial, subgraphUnionInaccessibleMemberMissingField],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(result.success).toBe(true);
+      const subscriptionField = result.fieldConfigurations.find(
+        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onTaskEvent',
+      );
+      expect(subscriptionField).toStrictEqual({
+        argumentNames: ['phoneChannelId'],
+        fieldName: 'onTaskEvent',
+        typeName: SUBSCRIPTION,
+        subscriptionFilterCondition: {
+          in: {
+            fieldPath: ['phoneChannelId'],
+            values: ['{{ args.phoneChannelId }}'],
+          },
+        },
+      });
     });
 
     test('that an entity can be defined as an extension in an EDG', () => {
@@ -920,10 +1053,222 @@ const subgraphR: Subgraph = {
     type Query{
       entity: Entity!
     }
-    
+
     type Entity @key(fields: "id") {
-      id: ID! 
-      name: String! 
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+// Fixtures for union and interface return types
+
+const subgraphUnionResolver: Subgraph = {
+  name: 'subgraph-union-resolver',
+  url: '',
+  definitions: parse(`
+    type Query {
+      task(id: ID!): TaskUpdated
+    }
+
+    type TaskUpdated @key(fields: "id phoneChannelId") {
+      id: ID!
+      phoneChannelId: ID!
+      title: String!
+    }
+
+    type TaskDeleted @key(fields: "id phoneChannelId") {
+      id: ID!
+      phoneChannelId: ID!
+    }
+  `),
+};
+
+const subgraphUnionEDG: Subgraph = {
+  name: 'subgraph-union-edg',
+  url: '',
+  definitions: parse(`
+    type TaskUpdated @key(fields: "id phoneChannelId", resolvable: false) {
+      id: ID! @external
+      phoneChannelId: ID! @external
+    }
+
+    type TaskDeleted @key(fields: "id phoneChannelId", resolvable: false) {
+      id: ID! @external
+      phoneChannelId: ID! @external
+    }
+
+    union TaskEvent = TaskUpdated | TaskDeleted
+
+    type Subscription {
+      onTaskEvent(phoneChannelId: ID!): TaskEvent!
+        @edfs__kafkaSubscribe(topics: ["taskEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
+    }
+  `),
+};
+
+const subgraphInterfaceResolver: Subgraph = {
+  name: 'subgraph-interface-resolver',
+  url: '',
+  definitions: parse(`
+    type Query {
+      taskById(id: ID!): TaskUpdated
+    }
+
+    interface TaskEvent {
+      id: ID!
+      phoneChannelId: ID!
+    }
+
+    type TaskUpdated implements TaskEvent @key(fields: "id phoneChannelId") {
+      id: ID!
+      phoneChannelId: ID!
+      title: String!
+    }
+
+    type TaskDeleted implements TaskEvent @key(fields: "id phoneChannelId") {
+      id: ID!
+      phoneChannelId: ID!
+    }
+  `),
+};
+
+const subgraphInterfaceEDG: Subgraph = {
+  name: 'subgraph-interface-edg',
+  url: '',
+  definitions: parse(`
+    interface TaskEvent {
+      id: ID!
+      phoneChannelId: ID!
+    }
+
+    type TaskUpdated implements TaskEvent @key(fields: "id phoneChannelId", resolvable: false) {
+      id: ID! @external
+      phoneChannelId: ID! @external
+    }
+
+    type TaskDeleted implements TaskEvent @key(fields: "id phoneChannelId", resolvable: false) {
+      id: ID! @external
+      phoneChannelId: ID! @external
+    }
+
+    type Subscription {
+      onTaskEvent(phoneChannelId: ID!): TaskEvent!
+        @edfs__kafkaSubscribe(topics: ["taskEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
+    }
+  `),
+};
+
+// Partial resolver — TaskDeleted has only `id`, so phoneChannelId is genuinely absent.
+const subgraphUnionResolverPartial: Subgraph = {
+  name: 'subgraph-union-resolver-partial',
+  url: '',
+  definitions: parse(`
+    type Query {
+      task(id: ID!): TaskUpdated
+    }
+
+    type TaskUpdated @key(fields: "id phoneChannelId") {
+      id: ID!
+      phoneChannelId: ID!
+      title: String!
+    }
+
+    type TaskDeleted @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphUnionMemberMissingField: Subgraph = {
+  name: 'subgraph-union-member-missing-field',
+  url: '',
+  definitions: parse(`
+    type TaskUpdated @key(fields: "id phoneChannelId", resolvable: false) {
+      id: ID! @external
+      phoneChannelId: ID! @external
+    }
+
+    type TaskDeleted @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    union TaskEvent = TaskUpdated | TaskDeleted
+
+    type Subscription {
+      onTaskEvent(phoneChannelId: ID!): TaskEvent!
+        @edfs__kafkaSubscribe(topics: ["taskEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
+    }
+  `),
+};
+
+const subgraphUnionInaccessibleMemberMissingField: Subgraph = {
+  name: 'subgraph-union-inaccessible-member-missing-field',
+  url: '',
+  definitions: parse(`
+    type TaskUpdated @key(fields: "id phoneChannelId", resolvable: false) {
+      id: ID! @external
+      phoneChannelId: ID! @external
+    }
+
+    type TaskDeleted @inaccessible @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    union TaskEvent = TaskUpdated | TaskDeleted
+
+    type Subscription {
+      onTaskEvent(phoneChannelId: ID!): TaskEvent!
+        @edfs__kafkaSubscribe(topics: ["taskEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
+    }
+  `),
+};
+
+const subgraphInterfaceResolverPartial: Subgraph = {
+  name: 'subgraph-interface-resolver-partial',
+  url: '',
+  definitions: parse(`
+    type Query {
+      taskById(id: ID!): TaskUpdated
+    }
+
+    type TaskUpdated @key(fields: "id phoneChannelId") {
+      id: ID!
+      phoneChannelId: ID!
+      title: String!
+    }
+
+    type TaskDeleted @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphInterfaceImplementerMissingField: Subgraph = {
+  name: 'subgraph-interface-implementer-missing-field',
+  url: '',
+  definitions: parse(`
+    interface TaskEvent {
+      id: ID!
+    }
+
+    type TaskUpdated implements TaskEvent @key(fields: "id phoneChannelId", resolvable: false) {
+      id: ID! @external
+      phoneChannelId: ID! @external
+    }
+
+    type TaskDeleted implements TaskEvent @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    type Subscription {
+      onTaskEvent(phoneChannelId: ID!): TaskEvent!
+        @edfs__kafkaSubscribe(topics: ["taskEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
     }
   `),
 };

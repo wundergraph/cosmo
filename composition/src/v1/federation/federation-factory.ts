@@ -65,7 +65,10 @@ import {
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldNumberErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
+  subscriptionFilterInterfaceImplementerInvalidErrorMessage,
   subscriptionFilterNamedTypeErrorMessage,
+  subscriptionFilterNoAccessibleConcreteTypesErrorMessage,
+  subscriptionFilterUnionMemberInvalidErrorMessage,
   undefinedEntityInterfaceImplementationsError,
   undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
   undefinedTypeError,
@@ -2763,6 +2766,46 @@ export class FederationFactory {
     }
   }
 
+  validateSubscriptionFilterForTarget(
+    directiveNode: ConstDirectiveNode,
+    target: ObjectDefinitionData,
+    directiveSubgraphName: string,
+  ): { condition?: SubscriptionCondition; errors: string[] } {
+    // directive validation occurs elsewhere
+    if (!directiveNode.arguments || directiveNode.arguments.length !== 1) {
+      return { errors: [] };
+    }
+    const argumentNode = directiveNode.arguments[0];
+    if (argumentNode.value.kind !== Kind.OBJECT) {
+      return {
+        errors: [
+          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
+            CONDITION,
+            OBJECT,
+            kindToNodeType(argumentNode.value.kind),
+          ),
+        ],
+      };
+    }
+    const condition = {} as SubscriptionCondition;
+    const errorMessages: string[] = [];
+    // Reset depth state so each target validation starts fresh.
+    this.isMaxDepth = false;
+    const ok = this.validateSubscriptionFilterCondition(
+      argumentNode.value,
+      condition,
+      target,
+      0,
+      CONDITION,
+      directiveSubgraphName,
+      errorMessages,
+    );
+    if (!ok) {
+      return { errors: errorMessages };
+    }
+    return { condition, errors: [] };
+  }
+
   validateSubscriptionFilterAndGenerateConfiguration(
     directiveNode: ConstDirectiveNode,
     objectData: ObjectDefinitionData,
@@ -2771,38 +2814,16 @@ export class FederationFactory {
     parentTypeName: string,
     directiveSubgraphName: string,
   ) {
-    // directive validation occurs elsewhere
-    if (!directiveNode.arguments || directiveNode.arguments.length !== 1) {
+    const { condition, errors } = this.validateSubscriptionFilterForTarget(
+      directiveNode,
+      objectData,
+      directiveSubgraphName,
+    );
+    if (errors.length > 0) {
+      this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, errors));
       return;
     }
-    const argumentNode = directiveNode.arguments[0];
-    if (argumentNode.value.kind !== Kind.OBJECT) {
-      this.errors.push(
-        invalidSubscriptionFilterDirectiveError(fieldPath, [
-          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
-            CONDITION,
-            OBJECT,
-            kindToNodeType(argumentNode.value.kind),
-          ),
-        ]),
-      );
-      return;
-    }
-    const condition = {} as SubscriptionCondition;
-    const errorMessages: string[] = [];
-    if (
-      !this.validateSubscriptionFilterCondition(
-        argumentNode.value,
-        condition,
-        objectData,
-        0,
-        CONDITION,
-        directiveSubgraphName,
-        errorMessages,
-      )
-    ) {
-      this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, errorMessages));
-      this.isMaxDepth = false;
+    if (!condition) {
       return;
     }
     getValueOrDefault(this.fieldConfigurationByFieldCoords, fieldPath, () => ({
@@ -2810,6 +2831,21 @@ export class FederationFactory {
       fieldName,
       typeName: parentTypeName,
     })).subscriptionFilterCondition = condition;
+  }
+
+  collectSubscriptionFilterConcreteTargets(abstractTypeName: string): ObjectDefinitionData[] {
+    const concreteNames = this.concreteTypeNamesByAbstractTypeName.get(abstractTypeName);
+    if (!concreteNames) {
+      return [];
+    }
+    const out: ObjectDefinitionData[] = [];
+    for (const concreteName of concreteNames) {
+      const data = this.parentDefinitionDataByTypeName.get(concreteName);
+      if (data && data.kind === Kind.OBJECT_TYPE_DEFINITION && !isNodeDataInaccessible(data)) {
+        out.push(data);
+      }
+    }
+    return out;
   }
 
   validateSubscriptionFiltersAndGenerateConfiguration() {
@@ -2836,18 +2872,81 @@ export class FederationFactory {
         // @inaccessible error are caught elsewhere
         continue;
       }
-      // TODO handle Unions and Interfaces
-      if (namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+
+      if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
+        // Fast path: existing single-object behavior, byte-for-byte unchanged.
+        this.validateSubscriptionFilterAndGenerateConfiguration(
+          data.directive,
+          namedTypeData,
+          fieldPath,
+          data.fieldData.name,
+          data.fieldData.renamedParentTypeName,
+          data.directiveSubgraphName,
+        );
         continue;
       }
-      this.validateSubscriptionFilterAndGenerateConfiguration(
-        data.directive,
-        namedTypeData,
-        fieldPath,
-        data.fieldData.name,
-        data.fieldData.renamedParentTypeName,
-        data.directiveSubgraphName,
-      );
+
+      if (
+        namedTypeData.kind !== Kind.UNION_TYPE_DEFINITION &&
+        namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION
+      ) {
+        // Other kinds (scalar/enum/input) are caught at normalization time.
+        continue;
+      }
+
+      const kindLabel: 'union' | 'interface' =
+        namedTypeData.kind === Kind.UNION_TYPE_DEFINITION ? 'union' : 'interface';
+
+      const targets = this.collectSubscriptionFilterConcreteTargets(namedTypeData.name);
+      if (targets.length === 0) {
+        this.errors.push(
+          invalidSubscriptionFilterDirectiveError(fieldPath, [
+            subscriptionFilterNoAccessibleConcreteTypesErrorMessage(namedTypeData.name, kindLabel),
+          ]),
+        );
+        continue;
+      }
+
+      const aggregatedErrors: string[] = [];
+      let firstSuccess: SubscriptionCondition | undefined = undefined;
+      for (const target of targets) {
+        const { condition, errors } = this.validateSubscriptionFilterForTarget(
+          data.directive,
+          target,
+          data.directiveSubgraphName,
+        );
+        if (errors.length > 0) {
+          const wrapped =
+            kindLabel === 'union'
+              ? subscriptionFilterUnionMemberInvalidErrorMessage(namedTypeData.name, target.name, errors.join('\n'))
+              : subscriptionFilterInterfaceImplementerInvalidErrorMessage(
+                  namedTypeData.name,
+                  target.name,
+                  errors.join('\n'),
+                );
+          aggregatedErrors.push(wrapped);
+          continue;
+        }
+        if (firstSuccess === undefined && condition) {
+          firstSuccess = condition;
+        }
+      }
+
+      if (aggregatedErrors.length > 0) {
+        this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, aggregatedErrors));
+        continue;
+      }
+
+      if (firstSuccess === undefined) {
+        // Defensive — unreachable when targets is non-empty and no errors were collected.
+        continue;
+      }
+
+      getValueOrDefault(this.fieldConfigurationByFieldCoords, fieldPath, () => ({
+        argumentNames: [],
+        fieldName: data.fieldData.name,
+        typeName: data.fieldData.renamedParentTypeName,
+      })).subscriptionFilterCondition = firstSuccess;
     }
   }
 
