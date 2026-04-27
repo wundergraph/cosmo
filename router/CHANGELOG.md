@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.311.1](https://github.com/wundergraph/cosmo/compare/router@0.311.0...router@0.311.1) (2026-04-27)
+
+### Bug Fixes
+
+* add extension code for po errors from websockets ([#2792](https://github.com/wundergraph/cosmo/issues/2792)) ([b1c17b0](https://github.com/wundergraph/cosmo/commit/b1c17b0c331f3be8f0a6d97d17b4909c42a7759e)) (@SkArchon)
+* remediate several vulnerabilities ([#2787](https://github.com/wundergraph/cosmo/issues/2787)) ([fdd035b](https://github.com/wundergraph/cosmo/commit/fdd035b8bfd491a45e00e2b60e9c28b695b64f48)) (@pepol)
+
 # [0.311.0](https://github.com/wundergraph/cosmo/compare/router@0.310.0...router@0.311.0) (2026-04-24)
 
 ### Features
