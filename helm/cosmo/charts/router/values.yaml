@@ -192,6 +192,7 @@ probes:
       path: /health/live
       port: http
     initialDelaySeconds: 10
+  # -- Configure startup probe
   startup: {}
 
 global:
