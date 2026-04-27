@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.22.0...@wundergraph/protographic@0.22.1) (2026-04-27)
+
+### Bug Fixes
+
+* **protographic:** update protobufjs to remediate vulnerability ([#2794](https://github.com/wundergraph/cosmo/issues/2794)) ([0c2ca73](https://github.com/wundergraph/cosmo/commit/0c2ca7333c64499fdce7605cbdb8266c775003ab)) (@pepol)
+
 # [0.22.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.21.0...@wundergraph/protographic@0.22.0) (2026-04-24)
 
 ### Features
