@@ -314,6 +314,7 @@
   "Authentication": {
     "JWT": {
       "JWKS": null,
+      "ScopeClaim": "scope",
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": null

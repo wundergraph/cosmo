@@ -16,7 +16,7 @@ import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
-import _ from 'lodash';
+import { cloneDeep } from 'lodash-es';
 import pLimit from 'p-limit';
 import { NewSchemaChangeOperationUsage, ProposalMatch, SchemaCheckChangeAction } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
@@ -305,7 +305,7 @@ export class SchemaCheckRepository {
   }) {
     let hasUnsafeClientTraffic = false;
 
-    const result = _.cloneDeep(data.inspectorResultsByChangeId);
+    const result = cloneDeep(data.inspectorResultsByChangeId);
 
     const changeActionsByOperationHash: Map<string, typeof data.changes> = new Map();
 

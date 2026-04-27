@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.166.1](https://github.com/wundergraph/cosmo/compare/studio@0.166.0...studio@0.166.1) (2026-04-27)
+
+### Bug Fixes
+
+* remediate several vulnerabilities ([#2787](https://github.com/wundergraph/cosmo/issues/2787)) ([fdd035b](https://github.com/wundergraph/cosmo/commit/fdd035b8bfd491a45e00e2b60e9c28b695b64f48)) (@pepol)
+
+# [0.166.0](https://github.com/wundergraph/cosmo/compare/studio@0.165.0...studio@0.166.0) (2026-04-24)
+
+### Features
+
+* update `lodash` and `lodash-es` ([#2780](https://github.com/wundergraph/cosmo/issues/2780)) ([bbf1e38](https://github.com/wundergraph/cosmo/commit/bbf1e38b3a346363fe742801f2982dbafb267454)) (@wilsonrivera)
+
 # [0.165.0](https://github.com/wundergraph/cosmo/compare/studio@0.164.0...studio@0.165.0) (2026-04-16)
 
 ### Features
