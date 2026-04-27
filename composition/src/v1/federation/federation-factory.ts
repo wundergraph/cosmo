@@ -2886,10 +2886,7 @@ export class FederationFactory {
         continue;
       }
 
-      if (
-        namedTypeData.kind !== Kind.UNION_TYPE_DEFINITION &&
-        namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION
-      ) {
+      if (namedTypeData.kind !== Kind.UNION_TYPE_DEFINITION && namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
         // Other kinds (scalar/enum/input) are caught at normalization time.
         continue;
       }
