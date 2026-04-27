@@ -143,6 +143,7 @@ autoscaling:
   maxReplicas: 100
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
+  behavior: {}
 
 nodeSelector: {}
 
@@ -172,6 +173,7 @@ probes:
       path: /health/live
       port: http
     initialDelaySeconds: 10
+  startup: {}
 
 global:
   helmTests: false

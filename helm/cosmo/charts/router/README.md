@@ -15,6 +15,7 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| autoscaling.behavior | object | `{}` | Configure the [HPA scaling behavior](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#configurable-scaling-behavior) |
 | commonConfiguration | string | `"version: \"1\"\nlog_level: \"info\""` | You can use this to provide the router configuration via yaml. Values here have precedence over the configurations section. For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration This value is processed with the helm `tpl` function allowing referencing of variables and inclusion of templates |
 | commonConfigurationPath | string | `""` | Path to a configuration file to embed. If set, this takes precedence over commonConfiguration. The file path is relative to the chart directory and will be processed with the helm `tpl` function. Example: "configs/router-config.yaml" |
 | commonLabels | object | `{}` | Add labels to all deployed resources |
@@ -68,6 +69,7 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | priorityClassName | string | `""` | Set to existing PriorityClass name to control pod preemption by the scheduler |
 | probes.liveness | object | `{"httpGet":{"path":"/health/live","port":"http"},"initialDelaySeconds":10}` | Configure liveness probe |
 | probes.readiness | object | `{"httpGet":{"path":"/health/ready","port":"http"},"initialDelaySeconds":5}` | Configure readiness probe |
+| probes.startup | object | `{}` | Configure startup probe |
 | replicaCount | int | `1` |  |
 | resources | object | `{}` |  |
 | securityContext | object | `{}` |  |
