@@ -1085,7 +1085,7 @@ func TestKafkaEvents(t *testing.T) {
 				const subscriptionQuery = `subscription { filteredEmployeeEventUnionMyKafka(tag: "match") { ... on EmployeeUpdated { id tag } ... on EmployeeDeleted { id tag } } }`
 
 				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-				require.NoError(t, conn.WriteJSON(&testenv.WebSocketMessage{
+				require.NoError(t, testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
 					Payload: []byte(fmt.Sprintf(`{"query":%q}`, subscriptionQuery)),
@@ -1159,7 +1159,7 @@ func TestKafkaEvents(t *testing.T) {
 				const subscriptionQuery = `subscription { filteredEmployeeEventUnionMyKafka(tag: "match") { ... on EmployeeUpdated { id tag } ... on EmployeeDeleted { id tag } } }`
 
 				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-				require.NoError(t, conn.WriteJSON(&testenv.WebSocketMessage{
+				require.NoError(t, testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
 					Payload: []byte(fmt.Sprintf(`{"query":%q}`, subscriptionQuery)),
@@ -1232,7 +1232,7 @@ func TestKafkaEvents(t *testing.T) {
 				const subscriptionQuery = `subscription { filteredEmployeeChangeInterfaceMyKafka(tag: "match") { ... on EmployeeChanged { id tag } ... on EmployeeRemoved { id tag } } }`
 
 				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-				require.NoError(t, conn.WriteJSON(&testenv.WebSocketMessage{
+				require.NoError(t, testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
 					Payload: []byte(fmt.Sprintf(`{"query":%q}`, subscriptionQuery)),
@@ -1292,7 +1292,7 @@ func TestKafkaEvents(t *testing.T) {
 				const subscriptionQuery = `subscription { filteredEmployeeChangeInterfaceMyKafka(tag: "match") { ... on EmployeeChanged { id tag } ... on EmployeeRemoved { id tag } } }`
 
 				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-				require.NoError(t, conn.WriteJSON(&testenv.WebSocketMessage{
+				require.NoError(t, testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
 					Payload: []byte(fmt.Sprintf(`{"query":%q}`, subscriptionQuery)),

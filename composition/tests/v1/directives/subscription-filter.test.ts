@@ -462,10 +462,11 @@ describe('@openfed__subscriptionFilter tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(result.success).toBe(true);
-      const subscriptionField = result.fieldConfigurations.find(
+      const subscriptionFields = result.fieldConfigurations.filter(
         (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onTaskEvent',
       );
-      expect(subscriptionField).toStrictEqual({
+      expect(subscriptionFields).toHaveLength(1);
+      expect(subscriptionFields[0]).toStrictEqual({
         argumentNames: ['phoneChannelId'],
         fieldName: 'onTaskEvent',
         typeName: SUBSCRIPTION,
@@ -484,10 +485,11 @@ describe('@openfed__subscriptionFilter tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(result.success).toBe(true);
-      const subscriptionField = result.fieldConfigurations.find(
+      const subscriptionFields = result.fieldConfigurations.filter(
         (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onTaskEvent',
       );
-      expect(subscriptionField).toStrictEqual({
+      expect(subscriptionFields).toHaveLength(1);
+      expect(subscriptionFields[0]).toStrictEqual({
         argumentNames: ['phoneChannelId'],
         fieldName: 'onTaskEvent',
         typeName: SUBSCRIPTION,
@@ -570,10 +572,11 @@ describe('@openfed__subscriptionFilter tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(result.success).toBe(true);
-      const subscriptionField = result.fieldConfigurations.find(
+      const subscriptionFields = result.fieldConfigurations.filter(
         (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onTaskEvent',
       );
-      expect(subscriptionField).toStrictEqual({
+      expect(subscriptionFields).toHaveLength(1);
+      expect(subscriptionFields[0]).toStrictEqual({
         argumentNames: ['phoneChannelId'],
         fieldName: 'onTaskEvent',
         typeName: SUBSCRIPTION,
