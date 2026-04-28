@@ -137,7 +137,10 @@ import {
   listSizeSizedFieldNotListErrorMessage,
   listSizeSizedFieldsInvalidReturnTypeErrorMessage,
   listSizeSizedFieldsOnListsErrorMessage,
+  listSizeSlicingArgumentMalformedPathErrorMessage,
   listSizeSlicingArgumentNotIntErrorMessage,
+  listSizeSlicingArgumentSegmentNotFoundErrorMessage,
+  listSizeSlicingArgumentSegmentNotInputObjectErrorMessage,
   multipleNamedTypeDefinitionError,
   noBaseScalarDefinitionError,
   noDefinedEnumValuesError,
@@ -2616,6 +2619,10 @@ export class NormalizationFactory {
       sizedFields: [],
       requireOneSlicingArgument: true, // per IBM cost spec
     };
+    // For each accepted slicing argument, capture the full resolved chain:
+    // (argument + each intermediate input field + leaf).
+    // Later we check the assumedSize against the default value of every element of the chain.
+    const slicingArgChainByPath = new Map<string, InputValueData[]>();
 
     for (const argumentNode of args) {
       const argumentName = argumentNode.name.value;
@@ -2645,22 +2652,83 @@ export class NormalizationFactory {
               continue;
             }
 
-            const slicingArgName = (valueNode as StringValueNode).value;
-            const argData = data.argumentDataByName.get(slicingArgName);
-            if (!argData) {
-              errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgName));
+            // slicingArgPath could be just an argument "inputA" or a dot-path "inputA.page.first".
+            const slicingArgPath = (valueNode as StringValueNode).value;
+            const segments = slicingArgPath.split('.');
+
+            // Reject empty segments (e.g. "", "a.", ".b", "a..b").
+            if (segments.length === 0 || segments.some((s) => s.length === 0)) {
+              errorMessages.push(listSizeSlicingArgumentMalformedPathErrorMessage(directiveCoords, slicingArgPath));
               continue;
             }
 
-            const unwrappedType = argData.type.kind === Kind.NON_NULL_TYPE ? argData.type.type : argData.type;
-            if (unwrappedType.kind === Kind.LIST_TYPE || argData.namedTypeName !== INT_SCALAR) {
+            // First segment should be valid argument name:
+            const firstSegment = segments[0];
+            const argData = data.argumentDataByName.get(firstSegment);
+            if (!argData) {
+              errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, firstSegment));
+              continue;
+            }
+
+            // Walk the rest of the path in the slicingArgument.
+            // `current` tracks the input value reached so far:
+            // the argument itself for a flat path, or the nested input field for each step of a
+            // dot-path. After the loop it is the leaf, which must be Int/Int!.
+            let current: InputValueData = argData;
+            const chain: InputValueData[] = [argData];
+            let pathInvalid = false;
+
+            for (let i = 1; i < segments.length; i++) {
+              // Non-leaf step: `current` must unwrap to an Input Object. Lists are rejected here.
+              const unwrapped = current.type.kind === Kind.NON_NULL_TYPE ? current.type.type : current.type;
+              const parentTypeData = this.parentDefinitionDataByTypeName.get(current.namedTypeName);
+              if (
+                unwrapped.kind === Kind.LIST_TYPE ||
+                !parentTypeData ||
+                parentTypeData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION
+              ) {
+                errorMessages.push(
+                  listSizeSlicingArgumentSegmentNotInputObjectErrorMessage(
+                    directiveCoords,
+                    slicingArgPath,
+                    printTypeNode(current.type),
+                  ),
+                );
+                pathInvalid = true;
+                break;
+              }
+              const inputValue = parentTypeData.inputValueDataByName.get(segments[i]);
+              if (!inputValue) {
+                errorMessages.push(
+                  listSizeSlicingArgumentSegmentNotFoundErrorMessage(
+                    directiveCoords,
+                    slicingArgPath,
+                    segments[i],
+                    current.namedTypeName,
+                  ),
+                );
+                pathInvalid = true;
+                break;
+              }
+              current = inputValue;
+              chain.push(inputValue);
+            }
+
+            if (pathInvalid) {
+              continue;
+            }
+
+            // Leaf check: the final value must be Int or Int!
+            const unwrappedLeaf = current.type.kind === Kind.NON_NULL_TYPE ? current.type.type : current.type;
+            if (unwrappedLeaf.kind === Kind.LIST_TYPE || current.namedTypeName !== INT_SCALAR) {
               errorMessages.push(
-                listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgName, printTypeNode(argData.type)),
+                listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgPath, printTypeNode(current.type)),
               );
               continue;
             }
 
-            listSizeConfig.slicingArguments.push(slicingArgName);
+            listSizeConfig.slicingArguments.push(slicingArgPath);
+            slicingArgChainByPath.set(slicingArgPath, chain);
           }
           break;
         }
@@ -2726,10 +2794,24 @@ export class NormalizationFactory {
       if (listSizeConfig.requireOneSlicingArgument) {
         errorMessages.push(listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords));
       } else {
-        for (const slicingArgName of listSizeConfig.slicingArguments) {
-          const argData = data.argumentDataByName.get(slicingArgName);
-          if (argData?.defaultValue) {
-            errorMessages.push(listSizeAssumedSizeSlicingArgDefaultErrorMessage(directiveCoords, slicingArgName));
+        // When assumedSize is set together with slicingArguments, the slicing argument must not have
+        // a default in any element of the slicingArgument's chain. That should be checked for all slicing Arguments.
+        // For example, if the query is defined like this:
+        //  search(a: SearchInput): [Book]
+        //    @listSize(assumedSize: 50, slicingArguments: ["a.b.c"], requireOneSlicingArgument: false)
+        // any of those defaults are forbidden:
+        //  input SearchInput { b: PaginationInput = { c: 10 } }
+        //  input PaginationInput { c: Int = 10 }
+        // Notably, this query definition is also forbidden with the @listSize above:
+        //  search(a: SearchInput = { b: { c: 10 } }): [Book]
+        // A default anywhere along the chain (argument, any intermediate input field, the leaf)
+        // means the slicing value can resolve via that default rather than assumedSize.
+        // which violates the IBM cost spec rule.
+        for (const slicingArgPath of listSizeConfig.slicingArguments) {
+          const chain = slicingArgChainByPath.get(slicingArgPath);
+          if (chain?.some((node) => node.defaultValue)) {
+            // At least one node in the chain has a defaultValue set.
+            errorMessages.push(listSizeAssumedSizeSlicingArgDefaultErrorMessage(directiveCoords, slicingArgPath));
           }
         }
       }

@@ -12,7 +12,10 @@ import {
   listSizeSizedFieldNotListErrorMessage,
   listSizeSizedFieldsInvalidReturnTypeErrorMessage,
   listSizeSizedFieldsOnListsErrorMessage,
+  listSizeSlicingArgumentMalformedPathErrorMessage,
   listSizeSlicingArgumentNotIntErrorMessage,
+  listSizeSlicingArgumentSegmentNotFoundErrorMessage,
+  listSizeSlicingArgumentSegmentNotInputObjectErrorMessage,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
@@ -648,6 +651,246 @@ describe('@listSize directive tests', () => {
       );
     });
   });
+
+  describe('nested-path slicingArguments tests', () => {
+    test('that @listSize with a single-level nested path is correctly normalized', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithNestedSlicingArg, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const ls = costs.listSizes.get('Query.search');
+      expect(ls).toBeDefined();
+      expect(ls!.slicingArguments).toEqual(['input.first']);
+    });
+
+    test('that @listSize with a two-level nested path is correctly normalized', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithDeepNestedSlicingArg, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const ls = costs.listSizes.get('Query.search');
+      expect(ls).toBeDefined();
+      expect(ls!.slicingArguments).toEqual(['input.pagination.first']);
+    });
+
+    test('that @listSize with a mix of flat and nested slicingArguments is correctly normalized', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithMixedSlicingArgs, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const ls = costs.listSizes.get('Query.search');
+      expect(ls).toBeDefined();
+      expect(ls!.requireOneSlicingArgument).toBe(false);
+      expect(ls!.slicingArguments).toEqual(['limit', 'input.pagination.first']);
+    });
+
+    test('that @listSize with a non-null Int leaf in a nested path is accepted', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithNestedSlicingArgNonNullLeaf,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const ls = costs.listSizes.get('Query.search');
+      expect(ls).toBeDefined();
+      expect(ls!.slicingArguments).toEqual(['input.first']);
+    });
+
+    test('that a non-null input-object intermediate is traversed correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithNestedSlicingArgNonNullIntermediate,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const ls = costs.listSizes.get('Query.search');
+      expect(ls).toBeDefined();
+      expect(ls!.slicingArguments).toEqual(['input.pagination.first']);
+    });
+
+    test('that an unknown intermediate segment produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgUnknownIntermediate,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeSlicingArgumentSegmentNotFoundErrorMessage(
+            'Query.search',
+            'input.bogus.first',
+            'bogus',
+            'SearchInput',
+          ),
+        ]),
+      );
+    });
+
+    test('that an unknown leaf segment produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgUnknownLeaf,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeSlicingArgumentSegmentNotFoundErrorMessage(
+            'Query.search',
+            'input.pagination.bogus',
+            'bogus',
+            'PaginationInput',
+          ),
+        ]),
+      );
+    });
+
+    test('that traversing through a non-input-object intermediate produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgScalarIntermediate,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeSlicingArgumentSegmentNotInputObjectErrorMessage('Query.search', 'input.query.first', 'String'),
+        ]),
+      );
+    });
+
+    test('that traversing through a list-typed intermediate produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgListIntermediate,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeSlicingArgumentSegmentNotInputObjectErrorMessage(
+            'Query.search',
+            'input.paginations.first',
+            '[PaginationInput!]',
+          ),
+        ]),
+      );
+    });
+
+    test('that a nested path whose leaf is not Int produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgNonIntLeaf,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeSlicingArgumentNotIntErrorMessage('Query.search', 'input.pagination.cursor', 'String'),
+        ]),
+      );
+    });
+
+    test('that a nested path whose leaf is a list produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgListLeaf,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeSlicingArgumentNotIntErrorMessage('Query.search', 'input.first', '[Int]'),
+        ]),
+      );
+    });
+
+    test('that a malformed path with starting empty segments produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgMalformedPathStart,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeSlicingArgumentMalformedPathErrorMessage('Query.search', '.input.first'),
+        ]),
+      );
+    });
+
+    test('that a malformed path with middle empty segments produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgMalformedPathMiddle,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeSlicingArgumentMalformedPathErrorMessage('Query.search', 'input..first'),
+        ]),
+      );
+    });
+
+    test('that a malformed path with ending empty segments produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgMalformedPathEnd,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeSlicingArgumentMalformedPathErrorMessage('Query.search', 'input.first.'),
+        ]),
+      );
+    });
+
+    test('that a path whose first segment is not a defined argument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgUnknownArgument,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeInvalidSlicingArgumentErrorMessage('Query.search', 'bogus'),
+        ]),
+      );
+    });
+
+    test('that a flat path pointing at an input-object argument produces a not-Int error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithFlatSlicingArgInputObject,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeSlicingArgumentNotIntErrorMessage('Query.search', 'input', 'PaginationInput!'),
+        ]),
+      );
+    });
+
+    test('that an intermediate-field default value is rejected when assumedSize is also set', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgIntermediateDefaultPlusAssumedSize,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeAssumedSizeSlicingArgDefaultErrorMessage('Query.search', 'input.pagination.first'),
+        ]),
+      );
+    });
+
+    test('that an argument default value covering a nested leaf is rejected when assumedSize is also set', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgArgumentDefaultPlusAssumedSize,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeAssumedSizeSlicingArgDefaultErrorMessage('Query.search', 'input.first'),
+        ]),
+      );
+    });
+
+    test('that a nested-leaf default value is rejected when assumedSize is also set', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgLeafDefaultPlusAssumedSize,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeAssumedSizeSlicingArgDefaultErrorMessage('Query.search', 'input.first'),
+        ]),
+      );
+    });
+  });
 });
 
 const subgraphWithAssumedSize: Subgraph = {
@@ -1057,5 +1300,263 @@ const subgraphWithAllArgumentsValid: Subgraph = {
     type User {
       id: ID!
     }
+  `),
+};
+
+// --- nested-path slicingArguments fixtures ---
+
+const subgraphWithNestedSlicingArg: Subgraph = {
+  name: 'subgraph-listsize-nested-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput!): [Book]
+        @listSize(slicingArguments: ["input.first"], requireOneSlicingArgument: true)
+    }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithDeepNestedSlicingArg: Subgraph = {
+  name: 'subgraph-listsize-deep-nested-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Book]
+        @listSize(slicingArguments: ["input.pagination.first"], requireOneSlicingArgument: true)
+    }
+    input SearchInput { pagination: PaginationInput, query: String }
+    input PaginationInput { first: Int, after: String }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithMixedSlicingArgs: Subgraph = {
+  name: 'subgraph-listsize-mixed-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(limit: Int, input: SearchInput!): [Book]
+        @listSize(slicingArguments: ["limit", "input.pagination.first"], requireOneSlicingArgument: false)
+    }
+    input SearchInput { pagination: PaginationInput }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgNonNullLeaf: Subgraph = {
+  name: 'subgraph-listsize-nested-nonnull-leaf',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput!): [Book]
+        @listSize(slicingArguments: ["input.first"], requireOneSlicingArgument: true)
+    }
+    input PaginationInput { first: Int! }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgNonNullIntermediate: Subgraph = {
+  name: 'subgraph-listsize-nested-nonnull-intermediate',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Book]
+        @listSize(slicingArguments: ["input.pagination.first"], requireOneSlicingArgument: true)
+    }
+    input SearchInput { pagination: PaginationInput! }
+    input PaginationInput { first: Int! }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgUnknownIntermediate: Subgraph = {
+  name: 'subgraph-listsize-nested-unknown-intermediate',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Book]
+        @listSize(slicingArguments: ["input.bogus.first"], requireOneSlicingArgument: true)
+    }
+    input SearchInput { pagination: PaginationInput }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgUnknownLeaf: Subgraph = {
+  name: 'subgraph-listsize-nested-unknown-leaf',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Book]
+        @listSize(slicingArguments: ["input.pagination.bogus"], requireOneSlicingArgument: true)
+    }
+    input SearchInput { pagination: PaginationInput }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgScalarIntermediate: Subgraph = {
+  name: 'subgraph-listsize-nested-scalar-intermediate',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Book]
+        @listSize(slicingArguments: ["input.query.first"], requireOneSlicingArgument: true)
+    }
+    input SearchInput { query: String }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgListIntermediate: Subgraph = {
+  name: 'subgraph-listsize-nested-list-intermediate',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Book]
+        @listSize(slicingArguments: ["input.paginations.first"], requireOneSlicingArgument: true)
+    }
+    input SearchInput { paginations: [PaginationInput!] }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgNonIntLeaf: Subgraph = {
+  name: 'subgraph-listsize-nested-nonint-leaf',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Book]
+        @listSize(slicingArguments: ["input.pagination.cursor"], requireOneSlicingArgument: true)
+    }
+    input SearchInput { pagination: PaginationInput }
+    input PaginationInput { cursor: String }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgListLeaf: Subgraph = {
+  name: 'subgraph-listsize-nested-list-leaf',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput!): [Book]
+        @listSize(slicingArguments: ["input.first"], requireOneSlicingArgument: true)
+    }
+    input PaginationInput { first: [Int] }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgMalformedPathStart: Subgraph = {
+  name: 'subgraph-listsize-nested-malformed-path',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput!): [Book]
+        @listSize(slicingArguments: [".input.first"], requireOneSlicingArgument: true)
+    }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgMalformedPathMiddle: Subgraph = {
+  name: 'subgraph-listsize-nested-malformed-path',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput!): [Book]
+        @listSize(slicingArguments: ["input..first"], requireOneSlicingArgument: true)
+    }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgMalformedPathEnd: Subgraph = {
+  name: 'subgraph-listsize-nested-malformed-path',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput!): [Book]
+        @listSize(slicingArguments: ["input.first."], requireOneSlicingArgument: true)
+    }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgUnknownArgument: Subgraph = {
+  name: 'subgraph-listsize-nested-unknown-arg',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Book]
+        @listSize(slicingArguments: ["bogus.pagination.first"], requireOneSlicingArgument: true)
+    }
+    input SearchInput { pagination: PaginationInput }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithFlatSlicingArgInputObject: Subgraph = {
+  name: 'subgraph-listsize-flat-slicing-input-object',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput!): [Book]
+        @listSize(slicingArguments: ["input"], requireOneSlicingArgument: true)
+    }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgIntermediateDefaultPlusAssumedSize: Subgraph = {
+  name: 'subgraph-listsize-nested-intermediate-default-assumed',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Book]
+        @listSize(assumedSize: 50, slicingArguments: ["input.pagination.first"], requireOneSlicingArgument: false)
+    }
+    input SearchInput { pagination: PaginationInput = { first: 10 } }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgArgumentDefaultPlusAssumedSize: Subgraph = {
+  name: 'subgraph-listsize-nested-argument-default-assumed',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput = { first: 10 }): [Book]
+        @listSize(assumedSize: 50, slicingArguments: ["input.first"], requireOneSlicingArgument: false)
+    }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgLeafDefaultPlusAssumedSize: Subgraph = {
+  name: 'subgraph-listsize-nested-leaf-default-assumed',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput!): [Book]
+        @listSize(assumedSize: 50, slicingArguments: ["input.first"], requireOneSlicingArgument: false)
+    }
+    input PaginationInput { first: Int = 10 }
+    type Book { id: ID! }
   `),
 };

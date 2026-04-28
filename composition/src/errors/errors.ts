@@ -1723,6 +1723,40 @@ export function listSizeSlicingArgumentNotIntErrorMessage(
   );
 }
 
+export function listSizeSlicingArgumentMalformedPathErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  path: string,
+): string {
+  return (
+    ` The "slicingArguments" value "${path}" on "${directiveCoords}" is not a valid path.` +
+    ` A path must be a non-empty argument name, optionally followed by ".<inputField>" segments,` +
+    ` with no empty segments and no leading or trailing dots.`
+  );
+}
+
+export function listSizeSlicingArgumentSegmentNotFoundErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  path: string,
+  segment: string,
+  parentTypeName: TypeName,
+): string {
+  return (
+    ` The "slicingArguments" path "${path}" on "${directiveCoords}" references "${segment}",` +
+    ` which is not a defined Input field on Input Object type "${parentTypeName}".`
+  );
+}
+
+export function listSizeSlicingArgumentSegmentNotInputObjectErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  path: string,
+  typeName: TypeName,
+): string {
+  return (
+    ` The "slicingArguments" path "${path}" on "${directiveCoords}"` +
+    ` whose type "${typeName}" is not an Input Object type and therefore cannot be traversed further.`
+  );
+}
+
 export function listSizeSizedFieldNotFoundErrorMessage(
   directiveCoords: DirectiveArgumentCoords,
   fieldName: FieldName,
