@@ -393,7 +393,7 @@ export function invalidArgumentValueError({
   value,
 }: InvalidArgumentValueErrorParams): Error {
   return new Error(
-    ` The value "${value}" provided to argument "$${argumentName}" is not a valid "${expectedTypeString}" type.`,
+    ` The value "${value}" provided to argument "${argumentName}" is not a valid "${expectedTypeString}" type.`,
   );
 }
 

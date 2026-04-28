@@ -13,7 +13,7 @@ import {
   type InputValueDefinitionNode,
   type Kind,
   type StringValueNode,
-} from 'graphql/index';
+} from 'graphql/';
 import { type InputNodeKind } from '../../utils/types';
 import type { MutableInputValueNode, MutableTypeNode } from '../../schema-building/ast';
 import { type DirectiveArgumentData, type DirectiveDefinitionData } from './types';

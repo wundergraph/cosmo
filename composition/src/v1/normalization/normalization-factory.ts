@@ -949,14 +949,14 @@ export class NormalizationFactory {
     for (const argument of directiveNode.arguments) {
       switch (argument.name.value) {
         case PROPAGATE: {
-          if (argument.value.kind != Kind.BOOLEAN) {
+          if (argument.value.kind !== Kind.BOOLEAN) {
             return;
           }
           configureDescriptionData.propagate = argument.value.value;
           break;
         }
         case DESCRIPTION_OVERRIDE: {
-          if (argument.value.kind != Kind.STRING) {
+          if (argument.value.kind !== Kind.STRING) {
             return;
           }
           configureDescriptionData.description = argument.value.value;
@@ -2876,7 +2876,7 @@ export class NormalizationFactory {
             }
             switch (fieldName) {
               case CONSUMER_NAME:
-                if (field.value.kind != Kind.STRING || field.value.value.length < 1) {
+                if (field.value.kind !== Kind.STRING || field.value.value.length < 1) {
                   invalidRequiredFieldNames.add(fieldName);
                   isValid = false;
                   continue;
@@ -2884,7 +2884,7 @@ export class NormalizationFactory {
                 consumerName = field.value.value;
                 break;
               case STREAM_NAME:
-                if (field.value.kind != Kind.STRING || field.value.value.length < 1) {
+                if (field.value.kind !== Kind.STRING || field.value.value.length < 1) {
                   invalidRequiredFieldNames.add(fieldName);
                   isValid = false;
                   continue;
@@ -2892,7 +2892,7 @@ export class NormalizationFactory {
                 streamName = field.value.value;
                 break;
               case CONSUMER_INACTIVE_THRESHOLD:
-                if (field.value.kind != Kind.INT) {
+                if (field.value.kind !== Kind.INT) {
                   errorMessages.push(
                     invalidArgumentValueErrorMessage(
                       print(field.value),
@@ -3298,7 +3298,7 @@ export class NormalizationFactory {
     if (data.kind !== Kind.OBJECT_TYPE_DEFINITION) {
       return false;
     }
-    if (data.fieldDataByName.size != 1) {
+    if (data.fieldDataByName.size !== 1) {
       return false;
     }
     for (const [fieldName, fieldData] of data.fieldDataByName) {
@@ -3319,7 +3319,7 @@ export class NormalizationFactory {
     if (!isInputObjectDefinitionData(streamConfigurationInputData)) {
       return false;
     }
-    if (streamConfigurationInputData.inputValueDataByName.size != 3) {
+    if (streamConfigurationInputData.inputValueDataByName.size !== 3) {
       return false;
     }
     for (const [inputValueName, inputValueData] of streamConfigurationInputData.inputValueDataByName) {
