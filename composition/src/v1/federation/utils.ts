@@ -9,15 +9,15 @@ import {
   type InterfaceDefinitionData,
   type ObjectDefinitionData,
   type ParentDefinitionData,
-} from '../../schema-building/types';
+} from '../../schema-building/types/types';
 import { getTypeNodeNamedTypeName, type MutableFieldNode } from '../../schema-building/ast';
 import { BASE_SCALARS } from '../constants/constants';
 import { isKindAbstract } from '../../ast/utils';
 import { type GraphNode } from '../../resolvability-graph/graph-nodes';
 import { type InternalSubgraph } from '../../subgraph/types';
-import { type ContractTagOptions } from '../../federation/types';
+import { type ContractTagOptions } from '../../federation/types/types';
 import { getOrThrowError, getValueOrDefault } from '../../utils/utils';
-import { type KeyFieldSetData } from '../normalization/types';
+import { type KeyFieldSetData } from '../normalization/types/types';
 import { type TypeName } from '../../types/types';
 import { TYPENAME } from '../../utils/string-constants';
 

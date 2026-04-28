@@ -1,10 +1,11 @@
-import { type FieldData, type InputValueData, type ParentDefinitionData } from '../schema-building/types';
-import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
-
-export type InvalidRootTypeFieldEventsDirectiveData = {
-  definesDirectives: boolean;
-  invalidDirectiveNames: Array<string>;
-};
+import { type FieldData, type InputValueData, type ParentDefinitionData } from '../../schema-building/types/types';
+import {
+  type ArgumentName,
+  type DirectiveName,
+  type FieldName,
+  type SubgraphName,
+  type TypeName,
+} from '../../types/types';
 
 export type IncompatibleMergedTypesErrorParams = {
   actualType: string;
@@ -53,4 +54,43 @@ export type NonExternalConditionalFieldErrorParams = {
   directiveName: DirectiveName;
   subgraphName: SubgraphName;
   targetCoords: string;
+};
+
+export type invalidVersionLinkDirectiveUrlErrorParams = {
+  url: string;
+  versionString: string;
+};
+
+export type InvalidSubValueFieldLinkDirectiveImportErrorParams = {
+  fieldName: FieldName;
+  value: string;
+};
+
+export type InvalidLinkDirectiveImportObjectErrorParams = {
+  name: string;
+  rename: string;
+};
+
+export type InvalidCustomDirectiveErrorParams = {
+  directiveCoords: string;
+  directiveName: DirectiveName;
+  errors: Array<Error>;
+  ordinal: string;
+};
+
+export type InvalidDirectiveLocationErrorParams = {
+  directiveCoords: string;
+  directiveName: DirectiveName;
+  location: string;
+};
+
+export type InvalidRepeatedDirectiveErrorParams = {
+  directiveCoords: string;
+  directiveName: DirectiveName;
+};
+
+export type InvalidArgumentValueErrorParams = {
+  argumentName: ArgumentName;
+  value: string;
+  expectedTypeString: string;
 };

@@ -1,16 +1,34 @@
 import {
-  type ArgumentData,
   type CompositeOutputData,
-  type DirectiveDefinitionData,
   type FieldData,
   type InputObjectDefinitionData,
   type InputValueData,
   type NodeData,
   type SchemaData,
-} from '../../schema-building/types';
-import { type ConstDirectiveNode, type DocumentNode, type InputValueDefinitionNode, type ValueNode } from 'graphql';
-import { type RequiredFieldConfiguration } from '../../router-configuration/types';
-import { type DirectiveArgumentCoords, type DirectiveName, type SubgraphName } from '../../types/types';
+} from '../../../schema-building/types/types';
+import {
+  type ConstDirectiveNode,
+  type DocumentNode,
+  type InputValueDefinitionNode,
+  type Kind,
+  type NameNode,
+  type StringValueNode,
+  type ValueNode,
+} from 'graphql';
+import { type RequiredFieldConfiguration } from '../../../router-configuration/types';
+import {
+  type ArgumentName,
+  type DirectiveArgumentCoords,
+  type DirectiveName,
+  type FieldName,
+  type SubgraphName,
+  type TypeName,
+} from '../../../types/types';
+import { type ExecutionFailure, type ExecutionSuccess } from '../../../types/results';
+import {
+  type DirectiveArgumentData,
+  type DirectiveDefinitionData,
+} from '../../../directive-definition-data/types/types';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -34,10 +52,10 @@ export type FieldSetParentResult = {
   fieldSetParentData?: CompositeOutputData;
 };
 
-export type ExtractArgumentDataResult = {
-  argumentTypeNodeByName: Map<string, ArgumentData>;
-  optionalArgumentNames: Set<string>;
-  requiredArgumentNames: Set<string>;
+export type ExtractDirectiveArgumentDataResult = {
+  argumentDataByName: Map<ArgumentName, DirectiveArgumentData>;
+  optionalArgumentNames: Set<ArgumentName>;
+  requiredArgumentNames: Set<ArgumentName>;
 };
 
 export type ValidateDirectiveParams = {
@@ -46,7 +64,7 @@ export type ValidateDirectiveParams = {
   directiveCoords: string;
   directiveNode: ConstDirectiveNode;
   errorMessages: Array<string>;
-  requiredArgumentNames: Array<string>;
+  requiredArgumentNames: Array<ArgumentName>;
 };
 
 export type HandleOverrideDirectiveParams = {
@@ -90,21 +108,38 @@ export type RecordDirectiveWeightOnFieldParams = {
 };
 
 export type AddInputValueDataByNodeParams = {
-  inputValueDataByName: Map<string, InputValueData>;
+  inputValueDataByName: Map<FieldName, InputValueData>;
   isArgument: boolean;
   node: InputValueDefinitionNode;
-  originalParentTypeName: string;
-  fieldName?: string;
-  renamedParentTypeName?: string;
+  originalParentTypeName: TypeName;
+  fieldName?: FieldName;
+  renamedParentTypeName?: TypeName;
 };
 
-export type ExecutionFailure = {
-  success: false;
-};
-
-export type UpsertInputObjectSuccess = {
+export interface UpsertInputObjectSuccess extends ExecutionSuccess {
   data: InputObjectDefinitionData;
-  success: true;
-};
+}
 
 export type UpsertInputObjectResult = ExecutionFailure | UpsertInputObjectSuccess;
+
+export type ComposeDirectiveNode = {
+  readonly arguments: ReadonlyArray<ComposeDirectiveArgumentNode>;
+  readonly kind: Kind.DIRECTIVE;
+  readonly name: NameNode;
+  readonly loc?: Location;
+};
+
+export type ComposeDirectiveArgumentNode = {
+  readonly kind: Kind.ARGUMENT;
+  readonly name: NameNode;
+  readonly value: StringValueNode;
+  readonly loc?: Location;
+};
+
+export type LinkImportData = {
+  name: DirectiveName;
+  coreUrl: string;
+  version: number;
+  node?: ConstDirectiveNode;
+  rename?: DirectiveName;
+};

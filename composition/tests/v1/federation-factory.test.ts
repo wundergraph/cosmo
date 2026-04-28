@@ -1,11 +1,12 @@
 import {
+  duplicateSubgraphNamesError,
   incompatibleParentTypeMergeError,
   INPUT_OBJECT,
   type InputObjectDefinitionData,
-  invalidSubgraphNamesError,
   KEY,
   noBaseDefinitionForExtensionError,
   noQueryRootTypeError,
+  noSubgraphNameError,
   OBJECT,
   type ObjectDefinitionData,
   parse,
@@ -45,46 +46,24 @@ const __dirname = path.dirname(__filename);
 
 describe('FederationFactory tests', () => {
   test('that trying to federate with non-unique subgraph names returns an error', () => {
-    const result = federateSubgraphsFailure([pandas, pandas, users, users], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(invalidSubgraphNamesError([pandas.name, users.name], []));
+    const { errors } = federateSubgraphsFailure([pandas, pandas, users, users], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([duplicateSubgraphNamesError([pandas.name, users.name])]);
   });
 
   test('that trying to federate with empty subgraph names returns an error', () => {
-    const result = federateSubgraphsFailure([emptySubgraph, emptySubgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.errors).toHaveLength(1);
-    const errorMessage = result.errors![0].message;
-    expect(errorMessage).contains(
-      `Subgraphs to be federated must each have a unique, non-empty name.\n` +
-        ` The 1st subgraph in the array did not define a name.`,
-    );
-    expect(errorMessage).contains(
-      ` The 2nd subgraph in the array did not define a name.` +
-        ` Consequently, any further errors will temporarily identify this subgraph as "`,
-    );
+    const { errors } = federateSubgraphsFailure([emptySubgraph, emptySubgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors).toStrictEqual([noSubgraphNameError]);
   });
 
   test('that trying to federate with both non-unique and empty subgraph names returns an error', () => {
-    const result = federateSubgraphsFailure(
+    const { errors } = federateSubgraphsFailure(
       [users, users, pandas, pandas, emptySubgraph, emptySubgraph, emptySubgraph],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
-    expect(result.errors).toHaveLength(1);
-    const errorMessage = result.errors![0].message;
-    expect(errorMessage).contains(
-      `Subgraphs to be federated must each have a unique, non-empty name.\n` +
-        ` The following subgraph names are not unique:\n  "users", "pandas"\n` +
-        ` The 5th subgraph in the array did not define a name.` +
-        ` Consequently, any further errors will temporarily identify this subgraph as "`,
-    );
-    expect(errorMessage).contains(
-      ` The 6th subgraph in the array did not define a name.` +
-        ` Consequently, any further errors will temporarily identify this subgraph as "`,
-    );
-    expect(errorMessage).contains(
-      ` The 7th subgraph in the array did not define a name.` +
-        ` Consequently, any further errors will temporarily identify this subgraph as "`,
-    );
+    expect(errors).toHaveLength(2);
+    expect(errors).toStrictEqual([noSubgraphNameError, duplicateSubgraphNamesError([users.name, pandas.name])]);
   });
 
   test('that the demo subgraphs federate to generate the correct federated graph', () => {
