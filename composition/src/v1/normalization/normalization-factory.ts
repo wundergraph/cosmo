@@ -2666,7 +2666,7 @@ export class NormalizationFactory {
             const firstSegment = segments[0];
             const argData = data.argumentDataByName.get(firstSegment);
             if (!argData) {
-              errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, firstSegment));
+              errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgPath));
               continue;
             }
 

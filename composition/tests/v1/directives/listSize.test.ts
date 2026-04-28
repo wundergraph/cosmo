@@ -834,7 +834,7 @@ describe('@listSize directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
-          listSizeInvalidSlicingArgumentErrorMessage('Query.search', 'bogus'),
+          listSizeInvalidSlicingArgumentErrorMessage('Query.search', 'bogus.pagination.first'),
         ]),
       );
     });
