@@ -2691,6 +2691,7 @@ export class NormalizationFactory {
                   listSizeSlicingArgumentSegmentNotInputObjectErrorMessage(
                     directiveCoords,
                     slicingArgPath,
+                    current.name,
                     printTypeNode(current.type),
                   ),
                 );

@@ -1742,18 +1742,19 @@ export function listSizeSlicingArgumentSegmentNotFoundErrorMessage(
 ): string {
   return (
     ` The "slicingArguments" path "${path}" on "${directiveCoords}" references "${segment}",` +
-    ` which is not a defined Input field on Input Object type "${parentTypeName}".`
+    ` which is not a defined field on Input Object type "${parentTypeName}".`
   );
 }
 
 export function listSizeSlicingArgumentSegmentNotInputObjectErrorMessage(
   directiveCoords: DirectiveArgumentCoords,
   path: string,
+  segment: string,
   typeName: TypeName,
 ): string {
   return (
-    ` The "slicingArguments" path "${path}" on "${directiveCoords}"` +
-    ` whose type "${typeName}" is not an Input Object type and therefore cannot be traversed further.`
+    ` The "slicingArguments" path "${path}" on "${directiveCoords}" references "${segment}",` +
+    ` whose type "${typeName}" is not an Input Object.`
   );
 }
 
