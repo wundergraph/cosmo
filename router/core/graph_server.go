@@ -490,8 +490,14 @@ func (s *graphServer) buildMultiGraphHandler(
 	for featureFlagName, executionConfig := range opts.featureFlagConfigs {
 		// reuse old mux if config did not change
 		activeFF, found := opts.previousFeatureFlagMuxes[featureFlagName]
-		if found && proto.Equal(activeFF.config, executionConfig) {
+		if found && proto.Equal(activeFF.config.EngineConfig, executionConfig.EngineConfig) {
 			featureFlagToMux[featureFlagName] = activeFF.mux.mux
+			activeFF.mux.reused = true
+
+			s.graphMuxListLock.Lock()
+			s.graphMuxList = append(s.graphMuxList, activeFF.mux)
+			s.graphMuxListLock.Unlock()
+
 			continue
 		}
 
@@ -505,6 +511,7 @@ func (s *graphServer) buildMultiGraphHandler(
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
 		}
+
 		featureFlagToMux[featureFlagName] = gm.mux
 		opts.previousFeatureFlagMuxes[featureFlagName] = inUseFeatureFlag{
 			config: executionConfig,
@@ -584,6 +591,8 @@ type graphMux struct {
 	otelCacheMetrics          *rmetric.CacheMetrics
 	streamMetricStore         rmetric.StreamMetricStore
 	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
+
+	reused bool
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -2009,6 +2018,11 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	s.graphMuxListLock.Lock()
 	defer s.graphMuxListLock.Unlock()
 	for _, mux := range s.graphMuxList {
+		if mux.reused {
+			// If mux is reused by the next graph server do not shut it down.
+			mux.reused = false // reset the reused indicator so the mux is not skipped forever.
+			continue
+		}
 		if err := mux.Shutdown(ctx); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
