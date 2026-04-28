@@ -23,12 +23,12 @@
     }
   },
   "dependencies": {
-    "@bufbuild/protobuf": "1.9.0",
-    "@connectrpc/connect-query": "^1.4.1"
+    "@bufbuild/protobuf": "catalog:",
+    "@connectrpc/connect-query": "catalog:"
   },
   "devDependencies": {
-    "del-cli": "^5.0.0",
-    "typescript": "^5.2.2"
+    "del-cli": "catalog:",
+    "typescript": "catalog:"
   },
   "keywords": [
     "wundergraph",

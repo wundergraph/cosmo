@@ -139,3 +139,75 @@ func TestKafkaEngineDataSourceFactoryMultiTopicSubscription(t *testing.T) {
 	require.Equal(t, "test-topic-1", subscriptionConfig.Topics[0], "Expected first topic to be 'test-topic-1'")
 	require.Equal(t, "test-topic-2", subscriptionConfig.Topics[1], "Expected second topic to be 'test-topic-2'")
 }
+
+func TestTransformEventConfig(t *testing.T) {
+	t.Run("publish event", func(t *testing.T) {
+		cfg := &EngineDataSourceFactory{
+			providerId: "test-provider",
+			eventType:  EventTypePublish,
+			topics:     []string{"original.topic"},
+			fieldName:  "testField",
+		}
+
+		transformFn := func(s string) (string, error) {
+			return "transformed." + s, nil
+		}
+
+		err := cfg.TransformEventData(transformFn)
+		require.NoError(t, err)
+		require.Equal(t, []string{"transformed.original.topic"}, cfg.topics)
+	})
+
+	t.Run("publish event invalid topic count", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			topics      []string
+			expectedErr string
+		}{
+			{
+				name:        "no topics",
+				topics:      nil,
+				expectedErr: "publish event definition should define one topic but has 0",
+			},
+			{
+				name:        "multiple topics",
+				topics:      []string{"topic.one", "topic.two"},
+				expectedErr: "publish event definition should define one topic but has 2",
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				cfg := &EngineDataSourceFactory{
+					providerId: "test-provider",
+					eventType:  EventTypePublish,
+					topics:     append([]string(nil), tc.topics...),
+					fieldName:  "testField",
+				}
+
+				err := cfg.TransformEventData(func(s string) (string, error) {
+					return "transformed." + s, nil
+				})
+				require.ErrorContains(t, err, tc.expectedErr)
+				require.Equal(t, tc.topics, cfg.topics)
+			})
+		}
+	})
+
+	t.Run("subscribe event", func(t *testing.T) {
+		cfg := &EngineDataSourceFactory{
+			providerId: "test-provider",
+			eventType:  EventTypeSubscribe,
+			topics:     []string{"original.topic2", "original.topic1"},
+			fieldName:  "testField",
+		}
+
+		transformFn := func(s string) (string, error) {
+			return "transformed." + s, nil
+		}
+
+		err := cfg.TransformEventData(transformFn)
+		require.NoError(t, err)
+		require.Equal(t, []string{"transformed.original.topic1", "transformed.original.topic2"}, cfg.topics)
+	})
+}

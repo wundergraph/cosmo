@@ -1,6 +1,6 @@
 import { ColumnFiltersState, PaginationState, SortingState, Table } from '@tanstack/react-table';
 import { endOfDay, formatISO, startOfDay, subDays, subHours } from 'date-fns';
-import isEqual from 'lodash/isEqual';
+import { isEqual } from 'lodash';
 import { useRouter } from 'next/router';
 import { AnalyticsViewGroupName } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useEffect, useRef } from 'react';

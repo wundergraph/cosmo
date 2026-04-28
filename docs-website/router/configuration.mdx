@@ -1563,6 +1563,7 @@ In addition to the above JWKS configuration flavours, you can define a list of a
 
 | YAML                | Required               | Description                                                                                                                   | Default Value |
 | ------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| scope_claim         | <Icon icon="square" /> | The JWT claim used to read scopes for authorization. Use this when your identity provider stores scopes in a claim other than `scope`. Only top level claims are supported. | scope         |
 | header_name         | <Icon icon="square" /> | The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.       | Authorization |
 | header_value_prefix | <Icon icon="square" /> | The prefix of the header value. The prefix is used to extract the token from the header value. The default value is 'Bearer'. | Bearer        |
 
@@ -1598,6 +1599,7 @@ authentication:
           interval: 30s
           burst: 2
     header_name: Authorization # This is the default value
+    scope_claim: scope # This is the default value
     header_value_prefix: Bearer # This is the default value
     header_sources:
       - type: header
@@ -1709,6 +1711,10 @@ events:
           user_info:
             username: "username"
             password: "password"
+        tls:
+          ca_file: /path/to/ca.crt
+          cert_file: /path/to/client.crt
+          key_file: /path/to/client.key
     kafka:
       - id: my-kafka
         tls:
@@ -1742,6 +1748,60 @@ events:
 |                      | authentication.user_info          | <Icon icon="square" />                        | User-Info based authentication.                                                          |               |
 |                      | authentication.user_info.username | <Icon icon="square" />                        | Username.                                                                                |               |
 |                      | authentication.user_info.password | <Icon icon="square" />                        | Password.                                                                                |               |
+|                      | tls                               | <Icon icon="square" />                        | TLS configuration for the NATS provider.                                                 |               |
+|                      | tls.insecure_skip_ca_verification | <Icon icon="square" />                        | Skip server certificate verification. Not recommended for production.                    | false         |
+|                      | tls.ca_file                       | <Icon icon="square" />                        | Path to a custom CA certificate file (PEM) used to verify the server certificate. Defaults to the host's system trust store. |               |
+|                      | tls.cert_file                     | <Icon icon="square" />                        | Path to the client certificate file (PEM) for mTLS. Must be set together with `key_file`.             |               |
+|                      | tls.key_file                      | <Icon icon="square" />                        | Path to the client private key file (PEM) for mTLS. Must be set together with `cert_file`.            |               |
+
+#### TLS
+
+The NATS provider supports four TLS modes:
+
+| Mode | Config |
+|---|---|
+| No TLS | Omit the `tls` block |
+| TLS with skip verify | `insecure_skip_ca_verification: true` |
+| TLS with custom CA | `ca_file: /path/to/ca.crt` |
+| Mutual TLS (mTLS) | `cert_file` + `key_file` (plus optional `ca_file`) |
+
+<CodeGroup>
+  ```yaml Skip verify (dev/self-signed)
+  events:
+    providers:
+      nats:
+        - id: my-nats
+          url: "nats://localhost:4222"
+          tls:
+            insecure_skip_ca_verification: true
+  ```
+
+  ```yaml Custom CA (1-way TLS)
+  events:
+    providers:
+      nats:
+        - id: my-nats
+          url: "nats://localhost:4222"
+          tls:
+            ca_file: /path/to/ca.crt
+  ```
+
+  ```yaml Mutual TLS (mTLS)
+  events:
+    providers:
+      nats:
+        - id: my-nats
+          url: "nats://localhost:4222"
+          tls:
+            ca_file: /path/to/ca.crt
+            cert_file: /path/to/client.crt
+            key_file: /path/to/client.key
+  ```
+</CodeGroup>
+
+<Warning>
+  `insecure_skip_ca_verification: true` disables server certificate verification. Do not use in production.
+</Warning>
 
 ### Kafka Provider
 
@@ -2307,7 +2367,7 @@ apollo_router_compatibility_flags:
 | Environment Variable                                | YAML                           | Required               | Description                                                                                                                                                                                                                                                                                  | Default Value |
 | --------------------------------------------------- | ------------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
 | CACHE_WARMUP_ENABLED                                | enabled                        | <Icon icon="square" /> | Enable the cache warmer.                                                                                                                                                                                                                                                                     | false         |
-| CACHE_WARMUP_ITEMS_PER_SECOND                       | items_per_second               | <Icon icon="square" /> | The number of cache warmup items to process per second. Higher numbers decrease the time to warm up the cache but increase the load on the system.                                                                                                                                           | 50            |
+| CACHE_WARMUP_ITEMS_PER_SECOND                       | items_per_second               | <Icon icon="square" /> | Maximum number of cache warmup items processed per second across all workers. Acts as an upper bound: actual throughput can be lower if processing is slow or there are too few items. Set to `0` for unlimited. Higher numbers decrease warmup time but increase system load.               | 50            |
 | CACHE_WARMUP_TIMEOUT                                | timeout                        | <Icon icon="square" /> | The timeout for warming up the cache. This can be used to limit the amount of time cache warming will block deploying a new config. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.                        | 30s           |
 | CACHE_WARMUP_WORKERS                                | workers                        | <Icon icon="square" /> | The number of workers for the cache warmup to run in parallel. Higher numbers decrease the time to warm up the cache but increase the load on the system.                                                                                                                                    | 8             |
 |                                                     | source                         | <Icon icon="square" /> | The source of the cache warmup items. Only one can be specified. If empty, the cache warmup source is the Cosmo CDN and it requires a graph to be set.                                                                                                                                       |               |

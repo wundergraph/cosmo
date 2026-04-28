@@ -31,6 +31,7 @@ import (
 
 	"github.com/cloudflare/backoff"
 	mcpclient "github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -365,6 +366,7 @@ type Config struct {
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
 	MCPOperationsPath                  string
+	MCPAuthToken                       string // Optional Bearer token for MCP authentication
 	EnableRedis                        bool
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
@@ -688,6 +690,9 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.MCP.Enabled {
 		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
+		if cfg.MCP.OAuth.Enabled && cfg.MCP.Server.BaseURL == "" {
+			cfg.MCP.Server.BaseURL = fmt.Sprintf("http://%s", cfg.MCP.Server.ListenAddr)
+		}
 	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
@@ -851,7 +856,17 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
 		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
-		client, err := mcpclient.NewStreamableHttpClient(mcpAddr)
+
+		// Add authentication headers if token is provided
+		var clientOpts []transport.StreamableHTTPCOption
+		if cfg.MCPAuthToken != "" {
+			headers := map[string]string{
+				"Authorization": fmt.Sprintf("Bearer %s", cfg.MCPAuthToken),
+			}
+			clientOpts = append(clientOpts, transport.WithHTTPHeaders(headers))
+		}
+
+		client, err := mcpclient.NewStreamableHttpClient(mcpAddr, clientOpts...)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
@@ -1118,6 +1133,9 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.MCP.Enabled {
 		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
+		if cfg.MCP.OAuth.Enabled && cfg.MCP.Server.BaseURL == "" {
+			cfg.MCP.Server.BaseURL = fmt.Sprintf("http://%s", cfg.MCP.Server.ListenAddr)
+		}
 	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
@@ -1279,7 +1297,17 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
 		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
-		client, err := mcpclient.NewStreamableHttpClient(mcpAddr)
+
+		// Add authentication headers if token is provided
+		var clientOpts []transport.StreamableHTTPCOption
+		if cfg.MCPAuthToken != "" {
+			headers := map[string]string{
+				"Authorization": fmt.Sprintf("Bearer %s", cfg.MCPAuthToken),
+			}
+			clientOpts = append(clientOpts, transport.WithHTTPHeaders(headers))
+		}
+
+		client, err := mcpclient.NewStreamableHttpClient(mcpAddr, clientOpts...)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
@@ -1776,23 +1804,33 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
-			require.NoError(t, err)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(requestLog)
-			require.NoError(t, err)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			return
 		}
+
 		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
-		if authorization == "" {
-			require.NotEmpty(t, authorization, "missing authorization header")
+		token, ok := strings.CutPrefix(authorization, "Bearer ")
+		if !ok {
+			http.Error(w, "missing or malformed Bearer token", http.StatusUnauthorized)
+			return
 		}
-		token := authorization[len("Bearer "):]
 		parsedClaims := make(jwt.MapClaims)
 		jwtParser := new(jwt.Parser)
-		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		require.NoError(t, err)
+		if _, _, err := jwtParser.ParseUnverified(token, parsedClaims); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
 		cdnFileServer.ServeHTTP(w, r)
 	})
 	cdnServer = httptest.NewServer(handler)
