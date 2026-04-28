@@ -79,6 +79,7 @@ type (
 	// All fields are shared between all feature muxes. On shutdown, all graph instances are shutdown.
 	graphServer struct {
 		*Config
+		parentCtx               context.Context
 		context                 context.Context
 		cancelFunc              context.CancelFunc
 		storageProviders        *config.StorageProviders
@@ -177,9 +178,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	gsCtx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
-		context:                 ctx,
+		parentCtx:               ctx,
+		context:                 gsCtx,
 		cancelFunc:              cancel,
 		Config:                  &r.Config,
 		engineStats:             r.EngineStats,
@@ -328,6 +330,13 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
+	}
+
+	// Remove feature flag muxes that no longer exist.
+	for name := range r.activeFeatureFlagMuxes {
+		if _, exists := featureFlagConfigMap[name]; !exists {
+			delete(r.activeFeatureFlagMuxes, name)
+		}
 	}
 
 	wrapper, err := gzhttp.NewWrapper(
@@ -592,6 +601,9 @@ type graphMux struct {
 	streamMetricStore         rmetric.StreamMetricStore
 	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
 
+	muxCtx    context.Context
+	muxCancel context.CancelFunc
+
 	reused bool
 }
 
@@ -854,6 +866,7 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
+	s.muxCancel()
 	s.planCache.Close()
 	s.planFallbackCache.Close()
 	s.persistedOperationCache.Close()
@@ -916,9 +929,12 @@ func (s *graphServer) buildGraphMux(
 	ctx context.Context,
 	opts BuildGraphMuxOptions,
 ) (*graphMux, error) {
+	muxCtx, muxCancel := context.WithCancel(s.parentCtx)
 	gm := &graphMux{
 		metricStore:       rmetric.NewNoopMetrics(),
 		streamMetricStore: rmetric.NewNoopStreamMetricStore(),
+		muxCtx:            muxCtx,
+		muxCancel:         muxCancel,
 	}
 
 	httpRouter := chi.NewRouter()
@@ -1701,7 +1717,7 @@ func (s *graphServer) buildGraphMux(
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
-		wsMiddleware := NewWebsocketMiddleware(ctx, WebsocketMiddlewareOptions{
+		wsMiddleware := NewWebsocketMiddleware(gm.muxCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,
 			Planner:                   operationPlanner,
