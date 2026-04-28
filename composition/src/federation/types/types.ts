@@ -1,4 +1,4 @@
-import { type Warning } from '../warnings/types';
+import { type Warning } from '../../warnings/types';
 import {
   type ConstDirectiveNode,
   type DirectiveDefinitionNode,
@@ -9,41 +9,39 @@ import {
 import {
   type ConfigureDescriptionData,
   type ExtensionType,
+  type FederatedDirectivesData,
   type ParentDefinitionData,
-  type PersistedDirectivesData,
-} from '../schema-building/types';
-import { type FieldConfiguration } from '../router-configuration/types';
-import { type SubgraphConfig } from '../subgraph/types';
-import type { DirectiveName, SubgraphName, TypeName } from '../types/types';
+} from '../../schema-building/types/types';
+import { type FieldConfiguration } from '../../router-configuration/types';
+import { type SubgraphConfig } from '../../subgraph/types';
+import type { DirectiveName, SubgraphName, TypeName } from '../../types/types';
+import { type ExecutionMultiFailure, type ExecutionSuccess } from '../../types/results';
 
-export type FederationFailure = {
+export interface FederationFailure extends ExecutionMultiFailure {
   errors: Array<Error>;
-  success: false;
   warnings: Array<Warning>;
-};
+}
 
-export type FederationSuccess = {
+export interface FederationSuccess extends ExecutionSuccess {
   directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   fieldConfigurations: Array<FieldConfiguration>;
   federatedGraphAST: DocumentNode;
   federatedGraphClientSchema: GraphQLSchema;
   federatedGraphSchema: GraphQLSchema;
-  parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
-  subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
+  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
+  subgraphConfigBySubgraphName: Map<SubgraphName, SubgraphConfig>;
   shouldIncludeClientSchema?: boolean;
-  success: true;
   warnings: Array<Warning>;
-};
+}
 
 export type FederationResult = FederationFailure | FederationSuccess;
 
-export type FederationResultWithContractsFailure = {
-  success: false;
+export interface FederationResultWithContractsFailure extends ExecutionMultiFailure {
   errors: Array<Error>;
   warnings: Array<Warning>;
-};
+}
 
-export type FederationResultWithContractsSuccess = {
+export interface FederationResultWithContractsSuccess extends ExecutionSuccess {
   directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   fieldConfigurations: Array<FieldConfiguration>;
   federatedGraphAST: DocumentNode;
@@ -52,10 +50,9 @@ export type FederationResultWithContractsSuccess = {
   federationResultByContractName: Map<string, FederationResult>;
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   subgraphConfigBySubgraphName: Map<SubgraphName, SubgraphConfig>;
-  success: true;
   warnings: Array<Warning>;
   shouldIncludeClientSchema?: boolean;
-};
+}
 
 export type FederationResultWithContracts = FederationResultWithContractsFailure | FederationResultWithContractsSuccess;
 
@@ -69,6 +66,6 @@ export type MutualParentDefinitionData = {
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   name: TypeName;
-  persistedDirectivesData: PersistedDirectivesData;
+  federatedDirectivesData: FederatedDirectivesData;
   description?: StringValueNode;
 };

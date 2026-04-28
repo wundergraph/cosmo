@@ -21,7 +21,12 @@ import {
 } from './string-constants';
 import { invalidKeyFatalError } from '../errors/errors';
 import { stringToNameNode } from '../ast/utils';
-import { type AddMapEntriesParams, type AddOptionalToSetParams, type AddToSetParams } from './params';
+import {
+  type AddMapEntriesParams,
+  type AddOptionalToSetParams,
+  type AddToSetParams,
+  type MergeSetValueMapParams,
+} from './params';
 
 export function getOrThrowError<K, V>(map: Map<K, V>, key: K, mapName: string): V {
   const value = map.get(key);
@@ -264,4 +269,18 @@ export function getFirstEntry<K, V>(collection: Set<V> | Map<K, V>): V | undefin
     return;
   }
   return value;
+}
+
+export function mergeSetValueMap<K, V>({ source, target }: MergeSetValueMapParams<K, V>): void {
+  for (const [key, sourceSet] of source) {
+    const targetSet = target.get(key);
+    if (!targetSet) {
+      target.set(key, new Set<V>(sourceSet));
+      continue;
+    }
+    addIterableToSet({
+      source: sourceSet,
+      target: targetSet,
+    });
+  }
 }

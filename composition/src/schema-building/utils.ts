@@ -3,8 +3,6 @@ import {
   type ConstDirectiveNode,
   type ConstValueNode,
   DEFAULT_DEPRECATION_REASON,
-  type DefinitionNode,
-  type DirectiveDefinitionNode,
   type EnumValueDefinitionNode,
   type EnumValueNode,
   type FieldDefinitionNode,
@@ -17,6 +15,7 @@ import {
   print,
   type StringValueNode,
   type TypeNode,
+  visit,
 } from 'graphql';
 import {
   type AuthorizationData,
@@ -25,20 +24,19 @@ import {
   type ConditionalFieldData,
   type DefinitionData,
   type EnumDefinitionData,
+  type EnumValueData,
   ExtensionType,
   type ExternalFieldData,
+  type FederatedDirectivesData,
   type FieldData,
   type InputObjectDefinitionData,
-  type InputValueData,
   type InterfaceDefinitionData,
   type NodeData,
   type ObjectDefinitionData,
   type ParentDefinitionData,
-  type PersistedDirectiveDefinitionData,
-  type PersistedDirectivesData,
   type SchemaData,
-} from './types';
-import { type MutableDefinitionNode, type MutableFieldNode, type MutableInputValueNode } from './ast';
+} from './types/types';
+import { type MutableFieldNode, type MutableInputValueNode } from './ast';
 import {
   type InterfaceTypeNode,
   type ObjectTypeNode,
@@ -46,11 +44,7 @@ import {
   setToNameNodeArray,
   stringToNameNode,
 } from '../ast/utils';
-import {
-  incompatibleInputValueDefaultValuesError,
-  invalidRepeatedFederatedDirectiveErrorMessage,
-  invalidRequiredInputValueError,
-} from '../errors/errors';
+import { incompatibleInputValueDefaultValuesError, invalidRequiredInputValueError } from '../errors/errors';
 import { type SubscriptionFilterValue } from '../router-configuration/types';
 import {
   ARGUMENT,
@@ -88,9 +82,33 @@ import {
 import { type InputNodeKind, type InvalidRequiredInputValueData, type OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
 import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
-import { type IsTypeValidImplementationParams } from './params';
+import {
+  type CompareAndValidateInputDefaultValuesParams,
+  type DirectiveDefinitionNodeFromDataParams,
+  type GetRouterPersistedDirectiveNodesParams,
+  type GetValidArgumentNodesParams,
+  GetValidExecutableDirectiveArgumentNodesParams,
+  type IsTypeValidImplementationParams,
+  type RouterSchemaFieldNodeFromDataParams,
+  type RouterSchemaInputValueNodeFromDataParams,
+  type RouterSchemaNodeFromDataParams,
+  type SanitizeDefaultValueParams,
+} from './types/params';
+import {
+  DirectiveDefinitionNodeResult,
+  type GetFederatedDirectiveNodesResult,
+  type InputValueNodesResult,
+  type RouterSchemaFieldNodeFromDataResult,
+  type RouterSchemaInputValueNodeFromDataResult,
+  type RouterSchemaNodeFromDataResult,
+} from './types/results';
+import { validateDirectives } from '../validation/validation';
+import { type ExecutionMultiResult, type ExecutionSingleFailureResult } from '../types/results';
+import { type DirectiveArgumentData } from '../directive-definition-data/types/types';
+import { type Warning } from '../warnings/types';
+import { invalidRepeatedComposedDirectiveWarning } from '../v1/warnings/warnings';
 
-export function newPersistedDirectivesData(): PersistedDirectivesData {
+export function newFederatedDirectivesData(): FederatedDirectivesData {
   return {
     deprecatedReason: '',
     directivesByName: new Map<DirectiveName, Array<ConstDirectiveNode>>(),
@@ -173,47 +191,41 @@ export function areDefaultValuesCompatible(typeNode: TypeNode, incomingDefaultVa
   }
 }
 
-export function compareAndValidateInputValueDefaultValues(
-  existingData: InputValueData,
-  incomingData: InputValueData,
-  errors: Error[],
-) {
+export function compareAndValidateInputDefaultValues({
+  existingData,
+  incomingData,
+}: CompareAndValidateInputDefaultValuesParams): ExecutionSingleFailureResult {
   if (!existingData.defaultValue) {
     // TODO warning if default value in incoming
-    return;
+    return {
+      success: true,
+    };
   }
   if (!incomingData.defaultValue) {
     // TODO warning
     existingData.includeDefaultValue = false;
-    return;
+    return {
+      success: true,
+    };
   }
   const existingDefaultValueString = print(existingData.defaultValue);
   const incomingDefaultValueString = print(incomingData.defaultValue);
-  if (existingDefaultValueString !== incomingDefaultValueString) {
-    errors.push(
-      incompatibleInputValueDefaultValuesError(
-        `${existingData.isArgument ? ARGUMENT : INPUT_FIELD} "${existingData.name}"`,
-        existingData.originalCoords,
-        [...incomingData.subgraphNames],
-        existingDefaultValueString,
-        incomingDefaultValueString,
-      ),
-    );
-    return;
+  if (existingDefaultValueString == incomingDefaultValueString) {
+    return {
+      success: true,
+    };
   }
-}
 
-export function setMutualExecutableLocations(
-  persistedDirectiveDefinitionData: PersistedDirectiveDefinitionData,
-  incomingExecutableLocations: Set<string>,
-) {
-  const mutualExecutableLocations = new Set<string>();
-  for (const incomingExecutableLocation of incomingExecutableLocations) {
-    if (persistedDirectiveDefinitionData.executableLocations.has(incomingExecutableLocation)) {
-      mutualExecutableLocations.add(incomingExecutableLocation);
-    }
-  }
-  persistedDirectiveDefinitionData.executableLocations = mutualExecutableLocations;
+  return {
+    error: incompatibleInputValueDefaultValuesError(
+      `${existingData.kind === Kind.ARGUMENT ? ARGUMENT : INPUT_FIELD} "${existingData.name}"`,
+      existingData.originalCoords,
+      [...incomingData.subgraphNames],
+      existingDefaultValueString,
+      incomingDefaultValueString,
+    ),
+    success: false,
+  };
 }
 
 export function isTypeNameRootType(typeName: string, operationByTypeName: Map<TypeName, OperationTypeNode>) {
@@ -330,7 +342,7 @@ export function setParentDataExtensionType(existingData: ParentDefinitionData, i
 }
 
 export function upsertDeprecatedDirective(
-  persistedDirectivesData: PersistedDirectivesData,
+  federatedDirectivesData: FederatedDirectivesData,
   incomingDirectiveNode: ConstDirectiveNode,
 ) {
   if (!incomingDirectiveNode.arguments?.length) {
@@ -338,19 +350,19 @@ export function upsertDeprecatedDirective(
   }
   // The argument was already validated in the normalization factory, so it can be safely cast
   const incomingReasonString = (incomingDirectiveNode.arguments[0].value as StringValueNode).value;
-  if (persistedDirectivesData.deprecatedReason.length < incomingReasonString.length) {
-    persistedDirectivesData.deprecatedReason = incomingReasonString;
+  if (federatedDirectivesData.deprecatedReason.length < incomingReasonString.length) {
+    federatedDirectivesData.deprecatedReason = incomingReasonString;
   }
 }
 
 export function upsertTagDirectives(
-  persistedDirectivesData: PersistedDirectivesData,
+  federatedDirectivesData: FederatedDirectivesData,
   incomingDirectiveNodes: ConstDirectiveNode[],
 ) {
   for (const incomingDirectiveNode of incomingDirectiveNodes) {
     // The argument was already validated in the normalization factory, so it can be safely cast
     const incomingNameString = (incomingDirectiveNode.arguments![0].value as StringValueNode).value;
-    persistedDirectivesData.tagDirectiveByName.set(incomingNameString, incomingDirectiveNode);
+    federatedDirectivesData.tagDirectiveByName.set(incomingNameString, incomingDirectiveNode);
   }
 }
 
@@ -359,10 +371,10 @@ export function propagateAuthDirectives(parentData: ParentDefinitionData, authDa
     return;
   }
   if (authData.requiresAuthentication) {
-    parentData.persistedDirectivesData.directivesByName.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
+    parentData.federatedDirectivesData.directivesByName.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
   }
   if (authData.requiredScopes.length > 0) {
-    parentData.persistedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
+    parentData.federatedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
       generateRequiresScopesDirective(authData.requiredScopes),
     ]);
   }
@@ -377,10 +389,10 @@ export function propagateFieldAuthDirectives(fieldData: FieldData, authData?: Au
     return;
   }
   if (fieldAuthData.originalData.requiresAuthentication) {
-    fieldData.persistedDirectivesData.directivesByName.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
+    fieldData.federatedDirectivesData.directivesByName.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
   }
   if (fieldAuthData.originalData.requiredScopes.length > 0) {
-    fieldData.persistedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
+    fieldData.federatedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
       generateRequiresScopesDirective(fieldAuthData.originalData.requiredScopes),
     ]);
   }
@@ -403,57 +415,113 @@ export function generateDeprecatedDirective(reason: string): ConstDirectiveNode 
   };
 }
 
-function getValidFlattenedPersistedDirectiveNodeArray(
-  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>,
-  persistedDirectiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>,
-  directiveCoords: string,
-  errors: Error[],
-): ConstDirectiveNode[] {
-  const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
-  for (const [directiveName, directiveNodes] of directivesByName) {
-    const persistedDirectiveDefinition = persistedDirectiveDefinitionByName.get(directiveName);
-    if (!persistedDirectiveDefinition) {
+export function getNodeCoords(data: NodeData): string {
+  switch (data.kind) {
+    case Kind.ARGUMENT:
+    // Intentional fallthrough
+    case Kind.FIELD_DEFINITION:
+    // Intentional fallthrough
+    case Kind.INPUT_VALUE_DEFINITION:
+    // Intentional fallthrough
+    case Kind.ENUM_VALUE_DEFINITION: {
+      return data.federatedCoords;
+    }
+    default: {
+      return data.name;
+    }
+  }
+}
+
+export function extractUniqueDirectiveNodes(directiveNodes: Array<ConstDirectiveNode>): Array<ConstDirectiveNode> {
+  const nodes: Array<ConstDirectiveNode> = [];
+  const printedNodes = new Set<string>();
+  for (const directiveNode of directiveNodes) {
+    const directive = print(directiveNode);
+    if (printedNodes.has(directive)) {
+      continue;
+    }
+    printedNodes.add(directive);
+    nodes.push(directiveNode);
+  }
+  return nodes;
+}
+
+export function getRouterSchemaDirectiveNodes({
+  data,
+  federatedDirectiveDataByName,
+  parentDefinitionDataByTypeName,
+}: GetRouterPersistedDirectiveNodesParams): GetFederatedDirectiveNodesResult {
+  const nodes = [...data.federatedDirectivesData.tagDirectiveByName.values()];
+  if (data.federatedDirectivesData.isDeprecated) {
+    nodes.push(generateDeprecatedDirective(data.federatedDirectivesData.deprecatedReason));
+  }
+  const coords = getNodeCoords(data);
+  const errors: Array<Error> = [];
+  const warnings: Array<Warning> = [];
+  for (const [directiveName, directiveNodes] of data.federatedDirectivesData.directivesByName) {
+    if (directiveName === SEMANTIC_NON_NULL && isFieldData(data)) {
+      nodes.push(
+        generateSemanticNonNullDirective(getFirstEntry(data.nullLevelsBySubgraphName) ?? new Set<number>([0])),
+      );
+      continue;
+    }
+    const directiveData = federatedDirectiveDataByName.get(directiveName);
+    if (!directiveData) {
       continue;
     }
     if (directiveNodes.length < 2) {
-      persistedDirectiveNodes.push(...directiveNodes);
+      nodes.push(...directiveNodes);
       continue;
     }
-    if (!persistedDirectiveDefinition.repeatable) {
-      errors.push(invalidRepeatedFederatedDirectiveErrorMessage(directiveName, directiveCoords));
-      continue;
-    }
-    persistedDirectiveNodes.push(...directiveNodes);
-  }
-  return persistedDirectiveNodes;
-}
 
-function getRouterPersistedDirectiveNodes<T extends NodeData>(
-  nodeData: T,
-  persistedDirectiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>,
-  errors: Error[],
-): ConstDirectiveNode[] {
-  const persistedDirectiveNodes = [...nodeData.persistedDirectivesData.tagDirectiveByName.values()];
-  if (nodeData.persistedDirectivesData.isDeprecated) {
-    persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.persistedDirectivesData.deprecatedReason));
+    const uniqueDirectiveNodes = extractUniqueDirectiveNodes(directiveNodes);
+    const validationResult = validateDirectives({
+      data,
+      directiveCoords: coords,
+      directiveDefinitionData: directiveData,
+      directiveNodes: uniqueDirectiveNodes,
+      parentDefinitionDataByTypeName,
+    });
+    if (!validationResult.success) {
+      errors.push(...validationResult.errors);
+      continue;
+    }
+
+    if (uniqueDirectiveNodes.length > 1 && directiveData.isComposed && !directiveData.isRepeatable) {
+      warnings.push(
+        invalidRepeatedComposedDirectiveWarning({
+          directiveCoords: coords,
+          directiveName,
+          printedDirective: print(uniqueDirectiveNodes[0]),
+        }),
+      );
+      nodes.push(uniqueDirectiveNodes[0]);
+      continue;
+    }
+
+    nodes.push(...uniqueDirectiveNodes);
   }
-  persistedDirectiveNodes.push(
-    ...getValidFlattenedPersistedDirectiveNodeArray(
-      nodeData.persistedDirectivesData.directivesByName,
-      persistedDirectiveDefinitionByName,
-      nodeData.name,
+
+  if (errors.length > 0) {
+    return {
       errors,
-    ),
-  );
-  return persistedDirectiveNodes;
+      success: false,
+    };
+  }
+
+  return {
+    nodes,
+    success: true,
+    warnings,
+  };
 }
 
 export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T): ConstDirectiveNode[] {
   const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
-  if (nodeData.persistedDirectivesData.isDeprecated) {
-    persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.persistedDirectivesData.deprecatedReason));
+  if (nodeData.federatedDirectivesData.isDeprecated) {
+    persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.federatedDirectivesData.deprecatedReason));
   }
-  for (const [directiveName, directiveNodes] of nodeData.persistedDirectivesData.directivesByName) {
+  for (const [directiveName, directiveNodes] of nodeData.federatedDirectivesData.directivesByName) {
     if (directiveName === SEMANTIC_NON_NULL && isFieldData(nodeData)) {
       persistedDirectiveNodes.push(
         generateSemanticNonNullDirective(getFirstEntry(nodeData.nullLevelsBySubgraphName) ?? new Set<number>([0])),
@@ -491,35 +559,102 @@ export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): Mutab
   };
 }
 
-export function getNodeWithPersistedDirectivesByInputValueData(
-  inputValueData: InputValueData,
-  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
-  errors: Error[],
-): MutableInputValueNode {
-  inputValueData.node.name = stringToNameNode(inputValueData.name);
-  inputValueData.node.type = inputValueData.type;
-  inputValueData.node.description = inputValueData.description;
-  inputValueData.node.directives = getRouterPersistedDirectiveNodes(
-    inputValueData,
-    persistedDirectiveDefinitionByDirectiveName,
-    errors,
-  );
-  if (inputValueData.includeDefaultValue) {
-    inputValueData.node.defaultValue = inputValueData.defaultValue;
+export function routerSchemaFieldNodeFromData({
+  argumentNodes,
+  data,
+  description,
+  federatedDirectiveDataByName,
+  parentDefinitionDataByTypeName,
+}: RouterSchemaFieldNodeFromDataParams): RouterSchemaFieldNodeFromDataResult {
+  data.node.arguments = argumentNodes;
+  data.node.description = description;
+  data.node.name = stringToNameNode(data.name);
+  data.node.type = data.type;
+  const directivesResult = getRouterSchemaDirectiveNodes({
+    federatedDirectiveDataByName,
+    data: data,
+    parentDefinitionDataByTypeName,
+  });
+  if (!directivesResult.success) {
+    return directivesResult;
   }
-  return inputValueData.node;
+
+  data.node.directives = directivesResult.nodes;
+
+  return {
+    node: data.node,
+    success: true,
+    warnings: directivesResult.warnings,
+  };
 }
 
-function addValidatedArgumentNodes(
-  argumentNodes: MutableInputValueNode[],
-  hostData: PersistedDirectiveDefinitionData,
-  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
-  errors: Error[],
-  argumentNamesForFieldConfiguration?: Set<string>,
-): boolean {
-  const invalidRequiredArgumentErrors: InvalidRequiredInputValueData[] = [];
-  for (const [argumentName, argumentData] of hostData.argumentDataByName) {
-    const missingSubgraphs = getEntriesNotInHashSet(hostData.subgraphNames, argumentData.subgraphNames);
+export function routerSchemaInputValueNodeFromData({
+  data,
+  description,
+  federatedDirectiveDataByName,
+  parentDefinitionDataByTypeName,
+}: RouterSchemaInputValueNodeFromDataParams): RouterSchemaInputValueNodeFromDataResult {
+  data.node.description = description;
+  data.node.name = stringToNameNode(data.name);
+  data.node.type = data.type;
+  if (data.includeDefaultValue) {
+    data.node.defaultValue = data.defaultValue;
+  }
+  const directivesResult = getRouterSchemaDirectiveNodes({
+    data,
+    federatedDirectiveDataByName,
+    parentDefinitionDataByTypeName,
+  });
+  if (!directivesResult.success) {
+    return directivesResult;
+  }
+
+  data.node.directives = directivesResult.nodes;
+
+  return {
+    node: data.node,
+    success: true,
+    warnings: directivesResult.warnings,
+  };
+}
+
+export function routerSchemaNodeFromData<T extends ParentDefinitionData | EnumValueData>({
+  data,
+  description,
+  federatedDirectiveDataByName,
+  parentDefinitionDataByTypeName,
+}: RouterSchemaNodeFromDataParams): RouterSchemaNodeFromDataResult<T['node']> {
+  data.node.description = description;
+  data.node.name = stringToNameNode(data.name);
+  const directivesResult = getRouterSchemaDirectiveNodes({
+    federatedDirectiveDataByName,
+    data: data,
+    parentDefinitionDataByTypeName,
+  });
+  if (!directivesResult.success) {
+    return directivesResult;
+  }
+
+  data.node.directives = directivesResult.nodes;
+
+  return {
+    node: data.node,
+    success: true,
+    warnings: directivesResult.warnings,
+  };
+}
+
+function getValidFederatedDirectiveArgumentNodes({
+  data,
+  federatedDirectiveDataByName,
+  parentDefinitionDataByTypeName,
+}: GetValidArgumentNodesParams): InputValueNodesResult {
+  const errors: Array<Error> = [];
+  const warnings: Array<Warning> = [];
+  const invalidRequiredArgumentErrors: Array<InvalidRequiredInputValueData> = [];
+  const nodes: Array<MutableInputValueNode> = [];
+  for (const [argumentName, argumentData] of data.argumentDataByName) {
+    const missingSubgraphs = getEntriesNotInHashSet(data.subgraphNames, argumentData.subgraphNames);
     if (missingSubgraphs.length > 0) {
       // Required arguments must be defined in all subgraphs that define the field
       if (argumentData.requiredSubgraphNames.size > 0) {
@@ -531,42 +666,68 @@ function addValidatedArgumentNodes(
       }
       /* If the argument is always optional, but it's not defined in all subgraphs that define the field,
          the argument should not be included in the federated graph */
+      data.optionalArgumentNames.delete(argumentName);
       continue;
     }
-    argumentNodes.push(
-      getNodeWithPersistedDirectivesByInputValueData(argumentData, persistedDirectiveDefinitionByDirectiveName, errors),
-    );
-    if (argumentNamesForFieldConfiguration) {
-      argumentNamesForFieldConfiguration.add(argumentName);
+
+    const argNodeResult = routerSchemaInputValueNodeFromData({
+      data: argumentData,
+      federatedDirectiveDataByName,
+      parentDefinitionDataByTypeName,
+    });
+    if (!argNodeResult.success) {
+      errors.push(...argNodeResult.errors);
+      continue;
     }
+
+    nodes.push(argNodeResult.node);
+    warnings.push(...argNodeResult.warnings);
   }
+
   if (invalidRequiredArgumentErrors.length > 0) {
-    errors.push(
-      invalidRequiredInputValueError(DIRECTIVE_DEFINITION, `@${hostData.name}`, invalidRequiredArgumentErrors),
-    );
-    return false;
+    errors.push(invalidRequiredInputValueError(DIRECTIVE_DEFINITION, `@${data.name}`, invalidRequiredArgumentErrors));
   }
-  return true;
+
+  if (errors.length > 0) {
+    return {
+      errors,
+      success: false,
+    };
+  }
+
+  return {
+    nodes,
+    success: true,
+    warnings,
+  };
 }
 
-export function addValidPersistedDirectiveDefinitionNodeByData(
-  definitions: (MutableDefinitionNode | DefinitionNode)[],
-  data: PersistedDirectiveDefinitionData,
-  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
-  errors: Error[],
-) {
-  const argumentNodes: MutableInputValueNode[] = [];
-  if (!addValidatedArgumentNodes(argumentNodes, data, persistedDirectiveDefinitionByDirectiveName, errors)) {
-    return;
-  }
-  definitions.push({
-    arguments: argumentNodes,
-    kind: Kind.DIRECTIVE_DEFINITION,
-    locations: setToNameNodeArray(data.executableLocations),
-    name: stringToNameNode(data.name),
-    repeatable: data.repeatable,
-    description: data.description,
+export function propagateDirectiveDefinitionNodeFromData({
+  data,
+  federatedDirectiveDataByName,
+  parentDefinitionDataByTypeName,
+}: DirectiveDefinitionNodeFromDataParams): ExecutionMultiResult {
+  const argumentNodesResult = getValidFederatedDirectiveArgumentNodes({
+    data,
+    federatedDirectiveDataByName,
+    parentDefinitionDataByTypeName,
   });
+  if (!argumentNodesResult.success) {
+    return argumentNodesResult;
+  }
+
+  data.node = {
+    arguments: argumentNodesResult.nodes,
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: setToNameNodeArray(data.locations),
+    name: stringToNameNode(data.name),
+    repeatable: data.isRepeatable,
+    description: data.description,
+  };
+
+  return {
+    success: true,
+  };
 }
 
 type InvalidFieldNames = {
@@ -681,7 +842,7 @@ export function isTypeValidImplementation({
 }
 
 export function isNodeDataInaccessible(data: NodeData): boolean {
-  return data.persistedDirectivesData.directivesByName.has(INACCESSIBLE) || data.directivesByName.has(INACCESSIBLE);
+  return data.federatedDirectivesData.directivesByName.has(INACCESSIBLE) || data.directivesByName.has(INACCESSIBLE);
 }
 
 export function isLeafKind(kind: Kind): boolean {
@@ -764,7 +925,7 @@ export function newExternalFieldData(isDefinedExternal: boolean): ExternalFieldD
   };
 }
 
-export function getInitialFederatedDescription(data: NodeData): StringValueNode | undefined {
+export function getInitialFederatedDescription(data: NodeData | DirectiveArgumentData): StringValueNode | undefined {
   const { value, done } = data.configureDescriptionDataBySubgraphName.values().next();
   if (done) {
     return data.description;
@@ -801,4 +962,29 @@ export function isInterfaceNode(node: ParentTypeNode): node is InterfaceTypeNode
 
 export function isEnumData(data: ParentDefinitionData): data is EnumDefinitionData {
   return data.kind === Kind.ENUM_TYPE_DEFINITION;
+}
+
+export function sanitizeDefaultValue({ data, namedTypeData, node }: SanitizeDefaultValueParams) {
+  if (!data.defaultValue) {
+    return;
+  }
+
+  if (!isEnumData(namedTypeData)) {
+    return;
+  }
+
+  data.defaultValue = visit(data.defaultValue, {
+    StringValue: {
+      enter(node) {
+        return {
+          kind: Kind.ENUM,
+          value: node.value,
+        };
+      },
+    },
+  });
+
+  if (node) {
+    node.defaultValue = data.defaultValue;
+  }
 }
