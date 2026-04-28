@@ -124,9 +124,10 @@ func (b BuildGraphMuxOptions) IsBaseGraph() bool {
 
 // buildMultiGraphHandlerOptions contains the configuration options for building a multi-graph handler.
 type buildMultiGraphHandlerOptions struct {
-	baseMux               *chi.Mux
-	featureFlagConfigs    map[string]*nodev1.FeatureFlagRouterExecutionConfig
-	reloadPersistentState *ReloadPersistentState
+	baseMux                  *chi.Mux
+	featureFlagConfigs       map[string]*nodev1.FeatureFlagRouterExecutionConfig
+	reloadPersistentState    *ReloadPersistentState
+	previousFeatureFlagMuxes map[string]inUseFeatureFlag
 }
 
 // newGraphServer creates a new server instance.
@@ -315,10 +316,15 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
+	if r.activeFeatureFlagMuxes == nil {
+		r.activeFeatureFlagMuxes = make(map[string]inUseFeatureFlag)
+	}
+
 	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, buildMultiGraphHandlerOptions{
-		baseMux:               gm.mux,
-		featureFlagConfigs:    featureFlagConfigMap,
-		reloadPersistentState: r.reloadPersistentState,
+		baseMux:                  gm.mux,
+		featureFlagConfigs:       featureFlagConfigMap,
+		reloadPersistentState:    r.reloadPersistentState,
+		previousFeatureFlagMuxes: r.activeFeatureFlagMuxes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
@@ -470,9 +476,6 @@ type inUseFeatureFlag struct {
 	mux    *graphMux
 }
 
-// key = ff name, value = currently active ff
-var inUseFeatureFlagConfigs = make(map[string]inUseFeatureFlag)
-
 func (s *graphServer) buildMultiGraphHandler(
 	ctx context.Context,
 	opts buildMultiGraphHandlerOptions,
@@ -486,7 +489,7 @@ func (s *graphServer) buildMultiGraphHandler(
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range opts.featureFlagConfigs {
 		// reuse old mux if config did not change
-		activeFF, found := inUseFeatureFlagConfigs[featureFlagName]
+		activeFF, found := opts.previousFeatureFlagMuxes[featureFlagName]
 		if found && proto.Equal(activeFF.config, executionConfig) {
 			featureFlagToMux[featureFlagName] = activeFF.mux.mux
 			continue
@@ -503,7 +506,7 @@ func (s *graphServer) buildMultiGraphHandler(
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
 		}
 		featureFlagToMux[featureFlagName] = gm.mux
-		inUseFeatureFlagConfigs[featureFlagName] = inUseFeatureFlag{
+		opts.previousFeatureFlagMuxes[featureFlagName] = inUseFeatureFlag{
 			config: executionConfig,
 			mux:    gm,
 		}

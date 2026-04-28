@@ -87,15 +87,16 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		httpServer            *server
-		modules               []Module
-		EngineStats           statistics.EngineStatistics
-		playgroundHandler     func(http.Handler) http.Handler
-		proxy                 ProxyFunc
-		disableUsageTracking  bool
-		usage                 UsageTracker
-		headerPropagation     *HeaderPropagation
-		reloadPersistentState *ReloadPersistentState
+		httpServer             *server
+		modules                []Module
+		EngineStats            statistics.EngineStatistics
+		playgroundHandler      func(http.Handler) http.Handler
+		proxy                  ProxyFunc
+		disableUsageTracking   bool
+		usage                  UsageTracker
+		headerPropagation      *HeaderPropagation
+		reloadPersistentState  *ReloadPersistentState
+		activeFeatureFlagMuxes map[string]inUseFeatureFlag
 	}
 
 	UsageTracker interface {
