@@ -76,7 +76,9 @@ cache_warmup:
 
 For detailed information on the configuration, click [here](/router/configuration#cache-warmer).
 
-Size `timeout` based on the throughput the other two settings allow. The theoretical minimum runtime is `total items / items_per_second`. For example, warming 200 items with 1 worker at 2 items per second cannot finish in less than 100 seconds, and in practice takes longer because each item also has to be planned. A reasonable starting point is at least 2 times that minimum (best case).
+`items_per_second` is a ceiling, not a target. The router uses a rate limiter that prevents workers from exceeding this rate, but actual throughput can be lower when planning is slow or there are fewer items than the limit allows. The limit is shared across all workers, not applied per worker. A single rate limiter sits in front of the worker pool, so `workers: 9` with `items_per_second: 50` means the 9 workers collectively process at most 50 items per second, not 50 each.
+
+Size `timeout` based on the throughput the other two settings allow. The theoretical minimum runtime is `total items / items_per_second`. For example, warming 200 items with 1 worker capped at 2 items per second cannot finish in less than 100 seconds, and in practice takes longer because each item also has to be planned.
 
 If you are using the [slow plan cache](#slow-plan-cache) as the warmup source, to get an estimate of how many operations the router actually warms, inspect the cache warmer logs. The `Warmup completed`, `Warmup timeout`, and `Warmup error` messages all include a `processed_items` attribute. Use that number to size `timeout` for future restarts.
 
