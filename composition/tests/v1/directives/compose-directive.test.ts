@@ -83,7 +83,21 @@ describe('@composeDirective tests', () => {
         }
         `,
       );
-      const { federatedGraphSchema, warnings } = federateSubgraphsSuccess([aaaaa], ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { federatedGraphClientSchema, federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [aaaaa],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+      
+      type Query {
+        a: ID
+      }
+    `,
+        ),
+      );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
@@ -347,7 +361,7 @@ describe('@composeDirective tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that an error is returned if a composed directive does not conform to the highest version definition', () => {
+    test('that @composeDirective does not treat an executable location differently', () => {
       const aaaaa = createSubgraph(
         'aaaaa',
         `
@@ -357,7 +371,7 @@ describe('@composeDirective tests', () => {
         
         directive @a on FIELD | FIELD_DEFINITION
         
-        type Query @shareable{
+        type Query @shareable {
           a: ID @a
         }
     `,
@@ -367,7 +381,7 @@ describe('@composeDirective tests', () => {
         `
         directive @a on FIELD | FIELD_DEFINITION
         
-        type Query @shareable{
+        type Query @shareable {
           a: ID @a
         }
         `,
@@ -375,6 +389,18 @@ describe('@composeDirective tests', () => {
       const { federatedGraphSchema, warnings } = federateSubgraphsSuccess(
         [aaaaa, aaaab],
         ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+        directive @a on FIELD | FIELD_DEFINITION
+        
+        type Query {
+          a: ID @a
+        }
+        `,
+        ),
       );
       expect(warnings).toHaveLength(0);
     });

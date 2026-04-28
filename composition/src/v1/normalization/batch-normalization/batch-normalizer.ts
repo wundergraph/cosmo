@@ -93,7 +93,7 @@ export class BatchNormalizer {
 
       const existingMajorVersion = Math.trunc(existingData.version);
       const incomingMajorVersion = Math.trunc(importData.version);
-      if (existingMajorVersion != incomingMajorVersion) {
+      if (existingMajorVersion !== incomingMajorVersion) {
         this.errors.push(nonEqualComposeDirectiveMajorVersionError(directiveName));
       }
 

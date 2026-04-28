@@ -147,4 +147,4 @@ export const CLIENT_PERSISTED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new 
   SEMANTIC_NON_NULL,
 ]);
 
-export const IMPORT_VERSION_REGEX = /v\d+\.\d+/;
+export const IMPORT_VERSION_REGEX = /^v\d+\.\d+$/;

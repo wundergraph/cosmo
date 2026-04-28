@@ -133,7 +133,6 @@ import {
 import { IMPORT_VERSION_REGEX } from '../constants/strings';
 import { type UpsertFederatedDirectiveDataParams } from '../../directive-definition-data/types/params';
 import { type DirectiveDefinitionData } from '../../directive-definition-data/types/types';
-import { ExecutionMultiResult } from '../../types/results';
 
 export function newFieldSetData(): FieldSetData {
   return {
@@ -530,7 +529,9 @@ export function upsertFederatedDirectiveData({
     }
 
     if (existingData.version < directiveData.version) {
-      // Only propagate the latest version's description if any
+      /* Only propagate the latest version's description if any.
+       * This means a description can be deleted.
+       */
       existingData.description = directiveData.description;
       existingDataByName.set(directiveName, directiveData);
     }
@@ -617,7 +618,7 @@ function extractLinkImportObject(value: ConstObjectValueNode): ExtractLinkImport
     switch (fieldName) {
       case AS: {
         if (field.value.kind !== Kind.STRING) {
-          invalidFieldLinkDirectiveImportObjectError({ fieldName, value: valueString });
+          errors.push(invalidFieldLinkDirectiveImportObjectError({ fieldName, value: valueString }));
           break;
         }
         data.rename = field.value.value;
@@ -625,14 +626,14 @@ function extractLinkImportObject(value: ConstObjectValueNode): ExtractLinkImport
       }
       case NAME: {
         if (field.value.kind !== Kind.STRING) {
-          invalidFieldLinkDirectiveImportObjectError({ fieldName, value: valueString });
+          errors.push(invalidFieldLinkDirectiveImportObjectError({ fieldName, value: valueString }));
           break;
         }
         data.name = field.value.value;
         break;
       }
       default: {
-        unknownFieldLinkDirectiveImportObjectError({ fieldName, value: valueString });
+        errors.push(unknownFieldLinkDirectiveImportObjectError({ fieldName, value: valueString }));
         break;
       }
     }

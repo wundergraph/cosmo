@@ -2,7 +2,7 @@ import { type DirectiveArgumentDataParams, type DirectiveDefinitionDataParams } 
 import { type ConfigureDescriptionData } from '../schema-building/types/types';
 import { type ArgumentName, type DirectiveName, type SubgraphName } from '../types/types';
 import { EXECUTABLE_DIRECTIVE_LOCATIONS } from '../utils/string-constants';
-import { type ConstDirectiveNode, Kind } from 'graphql/index';
+import { type ConstDirectiveNode, Kind } from 'graphql';
 import { newFederatedDirectivesData } from '../schema-building/utils';
 import { getTypeNodeNamedTypeName } from '../schema-building/ast';
 import { stringToNameNode } from '../ast/utils';

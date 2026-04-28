@@ -5,7 +5,7 @@ import {
   type SubgraphName,
   type TypeName,
 } from '../../types/types';
-import type { ConstDirectiveNode, ConstValueNode, DirectiveDefinitionNode, Kind, StringValueNode } from 'graphql/index';
+import type { ConstDirectiveNode, ConstValueNode, DirectiveDefinitionNode, Kind, StringValueNode } from 'graphql';
 import type { InputNodeKind } from '../../utils/types';
 import type { MutableInputValueNode, MutableTypeNode } from '../../schema-building/ast';
 import { type ConfigureDescriptionData, type FederatedDirectivesData } from '../../schema-building/types/types';
