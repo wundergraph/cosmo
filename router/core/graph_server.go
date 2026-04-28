@@ -22,15 +22,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
-	"go.opentelemetry.io/otel/attribute"
-	otelmetric "go.opentelemetry.io/otel/metric"
-	oteltrace "go.opentelemetry.io/otel/trace"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"golang.org/x/exp/maps"
-	"golang.org/x/sync/errgroup"
-
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
@@ -57,6 +48,15 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"golang.org/x/exp/maps"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
@@ -465,6 +465,14 @@ func getRoutingUrlGroupingForCircuitBreakers(
 	return routingUrlGroupings, nil
 }
 
+type inUseFeatureFlag struct {
+	config *nodev1.FeatureFlagRouterExecutionConfig
+	mux    *graphMux
+}
+
+// key = ff name, value = currently active ff
+var inUseFeatureFlagConfigs = make(map[string]inUseFeatureFlag)
+
 func (s *graphServer) buildMultiGraphHandler(
 	ctx context.Context,
 	opts buildMultiGraphHandlerOptions,
@@ -477,6 +485,13 @@ func (s *graphServer) buildMultiGraphHandler(
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range opts.featureFlagConfigs {
+		// reuse old mux if config did not change
+		activeFF, found := inUseFeatureFlagConfigs[featureFlagName]
+		if found && proto.Equal(activeFF.config, executionConfig) {
+			featureFlagToMux[featureFlagName] = activeFF.mux.mux
+			continue
+		}
+
 		gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
 			FeatureFlagName:       featureFlagName,
 			RouterConfigVersion:   executionConfig.GetVersion(),
@@ -488,6 +503,10 @@ func (s *graphServer) buildMultiGraphHandler(
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
 		}
 		featureFlagToMux[featureFlagName] = gm.mux
+		inUseFeatureFlagConfigs[featureFlagName] = inUseFeatureFlag{
+			config: executionConfig,
+			mux:    gm,
+		}
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -2086,14 +2105,14 @@ func configureSubgraphOverwrites(
 		}
 		subgraph.UrlString = subgraph.Url.String()
 
-		overrideURL, ok := overrideRoutingURLConfig.Subgraphs[sg.Name]
-		overrideSubgraph, overrideSubgraphOk := overridesConfig.Subgraphs[sg.Name]
+		overrideURL, hasOverwriteURL := overrideRoutingURLConfig.Subgraphs[sg.Name]
+		overrideSubgraph, hasOverwriteConfig := overridesConfig.Subgraphs[sg.Name]
 
 		var overrideSubscriptionURL string
 		var overrideSubscriptionProtocol *common.GraphQLSubscriptionProtocol
 		var overrideSubscriptionWebsocketSubprotocol *common.GraphQLWebsocketSubprotocol
 
-		if overrideSubgraphOk {
+		if hasOverwriteConfig {
 			if overrideSubgraph.RoutingURL != "" {
 				overrideURL = overrideSubgraph.RoutingURL
 			}
@@ -2131,7 +2150,7 @@ func configureSubgraphOverwrites(
 		}
 
 		// check if the subgraph is overridden
-		if ok || overrideSubgraphOk {
+		if hasOverwriteURL || hasOverwriteConfig {
 			if overrideURL != "" {
 				subgraph.Url, err = url.Parse(overrideURL)
 				if err != nil {
