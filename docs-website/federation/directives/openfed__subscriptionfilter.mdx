@@ -35,3 +35,39 @@ The `@openfed__subscriptionFilter` directive declares that a field definition ca
 |condition|openfed\_\_SubscriptionFilterCondition!|
 
 The `condition` argument requires an object representing the filter condition. This object can be nested to express OR, AND, and NOT conditions. Currently, only the IN comparison operator is supported. This operator can be used to validate if a value is inside a list.
+
+## Supported return types
+
+`@openfed__subscriptionFilter` works on subscription fields whose return type is:
+
+- An **object** type.
+- A **union** type. The `fieldPath` must resolve on every accessible union member. If any member is missing the path or resolves to a non-leaf type, composition fails with an error naming the offending member.
+- An **interface** type. The same rule applies to every accessible concrete implementer.
+
+Members and implementers marked `@inaccessible` are skipped before validation. The filter runs against the event payload by field name, so the static return type does not affect runtime evaluation. The condition is validated once per concrete type at composition time and emitted as a single configuration in the router.
+
+### Union example
+
+```graphql
+type TaskUpdated @key(fields: "id channelId", resolvable: false) {
+    id: ID! @external
+    channelId: ID! @external
+}
+
+type TaskDeleted @key(fields: "id channelId", resolvable: false) {
+    id: ID! @external
+    channelId: ID! @external
+}
+
+union TaskEvent = TaskUpdated | TaskDeleted
+
+type Subscription {
+    onTaskEvent(channelId: ID!): TaskEvent!
+        @edfs__kafkaSubscribe(topics: ["task:event"], providerId: "kafka")
+        @openfed__subscriptionFilter(condition: {
+            IN: { fieldPath: "channelId", values: ["{{ args.channelId }}"] }
+        })
+}
+```
+
+The router checks `channelId` on every incoming event payload regardless of `__typename`. Events whose `__typename` is not a member of the union surface an `INVALID_GRAPHQL` error to the subscriber instead of being delivered.

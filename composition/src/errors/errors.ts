@@ -1225,6 +1225,35 @@ export function subscriptionFilterNamedTypeErrorMessage(namedTypeName: string): 
   return ` Unknown type "${namedTypeName}".`;
 }
 
+export function subscriptionFilterUnionMemberInvalidErrorMessage(
+  unionTypeName: string,
+  memberTypeName: string,
+  detail: string,
+): string {
+  return (
+    ` The "@openfed__subscriptionFilter" condition is invalid for union member "${memberTypeName}" of union "${unionTypeName}":\n` +
+    detail
+  );
+}
+
+export function subscriptionFilterInterfaceImplementerInvalidErrorMessage(
+  interfaceTypeName: string,
+  implementerTypeName: string,
+  detail: string,
+): string {
+  return (
+    ` The "@openfed__subscriptionFilter" condition is invalid for concrete type "${implementerTypeName}" implementing interface "${interfaceTypeName}":\n` +
+    detail
+  );
+}
+
+export function subscriptionFilterNoAccessibleConcreteTypesErrorMessage(
+  abstractTypeName: string,
+  abstractKind: 'union' | 'interface',
+): string {
+  return ` The ${abstractKind} "${abstractTypeName}" has no accessible concrete types against which the "@openfed__subscriptionFilter" condition can be validated.`;
+}
+
 export function subscriptionFilterConditionDepthExceededErrorMessage(inputPath: string): string {
   return (
     ` The input path "${inputPath}" exceeds the maximum depth of ${MAX_SUBSCRIPTION_FILTER_DEPTH}` +
