@@ -739,7 +739,12 @@ describe('@listSize directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
-          listSizeSlicingArgumentSegmentNotInputObjectErrorMessage('Query.search', 'input.query.first', 'query', 'String'),
+          listSizeSlicingArgumentSegmentNotInputObjectErrorMessage(
+            'Query.search',
+            'input.query.first',
+            'query',
+            'String',
+          ),
         ]),
       );
     });
