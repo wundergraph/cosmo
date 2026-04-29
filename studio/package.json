@@ -98,6 +98,7 @@
     "next": "15.5.15",
     "next-themes": "^0.2.1",
     "posthog-js": "^1.240.6",
+    "prettier": "catalog:",
     "pretty-bytes": "^6.1.1",
     "prism-react-renderer": "^2.0.6",
     "prismjs": "^1.30.0",
