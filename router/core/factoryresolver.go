@@ -683,20 +683,26 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	if costConfig == nil {
 		return out
 	}
-	for _, fw := range costConfig.GetFieldWeights() {
-		w := &plan.FieldWeight{}
-		if fw.Weight != nil {
-			w.HasWeight = true
-			w.Weight = int(*fw.Weight)
+	for _, fieldWeightConfig := range costConfig.GetFieldWeights() {
+		fieldCost := &plan.FieldCost{}
+		if fieldWeightConfig.Weight != nil {
+			fieldCost.HasWeight = true
+			fieldCost.Weight = int(*fieldWeightConfig.Weight)
 		}
-		if args := fw.GetArgumentWeights(); len(args) > 0 {
-			w.ArgumentWeights = make(map[string]int, len(args))
+		if args := fieldWeightConfig.GetArgumentWeights(); len(args) > 0 {
+			fieldCost.ArgumentWeights = make(map[string]int, len(args))
 			for k, v := range args {
-				w.ArgumentWeights[k] = int(v)
+				fieldCost.ArgumentWeights[k] = int(v)
 			}
 		}
-		coordinate := plan.FieldCoordinate{TypeName: fw.GetTypeName(), FieldName: fw.GetFieldName()}
-		out.CostConfig.Weights[coordinate] = w
+		if dw := fieldWeightConfig.GetDirectiveArgumentWeights(); len(dw) > 0 {
+			fieldCost.DirectiveArgumentWeights = make(map[string]int, len(dw))
+			for k, v := range dw {
+				fieldCost.DirectiveArgumentWeights[k] = int(v)
+			}
+		}
+		coordinate := plan.FieldCoordinate{TypeName: fieldWeightConfig.GetTypeName(), FieldName: fieldWeightConfig.GetFieldName()}
+		out.CostConfig.Weights[coordinate] = fieldCost
 	}
 	for _, ls := range costConfig.GetListSizes() {
 		listSizes := &plan.FieldListSize{
@@ -718,8 +724,6 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	for k, v := range costConfig.GetTypeWeights() {
 		out.CostConfig.Types[k] = int(v)
 	}
-	// Directives with argument weights are TBD.
-
 	return out
 }
 
