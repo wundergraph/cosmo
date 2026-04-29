@@ -287,7 +287,6 @@ export const DEPRECATED_DEFINITION_DATA = newDirectiveDefinitionData({
       }),
     ],
   ]),
-  isComposed: true,
   locations: new Set<DirectiveLocation>([
     ARGUMENT_DEFINITION_UPPER,
     ENUM_VALUE_UPPER,
@@ -517,7 +516,6 @@ export const NATS_SUBSCRIBE_DEFINITION_DATA = newDirectiveDefinitionData({
 });
 
 export const ONE_OF_DEFINITION_DATA = newDirectiveDefinitionData({
-  isComposed: true,
   locations: new Set<DirectiveLocation>([INPUT_OBJECT_UPPER]),
   name: ONE_OF,
   node: ONE_OF_DEFINITION,

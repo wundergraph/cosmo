@@ -67,10 +67,11 @@ describe('FederationFactory tests', () => {
   });
 
   test('that the demo subgraphs federate to generate the correct federated graph', () => {
-    const { federatedGraphSchema } = federateSubgraphsSuccess(
+    const { federatedGraphAST, federatedGraphSchema } = federateSubgraphsSuccess(
       [demoEmployees, demoFamily, demoHobbies, demoProducts],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
+    expect(federatedGraphAST.definitions).toHaveLength(58);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
         SCHEMA_ALL_ROOTS_DEFINITION +
