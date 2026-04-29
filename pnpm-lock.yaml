@@ -501,6 +501,9 @@ importers:
       '@types/lodash':
         specifier: 'catalog:'
         version: 4.17.24
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.17.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 3.2.4(vitest@3.2.4(@types/debug@4.1.12)(@types/node@22.17.0)(jsdom@27.2.0)(terser@5.44.1))

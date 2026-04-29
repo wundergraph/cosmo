@@ -33,6 +33,7 @@ export type DirectiveDefinitionData = {
   argumentDataByName: Map<ArgumentName, DirectiveArgumentData>;
   executableLocations: Set<DirectiveLocation>;
   isComposed: boolean;
+  isReferenced: boolean;
   isRepeatable: boolean;
   locations: Set<DirectiveLocation>;
   name: DirectiveName;

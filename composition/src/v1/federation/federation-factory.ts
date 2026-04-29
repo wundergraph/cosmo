@@ -1715,6 +1715,7 @@ export class FederationFactory {
             argumentDataByName,
             isComposed: true,
             isRepeatable: data.isRepeatable,
+            isReferenced: data.isReferenced,
             executableLocations: locations,
             locations,
             name: directiveName,
@@ -1746,18 +1747,6 @@ export class FederationFactory {
         addIterableToSet({ source: data.subgraphNames, target: existingData.subgraphNames });
         existingData.isRepeatable &&= data.isRepeatable;
       }
-      //   const existingData = this.federatedDirectiveDataByName.get(directiveName);
-      //   if (!existingData) {
-      //     continue;
-      //   }
-      //   const nodeResult = propagateDirectiveDefinitionNodeFromData({
-      //     data: existingData,
-      //     federatedDirectiveDataByName: this.federatedDirectiveDataByName,
-      //     parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
-      //   });
-      //   if (!nodeResult.success) {
-      //     this.errors.push(...nodeResult.errors);
-      //   }
     }
   }
 

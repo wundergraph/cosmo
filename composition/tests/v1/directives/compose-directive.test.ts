@@ -247,9 +247,9 @@ describe('@composeDirective tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that different core features can import the same named directive if only one is composed', () => {});
+    test.todo('that different core features can import the same named directive if only one is composed');
 
-    test('that an error is returned if directive is composed with different core features', () => {
+    test('that an error is returned if a directive is composed with different core features', () => {
       const aaaaa = createSubgraph(
         'aaaaa',
         `
@@ -398,6 +398,48 @@ describe('@composeDirective tests', () => {
         
         type Query {
           a: ID @a
+        }
+        `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
+    test('that @composeDirective does not propagate any directives if there are no references to the directive within that subgraph', () => {
+      const aaaaa = createSubgraph(
+        'aaaaa',
+        `
+      extend schema
+        @link(import: ["@a"], url: "https://a/a/v1.0")
+        @composeDirective(name: "@a")
+        
+        directive @a on FIELD | FIELD_DEFINITION
+        
+        type Query @shareable {
+          a: ID
+        }
+    `,
+      );
+      const aaaab = createSubgraph(
+        'aaaab',
+        `
+        directive @a on FIELD | FIELD_DEFINITION
+        
+        type Query @shareable {
+          a: ID @a
+        }
+        `,
+      );
+      const { federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [aaaaa, aaaab],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+        type Query {
+          a: ID
         }
         `,
         ),

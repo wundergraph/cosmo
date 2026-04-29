@@ -802,6 +802,9 @@ export class NormalizationFactory {
         }
         continue;
       }
+      if (definitionData.isComposed) {
+        definitionData.isReferenced = true;
+      }
       const definitionErrorMessages: Array<string> = [];
       const directiveLocation = nodeKindToDirectiveLocation(data.kind);
       if (!definitionData.locations.has(directiveLocation)) {
@@ -1219,6 +1222,7 @@ export class NormalizationFactory {
       executableLocations: locations.intersection(EXECUTABLE_DIRECTIVE_LOCATIONS),
       isComposed: false,
       isRepeatable: node.repeatable,
+      isReferenced: false,
       locations,
       name,
       node,

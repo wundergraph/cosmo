@@ -535,6 +535,13 @@ export function upsertFederatedDirectiveData({
       existingData.description = directiveData.description;
       existingDataByName.set(directiveName, directiveData);
     }
+
+    /* If at least one subgraph includes the directive name in `@composeDirective` and is referenced in that subgraph,
+     * then it should be propagated in the federated graph.
+     */
+    if (directiveData.isComposed) {
+      existingData.isComposed ||= directiveData.isComposed;
+    }
   }
 }
 
@@ -556,6 +563,8 @@ function extractLinkUrlSegments(argNode: ConstArgumentNode): ExtractImportUrlSeg
       success: false,
     };
   }
+
+  // @a()
 
   const segments = url.pathname.split('/');
   if (segments.length < 3) {

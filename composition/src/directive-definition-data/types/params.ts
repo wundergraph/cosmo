@@ -53,6 +53,7 @@ export type DirectiveDefinitionDataParams = {
   argumentDataByName?: Map<ArgumentName, DirectiveArgumentData>;
   description?: StringValueNode;
   isComposed?: boolean;
+  isReferenced?: boolean;
   isRepeatable?: boolean;
   optionalArgumentNames?: Set<ArgumentName>;
   requiredArgumentNames?: Set<ArgumentName>;
