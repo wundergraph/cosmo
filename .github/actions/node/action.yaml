@@ -1,17 +1,18 @@
-name: "Setup Node"
-description: "This action install node and cache modules. It uses pnpm as package manager."
+name: 'Setup Node'
+description: 'This action install node and cache modules. It uses pnpm as package manager.'
 inputs:
   node-version:
-    description: "The node version to install (Default: lts)"
-    default: "lts/*"
+    description: 'The node version to install (Default: lts)'
+    # TODO: revert to lts/* after 20 is EOL
+    default: '22.x'
     required: false
   working-directory:
-    description: "The working directory of your node package"
-    default: "."
+    description: 'The working directory of your node package'
+    default: '.'
     required: false
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - uses: actions/setup-node@v4
       with:
