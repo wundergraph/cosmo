@@ -40,10 +40,12 @@ type Options struct {
 	Logger                     *zap.Logger
 	SignatureKey               string
 	RouterCompatibilityVersion int
+	FallbackEndpoint           string
 }
 
 type Client struct {
 	cdnURL              *url.URL
+	cdnFallbackURL      *url.URL
 	authenticationToken string
 	// federatedGraphID is the ID of the federated graph that was obtained
 	// from the token, already url-escaped
@@ -85,6 +87,14 @@ func NewClient(endpoint string, token string, opts *Options) (routerconfig.Clien
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
 	}
 
+	var fu *url.URL
+	if opts.FallbackEndpoint != "" {
+		fu, err = url.Parse(opts.FallbackEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("invalid CDN fallback URL %q: %w", opts.FallbackEndpoint, err)
+		}
+	}
+
 	if opts.Logger == nil {
 		opts.Logger = zap.NewNop()
 	}
@@ -98,6 +108,7 @@ func NewClient(endpoint string, token string, opts *Options) (routerconfig.Clien
 
 	c := &Client{
 		cdnURL:                     u,
+		cdnFallbackURL:             fu,
 		authenticationToken:        token,
 		federatedGraphID:           url.PathEscape(claims.FederatedGraphID),
 		organizationID:             url.PathEscape(claims.OrganizationID),
@@ -114,79 +125,19 @@ func NewClient(endpoint string, token string, opts *Options) (routerconfig.Clien
 }
 
 func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.Time) ([]byte, error) {
-	routerConfigPath := fmt.Sprintf("/%s/%s/routerconfigs/%slatest.json",
-		cdn.organizationID,
-		cdn.federatedGraphID,
-		routerconfig.VersionPath(cdn.routerCompatibilityVersion),
-	)
-	routerConfigURL := cdn.cdnURL.ResolveReference(&url.URL{Path: routerConfigPath})
+	resp, body, err := cdn.doGetRouterConfig(ctx, version, cdn.cdnURL)
 
-	body, err := json.Marshal(getRouterConfigRequestBody{
-		Version: version,
-	})
+	if err != nil && cdn.cdnFallbackURL != nil && httpclient.IsCDNFallbackEligible(resp, err) {
+		cdn.logger.Warn("Primary CDN failed, attempting fallback CDN for router config",
+			zap.Error(err),
+			zap.String("fallback_url", cdn.cdnFallbackURL.String()),
+		)
+		resp, body, err = cdn.doGetRouterConfig(ctx, version, cdn.cdnFallbackURL)
+	}
+
 	if err != nil {
 		return nil, err
 	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", routerConfigURL.String(), bytes.NewBuffer(body))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
-	req.Header.Set("Accept-Encoding", "gzip")
-
-	resp, err := cdn.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		if resp.StatusCode == http.StatusNotFound {
-			return nil, ErrConfigNotFound
-		}
-		if resp.StatusCode == http.StatusUnauthorized {
-			return nil, errors.New("could not authenticate against CDN")
-		}
-		if resp.StatusCode == http.StatusBadRequest {
-			return nil, errors.New("bad request")
-		}
-		if resp.StatusCode == http.StatusNotModified {
-			return nil, configpoller.ErrConfigNotModified
-		}
-
-		return nil, fmt.Errorf("unexpected status code when loading router config, statusCode: %d", resp.StatusCode)
-	}
-
-	var reader io.Reader = resp.Body
-
-	if resp.Header.Get("Content-Encoding") == "gzip" {
-		r, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("could not create gzip reader: %w", err)
-		}
-		defer func() {
-			_ = r.Close()
-		}()
-		reader = r
-	}
-
-	body, err = io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("could not read the response body: %w", err)
-	}
-
-	if len(body) == 0 {
-		return nil, errors.New("empty response body")
-	}
-
-	/**
-	* If a signature key is set, we need to validate the signature of the received config
-	 */
 
 	if cdn.hash != nil {
 		configSignature := resp.Header.Get(sigResponseHeaderName)
@@ -198,14 +149,12 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 			return nil, ErrMissingSignatureHeader
 		}
 
-		// create a signature of the received config body
 		if _, err := cdn.hash.Write(body); err != nil {
 			return nil, fmt.Errorf("could not write config body to hmac: %w", err)
 		}
 		dataHmac := cdn.hash.Sum(nil)
 		cdn.hash.Reset()
 
-		// compare received signature with the one we calculated with the private signature key
 		rawSignature, err := base64.StdEncoding.DecodeString(configSignature)
 		if err != nil {
 			return nil, fmt.Errorf("could not hex decode signature key: %w", err)
@@ -226,6 +175,80 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 	}
 
 	return body, nil
+}
+
+func (cdn *Client) doGetRouterConfig(ctx context.Context, version string, baseURL *url.URL) (*http.Response, []byte, error) {
+	routerConfigPath := fmt.Sprintf("/%s/%s/routerconfigs/%slatest.json",
+		cdn.organizationID,
+		cdn.federatedGraphID,
+		routerconfig.VersionPath(cdn.routerCompatibilityVersion),
+	)
+	routerConfigURL := baseURL.ResolveReference(&url.URL{Path: routerConfigPath})
+
+	body, err := json.Marshal(getRouterConfigRequestBody{
+		Version: version,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", routerConfigURL.String(), bytes.NewBuffer(body))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
+	req.Header.Set("Accept-Encoding", "gzip")
+
+	resp, err := cdn.httpClient.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return resp, nil, ErrConfigNotFound
+		}
+		if resp.StatusCode == http.StatusUnauthorized {
+			return resp, nil, errors.New("could not authenticate against CDN")
+		}
+		if resp.StatusCode == http.StatusBadRequest {
+			return resp, nil, errors.New("bad request")
+		}
+		if resp.StatusCode == http.StatusNotModified {
+			return resp, nil, configpoller.ErrConfigNotModified
+		}
+
+		return resp, nil, fmt.Errorf("unexpected status code when loading router config, statusCode: %d", resp.StatusCode)
+	}
+
+	var reader io.Reader = resp.Body
+
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		r, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return resp, nil, fmt.Errorf("could not create gzip reader: %w", err)
+		}
+		defer func() {
+			_ = r.Close()
+		}()
+		reader = r
+	}
+
+	body, err = io.ReadAll(reader)
+	if err != nil {
+		return resp, nil, fmt.Errorf("could not read the response body: %w", err)
+	}
+
+	if len(body) == 0 {
+		return resp, nil, errors.New("empty response body")
+	}
+
+	return resp, body, nil
 }
 
 func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {

@@ -666,8 +666,9 @@ type RateLimitOverride struct {
 }
 
 type CDNConfiguration struct {
-	URL       string      `yaml:"url" env:"CDN_URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
-	CacheSize BytesString `yaml:"cache_size,omitempty" env:"CDN_CACHE_SIZE" envDefault:"100MB"`
+	URL         string      `yaml:"url" env:"CDN_URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
+	FallbackURL string      `yaml:"fallback_url" env:"CDN_FALLBACK_URL" envDefault:""`
+	CacheSize   BytesString `yaml:"cache_size,omitempty" env:"CDN_CACHE_SIZE" envDefault:"100MB"`
 }
 
 type NatsTokenBasedAuthentication struct {
@@ -952,8 +953,9 @@ type S3StorageProvider struct {
 }
 
 type CDNStorageProvider struct {
-	ID  string `yaml:"id,omitempty" env:"ID"`
-	URL string `yaml:"url,omitempty" env:"URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
+	ID          string `yaml:"id,omitempty" env:"ID"`
+	URL         string `yaml:"url,omitempty" env:"URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
+	FallbackURL string `yaml:"fallback_url,omitempty" env:"FALLBACK_URL" envDefault:""`
 }
 
 type FileSystemStorageProvider struct {
@@ -968,7 +970,8 @@ type RedisStorageProvider struct {
 }
 
 type PersistedOperationsCDNProvider struct {
-	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
+	URL         string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
+	FallbackURL string `yaml:"fallback_url,omitempty" envDefault:""`
 }
 
 type ExecutionConfigStorage struct {

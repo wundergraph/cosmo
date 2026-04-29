@@ -1460,7 +1460,7 @@ func (s *graphServer) buildGraphMux(
 				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
 				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planFallbackCache)
 			}
-			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.graphApiToken, s.logger)
+			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.cdnConfig.FallbackURL, s.graphApiToken, s.logger)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cdn source: %w", err)
 			}

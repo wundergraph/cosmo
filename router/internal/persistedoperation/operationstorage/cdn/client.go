@@ -23,7 +23,8 @@ import (
 )
 
 type Options struct {
-	Logger *zap.Logger
+	Logger           *zap.Logger
+	FallbackEndpoint string
 }
 
 // Deprecated: The CDN-based persisted operation Client is deprecated.
@@ -33,6 +34,7 @@ var _ persistedoperation.StorageClient = (*Client)(nil)
 
 type Client struct {
 	cdnURL              *url.URL
+	cdnFallbackURL      *url.URL
 	authenticationToken string
 	// federatedGraphID is the ID of the federated graph that was obtained
 	// from the token, already url-escaped
@@ -53,6 +55,14 @@ func NewClient(endpoint string, token string, opts Options) (*Client, error) {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
 	}
 
+	var fu *url.URL
+	if opts.FallbackEndpoint != "" {
+		fu, err = url.Parse(opts.FallbackEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("invalid CDN fallback URL %q: %w", opts.FallbackEndpoint, err)
+		}
+	}
+
 	if opts.Logger == nil {
 		opts.Logger = zap.NewNop()
 	}
@@ -67,13 +77,14 @@ func NewClient(endpoint string, token string, opts Options) (*Client, error) {
 		zap.String("url", endpoint),
 	)
 
-	fetcher, err := pqlmanifest.NewFetcher(endpoint, token, logger)
+	fetcher, err := pqlmanifest.NewFetcher(endpoint, opts.FallbackEndpoint, token, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manifest fetcher: %w", err)
 	}
 
 	return &Client{
 		cdnURL:              u,
+		cdnFallbackURL:      fu,
 		authenticationToken: token,
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
 		organizationID:      url.PathEscape(claims.OrganizationID),
@@ -93,7 +104,36 @@ func (cdn *Client) PersistedOperation(ctx context.Context, clientName string, sh
 }
 
 func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+	span := trace.SpanFromContext(ctx)
 
+	resp, body, err := cdn.doPersistedOperation(ctx, clientName, sha256Hash, cdn.cdnURL)
+
+	if err != nil && cdn.cdnFallbackURL != nil && httpclient.IsCDNFallbackEligible(resp, err) {
+		cdn.logger.Warn("Primary CDN failed, attempting fallback CDN for persisted operation",
+			zap.Error(err),
+			zap.String("fallback_url", cdn.cdnFallbackURL.String()),
+			zap.String("client_name", clientName),
+			zap.String("sha256_hash", sha256Hash),
+		)
+		span.AddEvent("cdn.fallback", trace.WithAttributes(
+			semconv.HTTPURL(cdn.cdnFallbackURL.String()),
+		))
+		_, body, err = cdn.doPersistedOperation(ctx, clientName, sha256Hash, cdn.cdnFallbackURL)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	var po persistedoperation.PersistedOperation
+	if err := json.Unmarshal(body, &po); err != nil {
+		return nil, err
+	}
+
+	return []byte(po.Body), nil
+}
+
+func (cdn *Client) doPersistedOperation(ctx context.Context, clientName string, sha256Hash string, baseURL *url.URL) (*http.Response, []byte, error) {
 	span := trace.SpanFromContext(ctx)
 
 	operationPath := fmt.Sprintf("/%s/%s/operations/%s/%s.json",
@@ -101,11 +141,11 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sh
 		cdn.federatedGraphID,
 		url.PathEscape(clientName),
 		url.PathEscape(sha256Hash))
-	operationURL := cdn.cdnURL.ResolveReference(&url.URL{Path: operationPath})
+	operationURL := baseURL.ResolveReference(&url.URL{Path: operationPath})
 
 	req, err := http.NewRequestWithContext(ctx, "GET", operationURL.String(), nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	span.SetAttributes(
@@ -118,7 +158,7 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sh
 
 	resp, err := cdn.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -130,38 +170,32 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sh
 		span.SetStatus(codes.Error, fmt.Sprintf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode))
 
 		if resp.StatusCode == http.StatusNotFound {
-			return nil, &persistedoperation.PersistentOperationNotFoundError{
+			return resp, nil, &persistedoperation.PersistentOperationNotFoundError{
 				ClientName: clientName,
 				Sha256Hash: sha256Hash,
 			}
 		}
 		if resp.StatusCode == http.StatusUnauthorized {
-			return nil, errors.New("could not authenticate against CDN")
+			return resp, nil, errors.New("could not authenticate against CDN")
 		}
 		if resp.StatusCode == http.StatusBadRequest {
-			return nil, errors.New("bad request")
+			return resp, nil, errors.New("bad request")
 		}
-		return nil, fmt.Errorf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode)
+		return resp, nil, fmt.Errorf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode)
 	}
 
 	reader, cleanup, err := gzipAwareReader(resp)
 	if err != nil {
-		return nil, err
+		return resp, nil, err
 	}
 	defer cleanup()
 
 	body, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, errors.New("could not read the response body. " + err.Error())
+		return resp, nil, errors.New("could not read the response body. " + err.Error())
 	}
 
-	var po persistedoperation.PersistedOperation
-	err = json.Unmarshal(body, &po)
-	if err != nil {
-		return nil, err
-	}
-
-	return []byte(po.Body), nil
+	return resp, body, nil
 }
 
 // setCDNHeaders sets the common headers for CDN requests.

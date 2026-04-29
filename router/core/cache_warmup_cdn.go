@@ -24,6 +24,7 @@ var _ CacheWarmupSource = (*CDNSource)(nil)
 
 type CDNSource struct {
 	cdnURL              *url.URL
+	cdnFallbackURL      *url.URL
 	authenticationToken string
 	// federatedGraphID is the ID of the federated graph that was obtained
 	// from the token, already url-escaped
@@ -34,10 +35,18 @@ type CDNSource struct {
 	httpClient     *http.Client
 }
 
-func NewCDNSource(endpoint, token string, logger *zap.Logger) (*CDNSource, error) {
+func NewCDNSource(endpoint, fallbackEndpoint, token string, logger *zap.Logger) (*CDNSource, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
+	}
+
+	var fu *url.URL = nil
+	if fallbackEndpoint != "" {
+		fu, err = url.Parse(fallbackEndpoint)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
@@ -51,6 +60,7 @@ func NewCDNSource(endpoint, token string, logger *zap.Logger) (*CDNSource, error
 
 	return &CDNSource{
 		cdnURL:              u,
+		cdnFallbackURL:      fu,
 		authenticationToken: token,
 		federatedGraphID:    claims.FederatedGraphID,
 		organizationID:      claims.OrganizationID,
@@ -62,14 +72,45 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.O
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
-	operationsPath := fmt.Sprintf("/%s/%s/cache_warmup/operations.json", c.organizationID, c.federatedGraphID)
+	resp, body, err := c.fetchOperationsJSON(ctx, log, c.cdnURL)
 
-	operationURL := c.cdnURL.ResolveReference(&url.URL{Path: operationsPath})
+	if err != nil && c.cdnFallbackURL != nil && httpclient.IsCDNFallbackEligible(resp, err) {
+		log.Warn("Primary CDN failed, attempting fallback CDN",
+			zap.Error(err),
+			zap.String("fallback_url", c.cdnFallbackURL.String()),
+		)
+		span.AddEvent("cdn.fallback", trace.WithAttributes(
+			semconv.HTTPURL(c.cdnFallbackURL.String()),
+		))
+		_, body, err = c.fetchOperationsJSON(ctx, log, c.cdnFallbackURL)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	if body == nil {
+		return nil, nil
+	}
+
+	var warmupOperations nodev1.CacheWarmerOperations
+	unmarshalOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+	if err := unmarshalOpts.Unmarshal(body, &warmupOperations); err != nil {
+		return nil, err
+	}
+
+	return warmupOperations.GetOperations(), nil
+}
+
+func (c *CDNSource) fetchOperationsJSON(ctx context.Context, log *zap.Logger, baseURL *url.URL) (*http.Response, []byte, error) {
+	span := trace.SpanFromContext(ctx)
+
+	operationsPath := fmt.Sprintf("/%s/%s/cache_warmup/operations.json", c.organizationID, c.federatedGraphID)
+	operationURL := baseURL.ResolveReference(&url.URL{Path: operationsPath})
 	log.Debug("Loading cache warmup config", zap.String("url", operationURL.String()))
 
 	req, err := http.NewRequestWithContext(ctx, "GET", operationURL.String(), nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	span.SetAttributes(
@@ -84,7 +125,7 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.O
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -95,29 +136,23 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.O
 
 		if resp.StatusCode == http.StatusNotFound {
 			log.Debug("Cache warmup config not found", zap.String("url", operationURL.String()))
-			return nil, nil
+			return resp, nil, nil
 		}
 		if resp.StatusCode == http.StatusUnauthorized {
-			return nil, errors.New("could not authenticate against CDN")
+			return resp, nil, errors.New("could not authenticate against CDN")
 		}
 		if resp.StatusCode == http.StatusBadRequest {
-			return nil, errors.New("bad request")
+			return resp, nil, errors.New("bad request")
 		}
-		return nil, fmt.Errorf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode)
+		return resp, nil, fmt.Errorf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode)
 	}
 
 	body, err := c.readResponse(resp)
 	if err != nil {
-		return nil, err
+		return resp, nil, err
 	}
 
-	var warmupOperations nodev1.CacheWarmerOperations
-	unmarshalOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
-	if err := unmarshalOpts.Unmarshal(body, &warmupOperations); err != nil {
-		return nil, err
-	}
-
-	return warmupOperations.GetOperations(), nil
+	return resp, body, nil
 }
 
 func (c *CDNSource) readResponse(resp *http.Response) ([]byte, error) {

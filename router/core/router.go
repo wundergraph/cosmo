@@ -1214,7 +1214,8 @@ func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedo
 		}
 
 		c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
-			Logger: r.logger,
+			Logger:           r.logger,
+			FallbackEndpoint: provider.FallbackURL,
 		})
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create CDN client: %w", err)
@@ -1267,7 +1268,8 @@ func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedo
 		}
 
 		c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
-			Logger: r.logger,
+			Logger:           r.logger,
+			FallbackEndpoint: r.cdnConfig.FallbackURL,
 		})
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create CDN client: %w", err)
@@ -1373,7 +1375,7 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 		return nil, errors.New("graph token is required for PQL manifest")
 	}
 
-	fetcher, err := pqlmanifest.NewFetcher(r.cdnConfig.URL, r.graphApiToken, r.logger)
+	fetcher, err := pqlmanifest.NewFetcher(r.cdnConfig.URL, r.cdnConfig.FallbackURL, r.graphApiToken, r.logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PQL manifest fetcher: %w", err)
 	}
