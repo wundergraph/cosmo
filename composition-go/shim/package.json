@@ -18,7 +18,12 @@
   "dependencies": {
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
-    "graphql": "catalog:"
+    "graphql": "catalog:",
+    "set.prototype.difference": "^1.1.7",
+    "set.prototype.intersection": "^1.1.8",
+    "set.prototype.isdisjointfrom": "^1.1.5",
+    "set.prototype.issubsetof": "^1.1.4",
+    "set.prototype.issupersetof": "^1.1.3"
   },
   "devDependencies": {
     "@types/node": "catalog:",
