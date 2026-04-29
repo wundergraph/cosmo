@@ -1229,7 +1229,8 @@ type PluginsConfiguration struct {
 }
 
 type PluginRegistryConfiguration struct {
-	URL string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
+	URL      string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
+	Insecure bool   `yaml:"insecure" env:"INSECURE" envDefault:"false"`
 }
 
 type IntrospectionConfiguration struct {
