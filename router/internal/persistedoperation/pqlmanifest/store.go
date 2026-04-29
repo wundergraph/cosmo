@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync"
 	"sync/atomic"
 
 	"go.uber.org/zap"
@@ -18,47 +17,44 @@ type Manifest struct {
 }
 
 type Store struct {
-	manifest  atomic.Pointer[Manifest]
-	updateCh  chan struct{}
-	onUpdate  atomic.Value // stores func()
-	startOnce sync.Once
-	logger    *zap.Logger
+	manifest atomic.Pointer[Manifest]
+	updateCh chan struct{}
+	onUpdate atomic.Value // stores func()
+	logger   *zap.Logger
 }
 
 func NewStore(logger *zap.Logger) *Store {
-	return &Store{
+	s := &Store{
 		logger:   logger,
 		updateCh: make(chan struct{}, 1),
+	}
+	go s.run()
+	return s
+}
+
+// run is the single worker goroutine that processes manifest update signals
+// and calls the registered callback.
+func (s *Store) run() {
+	for range s.updateCh {
+		if fn, ok := s.onUpdate.Load().(func()); ok && fn != nil {
+			fn()
+		}
 	}
 }
 
 // SetOnUpdate registers a callback that is invoked after the manifest is updated via Load.
-// The callback runs on a dedicated worker goroutine that processes signals sequentially.
-// If an update arrives while the callback is still running, it is coalesced into a single
-// pending signal — at most one signal is buffered, so rapid updates don't queue up.
-// Safe to call multiple times (e.g. on config reload): the callback is swapped atomically.
+// The callback runs on a dedicated worker goroutine with coalescing — if the worker is busy,
+// new signals are dropped so rapid updates don't queue unbounded work.
+// Safe to call multiple times: the callback is swapped atomically. On config reload,
+// the new graphServer replaces the old callback, which is correct by design.
 func (s *Store) SetOnUpdate(fn func()) {
 	s.onUpdate.Store(fn)
-	s.startOnce.Do(func() {
-		go func() {
-			for range s.updateCh {
-				if f, ok := s.onUpdate.Load().(func()); ok && f != nil {
-					f()
-				}
-			}
-		}()
-	})
 }
 
-// Load swaps the manifest atomically and signals the update worker if a callback is registered.
-// If the worker is busy processing a previous update, the signal is dropped (coalesced)
-// so back-to-back manifest updates don't queue unbounded work.
+// Load swaps the manifest atomically and signals the worker goroutine.
+// If the worker is busy, the signal is coalesced (dropped).
 func (s *Store) Load(manifest *Manifest) {
 	s.manifest.Store(manifest)
-
-	if s.onUpdate.Load() == nil {
-		return
-	}
 
 	select {
 	case s.updateCh <- struct{}{}:
@@ -67,7 +63,7 @@ func (s *Store) Load(manifest *Manifest) {
 	}
 }
 
-// Close stops the update worker goroutine.
+// Close stops the worker goroutine.
 func (s *Store) Close() {
 	close(s.updateCh)
 }

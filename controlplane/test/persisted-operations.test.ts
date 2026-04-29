@@ -1,20 +1,29 @@
 import crypto from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi, type Mock } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
+import { persistedOperationToFeatureFlags } from '../src/db/schema.js';
+import { FeatureFlagRepository } from '../src/core/repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
+import { NamespaceRepository } from '../src/core/repositories/NamespaceRepository.js';
 import { MAX_MANIFEST_OPERATIONS, OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
 import {
   afterAllSetup,
   beforeAllSetup,
+  createTestGroup,
+  createTestRBACEvaluator,
   genID,
   genUniqueLabel,
   TestUser,
-  createTestRBACEvaluator,
-  createTestGroup,
 } from '../src/core/test-util.js';
-import { SetupTest } from './test-util.js';
+import {
+  createFeatureFlag,
+  deleteFeatureFlag,
+  featureFlagIntegrationTestSetUp,
+  SetupTest,
+  toggleFeatureFlag,
+} from './test-util.js';
 
 let dbname = '';
 
@@ -26,6 +35,30 @@ vi.mock('../src/core/clickhouse/index.js', () => {
 
   return { ClickHouseClient };
 });
+
+// Reads the PQL manifest from blob storage
+const readManifest = async (blobStorage: Awaited<ReturnType<typeof SetupTest>>['blobStorage']) => {
+  const manifestKey = blobStorage.keys().find((key) => key.endsWith('/operations/manifest.json'));
+  if (!manifestKey) {
+    throw new Error('Manifest not found in blob storage');
+  }
+  const blob = await blobStorage.getObject({ key: manifestKey });
+  return JSON.parse(await new Response(blob.stream).text());
+};
+
+// Sets up a federated graph with a feature flag subgraph and an enabled feature flag.
+// Returns the graph name and FF name for use in tests.
+const setupFederatedGraphWithFeatureFlag = async (client: Client) => {
+  const labels = [{ key: 'team', value: genID('label') }];
+  const fedGraphName = genID('fedGraph');
+
+  await featureFlagIntegrationTestSetUp(client, [{ name: 'users', hasFeatureSubgraph: true }], fedGraphName, labels);
+
+  const featureFlagName = genID('flag');
+  await createFeatureFlag(client, featureFlagName, labels, ['users-feature'], 'default', true);
+
+  return { fedGraphName, featureFlagName };
+};
 
 const setupFederatedGraph = async (fedGraphName: string, client: Client) => {
   const subgraph1Name = genID('subgraph1');
@@ -341,6 +374,146 @@ describe('Persisted operations', (ctx) => {
       });
       expect(deleteFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
       expect(blobStorage.keys().length).toBe(0);
+    });
+  });
+
+  // Base schema: User { id, name, email, isPremium }
+  // Feature subgraph adds: User { username, basket }, Mutation { addProductToUserBasket }
+  describe('feature flag schema validation', () => {
+    test('Should accept operation valid only on a feature flag schema', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      // "username" only exists on the FF schema
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('op'), contents: `query { users { id username } }` }],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    });
+
+    test('Should accept operation valid on base schema even with feature flags', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('op'), contents: `query { users { id name } }` }],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    });
+
+    test('Should reject operation invalid on all schemas', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('op'), contents: `query { users { id nonExistentField } }` }],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.ERR);
+      expect(resp.response?.details).toContain('not valid on any schema');
+      expect(resp.response?.details).toContain('nonExistentField');
+    });
+
+    test('Should replace stale feature flag links when re-publishing operations', async (testContext) => {
+      const { client, server, users } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const labels = [{ key: 'team', value: genID('label') }];
+      const fedGraphName = genID('fedGraph');
+
+      await featureFlagIntegrationTestSetUp(
+        client,
+        [{ name: 'users', hasFeatureSubgraph: true }],
+        fedGraphName,
+        labels,
+      );
+
+      // Create two feature flags
+      const ff1Name = genID('flag1');
+      const ff2Name = genID('flag2');
+      await createFeatureFlag(client, ff1Name, labels, ['users-feature'], 'default', true);
+      await createFeatureFlag(client, ff2Name, labels, ['users-feature'], 'default', true);
+
+      const user = users.adminAliceCompanyA;
+      const db = server.db;
+      const logger = server.log;
+
+      // Resolve IDs
+      const fedGraphRepo = new FederatedGraphRepository(logger, db, user.organizationId);
+      const fedGraph = await fedGraphRepo.byName(fedGraphName, 'default');
+      expect(fedGraph).toBeDefined();
+
+      const namespaceRepo = new NamespaceRepository(db, user.organizationId);
+      const namespace = await namespaceRepo.byName('default');
+      expect(namespace).toBeDefined();
+
+      const ffRepo = new FeatureFlagRepository(logger, db, user.organizationId);
+      const ff1 = await ffRepo.getFeatureFlagByName({ featureFlagName: ff1Name, namespaceId: namespace!.id });
+      const ff2 = await ffRepo.getFeatureFlagByName({ featureFlagName: ff2Name, namespaceId: namespace!.id });
+      expect(ff1).toBeDefined();
+      expect(ff2).toBeDefined();
+
+      const opsRepo = new OperationsRepository(db, fedGraph!.id);
+      const clientId = await opsRepo.registerClient('test-client', user.userId);
+
+      const opId = genID('op');
+      const makeOp = (ffIds: string[]) => ({
+        operationId: opId,
+        hash: crypto.createHash('sha256').update(opId).digest('hex'),
+        filePath: `${opId}.graphql`,
+        contents: `query { users { id username } }`,
+        operationNames: ['Users'],
+        validOnBaseGraph: false,
+        validOnFeatureFlagIds: ffIds,
+      });
+
+      // First publish: link to FF1
+      await opsRepo.updatePersistedOperations(clientId, user.userId, [makeOp([ff1!.id])]);
+
+      // Query the junction table to get the persisted operation ID
+      const linksAfterFirst = await db.select().from(persistedOperationToFeatureFlags);
+
+      // Filter to only links for our feature flags
+      const relevantLinksFirst = linksAfterFirst.filter(
+        (l) => l.featureFlagId === ff1!.id || l.featureFlagId === ff2!.id,
+      );
+      expect(relevantLinksFirst).toHaveLength(1);
+      expect(relevantLinksFirst[0].featureFlagId).toBe(ff1!.id);
+
+      // Second publish: change link to FF2 (should remove FF1 link)
+      await opsRepo.updatePersistedOperations(clientId, user.userId, [makeOp([ff2!.id])]);
+
+      const linksAfterSecond = await db.select().from(persistedOperationToFeatureFlags);
+
+      const relevantLinksSecond = linksAfterSecond.filter(
+        (l) => l.featureFlagId === ff1!.id || l.featureFlagId === ff2!.id,
+      );
+      expect(relevantLinksSecond).toHaveLength(1);
+      expect(relevantLinksSecond[0].featureFlagId).toBe(ff2!.id);
+
+      // Third publish: no feature flags (should remove all links)
+      await opsRepo.updatePersistedOperations(clientId, user.userId, [makeOp([])]);
+
+      const linksAfterThird = await db.select().from(persistedOperationToFeatureFlags);
+
+      const relevantLinksThird = linksAfterThird.filter(
+        (l) => l.featureFlagId === ff1!.id || l.featureFlagId === ff2!.id,
+      );
+      expect(relevantLinksThird).toHaveLength(0);
     });
   });
 
@@ -725,6 +898,106 @@ describe('Persisted operations', (ctx) => {
 
       // Same operations should produce the same revision
       expect(manifest2.revision).toBe(manifest1.revision);
+    });
+
+    test('Should exclude FF-only operation from manifest when FF is disabled', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName, featureFlagName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [
+          { id: genID('base-op'), contents: `query { users { id name } }` },
+          { id: genID('ff-op'), contents: `query { users { id username } }` },
+        ],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+      let manifest = await readManifest(blobStorage);
+      expect(Object.keys(manifest.operations).length).toBe(2);
+
+      await toggleFeatureFlag(client, featureFlagName, false);
+
+      manifest = await readManifest(blobStorage);
+      expect(Object.keys(manifest.operations).length).toBe(1);
+      const remainingOp = Object.values(manifest.operations)[0] as string;
+      expect(remainingOp).toContain('name');
+      expect(remainingOp).not.toContain('username');
+    });
+
+    test('Should restore FF-only operation in manifest when FF is re-enabled', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName, featureFlagName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [
+          { id: genID('base-op'), contents: `query { users { id name } }` },
+          { id: genID('ff-op'), contents: `query { users { id username } }` },
+        ],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+      await toggleFeatureFlag(client, featureFlagName, false);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(1);
+
+      await toggleFeatureFlag(client, featureFlagName, true);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(2);
+    });
+
+    test('Should exclude FF-only operation from manifest when FF is deleted', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName, featureFlagName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [
+          { id: genID('base-op'), contents: `query { users { id name } }` },
+          { id: genID('ff-op'), contents: `query { users { id username } }` },
+        ],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(2);
+
+      await deleteFeatureFlag(client, featureFlagName);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(1);
+    });
+
+    test('Should keep base-valid operations in manifest regardless of FF state', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const { fedGraphName, featureFlagName } = await setupFederatedGraphWithFeatureFlag(client);
+
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [
+          { id: genID('op1'), contents: `query { users { id } }` },
+          { id: genID('op2'), contents: `query { users { id name } }` },
+        ],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(2);
+
+      await toggleFeatureFlag(client, featureFlagName, false);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(2);
+
+      await deleteFeatureFlag(client, featureFlagName);
+      expect(Object.keys((await readManifest(blobStorage)).operations).length).toBe(2);
     });
 
     test('Should reject publish when operation limit would be exceeded', async (testContext) => {
