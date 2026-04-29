@@ -14,7 +14,7 @@ Previously the `extensions` field from each subscribe message was merged into `c
 
 **Action for subgraph implementations:** if your subgraph reads subscribe-message extensions from `connection_init.payload.extensions`, update it to read them from `subscribe.payload.extensions`.
 
-See [Subscriptions — Using the "extensions" field](/router/subscriptions#using-the-extensions-field) for the current behavior.
+See [Subscriptions - Using the "extensions" field](/router/subscriptions#using-the-extensions-field) for the new behavior.
 
 ## Upstream connection errors no longer tear down the client WebSocket
 
@@ -24,7 +24,7 @@ The router now emits a per-subscription GraphQL error and terminates that subscr
 
 **Action for clients:** if your client detected upstream subgraph failures by observing a WebSocket close with code `1001`, inspect the GraphQL error `code` extension instead. Reconnect logic that previously operated at the whole-connection level may need to move to individual subscriptions.
 
-See [Subgraph Error Propagation — Upstream WebSocket errors during subscriptions](/router/subgraph-error-propagation#upstream-websocket-errors-during-subscriptions) for the current behavior and example payloads.
+See [Subgraph Error Propagation - Upstream WebSocket errors during subscriptions](/router/subgraph-error-propagation#upstream-websocket-errors-during-subscriptions) for the new behavior and example payloads.
 
 ## `complete` is no longer sent after `error` on `graphql-transport-ws`
 
@@ -48,7 +48,7 @@ This mirrored a bug in the [`graphql-ws` reference implementation](https://githu
 Several `websocket_client_*` options were named as if they tuned the router's upstream connections to subgraphs, but were actually used for the server-side WebSocket handler (the router's downstream endpoint accepting client connections). This release splits those roles cleanly. All changes are listed below.
 
 <Warning>
-  The old `websocket_client_poll_timeout`, `websocket_client_conn_buffer_size`, `websocket_client_read_timeout`, and `websocket_client_frame_timeout` router configuration options are no longer available, and their `ENGINE_WEBSOCKET_CLIENT_*` environment variables are no longer recognized. One option — `websocket_client_write_timeout` — keeps its name but now applies to a different side of the router. Review each section below before upgrading.
+  The old `websocket_client_poll_timeout`, `websocket_client_conn_buffer_size`, `websocket_client_read_timeout`, and `websocket_client_frame_timeout` router configuration options are no longer available, and their `ENGINE_WEBSOCKET_CLIENT_*` environment variables are no longer recognized. One option - `websocket_client_write_timeout` - keeps its name but now applies to a different side of the router. Review each section below before upgrading.
 </Warning>
 
 ### Renamed: server-side options
@@ -131,4 +131,3 @@ engine:
 ```
 
 See [Router Engine Configuration](/router/configuration#router-engine-configuration) for the full reference.
-

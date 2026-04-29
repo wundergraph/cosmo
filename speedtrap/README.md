@@ -123,3 +123,7 @@ To run the shipped suites, the consuming test harness must register a backend na
 ## testing.T Compatibility
 
 `S` implements the failure-reporting surface of `testing.T` (`Fail`, `FailNow`, `Error`, `Errorf`, `Fatal`, `Fatalf`, `Log`, `Logf`). Libraries that accept `testing.T`, including testify and jsonassert, work against `s` with no adapter.
+
+## Running
+
+During Cosmo development, the scenarios can be run against the Cosmo router via `router-tests/subscriptions/speedtrap_test.go` (`TestSpeedtrapScenarios`). That test stands up the router with a real subgraph HTTP server backed by a speedtrap mock, then runs each scenario. It is part of the integration test suite and thus runs in CI alongside the rest of those tests.
