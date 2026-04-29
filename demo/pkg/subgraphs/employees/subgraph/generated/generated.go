@@ -1240,8 +1240,9 @@ directive @goField(
 
 directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
 
-# To demonstrate that cost can be applied to the argument of a directive
-directive @expensiveOp(applied: Boolean = true @cost(weight: 22)) on FIELD_DEFINITION
+# To demonstrate that cost can be applied to the argument of a directive.
+# If coefficient is set to null, then weight won't be added.
+directive @expensiveOp(coefficient: Int = 2 @cost(weight: 22)) on FIELD_DEFINITION
 
 type Query {
   employee(id: Int! @cost(weight: 2)): Employee @cost(weight: 5) @openfed__requireFetchReasons
