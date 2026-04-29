@@ -278,13 +278,6 @@ export class BatchNormalizer {
       this.errors.push(duplicateOverriddenFieldsError(duplicateOverriddenFieldErrorMessages));
     }
 
-    // If the composed directive is not referenced in a subgraph that composes the directive, it is not propagated.
-    for (const [directiveName, { isComposed, isReferenced }] of this.federatedDirectiveDataByName) {
-      if (isComposed && !isReferenced) {
-        this.federatedDirectiveDataByName.delete(directiveName);
-      }
-    }
-
     for (const [directiveName, executableDirectiveDatas] of this.executableDirectiveDatasByName) {
       if (
         this.federatedDirectiveDataByName.has(directiveName) ||

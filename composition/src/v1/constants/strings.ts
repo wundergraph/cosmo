@@ -141,7 +141,7 @@ export const IGNORED_FEDERATED_TYPE_NAMES: ReadonlySet<TypeName> = new Set<TypeN
   SUBSCRIPTION_FILTER_VALUE,
 ]);
 
-export const CLIENT_PERSISTED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([
+export const CLIENT_FEDERATED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([
   DEPRECATED,
   ONE_OF,
   SEMANTIC_NON_NULL,

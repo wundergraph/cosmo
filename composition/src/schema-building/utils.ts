@@ -87,7 +87,6 @@ import {
   type DirectiveDefinitionNodeFromDataParams,
   type GetRouterPersistedDirectiveNodesParams,
   type GetValidArgumentNodesParams,
-  GetValidExecutableDirectiveArgumentNodesParams,
   type IsTypeValidImplementationParams,
   type RouterSchemaFieldNodeFromDataParams,
   type RouterSchemaInputValueNodeFromDataParams,
@@ -95,7 +94,6 @@ import {
   type SanitizeDefaultValueParams,
 } from './types/params';
 import {
-  DirectiveDefinitionNodeResult,
   type GetFederatedDirectiveNodesResult,
   type InputValueNodesResult,
   type RouterSchemaFieldNodeFromDataResult,
@@ -469,6 +467,15 @@ export function getRouterSchemaDirectiveNodes({
     if (!directiveData) {
       continue;
     }
+
+    /* The Apollo behaviour is that composed directive must be referenced within at least one composing subgraph else
+     * no usages are propagated into the federated graph.
+     * It's likely this behaviour is a bug, but it's mirrored here for consistency.
+     */
+    if (directiveData.isComposed && !directiveData.isReferenced) {
+      continue;
+    }
+
     if (directiveNodes.length < 2) {
       nodes.push(...directiveNodes);
       continue;
@@ -516,7 +523,7 @@ export function getRouterSchemaDirectiveNodes({
   };
 }
 
-export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T): ConstDirectiveNode[] {
+export function getClientFederatedDirectiveNodes<T extends NodeData>(nodeData: T): ConstDirectiveNode[] {
   const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
   if (nodeData.federatedDirectivesData.isDeprecated) {
     persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.federatedDirectivesData.deprecatedReason));
@@ -541,7 +548,7 @@ export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T
 }
 
 export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): MutableFieldNode {
-  const directives = getClientPersistedDirectiveNodes(fieldData);
+  const directives = getClientFederatedDirectiveNodes(fieldData);
   const argumentNodes: MutableInputValueNode[] = [];
   for (const inputValueData of fieldData.argumentDataByName.values()) {
     if (isNodeDataInaccessible(inputValueData)) {
@@ -549,7 +556,7 @@ export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): Mutab
     }
     argumentNodes.push({
       ...inputValueData.node,
-      directives: getClientPersistedDirectiveNodes(inputValueData),
+      directives: getClientFederatedDirectiveNodes(inputValueData),
     });
   }
   return {

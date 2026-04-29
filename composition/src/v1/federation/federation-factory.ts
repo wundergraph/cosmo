@@ -84,7 +84,7 @@ import {
   validateImplicitFieldSets,
 } from './utils';
 import {
-  CLIENT_PERSISTED_DIRECTIVE_NAMES,
+  CLIENT_FEDERATED_DIRECTIVE_NAMES,
   DEPENDENCIES_BY_DIRECTIVE_NAME,
   IGNORED_FEDERATED_TYPE_NAMES,
   SUBSCRIPTION_FILTER_INPUT_NAMES,
@@ -135,7 +135,7 @@ import {
 import {
   areKindsEqual,
   compareAndValidateInputDefaultValues,
-  getClientPersistedDirectiveNodes,
+  getClientFederatedDirectiveNodes,
   getClientSchemaFieldNodeByFieldData,
   getDefinitionDataCoords,
   getInitialFederatedDescription,
@@ -1078,10 +1078,6 @@ export class FederationFactory {
         type: sourceData.type,
       },
       originalCoords: sourceData.originalCoords,
-      // persistedDirectivesData: this.extractFederatedDirectives({
-      //   data: newPersistedDirectivesData(),
-      //   directivesByName: sourceData.directivesByName,
-      // }),
       requiredSubgraphNames: new Set(sourceData.requiredSubgraphNames),
       subgraphNames: new Set(sourceData.subgraphNames),
       type: sourceData.type,
@@ -1502,50 +1498,6 @@ export class FederationFactory {
           }
         }
     }
-  }
-
-  upsertPersistedDirectiveDefinitionData() {
-    // const name = incomingData.name;
-    // const existingData = this.potentialPersistedDirectiveDefinitionDataByName.get(name);
-    // if (!existingData) {
-    //   // The executable directive must be defined in all subgraphs to be persisted.
-    //   if (subgraphNumber > 1) {
-    //     return;
-    //   }
-    //   const argumentDataByArgumentName = new Map<string, InputValueData>();
-    //   for (const inputValueData of incomingData.argumentDataByName.values()) {
-    //     this.upsertInputValueData(argumentDataByArgumentName, inputValueData, `@${incomingData.name}`, false);
-    //   }
-    //   this.potentialPersistedDirectiveDefinitionDataByName.set(name, {
-    //     argumentDataByName: argumentDataByArgumentName,
-    //     executableLocations: new Set<string>(incomingData.executableLocations),
-    //     name,
-    //     repeatable: incomingData.repeatable,
-    //     subgraphNames: new Set<string>(incomingData.subgraphNames),
-    //     description: incomingData.description,
-    //   });
-    //   return;
-    // }
-    // // If the executable directive has not been defined in at least one graph, the definition should not be persisted
-    // if (existingData.subgraphNames.size + 1 !== subgraphNumber) {
-    //   this.potentialPersistedDirectiveDefinitionDataByName.delete(name);
-    //   return;
-    // }
-    // setMutualExecutableLocations(existingData, incomingData.executableLocations);
-    // // If there are no mutually defined executable locations, the definition should not be persisted
-    // if (existingData.executableLocations.size < 1) {
-    //   this.potentialPersistedDirectiveDefinitionDataByName.delete(name);
-    //   return;
-    // }
-    // for (const inputValueData of incomingData.argumentDataByName.values()) {
-    //   this.upsertInputValueData(existingData.argumentDataByName, inputValueData, `@${existingData.name}`, false);
-    // }
-    // setLongestDescription(existingData, incomingData);
-    // existingData.repeatable &&= incomingData.repeatable;
-    // addIterableToSet({
-    //   source: incomingData.subgraphNames,
-    //   target: existingData.subgraphNames,
-    // });
   }
 
   shouldUpdateFederatedFieldAbstractNamedType(abstractTypeName: string, objectTypeNames: Set<string>): boolean {
@@ -2069,7 +2021,7 @@ export class FederationFactory {
             const isValueInaccessible = isNodeDataInaccessible(enumValueData);
             const clientEnumValueNode: MutableEnumValueNode = {
               ...enumValueData.node,
-              directives: getClientPersistedDirectiveNodes(enumValueData),
+              directives: getClientFederatedDirectiveNodes(enumValueData),
             };
             const enumValueNodeResult = routerSchemaNodeFromData<EnumValueData>({
               data: enumValueData,
@@ -2136,7 +2088,7 @@ export class FederationFactory {
           }
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
-            directives: getClientPersistedDirectiveNodes(parentDefinitionData),
+            directives: getClientFederatedDirectiveNodes(parentDefinitionData),
             values: clientEnumValueNodes,
           });
           break;
@@ -2171,7 +2123,7 @@ export class FederationFactory {
               }
               clientInputValueNodes.push({
                 ...inputValueData.node,
-                directives: getClientPersistedDirectiveNodes(inputValueData),
+                directives: getClientFederatedDirectiveNodes(inputValueData),
               });
             } else if (isTypeRequired(inputValueData.type)) {
               invalidRequiredInputs.push({
@@ -2227,7 +2179,7 @@ export class FederationFactory {
           }
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
-            directives: getClientPersistedDirectiveNodes(parentDefinitionData),
+            directives: getClientFederatedDirectiveNodes(parentDefinitionData),
             fields: clientInputValueNodes,
           });
           break;
@@ -2319,7 +2271,7 @@ export class FederationFactory {
           }
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
-            directives: getClientPersistedDirectiveNodes(parentDefinitionData),
+            directives: getClientFederatedDirectiveNodes(parentDefinitionData),
             fields: clientSchemaFieldNodes,
           });
           break;
@@ -2347,7 +2299,7 @@ export class FederationFactory {
           }
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
-            directives: getClientPersistedDirectiveNodes(parentDefinitionData),
+            directives: getClientFederatedDirectiveNodes(parentDefinitionData),
           });
           break;
         }
@@ -2376,7 +2328,7 @@ export class FederationFactory {
           }
           this.clientDefinitions.push({
             ...parentDefinitionData.node,
-            directives: getClientPersistedDirectiveNodes(parentDefinitionData),
+            directives: getClientFederatedDirectiveNodes(parentDefinitionData),
             types: clientMembers,
           });
           break;
@@ -2474,7 +2426,7 @@ export class FederationFactory {
        * */
       this.clientDefinitions.push({
         ...data.node,
-        directives: getClientPersistedDirectiveNodes(data),
+        directives: getClientFederatedDirectiveNodes(data),
         fields: clientSchemaFieldNodes,
         interfaces: clientInterfaces,
       });
@@ -2491,7 +2443,7 @@ export class FederationFactory {
       }
       const dependencies = DEPENDENCIES_BY_DIRECTIVE_NAME.get(directiveName) ?? [];
       this.directiveDefinitionByName.set(directiveName, definition);
-      if (CLIENT_PERSISTED_DIRECTIVE_NAMES.has(directiveName)) {
+      if (CLIENT_FEDERATED_DIRECTIVE_NAMES.has(directiveName)) {
         this.clientDefinitions.push(definition);
         addIterableToSet({
           source: dependencies,

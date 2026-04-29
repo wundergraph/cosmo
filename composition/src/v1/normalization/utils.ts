@@ -567,14 +567,14 @@ function extractLinkUrlSegments(argNode: ConstArgumentNode): ExtractImportUrlSeg
   // @a()
 
   const segments = url.pathname.split('/');
-  if (segments.length < 3) {
+  const versionString = segments.at(-1);
+  if (segments.length < 3 && !versionString) {
     return {
       error: noPathLinkDirectiveUrlError(urlString),
       success: false,
     };
   }
 
-  const versionString = segments.at(-1);
   if (!versionString) {
     return {
       error: noVersionLinkDirectiveUrlError(urlString),
@@ -584,7 +584,14 @@ function extractLinkUrlSegments(argNode: ConstArgumentNode): ExtractImportUrlSeg
 
   if (!IMPORT_VERSION_REGEX.test(versionString)) {
     return {
-      error: invalidVersionLinkDirectiveUrlError({ url: urlString, versionString: versionString }),
+      error: invalidVersionLinkDirectiveUrlError({ url: urlString, versionString }),
+      success: false,
+    };
+  }
+
+  if (segments.length < 3) {
+    return {
+      error: noFeatureNameLinkDirectiveUrlError(urlString),
       success: false,
     };
   }
