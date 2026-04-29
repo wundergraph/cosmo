@@ -143,6 +143,26 @@ autoscaling:
   maxReplicas: 100
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
+  behavior: {}
+    # Configures the HPA scaling behavior. When unset, Kubernetes applies its defaults
+    # (300s scale-down stabilization window, no scale-up window).
+    # Example of a custom scale up and scale down behavior:
+    # scaleUp:
+    #   stabilizationWindowSeconds: 180
+    #   selectPolicy: Min
+    #   policies:
+    #     - type: Pods
+    #       value: 2
+    #       periodSeconds: 60
+    #     - type: Percent
+    #       value: 50
+    #       periodSeconds: 60
+    # scaleDown:
+    #   stabilizationWindowSeconds: 120
+    #   policies:
+    #     - type: Percent
+    #       value: 50
+    #       periodSeconds: 60
 
 nodeSelector: {}
 
@@ -172,6 +192,8 @@ probes:
       path: /health/live
       port: http
     initialDelaySeconds: 10
+  # -- Configure startup probe
+  startup: {}
 
 global:
   helmTests: false

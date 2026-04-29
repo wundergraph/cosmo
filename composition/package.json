@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/composition",
-  "version": "0.56.0",
+  "version": "0.57.0",
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
@@ -32,17 +32,17 @@
   "dependencies": {
     "@graphql-tools/merge": "^9.0.0",
     "@graphql-tools/schema": "^10.0.0",
-    "@graphql-tools/utils": "^11.0.0",
+    "@graphql-tools/utils": "catalog:",
     "core-js": "^3.41.0",
-    "graphql": "^16.9.0",
-    "lodash": "^4.17.21",
+    "graphql": "catalog:",
+    "lodash": "catalog:",
     "pathe": "^1.1.1"
   },
   "devDependencies": {
-    "@types/lodash": "^4.17.0",
-    "@vitest/coverage-v8": "3.2.4",
-    "del-cli": "^5.0.0",
-    "typescript": "5.5.2",
-    "vitest": "^3.2.4"
+    "@types/lodash": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "del-cli": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

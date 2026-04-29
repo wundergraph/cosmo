@@ -26,11 +26,6 @@ type BatchedOperationId struct{}
 
 const defaultBufioReaderSize = 4096
 
-const (
-	ExtensionCodeBatchSizeExceeded             = "BATCH_LIMIT_EXCEEDED"
-	ExtensionCodeBatchSubscriptionsUnsupported = "BATCHING_SUBSCRIPTION_UNSUPPORTED"
-)
-
 type HandlerOpts struct {
 	MaxEntriesPerBatch  int
 	MaxRoutines         int
@@ -117,7 +112,7 @@ func processBatchedRequest(w http.ResponseWriter, r *http.Request, handlerOpts H
 			statusCode: http.StatusOK,
 		}
 		if !handlerOpts.OmitExtensions {
-			maxError.extensionCode = ExtensionCodeBatchSizeExceeded
+			maxError.extensionCode = ExtCodeErrBatchSizeExceeded
 		}
 		return maxError
 	}

@@ -18,13 +18,13 @@
   "dependencies": {
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
-    "graphql": "^16.9.0"
+    "graphql": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^20.8.10",
+    "@types/node": "catalog:",
     "esbuild": "^0.25.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "tsup": "^8.0.1",
-    "typescript": "^5.2.2"
+    "typescript": "catalog:"
   }
 }
