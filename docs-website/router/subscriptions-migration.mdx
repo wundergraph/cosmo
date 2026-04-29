@@ -48,7 +48,7 @@ This mirrored a bug in the [`graphql-ws` reference implementation](https://githu
 Several `websocket_client_*` options were named as if they tuned the router's upstream connections to subgraphs, but were actually used for the server-side WebSocket handler (the router's downstream endpoint accepting client connections). This release splits those roles cleanly. All changes are listed below.
 
 <Warning>
-  The old `websocket_client_poll_timeout`, `websocket_client_conn_buffer_size`, `websocket_client_read_timeout`, and `websocket_client_frame_timeout` keys have been removed from the config schema, and their `ENGINE_WEBSOCKET_CLIENT_*` environment variables are no longer recognized. One option — `websocket_client_write_timeout` — keeps its name but now applies to a different side of the router. Review each section below before upgrading.
+  The old `websocket_client_poll_timeout`, `websocket_client_conn_buffer_size`, `websocket_client_read_timeout`, and `websocket_client_frame_timeout` router configuration options are no longer available, and their `ENGINE_WEBSOCKET_CLIENT_*` environment variables are no longer recognized. One option — `websocket_client_write_timeout` — keeps its name but now applies to a different side of the router. Review each section below before upgrading.
 </Warning>
 
 ### Renamed: server-side options
