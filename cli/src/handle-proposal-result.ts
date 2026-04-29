@@ -3,9 +3,9 @@ import {
   CreateProposalResponse,
   UpdateProposalResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import Table from 'cli-table3';
 import logSymbols from 'log-symbols';
 import pc from 'picocolors';
+import { CLITable } from './cli-table.js';
 
 /**
  * Shared handler for proposal command responses (both create and update).
@@ -16,29 +16,26 @@ export const handleProposalResult = (
   proposalName: string,
   isCreate = false,
 ): { success: boolean; message?: string } => {
-  const changesTable = new Table({
+  const changesTable = new CLITable({
     head: [
       pc.bold(pc.white('SUBGRAPH_NAME')),
       pc.bold(pc.white('CHANGE')),
       pc.bold(pc.white('TYPE')),
       pc.bold(pc.white('DESCRIPTION')),
     ],
-    wordWrap: true,
   });
 
-  const compositionErrorsTable = new Table({
+  const compositionErrorsTable = new CLITable({
     head: [pc.bold(pc.white('ERROR_MESSAGE'))],
     colWidths: [120],
-    wordWrap: true,
   });
 
-  const compositionWarningsTable = new Table({
+  const compositionWarningsTable = new CLITable({
     head: [pc.bold(pc.white('WARNING_MESSAGE'))],
     colWidths: [120],
-    wordWrap: true,
   });
 
-  const lintIssuesTable = new Table({
+  const lintIssuesTable = new CLITable({
     head: [
       pc.bold(pc.white('SUBGRAPH_NAME')),
       pc.bold(pc.white('LINT_RULE')),
@@ -46,10 +43,9 @@ export const handleProposalResult = (
       pc.bold(pc.white('LINE NUMBER')),
     ],
     colAligns: ['left', 'left', 'center'],
-    wordWrap: true,
   });
 
-  const graphPruningIssuesTable = new Table({
+  const graphPruningIssuesTable = new CLITable({
     head: [
       pc.bold(pc.white('SUBGRAPH_NAME')),
       pc.bold(pc.white('RULE')),
@@ -58,7 +54,6 @@ export const handleProposalResult = (
       pc.bold(pc.white('LINE NUMBER')),
     ],
     colAligns: ['left', 'left', 'left', 'center'],
-    wordWrap: true,
   });
 
   let success = false;

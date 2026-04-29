@@ -1,9 +1,9 @@
 import { ROUTER_COMPATIBILITY_VERSIONS } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
+import { CLITable } from '../../../../../cli-table.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../../../core/types/types.js';
 import { handleCompositionResult } from '../../../../../handle-composition-result.js';
@@ -61,24 +61,19 @@ export default (opts: CommonGraphCommandOptions) => {
           `${options.version} is not a valid router compatibility version. Please input one of the following valid versions:`,
         )}`,
       );
-      const validVersionsTable = new Table({
-        wordWrap: true,
-        wrapOnWordBoundary: false,
-      });
+      const validVersionsTable = new CLITable();
 
       validVersionsTable.push([pc.bold(pc.white('VERSION')), ...ROUTER_COMPATIBILITY_VERSIONS]);
       program.error(validVersionsTable.toString());
     }
 
-    const versionsTable = new Table({
+    const versionsTable = new CLITable({
       head: [
         pc.bold(pc.white('GRAPH NAME')),
         pc.bold(pc.white('NAMESPACE')),
         pc.bold(pc.white('PREVIOUS VERSION')),
         pc.bold(pc.white('NEW VERSION')),
       ],
-      wordWrap: true,
-      wrapOnWordBoundary: false,
     });
 
     versionsTable.push([name, options.namespace || 'default', response.previousVersion, response.newVersion]);

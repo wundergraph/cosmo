@@ -1,7 +1,7 @@
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import Table from 'cli-table3';
+import { CLITable } from '../../../../../cli-table.js';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
 
@@ -21,10 +21,7 @@ export default (opts: BaseCommandOptions) => {
       program.error(pc.red('Could not fetch router compatibility versions.'));
     }
 
-    const versionsTable = new Table({
-      wordWrap: true,
-      wrapOnWordBoundary: false,
-    });
+    const versionsTable = new CLITable();
 
     versionsTable.push([pc.bold(pc.white('VERSION')), ...response.versions]);
 
