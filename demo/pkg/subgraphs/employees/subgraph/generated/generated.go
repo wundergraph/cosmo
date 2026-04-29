@@ -1251,7 +1251,7 @@ type Query {
   products: [Products!]!
   teammates(team: Department!): [Employee!]!
   firstEmployee: Employee! @tag(name: "internal")
-  findEmployeesBy(criteria: FindEmployeeCriteria!): [Employee!]!
+  findEmployeesBy(criteria: FindEmployeeCriteria!): [Employee!]! @expensiveOp(coefficient: null)
 }
 
 scalar Upload
