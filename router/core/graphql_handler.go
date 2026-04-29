@@ -372,7 +372,7 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 // In the websocket case, we call this function concurrently as part of the polling loop. This is error-prone.
 // WriteError is used by the resolver's AsyncErrorWriter and by request-scoped
 // handlers. For subscription writers it emits a non-terminal error frame
-// (inlined into a next/data frame) so the subscription stays alive — the
+// (inlined into a next/data frame) so the subscription stays alive - the
 // per-update contract in the resolver. Terminal subscription failures should
 // call WriteTerminalError instead.
 func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolve.GraphQLResponse, w io.Writer) {

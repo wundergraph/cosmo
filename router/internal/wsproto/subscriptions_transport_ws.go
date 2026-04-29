@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gobwas/ws"
 	"github.com/tidwall/sjson"
 )
 
@@ -58,8 +57,10 @@ func (p *subscriptionsTransportWSProtocol) Initialize() (json.RawMessage, error)
 		return nil, fmt.Errorf("error reading connection_init: %w", err)
 	}
 	if msg.Type != subscriptionsTransportWSMessageTypeConnectionInit {
-		_ = p.Close(4401, "Unauthorized")
-		return nil, fmt.Errorf("first message should be %s, got %s", subscriptionsTransportWSMessageTypeConnectionInit, msg.Type)
+		return nil, &CloseError{
+			Err:  fmt.Errorf("first message should be %s, got %s", subscriptionsTransportWSMessageTypeConnectionInit, msg.Type),
+			Kind: CloseKindUnauthorized,
+		}
 	}
 	if err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeConnectionAck}); err != nil {
 		return nil, fmt.Errorf("sending %s: %w", subscriptionsTransportWSMessageTypeConnectionAck, err)
@@ -81,11 +82,15 @@ func (p *subscriptionsTransportWSProtocol) ReadMessage() (*Message, error) {
 	case subscriptionsTransportWSMessageTypeStop:
 		messageType = MessageTypeComplete
 	case subscriptionsTransportWSMessageTypeConnectionInit:
-		_ = p.Close(4429, "Too many initialisation requests")
-		return nil, fmt.Errorf("duplicate connection_init")
+		return nil, &CloseError{
+			Err:  fmt.Errorf("duplicate connection_init"),
+			Kind: CloseKindTooManyInits,
+		}
 	default:
-		_ = p.Close(4400, "Invalid message type")
-		return nil, fmt.Errorf("unsupported message type %s", msg.Type)
+		return nil, &CloseError{
+			Err:  fmt.Errorf("unsupported message type %s", msg.Type),
+			Kind: CloseKindInvalidMessageType,
+		}
 	}
 
 	return &Message{
@@ -127,14 +132,6 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors 
 		Payload:    data,
 		Extensions: extensions,
 	})
-}
-
-func (p *subscriptionsTransportWSProtocol) Close(code ws.StatusCode, reason string) error {
-	if err := p.conn.WriteCloseFrame(code, reason); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (p *subscriptionsTransportWSProtocol) Complete(id string) error {

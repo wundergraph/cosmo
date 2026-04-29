@@ -37,18 +37,12 @@ import (
 	"go.uber.org/zap"
 )
 
-var errClientTerminatedConnection = errors.New("client terminated connection")
-
-// closeConnectionError signals that the message loop should tear down the
-// connection with the given close kind. HandleMessage returns this instead of
-// calling handler.Close directly, so the loop owns lifecycle (single Close,
-// immediate map removal in the netpoll case).
-type closeConnectionError struct {
-	kind SubscriptionCloseKind
-}
-
-func (e *closeConnectionError) Error() string {
-	return fmt.Sprintf("close connection (%d): %s", e.kind.WSCode, e.kind.Reason)
+// errClientTerminatedConnection is returned by HandleMessage when the client
+// sends a terminate message. It surfaces as *wsproto.CloseError so the read
+// loops handle it via the same errors.As path as any other close-kind error.
+var errClientTerminatedConnection = &wsproto.CloseError{
+	Err:  errors.New("client terminated connection"),
+	Kind: wsproto.CloseKindNormal,
 }
 
 type WebsocketMiddlewareOptions struct {
@@ -387,7 +381,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 		requestLogger.Debug("Initializing websocket connection", zap.Error(err))
 
-		handler.Close(false, SubscriptionCloseKindNormal)
+		handler.Close(false, wsproto.CloseKindOf(err))
 		return
 	}
 
@@ -409,7 +403,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 				}
 				http.Error(handler.w, http.StatusText(statusCode), statusCode)
 				_ = handler.writeErrorMessage(requestID, errorMessage)
-				handler.Close(false, SubscriptionCloseKindNormal)
+				handler.Close(false, wsproto.CloseKindNormal)
 				return
 			}
 		}
@@ -421,7 +415,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			if err != nil {
 				requestLogger.Error("Error parsing initial payload: %v", zap.Error(err))
 				_ = handler.writeErrorMessage(requestID, err)
-				handler.Close(false, SubscriptionCloseKindNormal)
+				handler.Close(false, wsproto.CloseKindNormal)
 				return
 			}
 			jwtToken, ok := initialPayloadMap[fromInitialPayloadConfig.Key].(string)
@@ -429,7 +423,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 				err := fmt.Errorf("invalid JWT token in initial payload: JWT token is not a string")
 				requestLogger.Error(err.Error())
 				_ = handler.writeErrorMessage(requestID, err)
-				handler.Close(false, SubscriptionCloseKindNormal)
+				handler.Close(false, wsproto.CloseKindNormal)
 				return
 			}
 			handler.request.Header.Set(fromInitialPayloadConfig.ExportToken.HeaderKey, jwtToken)
@@ -443,7 +437,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		err = h.addConnection(c, handler)
 		if err != nil {
 			requestLogger.Error("Adding connection to net poller", zap.Error(err))
-			handler.Close(true, SubscriptionCloseKindNormal)
+			handler.Close(true, wsproto.CloseKindNormal)
 		}
 		return
 	}
@@ -461,7 +455,7 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 	for {
 		select {
 		case <-serverDone:
-			handler.Close(true, SubscriptionCloseKindGoingAway)
+			handler.Close(true, wsproto.CloseKindGoingAway)
 			return
 		default:
 			msg, err := handler.protocol.ReadMessage()
@@ -469,20 +463,16 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 				if isReadTimeout(err) {
 					continue
 				}
-				h.logger.Debug("Client closed connection")
-				handler.Close(true, SubscriptionCloseKindNormal)
+				h.logger.Debug("Client closed connection", zap.Error(err))
+				handler.Close(true, wsproto.CloseKindOf(err))
 				return
 			}
 			err = h.HandleMessage(handler, msg)
 			if err != nil {
 				h.logger.Debug("Handling websocket message", zap.Error(err))
-				if errors.Is(err, errClientTerminatedConnection) {
-					handler.Close(true, SubscriptionCloseKindNormal)
-					return
-				}
-				var closeErr *closeConnectionError
+				var closeErr *wsproto.CloseError
 				if errors.As(err, &closeErr) {
-					handler.Close(true, closeErr.kind)
+					handler.Close(true, closeErr.Kind)
 					return
 				}
 			}
@@ -502,7 +492,7 @@ func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnec
 	return h.netPoll.Add(conn)
 }
 
-func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketConnectionHandler, fd int, closeKind SubscriptionCloseKind) {
+func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketConnectionHandler, fd int, closeKind wsproto.CloseKind) {
 	h.stats.ConnectionsDec()
 	h.connectionsMu.Lock()
 	delete(h.connections, fd)
@@ -577,26 +567,25 @@ func (h *WebsocketHandler) runPoller() {
 
 				if fd == 0 {
 					h.logger.Debug("Invalid socket fd", zap.Int("fd", fd))
-					h.removeConnection(conn, handler, fd, SubscriptionCloseKindNormal)
+					h.removeConnection(conn, handler, fd, wsproto.CloseKindNormal)
 					continue
 				}
 
 				msg, err := handler.protocol.ReadMessage()
 				if err != nil {
 					h.logger.Debug("Client closed connection", zap.Error(err))
-					h.removeConnection(conn, handler, fd, SubscriptionCloseKindNormal)
+					h.removeConnection(conn, handler, fd, wsproto.CloseKindOf(err))
 					continue
 				}
 				err = h.HandleMessage(handler, msg)
 				if err != nil {
 					h.logger.Debug("Handling websocket message", zap.Error(err))
-					if errors.Is(err, errClientTerminatedConnection) {
-						h.removeConnection(conn, handler, fd, SubscriptionCloseKindNormal)
-						continue
-					}
-					var closeErr *closeConnectionError
+
+					// Only closeErr closes, which is why we're not using wsproto.CloseKindOf,
+					// which defaults to CloseKindNormal
+					var closeErr *wsproto.CloseError
 					if errors.As(err, &closeErr) {
-						h.removeConnection(conn, handler, fd, closeErr.kind)
+						h.removeConnection(conn, handler, fd, closeErr.Kind)
 						continue
 					}
 				}
@@ -616,22 +605,9 @@ func (h *WebsocketHandler) closeAllConnections() {
 
 	for _, handler := range handlers {
 		h.stats.ConnectionsDec()
-		handler.Close(true, SubscriptionCloseKindGoingAway)
+		handler.Close(true, wsproto.CloseKindGoingAway)
 	}
 }
-
-// SubscriptionCloseKind defines the WebSocket close code and reason sent to the
-// downstream client when the connection handler tears down. This is a connection-level
-// concern — the resolver never sends close frames.
-type SubscriptionCloseKind struct {
-	WSCode ws.StatusCode
-	Reason string
-}
-
-var (
-	SubscriptionCloseKindNormal    = SubscriptionCloseKind{ws.StatusNormalClosure, "Normal closure"}
-	SubscriptionCloseKindGoingAway = SubscriptionCloseKind{ws.StatusGoingAway, "Going away"}
-)
 
 type websocketResponseWriter struct {
 	id              string
@@ -1225,7 +1201,7 @@ func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, ms
 		registration, err := handler.registerSubscription(msg)
 		if err != nil {
 			h.logger.Warn("Handling subscription registration", zap.Error(err))
-			return &closeConnectionError{kind: SubscriptionCloseKind{WSCode: 4409, Reason: "Subscriber for " + msg.ID + " already exists"}}
+			return &wsproto.CloseError{Kind: wsproto.CloseKind{Code: 4409, Reason: "Subscriber for " + msg.ID + " already exists"}}
 		}
 		handler.executeSubscription(registration)
 	case wsproto.MessageTypeComplete:
@@ -1355,7 +1331,7 @@ func (h *WebSocketConnectionHandler) shouldComputeOperationSha256(operationKit *
 	return false
 }
 
-func (h *WebSocketConnectionHandler) Close(unsubscribe bool, closeKind SubscriptionCloseKind) {
+func (h *WebSocketConnectionHandler) Close(unsubscribe bool, closeKind wsproto.CloseKind) {
 	if unsubscribe {
 		// Remove any pending IDs associated with this connection
 		err := h.graphqlHandler.executor.Resolver.UnsubscribeClient(h.connectionID)
@@ -1364,7 +1340,7 @@ func (h *WebSocketConnectionHandler) Close(unsubscribe bool, closeKind Subscript
 		}
 	}
 
-	if err := h.conn.WriteCloseFrame(closeKind.WSCode, closeKind.Reason); err != nil {
+	if err := h.conn.WriteCloseFrame(closeKind.Code, closeKind.Reason); err != nil {
 		h.logger.Debug("Writing close frame", zap.Error(err))
 	}
 
