@@ -965,6 +965,11 @@ export class FieldWeightConfiguration extends Message<FieldWeightConfiguration> 
    */
   argumentWeights: { [key: string]: number } = {};
 
+  /**
+   * @generated from field: map<string, int32> directive_argument_weights = 5;
+   */
+  directiveArgumentWeights: { [key: string]: number } = {};
+
   constructor(data?: PartialMessage<FieldWeightConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -977,6 +982,7 @@ export class FieldWeightConfiguration extends Message<FieldWeightConfiguration> 
     { no: 2, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "weight", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 4, name: "argument_weights", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 5 /* ScalarType.INT32 */} },
+    { no: 5, name: "directive_argument_weights", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 5 /* ScalarType.INT32 */} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldWeightConfiguration {
