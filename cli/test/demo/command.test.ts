@@ -23,6 +23,7 @@ vi.mock('../../src/commands/demo/util.js', async (importOriginal) => {
     publishAllPlugins: vi.fn(),
     runRouterContainer: vi.fn(),
     getDemoLogPath: vi.fn(),
+    captureOnboardingEvent: vi.fn(),
   };
 });
 
@@ -264,6 +265,214 @@ describe('Demo command', () => {
 
       expect(getGraphFn).toHaveBeenCalledTimes(2);
       expect(demoUtil.runRouterContainer).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('event tracking', () => {
+    it('fires completed events on happy path', async () => {
+      keys.enter();
+
+      await runDemo();
+
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_completed',
+        properties: { step_name: 'init', entry_source: 'wgc' },
+      });
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_completed',
+        properties: { step_name: 'check_onboarding', entry_source: 'wgc' },
+      });
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_completed',
+        properties: { step_name: 'create_federated_graph', entry_source: 'wgc' },
+      });
+    });
+
+    it('fires delete_federated_graph completed when user deletes existing graph', async () => {
+      const overrides: PlatformOverrides = {
+        getFederatedGraphByName: () => ({
+          response: { code: EnumStatusCode.OK },
+          graph: new FederatedGraph({
+            name: 'demo',
+            namespace: 'default',
+            routingURL: 'http://localhost:3002/graphql',
+          }),
+          subgraphs: [new Subgraph({ name: 'products', namespace: 'default' })],
+        }),
+      };
+
+      keys.enter();
+      keys.press('d');
+
+      await expect(runDemo(overrides)).rejects.toThrow('process.exit');
+
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_completed',
+        properties: { step_name: 'delete_federated_graph', entry_source: 'wgc' },
+      });
+    });
+
+    it('fires init failed when whoAmI RPC fails', async () => {
+      const overrides: PlatformOverrides = {
+        whoAmI: () => ({
+          response: { code: EnumStatusCode.ERR, details: 'Unauthorized' },
+        }),
+      };
+
+      await expect(runDemo(overrides)).rejects.toThrow('process.exit');
+
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_failed',
+        properties: {
+          step_name: 'init',
+          entry_source: 'wgc',
+          error_category: 'resource',
+          error_message: expect.any(String),
+        },
+      });
+    });
+
+    it('fires check_onboarding failed when user is not org owner', async () => {
+      const overrides: PlatformOverrides = {
+        getOnboarding: () => ({
+          response: { code: EnumStatusCode.OK },
+          enabled: false,
+        }),
+      };
+
+      keys.enter();
+
+      await expect(runDemo(overrides)).rejects.toThrow('process.exit');
+
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_failed',
+        properties: {
+          step_name: 'check_onboarding',
+          entry_source: 'wgc',
+          error_category: 'resource',
+          error_message: expect.any(String),
+        },
+      });
+    });
+
+    it('fires check_onboarding failed when getOnboarding RPC errors', async () => {
+      const getOnboardingFn = vi
+        .fn()
+        .mockReturnValueOnce({ response: { code: EnumStatusCode.ERR, details: 'rpc error' } })
+        .mockReturnValue({ response: { code: EnumStatusCode.OK }, enabled: true });
+
+      keys.enter();
+      keys.press('Enter');
+
+      await runDemo({ getOnboarding: getOnboardingFn });
+
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_failed',
+        properties: {
+          step_name: 'check_onboarding',
+          entry_source: 'wgc',
+          error_category: 'resource',
+          error_message: expect.any(String),
+        },
+      });
+    });
+
+    it('fires delete_federated_graph failed when graph deletion fails', async () => {
+      const overrides: PlatformOverrides = {
+        getFederatedGraphByName: () => ({
+          response: { code: EnumStatusCode.OK },
+          graph: new FederatedGraph({
+            name: 'demo',
+            namespace: 'default',
+            routingURL: 'http://localhost:3002/graphql',
+          }),
+          subgraphs: [new Subgraph({ name: 'products', namespace: 'default' })],
+        }),
+        deleteFederatedGraph: () => ({
+          response: { code: EnumStatusCode.ERR, details: 'deletion failed' },
+        }),
+      };
+
+      keys.enter();
+      keys.press('d');
+      keys.press('Enter');
+
+      await expect(runDemo(overrides)).rejects.toThrow('process.exit');
+
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_failed',
+        properties: {
+          step_name: 'delete_federated_graph',
+          entry_source: 'wgc',
+          error_category: 'resource',
+          error_message: expect.any(String),
+        },
+      });
+    });
+
+    it('fires run_router_send_metrics failed when deleteRouterToken RPC fails', async () => {
+      const deleteRouterTokenFn = vi
+        .fn()
+        .mockReturnValueOnce({ response: { code: EnumStatusCode.ERR, details: 'token error' } })
+        .mockReturnValue({ response: { code: EnumStatusCode.OK } });
+
+      keys.enter();
+      keys.press('r');
+
+      await runDemo({ deleteRouterToken: deleteRouterTokenFn });
+
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_failed',
+        properties: {
+          step_name: 'run_router_send_metrics',
+          entry_source: 'wgc',
+          error_category: 'router',
+          error_message: expect.any(String),
+        },
+      });
+    });
+
+    it('fires run_router_send_metrics failed when createFederatedGraphToken RPC fails', async () => {
+      const createFederatedGraphTokenFn = vi
+        .fn()
+        .mockReturnValueOnce({ response: { code: EnumStatusCode.ERR, details: 'create token error' } })
+        .mockReturnValue({ response: { code: EnumStatusCode.OK }, token: 'test-token' });
+
+      keys.enter();
+      keys.press('r');
+
+      await runDemo({ createFederatedGraphToken: createFederatedGraphTokenFn });
+
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_failed',
+        properties: {
+          step_name: 'run_router_send_metrics',
+          entry_source: 'wgc',
+          error_category: 'router',
+          error_message: expect.any(String),
+        },
+      });
+    });
+
+    it('fires run_router_send_metrics failed when router exits with error', async () => {
+      vi.mocked(demoUtil.runRouterContainer)
+        .mockResolvedValueOnce({ error: new Error('container exited') })
+        .mockResolvedValueOnce({ error: null });
+
+      keys.enter();
+      keys.press('r');
+
+      await runDemo();
+
+      expect(demoUtil.captureOnboardingEvent).toHaveBeenCalledWith({
+        name: 'onboarding_step_failed',
+        properties: {
+          step_name: 'run_router_send_metrics',
+          entry_source: 'wgc',
+          error_category: 'router',
+          error_message: expect.any(String),
+        },
+      });
     });
   });
 });

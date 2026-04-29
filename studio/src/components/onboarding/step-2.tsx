@@ -5,7 +5,9 @@ import { getFederatedGraphByName } from '@wundergraph/cosmo-connect/dist/platfor
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetFederatedGraphByNameResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { CheckCircledIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { usePostHog } from 'posthog-js/react';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { captureOnboardingEvent } from '@/lib/track';
 import { OnboardingContainer } from './onboarding-container';
 import { OnboardingNavigation } from './onboarding-navigation';
 import { FederationAnimation } from './federation-animation';
@@ -115,6 +117,7 @@ const StatusText = ({ status, onRetry }: { status: 'pending' | 'ok' | 'fail' | '
 export const Step2 = () => {
   const { setStep, setSkipped } = useOnboarding();
   const router = useRouter();
+  const posthog = usePostHog();
   const [polling, dispatch] = useReducer(pollingReducer, { active: true, epoch: 0 });
 
   const restartPolling = useCallback(() => dispatch({ type: 'RESTART' }), []);
@@ -137,6 +140,19 @@ export const Step2 = () => {
   );
 
   const status = getDemoGraphStatus({ data, isPolling: polling.active, isError });
+
+  useEffect(() => {
+    if (status !== 'fail' && status !== 'error') return;
+
+    captureOnboardingEvent(posthog, {
+      name: 'onboarding_step_failed',
+      options: {
+        step_name: 'create_graph',
+        error_category: 'resource',
+        error_message: status === 'error' ? 'Failed to fetch federated graph data' : 'Demo federated graph not created',
+      },
+    });
+  }, [status, posthog]);
 
   return (
     <OnboardingContainer>
@@ -214,10 +230,26 @@ export const Step2 = () => {
 
       <OnboardingNavigation
         className="pt-2"
-        onSkip={setSkipped}
+        onSkip={() => {
+          captureOnboardingEvent(posthog, {
+            name: 'onboarding_skipped',
+            options: {
+              step_name: 'create_graph',
+            },
+          });
+          setSkipped();
+        }}
         backHref="/onboarding/1"
         forward={{
-          onClick: () => router.push('/onboarding/3'),
+          onClick: () => {
+            captureOnboardingEvent(posthog, {
+              name: 'onboarding_step_completed',
+              options: {
+                step_name: 'create_graph',
+              },
+            });
+            router.push('/onboarding/3');
+          },
           disabled: status !== 'ok',
         }}
       />

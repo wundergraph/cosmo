@@ -1,9 +1,11 @@
 import { useRouter } from 'next/router';
 import { z } from 'zod';
+import { useCallback } from 'react';
 import { useFieldArray } from 'react-hook-form';
 import { ArrowRightIcon, Cross1Icon, ExternalLinkIcon, PlusIcon } from '@radix-ui/react-icons';
 import { BookOpenIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import { MdArrowOutward } from 'react-icons/md';
+import { usePostHog } from 'posthog-js/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import {
@@ -12,6 +14,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { captureOnboardingEvent } from '@/lib/track';
 import { cn } from '@/lib/utils';
 import { docsBaseURL } from '@/lib/constants';
 import { OnboardingContainer } from './onboarding-container';
@@ -41,13 +44,24 @@ const inviteSchema = z.object({
 
 type InviteFormValues = z.infer<typeof inviteSchema>;
 
-const DocumentationLinkItem = ({ title, description, href }: { title: string; description: string; href: string }) => (
+const DocumentationLinkItem = ({
+  title,
+  description,
+  href,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  onClick: () => void;
+}) => (
   <li>
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="group flex items-start justify-between gap-3 rounded-md border border-border p-3 transition-colors hover:bg-muted/50"
+      onClick={onClick}
     >
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium">{title}</span>
@@ -84,10 +98,17 @@ const HubPromoLink = () => (
 
 export function StepFinished() {
   const router = useRouter();
+  const posthog = usePostHog();
   const { toast } = useToast();
   const { setStep } = useOnboarding();
 
   const handleFinish = () => {
+    captureOnboardingEvent(posthog, {
+      name: 'onboarding_completed',
+      options: {
+        step_name: 'take_me_in_click_opt',
+      },
+    });
     setStep(undefined);
     router.push('/');
   };
@@ -118,18 +139,36 @@ export function StepFinished() {
       {
         onSuccess: (d) => {
           if (d.response?.code !== EnumStatusCode.OK) {
+            const description = d.response?.details ?? 'Could not invite members. Please try again.';
             toast({
-              description: d.response?.details ?? 'Could not invite members. Please try again.',
+              description,
               duration: 3000,
+            });
+            captureOnboardingEvent(posthog, {
+              name: 'onboarding_step_failed',
+              options: {
+                step_name: 'onboarding_users_invited_opt',
+                error_category: 'invites',
+                error_message: description,
+              },
             });
             return;
           }
 
           if (d.invitationErrors.length > 0) {
             const failed = d.invitationErrors.map((e) => e.email).join(', ');
+            const description = `Some invitations failed: ${failed}`;
             toast({
-              description: `Some invitations failed: ${failed}`,
+              description,
               duration: 5000,
+            });
+            captureOnboardingEvent(posthog, {
+              name: 'onboarding_step_failed',
+              options: {
+                step_name: 'onboarding_users_invited_opt',
+                error_category: 'invites',
+                error_message: description,
+              },
             });
             return;
           }
@@ -138,17 +177,42 @@ export function StepFinished() {
             description: `Invited ${emails.length} ${emails.length === 1 ? 'member' : 'members'}.`,
             duration: 3000,
           });
+          captureOnboardingEvent(posthog, {
+            name: 'onboarding_step_completed',
+            options: {
+              step_name: 'onboarding_users_invited_opt',
+              users_invited: emails.length,
+            },
+          });
           form.reset({ members: [{ email: '' }] });
         },
         onError: () => {
+          const description = 'Could not invite members. Please try again.';
           toast({
-            description: 'Could not invite members. Please try again.',
+            description,
             duration: 3000,
+          });
+          captureOnboardingEvent(posthog, {
+            name: 'onboarding_step_failed',
+            options: {
+              step_name: 'onboarding_users_invited_opt',
+              error_category: 'invites',
+              error_message: description,
+            },
           });
         },
       },
     );
   };
+
+  const trackDocumentationLinkClick = useCallback(() => {
+    captureOnboardingEvent(posthog, {
+      name: 'onboarding_step_completed',
+      options: {
+        step_name: 'onboarding_docs_visit_opt',
+      },
+    });
+  }, [posthog]);
 
   return (
     <OnboardingContainer>
@@ -264,16 +328,19 @@ export function StepFinished() {
               title="Introduction to Cosmo"
               description="What Cosmo is, the moving parts, and how federation fits together."
               href={`${docsBaseURL}/overview`}
+              onClick={trackDocumentationLinkClick}
             />
             <DocumentationLinkItem
               title="CLI reference"
               description="Everything you can do with the wgc command-line tool."
               href={`${docsBaseURL}/cli/intro`}
+              onClick={trackDocumentationLinkClick}
             />
             <DocumentationLinkItem
               title="Tutorials"
               description="Hands-on guides covering common Cosmo use cases, end to end."
               href={`${docsBaseURL}/tutorial`}
+              onClick={trackDocumentationLinkClick}
             />
           </ul>
           <HubPromoLink />

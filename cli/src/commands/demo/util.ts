@@ -7,6 +7,7 @@ import ora from 'ora';
 import pc from 'picocolors';
 import { z } from 'zod';
 import { config, cacheDir } from '../../core/config.js';
+import { capture } from '../../core/telemetry.js';
 import { getDefaultPlatforms, publishPluginPipeline, readPluginFiles } from '../../core/plugin-publish.js';
 import type { BaseCommandOptions } from '../../core/types/types.js';
 import { visibleLength } from '../../utils.js';
@@ -137,13 +138,33 @@ export async function prepareSupportingData() {
   );
   if (!treeResponse.ok) {
     spinner.fail('Failed to fetch repository tree.');
-    program.error(`GitHub API error: ${treeResponse.statusText}`);
+    const errorText = `GitHub API error: ${treeResponse.statusText}`;
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'init',
+        entry_source: 'wgc',
+        error_category: 'support_files',
+        error_message: errorText,
+      },
+    });
+    program.error(errorText);
   }
 
   const parsed = GitHubTreeSchema.safeParse(await treeResponse.json());
   if (!parsed.success) {
     spinner.fail('Failed to parse repository tree.');
-    program.error('Unexpected response format from GitHub API. The repository structure may have changed.');
+    const errorText = 'Unexpected response format from GitHub API. The repository structure may have changed.';
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'init',
+        entry_source: 'wgc',
+        error_category: 'support_files',
+        error_message: errorText,
+      },
+    });
+    program.error(errorText);
   }
 
   const files = parsed.data.tree.filter((entry) => entry.type === 'blob' && entry.path.startsWith('plugins/'));
@@ -164,15 +185,35 @@ export async function prepareSupportingData() {
 
         return { path: file.path, error: null };
       } catch (err) {
-        return { path: file.path, error: err instanceof Error ? err.message : String(err) };
+        return {
+          path: file.path,
+          error: err instanceof Error ? err.message : String(err),
+        };
       }
     }),
   );
 
   const failed = results.filter((r) => r.error !== null);
   if (failed.length > 0) {
-    spinner.fail(`Failed to fetch some files from onboarding repository or store them in ${cosmoDir}.`);
-    program.error(failed.map((f) => `  ${f.path}: ${f.error}`).join('\n'));
+    const failText = `Failed to fetch ${failed.length} support files.`;
+    const errorText = failed
+      .map((f) => {
+        const error = f.error.toLowerCase();
+        const errorCode = error.includes('fetch') || error.includes('network') ? 'NETWORK_ERROR' : 'SUPPORT_FILE_ERROR';
+        return `  ${path.basename(f.path)}: ${errorCode}`;
+      })
+      .join('\n');
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'init',
+        entry_source: 'wgc',
+        error_category: 'support_files',
+        error_message: `${failText}\n${errorText}`,
+      },
+    });
+    spinner.fail(failText);
+    program.error(errorText);
   }
 
   spinner.succeed(`Support files copied to ${pc.bold(cosmoDir)}`);
@@ -226,14 +267,34 @@ export async function checkDockerReadiness(): Promise<void> {
   const spinner = demoSpinner('Checking Docker availability…').start();
 
   if (!(await isDockerAvailable())) {
-    spinner.fail('Docker is not available.');
+    const failText = 'Docker is not available.';
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'init',
+        entry_source: 'wgc',
+        error_category: 'docker_readiness',
+        error_message: failText,
+      },
+    });
+    spinner.fail(failText);
     program.error(
       `Docker CLI is not installed or the daemon is not running.\nInstall Docker: ${pc.underline('https://docs.docker.com/get-docker/')}`,
     );
   }
 
   if (!(await isBuildxAvailable())) {
-    spinner.fail('Docker Buildx is not available.');
+    const failText = 'Docker Buildx is not available.';
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'init',
+        entry_source: 'wgc',
+        error_category: 'docker_readiness',
+        error_message: failText,
+      },
+    });
+    spinner.fail(failText);
     program.error(
       `Docker Buildx plugin is required for multi-platform builds.\nSee: ${pc.underline('https://docs.docker.com/build/install-buildx/')}`,
     );
@@ -248,9 +309,20 @@ export async function checkDockerReadiness(): Promise<void> {
   try {
     await createDockerContainerBuilder(config.dockerBuilderName);
   } catch (err) {
-    spinner.fail(`Failed to create buildx builder "${config.dockerBuilderName}".`);
+    const failText = `Failed to create buildx builder "${config.dockerBuilderName}".`;
+    const errorText = err instanceof Error ? err.message : String(err);
+    spinner.fail(failText);
+    captureOnboardingEvent({
+      name: 'onboarding_step_failed',
+      properties: {
+        step_name: 'init',
+        entry_source: 'wgc',
+        error_category: 'docker_readiness',
+        error_message: `${failText}\n${errorText}`,
+      },
+    });
     program.error(
-      `Could not create a docker-container buildx builder: ${err instanceof Error ? err.message : String(err)}\nYou can create one manually: docker buildx create --use --driver docker-container --name ${config.dockerBuilderName}`,
+      `Could not create a docker-container buildx builder: ${errorText}\nYou can create one manually: docker buildx create --use --driver docker-container --name ${config.dockerBuilderName}`,
     );
   }
 
@@ -510,4 +582,37 @@ export async function publishAllPlugins({
   }
 
   return { error: null };
+}
+
+export function captureOnboardingEvent({
+  name,
+  properties,
+}:
+  | {
+      name: 'onboarding_step_completed';
+      properties: {
+        step_name:
+          | 'init'
+          | 'check_onboarding'
+          | 'create_federated_graph'
+          | 'delete_federated_graph'
+          | 'run_router_send_metrics';
+        entry_source: 'wgc';
+      };
+    }
+  | {
+      name: 'onboarding_step_failed';
+      properties: {
+        step_name:
+          | 'init'
+          | 'check_onboarding'
+          | 'create_federated_graph'
+          | 'delete_federated_graph'
+          | 'run_router_send_metrics';
+        entry_source: 'wgc';
+        error_category: 'resource' | 'support_files' | 'docker_readiness' | 'router';
+        error_message: string;
+      };
+    }): void {
+  capture(name, properties);
 }
