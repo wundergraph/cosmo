@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@types/lodash": "catalog:",
-    "@types/node": "24.1.0",
+    "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "del-cli": "catalog:",
     "typescript": "catalog:",
