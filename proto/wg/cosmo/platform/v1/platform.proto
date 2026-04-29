@@ -2136,6 +2136,37 @@ message GetClientsResponse {
   repeated ClientInfo clients = 2;
 }
 
+message PreviewDeleteClientRequest {
+  string fedGraphName = 1;
+  string namespace = 2;
+  string clientName = 3;
+}
+
+message PreviewDeleteClientResponse {
+  Response response = 1;
+  ClientInfo client = 2;
+  int32 persistedOperationsCount = 3;
+}
+
+message DeleteClientRequest {
+  string fedGraphName = 1;
+  string namespace = 2;
+  string clientName = 3;
+}
+
+message DeleteClientResponse {
+  message Operation {
+    string id = 1;
+    string operationId = 2;
+    repeated string operationNames = 3;
+  }
+
+  Response response = 1;
+  ClientInfo client = 2;
+  int32 deletedOperationsCount = 3;
+  repeated Operation deletedOperations = 4;
+}
+
 message GetFieldUsageRequest {
   string graph_name = 1;
   optional string namedType = 2;
@@ -3439,6 +3470,10 @@ service PlatformService {
   rpc UpdateIDPMappers(UpdateIDPMappersRequest) returns (UpdateIDPMappersResponse) {}
   // GetClients returns all the clients of the federated graph
   rpc GetClients(GetClientsRequest) returns (GetClientsResponse) {}
+  // PreviewDeleteClient returns the affected operation count for deleting a client
+  rpc PreviewDeleteClient(PreviewDeleteClientRequest) returns (PreviewDeleteClientResponse) {}
+  // DeleteClient deletes a registered client and its persisted operations
+  rpc DeleteClient(DeleteClientRequest) returns (DeleteClientResponse) {}
   // GetRouters returns all active routers of the federated graph
   rpc GetRouters(GetRoutersRequest) returns (GetRoutersResponse) {}
   // GetInvitations returns all the invitations a user has received

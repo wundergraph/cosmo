@@ -612,6 +612,11 @@
                 "pages": ["cli/operations", "cli/operations/push"]
               },
               {
+                "group": "Clients",
+                "icon": "laptop-mobile",
+                "pages": ["cli/clients", "cli/clients/list", "cli/clients/delete"]
+              },
+              {
                 "group": "Schema Contracts",
                 "icon": "file-signature",
                 "pages": [

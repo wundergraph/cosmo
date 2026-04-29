@@ -1,0 +1,53 @@
+---
+title: 'Delete'
+description: 'Delete a registered GraphQL client from a federated graph or monograph'
+icon: trash
+---
+
+## Usage
+
+```bash
+npx wgc clients delete <graph-name> <client-name>
+```
+
+## Description
+
+The `npx wgc clients delete` command deletes a registered GraphQL client from a federated graph or monograph.
+
+If the client has persisted operations, the command asks for confirmation. Confirming deletes the client and its related persisted operations.
+
+Use `--force` to skip confirmation. Use `--json` to print structured JSON output.
+
+## Parameters
+
+- `<graph-name>`: The name of the federated graph or monograph.
+
+- `<client-name>`: The name of the registered GraphQL client.
+
+## Options
+
+- `-n, --namespace <string>` : The namespace of the federated graph or monograph. Defaults to `default`.
+
+- `-j, --json` : Prints structured JSON instead of text.
+
+- `-f, --force` : Deletes the client without confirmation. Required with `--json` if persisted operations would be deleted.
+
+## Examples
+
+```bash
+npx wgc clients delete production web
+```
+
+Deletes the client named `web` from the graph named `production`.
+
+```bash
+npx wgc clients delete production web --namespace staging --force
+```
+
+Deletes the client named `web` from the graph named `production` in the `staging` namespace without prompting.
+
+```bash
+npx wgc clients delete production web --json --force
+```
+
+Deletes the client named `web` and prints JSON output.
