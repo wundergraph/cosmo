@@ -3,6 +3,7 @@ import {
   extractOperationNames,
   hasLabelsChanged,
   isValidGrpcNamingScheme,
+  isValidGrpcSubgraphRoutingURL,
   isValidLabels,
   isValidNamespaceName,
   normalizePagination,
@@ -522,5 +523,40 @@ describe('isValidGrpcNamingScheme', () => {
       const result = normalizePagination({ offset: 2000 }, { maxOffset: 1000 });
       expect(result.offset).toBe(1000);
     });
+  });
+});
+
+describe('isValidGrpcSubgraphRoutingURL', () => {
+  test('accepts http URLs (ConnectRPC)', () => {
+    expect(isValidGrpcSubgraphRoutingURL('http://localhost:8080')).toBe(true);
+    expect(isValidGrpcSubgraphRoutingURL('http://example.com:443')).toBe(true);
+    expect(isValidGrpcSubgraphRoutingURL('http://example.com:443/grpc')).toBe(true);
+  });
+
+  test('accepts https URLs (ConnectRPC)', () => {
+    expect(isValidGrpcSubgraphRoutingURL('https://api.example.com')).toBe(true);
+    expect(isValidGrpcSubgraphRoutingURL('https://api.example.com:8443/v1')).toBe(true);
+  });
+
+  test('case-insensitive on http(s) scheme', () => {
+    expect(isValidGrpcSubgraphRoutingURL('HTTP://localhost:8080')).toBe(true);
+    expect(isValidGrpcSubgraphRoutingURL('HTTPS://api.example.com')).toBe(true);
+  });
+
+  test('rejects malformed http URLs', () => {
+    expect(isValidGrpcSubgraphRoutingURL('http://')).toBe(false);
+    expect(isValidGrpcSubgraphRoutingURL('https://')).toBe(false);
+  });
+
+  test('delegates to isValidGrpcNamingScheme for non-http schemes', () => {
+    expect(isValidGrpcSubgraphRoutingURL('dns:///example.com:8080')).toBe(true);
+    expect(isValidGrpcSubgraphRoutingURL('localhost:8080')).toBe(true);
+    expect(isValidGrpcSubgraphRoutingURL('unix:/tmp/sock')).toBe(true);
+    expect(isValidGrpcSubgraphRoutingURL('ftp://example.com')).toBe(false);
+  });
+
+  test('rejects empty / whitespace-only', () => {
+    expect(isValidGrpcSubgraphRoutingURL('')).toBe(false);
+    expect(isValidGrpcSubgraphRoutingURL('   ')).toBe(false);
   });
 });
