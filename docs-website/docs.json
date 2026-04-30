@@ -467,6 +467,7 @@
             "pages": [
               "cli/intro",
               "cli/essentials",
+              "cli/demo",
               "cli/api-keys",
               {
                 "group": "Namespace",

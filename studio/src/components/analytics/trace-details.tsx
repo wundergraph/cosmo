@@ -18,7 +18,7 @@ import { GraphQLSchema } from 'graphql';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import parserBabel from 'prettier/plugins/babel';
-import * as prettierPluginEstree from 'prettier/plugins/estree';
+import prettierPluginEstree from 'prettier/plugins/estree';
 import graphQLPlugin from 'prettier/plugins/graphql';
 import * as prettier from 'prettier/standalone';
 import { useContext, useEffect, useState } from 'react';

@@ -1106,6 +1106,21 @@ message InviteUserResponse {
   Response response = 1;
 }
 
+message InviteUsersRequest {
+  repeated string emails = 1;
+  repeated string groups = 2;
+}
+
+message InviteUsersInvitationError {
+  string email = 1;
+  string error = 2;
+}
+
+message InviteUsersResponse {
+  Response response = 1;
+  repeated InviteUsersInvitationError invitationErrors = 2;
+}
+
 message APIKey{
   message Group {
     string id = 1;
@@ -3215,6 +3230,38 @@ message RecomposeGraphResponse {
   optional SubgraphPublishStats errorCounts = 5;
 }
 
+message GetOnboardingRequest {}
+
+message GetOnboardingResponse {
+  Response response = 1;
+  optional string finishedAt = 3;
+  int32 federatedGraphsCount = 4;
+  bool enabled = 5;
+  bool slack = 6;
+  bool email = 7;
+}
+
+message CreateOnboardingRequest {
+  bool slack = 1;
+  bool email = 2;
+}
+
+message CreateOnboardingResponse {
+  Response response = 1;
+  optional string finishedAt = 2;
+  int32 federatedGraphsCount = 3;
+  bool slack = 4;
+  bool email = 5;
+}
+
+message FinishOnboardingRequest {}
+
+message FinishOnboardingResponse {
+  Response response = 1;
+  int32 federatedGraphsCount = 2;
+  string finishedAt = 3;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3359,6 +3406,8 @@ service PlatformService {
   rpc IsMemberLimitReached(IsMemberLimitReachedRequest) returns (IsMemberLimitReachedResponse){}
   // InviteUser invites an user to join the organization
   rpc InviteUser(InviteUserRequest) returns (InviteUserResponse){}
+  // InviteUsers invites multiple users to join the organization
+  rpc InviteUsers(InviteUsersRequest) returns (InviteUsersResponse){}
   // GetAPIKeys returns a list of API keys of the organization
   rpc GetAPIKeys(GetAPIKeysRequest) returns (GetAPIKeysResponse){}
   // CreateAPIKey creates an API key for the organization
@@ -3614,4 +3663,9 @@ service PlatformService {
   rpc VerifyAPIKeyGraphAccess(VerifyAPIKeyGraphAccessRequest) returns (VerifyAPIKeyGraphAccessResponse) {}
   // RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
   rpc RecomposeGraph(RecomposeGraphRequest) returns (RecomposeGraphResponse) {}
+
+  // Onboarding
+  rpc GetOnboarding(GetOnboardingRequest) returns (GetOnboardingResponse) {}
+  rpc CreateOnboarding(CreateOnboardingRequest) returns (CreateOnboardingResponse) {}
+  rpc FinishOnboarding(FinishOnboardingRequest) returns (FinishOnboardingResponse) {}
 }

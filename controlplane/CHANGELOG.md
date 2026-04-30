@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.221.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.220.0...controlplane@0.221.0) (2026-04-30)
+
+### Features
+
+* **controlplane:** add support for failover s3 bucket in helm chart ([#2803](https://github.com/wundergraph/cosmo/issues/2803)) ([9780ce7](https://github.com/wundergraph/cosmo/commit/9780ce7b2b883de434bf846018bf28459ac27ea3)) (@pepol)
+* onboarding wizard ([#2790](https://github.com/wundergraph/cosmo/issues/2790)) ([3227519](https://github.com/wundergraph/cosmo/commit/3227519b3cc7b2dbc163856967bfe36cebf81887)) (@comatory)
+
+# [0.220.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.219.1...controlplane@0.220.0) (2026-04-29)
+
+### Features
+
+* centralize TS dependency management via catalogs ([#2782](https://github.com/wundergraph/cosmo/issues/2782)) ([a6a6956](https://github.com/wundergraph/cosmo/commit/a6a69565727f01a942a16e6d560d0fedabcb531e)) (@comatory)
+
 ## [0.219.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.219.0...controlplane@0.219.1) (2026-04-27)
 
 **Note:** Version bump only for package controlplane

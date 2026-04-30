@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.12.0...@wundergraph/playground@0.13.0) (2026-04-29)
+
+### Features
+
+* centralize TS dependency management via catalogs ([#2782](https://github.com/wundergraph/cosmo/issues/2782)) ([a6a6956](https://github.com/wundergraph/cosmo/commit/a6a69565727f01a942a16e6d560d0fedabcb531e)) (@comatory)
+
 # [0.12.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.11.1...@wundergraph/playground@0.12.0) (2026-04-24)
 
 ### Features
