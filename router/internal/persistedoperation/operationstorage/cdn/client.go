@@ -111,7 +111,6 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sh
 	if err != nil && cdn.cdnFallbackURL != nil && httpclient.IsCDNFallbackEligible(resp, err) {
 		primaryErr := err
 		cdn.logger.Warn("Primary CDN failed, attempting fallback CDN for persisted operation",
-			zap.Error(err),
 			zap.String("fallback_url", cdn.cdnFallbackURL.String()),
 		)
 		span.AddEvent("cdn.fallback", trace.WithAttributes(
@@ -122,6 +121,7 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sh
 		if fallbackErr != nil {
 			return nil, fmt.Errorf("primary CDN failed: %w; fallback CDN also failed: %v", primaryErr, fallbackErr)
 		}
+		span.SetStatus(codes.Ok, "")
 		err = nil
 	}
 

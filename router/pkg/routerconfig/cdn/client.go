@@ -134,8 +134,8 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 			zap.String("fallback_url", cdn.cdnFallbackURL.String()),
 		)
 		fallbackResp, fallbackBody, fallbackErr := cdn.doGetRouterConfig(ctx, version, cdn.cdnFallbackURL)
-		if fallbackErr == nil {
-			resp, body, err = fallbackResp, fallbackBody, nil
+		if fallbackErr == nil || errors.Is(fallbackErr, configpoller.ErrConfigNotModified) {
+			resp, body, err = fallbackResp, fallbackBody, fallbackErr
 		} else {
 			return nil, fmt.Errorf("primary CDN failed: %w; fallback CDN also failed: %v", primaryErr, fallbackErr)
 		}
