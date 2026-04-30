@@ -77,11 +77,21 @@ func (f *Fetcher) Fetch(ctx context.Context, currentRevision string) (*Manifest,
 	resp, body, err := f.doFetch(ctx, currentRevision, f.cdnURL)
 
 	if err != nil && f.cdnFallbackURL != nil && httpclient.IsCDNFallbackEligible(resp, err) {
+		primaryErr := err
 		f.logger.Warn("Primary CDN failed, attempting fallback CDN for PQL manifest",
 			zap.Error(err),
 			zap.String("fallback_url", f.cdnFallbackURL.String()),
 		)
-		_, body, err = f.doFetch(ctx, currentRevision, f.cdnFallbackURL)
+		var fallbackErr error
+		_, body, fallbackErr = f.doFetch(ctx, currentRevision, f.cdnFallbackURL)
+		if fallbackErr != nil {
+			return nil, false, fmt.Errorf("primary CDN failed: %w; fallback CDN also failed: %v", primaryErr, fallbackErr)
+		}
+		err = nil
+		if body == nil {
+			// Fallback returned 304 Not Modified
+			return nil, false, nil
+		}
 	}
 
 	if err != nil {

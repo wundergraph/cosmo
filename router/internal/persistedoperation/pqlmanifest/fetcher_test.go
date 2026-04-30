@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -271,7 +272,7 @@ func TestFetch_Fallback_429PrimaryFallsBackToSecondary(t *testing.T) {
 
 func TestFetch_Fallback_NotTriggeredOn404(t *testing.T) {
 	t.Parallel()
-	var fallbackCalled bool
+	var fallbackCalled atomic.Bool
 
 	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -279,7 +280,7 @@ func TestFetch_Fallback_NotTriggeredOn404(t *testing.T) {
 	defer primary.Close()
 
 	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fallbackCalled = true
+		fallbackCalled.Store(true)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer fallback.Close()
@@ -289,12 +290,12 @@ func TestFetch_Fallback_NotTriggeredOn404(t *testing.T) {
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "not found")
-	require.False(t, fallbackCalled)
+	require.False(t, fallbackCalled.Load())
 }
 
 func TestFetch_Fallback_NotTriggeredOn401(t *testing.T) {
 	t.Parallel()
-	var fallbackCalled bool
+	var fallbackCalled atomic.Bool
 
 	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -302,7 +303,7 @@ func TestFetch_Fallback_NotTriggeredOn401(t *testing.T) {
 	defer primary.Close()
 
 	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fallbackCalled = true
+		fallbackCalled.Store(true)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer fallback.Close()
@@ -312,7 +313,7 @@ func TestFetch_Fallback_NotTriggeredOn401(t *testing.T) {
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "authenticate")
-	require.False(t, fallbackCalled)
+	require.False(t, fallbackCalled.Load())
 }
 
 func TestFetch_Fallback_NetworkErrorFallsBack(t *testing.T) {
@@ -360,5 +361,45 @@ func TestFetch_Fallback_503WithoutFallbackReturnsError(t *testing.T) {
 	_, _, err := f.Fetch(context.Background(), "")
 
 	require.Error(t, err)
+	require.Contains(t, err.Error(), "503")
+}
+
+func TestFetch_Fallback_503Then404PreservesPrimaryError(t *testing.T) {
+	t.Parallel()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer primary.Close()
+
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer fallback.Close()
+
+	f := newTestFetcherWithFallback(primary.URL, fallback.URL)
+	_, _, err := f.Fetch(context.Background(), "")
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "primary CDN failed")
+	require.Contains(t, err.Error(), "503")
+}
+
+func TestFetch_Fallback_503Then401PreservesPrimaryError(t *testing.T) {
+	t.Parallel()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer primary.Close()
+
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer fallback.Close()
+
+	f := newTestFetcherWithFallback(primary.URL, fallback.URL)
+	_, _, err := f.Fetch(context.Background(), "")
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "primary CDN failed")
 	require.Contains(t, err.Error(), "503")
 }

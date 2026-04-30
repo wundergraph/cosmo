@@ -180,7 +180,7 @@ func TestCDNSource_LoadItems(t *testing.T) {
 		require.Len(t, items, 1)
 	})
 
-	t.Run("primary 503 fallback 503 returns error", func(t *testing.T) {
+	t.Run("primary 503 fallback 503 returns primary error", func(t *testing.T) {
 		t.Parallel()
 		primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusServiceUnavailable)
@@ -195,6 +195,45 @@ func TestCDNSource_LoadItems(t *testing.T) {
 		source := newTestCDNSource(primary.URL, fallback.URL)
 		_, err := source.LoadItems(context.Background(), zap.NewNop())
 		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "primary CDN failed")
+		assert.Contains(t, err.Error(), "fallback CDN also failed")
+	})
+
+	t.Run("primary 503 fallback 404 preserves primary error", func(t *testing.T) {
+		t.Parallel()
+		primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}))
+		defer primary.Close()
+
+		fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer fallback.Close()
+
+		source := newTestCDNSource(primary.URL, fallback.URL)
+		_, err := source.LoadItems(context.Background(), zap.NewNop())
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "primary CDN failed")
+		assert.Contains(t, err.Error(), "503")
+	})
+
+	t.Run("primary 503 fallback 401 preserves primary error", func(t *testing.T) {
+		t.Parallel()
+		primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}))
+		defer primary.Close()
+
+		fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+		}))
+		defer fallback.Close()
+
+		source := newTestCDNSource(primary.URL, fallback.URL)
+		_, err := source.LoadItems(context.Background(), zap.NewNop())
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "primary CDN failed")
 		assert.Contains(t, err.Error(), "503")
 	})
 

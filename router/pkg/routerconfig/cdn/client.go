@@ -128,11 +128,17 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 	resp, body, err := cdn.doGetRouterConfig(ctx, version, cdn.cdnURL)
 
 	if err != nil && cdn.cdnFallbackURL != nil && httpclient.IsCDNFallbackEligible(resp, err) {
+		primaryErr := err
 		cdn.logger.Warn("Primary CDN failed, attempting fallback CDN for router config",
 			zap.Error(err),
 			zap.String("fallback_url", cdn.cdnFallbackURL.String()),
 		)
-		resp, body, err = cdn.doGetRouterConfig(ctx, version, cdn.cdnFallbackURL)
+		fallbackResp, fallbackBody, fallbackErr := cdn.doGetRouterConfig(ctx, version, cdn.cdnFallbackURL)
+		if fallbackErr == nil {
+			resp, body, err = fallbackResp, fallbackBody, nil
+		} else {
+			return nil, fmt.Errorf("primary CDN failed: %w; fallback CDN also failed: %v", primaryErr, fallbackErr)
+		}
 	}
 
 	if err != nil {

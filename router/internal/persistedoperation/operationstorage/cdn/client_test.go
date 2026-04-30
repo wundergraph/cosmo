@@ -3,6 +3,7 @@ package cdn
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -189,7 +190,7 @@ func TestPersistedOperation_Fallback(t *testing.T) {
 		assert.Equal(t, "query { hello }", string(body))
 	})
 
-	t.Run("primary 503 fallback 503 returns error", func(t *testing.T) {
+	t.Run("primary 503 fallback 503 returns primary error", func(t *testing.T) {
 		t.Parallel()
 
 		primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -205,6 +206,50 @@ func TestPersistedOperation_Fallback(t *testing.T) {
 		c := newTestPersistedOpsClient(primary.URL, fallback.URL)
 		_, err := c.PersistedOperation(context.Background(), "client1", "abc123")
 		require.Error(t, err)
+		assert.Contains(t, err.Error(), "primary CDN failed")
+		assert.Contains(t, err.Error(), "fallback CDN also failed")
+	})
+
+	t.Run("primary 503 fallback 404 preserves primary error not NotFound", func(t *testing.T) {
+		t.Parallel()
+
+		primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}))
+		defer primary.Close()
+
+		fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer fallback.Close()
+
+		c := newTestPersistedOpsClient(primary.URL, fallback.URL)
+		_, err := c.PersistedOperation(context.Background(), "client1", "abc123")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "primary CDN failed")
+		assert.Contains(t, err.Error(), "503")
+		// Must NOT be a PersistentOperationNotFoundError
+		var notFoundErr *persistedoperation.PersistentOperationNotFoundError
+		assert.False(t, errors.As(err, &notFoundErr), "should not return PersistentOperationNotFoundError when primary was 503")
+	})
+
+	t.Run("primary 503 fallback 401 preserves primary error", func(t *testing.T) {
+		t.Parallel()
+
+		primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}))
+		defer primary.Close()
+
+		fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+		}))
+		defer fallback.Close()
+
+		c := newTestPersistedOpsClient(primary.URL, fallback.URL)
+		_, err := c.PersistedOperation(context.Background(), "client1", "abc123")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "primary CDN failed")
 		assert.Contains(t, err.Error(), "503")
 	})
 

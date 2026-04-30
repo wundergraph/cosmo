@@ -75,6 +75,7 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.O
 	resp, body, err := c.fetchOperationsJSON(ctx, log, c.cdnURL)
 
 	if err != nil && c.cdnFallbackURL != nil && httpclient.IsCDNFallbackEligible(resp, err) {
+		primaryErr := err
 		log.Warn("Primary CDN failed, attempting fallback CDN",
 			zap.Error(err),
 			zap.String("fallback_url", c.cdnFallbackURL.String()),
@@ -83,6 +84,12 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.O
 			semconv.HTTPURL(c.cdnFallbackURL.String()),
 		))
 		_, body, err = c.fetchOperationsJSON(ctx, log, c.cdnFallbackURL)
+		if err != nil {
+			return nil, fmt.Errorf("primary CDN failed: %w; fallback CDN also failed: %v", primaryErr, err)
+		}
+		if body == nil {
+			return nil, fmt.Errorf("primary CDN failed: %w; fallback CDN returned no cache warmup config", primaryErr)
+		}
 	}
 
 	if err != nil {

@@ -109,16 +109,20 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sh
 	resp, body, err := cdn.doPersistedOperation(ctx, clientName, sha256Hash, cdn.cdnURL)
 
 	if err != nil && cdn.cdnFallbackURL != nil && httpclient.IsCDNFallbackEligible(resp, err) {
+		primaryErr := err
 		cdn.logger.Warn("Primary CDN failed, attempting fallback CDN for persisted operation",
 			zap.Error(err),
 			zap.String("fallback_url", cdn.cdnFallbackURL.String()),
-			zap.String("client_name", clientName),
-			zap.String("sha256_hash", sha256Hash),
 		)
 		span.AddEvent("cdn.fallback", trace.WithAttributes(
 			semconv.HTTPURL(cdn.cdnFallbackURL.String()),
 		))
-		_, body, err = cdn.doPersistedOperation(ctx, clientName, sha256Hash, cdn.cdnFallbackURL)
+		var fallbackErr error
+		_, body, fallbackErr = cdn.doPersistedOperation(ctx, clientName, sha256Hash, cdn.cdnFallbackURL)
+		if fallbackErr != nil {
+			return nil, fmt.Errorf("primary CDN failed: %w; fallback CDN also failed: %v", primaryErr, fallbackErr)
+		}
+		err = nil
 	}
 
 	if err != nil {
