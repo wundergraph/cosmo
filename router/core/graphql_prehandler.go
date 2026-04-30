@@ -765,7 +765,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			statusCode: http.StatusBadRequest,
 		}
 		if !h.omitBatchExtensions {
-			unsupportedErr.extensionCode = ExtensionCodeBatchSubscriptionsUnsupported
+			unsupportedErr.extensionCode = ExtCodeErrBatchSubscriptionsUnsupported
 		}
 		return unsupportedErr
 	}

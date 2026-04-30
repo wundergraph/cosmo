@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest';
 import { buildSchema } from 'graphql';
-import { isNull } from 'lodash-es';
 import { GraphQLToProtoTextVisitor } from '../../src/sdl-to-proto-visitor.js';
 import {
   getEnumValuesWithNumbers,

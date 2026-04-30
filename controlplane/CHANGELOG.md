@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.220.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.219.1...controlplane@0.220.0) (2026-04-29)
+
+### Features
+
+* centralize TS dependency management via catalogs ([#2782](https://github.com/wundergraph/cosmo/issues/2782)) ([a6a6956](https://github.com/wundergraph/cosmo/commit/a6a69565727f01a942a16e6d560d0fedabcb531e)) (@comatory)
+
+## [0.219.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.219.0...controlplane@0.219.1) (2026-04-27)
+
+**Note:** Version bump only for package controlplane
+
+# [0.219.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.218.1...controlplane@0.219.0) (2026-04-24)
+
+### Bug Fixes
+
+* use lodash-es in controlplane ([#2793](https://github.com/wundergraph/cosmo/issues/2793)) ([e95aaed](https://github.com/wundergraph/cosmo/commit/e95aaede95a8e03418d29598e0b32c75c8a2010f)) (@comatory)
+
+### Features
+
+* update `lodash` and `lodash-es` ([#2780](https://github.com/wundergraph/cosmo/issues/2780)) ([bbf1e38](https://github.com/wundergraph/cosmo/commit/bbf1e38b3a346363fe742801f2982dbafb267454)) (@wilsonrivera)
+
 ## [0.218.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.218.0...controlplane@0.218.1) (2026-04-17)
 
 ### Bug Fixes
