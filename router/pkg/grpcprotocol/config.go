@@ -14,13 +14,13 @@ const (
 	EncodingJSON  = "json"
 )
 
-// Validate checks that all config values in a GRPCProtocolConfig are valid.
-func Validate(cfg *config.GRPCProtocolConfig) error {
+// Validate checks that all config values in a GRPCProtocolConfiguration are valid.
+func Validate(cfg *config.GRPCProtocolConfiguration) error {
 	if cfg == nil {
 		return nil
 	}
-	if cfg.Default != "" && cfg.Default != ProtocolGRPC && cfg.Default != ProtocolConnectRPC {
-		return fmt.Errorf("grpc_protocol.default: invalid value %q, must be %q or %q", cfg.Default, ProtocolGRPC, ProtocolConnectRPC)
+	if cfg.DefaultProtocol != "" && cfg.DefaultProtocol != ProtocolGRPC && cfg.DefaultProtocol != ProtocolConnectRPC {
+		return fmt.Errorf("grpc_protocol.default_protocol: invalid value %q, must be %q or %q", cfg.DefaultProtocol, ProtocolGRPC, ProtocolConnectRPC)
 	}
 	if cfg.DefaultEncoding != "" && cfg.DefaultEncoding != EncodingProto && cfg.DefaultEncoding != EncodingJSON {
 		return fmt.Errorf("grpc_protocol.default_encoding: invalid value %q, must be %q or %q", cfg.DefaultEncoding, EncodingProto, EncodingJSON)
@@ -37,21 +37,21 @@ func Validate(cfg *config.GRPCProtocolConfig) error {
 }
 
 // ResolveProtocol returns the effective protocol for a subgraph.
-func ResolveProtocol(cfg *config.GRPCProtocolConfig, subgraphName string) string {
+func ResolveProtocol(cfg *config.GRPCProtocolConfiguration, subgraphName string) string {
 	if cfg == nil {
 		return ProtocolGRPC
 	}
 	if sg, ok := cfg.Subgraphs[subgraphName]; ok && sg.Protocol != "" {
 		return sg.Protocol
 	}
-	if cfg.Default != "" {
-		return cfg.Default
+	if cfg.DefaultProtocol != "" {
+		return cfg.DefaultProtocol
 	}
 	return ProtocolGRPC
 }
 
 // ResolveEncoding returns the effective encoding for a subgraph.
-func ResolveEncoding(cfg *config.GRPCProtocolConfig, subgraphName string) string {
+func ResolveEncoding(cfg *config.GRPCProtocolConfiguration, subgraphName string) string {
 	if cfg == nil {
 		return EncodingProto
 	}

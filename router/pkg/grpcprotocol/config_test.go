@@ -9,7 +9,7 @@ import (
 )
 
 func TestResolveProtocol_Default(t *testing.T) {
-	assert.Equal(t, ProtocolGRPC, ResolveProtocol(&config.GRPCProtocolConfig{}, "any"))
+	assert.Equal(t, ProtocolGRPC, ResolveProtocol(&config.GRPCProtocolConfiguration{}, "any"))
 }
 
 func TestResolveProtocol_Nil(t *testing.T) {
@@ -17,14 +17,14 @@ func TestResolveProtocol_Nil(t *testing.T) {
 }
 
 func TestResolveProtocol_GlobalDefault(t *testing.T) {
-	cfg := &config.GRPCProtocolConfig{Default: ProtocolConnectRPC}
+	cfg := &config.GRPCProtocolConfiguration{DefaultProtocol: ProtocolConnectRPC}
 	assert.Equal(t, ProtocolConnectRPC, ResolveProtocol(cfg, "any"))
 }
 
 func TestResolveProtocol_PerSubgraphOverride(t *testing.T) {
-	cfg := &config.GRPCProtocolConfig{
-		Default: ProtocolGRPC,
-		Subgraphs: map[string]config.SubgraphGRPCProtocolConfig{
+	cfg := &config.GRPCProtocolConfiguration{
+		DefaultProtocol: ProtocolGRPC,
+		Subgraphs: map[string]config.GRPCProtocolSubgraph{
 			"rpc-a": {Protocol: ProtocolConnectRPC},
 		},
 	}
@@ -33,18 +33,18 @@ func TestResolveProtocol_PerSubgraphOverride(t *testing.T) {
 }
 
 func TestResolveEncoding_Default(t *testing.T) {
-	assert.Equal(t, EncodingProto, ResolveEncoding(&config.GRPCProtocolConfig{}, "any"))
+	assert.Equal(t, EncodingProto, ResolveEncoding(&config.GRPCProtocolConfiguration{}, "any"))
 }
 
 func TestResolveEncoding_GlobalDefault(t *testing.T) {
-	cfg := &config.GRPCProtocolConfig{DefaultEncoding: EncodingJSON}
+	cfg := &config.GRPCProtocolConfiguration{DefaultEncoding: EncodingJSON}
 	assert.Equal(t, EncodingJSON, ResolveEncoding(cfg, "any"))
 }
 
 func TestResolveEncoding_PerSubgraphOverride(t *testing.T) {
-	cfg := &config.GRPCProtocolConfig{
+	cfg := &config.GRPCProtocolConfiguration{
 		DefaultEncoding: EncodingProto,
-		Subgraphs: map[string]config.SubgraphGRPCProtocolConfig{
+		Subgraphs: map[string]config.GRPCProtocolSubgraph{
 			"rpc-a": {Encoding: EncodingJSON},
 		},
 	}
@@ -53,10 +53,10 @@ func TestResolveEncoding_PerSubgraphOverride(t *testing.T) {
 }
 
 func TestValidate_Valid(t *testing.T) {
-	cfg := &config.GRPCProtocolConfig{
-		Default:         ProtocolConnectRPC,
+	cfg := &config.GRPCProtocolConfiguration{
+		DefaultProtocol: ProtocolConnectRPC,
 		DefaultEncoding: EncodingJSON,
-		Subgraphs: map[string]config.SubgraphGRPCProtocolConfig{
+		Subgraphs: map[string]config.GRPCProtocolSubgraph{
 			"rpc-a": {Protocol: ProtocolGRPC, Encoding: EncodingProto},
 		},
 	}
@@ -68,24 +68,24 @@ func TestValidate_Nil(t *testing.T) {
 }
 
 func TestValidate_Empty(t *testing.T) {
-	require.NoError(t, Validate(&config.GRPCProtocolConfig{}))
+	require.NoError(t, Validate(&config.GRPCProtocolConfiguration{}))
 }
 
 func TestValidate_InvalidDefault(t *testing.T) {
-	err := Validate(&config.GRPCProtocolConfig{Default: "invalid"})
+	err := Validate(&config.GRPCProtocolConfiguration{DefaultProtocol: "invalid"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "grpc_protocol.default")
 }
 
 func TestValidate_InvalidEncoding(t *testing.T) {
-	err := Validate(&config.GRPCProtocolConfig{DefaultEncoding: "xml"})
+	err := Validate(&config.GRPCProtocolConfiguration{DefaultEncoding: "xml"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "grpc_protocol.default_encoding")
 }
 
 func TestValidate_InvalidSubgraphProtocol(t *testing.T) {
-	err := Validate(&config.GRPCProtocolConfig{
-		Subgraphs: map[string]config.SubgraphGRPCProtocolConfig{
+	err := Validate(&config.GRPCProtocolConfiguration{
+		Subgraphs: map[string]config.GRPCProtocolSubgraph{
 			"rpc-a": {Protocol: "http2"},
 		},
 	})

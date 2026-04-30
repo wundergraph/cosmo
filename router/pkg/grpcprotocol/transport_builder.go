@@ -11,7 +11,7 @@ import (
 // for all subgraphs configured to use ConnectRPC.
 // Returns nil if no subgraphs are configured for Connect.
 func BuildConnectTransports(
-	cfg *config.GRPCProtocolConfig,
+	cfg *config.GRPCProtocolConfiguration,
 	grpcSubgraphURLs map[string]string,
 	subgraphHTTPClients map[string]*http.Client,
 	defaultHTTPClient *http.Client,

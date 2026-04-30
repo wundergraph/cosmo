@@ -1206,21 +1206,36 @@ type MCPServer struct {
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
 }
 
-// GRPCProtocolConfig configures the transport protocol for gRPC subgraphs.
-// By default all gRPC subgraphs use native gRPC (HTTP/2 + Protobuf).
-// Setting the protocol to "connectrpc" switches a subgraph to the Connect protocol (HTTP/1.1).
-type GRPCProtocolConfig struct {
-	// Default protocol for all gRPC subgraphs ("grpc" or "connectrpc").
-	Default string `yaml:"default,omitempty" json:"default,omitempty"`
-	// DefaultEncoding for Connect subgraphs ("proto" or "json").
-	DefaultEncoding string `yaml:"default_encoding,omitempty" json:"default_encoding,omitempty"`
-	// Per-subgraph protocol and encoding overrides.
-	Subgraphs map[string]SubgraphGRPCProtocolConfig `yaml:"subgraphs,omitempty" json:"subgraphs,omitempty"`
+// GRPCProtocolConfiguration configures the transport protocol used to talk
+// to gRPC subgraphs. By default all gRPC subgraphs use native gRPC over
+// HTTP/2 with Protobuf encoding. Setting the protocol to "connectrpc"
+// switches a subgraph to the Connect protocol over HTTP/1.1, which is
+// useful when end-to-end HTTP/2 is unavailable (e.g. proxies or load
+// balancers that do not support gRPC).
+type GRPCProtocolConfiguration struct {
+	// DefaultProtocol selects the transport protocol for every gRPC subgraph
+	// that does not have a per-subgraph override. Allowed values: "grpc",
+	// "connectrpc". Defaults to "grpc".
+	DefaultProtocol string `yaml:"default_protocol,omitempty" json:"default_protocol,omitempty" envDefault:"grpc" env:"DEFAULT_PROTOCOL"`
+	// DefaultEncoding selects the wire format for Connect subgraphs that do
+	// not have a per-subgraph override. Allowed values: "proto", "json".
+	// Ignored when the resolved protocol is "grpc". Defaults to "proto".
+	DefaultEncoding string `yaml:"default_encoding,omitempty" json:"default_encoding,omitempty" envDefault:"proto" env:"DEFAULT_ENCODING"`
+	// Subgraphs holds per-subgraph protocol and encoding overrides keyed by
+	// subgraph name. An empty entry inherits the defaults above.
+	Subgraphs map[string]GRPCProtocolSubgraph `yaml:"subgraphs,omitempty" json:"subgraphs,omitempty"`
 }
 
-// SubgraphGRPCProtocolConfig holds per-subgraph protocol/encoding settings.
-type SubgraphGRPCProtocolConfig struct {
+// GRPCProtocolSubgraph configures the transport protocol and encoding for a
+// single gRPC subgraph, overriding the defaults declared in
+// GRPCProtocolConfiguration.
+type GRPCProtocolSubgraph struct {
+	// Protocol overrides the transport protocol for this subgraph.
+	// Allowed values: "grpc", "connectrpc". Empty inherits default_protocol.
 	Protocol string `yaml:"protocol,omitempty" json:"protocol,omitempty"`
+	// Encoding overrides the Connect wire format for this subgraph.
+	// Allowed values: "proto", "json". Empty inherits default_encoding.
+	// Ignored when the resolved protocol is "grpc".
 	Encoding string `yaml:"encoding,omitempty" json:"encoding,omitempty"`
 }
 
@@ -1333,7 +1348,7 @@ type Config struct {
 
 	WatchConfig WatchConfig `yaml:"watch_config" envPrefix:"WATCH_CONFIG_"`
 
-	GRPCProtocol *GRPCProtocolConfig `yaml:"grpc_protocol,omitempty"`
+	GRPCProtocol *GRPCProtocolConfiguration `yaml:"grpc_protocol,omitempty" envPrefix:"GRPC_PROTOCOL_"`
 }
 
 type WatchConfig struct {

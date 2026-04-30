@@ -2414,7 +2414,7 @@ func WithConnectRPC(cfg config.ConnectRPCConfiguration) Option {
 	}
 }
 
-func WithGRPCProtocol(cfg *config.GRPCProtocolConfig) Option {
+func WithGRPCProtocol(cfg *config.GRPCProtocolConfiguration) Option {
 	return func(r *Router) {
 		r.grpcProtocol = cfg
 	}

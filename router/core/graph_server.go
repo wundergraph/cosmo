@@ -107,7 +107,7 @@ type (
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
 		headerPropagation       *HeaderPropagation
-		grpcProtocolConfig      *config.GRPCProtocolConfig
+		grpcProtocolConfig      *config.GRPCProtocolConfiguration
 	}
 )
 
