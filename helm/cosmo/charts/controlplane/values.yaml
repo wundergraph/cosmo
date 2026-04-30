@@ -195,6 +195,18 @@ configuration:
   s3SecretAccessKey: ''
   # -- Forces usage of path style urls for S3. Default is true.
   s3ForcePathStyle: 'true'
+  # -- The url of S3-compatible storage for backup/failover purposes. If not defined, failover is not used.
+  s3FailoverStorageUrl: ''
+  # -- The region where the S3 failover bucket is located.
+  s3FailoverRegion: ''
+  # -- The endpoint of the S3 failover bucket.
+  s3FailoverEndpoint: ''
+  # -- S3 failover access key id, can be used instead of [username]:[password] in the url
+  s3FailoverAccessKeyId: ''
+  # -- S3 failover secret access key, can be used instead of [username]:[password] in the url
+  s3FailoverSecretAccessKey: ''
+  # -- Forces usage of path style urls for the failover S3. Default is true.
+  s3FailoverForcePathStyle: ''
   stripeSecretKey: ''
   stripeWebhookSecret: ''
   # -- The default billing plan, eg `developer@1`

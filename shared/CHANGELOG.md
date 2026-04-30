@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.46.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.45.7...@wundergraph/cosmo-shared@0.46.0) (2026-04-29)
+
+### Features
+
+* centralize TS dependency management via catalogs ([#2782](https://github.com/wundergraph/cosmo/issues/2782)) ([a6a6956](https://github.com/wundergraph/cosmo/commit/a6a69565727f01a942a16e6d560d0fedabcb531e)) (@comatory)
+* **router:** support costs on arguments of directives ([#2781](https://github.com/wundergraph/cosmo/issues/2781)) ([b70a55b](https://github.com/wundergraph/cosmo/commit/b70a55b85b3f50468e3d1218d6746d51cc1b4733)) (@ysmolski)
+
 ## [0.45.7](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.45.6...@wundergraph/cosmo-shared@0.45.7) (2026-04-24)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

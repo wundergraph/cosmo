@@ -161,13 +161,16 @@ type Query {
 Input object weights are evaluated per request, not cached with the query plan.
 Two requests using the same query but different input fields produce different cost estimates.
 
-When specified **on a field returning a list** — the list size multiplies the weight of this field:
+When specified **on a field returning a list**, the list size multiplies the weight of this field:
 
 ```graphql
 type Query {
   searchAll(term: String!): [Result] @cost(weight: 10)
 }
 ```
+
+When specified **on a directive argument definition**, it adds cost to every field where the directive
+is applied and the argument is active. See [Weights on Directive Arguments](#weights-on-directive-arguments).
 
 ### The @listSize Directive
 
@@ -439,7 +442,28 @@ query {
 With a default list size of 10, this query costs over 10,000.
 Use `@listSize` to provide realistic estimates for deeply nested structures.
 
-## Features Not Yet Implemented
+### Weights on Directive Arguments
 
-- **Weights on directive arguments** — `@cost` placed on arguments of custom directives is not accounted for
+`@cost` can be placed on arguments of custom directive definitions. When a field has such a directive
+applied, the weight of each active argument is added to the field's cost.
+
+```graphql
+directive @approx(tolerance: Int = 1 @cost(weight: -2)) on FIELD_DEFINITION
+
+type Query {
+  search(term: String!): [Result] @approx
+}
+```
+
+In this example, the `@approx` directive has an argument `tolerance` with a cost weight of -2.
+Because `tolerance` has a default non-null value, it is considered active on every field where
+`@approx` is applied, even when the argument is not explicitly provided. The weight of -2 is
+added to the cost of `Query.search`.
+
+An argument is active when:
+- It has a non-null value at the directive usage site, or
+- It has a default value and is not explicitly set to null
+
+When a directive is applied on fields of types implementing an interface, the router takes the
+maximum directive argument weight across all implementing types.
 

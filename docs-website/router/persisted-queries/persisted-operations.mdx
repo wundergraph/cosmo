@@ -151,10 +151,10 @@ persisted_operations:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `enabled` | `true` | Set to `false` to disable cache warmup for manifest operations. |
-| `workers` | `4` | Number of concurrent workers used to pre-process operations. Increase for large manifests. |
-| `items_per_second` | `50` | Rate limit for items processed per second. Set to `0` for unlimited throughput. |
-| `timeout` | `30s` | Maximum time allowed for the warmup to complete. If the timeout is exceeded, the router logs an error but continues serving requests normally. |
+| `enabled`          | `true` | Set to `false` to disable cache warmup for manifest operations. |
+| `workers`          | `4`    | Number of concurrent workers used to pre-process operations. Increase for large manifests. |
+| `items_per_second` | `50`   | Maximum items processed per second across all workers. Actual throughput can be lower if processing is slow. Set to `0` for unlimited. |
+| `timeout`          | `30s`  | Maximum time allowed for the warmup to complete. If the timeout is exceeded, the router logs an error but continues serving requests normally. |
 
 ## Using a custom storage provider
 
