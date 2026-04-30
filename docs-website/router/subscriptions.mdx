@@ -87,7 +87,7 @@ The router forwards each subscribe message's `extensions` to the subgraph in the
 The router does not merge subscribe-message `extensions` into `connection_init.payload`. The `connection_init.payload` carries only the downstream client's initial payload, unchanged.
 
 <Note>
-  Prior to the subscription overhaul release, the router merged subscribe-message extensions into `connection_init.payload.extensions`, overriding any `initial_payload` extensions. Subgraphs that read extensions from `connection_init` must now read them from `subscribe.payload.extensions`.
+  Prior to the [router@0.313.0 subscription overhaul release](https://github.com/wundergraph/cosmo/releases/tag/router%400.313.0), the router merged subscribe-message extensions into `connection_init.payload.extensions`, overriding any `initial_payload` extensions. Subgraphs that read extensions from `connection_init` must now read them from `subscribe.payload.extensions`.
 </Note>
 
 ### Header forwarding
