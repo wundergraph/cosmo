@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gobwas/ws"
 	"github.com/tidwall/sjson"
 )
 
@@ -58,7 +57,10 @@ func (p *subscriptionsTransportWSProtocol) Initialize() (json.RawMessage, error)
 		return nil, fmt.Errorf("error reading connection_init: %w", err)
 	}
 	if msg.Type != subscriptionsTransportWSMessageTypeConnectionInit {
-		return nil, fmt.Errorf("first message should be %s, got %s", subscriptionsTransportWSMessageTypeConnectionInit, msg.Type)
+		return nil, &CloseError{
+			Err:  fmt.Errorf("first message should be %s, got %s", subscriptionsTransportWSMessageTypeConnectionInit, msg.Type),
+			Kind: CloseKindUnauthorized,
+		}
 	}
 	if err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeConnectionAck}); err != nil {
 		return nil, fmt.Errorf("sending %s: %w", subscriptionsTransportWSMessageTypeConnectionAck, err)
@@ -79,8 +81,16 @@ func (p *subscriptionsTransportWSProtocol) ReadMessage() (*Message, error) {
 		messageType = MessageTypeSubscribe
 	case subscriptionsTransportWSMessageTypeStop:
 		messageType = MessageTypeComplete
+	case subscriptionsTransportWSMessageTypeConnectionInit:
+		return nil, &CloseError{
+			Err:  fmt.Errorf("duplicate connection_init"),
+			Kind: CloseKindTooManyInits,
+		}
 	default:
-		return nil, fmt.Errorf("unsupported message type %s", msg.Type)
+		return nil, &CloseError{
+			Err:  fmt.Errorf("unsupported message type %s", msg.Type),
+			Kind: CloseKindInvalidMessageType,
+		}
 	}
 
 	return &Message{
@@ -108,7 +118,10 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLData(id string, data json
 }
 
 func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error {
-	// This protocol has errors inside an object, so we need to wrap it
+	// subscriptions-transport-ws reserves "error" for pre-execution failures,
+	// so runtime errors are delivered as a "data" frame with the errors inside
+	// the ExecutionResult. Callers decide whether to follow up with "complete"
+	// (for terminal errors) via Complete.
 	data, err := sjson.SetBytes([]byte(`{}`), "errors", errors)
 	if err != nil {
 		return fmt.Errorf("encoding JSON: %w", err)
@@ -119,14 +132,6 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors 
 		Payload:    data,
 		Extensions: extensions,
 	})
-}
-
-func (p *subscriptionsTransportWSProtocol) Close(code ws.StatusCode, reason string) error {
-	if err := p.conn.WriteCloseFrame(code, reason); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (p *subscriptionsTransportWSProtocol) Complete(id string) error {
