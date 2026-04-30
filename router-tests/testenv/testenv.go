@@ -52,11 +52,14 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	projects "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated/projectsconnect"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/service"
 	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router/core"
@@ -371,6 +374,12 @@ type Config struct {
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
 	EnableGRPC                         bool
+	// EnableConnectRPC turns the projects subgraph into a ConnectRPC HTTP/2
+	// (h2c) endpoint that natively serves Connect, gRPC, and gRPC-Web. When
+	// false (the default), the projects subgraph runs as a plain *grpc.Server,
+	// which preserves the historical behaviour for existing tests. Requires
+	// EnableGRPC.
+	EnableConnectRPC                   bool
 	IgnoreQueryParamsList              []string
 }
 
@@ -627,8 +636,13 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		endpoint      string
 	)
 
+	var connectHTTPServer *httptest.Server
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
+		if cfg.EnableConnectRPC {
+			connectHTTPServer, endpoint = makeSafeConnectRPCServer(t)
+		} else {
+			projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
+		}
 	}
 
 	replacements := map[string]string{
@@ -787,7 +801,12 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		productFgServer.Close()
 	}
 	if cfg.EnableGRPC && cfg.Subgraphs.Projects.CloseOnStart {
-		projectServer.Stop()
+		if connectHTTPServer != nil {
+			connectHTTPServer.Close()
+		}
+		if projectServer != nil {
+			projectServer.Stop()
+		}
 	}
 
 	if cfg.ShutdownDelay == 0 {
@@ -1070,8 +1089,13 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		endpoint      string
 	)
 
+	var connectHTTPServer *httptest.Server
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
+		if cfg.EnableConnectRPC {
+			connectHTTPServer, endpoint = makeSafeConnectRPCServer(t)
+		} else {
+			projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
+		}
 	}
 
 	replacements := map[string]string{
@@ -1224,7 +1248,12 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.EnableGRPC && cfg.Subgraphs.Projects.CloseOnStart {
-		projectServer.Stop()
+		if connectHTTPServer != nil {
+			connectHTTPServer.Close()
+		}
+		if projectServer != nil {
+			projectServer.Stop()
+		}
 	}
 
 	if cfg.ShutdownDelay == 0 {
@@ -1765,6 +1794,34 @@ func makeSubgraphTestServer(_ testing.TB, handler http.Handler, tlsConfig *tls.C
 	}
 	s.Start()
 	return s
+}
+
+// makeSafeConnectRPCServer starts the projects subgraph as a ConnectRPC
+// handler running over HTTP/2 cleartext (h2c). The handler natively serves
+// Connect, gRPC, and gRPC-Web on the same endpoint, so the router can be
+// pointed at the returned address using either transport (selected via the
+// `grpc_protocol` configuration block).
+//
+// The endpoint format matches makeSafeGRPCServer (host:port without a
+// scheme); call sites continue to wrap it with grpcURL for the routing URL
+// in the router config, and BuildConnectTransports normalises that back to
+// http:// when ConnectRPC is the resolved protocol for a subgraph.
+func makeSafeConnectRPCServer(t testing.TB) (*httptest.Server, string) {
+	t.Helper()
+
+	grpcImpl := &service.ProjectsService{}
+	connectImpl := service.NewProjectsConnectService(grpcImpl)
+
+	mux := http.NewServeMux()
+	mux.Handle(projectsconnect.NewProjectsServiceHandler(connectImpl))
+
+	srv := httptest.NewUnstartedServer(h2c.NewHandler(mux, &http2.Server{}))
+	srv.EnableHTTP2 = true
+	srv.Start()
+	t.Cleanup(srv.Close)
+
+	endpoint := strings.TrimPrefix(srv.URL, "http://")
+	return srv, endpoint
 }
 
 func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interceptor grpc.UnaryServerInterceptor) (*grpc.Server, string) {

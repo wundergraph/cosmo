@@ -1,0 +1,20 @@
+# Single-subgraph federation pointing at the projects gRPC service from
+# cosmo/demo. The routing URL uses the http:// scheme so the router (with
+# `grpc_protocol.default_protocol: connectrpc`) reaches it over plain
+# HTTP/1.1. Build and start the standalone subgraph first:
+#
+#   cd ../../demo/pkg/subgraphs/projects
+#   go run ./cmd/service
+#
+# This serves the Connect handler on :4011 over H2C, which accepts
+# Connect, gRPC, and gRPC-Web from the same endpoint.
+
+version: 1
+subgraphs:
+  - name: projects
+    routing_url: http://localhost:4011
+    schema:
+      file: ../../demo/pkg/subgraphs/projects/src/schema.graphql
+    grpc:
+      protoFile: ../../demo/pkg/subgraphs/projects/generated/service.proto
+      mappingFile: ../../demo/pkg/subgraphs/projects/mapping.json

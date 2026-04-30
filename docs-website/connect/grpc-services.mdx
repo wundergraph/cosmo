@@ -22,6 +22,12 @@ For protocol details and shared concepts, see the [gRPC Concepts](/router/gRPC/c
 
 Services expose gRPC endpoints that the router calls over the network and integrate as subgraphs in your federated graph. They are deployed, scaled, monitored, and released independently.
 
+## Transport Protocols
+
+A gRPC service can be reached by the router over either native gRPC (HTTP/2 + Protobuf) or [ConnectRPC](https://connectrpc.com/) (HTTP/1.1 with Protobuf or JSON). ConnectRPC is useful when end-to-end HTTP/2 to the subgraph is not available, for example when a proxy or load balancer in front of the subgraph does not forward gRPC.
+
+The protocol is selected per subgraph in the router configuration via the `grpc_protocol` block. See [gRPC Subgraph Protocol](/router/configuration#grpc-subgraph-protocol) in the router configuration reference for the schema and examples, and [gRPC Concepts](/router/gRPC/concepts#connectrpc-support) for the conceptual overview.
+
 ## Choosing Between gRPC Services and Plugins
 
 - **Use [gRPC Services](/router/gRPC/grpc-services)** when you need language flexibility, independent scaling, or distributed deployments

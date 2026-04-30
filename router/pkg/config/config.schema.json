@@ -3993,6 +3993,45 @@
           }
         }
       }
+    },
+    "grpc_protocol": {
+      "type": "object",
+      "description": "Selects the transport protocol used to talk to gRPC subgraphs. By default all gRPC subgraphs use native gRPC over HTTP/2 with Protobuf encoding. Setting the protocol to 'connectrpc' switches a subgraph to the Connect protocol over HTTP/1.1, which is useful when end-to-end HTTP/2 is unavailable (for example when proxies or load balancers do not forward gRPC).",
+      "additionalProperties": false,
+      "properties": {
+        "default_protocol": {
+          "type": "string",
+          "description": "The transport protocol applied to every gRPC subgraph that does not have a per-subgraph override.",
+          "enum": ["grpc", "connectrpc"],
+          "default": "grpc"
+        },
+        "default_encoding": {
+          "type": "string",
+          "description": "The wire format applied to ConnectRPC subgraphs that do not have a per-subgraph override. Ignored when the resolved protocol is 'grpc'.",
+          "enum": ["proto", "json"],
+          "default": "proto"
+        },
+        "subgraphs": {
+          "type": "object",
+          "description": "Per-subgraph overrides keyed by subgraph name. Each entry can override the protocol and/or the encoding chosen by the defaults above.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "protocol": {
+                "type": "string",
+                "description": "Overrides the transport protocol for this subgraph. When omitted, default_protocol is used.",
+                "enum": ["grpc", "connectrpc"]
+              },
+              "encoding": {
+                "type": "string",
+                "description": "Overrides the ConnectRPC wire format for this subgraph. Ignored when the resolved protocol is 'grpc'. When omitted, default_encoding is used.",
+                "enum": ["proto", "json"]
+              }
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {

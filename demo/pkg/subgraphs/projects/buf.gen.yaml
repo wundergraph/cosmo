@@ -1,0 +1,27 @@
+version: v2
+# service.proto declares `option go_package = "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects"`
+# but the generated message/gRPC code lives at the .../generated subpath.
+# The Connect plugin imports the message types via the proto's go_package,
+# so we remap it to the actual generated path with M=.
+plugins:
+  # Messages and gRPC server/client. The output is kept in sync with the
+  # existing wgc-driven flow so that the .pb.go and _grpc.pb.go files do not
+  # change shape after running buf generate.
+  - local: protoc-gen-go
+    out: generated
+    opt:
+      - paths=source_relative
+      - Mservice.proto=github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated
+  - local: protoc-gen-go-grpc
+    out: generated
+    opt:
+      - paths=source_relative
+      - Mservice.proto=github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated
+  # ConnectRPC handler/client. The handler also serves gRPC and gRPC-Web on
+  # the same HTTP endpoint, so the demo subgraph can be reached over either
+  # protocol from the router. Output goes to generated/projectsconnect/.
+  - local: protoc-gen-connect-go
+    out: generated
+    opt:
+      - paths=source_relative
+      - Mservice.proto=github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated

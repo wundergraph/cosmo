@@ -13,6 +13,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 
+	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -37,6 +39,7 @@ type ExecutorConfigurationBuilder struct {
 	instanceData              InstanceData
 
 	subscriptionHooks subscriptionHooks
+	connectTransports map[string]grpcdatasource.RPCTransport
 }
 
 type Executor struct {
@@ -218,6 +221,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.logger,
 		routerEngineCfg.Execution.EnableNetPoll,
 		b.instanceData,
+		b.connectTransports,
 	), b.logger, b.subscriptionHooks)
 
 	// this generates the plan config using the data source factories from the config package

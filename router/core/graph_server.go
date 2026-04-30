@@ -45,6 +45,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	"github.com/wundergraph/cosmo/router/pkg/grpcprotocol"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpccommon"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcplugin"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcpluginoci"
@@ -58,6 +59,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
+	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
@@ -105,6 +107,7 @@ type (
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
 		headerPropagation       *HeaderPropagation
+		grpcProtocolConfig      *config.GRPCProtocolConfiguration
 	}
 )
 
@@ -176,6 +179,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 	}
 
+	if err := grpcprotocol.Validate(r.grpcProtocol); err != nil {
+		return nil, fmt.Errorf("invalid grpc_protocol configuration: %w", err)
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
 		context:                 ctx,
@@ -193,8 +200,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
 		},
-		storageProviders:  &r.storageProviders,
-		headerPropagation: r.headerPropagation,
+		storageProviders:   &r.storageProviders,
+		headerPropagation:  r.headerPropagation,
+		grpcProtocolConfig: r.grpcProtocol,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -1279,7 +1287,42 @@ func (s *graphServer) buildGraphMux(
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	if err := s.setupConnector(ctx, opts.EngineConfig, opts.ConfigSubgraphs, telemetryAttExpressions, tracingAttExpressions); err != nil {
+	// Build HTTP clients for Connect subgraphs, matching the timeout and transport
+	// configuration applied to regular GraphQL subgraph clients.
+	connectDefaultHTTPClient := &http.Client{
+		Transport: s.baseTransport,
+		Timeout:   s.subgraphTransportOptions.RequestTimeout,
+	}
+	connectSubgraphHTTPClients := map[string]*http.Client{}
+	for subgraph, subgraphOpts := range s.subgraphTransportOptions.SubgraphMap {
+		transport, ok := s.subgraphTransports[subgraph]
+		if !ok {
+			transport = s.baseTransport
+		}
+		connectSubgraphHTTPClients[subgraph] = &http.Client{
+			Transport: transport,
+			Timeout:   subgraphOpts.RequestTimeout,
+		}
+	}
+	// Include subgraphs with per-subgraph TLS but no traffic shaping overrides.
+	for subgraph, transport := range s.subgraphTransports {
+		if _, exists := connectSubgraphHTTPClients[subgraph]; !exists {
+			connectSubgraphHTTPClients[subgraph] = &http.Client{
+				Transport: transport,
+				Timeout:   s.subgraphTransportOptions.RequestTimeout,
+			}
+		}
+	}
+
+	// Build Connect transports for subgraphs configured to use ConnectRPC protocol.
+	connectTransports := grpcprotocol.BuildConnectTransports(
+		s.grpcProtocolConfig,
+		collectGRPCSubgraphURLs(opts.EngineConfig, opts.ConfigSubgraphs),
+		connectSubgraphHTTPClients,
+		connectDefaultHTTPClient,
+	)
+
+	if err := s.setupConnector(ctx, opts.EngineConfig, opts.ConfigSubgraphs, telemetryAttExpressions, tracingAttExpressions, connectTransports); err != nil {
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
@@ -1325,6 +1368,7 @@ func (s *graphServer) buildGraphMux(
 			CircuitBreaker:                s.circuitBreakerManager,
 		},
 		subscriptionHooks: s.subscriptionHooks,
+		connectTransports: connectTransports,
 	}
 
 	executor, providers, err := ecb.Build(
@@ -1745,6 +1789,7 @@ func (s *graphServer) setupConnector(
 	configSubgraphs []*nodev1.Subgraph,
 	telemetryAttributeExpressions *attributeExpressions,
 	tracingAttributeExpressions *attributeExpressions,
+	connectTransports map[string]grpcdatasource.RPCTransport,
 ) error {
 	s.connector = grpcconnector.NewConnector()
 
@@ -1765,6 +1810,14 @@ func (s *graphServer) setupConnector(
 
 		if sg == nil {
 			return fmt.Errorf("subgraph %s not found", dsConfig.Id)
+		}
+
+		// Skip gRPC connector registration for Connect subgraphs —
+		// they use HTTP via the Connect protocol instead of native gRPC.
+		if connectTransports != nil {
+			if _, isConnect := connectTransports[sg.Name]; isConnect {
+				continue
+			}
 		}
 
 		pluginConfig := grpcConfig.GetPlugin()
@@ -2170,4 +2223,25 @@ func configureSubgraphOverwrites(
 	}
 
 	return subgraphs, nil
+}
+
+// collectGRPCSubgraphURLs returns a map of subgraphName → routingUrl
+// for all subgraphs that have gRPC configuration in the engine config.
+func collectGRPCSubgraphURLs(
+	engineConfig *nodev1.EngineConfiguration,
+	configSubgraphs []*nodev1.Subgraph,
+) map[string]string {
+	urls := map[string]string{}
+	for _, dsConfig := range engineConfig.DatasourceConfigurations {
+		if dsConfig.GetCustomGraphql().GetGrpc() == nil {
+			continue
+		}
+		for _, sg := range configSubgraphs {
+			if sg.Id == dsConfig.Id {
+				urls[sg.Name] = sg.RoutingUrl
+				break
+			}
+		}
+	}
+	return urls
 }

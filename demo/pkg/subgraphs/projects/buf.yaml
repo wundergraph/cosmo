@@ -1,0 +1,13 @@
+version: v2
+modules:
+  - path: generated
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT
+  except:
+    - PACKAGE_VERSION_SUFFIX
+    - DIRECTORY_SAME_PACKAGE
+    - FILE_LOWER_SNAKE_CASE

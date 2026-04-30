@@ -21,6 +21,15 @@ plugin-generate:
 	$(wgc_router) plugin build ./pkg/subgraphs/projects --generate-only --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
 	$(wgc_router) plugin build ./pkg/subgraphs/courses --generate-only
 
+# Regenerate the projects subgraph protobuf code (messages + gRPC + ConnectRPC)
+# via buf. Use this after editing pkg/subgraphs/projects/generated/service.proto
+# or after bumping any of protoc-gen-go, protoc-gen-go-grpc, protoc-gen-connect-go.
+# The Connect handler is what makes the standalone subgraph reachable over both
+# gRPC and ConnectRPC from the same H2C endpoint (see cmd/service/main.go).
+.PHONY: projects-buf-generate
+projects-buf-generate:
+	cd ./pkg/subgraphs/projects && buf generate generated
+
 plugin-build-ci-bun-binary:
 	$(wgc_router_ci) plugin build ./pkg/subgraphs/courses --yes
 

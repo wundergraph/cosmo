@@ -638,5 +638,6 @@
       "Enabled": false,
       "Maximum": 10000000000
     }
-  }
+  },
+  "GRPCProtocol": null
 }

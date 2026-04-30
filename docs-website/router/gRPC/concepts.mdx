@@ -247,6 +247,33 @@ When implementing gRPC integration in your GraphQL Federation, you have two main
 | **Operational Complexity** | Higher - distributed ops | Lower - unified ops |
 
 
+## ConnectRPC Support
+
+The router can talk to gRPC subgraphs over either native gRPC (HTTP/2 +
+Protobuf) or [ConnectRPC](https://connectrpc.com/) (HTTP/1.1 with Protobuf
+or JSON). ConnectRPC is useful when end-to-end HTTP/2 to the subgraph is
+not possible — for example when a proxy or load balancer in front of the
+subgraph does not forward gRPC.
+
+A ConnectRPC subgraph implementation usually serves both gRPC and HTTP/1.1
+from the same handler (the [`connect-go`](https://connectrpc.com/docs/go)
+runtime does this by default), so the same subgraph can be reached over
+either transport without code changes.
+
+The transport protocol is selected per subgraph via the `grpc_protocol`
+section in the router configuration. See
+[gRPC Subgraph Protocol](/router/configuration#grpc-subgraph-protocol) in
+the configuration reference for the complete schema and examples.
+
+```yaml config.yaml
+grpc_protocol:
+  default_protocol: connectrpc
+  default_encoding: proto
+  subgraphs:
+    products:
+      protocol: grpc
+```
+
 ## Roadmap
 
 We're actively working on addressing these limitations. Future releases will include:

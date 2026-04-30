@@ -2412,3 +2412,45 @@ cache_warmup:
     filesystem:
       path: "./cache-warmer/operations"
 ```
+
+## gRPC Subgraph Protocol
+
+Selects the transport protocol used to talk to gRPC subgraphs. By default
+all gRPC subgraphs use native gRPC over HTTP/2 with Protobuf encoding.
+Setting the protocol to `connectrpc` switches a subgraph to the
+[ConnectRPC](https://connectrpc.com/) protocol over HTTP/1.1, which is
+useful when end-to-end HTTP/2 is unavailable (for example when a proxy or
+load balancer in front of the subgraph does not forward gRPC).
+
+ConnectRPC services typically expose both gRPC and HTTP/1.1 endpoints from
+the same handler, so the same subgraph implementation can be reached over
+either transport. The router picks the wire format on a per-subgraph basis
+based on the configuration below.
+
+| Environment Variable                                | YAML                                       | Required               | Description                                                                                                                                  | Default Value |
+| --------------------------------------------------- | ------------------------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| GRPC_PROTOCOL_DEFAULT_PROTOCOL                      | grpc_protocol.default_protocol             | <Icon icon="square" /> | The transport protocol applied to every gRPC subgraph that does not have a per-subgraph override. Allowed values: `grpc`, `connectrpc`.       | grpc          |
+| GRPC_PROTOCOL_DEFAULT_ENCODING                      | grpc_protocol.default_encoding             | <Icon icon="square" /> | The wire format applied to ConnectRPC subgraphs without a per-subgraph override. Ignored when the resolved protocol is `grpc`. Allowed: `proto`, `json`. | proto         |
+|                                                     | grpc_protocol.subgraphs.\<name\>.protocol  | <Icon icon="square" /> | Overrides the transport protocol for a single subgraph. When omitted, `default_protocol` is used.                                            |               |
+|                                                     | grpc_protocol.subgraphs.\<name\>.encoding  | <Icon icon="square" /> | Overrides the ConnectRPC wire format for a single subgraph. Ignored when the resolved protocol is `grpc`.                                    |               |
+
+### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+# Switch all gRPC subgraphs to ConnectRPC over HTTP/1.1
+grpc_protocol:
+  default_protocol: connectrpc
+  default_encoding: proto
+
+# Or mix protocols on a per-subgraph basis
+grpc_protocol:
+  default_protocol: grpc
+  subgraphs:
+    employees:
+      protocol: connectrpc
+      encoding: json
+    products:
+      protocol: grpc
+```

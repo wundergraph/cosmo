@@ -930,7 +930,7 @@ describe('Create subgraph tests', () => {
       expect(createGrpcServiceSubgraphResp.response?.details).toBe('Routing URL "invalid-url" is not a valid URL');
     });
 
-    test('Should not allow creating a GRPC service subgraph with HTTP/HTTPS routing URL', async (testContext) => {
+    test('Should allow creating a GRPC service subgraph with an HTTP/HTTPS routing URL (ConnectRPC)', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
       });
@@ -938,7 +938,8 @@ describe('Create subgraph tests', () => {
 
       const grpcServiceLabel = genUniqueLabel('service');
 
-      // Test HTTP URL
+      // ConnectRPC subgraphs serve over plain HTTP, so http:// must be a
+      // legitimate routing URL even though the subgraph type is GRPC_SERVICE.
       const createGrpcServiceSubgraphRespHttp = await client.createFederatedSubgraph({
         name: genID('grpc-service-http'),
         namespace: DEFAULT_NAMESPACE,
@@ -947,12 +948,8 @@ describe('Create subgraph tests', () => {
         labels: [grpcServiceLabel],
       });
 
-      expect(createGrpcServiceSubgraphRespHttp.response?.code).toBe(EnumStatusCode.ERR);
-      expect(createGrpcServiceSubgraphRespHttp.response?.details).toContain(
-        'Routing URL must follow gRPC naming scheme',
-      );
+      expect(createGrpcServiceSubgraphRespHttp.response?.code).toBe(EnumStatusCode.OK);
 
-      // Test HTTPS URL
       const createGrpcServiceSubgraphRespHttps = await client.createFederatedSubgraph({
         name: genID('grpc-service-https'),
         namespace: DEFAULT_NAMESPACE,
@@ -961,10 +958,7 @@ describe('Create subgraph tests', () => {
         labels: [grpcServiceLabel],
       });
 
-      expect(createGrpcServiceSubgraphRespHttps.response?.code).toBe(EnumStatusCode.ERR);
-      expect(createGrpcServiceSubgraphRespHttps.response?.details).toContain(
-        'Routing URL must follow gRPC naming scheme',
-      );
+      expect(createGrpcServiceSubgraphRespHttps.response?.code).toBe(EnumStatusCode.OK);
     });
 
     test('Should allow creating a GRPC service subgraph with valid gRPC naming scheme URLs', async (testContext) => {
