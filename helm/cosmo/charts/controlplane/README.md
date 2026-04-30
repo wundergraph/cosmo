@@ -87,12 +87,16 @@ WunderGraph Cosmo Controlplane
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
-| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
+| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"cleanupOldData":{"additionalLabels":{},"enabled":true,"schedule":"0 2 1 * *"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
 | jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
 | jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
 | jobs.activateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | jobs.activateOrganization.slug | string | `"foo"` | The slug of the organization |
+| jobs.cleanupOldData | object | `{"additionalLabels":{},"enabled":true,"schedule":"0 2 1 * *"}` | Scheduled CronJob to delete data (schema checks, audit logs, etc.) older than 90 days |
+| jobs.cleanupOldData.additionalLabels | object | `{}` | Adds additional labels to the job |
+| jobs.cleanupOldData.enabled | bool | `true` | Enables the cleanup CronJob |
+| jobs.cleanupOldData.schedule | string | `"0 2 1 * *"` | Cron schedule (default: 1st of every month at 2AM UTC) |
 | jobs.clickhouseMigration.additionalLabels | object | `{}` | Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector) |
 | jobs.databaseMigration.additionalLabels | object | `{}` | Adds additional labels to the database-migration job |
 | jobs.deactivateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
