@@ -564,8 +564,6 @@ function extractLinkUrlSegments(argNode: ConstArgumentNode): ExtractImportUrlSeg
     };
   }
 
-  // @a()
-
   const segments = url.pathname.split('/');
   const versionString = segments.at(-1);
   if (segments.length < 3 && !versionString) {
