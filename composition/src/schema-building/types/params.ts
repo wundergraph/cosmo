@@ -17,19 +17,13 @@ export type IsTypeValidImplementationParams = {
   originalType: TypeNode;
 };
 
-export type GetRouterPersistedDirectiveNodesParams = {
+export type GetRouterFederatedDirectiveNodesParams = {
   data: NodeData;
   federatedDirectiveDataByName: Map<DirectiveName, DirectiveDefinitionData>;
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
 };
 
 export type GetValidArgumentNodesParams = {
-  data: DirectiveDefinitionData;
-  federatedDirectiveDataByName: Map<DirectiveName, DirectiveDefinitionData>;
-  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
-};
-
-export type GetValidExecutableDirectiveArgumentNodesParams = {
   data: DirectiveDefinitionData;
   federatedDirectiveDataByName: Map<DirectiveName, DirectiveDefinitionData>;
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;

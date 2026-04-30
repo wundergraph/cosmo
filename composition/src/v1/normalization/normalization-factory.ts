@@ -392,7 +392,7 @@ import {
   type AddDirectiveArgumentDataByNodeParams,
   type ExtractDirectiveArgumentDataParams,
 } from '../../directive-definition-data/types/params';
-import { newDirectiveArgumentData } from '../../directive-definition-data/utils';
+import { newDirectiveArgumentData, newDirectiveDefinitionData } from '../../directive-definition-data/utils';
 import { type DirectiveArgumentData, type DirectiveDefinitionData } from '../../directive-definition-data/types/types';
 
 export function normalizeSubgraphFromString({
@@ -776,7 +776,8 @@ export class NormalizationFactory {
       return;
     }
 
-    definitionData.version = importData.version;
+    definitionData.majorVersion = importData.majorVersion;
+    definitionData.minorVersion = importData.minorVersion;
     definitionData.isComposed = true;
 
     this.federatedDirectiveDataByName.set(directiveName, definitionData);
@@ -1216,21 +1217,20 @@ export class NormalizationFactory {
     if (errors.length > 0) {
       this.errors.push(...errors);
     }
-    this.directiveDefinitionDataByName.set(name, {
-      argumentDataByName: argumentDataByName,
-      description: node.description,
-      executableLocations: locations.intersection(EXECUTABLE_DIRECTIVE_LOCATIONS),
-      isComposed: false,
-      isRepeatable: node.repeatable,
-      isReferenced: false,
-      locations,
+    this.directiveDefinitionDataByName.set(
       name,
-      node,
-      optionalArgumentNames,
-      requiredArgumentNames,
-      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
-      version: -1,
-    });
+      newDirectiveDefinitionData({
+        argumentDataByName: argumentDataByName,
+        description: node.description,
+        isRepeatable: node.repeatable,
+        locations,
+        name,
+        node,
+        optionalArgumentNames,
+        requiredArgumentNames,
+        subgraphNames: new Set<SubgraphName>([this.subgraphName]),
+      }),
+    );
     if (errorMessages.length > 0) {
       this.errors.push(invalidDirectiveDefinitionError(name, errorMessages));
     }

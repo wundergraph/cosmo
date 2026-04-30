@@ -7,6 +7,7 @@ import { newFederatedDirectivesData } from '../schema-building/utils';
 import { getTypeNodeNamedTypeName } from '../schema-building/ast';
 import { stringToNameNode } from '../ast/utils';
 import { type DirectiveArgumentData, type DirectiveDefinitionData } from './types/types';
+import { copyObjectValueMap } from '../utils/utils';
 
 export function newDirectiveArgumentData({
   configureDescriptionDataBySubgraphName,
@@ -70,11 +71,46 @@ export function newDirectiveDefinitionData({
     isReferenced: !!isReferenced,
     isRepeatable: !!isRepeatable,
     locations,
+    majorVersion: -1,
+    minorVersion: -1,
     name,
     optionalArgumentNames: optionalArgumentNames ?? new Set<ArgumentName>(),
     node,
     requiredArgumentNames: requiredArgumentNames ?? new Set<ArgumentName>(),
     subgraphNames: subgraphNames ?? new Set<SubgraphName>(),
-    version: -1,
+  };
+}
+
+export function copyDirectiveDefinitionData({
+  argumentDataByName,
+  description,
+  executableLocations,
+  isComposed,
+  isReferenced,
+  isRepeatable,
+  locations,
+  name,
+  node,
+  minorVersion,
+  majorVersion,
+  optionalArgumentNames,
+  requiredArgumentNames,
+  subgraphNames,
+}: DirectiveDefinitionData): DirectiveDefinitionData {
+  return {
+    argumentDataByName: copyObjectValueMap(argumentDataByName),
+    description: description ? { ...description } : undefined,
+    executableLocations: new Set(executableLocations),
+    isComposed,
+    isReferenced,
+    isRepeatable,
+    locations: new Set(locations),
+    majorVersion,
+    minorVersion,
+    name,
+    node: { ...node },
+    optionalArgumentNames: new Set(optionalArgumentNames),
+    requiredArgumentNames: new Set(requiredArgumentNames),
+    subgraphNames: new Set(subgraphNames),
   };
 }

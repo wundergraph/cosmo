@@ -133,6 +133,7 @@ import {
 import { IMPORT_VERSION_REGEX } from '../constants/strings';
 import { type UpsertFederatedDirectiveDataParams } from '../../directive-definition-data/types/params';
 import { type DirectiveDefinitionData } from '../../directive-definition-data/types/types';
+import { copyDirectiveDefinitionData } from '../../directive-definition-data/utils';
 
 export function newFieldSetData(): FieldSetData {
   return {
@@ -518,29 +519,32 @@ export function upsertFederatedDirectiveData({
 }: UpsertFederatedDirectiveDataParams): void {
   for (const [directiveName, directiveData] of incomingDataByName) {
     const existingData = existingDataByName.get(directiveName);
+    const copiedData = copyDirectiveDefinitionData(directiveData);
     if (!existingData) {
       if (!directiveData.isComposed) {
-        getValueOrDefault(executableDirectiveDatasByName, directiveName, () => []).push(directiveData);
+        getValueOrDefault(executableDirectiveDatasByName, directiveName, () => []).push(copiedData);
         continue;
       }
-      existingDataByName.set(directiveName, directiveData);
+      existingDataByName.set(directiveName, copiedData);
       executableDirectiveDatasByName.delete(directiveName);
       continue;
     }
 
-    if (existingData.version < directiveData.version) {
-      /* Only propagate the latest version's description if any.
-       * This means a description can be deleted.
-       */
-      existingData.description = directiveData.description;
-      existingDataByName.set(directiveName, directiveData);
+    // If a directive is not composed in a subgraph, it is effectively ignored.
+    if (!directiveData.isComposed) {
+      continue;
     }
 
-    /* If at least one subgraph includes the directive name in `@composeDirective` and is referenced in that subgraph,
-     * then it should be propagated in the federated graph.
+    /* If at least one subgraph includes the directive name in a `@composeDirective` directive, the definition of
+     * the custom directive should be propagated in the federated graph.
+     * The directive itself must be referenced in at least once in one of those subgraphs to propagate also the usages
+     * of the custom directive to the federated graph (in addition to the definition).
+     *
+     * Moreover, only the highest version of the directive is propagated; this means a directive definition description
+     *  could be set in one one subgraph and removed in another subgraph with a imported higher version.
      */
-    if (directiveData.isComposed) {
-      existingData.isComposed ||= directiveData.isComposed;
+    if (existingData.minorVersion < directiveData.minorVersion) {
+      existingDataByName.set(directiveName, copyDirectiveDefinitionData(directiveData));
     }
   }
 }
@@ -595,7 +599,15 @@ function extractLinkUrlSegments(argNode: ConstArgumentNode): ExtractImportUrlSeg
   }
 
   try {
-    const version = parseFloat(versionString.substring(1));
+    const versionSegments = versionString.substring(1).split(LITERAL_PERIOD);
+    if (versionSegments.length !== 2) {
+      return {
+        error: invalidVersionLinkDirectiveUrlError({ url: urlString, versionString }),
+        success: false,
+      };
+    }
+    const majorVersion = parseInt(versionSegments[0]);
+    const minorVersion = parseInt(versionSegments[1]);
 
     const featureName = segments.at(-2);
     if (!featureName) {
@@ -608,7 +620,8 @@ function extractLinkUrlSegments(argNode: ConstArgumentNode): ExtractImportUrlSeg
     return {
       coreUrl: urlString.substring(0, urlString.length - versionString.length),
       success: true,
-      version,
+      majorVersion,
+      minorVersion,
     };
   } catch {
     // Should never happen
@@ -623,7 +636,8 @@ function extractLinkImportObject(value: ConstObjectValueNode): ExtractLinkImport
   const data: LinkImportData = {
     name: '',
     coreUrl: '',
-    version: -1,
+    majorVersion: -1,
+    minorVersion: -1,
   };
   const errors: Array<Error> = [];
   const valueString = print(value);
@@ -691,7 +705,8 @@ function extractLinkImports(values: ReadonlyArray<ConstValueNode>): ExtractLinkI
         imports.push({
           name: value.value,
           coreUrl: '',
-          version: -1,
+          majorVersion: -1,
+          minorVersion: -1,
         });
         break;
       }
@@ -743,7 +758,8 @@ export function extractLinkArgs(
     }
 
     let imports: Array<LinkImportData> = [];
-    let version = -1;
+    let majorVersion = -1;
+    let minorVersion = -1;
     let coreUrl = '';
     for (const arg of directive.arguments) {
       const argName = arg.name.value;
@@ -757,7 +773,8 @@ export function extractLinkArgs(
             };
           }
           coreUrl = urlResult.coreUrl;
-          version = urlResult.version;
+          majorVersion = urlResult.majorVersion;
+          minorVersion = urlResult.minorVersion;
           break;
         }
         case IMPORT: {
@@ -766,7 +783,8 @@ export function extractLinkArgs(
               imports.push({
                 name: arg.value.value,
                 coreUrl: '',
-                version: -1,
+                majorVersion: -1,
+                minorVersion: -1,
               });
               break;
             }
@@ -799,7 +817,8 @@ export function extractLinkArgs(
 
     for (const value of imports) {
       value.coreUrl = coreUrl;
-      value.version = version;
+      value.majorVersion = majorVersion;
+      value.minorVersion = minorVersion;
       importDataByDirectiveName.set(value.rename ?? value.name, value);
     }
   }

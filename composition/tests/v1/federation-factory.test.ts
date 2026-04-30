@@ -799,7 +799,7 @@ describe('FederationFactory tests', () => {
     );
   });
 
-  test('that valid executable directives are merged and persisted in the federated graph', () => {
+  test('that valid executable directives are merged and persisted in the federated graph #1', () => {
     const result = federateSubgraphsSuccess([subgraphK, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -809,6 +809,22 @@ describe('FederationFactory tests', () => {
         
         type Query {
           dummy: String
+        }
+      `,
+      ),
+    );
+  });
+
+  test('that valid executable directives are merged and persisted in the federated graph #2', () => {
+    const result = federateSubgraphsSuccess([aaaaa, aaaab], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        directive @executableDirective on FIELD
+        
+        type Query {
+          a: ID
         }
       `,
       ),
@@ -1730,5 +1746,25 @@ const subgraphX: Subgraph = {
     type NestedObject {
       query: [[[[Queries!]]]]!
     }
+  `),
+};
+
+const aaaaa: Subgraph = {
+  name: 'aaaaa',
+  url: '',
+  definitions: parse(`
+    directive @executableDirective on FIELD | FIELD_DEFINITION
+    
+    type Query {
+      a: ID @executableDirective
+    }
+  `),
+};
+
+const aaaab: Subgraph = {
+  name: 'aaaab',
+  url: '',
+  definitions: parse(`
+    directive @executableDirective on FIELD | FIELD_DEFINITION
   `),
 };

@@ -11,7 +11,8 @@ export type ExtractLinkArgsResult = ExecutionMultiFailure | ExtractLinkArgsSucce
 
 export interface ExtractImportUrlVersionSuccess extends ExecutionSuccess {
   coreUrl: string;
-  version: number;
+  majorVersion: number;
+  minorVersion: number;
 }
 
 export type ExtractImportUrlSegmentsResult = ExecutionSingleFailure | ExtractImportUrlVersionSuccess;

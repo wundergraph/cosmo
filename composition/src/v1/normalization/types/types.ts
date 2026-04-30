@@ -11,6 +11,7 @@ import {
   type DocumentNode,
   type InputValueDefinitionNode,
   type Kind,
+  type Location,
   type NameNode,
   type StringValueNode,
   type ValueNode,
@@ -139,7 +140,8 @@ export type ComposeDirectiveArgumentNode = {
 export type LinkImportData = {
   name: DirectiveName;
   coreUrl: string;
-  version: number;
+  majorVersion: number;
+  minorVersion: number;
   node?: ConstDirectiveNode;
   rename?: DirectiveName;
 };

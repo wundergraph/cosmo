@@ -985,5 +985,53 @@ describe('@composeDirective tests', () => {
       );
       expect(warnings).toHaveLength(0);
     });
+
+    test('that @composeDirective propagates the highest version of the directive only', () => {
+      const aaaaa = createSubgraph(
+        'aaaaa',
+        `
+      extend schema
+        @link(import: ["@a"], url: "https://a/a/v1.10")
+        @composeDirective(name: "@a")
+        
+        directive @a(a: Int!) repeatable on FIELD | FIELD_DEFINITION
+        
+        type Query @shareable {
+          a: ID @a(a: 1)
+        }
+    `,
+      );
+      const aaaab = createSubgraph(
+        'aaaab',
+        `
+        extend schema
+          @link(import: ["@a"], url: "https://a/a/v1.9")
+          @composeDirective(name: "@a")
+          
+        directive @a(a: Int) on FIELD | FIELD_DEFINITION
+        
+        type Query @shareable {
+          a: ID @a(a: 2)
+        }
+        `,
+      );
+      const { federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [aaaaa, aaaab],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+        directive @a(a: Int!) repeatable on FIELD | FIELD_DEFINITION
+        
+        type Query {
+          a: ID @a(a: 1) @a(a: 2)
+        }
+        `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
   });
 });

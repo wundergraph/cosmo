@@ -36,12 +36,13 @@ export type DirectiveDefinitionData = {
   isReferenced: boolean;
   isRepeatable: boolean;
   locations: Set<DirectiveLocation>;
+  majorVersion: number;
+  minorVersion: number;
   name: DirectiveName;
   node: DirectiveDefinitionNode;
   // required arguments with a default value are considered optional
   optionalArgumentNames: Set<ArgumentName>;
   requiredArgumentNames: Set<ArgumentName>;
   subgraphNames: Set<SubgraphName>;
-  version: number;
   description?: StringValueNode;
 };

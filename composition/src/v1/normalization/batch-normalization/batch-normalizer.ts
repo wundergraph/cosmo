@@ -55,6 +55,7 @@ export class BatchNormalizer {
   warnings: Array<Warning> = [];
   validationErrors: Array<Error> = [];
   options?: CompositionOptions;
+
   constructor({ options, subgraphs }: BatchNormalizeParams) {
     this.options = options;
     this.subgraphs = subgraphs;
@@ -77,7 +78,7 @@ export class BatchNormalizer {
     }
   }
 
-  handleLinkImports(importDataByDirectiveName: Map<DirectiveName, LinkImportData>) {
+  handleLinkImports(importDataByDirectiveName: Map<DirectiveName, LinkImportData>): void {
     for (const [directiveName, importData] of importDataByDirectiveName) {
       const existingData = this.importDataByDirectiveName.get(directiveName);
       if (!existingData) {
@@ -91,20 +92,18 @@ export class BatchNormalizer {
         continue;
       }
 
-      const existingMajorVersion = Math.trunc(existingData.version);
-      const incomingMajorVersion = Math.trunc(importData.version);
-      if (existingMajorVersion !== incomingMajorVersion) {
+      if (existingData.majorVersion !== importData.majorVersion) {
         this.errors.push(nonEqualComposeDirectiveMajorVersionError(directiveName));
       }
 
-      if (existingData.version < importData.version) {
-        existingData.version = importData.version;
+      if (existingData.minorVersion < importData.minorVersion) {
+        existingData.minorVersion = importData.minorVersion;
         existingData.node = importData.node;
       }
     }
   }
 
-  handleEntityData(entityDataByTypeName: Map<TypeName, EntityData>, subgraphName: SubgraphName) {
+  handleEntityData(entityDataByTypeName: Map<TypeName, EntityData>, subgraphName: SubgraphName): void {
     for (const [typeName, entityData] of entityDataByTypeName) {
       const keyFieldSetDataByFieldSet = entityData.keyFieldSetDatasBySubgraphName.get(subgraphName);
       if (!keyFieldSetDataByFieldSet) {
@@ -173,7 +172,7 @@ export class BatchNormalizer {
     }
   }
 
-  handleOverrideConfigurationData() {
+  handleOverrideConfigurationData(): void {
     for (const [targetSubgraphName, overriddenFieldNamesByParentTypeName] of this
       .overriddenFieldNamesByParentTypeNameByTargetSubgraphName) {
       const internalSubgraph = this.internalSubgraphBySubgraphName.get(targetSubgraphName);

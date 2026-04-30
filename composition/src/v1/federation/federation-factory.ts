@@ -1662,21 +1662,23 @@ export class FederationFactory {
               incomingData: argumentData,
             });
           }
+          // Shared set between locations and executable locations because type-system locations are removed.
           const locations = new Set<DirectiveLocation>(data.executableLocations);
           this.federatedDirectiveDataByName.set(directiveName, {
             argumentDataByName,
-            isComposed: true,
+            isComposed: false,
             isRepeatable: data.isRepeatable,
             isReferenced: data.isReferenced,
             executableLocations: locations,
             locations,
+            majorVersion: -1,
+            minorVersion: -1,
             name: directiveName,
             description: data.description,
             node: data.node,
             optionalArgumentNames: new Set(data.optionalArgumentNames),
             requiredArgumentNames: new Set(data.requiredArgumentNames),
             subgraphNames: new Set(data.subgraphNames),
-            version: -1,
           });
           continue;
         }

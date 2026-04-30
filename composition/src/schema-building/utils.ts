@@ -85,7 +85,7 @@ import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } 
 import {
   type CompareAndValidateInputDefaultValuesParams,
   type DirectiveDefinitionNodeFromDataParams,
-  type GetRouterPersistedDirectiveNodesParams,
+  type GetRouterFederatedDirectiveNodesParams,
   type GetValidArgumentNodesParams,
   type IsTypeValidImplementationParams,
   type RouterSchemaFieldNodeFromDataParams,
@@ -105,6 +105,8 @@ import { type ExecutionMultiResult, type ExecutionSingleFailureResult } from '..
 import { type DirectiveArgumentData } from '../directive-definition-data/types/types';
 import { type Warning } from '../warnings/types';
 import { invalidRepeatedComposedDirectiveWarning } from '../v1/warnings/warnings';
+import { FEDERATED_DIRECTIVE_DATAS } from '../v1/normalization/utils';
+import { ROUTER_FEDERATED_DIRECTIVE_NAMES } from '../v1/constants/strings';
 
 export function newFederatedDirectivesData(): FederatedDirectivesData {
   return {
@@ -448,7 +450,7 @@ export function getRouterSchemaDirectiveNodes({
   data,
   federatedDirectiveDataByName,
   parentDefinitionDataByTypeName,
-}: GetRouterPersistedDirectiveNodesParams): GetFederatedDirectiveNodesResult {
+}: GetRouterFederatedDirectiveNodesParams): GetFederatedDirectiveNodesResult {
   const nodes = [...data.federatedDirectivesData.tagDirectiveByName.values()];
   if (data.federatedDirectivesData.isDeprecated) {
     nodes.push(generateDeprecatedDirective(data.federatedDirectivesData.deprecatedReason));
@@ -468,6 +470,10 @@ export function getRouterSchemaDirectiveNodes({
       continue;
     }
 
+    // Executable directives are propagated but not their in-schema usages
+    if (!directiveData.isComposed && !ROUTER_FEDERATED_DIRECTIVE_NAMES.has(directiveName)) {
+      continue;
+    }
     /* The Apollo behaviour is that composed directive must be referenced within at least one composing subgraph else
      * no usages are propagated into the federated graph.
      * It's likely this behaviour is a bug, but it's mirrored here for consistency.

@@ -11,7 +11,6 @@ export type IsArgumentValueValidParams = {
 
 export type ValidateCustomDirectiveParams = {
   argumentDataByName: Map<ArgumentName, DirectiveArgumentData>;
-
   directiveNode: ConstDirectiveNode;
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   requiredArgumentNames: Array<ArgumentName>;
