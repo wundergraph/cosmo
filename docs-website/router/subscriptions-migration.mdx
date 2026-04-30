@@ -1,0 +1,133 @@
+---
+title: "Migration: Subscriptions Overhaul"
+description: "Migration guide for the subscriptions overhaul. Covers the three behavioral changes and the engine WebSocket configuration renames."
+icon: "arrows-turn-right"
+---
+
+This release ships three behavioral changes alongside configuration renames. Each behavioral change is documented in its reference page; this guide links to those and summarizes what an upgrader needs to check.
+
+The router's WebSocket protocol behavior is a strict superset of the `graphql-transport-ws` and `graphql-ws` specifications. Spec-compliant clients are unaffected by the spec-fix change below. The other two changes may require adjustments.
+
+## Subgraph `connection_init` payload no longer merges subscribe extensions
+
+Previously the `extensions` field from each subscribe message was merged into `connection_init.payload.extensions` on the subgraph WebSocket, overriding any existing extensions set via `initial_payload`. The router now forwards subscribe-message extensions in the per-operation `subscribe.payload.extensions` field, where the spec places them.
+
+**Action for subgraph implementations:** if your subgraph reads subscribe-message extensions from `connection_init.payload.extensions`, update it to read them from `subscribe.payload.extensions`.
+
+See [Subscriptions - Using the extensions field](/router/subscriptions#using-the-extensions-field) for the new behavior.
+
+## Upstream connection errors no longer tear down the client WebSocket
+
+Previously, when a subgraph WebSocket died during active subscriptions (TCP drop, EOF, or a close frame from the subgraph), the router sent a WebSocket close frame with code `1001` to the downstream client and tore down the entire client connection. No GraphQL error payload was delivered for the affected subscription.
+
+The router now emits a per-subscription GraphQL error and terminates that subscription. The downstream client's WebSocket stays open and other subscriptions on the same connection continue. The error uses the message `"upstream service error"` and sets the `code` extension to `subgraph_error_propagation.default_extension_code` (default `DOWNSTREAM_SERVICE_ERROR`). When the failure includes a WebSocket close frame, the router additionally populates `closeCode` and `closeReason` extensions.
+
+**Action for clients:** if your client detected upstream subgraph failures by observing a WebSocket close with code `1001`, inspect the GraphQL error `code` extension instead. Reconnect logic that previously operated at the whole-connection level may need to move to individual subscriptions.
+
+See [Subgraph Error Propagation - Upstream WebSocket errors during subscriptions](/router/subgraph-error-propagation#upstream-websocket-errors-during-subscriptions) for the new behavior and example payloads.
+
+## `complete` is no longer sent after `error` on `graphql-transport-ws`
+
+Previously, when a subscription's backing async iterable raised an error, the router sent both `error` and `complete` for the same operation ID:
+
+```
+{"id":"1","type":"error","payload":[{"message":"..."}]}
+{"id":"1","type":"complete"}
+```
+
+This mirrored a bug in the [`graphql-ws` reference implementation](https://github.com/enisdenjo/graphql-ws), accepted upstream as a fix in [enisdenjo/graphql-ws#667](https://github.com/enisdenjo/graphql-ws/pull/667). The router now sends only the `error` message, matching the `graphql-transport-ws` spec:
+
+> **Error:** This message terminates the operation and no further messages will be sent.
+>
+> **Complete (Server → Client):** If the server dispatched the `Error` message relative to the original `Subscribe` message, no `Complete` message will be emitted.
+
+**Action:** none required. Spec-compliant clients ignore messages for operations they consider already completed.
+
+## Engine WebSocket configuration
+
+Several `websocket_client_*` options were named as if they tuned the router's upstream connections to subgraphs, but were actually used for the server-side WebSocket handler (the router's downstream endpoint accepting client connections). This release splits those roles cleanly. All changes are listed below.
+
+<Warning>
+  The old `websocket_client_poll_timeout`, `websocket_client_conn_buffer_size`, `websocket_client_read_timeout`, and `websocket_client_frame_timeout` router configuration options are no longer available, and their `ENGINE_WEBSOCKET_CLIENT_*` environment variables are no longer recognized. One option - `websocket_client_write_timeout` - keeps its name but now applies to a different side of the router. Review each section below before upgrading.
+</Warning>
+
+### Renamed: server-side options
+
+These were always server-side despite the `websocket_client_*` name. They are renamed, and the old names are removed entirely.
+
+| Old YAML / env var | New YAML / env var |
+|-|-|
+| `engine.websocket_client_poll_timeout` / `ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT` | `engine.websocket_server_poll_timeout` / `ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT` |
+| `engine.websocket_client_conn_buffer_size` / `ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE` | `engine.websocket_server_conn_buffer_size` / `ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE` |
+
+### Split: `websocket_client_read_timeout`
+
+The old `websocket_client_read_timeout` served two purposes. Both are affected.
+
+- The server-side read timeout is now `engine.websocket_server_read_timeout` / `ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT`. Default `5s`.
+- The upstream subscription client no longer has a generic read timeout. Use the finer-grained `websocket_client_ping_timeout` and `websocket_client_ack_timeout` below.
+
+### Scope change: `websocket_client_write_timeout`
+
+This option keeps its name but changes scope. Previously it governed the **server-side** write timeout (router writing to clients). It now governs the **upstream** write timeout (router writing to subgraphs), matching what its name implies.
+
+If you were setting this option in a previous release to tune server-side writes, set `engine.websocket_server_write_timeout` / `ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT` to the same value on upgrade. Otherwise the server-side falls back to its default of `10s`.
+
+### New: `websocket_server_write_timeout`
+
+`engine.websocket_server_write_timeout` / `ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT`. Server-side write timeout (router writing to clients). Default `10s`. Previously this behavior was governed by `websocket_client_write_timeout` (see above).
+
+### New: upstream client options
+
+These tune the router's outbound WebSocket connections to subgraphs.
+
+- `engine.websocket_client_ack_timeout` / `ENGINE_WEBSOCKET_CLIENT_ACK_TIMEOUT`. Maximum wait for a subgraph `connection_ack` after the router sends `connection_init`. Default `30s`, minimum `1s`.
+- `engine.websocket_client_read_limit` / `ENGINE_WEBSOCKET_CLIENT_READ_LIMIT`. Maximum size of a single incoming WebSocket message from a subgraph. Default `1MB`, minimum `1KB`.
+
+### Removed: `websocket_client_frame_timeout`
+
+`engine.websocket_client_frame_timeout` / `ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT` is removed with no replacement. Remove it from your config.
+
+### Unchanged
+
+These keep both their name and their scope:
+
+- `engine.websocket_client_ping_interval`
+- `engine.websocket_client_ping_timeout`
+- `engine.enable_net_poll` (applies to the server-side WebSocket handler only; has no effect on upstream subgraph connections)
+
+<Warning>
+  **Subject to change.** `enable_net_poll`, `websocket_server_poll_timeout`, and `websocket_server_conn_buffer_size` may be removed or changed in a future release without a standard deprecation cycle. Avoid depending on them.
+</Warning>
+
+### Before / after
+
+```yaml
+# Before
+engine:
+  enable_net_poll: true
+  websocket_client_poll_timeout: 1s
+  websocket_client_conn_buffer_size: 128
+  websocket_client_read_timeout: 5s
+  websocket_client_write_timeout: 10s
+  websocket_client_frame_timeout: 100ms
+  websocket_client_ping_interval: 15s
+  websocket_client_ping_timeout: 30s
+
+# After
+engine:
+  enable_net_poll: true
+  # Server-side WebSocket handler (router accepting clients)
+  websocket_server_read_timeout: 5s
+  websocket_server_write_timeout: 10s   # previously the misnamed websocket_client_write_timeout
+  websocket_server_poll_timeout: 1s
+  websocket_server_conn_buffer_size: 128
+  # Upstream subscription client (router connecting to subgraphs)
+  websocket_client_write_timeout: 10s   # same name, now actually upstream-only
+  websocket_client_ping_interval: 15s
+  websocket_client_ping_timeout: 30s
+  websocket_client_ack_timeout: 30s
+  websocket_client_read_limit: 1MB
+```
+
+See [Router Engine Configuration](/router/configuration#router-engine-configuration) for the full reference.

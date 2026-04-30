@@ -162,7 +162,8 @@
                   "router/subscriptions/server-sent-events-sse",
                   "router/subscriptions/multipart-http-requests",
                   "router/subscriptions/websocket-subprotocols",
-                  "router/subscriptions/router-configuration-for-subscriptions"
+                  "router/subscriptions/router-configuration-for-subscriptions",
+                  "router/subscriptions-migration"
                 ]
               },
               {
