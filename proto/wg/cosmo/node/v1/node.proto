@@ -4,12 +4,8 @@ package wg.cosmo.node.v1;
 
 import "wg/cosmo/common/common.proto";
 import "wg/cosmo/common/engine_config.proto";
+import "wg/cosmo/common/subgraph.proto";
 
-message Subgraph {
-  string id = 1;
-  string name = 2;
-  string routing_url = 3;
-}
 
 message FeatureFlagRouterExecutionConfigs {
   map<string, FeatureFlagRouterExecutionConfig> config_by_feature_flag_name = 1;
@@ -18,13 +14,13 @@ message FeatureFlagRouterExecutionConfigs {
 message FeatureFlagRouterExecutionConfig {
   wg.cosmo.common.EngineConfiguration engine_config = 1;
   string version = 2;
-  repeated Subgraph subgraphs = 3;
+  repeated wg.cosmo.common.Subgraph subgraphs = 3;
 }
 
 message RouterConfig {
   wg.cosmo.common.EngineConfiguration engine_config = 1;
   string version = 2;
-  repeated Subgraph subgraphs = 3;
+  repeated wg.cosmo.common.Subgraph subgraphs = 3;
   // The map of feature flag router execution configs requires a wrapper to be non-breaking
   optional FeatureFlagRouterExecutionConfigs feature_flag_configs = 4;
   string compatibility_version = 5;
