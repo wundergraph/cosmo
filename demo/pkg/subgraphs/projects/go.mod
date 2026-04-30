@@ -3,11 +3,13 @@ module github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
 go 1.25
 
 require (
+	connectrpc.com/connect v1.19.2
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/stretchr/testify v1.10.0
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
+	golang.org/x/net v0.38.0
 	google.golang.org/grpc v1.68.1
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.9
 )
 
 require (
@@ -36,7 +38,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.28.0 // indirect
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
