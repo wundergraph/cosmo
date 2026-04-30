@@ -61,3 +61,33 @@ func TestBuildConnectTransports_EmptyURLs(t *testing.T) {
 	result := BuildConnectTransports(cfg, map[string]string{}, nil, http.DefaultClient)
 	assert.Nil(t, result)
 }
+
+func TestNormalizeConnectBaseURL(t *testing.T) {
+	// The federated graph stores routing URLs in whichever scheme the user
+	// registered them with: gRPC name resolver schemes (dns:///, ipv4://...),
+	// the bare host:port form, or http(s):// for ConnectRPC. The Connect
+	// HTTP client only understands http(s)://, so this test pins down the
+	// translation between the two worlds.
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{name: "empty input passes through", in: "", want: ""},
+		{name: "http URL pass-through", in: "http://localhost:8080", want: "http://localhost:8080"},
+		{name: "https URL pass-through", in: "https://api.example.com:8443/v1", want: "https://api.example.com:8443/v1"},
+		{name: "dns scheme triple slash", in: "dns:///localhost:8080", want: "http://localhost:8080"},
+		{name: "dns scheme with authority host:port", in: "dns://8.8.8.8/example.com:9000", want: "http://example.com:9000"},
+		{name: "dns scheme single colon (no slashes)", in: "dns:localhost:8080", want: "http://localhost:8080"},
+		{name: "plain host:port (defaults to dns)", in: "localhost:8080", want: "http://localhost:8080"},
+		{name: "ipv4 scheme single endpoint", in: "ipv4:127.0.0.1:8080", want: "http://127.0.0.1:8080"},
+		{name: "unix scheme triple slash", in: "unix:///tmp/grpc.sock", want: "http://tmp/grpc.sock"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := normalizeConnectBaseURL(tt.in)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

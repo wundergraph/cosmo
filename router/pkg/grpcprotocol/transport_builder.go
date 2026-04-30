@@ -56,9 +56,16 @@ func BuildConnectTransports(
 }
 
 // normalizeConnectBaseURL converts a routing URL declared in the federated
-// graph (which may use the gRPC scheme conventions like "dns:///host:port"
-// or be a bare host:port) into the http(s) URL that the ConnectRPC HTTP
-// client expects. URLs that already use http or https are returned as-is.
+// graph - which may use the gRPC name resolver conventions like
+// "dns:///host:port" or "dns:host:port", or a bare host:port - into the
+// http URL that the ConnectRPC HTTP client expects. URLs that already use
+// http or https are returned as-is.
+//
+// The set of supported source schemes mirrors isValidGrpcNamingScheme on
+// the control plane (dns, ipv4, ipv6, vsock, unix, unix-abstract,
+// passthrough). For schemes that wrap an authority component
+// (`scheme://authority/endpoint`) the authority is dropped because Connect
+// targets the endpoint directly.
 func normalizeConnectBaseURL(routingURL string) string {
 	if routingURL == "" {
 		return routingURL
@@ -66,11 +73,27 @@ func normalizeConnectBaseURL(routingURL string) string {
 	if strings.HasPrefix(routingURL, "http://") || strings.HasPrefix(routingURL, "https://") {
 		return routingURL
 	}
-	// gRPC name resolver prefixes (dns:///, passthrough:///, unix:) are not
-	// understood by net/http; strip the scheme so the host:port can be
-	// re-prefixed with http://.
-	if idx := strings.Index(routingURL, "://"); idx > 0 {
-		routingURL = strings.TrimLeft(routingURL[idx+3:], "/")
+
+	// Order matters: longer prefixes must be checked before their shorter
+	// substrings (`unix-abstract:` before `unix:`).
+	grpcSchemes := []string{"unix-abstract:", "passthrough:", "dns:", "ipv4:", "ipv6:", "vsock:", "unix:"}
+	for _, prefix := range grpcSchemes {
+		if !strings.HasPrefix(routingURL, prefix) {
+			continue
+		}
+		rest := routingURL[len(prefix):]
+		// `scheme://authority/endpoint` and `scheme:///endpoint` both end up
+		// with a leading `//`; strip the authority and the path separator so
+		// only the endpoint survives.
+		if strings.HasPrefix(rest, "//") {
+			after := rest[2:]
+			if i := strings.Index(after, "/"); i >= 0 {
+				rest = after[i+1:]
+			} else {
+				rest = after
+			}
+		}
+		return "http://" + rest
 	}
 	return "http://" + routingURL
 }
