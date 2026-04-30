@@ -14,7 +14,7 @@ Previously the `extensions` field from each subscribe message was merged into `c
 
 **Action for subgraph implementations:** if your subgraph reads subscribe-message extensions from `connection_init.payload.extensions`, update it to read them from `subscribe.payload.extensions`.
 
-See [Subscriptions - Using the "extensions" field](/router/subscriptions#using-the-extensions-field) for the new behavior.
+See [Subscriptions - Using the extensions field](/router/subscriptions#using-the-extensions-field) for the new behavior.
 
 ## Upstream connection errors no longer tear down the client WebSocket
 

@@ -215,7 +215,7 @@ The error uses the `message` `"upstream service error"` and the `code` extension
 ```
 
 <Note>
-  Prior to the subscription overhaul release, upstream WebSocket failures during an active subscription terminated the entire downstream client WebSocket with close code `1001` and no GraphQL error payload. Clients that detected upstream failures via that close code must now inspect the `code` extension on GraphQL errors.
+  Prior to the [subscription overhaul release](/router/subscriptions-migration), upstream WebSocket failures during an active subscription terminated the entire downstream client WebSocket with close code `1001` and no GraphQL error payload. Clients that detected upstream failures via that close code must now inspect the `code` extension on GraphQL errors.
 </Note>
 
 ## Fallback status code errors

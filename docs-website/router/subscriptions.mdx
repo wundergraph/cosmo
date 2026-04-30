@@ -67,7 +67,7 @@ wscat -c wss://demo-router.fly.dev/graphql --subprotocol graphql-transport-ws
 {"id":"6e6f71d0-2729-4db5-baee-8b6fc88721a7","type":"subscribe","payload":{"query":"subscription {\n  currentTime {\n    unixTime\n  }\n}"}}
 ```
 
-### Using the "extensions" field
+### Using the extensions field
 
 Cosmo Router allows you to leverage the "extensions" field of a GraphQL Request JSON to add additional meta information to the subscription message.
 
