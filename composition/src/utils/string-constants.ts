@@ -1,5 +1,5 @@
 import { Kind } from 'graphql';
-import { type DirectiveName } from '../types/types';
+import { type DirectiveName, type FieldName } from '../types/types';
 
 export const AS = 'as';
 export const ASSUMED_SIZE = 'assumedSize';
@@ -87,6 +87,7 @@ export const LIST_SIZE = 'listSize';
 export const LINK_IMPORT = 'link__Import';
 export const LINK_PURPOSE = 'link__Purpose';
 export const LIST = 'list';
+export const LITERAL_AT = '@';
 export const LITERAL_SPACE = ' ';
 export const LITERAL_NEW_LINE = '\n';
 export const LITERAL_PERIOD = '.';
@@ -178,10 +179,10 @@ export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
 ]);
 
 export const ROOT_TYPE_NAMES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
-export const AUTHORIZATION_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES_SCOPES]);
-export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([DEPRECATED, ONE_OF, SEMANTIC_NON_NULL]);
-export const INHERITABLE_DIRECTIVE_NAMES = new Set<string>([EXTERNAL, REQUIRE_FETCH_REASONS, SHAREABLE]);
-export const IGNORED_FIELDS = new Set<string>([ENTITIES_FIELD, SERVICE_FIELD]);
+export const AUTHORIZATION_DIRECTIVES = new Set<DirectiveName>([AUTHENTICATED, REQUIRES_SCOPES]);
+export const PERSISTED_CLIENT_DIRECTIVES = new Set<DirectiveName>([DEPRECATED, ONE_OF, SEMANTIC_NON_NULL]);
+export const INHERITABLE_DIRECTIVE_NAMES = new Set<DirectiveName>([EXTERNAL, REQUIRE_FETCH_REASONS, SHAREABLE]);
+export const IGNORED_FIELDS = new Set<FieldName>([ENTITIES_FIELD, SERVICE_FIELD]);
 
 export const INPUT_NODE_KINDS = new Set<Kind>([
   Kind.ENUM_TYPE_DEFINITION,
@@ -199,4 +200,4 @@ export const OUTPUT_NODE_KINDS = new Set<Kind>([
 
 export const INTERFACE_NODE_KINDS = new Set<Kind>([Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION]);
 
-export const NON_REPEATABLE_PERSISTED_DIRECTIVES = new Set<DirectiveName>([INACCESSIBLE, ONE_OF, SEMANTIC_NON_NULL]);
+export const NON_REPEATABLE_FEDERATED_DIRECTIVES = new Set<DirectiveName>([INACCESSIBLE, ONE_OF, SEMANTIC_NON_NULL]);

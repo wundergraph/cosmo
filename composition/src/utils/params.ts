@@ -12,3 +12,8 @@ export type AddMapEntriesParams<K, V> = {
   source: Map<K, V>;
   target: Map<K, V>;
 };
+
+export type MergeSetValueMapParams<K, V> = {
+  source: Map<K, Set<V>>;
+  target: Map<K, Set<V>>;
+};

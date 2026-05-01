@@ -1,4 +1,4 @@
-import { type FederationResult, type FederationResultWithContracts } from './types';
+import { type FederationResult, type FederationResultWithContracts } from './types/types';
 import {
   federateSubgraphs as federateSubgraphsV1,
   federateSubgraphsContract as federateSubgraphsContractV1,
@@ -9,7 +9,7 @@ import {
   type FederateSubgraphsContractParams,
   type FederateSubgraphsParams,
   type FederateSubgraphsWithContractsParams,
-} from './params';
+} from './types/params';
 
 export function federateSubgraphs({
   options,

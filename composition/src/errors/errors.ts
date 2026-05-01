@@ -4,18 +4,24 @@ import {
   type FieldData,
   type InputValueData,
   type ObjectDefinitionData,
-} from '../schema-building/types';
+} from '../schema-building/types/types';
 import {
   type IncompatibleMergedTypesErrorParams,
   type IncompatibleParentTypeMergeErrorParams,
   type IncompatibleTypeWithProvidesErrorMessageParams,
+  type InvalidArgumentValueErrorParams,
+  type InvalidCustomDirectiveErrorParams,
+  type InvalidDirectiveLocationErrorParams,
+  type InvalidLinkDirectiveImportObjectErrorParams,
   type InvalidNamedTypeErrorParams,
-  type InvalidRootTypeFieldEventsDirectiveData,
+  type InvalidRepeatedDirectiveErrorParams,
+  type InvalidSubValueFieldLinkDirectiveImportErrorParams,
+  type invalidVersionLinkDirectiveUrlErrorParams,
   type NonExternalConditionalFieldErrorParams,
   type OneOfRequiredFieldsErrorParams,
   type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   type SemanticNonNullLevelsNonNullErrorParams,
-} from './types';
+} from './types/params';
 import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
 import {
   AND_UPPER,
@@ -40,7 +46,7 @@ import {
   VALUES,
 } from '../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
-import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdinal } from '../utils/utils';
+import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType } from '../utils/utils';
 import {
   type ImplementationErrors,
   type InvalidEntityInterface,
@@ -51,10 +57,14 @@ import { printTypeNode } from '@graphql-tools/merge';
 import {
   type ArgumentName,
   type DirectiveArgumentCoords,
+  type DirectiveLocation,
+  type DirectiveName,
   type FieldName,
   type NodeType,
+  type SubgraphName,
   type TypeName,
 } from '../types/types';
+import { type InvalidRootTypeFieldEventsDirectiveData } from './types/types';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -71,12 +81,12 @@ export function multipleNamedTypeDefinitionError(
 
 export function incompatibleInputValueDefaultValueTypeError(
   prefix: string,
-  path: string,
+  coords: string,
   typeString: string,
   defaultValue: string,
 ): Error {
   return new Error(
-    `The ${prefix} of type "${typeString}" defined on path "${path}" is` +
+    `The ${prefix} of type "${typeString}" defined on coords "${coords}" is` +
       ` incompatible with the default value of "${defaultValue}".`,
   );
 }
@@ -260,15 +270,55 @@ export function invalidDirectiveError(
   );
 }
 
-export function invalidRepeatedFederatedDirectiveErrorMessage(directiveName: string, directiveCoords: string): Error {
+export function invalidCustomDirectiveError({
+  directiveCoords,
+  directiveName,
+  errors,
+  ordinal,
+}: InvalidCustomDirectiveErrorParams) {
   return new Error(
-    `The definition for the directive "@${directiveName}" does not define it as repeatable,` +
-      ` but the directive has been declared on more than one instance of the type "${directiveCoords}".`,
+    `The ${ordinal} post-federation instance of the directive "@${directiveName}" declared on coordinates` +
+      ` "${directiveCoords}" is invalid for the following reason` +
+      (errors.length > 1 ? 's:\n' : ':\n - ') +
+      errors.map((error) => error.message).join('\n - '),
   );
 }
 
 export function invalidDirectiveLocationErrorMessage(directiveName: string, location: string): string {
   return ` The definition for "@${directiveName}" does not define "${location}" as a valid location.`;
+}
+
+export function invalidDirectiveLocationError({
+  directiveCoords,
+  directiveName,
+  location,
+}: InvalidDirectiveLocationErrorParams): Error {
+  return new Error(
+    `The directive "@${directiveName}" declared on "${directiveCoords}" is invalid because the` +
+      ` directive definition for "@${directiveName}" does not define "${location}" as a valid location.`,
+  );
+}
+
+export function invalidRepeatedDirectiveError({
+  directiveCoords,
+  directiveName,
+}: InvalidRepeatedDirectiveErrorParams): Error {
+  return new Error(
+    `The multiple instances of directive "@${directiveName}" declared on "${directiveCoords}" are invalid because` +
+      ` the directive definition for "@${directiveName}" does not define it as repeatable.`,
+  );
+}
+
+export function undefinedRequiredArgumentsError(requiredArgumentNames: Array<ArgumentName>): Error {
+  return new Error(
+    ` The following ` +
+      requiredArgumentNames.length +
+      ` required argument` +
+      (requiredArgumentNames.length > 1 ? 's are' : ' is') +
+      ` not defined: "` +
+      requiredArgumentNames.join(QUOTATION_JOIN) +
+      `"`,
+  );
 }
 
 export function undefinedRequiredArgumentsErrorMessage(
@@ -298,6 +348,16 @@ export function undefinedRequiredArgumentsErrorMessage(
   );
 }
 
+export function unexpectedArgumentProvisionError(argumentNames: Array<string>): Error {
+  return new Error(
+    `The following unexpected argument` +
+      (argumentNames.length > 1 ? 's are' : ' is') +
+      ` provided: "` +
+      argumentNames.join(QUOTATION_JOIN) +
+      `".`,
+  );
+}
+
 export function unexpectedDirectiveArgumentErrorMessage(directiveName: string, argumentNames: string[]): string {
   return (
     ` The definition for "@${directiveName}" does not define the following argument` +
@@ -308,6 +368,15 @@ export function unexpectedDirectiveArgumentErrorMessage(directiveName: string, a
   );
 }
 
+export function duplicateArgumentDefinitionError(argumentNames: Array<ArgumentName>): Error {
+  return new Error(
+    `The following argument` +
+      (argumentNames.length > 1 ? 's are' : ' is') +
+      ` defined more than once: "` +
+      argumentNames.join(QUOTATION_JOIN) +
+      `".`,
+  );
+}
 export function duplicateDirectiveArgumentDefinitionsErrorMessage(argumentNames: string[]): string {
   return (
     ` The following argument` +
@@ -315,6 +384,16 @@ export function duplicateDirectiveArgumentDefinitionsErrorMessage(argumentNames:
     ` defined more than once: "` +
     argumentNames.join(QUOTATION_JOIN) +
     `"`
+  );
+}
+
+export function invalidArgumentValueError({
+  argumentName,
+  expectedTypeString,
+  value,
+}: InvalidArgumentValueErrorParams): Error {
+  return new Error(
+    ` The value "${value}" provided to argument "${argumentName}" is not a valid "${expectedTypeString}" type.`,
   );
 }
 
@@ -382,10 +461,6 @@ export function invalidKeyFatalError<K>(key: K, mapName: string): Error {
   return new Error(`Fatal: Expected key "${key}" to exist in the map "${mapName}".`);
 }
 
-export const subgraphValidationFailureError: Error = new Error(
-  ` Fatal: Subgraph validation did not return a valid AST.`,
-);
-
 export function unexpectedParentKindForChildError(
   parentTypeName: string,
   expectedTypeString: string,
@@ -408,10 +483,14 @@ export function subgraphValidationError(subgraphName: string, errors: Error[]): 
   );
 }
 
-export function invalidSubgraphNameErrorMessage(index: number, newName: string): string {
-  return (
-    `The ${numberToOrdinal(index + 1)} subgraph in the array did not define a name.` +
-    ` Consequently, any further errors will temporarily identify this subgraph as "${newName}".`
+export const noSubgraphNameError = new Error(
+  `Federation could not be attempted because at least one subgraph does not define a name.`,
+);
+
+export function duplicateSubgraphNamesError(subgraphNames: Array<SubgraphName>): Error {
+  return new Error(
+    `Federation could not be attempted because the following subgraph names are defined more` +
+      ` than once: "${subgraphNames.join(QUOTATION_JOIN)}".`,
   );
 }
 
@@ -688,13 +767,6 @@ export function duplicateFieldInFieldSetErrorMessage(fieldSet: string, fieldPath
   return (
     ` The following field set is invalid:\n  "${fieldSet}"\n` +
     ` This is because "${fieldPath}" was included in the field set more than once.`
-  );
-}
-
-export function invalidConfigurationDataErrorMessage(typeName: string, fieldName: string, fieldSet: string): string {
-  return (
-    ` Expected ConfigurationData to exist for type "${typeName}" when adding field "${fieldName}"` +
-    `  while validating field set "${fieldSet}".`
   );
 }
 
@@ -1107,12 +1179,6 @@ export const invalidNatsStreamConfigurationDefinitionErrorMessage =
   ` The input object "edfs__NatsStreamConfiguration" that was defined in the Event Driven graph is invalid and must` +
   ` instead have the following definition:\n  input edfs__NatsStreamConfiguration {\n   consumerInactiveThreshold: Int! = 30\n` +
   `   consumerName: String!\n   streamName: String!\n  }`;
-
-export function invalidEdfsDirectiveName(directiveName: string): Error {
-  return new Error(
-    `Could not retrieve definition for Event-Driven Federated Subscription directive "${directiveName}".`,
-  );
-}
 
 export function invalidImplementedTypeError(
   typeName: string,
@@ -1590,8 +1656,16 @@ export function duplicateDirectiveDefinitionArgumentErrorMessage(argumentNames: 
   );
 }
 
+export function duplicateDirectiveDefinitionLocationError(location: DirectiveLocation): Error {
+  return new Error(`The location "${location}" is defined multiple times.`);
+}
+
 export function duplicateDirectiveDefinitionLocationErrorMessage(locationName: string): string {
   return `- The location "${locationName}" is defined multiple times.`;
+}
+
+export function invalidDirectiveDefinitionLocationError(locationName: string): Error {
+  return new Error(`"${locationName}" is not a valid directive location.`);
 }
 
 export function invalidDirectiveDefinitionLocationErrorMessage(locationName: string): string {
@@ -1799,4 +1873,114 @@ export function costOnInterfaceFieldErrorMessage(directiveCoords: DirectiveArgum
     ` The cost of an interface field is derived from the costs of the corresponding fields` +
     ` on the concrete types that implement the interface.`
   );
+}
+
+export function unknownComposeDirectiveNameError(directiveName: DirectiveName): Error {
+  return new Error(
+    ` A "@composeDirective" directive defines the "name" argument value "${directiveName}" without a` +
+      ` corresponding directive definition in the schema.`,
+  );
+}
+
+export function invalidComposeDirectiveNameError(directiveName: DirectiveName): Error {
+  return new Error(
+    ` A "@composeDirective" directive defines the "name" argument value "${directiveName}", which is not a` +
+      ` custom, user-defined directive.`,
+  );
+}
+
+export function noLeadingAtComposeDirectiveNameError(directiveName: DirectiveName) {
+  return new Error(
+    `A "@composeDirective" directive defines the "name" argument value "${directiveName}" without a leading "@".`,
+  );
+}
+
+export function unimportedComposeDirectiveNameError(directiveName: DirectiveName): Error {
+  return new Error(
+    ` A "@composeDirective" directive defines the "name" argument value "${directiveName}",` +
+      ` which is not a member of a core feature (imported through a "@link" directive).`,
+  );
+}
+
+export const noLinkDirectiveUrlError = new Error(` A "@link" directive was defined without a "url" argument.`);
+
+export function invalidLinkDirectiveUrlError(url: string): Error {
+  return new Error(` A "@link" directive defines the "url" argument value with invalid URL "${url}".`);
+}
+
+export function noPathLinkDirectiveUrlError(url: string) {
+  return new Error(` A "@link" directive defines the "url" argument value without a path in URL "${url}".`);
+}
+
+export function noFeatureNameLinkDirectiveUrlError(url: string): Error {
+  return new Error(
+    ` A "@link" directive defines the "url" argument value without a feature name component in URL "${url}".`,
+  );
+}
+
+export function noVersionLinkDirectiveUrlError(url: string): Error {
+  return new Error(
+    ` A "@link" directive defines the "url" argument value without a version component in URL "${url}".`,
+  );
+}
+
+export function invalidVersionLinkDirectiveUrlError({
+  url,
+  versionString,
+}: invalidVersionLinkDirectiveUrlErrorParams): Error {
+  return new Error(
+    ` A "@link" directive defines the "url" argument value with invalid version string "${versionString}"` +
+      ` (not of the form "v1.2") in URL "${url}".`,
+  );
+}
+
+export function nonIterableLinkDirectiveImportError(kind: Kind): Error {
+  return new Error(` A "@link" directive defines the "import" value with non-iterable kind "${kind}"`);
+}
+
+export function invalidFieldLinkDirectiveImportObjectError({
+  fieldName,
+  value,
+}: InvalidSubValueFieldLinkDirectiveImportErrorParams): Error {
+  return new Error(` A "@link" directive defines invalid sub-value "${value}": field "${fieldName}" must be a string.`);
+}
+
+export function noNameFieldLinkDirectiveImportObjectError(value: string): Error {
+  return new Error(` A "@link" directive defines invalid sub-value "${value}": required field "name" is missing.`);
+}
+
+export function unknownFieldLinkDirectiveImportObjectError({
+  fieldName,
+  value,
+}: InvalidSubValueFieldLinkDirectiveImportErrorParams): Error {
+  return new Error(` A "@link" directive defines invalid sub-value "${value}": unknown field "${fieldName}".`);
+}
+
+export function invalidLinkDirectiveImportObjectError({
+  name,
+  rename,
+}: InvalidLinkDirectiveImportObjectErrorParams): Error {
+  return new Error(
+    ` A "@link" directive imports "${name}" and renames to "${rename}": if an import is not a` +
+      ` directive, neither value should begin with "@"; otherwise, both values should be referenced with a leading "@".`,
+  );
+}
+
+export function invalidSubValueLinkDirectiveImportError(index: number): Error {
+  return new Error(
+    ` A "@link" directive defines invalid sub-value at index ${index}:` +
+      ` values should be either strings or input object values of the form { name: "<importedElement>", as: "<alias>" }.`,
+  );
+}
+
+export function nonEqualCoreFeatureComposeDirectiveError(directiveName: DirectiveName): Error {
+  return new Error(` Composed directive "${directiveName}" is not linked by the same core feature in every subgraph.`);
+}
+
+export function nonEqualComposeDirectiveMajorVersionError(directiveName: DirectiveName): Error {
+  return new Error(` Composed directive "${directiveName}" defines a major version mismatch across subgraphs.`);
+}
+
+export function unknownSubgraphNameError(subgraphName: SubgraphName): Error {
+  return new Error(`Internal Error: Expected subgraph "${subgraphName}" to be a valid record.`);
 }

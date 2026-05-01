@@ -1,16 +1,9 @@
-import type { DirectiveName, FieldName, SubgraphName } from '../../types/types';
-import type {
-  ArgumentData,
-  CompositeOutputData,
-  InputObjectDefinitionData,
-  InputValueData,
-  ParentDefinitionData,
-} from '../../schema-building/types';
-import type { ConstDirectiveNode, DocumentNode, InputValueDefinitionNode } from 'graphql';
-import type { Subgraph } from '../../subgraph/types';
-import type { CompositionOptions } from '../../types/params';
-import type { Graph } from '../../resolvability-graph/graph';
-import { type MutableInputValueNode } from '../../schema-building/ast';
+import { type DirectiveName, type FieldName, type SubgraphName } from '../../../types/types';
+import { type CompositeOutputData, type InputObjectDefinitionData } from '../../../schema-building/types/types';
+import { type ConstDirectiveNode, type DocumentNode } from 'graphql';
+import type { Subgraph } from '../../../subgraph/types';
+import type { CompositionOptions } from '../../../types/params';
+import type { Graph } from '../../../resolvability-graph/graph';
 
 export type ValidateOneOfDirectiveParams = {
   data: InputObjectDefinitionData;
@@ -53,10 +46,4 @@ export type NormalizeSubgraphFromStringParams = {
   noLocation: boolean;
   sdlString: string;
   options?: CompositionOptions;
-};
-
-export type SanitizeDefaultValueParams = {
-  data: ArgumentData | InputValueData;
-  namedTypeData: ParentDefinitionData;
-  node?: MutableInputValueNode;
 };

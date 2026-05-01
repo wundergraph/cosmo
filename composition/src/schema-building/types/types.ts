@@ -1,14 +1,12 @@
 import {
   type ConstDirectiveNode,
   type ConstValueNode,
-  type DirectiveDefinitionNode,
   type DocumentNode,
   type Kind,
   type NamedTypeNode,
   type OperationTypeDefinitionNode,
   type OperationTypeNode,
   type StringValueNode,
-  type TypeNode,
 } from 'graphql';
 import {
   type MutableEnumNode,
@@ -21,32 +19,22 @@ import {
   type MutableScalarNode,
   type MutableTypeNode,
   type MutableUnionNode,
-} from './ast';
-import { type FieldSetConditionData } from '../router-configuration/types';
-import { type KeyFieldSetData } from '../v1/normalization/types';
-import { type InputNodeKind, type OutputNodeKind } from '../utils/types';
-import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
-
-export type ArgumentData = {
-  name: string;
-  typeNode: TypeNode;
-  defaultValue?: ConstValueNode;
-};
+} from '../ast';
+import { type FieldSetConditionData } from '../../router-configuration/types';
+import { type KeyFieldSetData } from '../../v1/normalization/types/types';
+import { type InputNodeKind, type OutputNodeKind } from '../../utils/types';
+import {
+  type ArgumentName,
+  type DirectiveName,
+  type FieldName,
+  type SubgraphName,
+  type TypeName,
+} from '../../types/types';
+import { type DirectiveArgumentData, type DirectiveDefinitionData } from '../../directive-definition-data/types/types';
 
 export type ConfigureDescriptionData = {
   propagate: boolean;
   description: string;
-};
-
-export type DirectiveDefinitionData = {
-  argumentTypeNodeByName: Map<string, ArgumentData>;
-  isRepeatable: boolean;
-  locations: Set<string>;
-  name: string;
-  node: DirectiveDefinitionNode;
-  // required arguments with a default value are considered optional
-  optionalArgumentNames: Set<string>;
-  requiredArgumentNames: Set<string>;
 };
 
 export enum ExtensionType {
@@ -65,7 +53,7 @@ export type EnumDefinitionData = {
   kind: Kind.ENUM_TYPE_DEFINITION;
   name: string;
   node: MutableEnumNode;
-  persistedDirectivesData: PersistedDirectivesData;
+  federatedDirectivesData: FederatedDirectivesData;
   subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
@@ -79,7 +67,7 @@ export type EnumValueData = {
   name: string;
   node: MutableEnumValueNode;
   parentTypeName: TypeName;
-  persistedDirectivesData: PersistedDirectivesData;
+  federatedDirectivesData: FederatedDirectivesData;
   subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
@@ -95,7 +83,7 @@ export type ExternalFieldData = {
 };
 
 export type FieldData = {
-  argumentDataByName: Map<string, InputValueData>;
+  argumentDataByName: Map<ArgumentName, InputValueData>;
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   externalFieldDataBySubgraphName: Map<SubgraphName, ExternalFieldData>;
@@ -110,7 +98,7 @@ export type FieldData = {
   node: MutableFieldNode;
   nullLevelsBySubgraphName: Map<SubgraphName, Set<number>>;
   originalParentTypeName: TypeName;
-  persistedDirectivesData: PersistedDirectivesData;
+  federatedDirectivesData: FederatedDirectivesData;
   renamedParentTypeName: TypeName;
   subgraphNames: Set<SubgraphName>;
   type: MutableTypeNode;
@@ -126,7 +114,7 @@ export type InputObjectDefinitionData = {
   kind: Kind.INPUT_OBJECT_TYPE_DEFINITION;
   name: TypeName;
   node: MutableInputObjectNode;
-  persistedDirectivesData: PersistedDirectivesData;
+  federatedDirectivesData: FederatedDirectivesData;
   subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
@@ -144,7 +132,7 @@ export type InputValueData = {
   node: MutableInputValueNode;
   originalCoords: string;
   originalParentTypeName: TypeName;
-  persistedDirectivesData: PersistedDirectivesData;
+  federatedDirectivesData: FederatedDirectivesData;
   renamedParentTypeName: TypeName;
   requiredSubgraphNames: Set<SubgraphName>;
   subgraphNames: Set<SubgraphName>;
@@ -165,7 +153,7 @@ export type InterfaceDefinitionData = {
   kind: Kind.INTERFACE_TYPE_DEFINITION;
   name: TypeName;
   node: MutableInterfaceNode;
-  persistedDirectivesData: PersistedDirectivesData;
+  federatedDirectivesData: FederatedDirectivesData;
   requireFetchReasonsFieldNames: Set<FieldName>;
   subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
@@ -183,23 +171,14 @@ export type ObjectDefinitionData = {
   kind: Kind.OBJECT_TYPE_DEFINITION;
   name: TypeName;
   node: MutableObjectNode;
-  persistedDirectivesData: PersistedDirectivesData;
+  federatedDirectivesData: FederatedDirectivesData;
   renamedTypeName: TypeName;
   requireFetchReasonsFieldNames: Set<FieldName>;
   subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
 
-export type PersistedDirectiveDefinitionData = {
-  argumentDataByName: Map<string, InputValueData>;
-  executableLocations: Set<string>;
-  name: DirectiveName;
-  repeatable: boolean;
-  subgraphNames: Set<SubgraphName>;
-  description?: StringValueNode;
-};
-
-export type PersistedDirectivesData = {
+export type FederatedDirectivesData = {
   deprecatedReason: string;
   directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   isDeprecated: boolean;
@@ -213,7 +192,7 @@ export type ScalarDefinitionData = {
   kind: Kind.SCALAR_TYPE_DEFINITION;
   name: TypeName;
   node: MutableScalarNode;
-  persistedDirectivesData: PersistedDirectivesData;
+  federatedDirectivesData: FederatedDirectivesData;
   subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
@@ -234,7 +213,7 @@ export type UnionDefinitionData = {
   name: TypeName;
   memberByMemberTypeName: Map<TypeName, NamedTypeNode>;
   node: MutableUnionNode;
-  persistedDirectivesData: PersistedDirectivesData;
+  federatedDirectivesData: FederatedDirectivesData;
   subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
@@ -252,6 +231,8 @@ export type ChildData = EnumValueData | FieldData | InputValueData;
 export type CompositeOutputData = InterfaceDefinitionData | ObjectDefinitionData;
 
 export type DefinitionData =
+  | DirectiveArgumentData
+  | DirectiveDefinitionData
   | EnumDefinitionData
   | EnumValueData
   | FieldData
@@ -259,11 +240,10 @@ export type DefinitionData =
   | InputValueData
   | InterfaceDefinitionData
   | ObjectDefinitionData
-  | PersistedDirectiveDefinitionData
   | ScalarDefinitionData
   | UnionDefinitionData;
 
-export type NodeData = ParentDefinitionData | ChildData;
+export type NodeData = ChildData | ParentDefinitionData | DirectiveArgumentData;
 
 export type EntityData = {
   // If propagated in documentNodeByKeyFieldSet, at least one subgraph defines a resolvable key with this field set.
@@ -328,3 +308,11 @@ export type EntityInterfaceFederationData = {
   subgraphDataByTypeName: Map<TypeName, EntityInterfaceSubgraphData>;
   typeName: TypeName;
 };
+
+export type MutableParentDefinitionNode =
+  | MutableEnumNode
+  | MutableInputObjectNode
+  | MutableInterfaceNode
+  | MutableObjectNode
+  | MutableScalarNode
+  | MutableUnionNode;
