@@ -1,3 +1,10 @@
+// set methods
+import 'set.prototype.difference/auto';
+import 'set.prototype.isdisjointfrom/auto';
+import 'set.prototype.intersection/auto';
+import 'set.prototype.issubsetof/auto';
+import 'set.prototype.issupersetof/auto';
+
 export * from './ast/utils';
 export * from './buildASTSchema/buildASTSchema';
 export * from './directive-definition-data/directive-definition-data';
