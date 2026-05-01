@@ -2538,11 +2538,7 @@
                     "default": ["sig"],
                     "items": {
                       "type": "string",
-                      "enum": [
-                        "sig",
-                        "enc",
-                        ""
-                      ]
+                      "enum": ["sig", "enc", ""]
                     }
                   },
                   "algorithms": {
@@ -2647,6 +2643,87 @@
                     }
                   }
                 ]
+              }
+            }
+          }
+        },
+        "servers": {
+          "type": "array",
+          "description": "List of MCP servers (collections) mounted on the shared HTTP listener. When empty, the legacy top-level fields define a single implicit server at path '/mcp'. When non-empty, each entry is fully self-described — no inheritance from top-level fields.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "path"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Unique identifier for this server, used in metrics, logs, and tool descriptions."
+              },
+              "path": {
+                "type": "string",
+                "description": "URL path this server is mounted at (e.g. '/mcp', '/internal'). Must start with '/' and be unique across servers."
+              },
+              "storage": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Storage provider for this server's operation files.",
+                "properties": {
+                  "provider_id": {
+                    "type": "string",
+                    "description": "ID of a configured file_system storage provider."
+                  },
+                  "watch": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Periodically scan the storage provider directory for changes and hot-reload the collection's tools when files are added, modified, or removed. Currently only honored for file_system providers."
+                  },
+                  "watch_interval": {
+                    "type": "string",
+                    "default": "1s",
+                    "description": "Polling interval used when watch is true (e.g. '500ms', '1s', '10s')."
+                  }
+                },
+                "required": ["provider_id"]
+              },
+              "upstream": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Override the local Cosmo supergraph as the GraphQL backend for this server. When omitted, this server routes to the local supergraph.",
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "GraphQL endpoint URL to which operations are forwarded.",
+                    "format": "http-url"
+                  },
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "Schema source for this upstream (used to compile operations into MCP tools).",
+                    "properties": {
+                      "file": {
+                        "type": "string",
+                        "description": "Path to an SDL file containing the upstream's GraphQL schema."
+                      }
+                    }
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": { "type": "string" },
+                    "description": "Headers forwarded to the upstream on every request."
+                  }
+                }
+              },
+              "oauth": { "$ref": "#/properties/mcp/properties/oauth" },
+              "session": { "$ref": "#/properties/mcp/properties/session" },
+              "exclude_mutations": { "type": "boolean", "default": false },
+              "enable_arbitrary_operations": { "type": "boolean", "default": false },
+              "expose_schema": { "type": "boolean", "default": false },
+              "omit_tool_name_prefix": { "type": "boolean", "default": false },
+              "resource_documentation": {
+                "type": "string",
+                "description": "URL to a human-readable page describing this MCP resource. Included in RFC 9728 Protected Resource Metadata if set.",
+                "format": "http-url"
               }
             }
           }

@@ -1190,6 +1190,105 @@ type MCPConfiguration struct {
 	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
 	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
 	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
+
+	// Servers is the list of MCP servers ("collections") to expose on the shared HTTP listener.
+	// When empty, the legacy top-level fields above define a single implicit server at path "/mcp".
+	// When non-empty, each entry is fully self-described — no inheritance from top-level fields.
+	Servers []MCPServerEntry `yaml:"servers,omitempty"`
+}
+
+// MCPServerEntry describes a single MCP server (collection) mounted at a path on the shared listener.
+type MCPServerEntry struct {
+	// Name is a unique identifier for this server, used in metrics, logs, and tool descriptions.
+	Name string `yaml:"name"`
+	// Path is the URL path this server is mounted at (e.g. "/mcp", "/internal"). Must start with "/".
+	Path string `yaml:"path"`
+	// Storage references a file_system storage provider that holds operation files for this server.
+	Storage MCPStorageConfig `yaml:"storage,omitempty"`
+	// Upstream optionally overrides the local Cosmo supergraph as the GraphQL backend.
+	// When nil, the server routes to the local supergraph (default behavior).
+	Upstream *MCPUpstreamConfig `yaml:"upstream,omitempty"`
+	// OAuth configures authentication for this server; absent or enabled=false means no auth.
+	OAuth MCPOAuthConfiguration `yaml:"oauth,omitempty"`
+	// Per-server feature toggles (see MCPConfiguration for descriptions).
+	ExcludeMutations          bool             `yaml:"exclude_mutations"`
+	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations"`
+	ExposeSchema              bool             `yaml:"expose_schema"`
+	OmitToolNamePrefix        bool             `yaml:"omit_tool_name_prefix"`
+	Session                   MCPSessionConfig `yaml:"session,omitempty"`
+	ResourceDocumentation     string           `yaml:"resource_documentation,omitempty"`
+}
+
+// MCPUpstreamConfig points an MCP server at a non-Cosmo GraphQL endpoint.
+type MCPUpstreamConfig struct {
+	// URL is the GraphQL endpoint to which operations are forwarded.
+	URL string `yaml:"url"`
+	// Schema describes how to obtain the GraphQL schema for this upstream
+	// (used to compile operations into MCP tools).
+	Schema MCPUpstreamSchemaConfig `yaml:"schema,omitempty"`
+	// Headers are forwarded to the upstream on every request (in addition to per-request headers).
+	Headers map[string]string `yaml:"headers,omitempty"`
+}
+
+// MCPUpstreamSchemaConfig describes the schema source for an upstream-bound collection.
+type MCPUpstreamSchemaConfig struct {
+	// File is the path to an SDL file. If the file does not exist, the upstream is introspected
+	// at startup and the result is written to this path (introspection fallback is a v2 feature
+	// — for v1, the file must exist).
+	File string `yaml:"file,omitempty"`
+}
+
+// NormalizeServers returns the canonical list of MCPServerEntry the router will mount.
+//
+// When Servers is non-empty, entries are returned as-is after uniqueness/format validation.
+// When Servers is empty, a single implicit entry is synthesized from the legacy top-level
+// fields and mounted at "/mcp" — preserving backwards compatibility with existing configs.
+func (c *MCPConfiguration) NormalizeServers() ([]MCPServerEntry, error) {
+	if len(c.Servers) > 0 {
+		seenPaths := make(map[string]struct{}, len(c.Servers))
+		seenNames := make(map[string]struct{}, len(c.Servers))
+		for i := range c.Servers {
+			srv := &c.Servers[i]
+			if srv.Name == "" {
+				return nil, fmt.Errorf("mcp.servers[%d]: name is required", i)
+			}
+			if srv.Path == "" {
+				return nil, fmt.Errorf("mcp.servers[%d] (%q): path is required", i, srv.Name)
+			}
+			if !strings.HasPrefix(srv.Path, "/") {
+				return nil, fmt.Errorf("mcp.servers[%d] (%q): path must start with '/'", i, srv.Name)
+			}
+			if _, dup := seenPaths[srv.Path]; dup {
+				return nil, fmt.Errorf("mcp.servers: duplicate path %q", srv.Path)
+			}
+			seenPaths[srv.Path] = struct{}{}
+			if _, dup := seenNames[srv.Name]; dup {
+				return nil, fmt.Errorf("mcp.servers: duplicate name %q", srv.Name)
+			}
+			seenNames[srv.Name] = struct{}{}
+			if srv.Upstream != nil && srv.Upstream.URL == "" {
+				return nil, fmt.Errorf("mcp.servers[%d] (%q): upstream.url is required when upstream is set", i, srv.Name)
+			}
+		}
+		return c.Servers, nil
+	}
+
+	name := c.GraphName
+	if name == "" {
+		name = "mygraph"
+	}
+	return []MCPServerEntry{{
+		Name:                      name,
+		Path:                      "/mcp",
+		Storage:                   c.Storage,
+		OAuth:                     c.OAuth,
+		ExcludeMutations:          c.ExcludeMutations,
+		EnableArbitraryOperations: c.EnableArbitraryOperations,
+		ExposeSchema:              c.ExposeSchema,
+		OmitToolNamePrefix:        c.OmitToolNamePrefix,
+		Session:                   c.Session,
+		ResourceDocumentation:     c.ResourceDocumentation,
+	}}, nil
 }
 
 type MCPOAuthConfiguration struct {
@@ -1237,6 +1336,13 @@ type MCPSessionConfig struct {
 
 type MCPStorageConfig struct {
 	ProviderID string `yaml:"provider_id,omitempty" env:"MCP_STORAGE_PROVIDER_ID"`
+	// Watch enables periodic scanning of the storage provider directory for added,
+	// modified, or removed operation files. When a change is detected, the MCP
+	// collection's tools are reloaded without restarting the router.
+	// Currently only supported when the referenced provider is a file_system provider.
+	Watch bool `yaml:"watch,omitempty" envDefault:"false" env:"MCP_STORAGE_WATCH"`
+	// WatchInterval is the polling interval used when Watch is true. Defaults to 1s.
+	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"MCP_STORAGE_WATCH_INTERVAL"`
 }
 
 type MCPServer struct {
