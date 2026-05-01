@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package wg.cosmo.node.v2;
+
+import "wg/cosmo/common/engine_config.proto";
+import "wg/cosmo/common/subgraph.proto";
+
+/**
+ * GraphConfig represents the configuration of a graph.
+ * It could be a base graph or a feature flag graph.
+ * It contains the engine config as well as
+ * subgraph metadata for that graph.
+ */
+message GraphConfig { //  this is whats inside latest.json / <ff-name>.json
+  wg.cosmo.common.EngineConfiguration engine_config = 1;
+  repeated wg.cosmo.common.Subgraph subgraphs = 3;
+  string hash = 2; // hash of engine config + subgraphs
+}
+
+/**
+ * ActiveGraphConfigs holds names and configs to all active graphs.
+ */
+message ActiveGraphConfigs { // this is whats inside mapper.json
+  // key = ff name
+  // Empty key = base graph
+  map<string, GraphConfigWithHash> configs = 1;
+}
+
+message GraphConfigWithHash {
+  GraphConfig config = 1;
+  string config_hash = 2;
+}
+
+message

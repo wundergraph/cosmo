@@ -1,0 +1,487 @@
+syntax = "proto3";
+
+package wg.cosmo.common;
+
+import "wg/cosmo/common/common.proto";
+
+// ---------------------------------------------------------------------------
+// Configuration variables
+// ---------------------------------------------------------------------------
+
+enum ConfigurationVariableKind {
+  STATIC_CONFIGURATION_VARIABLE = 0;
+  ENV_CONFIGURATION_VARIABLE = 1;
+  PLACEHOLDER_CONFIGURATION_VARIABLE = 2;
+}
+
+message ConfigurationVariable {
+  ConfigurationVariableKind kind = 1;
+  string static_variable_content = 2;
+  string environment_variable_name = 3;
+  string environment_variable_default_value = 4;
+  string placeholder_variable_name = 5;
+};
+
+// ---------------------------------------------------------------------------
+// HTTP / fetch primitives
+// ---------------------------------------------------------------------------
+
+enum HTTPMethod {
+  GET = 0;
+  POST = 1;
+  PUT = 2;
+  DELETE = 3;
+  OPTIONS = 4;
+}
+
+message HTTPHeader {
+  repeated ConfigurationVariable values = 1;
+}
+
+message URLQueryConfiguration {
+  string name = 1;
+  string value = 2;
+}
+
+message MTLSConfiguration {
+  ConfigurationVariable key = 1;
+  ConfigurationVariable cert = 2;
+  bool insecureSkipVerify = 3;
+}
+
+message FetchConfiguration {
+  // You should either configure url OR a combination of baseURL and path
+  // If url resolves to a non empty string, it takes precedence over baseURL and path
+  // If url resolves to an empty string, the url will be configured as "{{baseURL}}{{path}}"
+  ConfigurationVariable url = 1;
+  HTTPMethod method = 2;
+  map<string, HTTPHeader> header = 3;
+  ConfigurationVariable body = 4;
+  repeated URLQueryConfiguration query = 5;
+  // urlEncodeBody defines whether the body should be URL encoded or not
+  // by default, the body will be JSON encoded
+  // setting urlEncodeBody to true will render the body empty,
+  // the Header Content-Type will be set to application/x-www-form-urlencoded,
+  // and the body will be URL encoded and set as the URL Query String
+  bool url_encode_body = 7;
+  MTLSConfiguration mtls = 8;
+  ConfigurationVariable base_url = 9;
+  ConfigurationVariable path = 10;
+  optional ConfigurationVariable http_proxy_url = 11;
+}
+
+// ---------------------------------------------------------------------------
+// GraphQL subscription / federation
+// ---------------------------------------------------------------------------
+
+message GraphQLSubscriptionConfiguration {
+  bool enabled = 1;
+  ConfigurationVariable url = 2;
+  /* @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. */
+  optional bool useSSE = 3;
+  optional GraphQLSubscriptionProtocol protocol = 4;
+  optional GraphQLWebsocketSubprotocol websocketSubprotocol = 5;
+}
+
+message GraphQLFederationConfiguration {
+  bool enabled = 1;
+  string serviceSdl = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Interned strings / scalar type helpers
+// ---------------------------------------------------------------------------
+
+message InternedString {
+  // key to index into EngineConfiguration.string_storage
+  string key = 1;
+}
+
+message SingleTypeField {
+  string type_name = 1;
+  string field_name = 2;
+}
+
+// ---------------------------------------------------------------------------
+// gRPC support types
+// ---------------------------------------------------------------------------
+
+message ImageReference {
+  string repository = 1; // {organization_id}/{subgraph_id}
+  string reference = 2; // v1
+}
+
+message PluginConfiguration {
+  // Plugin name
+  string name = 1;
+  // Plugin version
+  string version = 2;
+  optional ImageReference image_reference = 3;
+}
+
+// Defines mapping for a field argument
+message ArgumentMapping {
+  // Original GraphQL argument name
+  string original = 1;
+  // Mapped gRPC field name
+  string mapped = 2;
+}
+
+// Defines mapping for a single field
+message FieldMapping {
+  // Original GraphQL field name
+  string original = 1;
+  // Mapped gRPC field name
+  string mapped = 2;
+  // Mappings for field arguments
+  repeated ArgumentMapping argument_mappings = 3;
+}
+
+// Defines mapping for required fields
+message RequiredFieldMapping {
+  FieldMapping field_mapping = 1;
+  // Mapped gRPC method name
+  string rpc = 2;
+  // gRPC request message type name
+  string request = 3;
+  // gRPC response message type name
+  string response = 4;
+}
+
+// Defines mapping between GraphQL type fields and gRPC message fields
+message TypeFieldMapping {
+  // GraphQL type name
+  string type = 1;
+  // Mappings for each field in the type
+  repeated FieldMapping field_mappings = 2;
+}
+
+// Defines the type of GraphQL operation
+enum OperationType {
+  OPERATION_TYPE_UNSPECIFIED = 0;
+  // Query operation
+  OPERATION_TYPE_QUERY = 1;
+  // Mutation operation
+  OPERATION_TYPE_MUTATION = 2;
+  // Subscription operation
+  OPERATION_TYPE_SUBSCRIPTION = 3;
+}
+
+// Defines mapping between a GraphQL operation and a gRPC method
+message OperationMapping {
+  // GraphQL operation type: Query, Mutation, or Subscription
+  OperationType type = 1;
+  // Original GraphQL field name
+  string original = 2;
+  // Mapped gRPC method name
+  string mapped = 3;
+  // gRPC request message type name
+  string request = 4;
+  // gRPC response message type name
+  string response = 5;
+}
+
+message EnumValueMapping {
+  string original = 1;
+  string mapped = 2;
+}
+
+message EnumMapping {
+  string type = 1;
+  repeated EnumValueMapping values = 2;
+}
+
+// Defines the type of lookup operation
+enum LookupType {
+  // Unspecified lookup type
+  LOOKUP_TYPE_UNSPECIFIED = 0;
+  // Lookup type for field resolution
+  LOOKUP_TYPE_RESOLVE = 1;
+  // Lookup type for the @requires directive
+  LOOKUP_TYPE_REQUIRES = 2;
+}
+
+// Defines mapping for a lookup field
+message LookupFieldMapping {
+  // GraphQL type name
+  string type = 1;
+  // Mapping for the lookup field
+  FieldMapping field_mapping = 2;
+}
+
+// Defines mapping for a lookup operation
+message LookupMapping {
+  // Type of lookup operation
+  LookupType type = 1;
+  // Mappings for GraphQL type fields to gRPC message fields
+  LookupFieldMapping lookup_mapping = 2;
+  // Mapped gRPC method name
+  string rpc = 3;
+  // Mapped gRPC request message type name
+  string request = 4;
+  // Mapped gRPC response message type name
+  string response = 5;
+}
+
+// Defines mapping for entity resolution
+message EntityMapping {
+  // GraphQL type name
+  string type_name = 1;
+  // Kind of entity mapping: "entity", "requires", or "with_arguments"
+  string kind = 2;
+  // Key field that uniquely identifies the entity
+  string key = 3;
+  // gRPC method name for entity resolution
+  string rpc = 4;
+  // gRPC request message type name
+  string request = 5;
+  // gRPC response message type name
+  string response = 6;
+  // Mappings for required fields
+  repeated RequiredFieldMapping required_field_mappings = 7;
+}
+
+// Defines mapping for a gRPC service
+message GRPCMapping {
+  // Version of the mapping format
+  int32 version = 1;
+  // The main gRPC service name
+  string service = 2;
+  // Mappings for GraphQL operations to gRPC RPCs
+  repeated OperationMapping operation_mappings = 3;
+  // Mappings for GraphQL entities to gRPC service methods
+  repeated EntityMapping entity_mappings = 4;
+  // Mappings for GraphQL type fields to gRPC message fields
+  repeated TypeFieldMapping type_field_mappings = 5;
+  // Mappings for GraphQL enum values to gRPC enum values
+  repeated EnumMapping enum_mappings = 6;
+  // Mappings for GraphQL resolve operations to gRPC service methods
+  repeated LookupMapping resolve_mappings = 7;
+}
+
+message GRPCConfiguration {
+  GRPCMapping mapping = 1;
+  string proto_schema = 2;
+  PluginConfiguration plugin = 3;
+}
+
+// ---------------------------------------------------------------------------
+// Data source custom configurations
+// ---------------------------------------------------------------------------
+
+message DataSourceCustom_GraphQL {
+  FetchConfiguration fetch = 1;
+  GraphQLSubscriptionConfiguration subscription = 2;
+  GraphQLFederationConfiguration federation = 3;
+  InternedString upstream_schema = 4;
+  repeated SingleTypeField custom_scalar_type_fields = 6;
+  GRPCConfiguration grpc = 7;
+}
+
+message DataSourceCustom_Static {
+  ConfigurationVariable data = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Event-driven data sources
+// ---------------------------------------------------------------------------
+
+enum EventType {
+  PUBLISH = 0;
+  REQUEST = 1;
+  SUBSCRIBE = 2;
+}
+
+message EngineEventConfiguration {
+  string provider_id = 1;
+  EventType type = 2;
+  string type_name = 3;
+  string field_name = 4;
+}
+
+message NatsStreamConfiguration {
+  string consumer_name = 1;
+  string stream_name = 2;
+  int32 consumer_inactive_threshold = 3;
+}
+
+message NatsEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string subjects = 2;
+  NatsStreamConfiguration stream_configuration = 3;
+}
+
+message KafkaEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string topics = 2;
+}
+
+message RedisEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string channels = 2;
+}
+
+message DataSourceCustomEvents {
+  repeated NatsEventConfiguration nats = 1;
+  repeated KafkaEventConfiguration kafka = 2;
+  repeated RedisEventConfiguration redis = 3;
+}
+
+// ---------------------------------------------------------------------------
+// Shared field / type helpers
+// ---------------------------------------------------------------------------
+
+message DirectiveConfiguration {
+  string directive_name = 1;
+  string rename_to = 2;
+}
+
+message EntityInterfaceConfiguration {
+  string interface_type_name = 1;
+  repeated string concrete_type_names = 2;
+}
+
+message TypeField {
+  string type_name = 1;
+  repeated string field_names = 2;
+  repeated string external_field_names = 3;
+  repeated string require_fetch_reasons_field_names = 4;
+}
+
+message FieldCoordinates {
+  string field_name = 1;
+  string type_name = 2;
+}
+
+message FieldSetCondition {
+  repeated FieldCoordinates field_coordinates_path = 1;
+  repeated string field_path = 2;
+}
+
+message RequiredField {
+  string type_name = 1;
+  string field_name = 2;
+  string selection_set = 3;
+  bool disable_entity_resolver = 4;
+  repeated FieldSetCondition conditions = 5;
+}
+
+// ---------------------------------------------------------------------------
+// Cost configuration
+// ---------------------------------------------------------------------------
+
+message FieldWeightConfiguration {
+  string type_name = 1;
+  string field_name = 2;
+  optional int32 weight = 3;
+  map<string, int32> argument_weights = 4;
+  map<string, int32> directive_argument_weights = 5;
+}
+
+message FieldListSizeConfiguration {
+  string type_name = 1;
+  string field_name = 2;
+  optional int32 assumed_size = 3;
+  repeated string slicing_arguments = 4;
+  repeated string sized_fields = 5;
+  optional bool require_one_slicing_argument = 6;
+}
+
+message CostConfiguration {
+  repeated FieldWeightConfiguration field_weights = 1;
+  repeated FieldListSizeConfiguration list_sizes = 2;
+  map<string, int32> type_weights = 3;
+  map<string, int32> directive_argument_weights = 4;
+}
+
+// ---------------------------------------------------------------------------
+// Data source configuration
+// ---------------------------------------------------------------------------
+
+enum DataSourceKind {
+  STATIC = 0;
+  GRAPHQL = 1;
+  PUBSUB = 2;
+}
+
+message DataSourceConfiguration {
+  DataSourceKind kind = 1;
+  repeated TypeField root_nodes = 2;
+  repeated TypeField child_nodes = 3;
+  bool override_field_path_from_alias = 4;
+  DataSourceCustom_GraphQL custom_graphql = 5;
+  DataSourceCustom_Static custom_static = 6;
+  repeated DirectiveConfiguration directives = 7;
+  int64 request_timeout_seconds = 8;
+  string id = 9;
+  repeated RequiredField keys = 10;
+  repeated RequiredField provides = 11;
+  repeated RequiredField requires = 12;
+  DataSourceCustomEvents custom_events = 13;
+  repeated EntityInterfaceConfiguration entity_interfaces = 14;
+  repeated EntityInterfaceConfiguration interface_objects = 15;
+  CostConfiguration cost_configuration = 16;
+}
+
+// ---------------------------------------------------------------------------
+// Field / type configuration
+// ---------------------------------------------------------------------------
+
+enum ArgumentSource {
+  OBJECT_FIELD = 0;
+  FIELD_ARGUMENT = 1;
+}
+
+message ArgumentConfiguration {
+  string name = 1;
+  ArgumentSource source_type = 2;
+}
+
+message Scopes {
+  repeated string required_and_scopes = 1;
+}
+
+message AuthorizationConfiguration {
+  bool requires_authentication = 1;
+  repeated Scopes required_or_scopes = 2;
+  repeated Scopes required_or_scopes_by_or = 3;
+}
+
+message SubscriptionFieldCondition {
+  repeated string field_path = 1;
+  string json = 2;
+}
+
+message SubscriptionFilterCondition {
+  repeated SubscriptionFilterCondition and = 1;
+  optional SubscriptionFieldCondition in = 2;
+  optional SubscriptionFilterCondition not = 3;
+  repeated SubscriptionFilterCondition or = 4;
+}
+
+message FieldConfiguration {
+  string type_name = 1;
+  string field_name = 2;
+  repeated ArgumentConfiguration arguments_configuration = 3;
+  AuthorizationConfiguration authorization_configuration = 4;
+  optional SubscriptionFilterCondition subscription_filter_condition = 5;
+}
+
+message TypeConfiguration {
+  string type_name = 1;
+  string rename_to = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Engine configuration (root)
+// ---------------------------------------------------------------------------
+
+message EngineConfiguration {
+  int64 defaultFlushInterval = 1;
+  repeated DataSourceConfiguration datasource_configurations = 2;
+  repeated FieldConfiguration field_configurations = 3;
+  string graphqlSchema = 4;
+  repeated TypeConfiguration type_configurations = 5;
+  map<string, string> string_storage = 6;
+  optional string graphql_client_schema = 7;
+}
