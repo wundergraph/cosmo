@@ -11,7 +11,7 @@ import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
-import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
+import fastifyMetrics from './plugins/metrics.js';
 import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import fastifyRedis from './plugins/redis.js';
@@ -60,6 +60,7 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
+import { createNotifyOrganizationDeletionQueuedWorker } from './workers/NotifyOrganizationDeletionQueuedWorker.js';
 import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composition/composeGraphs.pool.js';
 
 export interface BuildConfig {
@@ -460,6 +461,15 @@ export default async function build(opts: BuildConfig) {
       blobStorage,
       platformWebhooks,
       deleteOrganizationAuditLogsQueue,
+    }),
+  );
+
+  bullWorkers.push(
+    createNotifyOrganizationDeletionQueuedWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      mailer: mailerClient,
     }),
   );
 

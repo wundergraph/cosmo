@@ -302,3 +302,10 @@ jobs:
   seedOrganization:
     # -- Adds additional labels to the job (see: .Values.global.seed)
     additionalLabels: {}
+  deleteInactiveOrgs:
+    # -- Enables the job to be run
+    enabled: true
+    # -- Cron schedule (default: 1st of every month at midnight UTC)
+    schedule: '0 0 1 * *'
+    # -- Adds additional labels to the job (see: .Values.global.seed)
+    additionalLabels: {}
