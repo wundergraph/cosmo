@@ -199,7 +199,9 @@
       "BaseURL": "http://localhost:5025"
     },
     "Storage": {
-      "ProviderID": "mcp"
+      "ProviderID": "mcp",
+      "Watch": false,
+      "WatchInterval": 1000000000
     },
     "Session": {
       "Stateless": true
@@ -225,7 +227,8 @@
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
     },
-    "ResourceDocumentation": ""
+    "ResourceDocumentation": "",
+    "Servers": null
   },
   "ConnectRPC": {
     "Enabled": false,

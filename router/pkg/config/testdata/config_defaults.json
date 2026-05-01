@@ -154,7 +154,9 @@
       "BaseURL": ""
     },
     "Storage": {
-      "ProviderID": ""
+      "ProviderID": "",
+      "Watch": false,
+      "WatchInterval": 1000000000
     },
     "Session": {
       "Stateless": true
@@ -180,7 +182,8 @@
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
     },
-    "ResourceDocumentation": ""
+    "ResourceDocumentation": "",
+    "Servers": null
   },
   "ConnectRPC": {
     "Enabled": false,
