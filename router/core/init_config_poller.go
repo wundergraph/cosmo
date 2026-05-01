@@ -29,6 +29,7 @@ func getConfigClient(r *Router, registry *ProviderRegistry, providerID string, i
 				Logger:                     r.logger,
 				SignatureKey:               r.routerConfigPollerConfig.GraphSignKey,
 				RouterCompatibilityVersion: execution_config.RouterCompatibilityVersionThreshold,
+				FallbackEndpoint:           provider.FallbackURL,
 			})
 		if err != nil {
 			return nil, err
@@ -103,6 +104,7 @@ func getConfigClient(r *Router, registry *ProviderRegistry, providerID string, i
 		Logger:                     r.logger,
 		SignatureKey:               r.routerConfigPollerConfig.GraphSignKey,
 		RouterCompatibilityVersion: execution_config.RouterCompatibilityVersionThreshold,
+		FallbackEndpoint:           r.cdnConfig.FallbackURL,
 	})
 	if err != nil {
 		return nil, err

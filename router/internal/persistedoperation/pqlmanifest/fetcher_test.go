@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,6 +24,15 @@ func newTestFetcher(serverURL string) *Fetcher {
 		httpClient:          &http.Client{},
 		logger:              zap.NewNop(),
 	}
+}
+
+func newTestFetcherWithFallback(primaryURL, fallbackURL string) *Fetcher {
+	f := newTestFetcher(primaryURL)
+	if fallbackURL != "" {
+		fu, _ := url.Parse(fallbackURL)
+		f.cdnFallbackURL = fu
+	}
+	return f
 }
 
 // mustMarshalManifest marshals a Manifest to JSON, panicking on error.
@@ -206,4 +216,190 @@ func TestFetch_UsesGETMethod(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, "GET", receivedMethod)
+}
+
+func TestFetch_Fallback_503PrimaryFallsBackToSecondary(t *testing.T) {
+	t.Parallel()
+	m := &Manifest{
+		Version:     1,
+		Revision:    "rev-fallback",
+		GeneratedAt: "2025-01-01T00:00:00Z",
+		Operations:  map[string]string{"hash1": "query { fallback }"},
+	}
+
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer primary.Close()
+
+	fallback := httptest.NewServer(newETagCDNHandler(m))
+	defer fallback.Close()
+
+	f := newTestFetcherWithFallback(primary.URL, fallback.URL)
+	result, changed, err := f.Fetch(context.Background(), "")
+
+	require.NoError(t, err)
+	require.True(t, changed)
+	require.NotNil(t, result)
+	require.Equal(t, "rev-fallback", result.Revision)
+	require.Equal(t, "query { fallback }", result.Operations["hash1"])
+}
+
+func TestFetch_Fallback_429PrimaryFallsBackToSecondary(t *testing.T) {
+	t.Parallel()
+	m := &Manifest{
+		Version:     1,
+		Revision:    "rev-429",
+		GeneratedAt: "2025-01-01T00:00:00Z",
+		Operations:  map[string]string{"hash1": "query { rate_limited }"},
+	}
+
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer primary.Close()
+
+	fallback := httptest.NewServer(newETagCDNHandler(m))
+	defer fallback.Close()
+
+	f := newTestFetcherWithFallback(primary.URL, fallback.URL)
+	result, changed, err := f.Fetch(context.Background(), "")
+
+	require.NoError(t, err)
+	require.True(t, changed)
+	require.NotNil(t, result)
+}
+
+func TestFetch_Fallback_NotTriggeredOn404(t *testing.T) {
+	t.Parallel()
+	var fallbackCalled atomic.Bool
+
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer primary.Close()
+
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fallbackCalled.Store(true)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer fallback.Close()
+
+	f := newTestFetcherWithFallback(primary.URL, fallback.URL)
+	_, _, err := f.Fetch(context.Background(), "")
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not found")
+	require.False(t, fallbackCalled.Load())
+}
+
+func TestFetch_Fallback_NotTriggeredOn401(t *testing.T) {
+	t.Parallel()
+	var fallbackCalled atomic.Bool
+
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer primary.Close()
+
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fallbackCalled.Store(true)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer fallback.Close()
+
+	f := newTestFetcherWithFallback(primary.URL, fallback.URL)
+	_, _, err := f.Fetch(context.Background(), "")
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "authenticate")
+	require.False(t, fallbackCalled.Load())
+}
+
+func TestFetch_Fallback_NetworkErrorFallsBack(t *testing.T) {
+	t.Parallel()
+	m := &Manifest{
+		Version:     1,
+		Revision:    "rev-net",
+		GeneratedAt: "2025-01-01T00:00:00Z",
+		Operations:  map[string]string{"hash1": "query { net }"},
+	}
+
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	primary.Close() // close immediately to cause network error
+
+	fallback := httptest.NewServer(newETagCDNHandler(m))
+	defer fallback.Close()
+
+	f := newTestFetcherWithFallback(primary.URL, fallback.URL)
+	result, changed, err := f.Fetch(context.Background(), "")
+
+	require.NoError(t, err)
+	require.True(t, changed)
+	require.NotNil(t, result)
+}
+
+func TestFetch_Fallback_NetworkErrorWithoutFallbackReturnsError(t *testing.T) {
+	t.Parallel()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	primary.Close()
+
+	f := newTestFetcher(primary.URL) // no fallback
+	_, _, err := f.Fetch(context.Background(), "")
+
+	require.Error(t, err)
+}
+
+func TestFetch_Fallback_503WithoutFallbackReturnsError(t *testing.T) {
+	t.Parallel()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer primary.Close()
+
+	f := newTestFetcher(primary.URL) // no fallback
+	_, _, err := f.Fetch(context.Background(), "")
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "503")
+}
+
+func TestFetch_Fallback_503Then404PreservesPrimaryError(t *testing.T) {
+	t.Parallel()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer primary.Close()
+
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer fallback.Close()
+
+	f := newTestFetcherWithFallback(primary.URL, fallback.URL)
+	_, _, err := f.Fetch(context.Background(), "")
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "primary CDN failed")
+	require.Contains(t, err.Error(), "503")
+}
+
+func TestFetch_Fallback_503Then401PreservesPrimaryError(t *testing.T) {
+	t.Parallel()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer primary.Close()
+
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer fallback.Close()
+
+	f := newTestFetcherWithFallback(primary.URL, fallback.URL)
+	_, _, err := f.Fetch(context.Background(), "")
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "primary CDN failed")
+	require.Contains(t, err.Error(), "503")
 }

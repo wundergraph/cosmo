@@ -48,6 +48,11 @@
                 "type": "string",
                 "description": "The provider URL. The URL is used to connect to the provider.",
                 "format": "url"
+              },
+              "fallback_url": {
+                "type": "string",
+                "description": "The fallback provider URL. Used when the primary URL fails with a server error (5xx), rate limiting (429), or a network/connection failure.",
+                "format": "url"
               }
             }
           }
@@ -2325,6 +2330,11 @@
           "type": "string",
           "format": "http-url",
           "description": "The URL of the CDN. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'."
+        },
+        "fallback_url": {
+          "type": "string",
+          "format": "http-url",
+          "description": "The fallback URL of the CDN. Used when the primary URL fails with a server error (5xx), rate limiting (429), or a network/connection failure."
         },
         "cache_size": {
           "type": "string",
