@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.58.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.1...@wundergraph/composition@0.58.2) (2026-05-01)
+
+### Bug Fixes
+
+* import set methods explicitly ([#2812](https://github.com/wundergraph/cosmo/issues/2812)) ([aa5cae1](https://github.com/wundergraph/cosmo/commit/aa5cae10723fef95fceaa89995233529c39dbc01)) (@Aenimus)
+
 ## [0.58.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.0...@wundergraph/composition@0.58.1) (2026-05-01)
 
 **Note:** Version bump only for package @wundergraph/composition
