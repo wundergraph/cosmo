@@ -28,7 +28,8 @@ export type FeatureIds =
   | 'security'
   | 'sso'
   | 'subgraph-check-extensions'
-  | 'support';
+  | 'support'
+  | 'split-config-loading';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -498,6 +499,7 @@ export type AuthContext = {
 export interface GraphApiKeyJwtPayload extends JWTPayload {
   federated_graph_id: string;
   organization_id: string;
+  features?: string[];
 }
 
 export interface PluginAccess {
