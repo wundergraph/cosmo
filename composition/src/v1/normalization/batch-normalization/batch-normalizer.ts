@@ -287,6 +287,15 @@ export class BatchNormalizer {
     }
 
     this.errors.push(...this.validationErrors);
+
+    if (this.errors.length > 0) {
+      return {
+        errors: this.errors,
+        success: false,
+        warnings: this.warnings,
+      };
+    }
+
     this.handleOverrideConfigurationData();
 
     if (this.errors.length > 0) {

@@ -1,1 +1,3 @@
 testdata/main/**/*
+cmd/config-validator/router-configs/**/*
+cmd/config-validator/routerconfigs/**/*
