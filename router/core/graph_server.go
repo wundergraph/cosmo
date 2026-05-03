@@ -208,6 +208,11 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			return nil, err
 		}
 		baseOtelAttributes = append(baseOtelAttributes, otel.WgFederatedGraphID.String(claims.FederatedGraphID))
+
+		if claims.HasFeature(rjwt.FeatureSplitConfigLoading) {
+			// TODO: implement split-config-loading path
+			s.logger.Info("split-config-loading feature enabled")
+		}
 	}
 
 	s.baseOtelAttributes = baseOtelAttributes
