@@ -29,6 +29,12 @@ message RouterConfig {
   string compatibility_version = 5;
 }
 
+message ActiveGraphs {
+  // key = feature flag name or empty if base graph
+  // value = hash of engine config
+  map<string, string> graph_configs = 1;
+}
+
 message Response {
   wg.cosmo.common.EnumStatusCode code = 1;
   // details is an optional field which can be used to provide more details about the error.
