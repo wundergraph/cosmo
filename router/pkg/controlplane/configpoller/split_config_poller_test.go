@@ -152,8 +152,6 @@ func TestSplitGetRouterConfig_ConfigFetchError(t *testing.T) {
 // It extracts the subscribe callback by using a fake controlplane.Poller.
 func pollOnce(p *splitConfigPoller, handler func(*nodev1.RouterConfig, string) error) {
 	var tickFn func()
-
-	// Temporarily replace the poller with one that captures the tick function.
 	p.poller = &capturingPoller{capture: &tickFn}
 	p.Subscribe(context.Background(), handler)
 	if tickFn != nil {

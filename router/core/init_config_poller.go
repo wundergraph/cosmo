@@ -135,13 +135,11 @@ func InitializeConfigPoller(r *Router, registry *ProviderRegistry) (*configpolle
 
 	if hasSplitCfgFeature {
 		providerID := r.routerConfigPollerConfig.Storage.ProviderID
-		if providerID != "" {
-			r.logger.Info("split-config-loading feature is enabled but a custom storage provider is configured; falling back to regular config polling",
-				zap.String("provider_id", providerID),
-			)
-		} else {
+		if providerID == "" {
 			return newSplitConfigPoller(r)
 		}
+		r.logger.Info("split-config-loading feature is enabled but a custom storage provider is configured; falling back to regular config polling",
+			zap.String("provider_id", providerID))
 	}
 
 	primaryClient, err := getConfigClient(r, registry, r.routerConfigPollerConfig.Storage.ProviderID, false)
