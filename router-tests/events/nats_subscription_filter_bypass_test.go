@@ -138,7 +138,7 @@ func TestNatsSubscriptionFilterBypassIfValuesNull(t *testing.T) {
 			RouterConfigJSONTemplate: cfg,
 			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Second
+				cfg.WebSocketServerReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
@@ -195,7 +195,7 @@ func TestNatsSubscriptionFilterBypassIfValuesNull(t *testing.T) {
 			RouterConfigJSONTemplate: cfg,
 			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Second
+				cfg.WebSocketServerReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// `$filterById` is declared on the operation but never supplied through
@@ -247,7 +247,7 @@ func TestNatsSubscriptionFilterBypassIfValuesNull(t *testing.T) {
 			RouterConfigJSONTemplate: cfg,
 			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Second
+				cfg.WebSocketServerReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
@@ -295,7 +295,7 @@ func TestNatsSubscriptionFilterBypassIfValuesNull(t *testing.T) {
 			RouterConfigJSONTemplate: cfg,
 			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Second
+				cfg.WebSocketServerReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
