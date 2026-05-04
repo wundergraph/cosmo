@@ -5,8 +5,6 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"hash"
@@ -79,7 +77,7 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 	return f, nil
 }
 
-// get performs an authenticated GET request to the given CDN path, validates the
+// get performs an authenticated HTTP GET request to the given CDN path, validates the
 // optional HMAC signature, and returns the (decompressed) response body.
 func (f *SplitFetcher) get(ctx context.Context, path string) ([]byte, error) {
 	target := f.cdnURL.ResolveReference(&url.URL{Path: path})
@@ -134,38 +132,9 @@ func (f *SplitFetcher) get(ctx context.Context, path string) ([]byte, error) {
 
 	// Validate HMAC signature when a key is configured.
 	if f.hash != nil {
-		configSignature := resp.Header.Get(sigResponseHeaderName)
-		if configSignature == "" {
-			f.logger.Error(
-				"Signature header not found in CDN response. Ensure that your Admission Controller was able to sign the config.",
-				zap.Error(ErrMissingSignatureHeader),
-			)
-			return nil, ErrMissingSignatureHeader
+		if err := validateHMACSignature(f.hash, body, resp.Header.Get(sigResponseHeaderName), f.logger, f.federatedGraphID); err != nil {
+			return nil, err
 		}
-
-		if _, err := f.hash.Write(body); err != nil {
-			return nil, fmt.Errorf("could not write config body to hmac: %w", err)
-		}
-		dataHmac := f.hash.Sum(nil)
-		f.hash.Reset()
-
-		rawSignature, err := base64.StdEncoding.DecodeString(configSignature)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode signature: %w", err)
-		}
-
-		if subtle.ConstantTimeCompare(rawSignature, dataHmac) != 1 {
-			f.logger.Error(
-				"Invalid config signature, potential tampering detected.",
-				zap.Error(ErrInvalidSignature),
-			)
-			return nil, ErrInvalidSignature
-		}
-
-		f.logger.Info("Config signature validation successful",
-			zap.String("federatedGraphID", f.federatedGraphID),
-			zap.String("signature", configSignature),
-		)
 	}
 
 	return body, nil

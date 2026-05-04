@@ -6,8 +6,6 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -184,45 +182,10 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 		return nil, errors.New("empty response body")
 	}
 
-	/**
-	* If a signature key is set, we need to validate the signature of the received config
-	 */
-
 	if cdn.hash != nil {
-		configSignature := resp.Header.Get(sigResponseHeaderName)
-		if configSignature == "" {
-			cdn.logger.Error(
-				"Signature header not found in CDN response. Ensure that your Admission Controller was able to sign the config. Open the compositions page in the Studio to check the status of the last deployment",
-				zap.Error(ErrMissingSignatureHeader),
-			)
-			return nil, ErrMissingSignatureHeader
+		if err := validateHMACSignature(cdn.hash, body, resp.Header.Get(sigResponseHeaderName), cdn.logger, cdn.federatedGraphID); err != nil {
+			return nil, err
 		}
-
-		// create a signature of the received config body
-		if _, err := cdn.hash.Write(body); err != nil {
-			return nil, fmt.Errorf("could not write config body to hmac: %w", err)
-		}
-		dataHmac := cdn.hash.Sum(nil)
-		cdn.hash.Reset()
-
-		// compare received signature with the one we calculated with the private signature key
-		rawSignature, err := base64.StdEncoding.DecodeString(configSignature)
-		if err != nil {
-			return nil, fmt.Errorf("could not hex decode signature key: %w", err)
-		}
-
-		if subtle.ConstantTimeCompare(rawSignature, dataHmac) != 1 {
-			cdn.logger.Error(
-				"Invalid config signature, potential tampering detected. Ensure that your Admission Controller has signed the config correctly. Open the compositions page in the Studio to check the status of the last deployment",
-				zap.Error(ErrInvalidSignature),
-			)
-			return nil, ErrInvalidSignature
-		}
-
-		cdn.logger.Info("Config signature validation successful",
-			zap.String("federatedGraphID", cdn.federatedGraphID),
-			zap.String("signature", configSignature),
-		)
 	}
 
 	return body, nil
