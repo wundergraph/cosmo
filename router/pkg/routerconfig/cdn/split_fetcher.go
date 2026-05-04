@@ -43,6 +43,10 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 		return nil, errors.New("token is required for split config fetcher")
 	}
 
+	if opts == nil {
+		opts = &Options{}
+	}
+
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
