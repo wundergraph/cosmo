@@ -4,10 +4,6 @@ inputs:
   node-version:
     description: 'The node version to install'
     required: false
-  working-directory:
-    description: 'The working directory of your node package'
-    default: '.'
-    required: false
 
 runs:
   using: 'composite'
