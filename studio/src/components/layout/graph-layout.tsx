@@ -182,7 +182,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
           description={`${data?.response?.details}.\nClick the button to go back.`}
           actions={
             <Button asChild>
-              <Link href="/">Go home</Link>
+              <Link href={`/${organizationSlug}`}>Go home</Link>
             </Button>
           }
         />
