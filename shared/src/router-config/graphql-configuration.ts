@@ -293,10 +293,14 @@ export function generateSubscriptionFilterCondition(
     return;
   }
   if (condition.in !== undefined) {
-    protoMessage.in = new SubscriptionFieldCondition({
+    const fieldCondition = new SubscriptionFieldCondition({
       fieldPath: condition.in.fieldPath,
       json: JSON.stringify(condition.in.values),
     });
+    if (condition.in.bypassIfValuesNull === true) {
+      fieldCondition.bypassIfValuesNull = true;
+    }
+    protoMessage.in = fieldCondition;
     return;
   }
   if (condition.not !== undefined) {

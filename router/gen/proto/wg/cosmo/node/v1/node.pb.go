@@ -4183,11 +4183,12 @@ func (x *SingleTypeField) GetFieldName() string {
 }
 
 type SubscriptionFieldCondition struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FieldPath     []string               `protobuf:"bytes,1,rep,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
-	Json          string                 `protobuf:"bytes,2,opt,name=json,proto3" json:"json,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	FieldPath          []string               `protobuf:"bytes,1,rep,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	Json               string                 `protobuf:"bytes,2,opt,name=json,proto3" json:"json,omitempty"`
+	BypassIfValuesNull *bool                  `protobuf:"varint,3,opt,name=bypass_if_values_null,json=bypassIfValuesNull,proto3,oneof" json:"bypass_if_values_null,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *SubscriptionFieldCondition) Reset() {
@@ -4232,6 +4233,13 @@ func (x *SubscriptionFieldCondition) GetJson() string {
 		return x.Json
 	}
 	return ""
+}
+
+func (x *SubscriptionFieldCondition) GetBypassIfValuesNull() bool {
+	if x != nil && x.BypassIfValuesNull != nil {
+		return *x.BypassIfValuesNull
+	}
+	return false
 }
 
 type SubscriptionFilterCondition struct {
@@ -4927,11 +4935,13 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\x0fSingleTypeField\x12\x1b\n" +
 	"\ttype_name\x18\x01 \x01(\tR\btypeName\x12\x1d\n" +
 	"\n" +
-	"field_name\x18\x02 \x01(\tR\tfieldName\"O\n" +
+	"field_name\x18\x02 \x01(\tR\tfieldName\"\xa1\x01\n" +
 	"\x1aSubscriptionFieldCondition\x12\x1d\n" +
 	"\n" +
 	"field_path\x18\x01 \x03(\tR\tfieldPath\x12\x12\n" +
-	"\x04json\x18\x02 \x01(\tR\x04json\"\xb5\x02\n" +
+	"\x04json\x18\x02 \x01(\tR\x04json\x126\n" +
+	"\x15bypass_if_values_null\x18\x03 \x01(\bH\x00R\x12bypassIfValuesNull\x88\x01\x01B\x18\n" +
+	"\x16_bypass_if_values_null\"\xb5\x02\n" +
 	"\x1bSubscriptionFilterCondition\x12?\n" +
 	"\x03and\x18\x01 \x03(\v2-.wg.cosmo.node.v1.SubscriptionFilterConditionR\x03and\x12A\n" +
 	"\x02in\x18\x02 \x01(\v2,.wg.cosmo.node.v1.SubscriptionFieldConditionH\x00R\x02in\x88\x01\x01\x12D\n" +
@@ -5229,6 +5239,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 	file_wg_cosmo_node_v1_node_proto_msgTypes[25].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[30].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[55].OneofWrappers = []any{}
+	file_wg_cosmo_node_v1_node_proto_msgTypes[59].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[60].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

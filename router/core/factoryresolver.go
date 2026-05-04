@@ -286,8 +286,9 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 			return nil
 		}
 		output.In = &plan.SubscriptionFieldCondition{
-			FieldPath: input.In.FieldPath,
-			Values:    values,
+			FieldPath:          input.In.FieldPath,
+			Values:             values,
+			BypassIfValuesNull: input.In.GetBypassIfValuesNull(),
 		}
 		return output
 	}
@@ -684,7 +685,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		return out
 	}
 	for _, fw := range costConfig.GetFieldWeights() {
-		w := &plan.FieldWeight{}
+		w := &plan.FieldCost{}
 		if fw.Weight != nil {
 			w.HasWeight = true
 			w.Weight = int(*fw.Weight)

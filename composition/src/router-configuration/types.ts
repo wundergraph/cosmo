@@ -48,6 +48,7 @@ export type EventConfiguration = KafkaEventConfiguration | NatsEventConfiguratio
 export type SubscriptionFilterValue = boolean | null | number | string;
 
 export type SubscriptionFieldCondition = {
+  bypassIfValuesNull?: boolean;
   fieldPath: string[];
   values: SubscriptionFilterValue[];
 };
