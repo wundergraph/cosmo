@@ -79,9 +79,9 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 	return f, nil
 }
 
-// doGET performs an authenticated GET request to the given CDN path, validates the
+// get performs an authenticated GET request to the given CDN path, validates the
 // optional HMAC signature, and returns the (decompressed) response body.
-func (f *SplitFetcher) doGET(ctx context.Context, path string) ([]byte, error) {
+func (f *SplitFetcher) get(ctx context.Context, path string) ([]byte, error) {
 	target := f.cdnURL.ResolveReference(&url.URL{Path: path})
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target.String(), nil)
@@ -174,7 +174,7 @@ func (f *SplitFetcher) doGET(ctx context.Context, path string) ([]byte, error) {
 // FetchMapper fetches the mapper file and returns the active graph configs and their hashes.
 func (f *SplitFetcher) FetchMapper(ctx context.Context) (*nodev1.ActiveGraphs, error) {
 	path := fmt.Sprintf("/%s/%s/manifest/mapper.json", f.organizationID, f.federatedGraphID)
-	body, err := f.doGET(ctx, path)
+	body, err := f.get(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch mapper: %w", err)
 	}
@@ -202,7 +202,7 @@ func (f *SplitFetcher) FetchConfig(ctx context.Context, featureFlagName string) 
 		)
 	}
 
-	body, err := f.doGET(ctx, path)
+	body, err := f.get(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch config for %q: %w", featureFlagName, err)
 	}
