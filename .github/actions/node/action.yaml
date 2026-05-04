@@ -1,66 +1,71 @@
-name: 'Setup Node'
-description: 'This action install node and cache modules. It uses pnpm as package manager.'
+name: "Setup Node"
+description: "This action install node and cache modules. It uses pnpm as package manager."
 inputs:
   node-version:
-    description: 'The node version to install'
+    description: "The node version to install"
     required: false
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Use default versions
       id: runtime-versions
       env:
         nodeVersionOverride: ${{ inputs.node-version }}
-      shell: node
+      shell: bash
       run: |
-        // Runtime versions are defined once for the monorepo at the root.
-        const pkgPath = path.join(process.env.GITHUB_WORKSPACE, 'package.json');
-        const re = /^[>=<]+/;
-        const nodeVersionOverride = process.env.nodeVersionOverride;
-        let nodeVersion = "";
-        let pnpmVersion = "";
-        let pkg = {};
+        set -euo pipefail
 
-        try {
-          const pkgFile = await fs.readFile(pkgPath, "utf-8");
-          pkg = JSON.parse(pkgFile);
-        } catch (err) {
-          console.error(`Failed to read 'package.json' at path ${pkgPath}`);
-          throw err
+        strip_range_prefix() {
+          local version="$1"
+          while [[ "$version" == [\<\=\>]* ]]; do
+            version="${version:1}"
+          done
+          printf '%s' "$version"
         }
 
-        const { engines: { node } = {}, packageManager } = pkg;
+        # Runtime versions are defined once for the monorepo at the root.
+        pkgPath="${GITHUB_WORKSPACE}/package.json"
+        nodeVersion="${nodeVersionOverride:-}"
 
-        if (!nodeVersionOverride) {
-          if (!node) {
-            throw new Error(`Missing field 'engines.node' in ${pkgPath}`)
-          }
+        if [[ ! -f "$pkgPath" ]]; then
+          echo "Failed to read 'package.json' at path ${pkgPath}" >&2
+          exit 1
+        fi
 
-          let hasUnsupportedPrefix = re.test(node);
-          nodeVersion = hasUnsupportedPrefix ? node.replace(re, "") : node;
+        if [[ -z "$nodeVersion" ]]; then
+          nodeVersion=$(jq -r '.engines.node // empty' "$pkgPath")
 
-          if (nodeVersion !== node) {
-            console.info(`Normalizing NodeJS to version ${nodeVersion}.`);
-          }
-        } else {
-          nodeVersion = nodeVersionOverride;
-        }
+          if [[ -z "$nodeVersion" ]]; then
+            echo "Missing field 'engines.node' in ${pkgPath}" >&2
+            exit 1
+          fi
 
-        if (!packageManager) {
-          throw new Error(`Missing field 'packageManager' in ${pkgPath}`)
-        }
+          normalizedNodeVersion=$(strip_range_prefix "$nodeVersion")
 
-        const normalizedPnpmVersion = packageManager.replace(/^pnpm@/, "");
-        const hasUnsupportedPnpmPrefix = re.test(normalizedPnpmVersion);
-        pnpmVersion = hasUnsupportedPnpmPrefix ? normalizedPnpmVersion.replace(re, "") : normalizedPnpmVersion ;
+          if [[ "$normalizedNodeVersion" != "$nodeVersion" ]]; then
+            echo "Normalizing NodeJS to version ${normalizedNodeVersion}."
+          fi
 
-        if (pnpmVersion !== normalizedPnpmVersion) {
-          console.info(`Normalizing pnpm to version ${pnpmVersion}.`);
-        }
+          nodeVersion="$normalizedNodeVersion"
+        fi
 
-        await fs.appendFile(process.env.GITHUB_OUTPUT, `node-version=${nodeVersion}\n`);
-        await fs.appendFile(process.env.GITHUB_OUTPUT, `pnpm-version=${pnpmVersion}\n`);
+        packageManager=$(jq -r '.packageManager // empty' "$pkgPath")
+
+        if [[ -z "$packageManager" ]]; then
+          echo "Missing field 'packageManager' in ${pkgPath}" >&2
+          exit 1
+        fi
+
+        normalizedPnpmVersion="${packageManager#pnpm@}"
+        pnpmVersion=$(strip_range_prefix "$normalizedPnpmVersion")
+
+        if [[ "$pnpmVersion" != "$normalizedPnpmVersion" ]]; then
+          echo "Normalizing pnpm to version ${pnpmVersion}."
+        fi
+
+        printf 'node-version=%s\n' "$nodeVersion" >> "$GITHUB_OUTPUT"
+        printf 'pnpm-version=%s\n' "$pnpmVersion" >> "$GITHUB_OUTPUT"
 
     - uses: actions/setup-node@v4
       with:
