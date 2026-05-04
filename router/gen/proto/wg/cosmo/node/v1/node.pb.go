@@ -671,9 +671,9 @@ func (x *RouterConfig) GetCompatibilityVersion() string {
 
 type ActiveGraphs struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// key = feature flag name or empty if base graph
-	// value = hash of engine config
-	GraphConfigs  map[string]string `protobuf:"bytes,1,rep,name=graph_configs,json=graphConfigs,proto3" json:"graph_configs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// key = feature flag name, empty means base graph
+	// value = hash of engine_config
+	GraphConfigs  map[string]string `protobuf:"bytes,1,rep,name=graphConfigs,proto3" json:"graphConfigs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4685,9 +4685,9 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\tsubgraphs\x18\x03 \x03(\v2\x1a.wg.cosmo.node.v1.SubgraphR\tsubgraphs\x12j\n" +
 	"\x14feature_flag_configs\x18\x04 \x01(\v23.wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigsH\x00R\x12featureFlagConfigs\x88\x01\x01\x123\n" +
 	"\x15compatibility_version\x18\x05 \x01(\tR\x14compatibilityVersionB\x17\n" +
-	"\x15_feature_flag_configs\"\xa6\x01\n" +
-	"\fActiveGraphs\x12U\n" +
-	"\rgraph_configs\x18\x01 \x03(\v20.wg.cosmo.node.v1.ActiveGraphs.GraphConfigsEntryR\fgraphConfigs\x1a?\n" +
+	"\x15_feature_flag_configs\"\xa5\x01\n" +
+	"\fActiveGraphs\x12T\n" +
+	"\fgraphConfigs\x18\x01 \x03(\v20.wg.cosmo.node.v1.ActiveGraphs.GraphConfigsEntryR\fgraphConfigs\x1a?\n" +
 	"\x11GraphConfigsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"j\n" +
@@ -5178,7 +5178,7 @@ var file_wg_cosmo_node_v1_node_proto_depIdxs = []int32{
 	19,  // 3: wg.cosmo.node.v1.RouterConfig.engine_config:type_name -> wg.cosmo.node.v1.EngineConfiguration
 	8,   // 4: wg.cosmo.node.v1.RouterConfig.subgraphs:type_name -> wg.cosmo.node.v1.Subgraph
 	9,   // 5: wg.cosmo.node.v1.RouterConfig.feature_flag_configs:type_name -> wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs
-	77,  // 6: wg.cosmo.node.v1.ActiveGraphs.graph_configs:type_name -> wg.cosmo.node.v1.ActiveGraphs.GraphConfigsEntry
+	77,  // 6: wg.cosmo.node.v1.ActiveGraphs.graphConfigs:type_name -> wg.cosmo.node.v1.ActiveGraphs.GraphConfigsEntry
 	84,  // 7: wg.cosmo.node.v1.Response.code:type_name -> wg.cosmo.common.EnumStatusCode
 	16,  // 8: wg.cosmo.node.v1.RegistrationInfo.account_limits:type_name -> wg.cosmo.node.v1.AccountLimits
 	13,  // 9: wg.cosmo.node.v1.SelfRegisterResponse.response:type_name -> wg.cosmo.node.v1.Response

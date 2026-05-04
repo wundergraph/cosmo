@@ -30,9 +30,9 @@ message RouterConfig {
 }
 
 message ActiveGraphs {
-  // key = feature flag name or empty if base graph
-  // value = hash of engine config
-  map<string, string> graph_configs = 1;
+  // key = feature flag name, empty means base graph
+  // value = hash of engine_config
+  map<string, string> graphConfigs = 1;
 }
 
 message Response {
