@@ -1,27 +1,79 @@
-name: "Setup Node"
-description: "This action install node and cache modules. It uses pnpm as package manager."
+name: 'Setup Node'
+description: 'This action install node and cache modules. It uses pnpm as package manager.'
 inputs:
   node-version:
-    description: "The node version to install (Default: lts)"
-    # TODO: revert to lts/* after 20 is EOL
-    default: "22.x"
+    description: 'The node version to install'
     required: false
   working-directory:
-    description: "The working directory of your node package"
-    default: "."
+    description: 'The working directory of your node package'
+    default: '.'
     required: false
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
+    - name: Use default versions
+      id: runtime-versions
+      env:
+        nodeVersionOverride: ${{ inputs.node-version }}
+      shell: node
+      run: |
+        // Runtime versions are defined once for the monorepo at the root.
+        const pkgPath = path.join(process.env.GITHUB_WORKSPACE, 'package.json');
+        const re = /^[>=<]+/;
+        const nodeVersionOverride = process.env.nodeVersionOverride;
+        let nodeVersion = "";
+        let pnpmVersion = "";
+        let pkg = {};
+
+        try {
+          const pkgFile = await fs.readFile(pkgPath, "utf-8");
+          pkg = JSON.parse(pkgFile);
+        } catch (err) {
+          console.error(`Failed to read 'package.json' at path ${pkgPath}`);
+          throw err
+        }
+
+        const { engines: { node } = {}, packageManager } = pkg;
+
+        if (!nodeVersionOverride) {
+          if (!node) {
+            throw new Error(`Missing field 'engines.node' in ${pkgPath}`)
+          }
+
+          let hasUnsupportedPrefix = re.test(node);
+          nodeVersion = hasUnsupportedPrefix ? node.replace(re, "") : node;
+
+          if (nodeVersion !== node) {
+            console.info(`Normalizing NodeJS to version ${nodeVersion}.`);
+          }
+        } else {
+          nodeVersion = nodeVersionOverride;
+        }
+
+        if (!packageManager) {
+          throw new Error(`Missing field 'packageManager' in ${pkgPath}`)
+        }
+
+        const normalizedPnpmVersion = packageManager.replace(/^pnpm@/, "");
+        const hasUnsupportedPnpmPrefix = re.test(normalizedPnpmVersion);
+        pnpmVersion = hasUnsupportedPnpmPrefix ? normalizedPnpmVersion.replace(re, "") : normalizedPnpmVersion ;
+
+        if (pnpmVersion !== normalizedPnpmVersion) {
+          console.info(`Normalizing pnpm to version ${pnpmVersion}.`);
+        }
+
+        await fs.appendFile(process.env.GITHUB_OUTPUT, `node-version=${nodeVersion}\n`);
+        await fs.appendFile(process.env.GITHUB_OUTPUT, `pnpm-version=${pnpmVersion}\n`);
+
     - uses: actions/setup-node@v4
       with:
-        node-version: ${{ inputs.node-version }}
+        node-version: ${{ steps.runtime-versions.outputs.node-version }}
 
     - uses: pnpm/action-setup@v4.0.0
       id: pnpm-install
       with:
-        version: 9.12.3
+        version: ${{ steps.runtime-versions.outputs.pnpm-version }}
         run_install: false
 
     - name: Get pnpm store directory
