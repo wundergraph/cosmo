@@ -1,6 +1,7 @@
 package cdn
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"crypto/hmac"
@@ -77,15 +78,21 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 	return f, nil
 }
 
-// get performs an authenticated GET request to the given CDN path, validates the
+// post performs an authenticated POST request to the given CDN path, validates the
 // optional HMAC signature, and returns the (decompressed) response body.
-func (f *SplitFetcher) get(ctx context.Context, path string) ([]byte, error) {
+func (f *SplitFetcher) post(ctx context.Context, path string) ([]byte, error) {
 	target := f.cdnURL.ResolveReference(&url.URL{Path: path})
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target.String(), nil)
+	// This payload tells the cdn to always return a 200 OK instead
+	// 304 Not Modified (in case the version did not change). The split config poller
+	// already does config change detection, so no need for the CDN to do the same.
+	reqBody := []byte(`{"version": ""}`)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target.String(), bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", "Bearer "+f.authenticationToken)
 	req.Header.Set("Accept-Encoding", "gzip")
 
@@ -175,7 +182,7 @@ func (f *SplitFetcher) FetchMapper(ctx context.Context) (*nodev1.ActiveGraphs, e
 	if err != nil {
 		return nil, fmt.Errorf("could not join path: %w", err)
 	}
-	body, err := f.get(ctx, path)
+	body, err := f.post(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch mapper: %w", err)
 	}
@@ -208,7 +215,7 @@ func (f *SplitFetcher) FetchConfig(ctx context.Context, featureFlagName string) 
 		return nil, fmt.Errorf("could not join path: %w", err)
 	}
 
-	body, err := f.get(ctx, path)
+	body, err := f.post(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch config for %q: %w", featureFlagName, err)
 	}
