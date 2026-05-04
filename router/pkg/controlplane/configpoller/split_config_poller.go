@@ -179,20 +179,20 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(newConfi
 		)
 
 		// Determine what changed, was added, or was removed.
-		changed := make(map[string]bool)
-		added := make(map[string]bool)
-		removed := make(map[string]bool)
+		changed := make(map[string]struct{})
+		added := make(map[string]struct{})
+		removed := make(map[string]struct{})
 
 		for name, hash := range graphConfigs {
 			if oldHash, exists := p.knownHashes[name]; !exists {
-				added[name] = true
+				added[name] = struct{}{}
 			} else if oldHash != hash {
-				changed[name] = true
+				changed[name] = struct{}{}
 			}
 		}
 		for name := range p.knownHashes {
 			if _, exists := graphConfigs[name]; !exists {
-				removed[name] = true
+				removed[name] = struct{}{}
 			}
 		}
 
@@ -200,12 +200,12 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(newConfi
 		patched := proto.Clone(p.currentConfig).(*nodev1.RouterConfig)
 
 		// Apply changes and additions.
-		toFetch := make(map[string]bool, len(changed)+len(added))
+		toFetch := make(map[string]struct{}, len(changed)+len(added))
 		for name := range changed {
-			toFetch[name] = true
+			toFetch[name] = struct{}{}
 		}
 		for name := range added {
-			toFetch[name] = true
+			toFetch[name] = struct{}{}
 		}
 
 		for name := range toFetch {
