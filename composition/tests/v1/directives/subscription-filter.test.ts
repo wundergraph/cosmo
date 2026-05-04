@@ -560,13 +560,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.field', [
-          subscriptionFieldConditionInvalidInputFieldErrorMessage(
-            'condition.IN',
-            [],
-            ['bypassIfValuesNull'],
-            [],
-            [],
-          ),
+          subscriptionFieldConditionInvalidInputFieldErrorMessage('condition.IN', [], ['bypassIfValuesNull'], [], []),
         ]),
       ]);
     });
