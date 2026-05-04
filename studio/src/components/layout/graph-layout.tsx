@@ -174,13 +174,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
   if (isLoading) {
     render = <Loader fullscreen />;
   } else if (data?.response?.code === EnumStatusCode.ERR_NOT_FOUND) {
-    const message = data?.response?.details || 'Click "Go back" button to recover.';
     render = (
       <div className="my-auto">
         <EmptyState
           icon={<NoSymbolIcon />}
           title="Not found"
-          description={`${message}.\nClick the button to go back.`}
+          description={`${data?.response?.details}.\nClick the button to go back.`}
           actions={
             <Button asChild>
               <Link href="/">Go home</Link>
