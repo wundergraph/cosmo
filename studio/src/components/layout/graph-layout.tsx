@@ -179,7 +179,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         <EmptyState
           icon={<NoSymbolIcon />}
           title="Not found"
-          description={`${data?.response?.details}.\nClick the button to go back.`}
+          description={data?.response?.details}
           actions={
             <Button asChild>
               <Link href={`/${organizationSlug}`}>Go home</Link>
