@@ -27,13 +27,11 @@ import (
 type SplitFetcher struct {
 	cdnURL              *url.URL
 	authenticationToken string
-	// federatedGraphID is url-escaped and extracted from the router JWT.
-	federatedGraphID string
-	// organizationID is url-escaped and extracted from the router JWT.
-	organizationID string
-	httpClient     *http.Client
-	logger         *zap.Logger
-	hash           hash.Hash // HMAC-SHA256 for signature validation; nil if no key configured
+	federatedGraphID    string
+	organizationID      string
+	httpClient          *http.Client
+	logger              *zap.Logger
+	hash                hash.Hash // HMAC-SHA256 for signature validation; nil if no key configured
 }
 
 // NewSplitFetcher creates a SplitFetcher for the given CDN endpoint and router token.
@@ -66,8 +64,8 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 	f := &SplitFetcher{
 		cdnURL:              u,
 		authenticationToken: token,
-		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
-		organizationID:      url.PathEscape(claims.OrganizationID),
+		federatedGraphID:    claims.FederatedGraphID,
+		organizationID:      claims.OrganizationID,
 		httpClient:          httpclient.NewRetryableHTTPClient(logger),
 		logger:              logger,
 	}
@@ -173,7 +171,10 @@ func (f *SplitFetcher) get(ctx context.Context, path string) ([]byte, error) {
 
 // FetchMapper fetches the mapper file and returns the active graph configs and their hashes.
 func (f *SplitFetcher) FetchMapper(ctx context.Context) (*nodev1.ActiveGraphs, error) {
-	path := fmt.Sprintf("/%s/%s/manifest/mapper.json", f.organizationID, f.federatedGraphID)
+	path, err := url.JoinPath("/", f.organizationID, f.federatedGraphID, "manifest/mapper.json")
+	if err != nil {
+		return nil, fmt.Errorf("could not join path: %w", err)
+	}
 	body, err := f.get(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch mapper: %w", err)
@@ -191,15 +192,20 @@ func (f *SplitFetcher) FetchMapper(ctx context.Context) (*nodev1.ActiveGraphs, e
 // FetchConfig fetches a single router config from CDN.
 // featureFlagName="" returns the base graph; any other value returns the named feature flag config.
 func (f *SplitFetcher) FetchConfig(ctx context.Context, featureFlagName string) (*nodev1.RouterConfig, error) {
-	var path string
+	var (
+		path string
+		err  error
+	)
+
 	if featureFlagName == "" {
-		path = fmt.Sprintf("/%s/%s/manifest/latest.json", f.organizationID, f.federatedGraphID)
+		path, err = url.JoinPath("/", f.organizationID, f.federatedGraphID, "manifest/latest.json")
 	} else {
-		path = fmt.Sprintf("/%s/%s/manifest/feature-flags/%s.json",
-			f.organizationID,
-			f.federatedGraphID,
-			url.PathEscape(featureFlagName),
-		)
+		path, err = url.JoinPath("/", f.organizationID, f.federatedGraphID, "manifest/feature-flags",
+			featureFlagName+".json")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("could not join path: %w", err)
 	}
 
 	body, err := f.get(ctx, path)
