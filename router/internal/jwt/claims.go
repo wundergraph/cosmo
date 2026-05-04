@@ -8,10 +8,9 @@ import (
 )
 
 const (
-	FederatedGraphIDClaim = "federated_graph_id"
-	OrganizationIDClaim   = "organization_id"
-	FeaturesClaim         = "features"
-
+	FederatedGraphIDClaim     = "federated_graph_id"
+	OrganizationIDClaim       = "organization_id"
+	FeaturesClaim             = "features"
 	FeatureSplitConfigLoading = "split-config-loading"
 )
 

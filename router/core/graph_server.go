@@ -208,7 +208,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			return nil, err
 		}
 		baseOtelAttributes = append(baseOtelAttributes, otel.WgFederatedGraphID.String(claims.FederatedGraphID))
-
 	}
 
 	s.baseOtelAttributes = baseOtelAttributes
