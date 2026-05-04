@@ -25,10 +25,11 @@ require (
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/astjson v1.1.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20260213130455-6e3277e7b850
+	github.com/wundergraph/cosmo/demo v0.0.0-20260323091151-a7de617c31d0
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
-	github.com/wundergraph/cosmo/router v0.0.0-20260318232543-0e5fa811a191
+	github.com/wundergraph/cosmo/router v0.0.0-20260323091151-a7de617c31d0
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
+	github.com/wundergraph/cosmo/speedtrap v0.0.0-00010101000000-000000000000
 	github.com/wundergraph/graphql-go-tools/v2 v2.1.1-0.20260504064838-5a00844995b5
 	go.opentelemetry.io/otel v1.39.0
 	go.opentelemetry.io/otel/sdk v1.39.0
@@ -102,6 +103,7 @@ require (
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/jensneuse/abstractlogger v0.0.4 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56 // indirect
+	github.com/kinbiko/jsonassert v1.2.0 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
@@ -215,5 +217,6 @@ replace (
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects => ../demo/pkg/subgraphs/projects
 	github.com/wundergraph/cosmo/router => ../router
 	github.com/wundergraph/cosmo/router-plugin => ../router-plugin
-// github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+	github.com/wundergraph/cosmo/speedtrap => ../speedtrap
+//github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
 )

@@ -184,6 +184,8 @@ github.com/josharian/native v1.1.0 h1:uuaP0hAbW7Y4l0ZRQ6C9zfb7Mg1mbFKry/xzDAfmtL
 github.com/josharian/native v1.1.0/go.mod h1:7X/raswPFr05uY3HiLlYeyQntB6OO7E/d2Cu7qoaN2w=
 github.com/jsimonetti/rtnetlink/v2 v2.0.1 h1:xda7qaHDSVOsADNouv7ukSuicKZO7GgVUCXxpaIEIlM=
 github.com/jsimonetti/rtnetlink/v2 v2.0.1/go.mod h1:7MoNYNbb3UaDHtF8udiJo/RH6VsTKP1pqKLUTVCvToE=
+github.com/kinbiko/jsonassert v1.2.0 h1:+/JthIVXdIrThrOtSN9ry0mNtWKXMWuvxR0nU7gQ+tI=
+github.com/kinbiko/jsonassert v1.2.0/go.mod h1:pCc3uudOt+lVAbkji9O0uw8MSVt4s+1ZJ0y8Ux2F1Og=
 github.com/kingledion/go-tools v0.6.0 h1:y8C/4mWoHgLkO45dB+Y/j0o4Y4WUB5lDTAcMPMtFpTg=
 github.com/kingledion/go-tools v0.6.0/go.mod h1:qcDJQxBui/H/hterGb90GMlLs9Yi7QrwaJL8OGdbsms=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
