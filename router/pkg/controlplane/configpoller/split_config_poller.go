@@ -166,6 +166,11 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(newConfi
 			return
 		}
 
+		if _, ok := graphConfigs[""]; !ok {
+			p.logger.Warn("Mapper missing base graph entry, keeping existing config")
+			return
+		}
+
 		newVersion := computeCompositeVersion(graphConfigs)
 		if newVersion == p.latestVersion {
 			p.logger.Debug("No changes detected in engine config, keeping existing config")
