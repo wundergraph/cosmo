@@ -1174,15 +1174,16 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPConfiguration struct {
-	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	Server                    MCPServer        `yaml:"server,omitempty"`
-	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
-	Session                   MCPSessionConfig `yaml:"session,omitempty"`
-	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
-	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
-	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
-	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
-	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	Enabled                   bool                     `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer                `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig         `yaml:"storage,omitempty"`
+	Session                   MCPSessionConfig         `yaml:"session,omitempty"`
+	CodeMode                  MCPCodeModeConfiguration `yaml:"code_mode,omitempty" envPrefix:"MCP_CODE_MODE_"`
+	GraphName                 string                   `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool                     `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool                     `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool                     `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	RouterURL                 string                   `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
 	OmitToolNamePrefix bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
@@ -1332,6 +1333,56 @@ type MCPOAuthScopesConfiguration struct {
 
 type MCPSessionConfig struct {
 	Stateless bool `yaml:"stateless" envDefault:"true" env:"MCP_SESSION_STATELESS"`
+}
+
+type MCPCodeModeConfiguration struct {
+	Enabled                 bool                      `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Server                  MCPCodeModeServerConfig   `yaml:"server,omitempty" envPrefix:""`
+	RequireMutationApproval bool                      `yaml:"require_mutation_approval" envDefault:"true" env:"REQUIRE_MUTATION_APPROVAL"`
+	ExecuteTimeout          time.Duration             `yaml:"execute_timeout" envDefault:"120s" env:"EXECUTE_TIMEOUT"`
+	MaxResultBytes          int                       `yaml:"max_result_bytes" envDefault:"32768" env:"MAX_RESULT_BYTES"`
+	Sandbox                 MCPCodeModeSandboxConfig  `yaml:"sandbox,omitempty" envPrefix:"SANDBOX_"`
+	QueryGeneration         MCPCodeModeQueryGenConfig `yaml:"query_generation,omitempty" envPrefix:"QUERY_GENERATION_"`
+	NamedOps                MCPCodeModeNamedOpsConfig `yaml:"named_ops,omitempty" envPrefix:"NAMED_OPS_"`
+}
+
+type MCPCodeModeServerConfig struct {
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5027" env:"LISTEN_ADDR"`
+}
+
+type MCPCodeModeSandboxConfig struct {
+	Timeout            time.Duration `yaml:"timeout" envDefault:"5s" env:"TIMEOUT"`
+	MaxMemoryMB        int           `yaml:"max_memory_mb" envDefault:"16" env:"MAX_MEMORY_MB"`
+	MaxInputSizeBytes  int           `yaml:"max_input_size_bytes" envDefault:"65536" env:"MAX_INPUT_SIZE_BYTES"`
+	MaxOutputSizeBytes int           `yaml:"max_output_size_bytes" envDefault:"1048576" env:"MAX_OUTPUT_SIZE_BYTES"`
+}
+
+type MCPCodeModeQueryGenConfig struct {
+	Enabled  bool                          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Endpoint string                        `yaml:"endpoint,omitempty" env:"ENDPOINT"`
+	Timeout  time.Duration                 `yaml:"timeout" envDefault:"10s" env:"TIMEOUT"`
+	Auth     MCPCodeModeQueryGenAuthConfig `yaml:"auth,omitempty" envPrefix:"AUTH_"`
+}
+
+type MCPCodeModeQueryGenAuthConfig struct {
+	Type          string `yaml:"type" envDefault:"static" env:"TYPE"`
+	StaticToken   string `yaml:"static_token,omitempty" env:"STATIC_TOKEN"`
+	TokenEndpoint string `yaml:"token_endpoint,omitempty" env:"TOKEN_ENDPOINT"`
+	ClientID      string `yaml:"client_id,omitempty" env:"CLIENT_ID"`
+	ClientSecret  string `yaml:"client_secret,omitempty" env:"CLIENT_SECRET"`
+}
+
+type MCPCodeModeNamedOpsConfig struct {
+	Enabled        bool                             `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	SessionTTL     time.Duration                    `yaml:"session_ttl" envDefault:"30m" env:"SESSION_TTL"`
+	MaxSessions    int                              `yaml:"max_sessions" envDefault:"1000" env:"MAX_SESSIONS"`
+	MaxBundleBytes int                              `yaml:"max_bundle_bytes" envDefault:"262144" env:"MAX_BUNDLE_BYTES"`
+	Storage        MCPCodeModeNamedOpsStorageConfig `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
+}
+
+type MCPCodeModeNamedOpsStorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	KeyPrefix  string `yaml:"key_prefix" envDefault:"cosmo_code_mode" env:"KEY_PREFIX"`
 }
 
 type MCPStorageConfig struct {
@@ -1601,6 +1652,10 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
 		cfg.Config.SubgraphErrorPropagation.OmitLocations = false
 		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
+	}
+
+	if err := ValidateMCPCodeMode(&cfg.Config.MCP.CodeMode, cfg.Config.MCP.Session.Stateless); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil

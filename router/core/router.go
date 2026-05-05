@@ -29,6 +29,7 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
+	codemodeserver "github.com/wundergraph/cosmo/router/internal/codemode/server"
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
@@ -966,6 +967,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	if err := r.startMCPServer(ctx); err != nil {
 		return err
 	}
+	if err := r.startCodeModeServer(ctx); err != nil {
+		return err
+	}
 
 	if r.connectRPC.Enabled {
 		r.logger.Debug("ConnectRPC configuration",
@@ -1251,6 +1255,76 @@ func (r *Router) buildMCPHandler(ctx context.Context, entry *config.MCPServerEnt
 	}
 
 	return mcpserver.NewGraphQLSchemaServer(ctx, endpoint, mcpOpts...)
+}
+
+// startCodeModeServer initializes and starts the separate Code Mode MCP server if enabled.
+func (r *Router) startCodeModeServer(ctx context.Context) error {
+	var redisProvider *config.RedisStorageProvider
+	if r.mcp.CodeMode.Enabled && r.mcp.CodeMode.NamedOps.Enabled {
+		if providerID := r.mcp.CodeMode.NamedOps.Storage.ProviderID; providerID != "" {
+			provider, ok := r.providerRegistry.Redis(providerID)
+			if !ok {
+				return fmt.Errorf("redis storage provider with id '%s' for mcp code_mode named_ops not found", providerID)
+			}
+			redisProvider = &provider
+		}
+	}
+
+	cm, err := codemodeserver.BuildFromConfig(codemodeserver.BuildOptions{
+		Config:           r.mcp.CodeMode,
+		SessionStateless: r.mcp.Session.Stateless,
+		RouterGraphQLURL: r.graphqlEndpointURL,
+		Logger:           r.logger,
+		TracerProvider:   r.tracerProvider,
+		MeterProvider:    r.otlpMeterProvider,
+		RedisProvider:    redisProvider,
+		RedisFactory: func(opts *rd.RedisCloserOptions) (rd.RDCloser, error) {
+			if opts.Logger == nil {
+				opts.Logger = r.logger
+			}
+			return rd.NewRedisCloser(opts)
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create code mode MCP server: %w", err)
+	}
+	r.codeModeServer = cm
+
+	if !r.mcp.CodeMode.Enabled {
+		return nil
+	}
+
+	errs := make(chan error, 1)
+	go func() {
+		errs <- cm.Start(ctx)
+	}()
+
+	deadline := time.NewTimer(5 * time.Second)
+	defer deadline.Stop()
+	tick := time.NewTicker(10 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		select {
+		case err := <-errs:
+			if err != nil {
+				return fmt.Errorf("failed to start code mode MCP server: %w", err)
+			}
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-deadline.C:
+			return fmt.Errorf("failed to start code mode MCP server: listener was not bound")
+		case <-tick.C:
+			if cm.Addr() != "" {
+				go func() {
+					if err := <-errs; err != nil {
+						r.logger.Error("Code Mode MCP server stopped unexpectedly", zap.Error(err))
+					}
+				}()
+				return nil
+			}
+		}
+	}
 }
 
 // buildClients initializes the storage clients for persisted operations and router config.
@@ -1826,6 +1900,14 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		wg.Go(func() {
 			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
+			}
+		})
+	}
+
+	if r.codeModeServer != nil {
+		wg.Go(func() {
+			if subErr := r.codeModeServer.Stop(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown code mode MCP server: %w", subErr))
 			}
 		})
 	}
