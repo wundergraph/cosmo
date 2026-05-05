@@ -52,9 +52,6 @@ const setupPosthog = ({
     // with the right data
     posthog.reset();
   } else if (distinctId === email) {
-    posthog.identify(email, {
-      id,
-    });
     // This session has been already identified, just keep the organization synchronized!
     posthog.group('cosmo_organization', organizationId, {
       id: organizationId,
@@ -62,7 +59,6 @@ const setupPosthog = ({
       name: organizationName,
       plan: plan,
     });
-    posthog.reloadFeatureFlags();
   } else {
     posthog.identify(email, {
       id,
@@ -73,8 +69,8 @@ const setupPosthog = ({
       name: organizationName,
       plan: plan,
     });
-    posthog.reloadFeatureFlags();
   }
+  posthog.reloadFeatureFlags();
 };
 
 const identify = ({
