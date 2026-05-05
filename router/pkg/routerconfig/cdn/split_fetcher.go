@@ -65,8 +65,8 @@ func NewSplitFetcher(endpoint string, token string, opts *Options) (*SplitFetche
 	f := &SplitFetcher{
 		cdnURL:              u,
 		authenticationToken: token,
-		federatedGraphID:    claims.FederatedGraphID,
-		organizationID:      claims.OrganizationID,
+		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
+		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          httpclient.NewRetryableHTTPClient(logger),
 		logger:              logger,
 	}
