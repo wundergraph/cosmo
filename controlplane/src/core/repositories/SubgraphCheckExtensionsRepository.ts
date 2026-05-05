@@ -1,7 +1,9 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
+import { traced } from '../tracing.js';
 
+@traced
 export class SubgraphCheckExtensionsRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 

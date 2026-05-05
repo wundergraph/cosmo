@@ -128,6 +128,9 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, 
 func (c *EngineDataSourceFactory) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
 	switch c.eventType {
 	case EventTypePublish, EventTypeRequest:
+		if len(c.subjects) != 1 {
+			return fmt.Errorf("publish and request event definition should define one subject but has %d", len(c.subjects))
+		}
 		extractedSubject, err := extractFn(c.subjects[0])
 		if err != nil {
 			return fmt.Errorf("unable to parse subject with id %s", c.subjects[0])

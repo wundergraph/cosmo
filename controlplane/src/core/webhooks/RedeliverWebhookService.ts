@@ -5,7 +5,9 @@ import { FastifyBaseLogger } from 'fastify';
 import { WebhookDeliveryInfo } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import { webhookAxiosRetryCond } from '../util.js';
+import { traced } from '../tracing.js';
 
+@traced
 export class RedeliverWebhookService {
   private readonly logger: FastifyBaseLogger;
   private httpClient: AxiosInstance;

@@ -510,6 +510,16 @@ func TestRouterPluginRequests(t *testing.T) {
 			query:    `{ employee(id: 999) { id taggedProjectSummary } }`,
 			expected: `{"data":{"employee":null}}`,
 		},
+		{
+			name:     "query employee @requires field with argument resolved with expertise",
+			query:    `{ employee(id: 1) { id filteredProjectSummary(tag: "cloud") } }`,
+			expected: `{"data":{"employee":{"id":1,"filteredProjectSummary":"expertise: Backend Architecture, filtered tags (tag=cloud): [cloud]"}}}`,
+		},
+		{
+			name:     "query employee @requires field with argument — no matching tags",
+			query:    `{ employee(id: 1) { id filteredProjectSummary(tag: "nonexistent") } }`,
+			expected: `{"data":{"employee":{"id":1,"filteredProjectSummary":"expertise: Backend Architecture, no tags matched (tag=nonexistent)"}}}`,
+		},
 		// Pattern 1: Flat abstract — interface
 		{
 			name:     "query employee @requires flat interface (technical)",

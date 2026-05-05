@@ -1,0 +1,67 @@
+# MCP OAuth - Example Config
+# yaml-language-server: $schema=./pkg/config/config.schema.json
+#
+# Example config for running the router's MCP server with OAuth 2.1 and
+# per-operation scope enforcement.
+#
+# Before use, edit the fields marked EDIT ME to point at your own
+# execution config and MCP operations directory.
+#
+# Usage (from the router/ directory):
+#   1. Start the test OAuth server:
+#        go run ../router-tests/cmd/oauth-server
+#   2. Start the router with this config:
+#        go run ./cmd/router -config mcp.oauth.config.yaml
+#   3. Point any MCP client at http://localhost:5025/mcp
+
+authentication:
+  jwt:
+    jwks:
+      - url: 'http://localhost:9099/.well-known/jwks.json'
+        refresh_interval: 1m
+
+mcp:
+  enabled: true
+  graph_name: 'my-graph'
+  omit_tool_name_prefix: true
+
+  server:
+    listen_addr: 'localhost:5025'
+    # port 5026 is for the published MCP server (proxy) endpoint
+    base_url: 'http://localhost:5026'
+
+  oauth:
+    enabled: true
+    authorization_server_url: 'http://localhost:9099'
+    jwks:
+      - url: 'http://localhost:9099/.well-known/jwks.json'
+        refresh_interval: 1m
+        algorithms: ['RS256']
+    # Include the token's existing scopes in 403 insufficient_scope challenges.
+    # Workaround for MCP client SDKs that replace rather than accumulate scopes.
+    scope_challenge_include_token_scopes: true
+    scopes:
+      initialize: ['mcp:connect']
+      tools_list: ['mcp:tools:read']
+      tools_call: ['mcp:tools:call']
+      execute_graphql: ['mcp:graphql:execute']
+      get_schema: ['mcp:schema:read']
+      get_operation_info: ['mcp:ops:read']
+
+  storage:
+    provider_id: 'mcp-operations'
+
+  session:
+    stateless: true
+
+  exclude_mutations: false
+  enable_arbitrary_operations: true
+  expose_schema: true
+
+  router_url: 'http://localhost:3002/graphql'
+
+storage_providers:
+  file_system:
+    - id: 'mcp-operations'
+      # EDIT ME: directory containing your persisted MCP operations.
+      path: '../connectrpc-tutorial/services'

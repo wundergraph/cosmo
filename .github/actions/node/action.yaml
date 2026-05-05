@@ -3,7 +3,8 @@ description: "This action install node and cache modules. It uses pnpm as packag
 inputs:
   node-version:
     description: "The node version to install (Default: lts)"
-    default: "lts/*"
+    # TODO: revert to lts/* after 20 is EOL
+    default: "22.x"
     required: false
   working-directory:
     description: "The working directory of your node package"

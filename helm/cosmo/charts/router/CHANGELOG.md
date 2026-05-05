@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.15.1...helm-cosmo-router@0.16.0) (2026-04-28)
+
+
+### Features
+
+* **helm:** add HPA behavior and startup probe ([#2798](https://github.com/wundergraph/cosmo/issues/2798)) ([1d1b39b](https://github.com/wundergraph/cosmo/commit/1d1b39be454e4108ac58c5dfce795cb73b7e82a2))
+
+## [0.15.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.15.0...helm-cosmo-router@0.15.1) (2026-04-20)
+
+
+### Bug Fixes
+
+* **helm:** exclude commonLabels from immutable selector matchLabels ([#2571](https://github.com/wundergraph/cosmo/issues/2571)) ([5758b4f](https://github.com/wundergraph/cosmo/commit/5758b4fc73f26ee18dbfda64b979d8025029711a))
+
 ## [0.15.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.14.0...helm-cosmo-router@0.15.0) (2025-09-10)
 
 

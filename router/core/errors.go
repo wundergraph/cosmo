@@ -14,7 +14,8 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -54,6 +55,31 @@ type (
 	}
 )
 
+const (
+	ExtCodeErrPersistedQueryNotFound        = "PERSISTED_QUERY_NOT_FOUND"
+	ExtCodeErrErrorRequestCanceled          = "REQUEST_CANCELED"
+	ExtCodeErrBatchSizeExceeded             = "BATCH_LIMIT_EXCEEDED"
+	ExtCodeErrBatchSubscriptionsUnsupported = "BATCHING_SUBSCRIPTION_UNSUPPORTED"
+)
+
+// isTerminalSubscriptionError reports whether the given error, when surfaced
+// from the resolver during a subscription, should terminate the stream rather
+// than being delivered inline as a per-update error. These are errors that
+// invalidate the whole subscription (auth reject, upgrade failure, rate limit)
+// — continuing to deliver updates after one of these wouldn't be meaningful.
+func isTerminalSubscriptionError(err error) bool {
+	switch getErrorType(err) {
+	case errorTypeUnauthorized,
+		errorTypeUpgradeFailed,
+		errorTypeInvalidWsSubprotocol,
+		errorTypeRateLimit,
+		errorTypeContextCanceled,
+		errorTypeContextTimeout:
+		return true
+	}
+	return false
+}
+
 func getErrorType(err error) errorType {
 	if errors.Is(err, ErrRateLimitExceeded) {
 		return errorTypeRateLimit
@@ -64,7 +90,7 @@ func getErrorType(err error) errorType {
 	if errors.Is(err, context.Canceled) {
 		return errorTypeContextCanceled
 	}
-	var upgradeErr *graphql_datasource.UpgradeRequestError
+	var upgradeErr transport.ErrFailedUpgrade
 	if errors.As(err, &upgradeErr) {
 		return errorTypeUpgradeFailed
 	}
@@ -82,7 +108,7 @@ func getErrorType(err error) errorType {
 	if errors.As(err, &streamsHandlerErr) {
 		return errorTypeStreamsHandlerError
 	}
-	var invalidWsSubprotocolErr graphql_datasource.InvalidWsSubprotocolError
+	var invalidWsSubprotocolErr transport.ErrInvalidSubprotocol
 	if errors.As(err, &invalidWsSubprotocolErr) {
 		return errorTypeInvalidWsSubprotocol
 	}
@@ -137,7 +163,6 @@ func trackFinalResponseError(ctx context.Context, err error) {
 }
 
 func getAggregatedSubgraphErrorCodes(err error) []string {
-
 	if unwrapped, ok := err.(multiError); ok {
 
 		errs := unwrapped.Unwrap()
@@ -166,7 +191,6 @@ func getSubgraphNames(ds []resolve.DataSourceInfo) []string {
 }
 
 func getAggregatedSubgraphServiceNames(err error) []string {
-
 	if unwrapped, ok := err.(multiError); ok {
 
 		errs := unwrapped.Unwrap()
@@ -189,7 +213,6 @@ func getAggregatedSubgraphServiceNames(err error) []string {
 // propagateSubgraphErrors propagates the subgraph errors to the request context
 func propagateSubgraphErrors(ctx *resolve.Context) {
 	err := ctx.SubgraphErrors()
-
 	if err != nil {
 		trackFinalResponseError(ctx.Context(), err)
 	}
@@ -342,6 +365,16 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	var httpErr HttpError
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 	switch {
+	case errors.Is(err, context.Canceled):
+		newErr := NewHttpGraphqlError("request canceled", ExtCodeErrErrorRequestCanceled, http.StatusOK)
+		writeRequestErrors(writeRequestErrorsParams{
+			request:           r,
+			writer:            w,
+			statusCode:        http.StatusOK,
+			requestErrors:     requestErrorsFromHttpError(newErr),
+			logger:            requestLogger,
+			headerPropagation: propagation,
+		})
 	case errors.As(err, &httpErr):
 		writeRequestErrors(writeRequestErrorsParams{
 			request:           r,
@@ -352,7 +385,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 			headerPropagation: propagation,
 		})
 	case errors.As(err, &poNotFoundErr):
-		newErr := NewHttpGraphqlError("PersistedQueryNotFound", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
+		newErr := NewHttpGraphqlError("PersistedQueryNotFound", ExtCodeErrPersistedQueryNotFound, http.StatusOK)
 		writeRequestErrors(writeRequestErrorsParams{
 			request:           r,
 			writer:            w,

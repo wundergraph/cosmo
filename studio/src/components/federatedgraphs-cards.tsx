@@ -5,7 +5,13 @@ import { docsBaseURL } from '@/lib/constants';
 import { formatMetric } from '@/lib/format-metric';
 import { useChartData } from '@/lib/insights-helpers';
 import { cn } from '@/lib/utils';
-import { ChevronDoubleRightIcon, CommandLineIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import {
+  BoltIcon,
+  BookmarkIcon,
+  ChevronDoubleRightIcon,
+  CommandLineIcon,
+  DocumentArrowDownIcon,
+} from '@heroicons/react/24/outline';
 import { Component2Icon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { migrateFromApollo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
@@ -38,6 +44,7 @@ import { useMutation } from '@connectrpc/connect-query';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { useOnboarding } from '@/hooks/use-onboarding';
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -616,6 +623,7 @@ export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGr
   const [token, setToken] = useState<string | undefined>();
   const [isMigrating, setIsMigrating] = useState(false);
   const checkUserAccess = useCheckUserAccess();
+  const { onboarding, enabled, currentStep } = useOnboarding();
 
   useEffect(() => {
     if (isMigrationSuccess) {
@@ -623,6 +631,24 @@ export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGr
       return () => clearTimeout(to);
     }
   }, [isMigrationSuccess]);
+
+  if (enabled && onboarding && onboarding.federatedGraphsCount === 0) {
+    return currentStep !== undefined && !onboarding.finishedAt ? (
+      <EmptyState
+        icon={<BookmarkIcon />}
+        title="Dive right back in"
+        description="Want to finish the onboarding and create your first federated graph?"
+        actions={<Link href={`/onboarding/${currentStep}`}>Continue</Link>}
+      />
+    ) : (
+      <EmptyState
+        icon={<BoltIcon />}
+        title="Need help?"
+        description="Take a quick 5-minute tour to help you set up your first federated graph"
+        actions={<Link href={`/onboarding/1`}>Start here</Link>}
+      />
+    );
+  }
 
   if (!graphs || graphs.length === 0)
     return (

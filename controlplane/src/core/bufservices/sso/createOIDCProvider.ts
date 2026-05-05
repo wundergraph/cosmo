@@ -11,6 +11,7 @@ import OidcProvider from '../../services/OidcProvider.js';
 import { enrichLogger, getLogger, handleError, isValidLocalhostOrSecureEndpoint } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { OidcRepository } from '../../repositories/OidcRepository.js';
 
 export function createOIDCProvider(
   opts: RouterOptions,
@@ -23,7 +24,6 @@ export function createOIDCProvider(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    const oidcProvider = new OidcProvider();
     if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
     }
@@ -35,6 +35,20 @@ export function createOIDCProvider(
         response: {
           code: EnumStatusCode.ERR_UPGRADE_PLAN,
           details: `OIDC feature is not enabled for this organization.`,
+        },
+        signInURL: '',
+        signOutURL: '',
+        loginURL: '',
+      };
+    }
+
+    const oidcRepo = new OidcRepository(opts.db);
+    const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+    if (provider) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_ALREADY_EXISTS,
+          details: 'An OIDC provider already exists for this organization.',
         },
         signInURL: '',
         signOutURL: '',
@@ -58,6 +72,7 @@ export function createOIDCProvider(
 
     const alias = `${authContext.organizationSlug}_${uid(3)}`;
 
+    const oidcProvider = new OidcProvider();
     await oidcProvider.createOidcProvider({
       kcClient: opts.keycloakClient,
       kcRealm: opts.keycloakRealm,
@@ -66,6 +81,7 @@ export function createOIDCProvider(
       alias,
       db: opts.db,
       input: req,
+      abortSignal: ctx.signal,
     });
 
     return {

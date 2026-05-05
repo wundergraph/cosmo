@@ -40,6 +40,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
 import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
+import { traced } from '../tracing.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -48,6 +49,7 @@ import { OrganizationGroupRepository } from './OrganizationGroupRepository.js';
 /**
  * Repository for organization related operations.
  */
+@traced
 export class OrganizationRepository {
   protected billing: BillingRepository;
 

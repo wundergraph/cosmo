@@ -16,7 +16,7 @@ import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
-import _ from 'lodash';
+import { cloneDeep } from 'lodash-es';
 import pLimit from 'p-limit';
 import { NewSchemaChangeOperationUsage, ProposalMatch, SchemaCheckChangeAction } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
@@ -56,6 +56,7 @@ import {
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { defaultRetentionLimitInDays } from '../constants.js';
+import { traced } from '../tracing.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { ProposalRepository } from './ProposalRepository.js';
@@ -64,6 +65,7 @@ import { SchemaLintRepository } from './SchemaLintRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { NamespaceRepository } from './NamespaceRepository.js';
 
+@traced
 export class SchemaCheckRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
@@ -284,7 +286,7 @@ export class SchemaCheckRepository {
     await Promise.all(promises);
   }
 
-  private mapChangesFromDriverValue = (val: any) => {
+  private mapChangesFromDriverValue(val: any) {
     if (typeof val === 'string' && val.length > 0 && val !== '{}') {
       const pairs = val.slice(2, -2).split('","');
 
@@ -294,7 +296,7 @@ export class SchemaCheckRepository {
       });
     }
     return [];
-  };
+  }
 
   public async checkClientTrafficAgainstOverrides(data: {
     changes: { id: string; changeType: string | null; path: string | null }[];
@@ -303,7 +305,7 @@ export class SchemaCheckRepository {
   }) {
     let hasUnsafeClientTraffic = false;
 
-    const result = _.cloneDeep(data.inspectorResultsByChangeId);
+    const result = cloneDeep(data.inspectorResultsByChangeId);
 
     const changeActionsByOperationHash: Map<string, typeof data.changes> = new Map();
 

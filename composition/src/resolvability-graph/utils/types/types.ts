@@ -8,6 +8,7 @@ export type EntityAncestorData = {
 
 export type EntityAncestorCollection = {
   fieldSetsByTargetSubgraphName: Map<SubgraphName, Set<string>>;
+  sourceSubgraphNamesBySatisfiedFieldSet: Map<string, Array<SubgraphName>>;
   subgraphNames: Array<SubgraphName>;
   typeName: TypeName;
 };

@@ -17,7 +17,7 @@ describe('OIDC provider', (ctx) => {
   });
 
   test('Should be able to create an OIDC provider ', async (testContext) => {
-    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
     testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
@@ -44,6 +44,52 @@ describe('OIDC provider', (ctx) => {
     expect(getOIDCProviderResponse.mappers).toHaveLength(1);
     expect(getOIDCProviderResponse.mappers[0].groupId).toBe(adminGroup.groupId);
     expect(getOIDCProviderResponse.mappers[0].ssoGroup).toBe('admin_group');
+  });
+
+  test('Should not overwrite existing OIDC provider configuration ', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    testContext.onTestFinished(() => server.close());
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+
+    let createOIDCProviderResponse = await client.createOIDCProvider({
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
+      clientID: '0oab1c2',
+      clientSecrect: 'secret',
+      mappers: [
+        new GroupMapper({
+          groupId: adminGroup.groupId,
+          ssoGroup: 'admin_group',
+        }),
+      ],
+      name: 'okta',
+    });
+    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const getOIDCProviderResponse = await client.getOIDCProvider({});
+    expect(getOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getOIDCProviderResponse.endpoint).toBe('localhost:8080');
+    expect(getOIDCProviderResponse.name).toBe('okta');
+    expect(getOIDCProviderResponse.mappers).toHaveLength(1);
+    expect(getOIDCProviderResponse.mappers[0].groupId).toBe(adminGroup.groupId);
+    expect(getOIDCProviderResponse.mappers[0].ssoGroup).toBe('admin_group');
+
+    createOIDCProviderResponse = await client.createOIDCProvider({
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
+      clientID: '0oab1c2',
+      clientSecrect: 'secret',
+      mappers: [
+        new GroupMapper({
+          groupId: adminGroup.groupId,
+          ssoGroup: 'admin_group',
+        }),
+      ],
+      name: 'overwritten okta',
+    });
+
+    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+    expect(createOIDCProviderResponse.response?.details).toBe('An OIDC provider already exists for this organization.');
   });
 
   test('Non admins should not be able to create an OIDC provider ', async (testContext) => {

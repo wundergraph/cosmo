@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   type BatchNormalizationSuccess,
-  batchNormalize,
+  BatchNormalizer,
   type ConfigurationData,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   type Subgraph,
@@ -675,9 +675,11 @@ describe('Router Configuration tests', () => {
     });
 
     test('that the router configuration is correctly generated', () => {
-      const result = batchNormalize({ subgraphs: [monolith, reviews, users] }) as BatchNormalizationSuccess;
+      const result = new BatchNormalizer({
+        subgraphs: [monolith, reviews, users],
+      }).batchNormalize() as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
-      expect(result.internalSubgraphBySubgraphName.get('monolith')!.configurationDataByTypeName).toStrictEqual(
+      expect(result.internalSubgraphByName.get('monolith')!.configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
             'Query',
@@ -689,7 +691,7 @@ describe('Router Configuration tests', () => {
           ],
         ]),
       );
-      expect(result.internalSubgraphBySubgraphName.get('reviews')!.configurationDataByTypeName).toStrictEqual(
+      expect(result.internalSubgraphByName.get('reviews')!.configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
             'Query',
@@ -717,7 +719,7 @@ describe('Router Configuration tests', () => {
           ],
         ]),
       );
-      expect(result.internalSubgraphBySubgraphName.get('users')!.configurationDataByTypeName).toStrictEqual(
+      expect(result.internalSubgraphByName.get('users')!.configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
             'Query',

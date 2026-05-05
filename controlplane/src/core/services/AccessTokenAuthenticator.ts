@@ -2,6 +2,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import AuthUtils from '../auth-utils.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { traced } from '../tracing.js';
 import { RBACEvaluator } from './RBACEvaluator.js';
 
 export type AccessTokenAuthContext = {
@@ -14,6 +15,7 @@ export type AccessTokenAuthContext = {
   rbac: RBACEvaluator;
 };
 
+@traced
 export default class AccessTokenAuthenticator {
   constructor(
     private orgRepo: OrganizationRepository,

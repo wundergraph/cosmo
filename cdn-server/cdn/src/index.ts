@@ -120,7 +120,7 @@ const persistedOperation = (storage: BlobStorage) => {
 
     const clientId = c.req.param('client_id');
     const operation = c.req.param('operation');
-    if (!operation.endsWith('.json')) {
+    if (!operation || !operation.endsWith('.json')) {
       return c.notFound();
     }
 
@@ -328,7 +328,7 @@ const subgraphChecks = (storage: BlobStorage) => {
     }
 
     const uniqueId = c.req.param('uniqueid');
-    if (!uniqueId.endsWith('.json')) {
+    if (!uniqueId || !uniqueId.endsWith('.json')) {
       return c.notFound();
     }
 

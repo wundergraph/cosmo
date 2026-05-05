@@ -1428,6 +1428,465 @@ describe('GraphQL Federation to Proto Mapping', () => {
     `);
   });
 
+  describe('Interface entities', () => {
+    it('maps interface entity with @key and implementing types', () => {
+      const sdl = `
+        directive @key(fields: String!) on OBJECT | INTERFACE
+
+        interface Media @key(fields: "id") {
+          id: ID!
+          title: String!
+          duration: Int!
+        }
+
+        type Movie implements Media @key(fields: "id") {
+          id: ID!
+          title: String!
+          duration: Int!
+          director: String!
+        }
+
+        type Song implements Media @key(fields: "id") {
+          id: ID!
+          title: String!
+          duration: Int!
+          artist: String!
+        }
+
+        type Query {
+          media(id: ID!): Media
+          _entities(representations: [_Any!]!): [_Entity]!
+        }
+
+        scalar _Any
+        union _Entity = Movie | Song
+      `;
+
+      const mapping = compileGraphQLToMapping(sdl, 'MediaService');
+
+      const json = mapping.toJson() as any;
+
+      // Should have entity mappings for interface AND concrete types
+      const entityTypeNames = json.entityMappings.map((e: any) => e.typeName);
+      expect(entityTypeNames).toContain('Media');
+      expect(entityTypeNames).toContain('Movie');
+      expect(entityTypeNames).toContain('Song');
+
+      expect(json).toMatchInlineSnapshot(`
+        {
+          "entityMappings": [
+            {
+              "key": "id",
+              "kind": "entity",
+              "request": "LookupMediaByIdRequest",
+              "response": "LookupMediaByIdResponse",
+              "rpc": "LookupMediaById",
+              "typeName": "Media",
+            },
+            {
+              "key": "id",
+              "kind": "entity",
+              "request": "LookupMovieByIdRequest",
+              "response": "LookupMovieByIdResponse",
+              "rpc": "LookupMovieById",
+              "typeName": "Movie",
+            },
+            {
+              "key": "id",
+              "kind": "entity",
+              "request": "LookupSongByIdRequest",
+              "response": "LookupSongByIdResponse",
+              "rpc": "LookupSongById",
+              "typeName": "Song",
+            },
+          ],
+          "operationMappings": [
+            {
+              "mapped": "QueryMedia",
+              "original": "media",
+              "request": "QueryMediaRequest",
+              "response": "QueryMediaResponse",
+              "type": "OPERATION_TYPE_QUERY",
+            },
+          ],
+          "service": "MediaService",
+          "typeFieldMappings": [
+            {
+              "fieldMappings": [
+                {
+                  "argumentMappings": [
+                    {
+                      "mapped": "id",
+                      "original": "id",
+                    },
+                  ],
+                  "mapped": "media",
+                  "original": "media",
+                },
+              ],
+              "type": "Query",
+            },
+            {
+              "fieldMappings": [
+                {
+                  "mapped": "id",
+                  "original": "id",
+                },
+                {
+                  "mapped": "title",
+                  "original": "title",
+                },
+                {
+                  "mapped": "duration",
+                  "original": "duration",
+                },
+                {
+                  "mapped": "director",
+                  "original": "director",
+                },
+              ],
+              "type": "Movie",
+            },
+            {
+              "fieldMappings": [
+                {
+                  "mapped": "id",
+                  "original": "id",
+                },
+                {
+                  "mapped": "title",
+                  "original": "title",
+                },
+                {
+                  "mapped": "duration",
+                  "original": "duration",
+                },
+                {
+                  "mapped": "artist",
+                  "original": "artist",
+                },
+              ],
+              "type": "Song",
+            },
+          ],
+          "version": 1,
+        }
+      `);
+    });
+
+    it('maps interface entity with different keys on interface vs implementing types', () => {
+      const sdl = `
+        directive @key(fields: String!) on OBJECT | INTERFACE
+
+        interface Account @key(fields: "id") {
+          id: ID!
+          email: String!
+        }
+
+        type PersonalAccount implements Account @key(fields: "id") @key(fields: "email") {
+          id: ID!
+          email: String!
+          firstName: String!
+          lastName: String!
+        }
+
+        type BusinessAccount implements Account @key(fields: "id") {
+          id: ID!
+          email: String!
+          companyName: String!
+          taxId: String!
+        }
+
+        type Query {
+          account(id: ID!): Account
+          _entities(representations: [_Any!]!): [_Entity]!
+        }
+
+        scalar _Any
+        union _Entity = PersonalAccount | BusinessAccount
+      `;
+
+      const mapping = compileGraphQLToMapping(sdl, 'AccountService');
+
+      const json = mapping.toJson() as any;
+
+      // Interface gets one lookup by id
+      const accountMappings = json.entityMappings.filter((e: any) => e.typeName === 'Account');
+      expect(accountMappings).toHaveLength(1);
+      expect(accountMappings[0].rpc).toBe('LookupAccountById');
+
+      // PersonalAccount gets two lookups (by id and by email)
+      const personalMappings = json.entityMappings.filter((e: any) => e.typeName === 'PersonalAccount');
+      expect(personalMappings).toHaveLength(2);
+      const personalRpcs = personalMappings.map((e: any) => e.rpc).sort();
+      expect(personalRpcs).toEqual(['LookupPersonalAccountByEmail', 'LookupPersonalAccountById']);
+
+      // BusinessAccount gets one lookup by id
+      const businessMappings = json.entityMappings.filter((e: any) => e.typeName === 'BusinessAccount');
+      expect(businessMappings).toHaveLength(1);
+      expect(businessMappings[0].rpc).toBe('LookupBusinessAccountById');
+
+      expect(json).toMatchInlineSnapshot(`
+        {
+          "entityMappings": [
+            {
+              "key": "id",
+              "kind": "entity",
+              "request": "LookupAccountByIdRequest",
+              "response": "LookupAccountByIdResponse",
+              "rpc": "LookupAccountById",
+              "typeName": "Account",
+            },
+            {
+              "key": "id",
+              "kind": "entity",
+              "request": "LookupPersonalAccountByIdRequest",
+              "response": "LookupPersonalAccountByIdResponse",
+              "rpc": "LookupPersonalAccountById",
+              "typeName": "PersonalAccount",
+            },
+            {
+              "key": "email",
+              "kind": "entity",
+              "request": "LookupPersonalAccountByEmailRequest",
+              "response": "LookupPersonalAccountByEmailResponse",
+              "rpc": "LookupPersonalAccountByEmail",
+              "typeName": "PersonalAccount",
+            },
+            {
+              "key": "id",
+              "kind": "entity",
+              "request": "LookupBusinessAccountByIdRequest",
+              "response": "LookupBusinessAccountByIdResponse",
+              "rpc": "LookupBusinessAccountById",
+              "typeName": "BusinessAccount",
+            },
+          ],
+          "operationMappings": [
+            {
+              "mapped": "QueryAccount",
+              "original": "account",
+              "request": "QueryAccountRequest",
+              "response": "QueryAccountResponse",
+              "type": "OPERATION_TYPE_QUERY",
+            },
+          ],
+          "service": "AccountService",
+          "typeFieldMappings": [
+            {
+              "fieldMappings": [
+                {
+                  "argumentMappings": [
+                    {
+                      "mapped": "id",
+                      "original": "id",
+                    },
+                  ],
+                  "mapped": "account",
+                  "original": "account",
+                },
+              ],
+              "type": "Query",
+            },
+            {
+              "fieldMappings": [
+                {
+                  "mapped": "id",
+                  "original": "id",
+                },
+                {
+                  "mapped": "email",
+                  "original": "email",
+                },
+                {
+                  "mapped": "first_name",
+                  "original": "firstName",
+                },
+                {
+                  "mapped": "last_name",
+                  "original": "lastName",
+                },
+              ],
+              "type": "PersonalAccount",
+            },
+            {
+              "fieldMappings": [
+                {
+                  "mapped": "id",
+                  "original": "id",
+                },
+                {
+                  "mapped": "email",
+                  "original": "email",
+                },
+                {
+                  "mapped": "company_name",
+                  "original": "companyName",
+                },
+                {
+                  "mapped": "tax_id",
+                  "original": "taxId",
+                },
+              ],
+              "type": "BusinessAccount",
+            },
+          ],
+          "version": 1,
+        }
+      `);
+    });
+
+    it('maps interface entity with composite key', () => {
+      const sdl = `
+        directive @key(fields: String!) on OBJECT | INTERFACE
+
+        interface Vehicle @key(fields: "make model") {
+          make: String!
+          model: String!
+          year: Int!
+        }
+
+        type Car implements Vehicle @key(fields: "make model") {
+          make: String!
+          model: String!
+          year: Int!
+          numDoors: Int!
+        }
+
+        type Truck implements Vehicle @key(fields: "make model") {
+          make: String!
+          model: String!
+          year: Int!
+          payloadCapacity: Float!
+        }
+
+        type Query {
+          vehicle(make: String!, model: String!): Vehicle
+        }
+      `;
+
+      const mapping = compileGraphQLToMapping(sdl, 'VehicleService');
+
+      const json = mapping.toJson() as any;
+
+      // All types should have composite key entity mappings
+      const entityTypeNames = json.entityMappings.map((e: any) => e.typeName);
+      expect(entityTypeNames).toContain('Vehicle');
+      expect(entityTypeNames).toContain('Car');
+      expect(entityTypeNames).toContain('Truck');
+
+      // All should use the composite key
+      for (const entity of json.entityMappings) {
+        expect(entity.key).toBe('make model');
+      }
+
+      expect(json).toMatchInlineSnapshot(`
+        {
+          "entityMappings": [
+            {
+              "key": "make model",
+              "kind": "entity",
+              "request": "LookupVehicleByMakeAndModelRequest",
+              "response": "LookupVehicleByMakeAndModelResponse",
+              "rpc": "LookupVehicleByMakeAndModel",
+              "typeName": "Vehicle",
+            },
+            {
+              "key": "make model",
+              "kind": "entity",
+              "request": "LookupCarByMakeAndModelRequest",
+              "response": "LookupCarByMakeAndModelResponse",
+              "rpc": "LookupCarByMakeAndModel",
+              "typeName": "Car",
+            },
+            {
+              "key": "make model",
+              "kind": "entity",
+              "request": "LookupTruckByMakeAndModelRequest",
+              "response": "LookupTruckByMakeAndModelResponse",
+              "rpc": "LookupTruckByMakeAndModel",
+              "typeName": "Truck",
+            },
+          ],
+          "operationMappings": [
+            {
+              "mapped": "QueryVehicle",
+              "original": "vehicle",
+              "request": "QueryVehicleRequest",
+              "response": "QueryVehicleResponse",
+              "type": "OPERATION_TYPE_QUERY",
+            },
+          ],
+          "service": "VehicleService",
+          "typeFieldMappings": [
+            {
+              "fieldMappings": [
+                {
+                  "argumentMappings": [
+                    {
+                      "mapped": "make",
+                      "original": "make",
+                    },
+                    {
+                      "mapped": "model",
+                      "original": "model",
+                    },
+                  ],
+                  "mapped": "vehicle",
+                  "original": "vehicle",
+                },
+              ],
+              "type": "Query",
+            },
+            {
+              "fieldMappings": [
+                {
+                  "mapped": "make",
+                  "original": "make",
+                },
+                {
+                  "mapped": "model",
+                  "original": "model",
+                },
+                {
+                  "mapped": "year",
+                  "original": "year",
+                },
+                {
+                  "mapped": "num_doors",
+                  "original": "numDoors",
+                },
+              ],
+              "type": "Car",
+            },
+            {
+              "fieldMappings": [
+                {
+                  "mapped": "make",
+                  "original": "make",
+                },
+                {
+                  "mapped": "model",
+                  "original": "model",
+                },
+                {
+                  "mapped": "year",
+                  "original": "year",
+                },
+                {
+                  "mapped": "payload_capacity",
+                  "original": "payloadCapacity",
+                },
+              ],
+              "type": "Truck",
+            },
+          ],
+          "version": 1,
+        }
+      `);
+    });
+  });
+
   it('maps entity with compound key and required fields', () => {
     const sdl = `
       directive @key(fields: String!) on OBJECT

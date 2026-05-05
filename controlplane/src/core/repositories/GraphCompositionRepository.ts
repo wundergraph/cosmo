@@ -12,8 +12,10 @@ import {
 } from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { CompositionSubgraphRecord } from '../composition/composer.js';
+import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
+@traced
 export class GraphCompositionRepository {
   constructor(
     private logger: FastifyBaseLogger,

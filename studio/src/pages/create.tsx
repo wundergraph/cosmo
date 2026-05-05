@@ -5,11 +5,10 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { SubmitHandler, useZodForm } from '@/hooks/use-form';
-import { useUser } from '@/hooks/use-user';
 import { NextPageWithLayout } from '@/lib/page';
 import { getStripe } from '@/lib/stripe';
 import { cn } from '@/lib/utils';
-import { ArrowLeftIcon, CheckCircledIcon, CheckIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, CheckCircledIcon } from '@radix-ui/react-icons';
 import { useQuery, useMutation } from '@connectrpc/connect-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -19,6 +18,8 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { PiCheck } from 'react-icons/pi';
+import { z } from 'zod';
+import { calURL } from '@/lib/constants';
 
 const getPrice = (price?: number) => {
   switch (price) {
@@ -30,8 +31,6 @@ const getPrice = (price?: number) => {
       return `$${price} / month`;
   }
 };
-
-import { z } from 'zod';
 
 const CreateOrganization: NextPageWithLayout = () => {
   return (
@@ -247,9 +246,10 @@ const OrganizationForm = () => {
                 <FormDescription>
                   Looking for enterprise plans?{' '}
                   <Link
-                    href="https://cal.com/stefan-avram-wundergraph/wundergraph-introduction?duration=30"
+                    href={calURL}
                     target="_blank"
                     className="text-foreground hover:underline"
+                    rel="noopener noreferrer"
                   >
                     Please contact sales
                   </Link>

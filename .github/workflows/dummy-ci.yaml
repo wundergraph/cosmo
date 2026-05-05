@@ -8,6 +8,12 @@ on:
       - '.github/workflows/image-release.yml'
       - '.github/actions/**'
       - 'docs-website/**'
+      - 'CLAUDE.md'
+      - 'CONTRIBUTING.md'
+      - 'README.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
 jobs:
   build_test:
     timeout-minutes: 5

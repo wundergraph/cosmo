@@ -13,11 +13,13 @@ import {
 } from '../../types/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { isCheckSuccessful, normalizeLabels } from '../util.js';
+import { traced } from '../tracing.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
 /**
  * Repository for organization related operations.
  */
+@traced
 export class ProposalRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,

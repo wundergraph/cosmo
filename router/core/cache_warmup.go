@@ -62,7 +62,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	if cfg.Timeout <= 0 {
 		w.timeout = time.Second * 30
 	}
-	w.log.Debug("Warmup started",
+	w.log.Info("Warmup started",
 		zap.Int("workers", cfg.Workers),
 		zap.Int("items_per_second", cfg.ItemsPerSecond),
 		zap.Duration("timeout", cfg.Timeout),
@@ -84,7 +84,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 		)
 		return err
 	}
-	w.log.Debug("Warmup completed",
+	w.log.Info("Warmup completed",
 		zap.Int("processed_items", completed),
 		zap.Duration("duration", time.Since(start)),
 	)
@@ -119,7 +119,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	}
 
 	if len(items) == 0 {
-		w.log.Debug("No items to process")
+		w.log.Info("No items to process")
 		return 0, nil
 	}
 
