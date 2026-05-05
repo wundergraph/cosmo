@@ -18,7 +18,15 @@ const resetTracking = () => {
   posthog.reset();
 };
 
-const identify = ({
+const setupReo = (email: string) => {
+  // Identify with Reo
+  window.Reo?.identify({
+    username: email,
+    type: 'email',
+  });
+};
+
+const setupPosthog = ({
   email,
   id,
   organizationId,
@@ -33,10 +41,6 @@ const identify = ({
   organizationSlug: string;
   plan?: string;
 }) => {
-  if (typeof window === 'undefined' || !process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-    return;
-  }
-
   // We allow PostHog tracking for any environment, if the key is provided
   // Identify with PostHog
   let distinctId = posthog.get_distinct_id();
@@ -55,28 +59,53 @@ const identify = ({
       name: organizationName,
       plan: plan,
     });
+  } else {
+    posthog.identify(email, {
+      id,
+    });
+    posthog.group('cosmo_organization', organizationId, {
+      id: organizationId,
+      slug: organizationSlug,
+      name: organizationName,
+      plan: plan,
+    });
+  }
+  posthog.reloadFeatureFlags();
+};
+
+const identify = ({
+  email,
+  id,
+  organizationId,
+  organizationName,
+  organizationSlug,
+  plan,
+}: {
+  id: string;
+  email: string;
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  plan?: string;
+}) => {
+  if (typeof window === 'undefined') {
     return;
   }
 
-  posthog.identify(email, {
-    id,
-  });
-  posthog.group('cosmo_organization', organizationId, {
-    id: organizationId,
-    slug: organizationSlug,
-    name: organizationName,
-    plan: plan,
-  });
-
-  if (process.env.NODE_ENV !== 'production') {
-    return;
+  if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+    setupPosthog({
+      email,
+      id,
+      organizationId,
+      organizationName,
+      organizationSlug,
+      plan,
+    });
   }
 
-  // Identify with Reo
-  window.Reo?.identify({
-    username: email,
-    type: 'email',
-  });
+  if (process.env.NODE_ENV === 'production') {
+    setupReo(email);
+  }
 };
 
 /**
