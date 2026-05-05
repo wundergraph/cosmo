@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  BOOLEAN,
   CONDITION,
   FIRST_ORDINAL,
   inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
@@ -19,6 +20,7 @@ import {
   OBJECT,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
+  STRING_SCALAR,
   type Subgraph,
   subgraphValidationError,
   SUBSCRIPTION,
@@ -453,6 +455,116 @@ describe('@openfed__subscriptionFilter tests', () => {
       ]);
     });
 
+    test('that bypassIfValuesNull: true is preserved on the IN condition', () => {
+      const result = federateSubgraphsSuccess([subgraphB, subgraphBypass1], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.success).toBe(true);
+      expect(result.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: [],
+          fieldName: 'field',
+          subscriptionFilterCondition: {
+            in: {
+              bypassIfValuesNull: true,
+              fieldPath: ['id'],
+              values: ['1'],
+            },
+          },
+          typeName: SUBSCRIPTION,
+        },
+      ]);
+    });
+
+    test('that bypassIfValuesNull: false collapses to undefined', () => {
+      const result = federateSubgraphsSuccess([subgraphB, subgraphBypass2], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.success).toBe(true);
+      expect(result.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: [],
+          fieldName: 'field',
+          subscriptionFilterCondition: {
+            in: {
+              fieldPath: ['id'],
+              values: ['1'],
+            },
+          },
+          typeName: SUBSCRIPTION,
+        },
+      ]);
+    });
+
+    test('that omitting bypassIfValuesNull leaves the IN condition unchanged', () => {
+      const result = federateSubgraphsSuccess([subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.success).toBe(true);
+      expect(result.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: [],
+          fieldName: 'field',
+          subscriptionFilterCondition: {
+            in: {
+              fieldPath: ['id'],
+              values: ['1'],
+            },
+          },
+          typeName: SUBSCRIPTION,
+        },
+      ]);
+    });
+
+    test('that bypassIfValuesNull is propagated through nested OR/IN conditions', () => {
+      const result = federateSubgraphsSuccess([subgraphB, subgraphBypass3], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.success).toBe(true);
+      expect(result.fieldConfigurations).toStrictEqual([
+        {
+          argumentNames: [],
+          fieldName: 'field',
+          subscriptionFilterCondition: {
+            or: [
+              {
+                in: {
+                  bypassIfValuesNull: true,
+                  fieldPath: ['id'],
+                  values: ['1'],
+                },
+              },
+              {
+                in: {
+                  fieldPath: ['id'],
+                  values: ['2'],
+                },
+              },
+            ],
+          },
+          typeName: SUBSCRIPTION,
+        },
+      ]);
+    });
+
+    test('that an error is returned if bypassIfValuesNull is not a Boolean', () => {
+      const result = federateSubgraphsFailure([subgraphB, subgraphBypass4], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors).toStrictEqual([
+        invalidSubscriptionFilterDirectiveError('Subscription.field', [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            'condition.IN',
+            [],
+            [],
+            [],
+            [invalidInputFieldTypeErrorMessage('condition.IN.bypassIfValuesNull', BOOLEAN, STRING_SCALAR)],
+          ),
+        ]),
+      ]);
+    });
+
+    test('that an error is returned if bypassIfValuesNull is duplicated', () => {
+      const result = federateSubgraphsFailure([subgraphB, subgraphBypass5], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors).toStrictEqual([
+        invalidSubscriptionFilterDirectiveError('Subscription.field', [
+          subscriptionFieldConditionInvalidInputFieldErrorMessage('condition.IN', [], ['bypassIfValuesNull'], [], []),
+        ]),
+      ]);
+    });
+
     test('that an entity can be defined as an extension in an EDG', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphQ, subgraphR],
@@ -659,23 +771,24 @@ const subgraphG: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1] } })
     }
-    
+
     input openfed__SubscriptionFieldCondition {
+      bypassIfValuesNull: Boolean
       fieldPath: String!
       values: [openfed__SubscriptionFilterValue]!
     }
-    
+
     input openfed__SubscriptionFilterCondition {
       AND: [openfed__SubscriptionFilterCondition!]
       IN: openfed__SubscriptionFieldCondition
       NOT: openfed__SubscriptionFilterCondition
       OR: [openfed__SubscriptionFilterCondition!]
     }
-    
+
     scalar openfed__SubscriptionFilterValue
   `),
 };
@@ -924,6 +1037,83 @@ const subgraphR: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID! 
       name: String! 
+    }
+  `),
+};
+
+const subgraphBypass1: Subgraph = {
+  name: 'subgraph-bypass-1',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    type Subscription {
+      field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["1"], bypassIfValuesNull: true } })
+    }
+  `),
+};
+
+const subgraphBypass2: Subgraph = {
+  name: 'subgraph-bypass-2',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    type Subscription {
+      field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["1"], bypassIfValuesNull: false } })
+    }
+  `),
+};
+
+const subgraphBypass3: Subgraph = {
+  name: 'subgraph-bypass-3',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    type Subscription {
+      field: Entity!
+        @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
+        @openfed__subscriptionFilter(condition: {
+          OR: [
+            { IN: { fieldPath: "id", values: ["1"], bypassIfValuesNull: true } },
+            { IN: { fieldPath: "id", values: ["2"] } }
+          ]
+        })
+    }
+  `),
+};
+
+const subgraphBypass4: Subgraph = {
+  name: 'subgraph-bypass-4',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    type Subscription {
+      field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["1"], bypassIfValuesNull: "yes" } })
+    }
+  `),
+};
+
+const subgraphBypass5: Subgraph = {
+  name: 'subgraph-bypass-5',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    type Subscription {
+      field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["1"], bypassIfValuesNull: true, bypassIfValuesNull: false } })
     }
   `),
 };

@@ -506,6 +506,7 @@ message SingleTypeField {
 message SubscriptionFieldCondition {
   repeated string field_path = 1;
   string json = 2;
+  optional bool bypass_if_values_null = 3;
 }
 
 message SubscriptionFilterCondition {

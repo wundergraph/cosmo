@@ -183,6 +183,8 @@ import {
 import {
   AND_UPPER,
   AUTHORIZATION_DIRECTIVES,
+  BOOLEAN,
+  BYPASS_IF_VALUES_NULL,
   CONDITION,
   DEPRECATED,
   ENUM_VALUE,
@@ -2628,10 +2630,32 @@ export class FederationFactory {
     const duplicatedFieldNames = new Set<string>();
     const invalidFieldNames = new Set<string>();
     const fieldErrorMessages: string[] = [];
+    let hasSeenBypassIfValuesNull = false;
     for (const objectFieldNode of objectValueNode.fields) {
       const inputFieldName = objectFieldNode.name.value;
       const inputFieldPath = inputPath + `.${inputFieldName}`;
       switch (inputFieldName) {
+        case BYPASS_IF_VALUES_NULL: {
+          if (hasSeenBypassIfValuesNull) {
+            hasErrors = true;
+            duplicatedFieldNames.add(BYPASS_IF_VALUES_NULL);
+            break;
+          }
+          hasSeenBypassIfValuesNull = true;
+          if (objectFieldNode.value.kind !== Kind.BOOLEAN) {
+            fieldErrorMessages.push(
+              invalidInputFieldTypeErrorMessage(inputFieldPath, BOOLEAN, kindToNodeType(objectFieldNode.value.kind)),
+            );
+            hasErrors = true;
+            break;
+          }
+          // Only persist when explicitly true. Explicit false collapses to undefined so the
+          // serializer can emit the smallest proto for unchanged configs.
+          if (objectFieldNode.value.value === true) {
+            condition.bypassIfValuesNull = true;
+          }
+          break;
+        }
         case FIELD_PATH: {
           if (validFieldNames.has(FIELD_PATH)) {
             validFieldNames.delete(FIELD_PATH);

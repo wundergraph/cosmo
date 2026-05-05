@@ -281,8 +281,9 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 			return nil
 		}
 		output.In = &plan.SubscriptionFieldCondition{
-			FieldPath: input.In.FieldPath,
-			Values:    values,
+			FieldPath:          input.In.FieldPath,
+			Values:             values,
+			BypassIfValuesNull: input.In.GetBypassIfValuesNull(),
 		}
 		return output
 	}

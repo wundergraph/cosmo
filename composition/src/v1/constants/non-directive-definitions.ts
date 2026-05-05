@@ -7,6 +7,8 @@ import {
 import { stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
   AND_UPPER,
+  BOOLEAN_SCALAR,
+  BYPASS_IF_VALUES_NULL,
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   EDFS_NATS_STREAM_CONFIGURATION,
@@ -114,12 +116,18 @@ export const SCOPE_SCALAR_DEFINITION: ScalarTypeDefinitionNode = {
 };
 
 /* input openfed__SubscriptionFieldCondition {
+ *   bypassIfValuesNull: Boolean
  *   fieldPath: String!
  *   values: [openfed__SubscriptionFilterValue]!
  * }
  */
 export const SUBSCRIPTION_FIELD_CONDITION_DEFINITION: InputObjectTypeDefinitionNode = {
   fields: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(BYPASS_IF_VALUES_NULL),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+    },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(FIELD_PATH),

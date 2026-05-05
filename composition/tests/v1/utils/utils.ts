@@ -82,6 +82,7 @@ export const OPENFED_SCOPE = `  scalar openfed__Scope`;
 
 export const OPENFED_SUBSCRIPTION_FIELD_CONDITION = `
   input openfed__SubscriptionFieldCondition {
+    bypassIfValuesNull: Boolean
     fieldPath: String!
     values: [openfed__SubscriptionFilterValue]!
   }
