@@ -12,6 +12,7 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
+	"github.com/wundergraph/cosmo/graphqlmetrics/cacheevents"
 	"github.com/wundergraph/cosmo/graphqlmetrics/config"
 	"github.com/wundergraph/cosmo/graphqlmetrics/core"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
@@ -120,6 +121,8 @@ func main() {
 
 	ms := core.NewMetricsService(logger, conn, procConfig)
 
+	cacheEventsSvc := cacheevents.NewService(logger, conn, cacheevents.DefaultProcessorConfig())
+
 	metricsConfig := telemetry.NewTelemetryConfig(
 		core.Version,
 		telemetry.PrometheusConfig{
@@ -136,6 +139,7 @@ func main() {
 		core.WithListenAddr(cfg.ListenAddr),
 		core.WithLogger(logger),
 		core.WithMetrics(metricsConfig),
+		core.WithCacheEventsService(cacheEventsSvc),
 	)
 
 	go func() {
@@ -157,6 +161,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		ms.Shutdown(cfg.ShutdownDelay)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		cacheEventsSvc.Shutdown(cfg.ShutdownDelay)
 	}()
 
 	// enforce a maximum shutdown delay

@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/cacheevents/v1/cacheeventsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/telemetry"
 	"go.opentelemetry.io/otel/attribute"
@@ -20,11 +21,12 @@ import (
 type Option func(s *Server)
 
 type Server struct {
-	server         *http.Server
-	listenAddr     string
-	logger         *zap.Logger
-	jwtSecret      []byte
-	metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandler
+	server              *http.Server
+	listenAddr          string
+	logger              *zap.Logger
+	jwtSecret           []byte
+	metricsService      graphqlmetricsv1connect.GraphQLMetricsServiceHandler
+	cacheEventsService  cacheeventsv1connect.CacheEventsServiceHandler
 
 	metricConfig     *telemetry.Config
 	prometheusServer *http.Server
@@ -92,6 +94,15 @@ func (s *Server) bootstrap(ctx context.Context) {
 
 	mux.Handle("/health", healthHandler)
 	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
+
+	if s.cacheEventsService != nil {
+		cachePath, cacheHandler := cacheeventsv1connect.NewCacheEventsServiceHandler(
+			s.cacheEventsService,
+			brotli.WithCompression(),
+			connect.WithInterceptors(interceptors...),
+		)
+		mux.Handle(cachePath, authenticate(s.jwtSecret, s.logger, cacheHandler))
+	}
 
 	s.server = &http.Server{
 		Addr: s.listenAddr,
@@ -195,5 +206,11 @@ func WithJwtSecret(secret []byte) Option {
 func WithMetrics(cfg *telemetry.Config) Option {
 	return func(s *Server) {
 		s.metricConfig = cfg
+	}
+}
+
+func WithCacheEventsService(handler cacheeventsv1connect.CacheEventsServiceHandler) Option {
+	return func(s *Server) {
+		s.cacheEventsService = handler
 	}
 }

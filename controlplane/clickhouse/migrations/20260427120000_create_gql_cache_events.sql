@@ -1,0 +1,220 @@
+-- migrate:up
+
+CREATE TABLE IF NOT EXISTS gql_cache_events_raw
+(
+    -- See https://github.com/PostHog/posthog/issues/10616 why ZSTD(3) is used
+    Timestamp DateTime64(9, 'UTC') CODEC(Delta, ZSTD(3)),
+
+    -- Tenant
+    OrganizationID LowCardinality(String) CODEC(ZSTD(3)),
+    FederatedGraphID LowCardinality(String) CODEC(ZSTD(3)),
+    RouterConfigVersion LowCardinality(String) CODEC(ZSTD(3)),
+
+    -- Event discriminator. Canonical lowercase string. Values:
+    --   'l1_read','l2_read','l1_write','l2_write','fetch_timing',
+    --   'subgraph_error','shadow_comparison','mutation','header_impact',
+    --   'cache_op_error'
+    EventType LowCardinality(String) CODEC(ZSTD(3)),
+
+    -- Operation context
+    OperationHash LowCardinality(String) CODEC(ZSTD(3)),
+    OperationName LowCardinality(String) CODEC(ZSTD(3)),
+    OperationType LowCardinality(String) CODEC(ZSTD(3)),
+    ClientName LowCardinality(String) CODEC(ZSTD(3)),
+    ClientVersion LowCardinality(String) CODEC(ZSTD(3)),
+    TraceID String CODEC(ZSTD(3)),
+    IsShadow Bool CODEC(ZSTD(3)),
+
+    -- Cache identity
+    EntityType LowCardinality(String) CODEC(ZSTD(3)),
+    SubgraphID LowCardinality(String) CODEC(ZSTD(3)),
+    KeyHash UInt64 CODEC(ZSTD(3)),
+
+    -- Field-level identity (root field for entity fetches; nested fields for value-type traversal)
+    FieldName LowCardinality(String) CODEC(ZSTD(3)),
+    FieldHash UInt64 CODEC(ZSTD(3)),
+    FieldPath Array(LowCardinality(String)) CODEC(ZSTD(3)),
+    EntityCount UInt32 CODEC(ZSTD(3)),
+    EntityUniqueKeys UInt32 CODEC(ZSTD(3)),
+
+    -- Read events (l1_read, l2_read)
+    Verdict LowCardinality(String) CODEC(ZSTD(3)),
+    ByteSize UInt32 CODEC(ZSTD(3)),
+    CacheAgeMs UInt32 CODEC(ZSTD(3)),
+
+    -- Write events (l1_write, l2_write)
+    TTLMs UInt32 CODEC(ZSTD(3)),
+    WriteReason LowCardinality(String) CODEC(ZSTD(3)),
+    Source LowCardinality(String) CODEC(ZSTD(3)),
+
+    -- Fetch timing
+    FetchSource LowCardinality(String) CODEC(ZSTD(3)),
+    DurationMs Float64 CODEC(ZSTD(3)),
+    TTFBMs Float64 CODEC(ZSTD(3)),
+    ItemCount UInt32 CODEC(ZSTD(3)),
+    IsEntityFetch Bool CODEC(ZSTD(3)),
+    HttpStatusCode UInt16 CODEC(ZSTD(3)),
+    ResponseBytes UInt32 CODEC(ZSTD(3)),
+
+    -- Errors (subgraph_error, cache_op_error)
+    ErrorMessage String CODEC(ZSTD(3)),
+    ErrorCode LowCardinality(String) CODEC(ZSTD(3)),
+    CacheOp LowCardinality(String) CODEC(ZSTD(3)),
+    CacheName LowCardinality(String) CODEC(ZSTD(3)),
+
+    -- Shadow + mutation share these columns
+    ShadowIsFresh Bool CODEC(ZSTD(3)),
+    CachedHash UInt64 CODEC(ZSTD(3)),
+    FreshHash UInt64 CODEC(ZSTD(3)),
+    CachedBytes UInt32 CODEC(ZSTD(3)),
+    FreshBytes UInt32 CODEC(ZSTD(3)),
+    ConfiguredTTLMs UInt32 CODEC(ZSTD(3)),
+
+    -- Mutation
+    MutationRootField LowCardinality(String) CODEC(ZSTD(3)),
+    HadCachedValue Bool CODEC(ZSTD(3)),
+    IsStale Bool CODEC(ZSTD(3)),
+
+    -- Header impact
+    BaseKeyHash UInt64 CODEC(ZSTD(3)),
+    HeaderHash UInt64 CODEC(ZSTD(3)),
+    ResponseHash UInt64 CODEC(ZSTD(3)),
+
+    INDEX idx_op_hash OperationHash TYPE bloom_filter(0.001) GRANULARITY 1,
+    INDEX idx_entity EntityType TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_subgraph SubgraphID TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_key_hash KeyHash TYPE bloom_filter(0.001) GRANULARITY 1
+)
+    engine = MergeTree PARTITION BY toDate(Timestamp)
+        ORDER BY (OrganizationID, FederatedGraphID, EventType, OperationHash, EntityType, SubgraphID, toUnixTimestamp(Timestamp))
+        TTL toDateTime(Timestamp) + toIntervalDay(7)
+        SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
+
+CREATE TABLE IF NOT EXISTS gql_cache_events_5m_90d
+(
+    Timestamp DateTime('UTC') CODEC(Delta, ZSTD(3)),
+
+    OrganizationID LowCardinality(String) CODEC(ZSTD(3)),
+    FederatedGraphID LowCardinality(String) CODEC(ZSTD(3)),
+    RouterConfigVersion LowCardinality(String) CODEC(ZSTD(3)),
+
+    EventType LowCardinality(String) CODEC(ZSTD(3)),
+    OperationHash LowCardinality(String) CODEC(ZSTD(3)),
+    OperationName LowCardinality(String) CODEC(ZSTD(3)),
+    OperationType LowCardinality(String) CODEC(ZSTD(3)),
+    ClientName LowCardinality(String) CODEC(ZSTD(3)),
+    ClientVersion LowCardinality(String) CODEC(ZSTD(3)),
+    EntityType LowCardinality(String) CODEC(ZSTD(3)),
+    SubgraphID LowCardinality(String) CODEC(ZSTD(3)),
+    Verdict LowCardinality(String) CODEC(ZSTD(3)),
+    FieldName LowCardinality(String) CODEC(ZSTD(3)),
+    FetchSource LowCardinality(String) CODEC(ZSTD(3)),
+    IsShadow Bool CODEC(ZSTD(3)),
+
+    Events UInt64 CODEC(ZSTD(3)),
+    SumByteSize UInt64 CODEC(ZSTD(3)),
+    SumDurationMs Float64 CODEC(ZSTD(3)),
+    SumCacheAgeMs UInt64 CODEC(ZSTD(3)),
+    SumStale UInt64 CODEC(ZSTD(3)),
+    SumEntityCount UInt64 CODEC(ZSTD(3))
+)
+    engine = SummingMergeTree PARTITION BY toDate(Timestamp)
+        ORDER BY (OrganizationID, FederatedGraphID, EventType, OperationHash, EntityType, SubgraphID, ClientName, ClientVersion, RouterConfigVersion, OperationName, OperationType, Verdict, FetchSource, IsShadow, toUnixTimestamp(Timestamp))
+        TTL toDateTime(Timestamp) + toIntervalDay(90)
+        SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS gql_cache_events_5m_90d_mv TO gql_cache_events_5m_90d AS
+SELECT
+    toStartOfFiveMinute(Timestamp) as Timestamp,
+    toLowCardinality(OrganizationID) as OrganizationID,
+    toLowCardinality(FederatedGraphID) as FederatedGraphID,
+    toLowCardinality(RouterConfigVersion) as RouterConfigVersion,
+    toLowCardinality(EventType) as EventType,
+    toLowCardinality(OperationHash) as OperationHash,
+    toLowCardinality(OperationName) as OperationName,
+    toLowCardinality(OperationType) as OperationType,
+    toLowCardinality(ClientName) as ClientName,
+    toLowCardinality(ClientVersion) as ClientVersion,
+    toLowCardinality(EntityType) as EntityType,
+    toLowCardinality(SubgraphID) as SubgraphID,
+    toLowCardinality(Verdict) as Verdict,
+    toLowCardinality(FieldName) as FieldName,
+    toLowCardinality(FetchSource) as FetchSource,
+    IsShadow as IsShadow,
+    count() as Events,
+    sum(ByteSize) as SumByteSize,
+    sum(DurationMs) as SumDurationMs,
+    sum(CacheAgeMs) as SumCacheAgeMs,
+    sumIf(1, IsStale) as SumStale,
+    sum(EntityCount) as SumEntityCount
+FROM gql_cache_events_raw
+GROUP BY
+    Timestamp,
+    OrganizationID,
+    FederatedGraphID,
+    RouterConfigVersion,
+    EventType,
+    OperationHash,
+    OperationName,
+    OperationType,
+    ClientName,
+    ClientVersion,
+    EntityType,
+    SubgraphID,
+    Verdict,
+    FieldName,
+    FetchSource,
+    IsShadow
+ORDER BY Timestamp;
+
+CREATE TABLE IF NOT EXISTS gql_cache_events_1d_90d
+(
+    Timestamp DateTime('UTC') CODEC(Delta, ZSTD(3)),
+
+    OrganizationID LowCardinality(String) CODEC(ZSTD(3)),
+    FederatedGraphID LowCardinality(String) CODEC(ZSTD(3)),
+
+    EventType LowCardinality(String) CODEC(ZSTD(3)),
+    EntityType LowCardinality(String) CODEC(ZSTD(3)),
+    SubgraphID LowCardinality(String) CODEC(ZSTD(3)),
+    Verdict LowCardinality(String) CODEC(ZSTD(3)),
+
+    Events UInt64 CODEC(ZSTD(3)),
+    SumByteSize UInt64 CODEC(ZSTD(3)),
+    SumDurationMs Float64 CODEC(ZSTD(3))
+)
+    engine = SummingMergeTree PARTITION BY toDate(Timestamp)
+        ORDER BY (OrganizationID, FederatedGraphID, EventType, EntityType, SubgraphID, Verdict, toUnixTimestamp(Timestamp))
+        TTL toDateTime(Timestamp) + toIntervalDay(90)
+        SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS gql_cache_events_1d_90d_mv TO gql_cache_events_1d_90d AS
+SELECT
+    toStartOfDay(Timestamp) as Timestamp,
+    toLowCardinality(OrganizationID) as OrganizationID,
+    toLowCardinality(FederatedGraphID) as FederatedGraphID,
+    toLowCardinality(EventType) as EventType,
+    toLowCardinality(EntityType) as EntityType,
+    toLowCardinality(SubgraphID) as SubgraphID,
+    toLowCardinality(Verdict) as Verdict,
+    count() as Events,
+    sum(ByteSize) as SumByteSize,
+    sum(DurationMs) as SumDurationMs
+FROM gql_cache_events_raw
+GROUP BY
+    Timestamp,
+    OrganizationID,
+    FederatedGraphID,
+    EventType,
+    EntityType,
+    SubgraphID,
+    Verdict
+ORDER BY Timestamp;
+
+-- migrate:down
+
+DROP VIEW IF EXISTS gql_cache_events_1d_90d_mv;
+DROP TABLE IF EXISTS gql_cache_events_1d_90d;
+DROP VIEW IF EXISTS gql_cache_events_5m_90d_mv;
+DROP TABLE IF EXISTS gql_cache_events_5m_90d;
+DROP TABLE IF EXISTS gql_cache_events_raw;
