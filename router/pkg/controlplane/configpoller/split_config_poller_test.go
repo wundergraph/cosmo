@@ -153,7 +153,7 @@ func TestSplitGetRouterConfig_ConfigFetchError(t *testing.T) {
 func pollOnce(p *splitConfigPoller, handler func(*nodev1.RouterConfig, string) error) {
 	var tickFn func()
 	p.poller = &capturingPoller{capture: &tickFn}
-	p.Subscribe(context.Background(), handler)
+	p.Subscribe(context.Background(), handler) // sets tickFn
 	if tickFn != nil {
 		tickFn()
 	}
