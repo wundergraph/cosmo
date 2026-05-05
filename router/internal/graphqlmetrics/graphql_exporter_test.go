@@ -26,7 +26,6 @@ type MyClient struct {
 func (m *MyClient) PublishAggregatedGraphQLMetrics(ctx context.Context, c *connect.Request[graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsResponse], error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	require.Equal(m.t, "Bearer secret", c.Header().Get("Authorization"))
 	m.publishedAggregations = append(m.publishedAggregations, c.Msg.Aggregation)
 	return nil, nil
 }
@@ -34,7 +33,6 @@ func (m *MyClient) PublishAggregatedGraphQLMetrics(ctx context.Context, c *conne
 func (m *MyClient) PublishGraphQLMetrics(ctx context.Context, c *connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[graphqlmetricsv1.PublishOperationCoverageReportResponse], error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	require.Equal(m.t, "Bearer secret", c.Header().Get("Authorization"))
 	m.publishedBatches = append(m.publishedBatches, c.Msg.GetSchemaUsage())
 	return nil, nil
 }
@@ -53,7 +51,6 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 	e, err := NewGraphQLMetricsExporter(
 		zap.NewNop(),
 		c,
-		"secret",
 		&exporter.ExporterSettings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
@@ -134,7 +131,6 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 	e, err := NewGraphQLMetricsExporter(
 		zap.NewNop(),
 		c,
-		"secret",
 		&exporter.ExporterSettings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
@@ -205,7 +201,6 @@ func TestForceFlushSync(t *testing.T) {
 	e, err := NewGraphQLMetricsExporter(
 		zap.NewNop(),
 		c,
-		"secret",
 		&exporter.ExporterSettings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
@@ -328,7 +323,6 @@ func TestExportBatchInterval(t *testing.T) {
 	e, err := NewGraphQLMetricsExporter(
 		zap.NewNop(),
 		c,
-		"secret",
 		&exporter.ExporterSettings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
@@ -404,7 +398,6 @@ func TestExportFullQueue(t *testing.T) {
 	e, err := NewGraphQLMetricsExporter(
 		zap.NewNop(),
 		c,
-		"secret",
 		&exporter.ExporterSettings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,

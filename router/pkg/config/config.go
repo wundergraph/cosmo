@@ -1051,6 +1051,19 @@ type EntityCachingConfiguration struct {
 	L1                     EntityCachingL1Configuration         `yaml:"l1"`
 	L2                     EntityCachingL2Configuration         `yaml:"l2"`
 	SubgraphCacheOverrides []EntityCachingSubgraphCacheOverride `yaml:"subgraph_cache_overrides,omitempty"`
+	EventsExport           EntityCacheEventsExportConfig        `yaml:"events_export,omitempty"`
+}
+
+// EntityCacheEventsExportConfig configures the per-fetch cache event export
+// pipeline. When enabled, the router buffers raw cache events in memory and
+// ships them to the cosmo cache-events Connect endpoint (typically the same
+// binary that receives graphql_metrics).
+type EntityCacheEventsExportConfig struct {
+	Enabled   bool          `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_EVENTS_EXPORT_ENABLED"`
+	Endpoint  string        `yaml:"endpoint,omitempty" env:"ENTITY_CACHING_EVENTS_EXPORT_ENDPOINT"`
+	BatchSize int           `yaml:"batch_size,omitempty" envDefault:"1024" env:"ENTITY_CACHING_EVENTS_EXPORT_BATCH_SIZE"`
+	QueueSize int           `yaml:"queue_size,omitempty" envDefault:"16384" env:"ENTITY_CACHING_EVENTS_EXPORT_QUEUE_SIZE"`
+	Interval  time.Duration `yaml:"interval,omitempty" envDefault:"5s" env:"ENTITY_CACHING_EVENTS_EXPORT_INTERVAL"`
 }
 
 type EntityCachingL1Configuration struct {

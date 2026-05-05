@@ -1782,10 +1782,12 @@ func (s *graphServer) buildGraphMux(
 
 	if s.entityCachingConfig.Enabled {
 		handlerOpts.EntityCaching = EntityCachingHandlerOptions{
-			L1Enabled:       s.entityCachingConfig.L1.Enabled,
-			L2Enabled:       s.entityCachingConfig.L2.Enabled,
-			GlobalKeyPrefix: s.entityCachingConfig.GlobalCacheKeyPrefix,
-			KeyInterceptors: s.entityCacheKeyInterceptors,
+			L1Enabled:           s.entityCachingConfig.L1.Enabled,
+			L2Enabled:           s.entityCachingConfig.L2.Enabled,
+			GlobalKeyPrefix:     s.entityCachingConfig.GlobalCacheKeyPrefix,
+			KeyInterceptors:     s.entityCacheKeyInterceptors,
+			EventsExporter:      s.cacheEventsExporter,
+			RouterConfigVersion: opts.RouterConfigVersion,
 		}
 
 		for _, m := range []*rmetric.EntityCacheMetrics{s.metrics.OTLPEntityCache, s.metrics.PromEntityCache} {
@@ -1793,7 +1795,6 @@ func (s *graphServer) buildGraphMux(
 				handlerOpts.EntityCaching.Metrics = append(handlerOpts.EntityCaching.Metrics, m)
 			}
 		}
-		// TODO: Add entity analytics exporter to handler options here once analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)

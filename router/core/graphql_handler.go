@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
+	"github.com/wundergraph/cosmo/router/internal/cacheevents"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -92,11 +93,13 @@ type HandlerOptions struct {
 
 // EntityCachingHandlerOptions groups all entity caching configuration passed to the GraphQL handler.
 type EntityCachingHandlerOptions struct {
-	L1Enabled       bool
-	L2Enabled       bool
-	GlobalKeyPrefix string
-	KeyInterceptors []EntityCacheKeyInterceptor
-	Metrics         []*rmetric.EntityCacheMetrics
+	L1Enabled           bool
+	L2Enabled           bool
+	GlobalKeyPrefix     string
+	KeyInterceptors     []EntityCacheKeyInterceptor
+	Metrics             []*rmetric.EntityCacheMetrics
+	EventsExporter      *cacheevents.Exporter
+	RouterConfigVersion string
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -278,7 +281,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
-		h.recordEntityCacheMetrics(resolveCtx)
+		h.recordEntityCacheMetrics(resolveCtx, reqCtx)
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
@@ -571,10 +574,11 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 	}
 }
 
-// recordEntityCacheMetrics records OTEL metrics from the cache analytics snapshot.
-// TODO: Add entity analytics export here once the analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
-func (h *GraphQLHandler) recordEntityCacheMetrics(resolveCtx *resolve.Context) {
-	if len(h.entityCaching.Metrics) == 0 {
+// recordEntityCacheMetrics records OTEL metrics from the cache analytics
+// snapshot and, when an exporter is configured, ships raw per-fetch events
+// to the cosmo cache-events backend.
+func (h *GraphQLHandler) recordEntityCacheMetrics(resolveCtx *resolve.Context, reqCtx *requestContext) {
+	if len(h.entityCaching.Metrics) == 0 && h.entityCaching.EventsExporter == nil {
 		return
 	}
 	snapshot := resolveCtx.GetCacheStats()
@@ -582,6 +586,40 @@ func (h *GraphQLHandler) recordEntityCacheMetrics(resolveCtx *resolve.Context) {
 	for _, m := range h.entityCaching.Metrics {
 		m.RecordSnapshot(ctx, snapshot)
 	}
+	if h.entityCaching.EventsExporter != nil && reqCtx != nil {
+		meta := h.buildCacheEventOperationMeta(ctx, reqCtx)
+		events := cacheevents.BuildEvents(&snapshot, meta)
+		for _, ev := range events {
+			h.entityCaching.EventsExporter.Record(ev, false)
+		}
+	}
+}
+
+// buildCacheEventOperationMeta extracts the operation/client/schema dimensions
+// from the request context that every cache event row needs. The trace ID is
+// pulled best-effort from the active span context.
+func (h *GraphQLHandler) buildCacheEventOperationMeta(ctx context.Context, reqCtx *requestContext) cacheevents.OperationMeta {
+	meta := cacheevents.OperationMeta{
+		RouterConfigVersion: h.entityCaching.RouterConfigVersion,
+	}
+	if reqCtx == nil {
+		return meta
+	}
+	if reqCtx.operation != nil {
+		meta.OperationHash = reqCtx.operation.HashString()
+		meta.OperationName = reqCtx.operation.name
+		meta.OperationType = reqCtx.operation.opType
+		if reqCtx.operation.clientInfo != nil {
+			meta.ClientName = reqCtx.operation.clientInfo.Name
+			meta.ClientVersion = reqCtx.operation.clientInfo.Version
+		}
+	}
+	if span := trace.SpanFromContext(ctx); span != nil {
+		if sc := span.SpanContext(); sc.IsValid() {
+			meta.TraceID = sc.TraceID().String()
+		}
+	}
+	return meta
 }
 
 const (
@@ -622,7 +660,7 @@ func (h *GraphQLHandler) cachingOptions(reqCtx *requestContext) resolve.CachingO
 	return resolve.CachingOptions{
 		EnableL1Cache:         enableL1,
 		EnableL2Cache:         enableL2,
-		EnableCacheAnalytics:  len(h.entityCaching.Metrics) > 0,
+		EnableCacheAnalytics:  len(h.entityCaching.Metrics) > 0 || h.entityCaching.EventsExporter != nil,
 		GlobalCacheKeyPrefix:  globalKeyPrefix,
 		L2CacheKeyInterceptor: h.buildL2CacheKeyInterceptor(reqCtx),
 	}

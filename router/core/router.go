@@ -25,8 +25,10 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/cacheevents/v1/cacheeventsv1connect"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/cacheevents"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
@@ -941,11 +943,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			http.DefaultClient,
 			r.graphqlMetricsConfig.CollectorEndpoint,
 			connect.WithSendGzip(),
+			exporter.WithBearerAuth(r.graphApiToken),
 		)
 		ge, err := graphqlmetrics.NewGraphQLMetricsExporter(
 			r.logger,
 			client,
-			r.graphApiToken,
 			exporter.NewDefaultExporterSettings(),
 		)
 		if err != nil {
@@ -956,7 +958,38 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
 
-	// TODO: Add entity analytics exporter setup here once the analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
+	if r.entityCachingConfig.Enabled && r.entityCachingConfig.EventsExport.Enabled {
+		endpoint := r.entityCachingConfig.EventsExport.Endpoint
+		if endpoint == "" {
+			endpoint = r.graphqlMetricsConfig.CollectorEndpoint
+		}
+		ceClient := cacheeventsv1connect.NewCacheEventsServiceClient(
+			http.DefaultClient,
+			endpoint,
+			connect.WithSendGzip(),
+			exporter.WithBearerAuth(r.graphApiToken),
+		)
+		ceSink := cacheevents.NewSink(cacheevents.SinkConfig{
+			Client: ceClient,
+			Logger: r.logger,
+		})
+		ceSettings := exporter.NewDefaultExporterSettings()
+		if v := r.entityCachingConfig.EventsExport.BatchSize; v > 0 {
+			ceSettings.BatchSize = v
+		}
+		if v := r.entityCachingConfig.EventsExport.QueueSize; v > 0 {
+			ceSettings.QueueSize = v
+		}
+		if v := r.entityCachingConfig.EventsExport.Interval; v > 0 {
+			ceSettings.Interval = v
+		}
+		ce, err := cacheevents.NewExporter(r.logger, ceSink, ceSettings)
+		if err != nil {
+			return fmt.Errorf("failed to validate cache events exporter: %w", err)
+		}
+		r.cacheEventsExporter = ce
+		r.logger.Info("Entity cache events export enabled", zap.String("endpoint", endpoint))
+	}
 
 	// Create Prometheus metrics exporter for schema field usage
 	// Note: This is separate from the Prometheus meter provider which handles OTEL metrics
@@ -1885,6 +1918,14 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		wg.Go(func() {
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
+			}
+		})
+	}
+
+	if r.cacheEventsExporter != nil {
+		wg.Go(func() {
+			if subErr := r.cacheEventsExporter.Shutdown(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown cache events exporter: %w", subErr))
 			}
 		})
 	}

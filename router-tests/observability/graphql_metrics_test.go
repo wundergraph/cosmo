@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,11 +24,14 @@ func TestGraphQLMetrics(t *testing.T) {
 	waitForMetrics := make(chan struct{})
 
 	var (
-		data    []byte
-		request graphqlmetrics.PublishAggregatedGraphQLRequestMetricsRequest
+		data       []byte
+		authHeader string
+		request    graphqlmetrics.PublishAggregatedGraphQLRequestMetricsRequest
 	)
 
 	fakeGraphQLMetricsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		authHeader = r.Header.Get("Authorization")
 
 		read, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
@@ -72,6 +76,12 @@ func TestGraphQLMetrics(t *testing.T) {
 	case <-time.After(60 * time.Second):
 		t.Fatal("timeout waiting for metrics")
 	}
+	// Auth is now applied by exporter.WithBearerAuth at the Connect-client
+	// layer (previously the sink set this manually). Assert the header still
+	// reaches the wire after the refactor.
+	require.True(t, strings.HasPrefix(authHeader, "Bearer "), "expected Bearer auth header, got %q", authHeader)
+	require.Greater(t, len(authHeader), len("Bearer "), "expected non-empty token in Authorization header")
+
 	err := proto.Unmarshal(data, &request)
 	require.NoError(t, err)
 	require.Len(t, request.Aggregation, 1)

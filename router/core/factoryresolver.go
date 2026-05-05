@@ -323,6 +323,15 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
+
+	// When raw cache events are exported off-process, force every entity to
+	// hash its analytics key at plan time so KeyRaw never reaches the wire.
+	// The proto's PII redaction is enforced by omission, but this also
+	// guarantees the engine populates EntityFieldHash.KeyHash so FIELD_HASH
+	// events can be emitted regardless of per-entity SDL configuration.
+	if l.entityCachingConfig != nil && l.entityCachingConfig.EventsExport.Enabled {
+		outConfig.ForceHashAnalyticsKeys = true
+	}
 	for _, configuration := range engineConfig.FieldConfigurations {
 		var args []plan.ArgumentConfiguration
 		for _, argumentConfiguration := range configuration.ArgumentsConfiguration {

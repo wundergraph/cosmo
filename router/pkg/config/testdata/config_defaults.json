@@ -554,7 +554,14 @@
         "CooldownPeriod": 10000000000
       }
     },
-    "SubgraphCacheOverrides": null
+    "SubgraphCacheOverrides": null,
+    "EventsExport": {
+      "Enabled": false,
+      "Endpoint": "",
+      "BatchSize": 1024,
+      "QueueSize": 16384,
+      "Interval": 5000000000
+    }
   },
   "ExecutionConfig": {
     "File": {

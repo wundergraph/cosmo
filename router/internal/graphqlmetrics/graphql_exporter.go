@@ -20,15 +20,12 @@ type GraphQLMetricsExporter struct {
 func NewGraphQLMetricsExporter(
 	logger *zap.Logger,
 	client graphqlmetricsv1connect.GraphQLMetricsServiceClient,
-	apiToken string,
 	settings *exporter.ExporterSettings,
 ) (*GraphQLMetricsExporter, error) {
 	sink := NewGraphQLMetricsSink(GraphQLMetricsSinkConfig{
-		Client:   client,
-		APIToken: apiToken,
-		Logger:   logger,
+		Client: client,
+		Logger: logger,
 	})
-
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -37,7 +34,7 @@ func NewGraphQLMetricsExporter(
 		settings = exporter.NewDefaultExporterSettings()
 	}
 
-	exporter, err := exporter.NewExporter(logger, sink, IsRetryableError, settings)
+	exporter, err := exporter.NewExporter(logger, sink, exporter.IsRetryableConnectError, settings)
 	if err != nil {
 		return nil, err
 	}

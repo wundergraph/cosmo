@@ -461,6 +461,43 @@
               }
             }
           }
+        },
+        "events_export": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Streams raw per-fetch entity-cache decision events to a remote endpoint (typically the cosmo graphqlmetrics service) for ClickHouse ingestion.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable/disable per-fetch cache event export.",
+              "default": false
+            },
+            "endpoint": {
+              "type": "string",
+              "description": "Connect/gRPC endpoint of the cache events service. Defaults to the graphql_metrics collector endpoint when empty.",
+              "format": "uri"
+            },
+            "batch_size": {
+              "type": "integer",
+              "description": "Maximum number of events flushed in a single batch.",
+              "default": 1024,
+              "minimum": 1
+            },
+            "queue_size": {
+              "type": "integer",
+              "description": "In-memory queue capacity. Events beyond this are dropped if the consumer cannot keep up.",
+              "default": 16384,
+              "minimum": 1
+            },
+            "interval": {
+              "type": "string",
+              "description": "Maximum time to wait before flushing a partial batch. Specified as a duration string (e.g., '5s', '1m').",
+              "default": "5s",
+              "duration": {
+                "minimum": "1s"
+              }
+            }
+          }
         }
       }
     },
