@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package wg.cosmo.cacheevents.v1;
+
+// CacheEventsService receives raw entity-cache decision events from the router.
+// Events are ingested per-fetch (one event per cache decision) and persisted
+// into ClickHouse for analytics.
+service CacheEventsService {
+  rpc PublishEntityCacheEvents(PublishEntityCacheEventsRequest)
+      returns (PublishEntityCacheEventsResponse) {}
+}
+
+message PublishEntityCacheEventsRequest {
+  repeated CacheEvent events = 1;
+}
+
+message PublishEntityCacheEventsResponse {}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  L1_READ = 1;
+  L2_READ = 2;
+  L1_WRITE = 3;
+  L2_WRITE = 4;
+  FETCH_TIMING = 5;
+  SUBGRAPH_ERROR = 6;
+  SHADOW_COMPARISON = 7;
+  MUTATION = 8;
+  HEADER_IMPACT = 9;
+  CACHE_OP_ERROR = 10;
+  FIELD_HASH = 11;
+  ENTITY_TYPE_INFO = 12;
+}
+
+enum CacheOpKind {
+  CACHE_OP_KIND_UNSPECIFIED = 0;
+  GET = 1;
+  SET = 2;
+  SET_NEGATIVE = 3;
+  DELETE = 4;
+}
+
+enum Verdict {
+  VERDICT_UNSPECIFIED = 0;
+  HIT = 1;
+  MISS = 2;
+  PARTIAL_HIT = 3;
+  FRESH = 4;
+  STALE = 5;
+}
+
+enum FieldSource {
+  FIELD_SOURCE_UNSPECIFIED = 0;
+  SUBGRAPH = 1;
+  L1 = 2;
+  L2 = 3;
+  SHADOW_CACHED = 4;
+}
+
+// CacheEvent is one wire-format cache decision. Fields are sparse — only those
+// relevant to the EventType are populated. PII NOTE: raw cache keys are never
+// on the wire; only KeyHash (xxhash of the original key) is transmitted.
+message CacheEvent {
+  // Common.
+  fixed64 timestamp_unix_nano = 1;
+  EventType event_type = 2;
+
+  string operation_hash = 3;
+  string operation_name = 4;
+  string operation_type = 5;
+  string router_config_version = 6;
+  string client_name = 7;
+  string client_version = 8;
+  string trace_id = 9;
+  bool is_shadow = 10;
+
+  string entity_type = 11;
+  string subgraph_id = 12;
+  fixed64 key_hash = 13;
+
+  // Read events (L1_READ, L2_READ).
+  Verdict verdict = 20;
+  uint32 byte_size = 21;
+  uint32 cache_age_ms = 22;
+
+  // Write events (L1_WRITE, L2_WRITE).
+  uint32 ttl_ms = 30;
+  string write_reason = 31;
+  string source = 32;
+
+  // Fetch timing (FETCH_TIMING).
+  FieldSource fetch_source = 40;
+  double duration_ms = 41;
+  double ttfb_ms = 42;
+  uint32 item_count = 43;
+  bool is_entity_fetch = 44;
+  uint32 http_status_code = 45;
+  uint32 response_bytes = 46;
+
+  // Errors (SUBGRAPH_ERROR, CACHE_OP_ERROR).
+  string error_message = 50;
+  string error_code = 51;
+  string cache_op = 52;
+  string cache_name = 53;
+
+  // Shadow comparison (SHADOW_COMPARISON).
+  bool shadow_is_fresh = 60;
+  fixed64 cached_hash = 61;
+  fixed64 fresh_hash = 62;
+  uint32 cached_bytes = 63;
+  uint32 fresh_bytes = 64;
+  uint32 configured_ttl_ms = 65;
+
+  // Mutation impact (MUTATION). Reuses cached_hash/fresh_hash/cached_bytes/fresh_bytes above.
+  string mutation_root_field = 70;
+  bool had_cached_value = 71;
+  bool is_stale = 72;
+
+  // Header impact (HEADER_IMPACT).
+  fixed64 base_key_hash = 80;
+  fixed64 header_hash = 81;
+  fixed64 response_hash = 82;
+
+  // FIELD_HASH only.
+  string field_name = 90;
+  fixed64 field_hash = 91;
+  // field_path disambiguates value-type leaves at arbitrary nesting depth.
+  // It is the chain of schema field names from the enclosing entity down to
+  // (but not including) the hashed leaf. Empty for direct entity scalars.
+  // Schema-aware consumers can resolve the parent type by walking field_path
+  // against the schema. Examples:
+  //   User.email                       → field_path=[]
+  //   User.address.street              → field_path=["address"]
+  //   User.profile.location.street     → field_path=["profile","location"]
+  //   User.tags[*].label               → field_path=["tags"]   (no array indexes)
+  // Crossing into a nested entity resets the path — the inner entity becomes
+  // its own scope.
+  // Field number 92 is reserved (was parent_type_name, dropped pre-release as
+  // redundant given field_path + schema lookup).
+  reserved 92;
+  reserved "parent_type_name";
+  repeated string field_path = 93;
+
+  // ENTITY_TYPE_INFO only.
+  uint32 entity_count = 100;
+  uint32 entity_unique_keys = 101;
+
+  // Replaces freeform `cache_op`. When set, the writer prefers this enum
+  // over the string for the LowCardinality column.
+  CacheOpKind cache_op_kind = 110;
+}
