@@ -178,6 +178,46 @@ subgraph_error_propagation:
 }
 ```
 
+## Upstream WebSocket errors during subscriptions
+
+When a subgraph WebSocket connection carrying active subscriptions fails — TCP drop, EOF, or a close frame from the subgraph — the router delivers a GraphQL error on each affected subscription and terminates that subscription. The downstream client's WebSocket stays open and other subscriptions on that connection continue normally.
+
+The error uses the `message` `"upstream service error"` and the `code` extension is set to the value configured in `subgraph_error_propagation.default_extension_code` (default `DOWNSTREAM_SERVICE_ERROR`).
+
+**Sudden closure (TCP drop, EOF):**
+
+```json
+{
+  "errors": [
+    {
+      "message": "upstream service error",
+      "extensions": { "code": "DOWNSTREAM_SERVICE_ERROR" }
+    }
+  ]
+}
+```
+
+**Close frame from subgraph:** when the failure carries a WebSocket close frame, the router additionally populates `closeCode` and `closeReason` extensions:
+
+```json
+{
+  "errors": [
+    {
+      "message": "upstream service error",
+      "extensions": {
+        "code": "DOWNSTREAM_SERVICE_ERROR",
+        "closeCode": 1011,
+        "closeReason": "internal error"
+      }
+    }
+  ]
+}
+```
+
+<Note>
+  Prior to the [subscription overhaul release](/router/subscriptions-migration), upstream WebSocket failures during an active subscription terminated the entire downstream client WebSocket with close code `1001` and no GraphQL error payload. Clients that detected upstream failures via that close code must now inspect the `code` extension on GraphQL errors.
+</Note>
+
 ## Fallback status code errors
 
 In cases where the router cannot parse a properly formed error from the subgraph response, e.g.

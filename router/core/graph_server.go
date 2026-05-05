@@ -1305,10 +1305,12 @@ func (s *graphServer) buildGraphMux(
 		logger:           s.logger,
 		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
-			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
-			PingTimeout:  s.engineExecutionConfiguration.WebSocketClientPingTimeout,
-			ReadTimeout:  s.engineExecutionConfiguration.WebSocketClientReadTimeout,
-			FrameTimeout: s.engineExecutionConfiguration.WebSocketClientFrameTimeout,
+			PingInterval:              s.engineExecutionConfiguration.WebSocketClientPingInterval,
+			PingTimeout:               s.engineExecutionConfiguration.WebSocketClientPingTimeout,
+			WriteTimeout:              s.engineExecutionConfiguration.WebSocketClientWriteTimeout,
+			AckTimeout:                s.engineExecutionConfiguration.WebSocketClientAckTimeout,
+			ReadLimit:                 int64(s.engineExecutionConfiguration.WebSocketClientReadLimit),
+			DefaultErrorExtensionCode: s.subgraphErrorPropagation.DefaultExtensionCode,
 		},
 		transportOptions: &TransportOptions{
 			SubgraphTransportOptions:      s.subgraphTransportOptions,
@@ -1680,11 +1682,11 @@ func (s *graphServer) buildGraphMux(
 			AccessController:          s.accessController,
 			Logger:                    s.logger,
 			Stats:                     s.engineStats,
-			ReadTimeout:               s.engineExecutionConfiguration.WebSocketClientReadTimeout,
-			WriteTimeout:              s.engineExecutionConfiguration.WebSocketClientWriteTimeout,
+			ReadTimeout:               s.engineExecutionConfiguration.WebSocketServerReadTimeout,
+			WriteTimeout:              s.engineExecutionConfiguration.WebSocketServerWriteTimeout,
 			EnableNetPoll:             s.engineExecutionConfiguration.EnableNetPoll,
-			NetPollTimeout:            s.engineExecutionConfiguration.WebSocketClientPollTimeout,
-			NetPollConnBufferSize:     s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
+			NetPollTimeout:            s.engineExecutionConfiguration.WebSocketServerPollTimeout,
+			NetPollConnBufferSize:     s.engineExecutionConfiguration.WebSocketServerConnBufferSize,
 			WebSocketConfiguration:    s.webSocketConfiguration,
 			ClientHeader:              s.clientHeader,
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
@@ -1773,7 +1775,6 @@ func (s *graphServer) setupConnector(
 				Logger:   s.logger,
 				Endpoint: sg.RoutingUrl,
 			})
-
 			if err != nil {
 				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)
 			}
@@ -1929,9 +1930,9 @@ func (s *graphServer) wait(ctx context.Context) error {
 // After all requests are done, it will shut down the metric store and runtime metrics.
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
 func (s *graphServer) Shutdown(ctx context.Context) error {
-	// Cancel the context after the graceful shutdown is done
-	// to clean up resources like websocket connections, pools, etc.
-	defer s.cancelFunc()
+	// Cancel context immediately so long-lived websocket handlers start graceful close with GoingAway.
+	// Non-hijacked HTTP requests are still governed by in-flight tracking and the shutdown context below.
+	s.cancelFunc()
 
 	s.logger.Debug("Shutdown of graph server initiated. Waiting for in-flight requests to finish.",
 		zap.String("config_version", s.baseRouterConfigVersion),

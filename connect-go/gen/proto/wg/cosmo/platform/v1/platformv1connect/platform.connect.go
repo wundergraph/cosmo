@@ -244,6 +244,9 @@ const (
 	// PlatformServiceInviteUserProcedure is the fully-qualified name of the PlatformService's
 	// InviteUser RPC.
 	PlatformServiceInviteUserProcedure = "/wg.cosmo.platform.v1.PlatformService/InviteUser"
+	// PlatformServiceInviteUsersProcedure is the fully-qualified name of the PlatformService's
+	// InviteUsers RPC.
+	PlatformServiceInviteUsersProcedure = "/wg.cosmo.platform.v1.PlatformService/InviteUsers"
 	// PlatformServiceGetAPIKeysProcedure is the fully-qualified name of the PlatformService's
 	// GetAPIKeys RPC.
 	PlatformServiceGetAPIKeysProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAPIKeys"
@@ -574,6 +577,15 @@ const (
 	// PlatformServiceRecomposeGraphProcedure is the fully-qualified name of the PlatformService's
 	// RecomposeGraph RPC.
 	PlatformServiceRecomposeGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/RecomposeGraph"
+	// PlatformServiceGetOnboardingProcedure is the fully-qualified name of the PlatformService's
+	// GetOnboarding RPC.
+	PlatformServiceGetOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOnboarding"
+	// PlatformServiceCreateOnboardingProcedure is the fully-qualified name of the PlatformService's
+	// CreateOnboarding RPC.
+	PlatformServiceCreateOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateOnboarding"
+	// PlatformServiceFinishOnboardingProcedure is the fully-qualified name of the PlatformService's
+	// FinishOnboarding RPC.
+	PlatformServiceFinishOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/FinishOnboarding"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -649,6 +661,7 @@ var (
 	platformServiceGetPendingOrganizationMembersMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("GetPendingOrganizationMembers")
 	platformServiceIsMemberLimitReachedMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("IsMemberLimitReached")
 	platformServiceInviteUserMethodDescriptor                                         = platformServiceServiceDescriptor.Methods().ByName("InviteUser")
+	platformServiceInviteUsersMethodDescriptor                                        = platformServiceServiceDescriptor.Methods().ByName("InviteUsers")
 	platformServiceGetAPIKeysMethodDescriptor                                         = platformServiceServiceDescriptor.Methods().ByName("GetAPIKeys")
 	platformServiceCreateAPIKeyMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("CreateAPIKey")
 	platformServiceUpdateAPIKeyMethodDescriptor                                       = platformServiceServiceDescriptor.Methods().ByName("UpdateAPIKey")
@@ -759,6 +772,9 @@ var (
 	platformServiceUnlinkSubgraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
 	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
 	platformServiceRecomposeGraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
+	platformServiceGetOnboardingMethodDescriptor                                      = platformServiceServiceDescriptor.Methods().ByName("GetOnboarding")
+	platformServiceCreateOnboardingMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("CreateOnboarding")
+	platformServiceFinishOnboardingMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("FinishOnboarding")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -890,6 +906,8 @@ type PlatformServiceClient interface {
 	IsMemberLimitReached(context.Context, *connect.Request[v1.IsMemberLimitReachedRequest]) (*connect.Response[v1.IsMemberLimitReachedResponse], error)
 	// InviteUser invites an user to join the organization
 	InviteUser(context.Context, *connect.Request[v1.InviteUserRequest]) (*connect.Response[v1.InviteUserResponse], error)
+	// InviteUsers invites multiple users to join the organization
+	InviteUsers(context.Context, *connect.Request[v1.InviteUsersRequest]) (*connect.Response[v1.InviteUsersResponse], error)
 	// GetAPIKeys returns a list of API keys of the organization
 	GetAPIKeys(context.Context, *connect.Request[v1.GetAPIKeysRequest]) (*connect.Response[v1.GetAPIKeysResponse], error)
 	// CreateAPIKey creates an API key for the organization
@@ -1103,6 +1121,10 @@ type PlatformServiceClient interface {
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
 	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
+	// Onboarding
+	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
+	CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error)
+	FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -1533,6 +1555,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceInviteUserProcedure,
 			connect.WithSchema(platformServiceInviteUserMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		inviteUsers: connect.NewClient[v1.InviteUsersRequest, v1.InviteUsersResponse](
+			httpClient,
+			baseURL+PlatformServiceInviteUsersProcedure,
+			connect.WithSchema(platformServiceInviteUsersMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getAPIKeys: connect.NewClient[v1.GetAPIKeysRequest, v1.GetAPIKeysResponse](
@@ -2202,6 +2230,24 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getOnboarding: connect.NewClient[v1.GetOnboardingRequest, v1.GetOnboardingResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOnboardingProcedure,
+			connect.WithSchema(platformServiceGetOnboardingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		createOnboarding: connect.NewClient[v1.CreateOnboardingRequest, v1.CreateOnboardingResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateOnboardingProcedure,
+			connect.WithSchema(platformServiceCreateOnboardingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		finishOnboarding: connect.NewClient[v1.FinishOnboardingRequest, v1.FinishOnboardingResponse](
+			httpClient,
+			baseURL+PlatformServiceFinishOnboardingProcedure,
+			connect.WithSchema(platformServiceFinishOnboardingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2277,6 +2323,7 @@ type platformServiceClient struct {
 	getPendingOrganizationMembers                      *connect.Client[v1.GetPendingOrganizationMembersRequest, v1.GetPendingOrganizationMembersResponse]
 	isMemberLimitReached                               *connect.Client[v1.IsMemberLimitReachedRequest, v1.IsMemberLimitReachedResponse]
 	inviteUser                                         *connect.Client[v1.InviteUserRequest, v1.InviteUserResponse]
+	inviteUsers                                        *connect.Client[v1.InviteUsersRequest, v1.InviteUsersResponse]
 	getAPIKeys                                         *connect.Client[v1.GetAPIKeysRequest, v1.GetAPIKeysResponse]
 	createAPIKey                                       *connect.Client[v1.CreateAPIKeyRequest, v1.CreateAPIKeyResponse]
 	updateAPIKey                                       *connect.Client[v1.UpdateAPIKeyRequest, v1.UpdateAPIKeyResponse]
@@ -2387,6 +2434,9 @@ type platformServiceClient struct {
 	unlinkSubgraph                                     *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
 	verifyAPIKeyGraphAccess                            *connect.Client[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse]
 	recomposeGraph                                     *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
+	getOnboarding                                      *connect.Client[v1.GetOnboardingRequest, v1.GetOnboardingResponse]
+	createOnboarding                                   *connect.Client[v1.CreateOnboardingRequest, v1.CreateOnboardingResponse]
+	finishOnboarding                                   *connect.Client[v1.FinishOnboardingRequest, v1.FinishOnboardingResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -2747,6 +2797,11 @@ func (c *platformServiceClient) IsMemberLimitReached(ctx context.Context, req *c
 // InviteUser calls wg.cosmo.platform.v1.PlatformService.InviteUser.
 func (c *platformServiceClient) InviteUser(ctx context.Context, req *connect.Request[v1.InviteUserRequest]) (*connect.Response[v1.InviteUserResponse], error) {
 	return c.inviteUser.CallUnary(ctx, req)
+}
+
+// InviteUsers calls wg.cosmo.platform.v1.PlatformService.InviteUsers.
+func (c *platformServiceClient) InviteUsers(ctx context.Context, req *connect.Request[v1.InviteUsersRequest]) (*connect.Response[v1.InviteUsersResponse], error) {
+	return c.inviteUsers.CallUnary(ctx, req)
 }
 
 // GetAPIKeys calls wg.cosmo.platform.v1.PlatformService.GetAPIKeys.
@@ -3328,6 +3383,21 @@ func (c *platformServiceClient) RecomposeGraph(ctx context.Context, req *connect
 	return c.recomposeGraph.CallUnary(ctx, req)
 }
 
+// GetOnboarding calls wg.cosmo.platform.v1.PlatformService.GetOnboarding.
+func (c *platformServiceClient) GetOnboarding(ctx context.Context, req *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error) {
+	return c.getOnboarding.CallUnary(ctx, req)
+}
+
+// CreateOnboarding calls wg.cosmo.platform.v1.PlatformService.CreateOnboarding.
+func (c *platformServiceClient) CreateOnboarding(ctx context.Context, req *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error) {
+	return c.createOnboarding.CallUnary(ctx, req)
+}
+
+// FinishOnboarding calls wg.cosmo.platform.v1.PlatformService.FinishOnboarding.
+func (c *platformServiceClient) FinishOnboarding(ctx context.Context, req *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error) {
+	return c.finishOnboarding.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3457,6 +3527,8 @@ type PlatformServiceHandler interface {
 	IsMemberLimitReached(context.Context, *connect.Request[v1.IsMemberLimitReachedRequest]) (*connect.Response[v1.IsMemberLimitReachedResponse], error)
 	// InviteUser invites an user to join the organization
 	InviteUser(context.Context, *connect.Request[v1.InviteUserRequest]) (*connect.Response[v1.InviteUserResponse], error)
+	// InviteUsers invites multiple users to join the organization
+	InviteUsers(context.Context, *connect.Request[v1.InviteUsersRequest]) (*connect.Response[v1.InviteUsersResponse], error)
 	// GetAPIKeys returns a list of API keys of the organization
 	GetAPIKeys(context.Context, *connect.Request[v1.GetAPIKeysRequest]) (*connect.Response[v1.GetAPIKeysResponse], error)
 	// CreateAPIKey creates an API key for the organization
@@ -3670,6 +3742,10 @@ type PlatformServiceHandler interface {
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
 	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
+	// Onboarding
+	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
+	CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error)
+	FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4096,6 +4172,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceInviteUserProcedure,
 		svc.InviteUser,
 		connect.WithSchema(platformServiceInviteUserMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceInviteUsersHandler := connect.NewUnaryHandler(
+		PlatformServiceInviteUsersProcedure,
+		svc.InviteUsers,
+		connect.WithSchema(platformServiceInviteUsersMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetAPIKeysHandler := connect.NewUnaryHandler(
@@ -4765,6 +4847,24 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetOnboardingHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOnboardingProcedure,
+		svc.GetOnboarding,
+		connect.WithSchema(platformServiceGetOnboardingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCreateOnboardingHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateOnboardingProcedure,
+		svc.CreateOnboarding,
+		connect.WithSchema(platformServiceCreateOnboardingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceFinishOnboardingHandler := connect.NewUnaryHandler(
+		PlatformServiceFinishOnboardingProcedure,
+		svc.FinishOnboarding,
+		connect.WithSchema(platformServiceFinishOnboardingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -4907,6 +5007,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceIsMemberLimitReachedHandler.ServeHTTP(w, r)
 		case PlatformServiceInviteUserProcedure:
 			platformServiceInviteUserHandler.ServeHTTP(w, r)
+		case PlatformServiceInviteUsersProcedure:
+			platformServiceInviteUsersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetAPIKeysProcedure:
 			platformServiceGetAPIKeysHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateAPIKeyProcedure:
@@ -5127,6 +5229,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceVerifyAPIKeyGraphAccessHandler.ServeHTTP(w, r)
 		case PlatformServiceRecomposeGraphProcedure:
 			platformServiceRecomposeGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOnboardingProcedure:
+			platformServiceGetOnboardingHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateOnboardingProcedure:
+			platformServiceCreateOnboardingHandler.ServeHTTP(w, r)
+		case PlatformServiceFinishOnboardingProcedure:
+			platformServiceFinishOnboardingHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5414,6 +5522,10 @@ func (UnimplementedPlatformServiceHandler) IsMemberLimitReached(context.Context,
 
 func (UnimplementedPlatformServiceHandler) InviteUser(context.Context, *connect.Request[v1.InviteUserRequest]) (*connect.Response[v1.InviteUserResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.InviteUser is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) InviteUsers(context.Context, *connect.Request[v1.InviteUsersRequest]) (*connect.Response[v1.InviteUsersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.InviteUsers is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetAPIKeys(context.Context, *connect.Request[v1.GetAPIKeysRequest]) (*connect.Response[v1.GetAPIKeysResponse], error) {
@@ -5854,4 +5966,16 @@ func (UnimplementedPlatformServiceHandler) VerifyAPIKeyGraphAccess(context.Conte
 
 func (UnimplementedPlatformServiceHandler) RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RecomposeGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOnboarding is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateOnboarding is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.FinishOnboarding is not implemented"))
 }
