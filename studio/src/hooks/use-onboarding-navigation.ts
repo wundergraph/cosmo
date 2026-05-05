@@ -38,6 +38,10 @@ export const useOnboardingNavigation = () => {
 
   useEffect(
     function handleNavigationToOnboarding() {
+      // Do not redirect if feature flag is off
+      if (!enabled) {
+        return;
+      }
       // Wait for the onboarding metadata query to resolve
       // Do not initiate redirect if we fail to fetch onboarding metadata. Fail silently in background.
       if (initialLoadSuccess === null || !initialLoadSuccess) {
