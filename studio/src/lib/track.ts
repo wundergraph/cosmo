@@ -50,7 +50,6 @@ const identify = ({
   } else if (distinctId === email) {
     posthog.identify(email, {
       id,
-      email,
     });
     // This session has been already identified, just keep the organization synchronized!
     posthog.group('cosmo_organization', organizationId, {
@@ -65,7 +64,6 @@ const identify = ({
 
   posthog.identify(email, {
     id,
-    email,
   });
   posthog.group('cosmo_organization', organizationId, {
     id: organizationId,
