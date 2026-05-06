@@ -42,7 +42,11 @@ const (
 	// Error response when the base graph (which doesn't define productCount)
 	// serves the request because the rollout selector either picked nothing
 	// or the flag was 0%.
-	productCountFieldError = `Cannot query field "productCount"`
+	//
+	// res.Body is a raw JSON string, so the inner double-quotes around the
+	// field name are JSON-escaped. Match the on-the-wire form, not the
+	// human-readable form.
+	productCountFieldError = `Cannot query field \"productCount\"`
 )
 
 func TestFeatureFlagRollouts(t *testing.T) {
