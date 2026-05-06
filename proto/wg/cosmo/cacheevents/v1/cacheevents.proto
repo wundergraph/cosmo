@@ -4,7 +4,8 @@ package wg.cosmo.cacheevents.v1;
 
 // CacheEventsService receives raw entity-cache decision events from the router.
 // Events are ingested per-fetch (one event per cache decision) and persisted
-// into ClickHouse for analytics.
+// into ClickHouse for analytics. See graphqlmetrics/cacheevents/ for the
+// server-side processor and ClickHouse schema.
 service CacheEventsService {
   rpc PublishEntityCacheEvents(PublishEntityCacheEventsRequest)
       returns (PublishEntityCacheEventsResponse) {}
