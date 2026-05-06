@@ -68,7 +68,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         schema {
           subscription: Subscription
         }
-        
+
         directive @edfs__kafkaSubscribe(providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
         directive @external on FIELD_DEFINITION | OBJECT
         directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
@@ -77,7 +77,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         type Entity @key(fields: "id", resolvable: false) {
           id: ID! @external
         }
-        
+
         type Subscription {
           field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: {IN: {fieldPath: "id", values: ["1"]}})
         }
@@ -98,7 +98,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         schema {
           subscription: Subscription
         }
-        
+
         directive @edfs__kafkaSubscribe(providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
         directive @external on FIELD_DEFINITION | OBJECT
         directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
@@ -107,7 +107,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         type Entity @key(fields: "id", resolvable: false) {
           id: ID! @external
         }
-        
+
         type Subscription {
           field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: {IN: {fieldPath: "id", values: [1]}})
         }
@@ -463,17 +463,17 @@ describe('@openfed__subscriptionFilter tests', () => {
       );
       expect(result.success).toBe(true);
       const subscriptionFields = result.fieldConfigurations.filter(
-        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onTaskEvent',
+        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onEntityEvent',
       );
       expect(subscriptionFields).toHaveLength(1);
       expect(subscriptionFields[0]).toStrictEqual({
-        argumentNames: ['phoneChannelId'],
-        fieldName: 'onTaskEvent',
+        argumentNames: ['entityCode'],
+        fieldName: 'onEntityEvent',
         typeName: SUBSCRIPTION,
         subscriptionFilterCondition: {
           in: {
-            fieldPath: ['phoneChannelId'],
-            values: ['{{ args.phoneChannelId }}'],
+            fieldPath: ['entityCode'],
+            values: ['{{ args.entityCode }}'],
           },
         },
       });
@@ -486,17 +486,17 @@ describe('@openfed__subscriptionFilter tests', () => {
       );
       expect(result.success).toBe(true);
       const subscriptionFields = result.fieldConfigurations.filter(
-        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onTaskEvent',
+        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onEntityEvent',
       );
       expect(subscriptionFields).toHaveLength(1);
       expect(subscriptionFields[0]).toStrictEqual({
-        argumentNames: ['phoneChannelId'],
-        fieldName: 'onTaskEvent',
+        argumentNames: ['entityCode'],
+        fieldName: 'onEntityEvent',
         typeName: SUBSCRIPTION,
         subscriptionFilterCondition: {
           in: {
-            fieldPath: ['phoneChannelId'],
-            values: ['{{ args.phoneChannelId }}'],
+            fieldPath: ['entityCode'],
+            values: ['{{ args.entityCode }}'],
           },
         },
       });
@@ -510,10 +510,10 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors![0]).toStrictEqual(
-        invalidSubscriptionFilterDirectiveError(`Subscription.onTaskEvent`, [
+        invalidSubscriptionFilterDirectiveError(`Subscription.onEntityEvent`, [
           subscriptionFilterUnionMemberInvalidErrorMessage(
-            'TaskEvent',
-            'TaskDeleted',
+            'EntityEvent',
+            'EntityDeleted',
             subscriptionFieldConditionInvalidInputFieldErrorMessage(
               'condition.IN',
               [],
@@ -522,10 +522,10 @@ describe('@openfed__subscriptionFilter tests', () => {
               [
                 undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage(
                   'condition.IN.fieldPath',
-                  'phoneChannelId',
-                  'phoneChannelId',
-                  'phoneChannelId',
-                  'TaskDeleted',
+                  'entityCode',
+                  'entityCode',
+                  'entityCode',
+                  'EntityDeleted',
                 ),
               ],
             ),
@@ -542,10 +542,10 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors![0]).toStrictEqual(
-        invalidSubscriptionFilterDirectiveError(`Subscription.onTaskEvent`, [
+        invalidSubscriptionFilterDirectiveError(`Subscription.onEntityEvent`, [
           subscriptionFilterInterfaceImplementerInvalidErrorMessage(
-            'TaskEvent',
-            'TaskDeleted',
+            'EntityEvent',
+            'EntityDeleted',
             subscriptionFieldConditionInvalidInputFieldErrorMessage(
               'condition.IN',
               [],
@@ -554,10 +554,10 @@ describe('@openfed__subscriptionFilter tests', () => {
               [
                 undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage(
                   'condition.IN.fieldPath',
-                  'phoneChannelId',
-                  'phoneChannelId',
-                  'phoneChannelId',
-                  'TaskDeleted',
+                  'entityCode',
+                  'entityCode',
+                  'entityCode',
+                  'EntityDeleted',
                 ),
               ],
             ),
@@ -573,17 +573,17 @@ describe('@openfed__subscriptionFilter tests', () => {
       );
       expect(result.success).toBe(true);
       const subscriptionFields = result.fieldConfigurations.filter(
-        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onTaskEvent',
+        (fc) => fc.typeName === SUBSCRIPTION && fc.fieldName === 'onEntityEvent',
       );
       expect(subscriptionFields).toHaveLength(1);
       expect(subscriptionFields[0]).toStrictEqual({
-        argumentNames: ['phoneChannelId'],
-        fieldName: 'onTaskEvent',
+        argumentNames: ['entityCode'],
+        fieldName: 'onEntityEvent',
         typeName: SUBSCRIPTION,
         subscriptionFilterCondition: {
           in: {
-            fieldPath: ['phoneChannelId'],
-            values: ['{{ args.phoneChannelId }}'],
+            fieldPath: ['entityCode'],
+            values: ['{{ args.entityCode }}'],
           },
         },
       });
@@ -600,16 +600,16 @@ describe('@openfed__subscriptionFilter tests', () => {
           query: Query
           subscription: Subscription
         }
-        
+
         type Entity {
           id: ID!
           name: String!
         }
-        
+
         type Query {
           entity: Entity!
         }
-        
+
         type Subscription {
           field: Entity!
         }
@@ -627,11 +627,11 @@ const subgraphA: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Object {
       field: String! @openfed__subscriptionFilter(condition: { IN: { fieldPath: "" } })
     }
-    
+
     type Subscription {
       field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
     }
@@ -650,7 +650,7 @@ const subgraphB: Subgraph = {
       OC
       SA
     }
-    
+
     type Entity @key(fields: "id") @key(fields: "id object { name, age } product { sku, continent }") {
       age: Int!
       id: ID!
@@ -658,23 +658,23 @@ const subgraphB: Subgraph = {
       object: Object!
       product: Product!
     }
-    
+
     type NestedObject {
       name: String!
     }
-    
+
     type Object {
       id: ID!
       name: String!
       age: Int!
       field: NestedObject!
     }
-  
+
     type Product {
       continent: Continent!
       sku: String!
     }
-    
+
     type Query {
       entities: [Entity!]!
     }
@@ -688,7 +688,7 @@ const subgraphC: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["1"] } })
     }
@@ -707,34 +707,34 @@ const subgraphD: Subgraph = {
       OC
       SA
     }
-  
+
     type Entity @key(fields: "id object { name, age } product { sku, continent }", resolvable: false) {
       id: ID! @external
       object: Object! @external
       product: Product! @external
     }
-    
+
     type Object @external {
       name: String!
       age: Int!
     }
-    
+
     type Product @external {
       continent: Continent!
       sku: String!
     }
-    
+
     type Subscription {
       field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
         condition: { AND: [
-          { NOT: 
+          { NOT:
             { OR: [
               { IN: { fieldPath: "object.name", values: ["Jens", "Stefan"] } },
               { IN: { fieldPath: "object.age", values: ["11", "22"] } },
             ] },
           },
           { AND: [
-            { NOT: 
+            { NOT:
               { IN: { fieldPath: "product.sku", values: ["aaa"] } },
             },
             { IN: { fieldPath: "product.continent" values: ["NA"] } },
@@ -752,7 +752,7 @@ const subgraphE: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: 1)
     }
@@ -766,18 +766,18 @@ const subgraphF: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
         condition: { AND: [
-          { NOT: 
+          { NOT:
             { OR: [
               { IN: { fieldPath: "object.field.name", values: ["Jens", "Stefan"] } },
               { IN: { fieldPath: "object.age", values: ["11", "22"] } },
             ] },
           },
           { AND: [
-            { NOT: 
+            { NOT:
               { IN: { fieldPath: "product.sku", values: ["aaa"] } },
             },
             { IN: { fieldPath: "product.continent" values: ["NA"] } },
@@ -795,23 +795,23 @@ const subgraphG: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1] } })
     }
-    
+
     input openfed__SubscriptionFieldCondition {
       fieldPath: String!
       values: [openfed__SubscriptionFilterValue]!
     }
-    
+
     input openfed__SubscriptionFilterCondition {
       AND: [openfed__SubscriptionFilterCondition!]
       IN: openfed__SubscriptionFieldCondition
       NOT: openfed__SubscriptionFilterCondition
       OR: [openfed__SubscriptionFilterCondition!]
     }
-    
+
     scalar openfed__SubscriptionFilterValue
   `),
 };
@@ -823,7 +823,7 @@ const subgraphH: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { field: "id", value: [1], } })
       two: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1], fieldPath: "id", values: [1] } })
@@ -838,7 +838,7 @@ const subgraphI: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: { hello: "world" } } })
       two: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [{ hello: "world" }] } })
@@ -855,7 +855,7 @@ const subgraphJ: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: "string" } })
       two: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: 1 } })
@@ -872,7 +872,7 @@ const subgraphK: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
         @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: "string" } })
@@ -888,7 +888,7 @@ const subgraphL: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"])
         @openfed__subscriptionFilter(condition: { OUT: { fieldPath: "id", values: "string" } })
@@ -912,11 +912,11 @@ const subgraphM: Subgraph = {
       id: ID! @external
       object: Object! @external
     }
-    
+
     type Object {
       id: ID! @external
     }
-    
+
     type Subscription {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "object", values: [1], } })
     }
@@ -931,11 +931,11 @@ const subgraphN: Subgraph = {
       id: ID! @external
       object: Object! @external
     }
-    
+
     type Object {
       id: ID! @external @inaccessible
     }
-    
+
     type Subscription {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "object.id", values: [1], } })
     }
@@ -949,10 +949,10 @@ const subgraphO: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
-        condition: { 
+        condition: {
           AND: [
             { fieldPath: "id", values: [1], },
             { fieldPath: "id", values: [2], },
@@ -960,17 +960,17 @@ const subgraphO: Subgraph = {
             { fieldPath: "id", values: [4], },
             { fieldPath: "id", values: [5], },
             { fieldPath: "id", values: [6], },
-          ] 
+          ]
         }
       )
       two: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
-        condition: { 
+        condition: {
           AND: [
-          ] 
+          ]
         }
       )
       three: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
-        condition: { 
+        condition: {
           OR: [
             { fieldPath: "id", values: [1], },
             { fieldPath: "id", values: [2], },
@@ -978,13 +978,13 @@ const subgraphO: Subgraph = {
             { fieldPath: "id", values: [4], },
             { fieldPath: "id", values: [5], },
             { fieldPath: "id", values: [6], },
-          ] 
+          ]
         }
       )
       four: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
-        condition: { 
+        condition: {
           OR: [
-          ] 
+          ]
         }
       )
     }
@@ -998,10 +998,10 @@ const subgraphP: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       one: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(
-        condition: { 
+        condition: {
           NOT: {
             NOT: {
               NOT: {
@@ -1028,7 +1028,7 @@ const subgraphQ: Subgraph = {
     extend type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1] } })
     }
@@ -1071,18 +1071,18 @@ const subgraphUnionResolver: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      task(id: ID!): TaskUpdated
+      task(id: ID!): EntityUpdated
     }
 
-    type TaskUpdated @key(fields: "id phoneChannelId") {
+    type EntityUpdated @key(fields: "id entityCode") {
       id: ID!
-      phoneChannelId: ID!
+      entityCode: String!
       title: String!
     }
 
-    type TaskDeleted @key(fields: "id phoneChannelId") {
+    type EntityDeleted @key(fields: "id entityCode") {
       id: ID!
-      phoneChannelId: ID!
+      entityCode: String!
     }
   `),
 };
@@ -1091,22 +1091,22 @@ const subgraphUnionEDG: Subgraph = {
   name: 'subgraph-union-edg',
   url: '',
   definitions: parse(`
-    type TaskUpdated @key(fields: "id phoneChannelId", resolvable: false) {
+    type EntityUpdated @key(fields: "id entityCode", resolvable: false) {
       id: ID! @external
-      phoneChannelId: ID! @external
+      entityCode: String! @external
     }
 
-    type TaskDeleted @key(fields: "id phoneChannelId", resolvable: false) {
+    type EntityDeleted @key(fields: "id entityCode", resolvable: false) {
       id: ID! @external
-      phoneChannelId: ID! @external
+      entityCode: String! @external
     }
 
-    union TaskEvent = TaskUpdated | TaskDeleted
+    union EntityEvent = EntityUpdated | EntityDeleted
 
     type Subscription {
-      onTaskEvent(phoneChannelId: ID!): TaskEvent!
-        @edfs__kafkaSubscribe(topics: ["taskEvent"])
-        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
+      onEntityEvent(entityCode: String!): EntityEvent!
+        @edfs__kafkaSubscribe(topics: ["entityEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "entityCode", values: ["{{ args.entityCode }}"] } })
     }
   `),
 };
@@ -1116,23 +1116,23 @@ const subgraphInterfaceResolver: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      taskById(id: ID!): TaskUpdated
+      entityById(id: ID!): EntityUpdated
     }
 
-    interface TaskEvent {
+    interface EntityEvent {
       id: ID!
-      phoneChannelId: ID!
+      entityCode: String!
     }
 
-    type TaskUpdated implements TaskEvent @key(fields: "id phoneChannelId") {
+    type EntityUpdated implements EntityEvent @key(fields: "id entityCode") {
       id: ID!
-      phoneChannelId: ID!
+      entityCode: String!
       title: String!
     }
 
-    type TaskDeleted implements TaskEvent @key(fields: "id phoneChannelId") {
+    type EntityDeleted implements EntityEvent @key(fields: "id entityCode") {
       id: ID!
-      phoneChannelId: ID!
+      entityCode: String!
     }
   `),
 };
@@ -1141,45 +1141,45 @@ const subgraphInterfaceEDG: Subgraph = {
   name: 'subgraph-interface-edg',
   url: '',
   definitions: parse(`
-    interface TaskEvent {
+    interface EntityEvent {
       id: ID!
-      phoneChannelId: ID!
+      entityCode: String!
     }
 
-    type TaskUpdated implements TaskEvent @key(fields: "id phoneChannelId", resolvable: false) {
+    type EntityUpdated implements EntityEvent @key(fields: "id entityCode", resolvable: false) {
       id: ID! @external
-      phoneChannelId: ID! @external
+      entityCode: String! @external
     }
 
-    type TaskDeleted implements TaskEvent @key(fields: "id phoneChannelId", resolvable: false) {
+    type EntityDeleted implements EntityEvent @key(fields: "id entityCode", resolvable: false) {
       id: ID! @external
-      phoneChannelId: ID! @external
+      entityCode: String! @external
     }
 
     type Subscription {
-      onTaskEvent(phoneChannelId: ID!): TaskEvent!
-        @edfs__kafkaSubscribe(topics: ["taskEvent"])
-        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
+      onEntityEvent(entityCode: String!): EntityEvent!
+        @edfs__kafkaSubscribe(topics: ["entityEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "entityCode", values: ["{{ args.entityCode }}"] } })
     }
   `),
 };
 
-// Partial resolver — TaskDeleted has only `id`, so phoneChannelId is genuinely absent.
+// Partial resolver — EntityDeleted has only `id`, so entityCode is genuinely absent.
 const subgraphUnionResolverPartial: Subgraph = {
   name: 'subgraph-union-resolver-partial',
   url: '',
   definitions: parse(`
     type Query {
-      task(id: ID!): TaskUpdated
+      entity(id: ID!): EntityUpdated
     }
 
-    type TaskUpdated @key(fields: "id phoneChannelId") {
+    type EntityUpdated @key(fields: "id entityCode") {
       id: ID!
-      phoneChannelId: ID!
+      entityCode: String!
       title: String!
     }
 
-    type TaskDeleted @key(fields: "id") {
+    type EntityDeleted @key(fields: "id") {
       id: ID!
     }
   `),
@@ -1189,21 +1189,21 @@ const subgraphUnionMemberMissingField: Subgraph = {
   name: 'subgraph-union-member-missing-field',
   url: '',
   definitions: parse(`
-    type TaskUpdated @key(fields: "id phoneChannelId", resolvable: false) {
+    type EntityUpdated @key(fields: "id entityCode", resolvable: false) {
       id: ID! @external
-      phoneChannelId: ID! @external
+      entityCode: String! @external
     }
 
-    type TaskDeleted @key(fields: "id", resolvable: false) {
+    type EntityDeleted @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
 
-    union TaskEvent = TaskUpdated | TaskDeleted
+    union EntityEvent = EntityUpdated | EntityDeleted
 
     type Subscription {
-      onTaskEvent(phoneChannelId: ID!): TaskEvent!
-        @edfs__kafkaSubscribe(topics: ["taskEvent"])
-        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
+      onEntityEvent(entityCode: String!): EntityEvent!
+        @edfs__kafkaSubscribe(topics: ["entityEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "entityCode", values: ["{{ args.entityCode }}"] } })
     }
   `),
 };
@@ -1212,21 +1212,21 @@ const subgraphUnionInaccessibleMemberMissingField: Subgraph = {
   name: 'subgraph-union-inaccessible-member-missing-field',
   url: '',
   definitions: parse(`
-    type TaskUpdated @key(fields: "id phoneChannelId", resolvable: false) {
+    type EntityUpdated @key(fields: "id entityCode", resolvable: false) {
       id: ID! @external
-      phoneChannelId: ID! @external
+      entityCode: String! @external
     }
 
-    type TaskDeleted @inaccessible @key(fields: "id", resolvable: false) {
+    type EntityDeleted @inaccessible @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
 
-    union TaskEvent = TaskUpdated | TaskDeleted
+    union EntityEvent = EntityUpdated | EntityDeleted
 
     type Subscription {
-      onTaskEvent(phoneChannelId: ID!): TaskEvent!
-        @edfs__kafkaSubscribe(topics: ["taskEvent"])
-        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
+      onEntityEvent(entityCode: String!): EntityEvent!
+        @edfs__kafkaSubscribe(topics: ["entityEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "entityCode", values: ["{{ args.entityCode }}"] } })
     }
   `),
 };
@@ -1236,16 +1236,16 @@ const subgraphInterfaceResolverPartial: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      taskById(id: ID!): TaskUpdated
+      entityById(id: ID!): EntityUpdated
     }
 
-    type TaskUpdated @key(fields: "id phoneChannelId") {
+    type EntityUpdated @key(fields: "id entityCode") {
       id: ID!
-      phoneChannelId: ID!
+      entityCode: String!
       title: String!
     }
 
-    type TaskDeleted @key(fields: "id") {
+    type EntityDeleted @key(fields: "id") {
       id: ID!
     }
   `),
@@ -1255,23 +1255,23 @@ const subgraphInterfaceImplementerMissingField: Subgraph = {
   name: 'subgraph-interface-implementer-missing-field',
   url: '',
   definitions: parse(`
-    interface TaskEvent {
+    interface EntityEvent {
       id: ID!
     }
 
-    type TaskUpdated implements TaskEvent @key(fields: "id phoneChannelId", resolvable: false) {
+    type EntityUpdated implements EntityEvent @key(fields: "id entityCode", resolvable: false) {
       id: ID! @external
-      phoneChannelId: ID! @external
+      entityCode: String! @external
     }
 
-    type TaskDeleted implements TaskEvent @key(fields: "id", resolvable: false) {
+    type EntityDeleted implements EntityEvent @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
 
     type Subscription {
-      onTaskEvent(phoneChannelId: ID!): TaskEvent!
-        @edfs__kafkaSubscribe(topics: ["taskEvent"])
-        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "phoneChannelId", values: ["{{ args.phoneChannelId }}"] } })
+      onEntityEvent(entityCode: String!): EntityEvent!
+        @edfs__kafkaSubscribe(topics: ["entityEvent"])
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "entityCode", values: ["{{ args.entityCode }}"] } })
     }
   `),
 };
