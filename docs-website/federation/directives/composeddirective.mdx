@@ -162,6 +162,55 @@ type Query {
 }
 ```
 
+#### Propagation from subgraphs that include but do not compose the directive
+
+If at least _one_ subgraph both composes and references a composed directive within that same subgraph, _all_
+declarations of that directive will (attempted to) be propagated to the router schema.
+This includes all declarations of the directive within subgraphs that _do not_ explicitly compose it.
+For example:
+
+```graphql
+# subgraph 1
+schema
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.0"
+)
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective on FIELD_DEFINITION
+
+type Query @shareable {
+  echo(string: String!): String! @myDirective
+}
+
+# subgraph 2
+schema {
+  query: Query
+}
+
+directive @myDirective on FIELD_DEFINITION
+
+type Query @shareable {
+  echo(string: String!): String!
+  test: ID! @myDirective
+}
+
+# router schema
+schema {
+  query: Query
+}
+
+directive @myDirective(input: String!) on FIELD_DEFINITION
+
+type Query {
+  echo(string: String!): String! @myDirective
+  test: ID! @myDirective # directive propagated from subgraph 2 despite not being explicitly composed
+}
+```
+
 ### Directive de-duplication
 
 If a composed directive is declared on the same coordinates across subgraphs, only unique declarations will be
@@ -187,7 +236,10 @@ type Query @shareable {
 
 # subgraph 2
 schema
-@link(import: ["@myDirective"], url: "https://company.org/my-feature/myDirective/v1.0")
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.0"
+)
 @composeDirective(name: "@myDirective") {
   query: Query
 }
