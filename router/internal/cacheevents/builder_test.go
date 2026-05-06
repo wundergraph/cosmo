@@ -53,9 +53,9 @@ func TestBuildEvents_AllEventTypes(t *testing.T) {
 		},
 		FieldHashes: []resolve.EntityFieldHash{
 			// Safe: KeyHash is set (engine ran with HashAnalyticsKeys=true) — emit a FIELD_HASH event.
-			{EntityType: "User", FieldName: "email", FieldHash: 0xfeed, KeyHash: 0xdead, Source: resolve.FieldSourceL2, DataSource: "accounts"},
+			{EntityType: "User", FieldName: "email", FieldHash: 0xfeed, KeyHash: 0xdead, Source: resolve.FieldSourceL2},
 			// PII guard: KeyHash is zero (HashAnalyticsKeys=false on this entity) — must NOT emit.
-			{EntityType: "User", FieldName: "phone", FieldHash: 0xbeef, KeyRaw: piiKey, Source: resolve.FieldSourceSubgraph, DataSource: "accounts"},
+			{EntityType: "User", FieldName: "phone", FieldHash: 0xbeef, KeyRaw: piiKey, Source: resolve.FieldSourceSubgraph},
 		},
 		EntityTypes: []resolve.EntityTypeInfo{
 			{TypeName: "User", Count: 5, UniqueKeys: 3},
@@ -148,7 +148,9 @@ func TestBuildEvents_AllEventTypes(t *testing.T) {
 		require.Equal(t, "email", ev.FieldName)
 		require.Equal(t, uint64(0xfeed), ev.FieldHash)
 		require.Equal(t, uint64(0xdead), ev.KeyHash)
-		require.Equal(t, "accounts", ev.SubgraphId, "FIELD_HASH must carry DataSource as SubgraphId")
+		// SubgraphId on FIELD_HASH is sourced from EntityFieldHash.DataSource on
+		// the new engine; the pinned engine has no DataSource on that struct, so
+		// the field is left empty until the engine bump lands.
 		require.NotEqual(t, "phone", ev.FieldName, "FIELD_HASH event with KeyHash=0 must be dropped")
 	}
 

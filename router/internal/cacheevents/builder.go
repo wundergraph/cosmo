@@ -40,11 +40,16 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 		return nil
 	}
 
+	// All events in a single snapshot share the build-time timestamp. The
+	// engine does not yet stamp per-event timestamps; once it does, swap to
+	// the per-event field.
+	now := uint64(time.Now().UnixNano())
+
 	out := make([]*cacheeventsv1.CacheEvent, 0, total)
 
 	for i := range snapshot.L1Reads {
 		ev := &snapshot.L1Reads[i]
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_L1_READ, ev.EntityType, ev.DataSource, ev.Shadow, &cacheeventsv1.CacheEvent{
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_L1_READ, ev.EntityType, ev.DataSource, ev.Shadow, &cacheeventsv1.CacheEvent{
 			KeyHash:    hashKey(ev.CacheKey),
 			Verdict:    verdictFromKind(ev.Kind),
 			ByteSize:   uint32(ev.ByteSize),
@@ -53,7 +58,7 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 	}
 	for i := range snapshot.L2Reads {
 		ev := &snapshot.L2Reads[i]
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_L2_READ, ev.EntityType, ev.DataSource, ev.Shadow, &cacheeventsv1.CacheEvent{
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_L2_READ, ev.EntityType, ev.DataSource, ev.Shadow, &cacheeventsv1.CacheEvent{
 			KeyHash:    hashKey(ev.CacheKey),
 			Verdict:    verdictFromKind(ev.Kind),
 			ByteSize:   uint32(ev.ByteSize),
@@ -62,7 +67,7 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 	}
 	for i := range snapshot.L1Writes {
 		ev := &snapshot.L1Writes[i]
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_L1_WRITE, ev.EntityType, ev.DataSource, ev.Shadow, &cacheeventsv1.CacheEvent{
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_L1_WRITE, ev.EntityType, ev.DataSource, ev.Shadow, &cacheeventsv1.CacheEvent{
 			KeyHash:     hashKey(ev.CacheKey),
 			ByteSize:    uint32(ev.ByteSize),
 			TtlMs:       uint32(ev.TTL / time.Millisecond),
@@ -72,7 +77,7 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 	}
 	for i := range snapshot.L2Writes {
 		ev := &snapshot.L2Writes[i]
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_L2_WRITE, ev.EntityType, ev.DataSource, ev.Shadow, &cacheeventsv1.CacheEvent{
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_L2_WRITE, ev.EntityType, ev.DataSource, ev.Shadow, &cacheeventsv1.CacheEvent{
 			KeyHash:     hashKey(ev.CacheKey),
 			ByteSize:    uint32(ev.ByteSize),
 			TtlMs:       uint32(ev.TTL / time.Millisecond),
@@ -82,7 +87,7 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 	}
 	for i := range snapshot.FetchTimings {
 		ev := &snapshot.FetchTimings[i]
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_FETCH_TIMING, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_FETCH_TIMING, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
 			FetchSource:    fetchSourceFromGoTools(ev.Source),
 			DurationMs:     float64(ev.DurationMs),
 			TtfbMs:         float64(ev.TTFBMs),
@@ -94,7 +99,7 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 	}
 	for i := range snapshot.ErrorEvents {
 		ev := &snapshot.ErrorEvents[i]
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_SUBGRAPH_ERROR, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_SUBGRAPH_ERROR, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
 			ErrorMessage: ev.Message,
 			ErrorCode:    ev.Code,
 		}))
@@ -105,7 +110,7 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 		if ev.IsFresh {
 			verdict = cacheeventsv1.Verdict_FRESH
 		}
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_SHADOW_COMPARISON, ev.EntityType, ev.DataSource, true, &cacheeventsv1.CacheEvent{
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_SHADOW_COMPARISON, ev.EntityType, ev.DataSource, true, &cacheeventsv1.CacheEvent{
 			KeyHash:         hashKey(ev.CacheKey),
 			Verdict:         verdict,
 			ShadowIsFresh:   ev.IsFresh,
@@ -119,7 +124,8 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 	}
 	for i := range snapshot.MutationEvents {
 		ev := &snapshot.MutationEvents[i]
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_MUTATION, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
+		// MutationEvent has no DataSource in the pinned engine — pass empty.
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_MUTATION, ev.EntityType, "", false, &cacheeventsv1.CacheEvent{
 			KeyHash:           hashKey(ev.EntityCacheKey),
 			MutationRootField: ev.MutationRootField,
 			HadCachedValue:    ev.HadCachedValue,
@@ -133,7 +139,7 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 	}
 	for i := range snapshot.HeaderImpactEvents {
 		ev := &snapshot.HeaderImpactEvents[i]
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_HEADER_IMPACT, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_HEADER_IMPACT, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
 			BaseKeyHash:  hashKey(ev.BaseKey),
 			HeaderHash:   ev.HeaderHash,
 			ResponseHash: ev.ResponseHash,
@@ -141,7 +147,7 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 	}
 	for i := range snapshot.CacheOpErrors {
 		ev := &snapshot.CacheOpErrors[i]
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_CACHE_OP_ERROR, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_CACHE_OP_ERROR, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
 			CacheOpKind:  cacheOpKindFromString(ev.Operation),
 			CacheName:    ev.CacheName,
 			ErrorMessage: ev.Message,
@@ -156,40 +162,23 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 		if ev.KeyHash == 0 {
 			continue
 		}
-		// field_path carries the schema-name field chain from the enclosing
-		// entity to the hashed leaf's parent — disambiguates value-type
-		// scalars at arbitrary nesting depth (empty for direct scalars).
-		// Schema-aware consumers walk it to resolve the parent type.
-		var fieldPath []string
-		if len(ev.FieldPath) > 0 {
-			fieldPath = ev.FieldPath
-		}
-		out = append(out, fillCommon(meta, tsOf(ev.Timestamp), cacheeventsv1.EventType_FIELD_HASH, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
+		// EntityFieldHash has no DataSource or FieldPath in the pinned engine.
+		// Once those fields land upstream, populate them here.
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_FIELD_HASH, ev.EntityType, "", false, &cacheeventsv1.CacheEvent{
 			KeyHash:     ev.KeyHash,
 			FieldName:   ev.FieldName,
 			FieldHash:   ev.FieldHash,
 			FetchSource: fetchSourceFromGoTools(ev.Source),
-			FieldPath:   fieldPath,
 		}))
 	}
 	for i := range snapshot.EntityTypes {
 		ev := &snapshot.EntityTypes[i]
-		out = append(out, fillCommon(meta, uint64(time.Now().UnixNano()), cacheeventsv1.EventType_ENTITY_TYPE_INFO, ev.TypeName, "", false, &cacheeventsv1.CacheEvent{
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_ENTITY_TYPE_INFO, ev.TypeName, "", false, &cacheeventsv1.CacheEvent{
 			EntityCount:      uint32(ev.Count),
 			EntityUniqueKeys: uint32(ev.UniqueKeys),
 		}))
 	}
 	return out
-}
-
-// tsOf returns the engine-stamped timestamp as Unix nanoseconds, falling back
-// to time.Now() when the engine field is zero (graceful for older engine
-// versions that did not populate per-event timestamps).
-func tsOf(t time.Time) uint64 {
-	if t.IsZero() {
-		return uint64(time.Now().UnixNano())
-	}
-	return uint64(t.UnixNano())
 }
 
 // cacheOpKindFromString maps the engine's freeform Operation string onto the
