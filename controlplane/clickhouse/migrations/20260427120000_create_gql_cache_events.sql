@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS gql_cache_events_raw
     engine = MergeTree PARTITION BY toDate(Timestamp)
         ORDER BY (OrganizationID, FederatedGraphID, EventType, OperationHash, EntityType, SubgraphID, toUnixTimestamp(Timestamp))
         TTL toDateTime(Timestamp) + toIntervalDay(7)
-        SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
+        SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1, non_replicated_deduplication_window = 1000;
 
 CREATE TABLE IF NOT EXISTS gql_cache_events_5m_90d
 (

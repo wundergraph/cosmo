@@ -9,6 +9,7 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/avast/retry-go"
+	"github.com/google/uuid"
 	cacheeventsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/cacheevents/v1"
 	"go.uber.org/zap"
 )
@@ -40,9 +41,19 @@ func (w *Writer) ProcessBatch(ctx context.Context, items []BatchItem) {
 
 	insertTime := time.Now().UTC()
 
+	// Stable per-logical-batch deduplication token reused across retries.
+	// clickhouse-go v2 marks a batch "sent" even when Send() returns an
+	// error, so the only safe retry is to build a fresh batch — which would
+	// duplicate rows if ClickHouse had already committed the first attempt.
+	// insert_deduplication_token tells the server to drop matching repeats.
+	dedupCtx := clickhouse.Context(ctx, clickhouse.WithSettings(clickhouse.Settings{
+		"insert_deduplicate":         uint8(1),
+		"insert_deduplication_token": uuid.NewString(),
+	}))
+
 	err := retry.Do(
 		func() error {
-			batch, err := w.conn.PrepareBatch(ctx, insertCacheEventsRawQuery)
+			batch, err := w.conn.PrepareBatch(dedupCtx, insertCacheEventsRawQuery)
 			if err != nil {
 				return fmt.Errorf("prepare batch: %w", err)
 			}

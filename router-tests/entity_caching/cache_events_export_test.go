@@ -99,10 +99,11 @@ func TestCacheEventsExport_DeliversBatchesWithBearerAuth(t *testing.T) {
 		xEnv.MakeGraphQLRequestOK(req)
 		xEnv.MakeGraphQLRequestOK(req)
 
-		// Wait for the periodic flush to deliver something.
+		// Wait for the periodic flush to deliver events from both requests.
+		const expectedMinEvents = 2
 		require.Eventually(t, func() bool {
 			_, events := handler.snapshot()
-			return len(events) > 0
+			return len(events) >= expectedMinEvents
 		}, 10*time.Second, 50*time.Millisecond, "expected cache events to be exported")
 	})
 

@@ -963,6 +963,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		if endpoint == "" {
 			endpoint = r.graphqlMetricsConfig.CollectorEndpoint
 		}
+		if endpoint == "" {
+			return errors.New("entity cache events export requires an endpoint (entity_caching.events_export.endpoint or graphql_metrics.collector_endpoint)")
+		}
 		ceClient := cacheeventsv1connect.NewCacheEventsServiceClient(
 			http.DefaultClient,
 			endpoint,

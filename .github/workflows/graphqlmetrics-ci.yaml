@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - "graphqlmetrics/**/*"
+      - "proto/wg/cosmo/cacheevents/**/*"
       - ".github/workflows/graphqlmetrics-ci.yaml"
 
 concurrency:

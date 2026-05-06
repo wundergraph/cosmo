@@ -53,7 +53,7 @@ func (s *Service) PublishEntityCacheEvents(
 
 	claims, err := utils.GetClaims(ctx)
 	if err != nil {
-		return nil, errNotAuthenticated
+		return nil, connect.NewError(connect.CodeUnauthenticated, errNotAuthenticated)
 	}
 
 	if len(req.Msg.Events) == 0 {
@@ -65,6 +65,7 @@ func (s *Service) PublishEntityCacheEvents(
 		Claims: claims,
 	}); err != nil {
 		s.logger.Warn("Cache events queue rejected push", zap.Error(err))
+		return nil, connect.NewError(connect.CodeResourceExhausted, err)
 	}
 
 	return res, nil
