@@ -829,7 +829,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 
 // bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance.
-func (r *Router) bootstrap(ctx context.Context) error {
+func (r *Router) bootstrap(ctx context.Context) (err error) {
 	if !r.bootstrapped.CompareAndSwap(false, true) {
 		return fmt.Errorf("router is already bootstrapped")
 	}
@@ -989,11 +989,26 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		if v := r.entityCachingConfig.EventsExport.Interval; v > 0 {
 			ceSettings.Interval = v
 		}
-		ce, err := cacheevents.NewExporter(r.logger, ceSink, ceSettings)
+		var ce *cacheevents.Exporter
+		ce, err = cacheevents.NewExporter(r.logger, ceSink, ceSettings)
 		if err != nil {
 			return fmt.Errorf("failed to validate cache events exporter: %w", err)
 		}
 		r.cacheEventsExporter = ce
+		// NewExporter starts a worker goroutine; if any subsequent bootstrap step
+		// returns a non-nil error via the named return below, drain the exporter
+		// instead of leaving it running for the process lifetime. Shutdown() in
+		// the top-level Shutdown path nil-checks the field so this is idempotent.
+		defer func() {
+			if err != nil && r.cacheEventsExporter != nil {
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				if subErr := r.cacheEventsExporter.Shutdown(shutdownCtx); subErr != nil {
+					r.logger.Warn("Failed to shutdown cache events exporter during bootstrap rollback", zap.Error(subErr))
+				}
+				r.cacheEventsExporter = nil
+			}
+		}()
 		r.logger.Info("Entity cache events export enabled", zap.String("endpoint", endpoint))
 	}
 
