@@ -5,9 +5,11 @@ import {
   TeardownProposalRolloutRequest,
   TeardownProposalRolloutResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
+import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -33,10 +35,15 @@ export function teardownProposalRollout(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
+
     const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
     const auditLogRepo = new AuditLogRepository(opts.db);
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
     const proposal = await proposalRepo.ById(req.proposalId);
     if (!proposal) {
@@ -47,8 +54,26 @@ export function teardownProposalRollout(
 
     const federatedGraph = await fedGraphRepo.byId(proposal.proposal.federatedGraphId);
     if (!federatedGraph) {
-      // Idempotent: nothing to recompose if the federated graph vanished.
-      return { response: { code: EnumStatusCode.OK } };
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Federated graph for proposal ${req.proposalId} not found`,
+        },
+      };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
+    }
+
+    const namespace = await namespaceRepo.byId(federatedGraph.namespaceId);
+    if (!namespace || !namespace.enableProposals) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Proposals are not enabled for namespace ${federatedGraph.namespace}`,
+        },
+      };
     }
 
     await teardownProposalRolloutSideEffects({

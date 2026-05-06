@@ -5,15 +5,22 @@ import {
   BulkUpdateProposalRolloutPercentagesRequest,
   BulkUpdateProposalRolloutPercentagesResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { splitLabel } from '@wundergraph/cosmo-shared';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import * as schema from '../../../db/schema.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+
+// Cap to prevent a single request from holding a long transaction and amplifying
+// CDN pushes. Caller must split into smaller batches if they have more.
+const MAX_BATCH_ITEMS = 50;
 
 // BulkUpdateProposalRolloutPercentages atomically creates or updates rollout
 // percentages across one or more proposals on the same federated graph.
@@ -48,16 +55,26 @@ export function bulkUpdateProposalRolloutPercentages(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
+
     if (req.items.length === 0) {
       return { response: { code: EnumStatusCode.OK }, items: [] };
     }
 
-    // Per-item validation. Cumulative validation happens after we resolve the
-    // batch's federated graph and pull sibling FFs not in the batch.
-    // The DB-level CHECK on feature_flags.traffic_percentage enforces [0, 100]
-    // as a backstop; this is the friendlier app-level rejection. Reject
-    // non-integers / negatives explicitly so they can't slip past as e.g.
-    // -5 (which would free cumulative budget) or NaN/Infinity from JSON.
+    if (req.items.length > MAX_BATCH_ITEMS) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Too many items in batch: got ${req.items.length}, max is ${MAX_BATCH_ITEMS}. Split into smaller per-graph batches.`,
+        },
+        items: [],
+      };
+    }
+
+    // Per-item input validation. Cumulative budget is checked later inside the
+    // transaction once we hold row locks on the federated graph's FFs.
     for (const item of req.items) {
       if (!Number.isInteger(item.percentage) || item.percentage < 0 || item.percentage > 100) {
         return {
@@ -87,24 +104,24 @@ export function bulkUpdateProposalRolloutPercentages(
       seen.add(item.proposalId);
     }
 
+    // -------- Phase 1: read-only resolve --------
+    // Load every proposal and discover the single federated graph the batch
+    // targets. No mutations happen here; if anything is missing/invalid we
+    // return ERR before touching the DB.
     const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
-    const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-    const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
-    const auditLogRepo = new AuditLogRepository(opts.db);
 
-    // Resolve every proposal. Where a linked rollout flag already exists, we
-    // record it for the percentage-update path. Where it doesn't, we deploy
-    // (create feature subgraphs + flag) and record the freshly-created link.
-    type Resolved = {
+    type ProposalPlan = {
       proposalId: string;
+      proposalName: string;
+      proposalState: string;
       federatedGraphId: string;
-      featureFlagId: string;
-      featureFlagName: string;
+      // Linked FF row, if a rollout was previously deployed for this proposal.
+      linkedFlag: { id: string; name: string; trafficPercentage: number | null } | undefined;
+      // Subgraphs to deploy as feature subgraphs (only used when linkedFlag is undefined).
+      proposalSubgraphs: { subgraphName: string; schemaSDL: string; isDeleted: boolean }[];
       newPercentage: number;
-      isNew: boolean;
     };
-    const resolved: Resolved[] = [];
+    const plans: ProposalPlan[] = [];
 
     for (const item of req.items) {
       const proposal = await proposalRepo.ById(item.proposalId);
@@ -117,22 +134,12 @@ export function bulkUpdateProposalRolloutPercentages(
           items: [],
         };
       }
+      const linkedFlag = await proposalRepo.getLinkedRolloutFlag(item.proposalId);
 
-      const linked = await proposalRepo.getLinkedRolloutFlag(item.proposalId);
-      if (linked) {
-        resolved.push({
-          proposalId: item.proposalId,
-          federatedGraphId: proposal.proposal.federatedGraphId,
-          featureFlagId: linked.id,
-          featureFlagName: linked.name,
-          newPercentage: item.percentage,
-          isNew: false,
-        });
-        continue;
-      }
-
-      // Deploy path: proposal has no rollout flag yet, create one.
-      if (proposal.proposal.state !== 'APPROVED') {
+      // First-deploy gate: state must be APPROVED. Re-deploys (linked flag
+      // already exists) are allowed in any state; the typical use is to dial
+      // the percentage up/down between APPROVED and PUBLISHED.
+      if (!linkedFlag && proposal.proposal.state !== 'APPROVED') {
         return {
           response: {
             code: EnumStatusCode.ERR,
@@ -144,132 +151,24 @@ export function bulkUpdateProposalRolloutPercentages(
         };
       }
 
-      const federatedGraph = await fedGraphRepo.byId(proposal.proposal.federatedGraphId);
-      if (!federatedGraph) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_NOT_FOUND,
-            details: `Federated graph for proposal ${item.proposalId} not found`,
-          },
-          items: [],
-        };
-      }
-
-      const featureSubgraphIds: string[] = [];
-      for (const ps of proposal.proposalSubgraphs) {
-        if (ps.isDeleted) {
-          // Caching proposals shouldn't include deletions, but skip for safety.
-          continue;
-        }
-        const baseSubgraph = await subgraphRepo.byName(ps.subgraphName, federatedGraph.namespace);
-        if (!baseSubgraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Base subgraph "${ps.subgraphName}" not found in namespace "${federatedGraph.namespace}"`,
-            },
-            items: [],
-          };
-        }
-
-        const featureSubgraphName = `${proposal.proposal.name}__${ps.subgraphName}__rollout`;
-        let featureSubgraph = await subgraphRepo.byName(featureSubgraphName, federatedGraph.namespace);
-        if (!featureSubgraph) {
-          featureSubgraph = await subgraphRepo.create({
-            name: featureSubgraphName,
-            namespace: federatedGraph.namespace,
-            namespaceId: federatedGraph.namespaceId,
-            createdBy: authContext.userId,
-            labels: baseSubgraph.labels,
-            routingUrl: baseSubgraph.routingUrl,
-            isEventDrivenGraph: false,
-            subscriptionUrl: baseSubgraph.subscriptionUrl,
-            subscriptionProtocol: baseSubgraph.subscriptionProtocol,
-            websocketSubprotocol: baseSubgraph.websocketSubprotocol,
-            featureSubgraphOptions: {
-              isFeatureSubgraph: true,
-              baseSubgraphID: baseSubgraph.id,
-            },
-            type: 'standard',
-          });
-          if (!featureSubgraph) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR,
-                details: `Failed to create feature subgraph "${featureSubgraphName}"`,
-              },
-              items: [],
-            };
-          }
-        }
-
-        // Publish the proposal's SDL onto the feature subgraph so the rollout
-        // routes through the cache-tuned schema while the URL stays identical.
-        await subgraphRepo.addSchemaVersion({
-          targetId: featureSubgraph.targetId,
-          subgraphSchema: ps.schemaSDL,
-        });
-
-        featureSubgraphIds.push(featureSubgraph.id);
-      }
-
-      if (featureSubgraphIds.length === 0) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Proposal ${item.proposalId} has no modified subgraphs to deploy as a rollout`,
-          },
-          items: [],
-        };
-      }
-
-      const featureFlagName = `proposal_${item.proposalId.slice(0, 8)}_rollout`;
-      const featureFlag = await featureFlagRepo.createFeatureFlag({
-        namespaceId: federatedGraph.namespaceId,
-        name: featureFlagName,
-        labels: federatedGraph.labelMatchers.flatMap((m) =>
-          m.split(',').map((l) => ({ key: l.split('=')[0], value: l.split('=')[1] || '' })),
-        ),
-        featureSubgraphIds,
-        createdBy: authContext.userId,
-        isEnabled: true,
-      });
-
-      await proposalRepo.setLinkedRolloutFlag({
-        featureFlagId: featureFlag.id,
+      plans.push({
         proposalId: item.proposalId,
-        trafficPercentage: item.percentage,
-      });
-
-      await auditLogRepo.addAuditLog({
-        organizationId: authContext.organizationId,
-        organizationSlug: authContext.organizationSlug,
-        auditAction: 'feature_flag.created',
-        action: 'created',
-        actorId: authContext.userId,
-        auditableType: 'feature_flag',
-        auditableDisplayName: featureFlag.name,
-        apiKeyName: authContext.apiKeyName,
-        actorDisplayName: authContext.userDisplayName,
-        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-        targetNamespaceId: federatedGraph.namespaceId,
-        targetNamespaceDisplayName: federatedGraph.namespace,
-      });
-
-      resolved.push({
-        proposalId: item.proposalId,
+        proposalName: proposal.proposal.name,
+        proposalState: proposal.proposal.state,
         federatedGraphId: proposal.proposal.federatedGraphId,
-        featureFlagId: featureFlag.id,
-        featureFlagName: featureFlag.name,
+        linkedFlag,
+        proposalSubgraphs: proposal.proposalSubgraphs.map((ps) => ({
+          subgraphName: ps.subgraphName,
+          schemaSDL: ps.schemaSDL,
+          isDeleted: ps.isDeleted,
+        })),
         newPercentage: item.percentage,
-        isNew: true,
       });
     }
 
     // The batch must target one federated graph: composeAndDeployGraphs runs
     // per federated graph, so a multi-graph batch defeats the "one push" goal.
-    // Caller can split into per-graph batches if they really need to.
-    const graphIds = [...new Set(resolved.map((r) => r.federatedGraphId))];
+    const graphIds = [...new Set(plans.map((p) => p.federatedGraphId))];
     if (graphIds.length > 1) {
       return {
         response: {
@@ -281,87 +180,307 @@ export function bulkUpdateProposalRolloutPercentages(
     }
     const federatedGraphId = graphIds[0]!;
 
-    // Cumulative budget check: sum of (a) the new pct for every FF in the
-    // batch + (b) current pct for every other FF on this federated graph
-    // that's an active rollout (proposalId set, traffic_percentage set) and
-    // not in this batch. Mirrors what the router computes at config-load.
-    const allActiveFFs = await opts.db
-      .select({
-        id: schema.featureFlags.id,
-        trafficPercentage: schema.featureFlags.trafficPercentage,
-      })
-      .from(schema.featureFlags)
-      .innerJoin(schema.proposals, eq(schema.featureFlags.proposalId, schema.proposals.id))
-      .where(
-        and(eq(schema.proposals.federatedGraphId, federatedGraphId), isNotNull(schema.featureFlags.trafficPercentage)),
-      );
-
-    const inBatch = new Set(resolved.map((r) => r.featureFlagId));
-    let cumulative = 0;
-    for (const r of resolved) {
-      cumulative += r.newPercentage;
-    }
-    for (const ff of allActiveFFs) {
-      if (inBatch.has(ff.id)) {
-        continue;
-      }
-      cumulative += ff.trafficPercentage ?? 0;
-    }
-    if (cumulative > 100) {
+    const fedGraphRepoRO = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const federatedGraph = await fedGraphRepoRO.byId(federatedGraphId);
+    if (!federatedGraph) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
-          details:
-            `Cumulative rollout percentage across all active rollouts on this federated graph ` +
-            `would be ${cumulative}, exceeding 100. The router fails closed at >100 (all unpinned ` +
-            `traffic falls back to base). Reduce the requested percentages or teardown another rollout first.`,
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Federated graph for proposal batch not found`,
         },
         items: [],
       };
     }
 
-    // Single transaction: every FF row updated together. Newly-deployed flags
-    // had setLinkedRolloutFlag set the percentage already, but we still update
-    // here for consistency (idempotent same-value write).
-    await opts.db.transaction(async (tx) => {
-      for (const r of resolved) {
-        await tx
-          .update(schema.featureFlags)
-          .set({ trafficPercentage: r.newPercentage, updatedAt: new Date() })
-          .where(eq(schema.featureFlags.id, r.featureFlagId));
-      }
-    });
+    // -------- Phase 2: authorization --------
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
+    }
 
-    // Single composeAndDeployGraphs call → single CDN push → single router
-    // config reload. This is the whole point of the bulk endpoint.
-    const federatedGraph = await fedGraphRepo.byId(federatedGraphId);
-    if (federatedGraph) {
-      const { compositionErrors } = await fedGraphRepo.composeAndDeployGraphs({
-        actorId: authContext.userId,
-        admissionConfig: {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    const namespace = await namespaceRepo.byId(federatedGraph.namespaceId);
+    if (!namespace) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Namespace ${federatedGraph.namespace} not found`,
         },
-        blobStorage: opts.blobStorage,
-        chClient: opts.chClient!,
-        compositionOptions: {},
-        federatedGraphs: [federatedGraph],
-        webhookProxyUrl: opts.webhookProxyUrl,
-      });
-      const ffNamesInBatch = new Set(resolved.map((r) => r.featureFlagName));
-      const relevantErrors = compositionErrors.filter((e) => ffNamesInBatch.has(e.featureFlag));
-      if (relevantErrors.length > 0) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details:
-              `One or more rollout feature flags failed to compose at the new percentages. ` +
-              `The router will keep falling back to base for those flags until fixed.\n` +
-              relevantErrors.map((e) => `${e.featureFlag}: ${e.message}`).join('\n'),
+        items: [],
+      };
+    }
+    if (!namespace.enableProposals) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Proposals are not enabled for namespace ${federatedGraph.namespace}`,
+        },
+        items: [],
+      };
+    }
+
+    // Pre-compute label list once. labelMatchers is a list of strings of the
+    // form "k1=v1,k2=v2"; splitLabel handles escapes and edge cases the
+    // straightforward `split('=')` approach gets wrong.
+    const fedGraphLabels = federatedGraph.labelMatchers.flatMap((m) => m.split(',').map((l) => splitLabel(l)));
+
+    // -------- Phase 3: transactional deploy + budget + update + compose --------
+    type ResolvedItem = {
+      proposalId: string;
+      featureFlagId: string;
+      featureFlagName: string;
+      newPercentage: number;
+    };
+    const resolved: ResolvedItem[] = [];
+    const compositionFailures: { featureFlag: string; message: string }[] = [];
+
+    try {
+      await opts.db.transaction(async (tx) => {
+        const txProposalRepo = new ProposalRepository(tx, authContext.organizationId);
+        const txFedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+        const txSubgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+        const txFeatureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
+        const txAuditLogRepo = new AuditLogRepository(tx);
+
+        // Lock every active rollout flag on this federated graph for the
+        // duration of the transaction. Two concurrent bulkUpdate calls on the
+        // same graph now serialize through these locks, so the cumulative budget
+        // check can't be bypassed by interleaving reads.
+        await tx
+          .select({ id: schema.featureFlags.id })
+          .from(schema.featureFlags)
+          .innerJoin(schema.proposals, eq(schema.featureFlags.proposalId, schema.proposals.id))
+          .where(
+            and(
+              eq(schema.proposals.federatedGraphId, federatedGraphId),
+              isNotNull(schema.featureFlags.trafficPercentage),
+            ),
+          )
+          .for('update', { of: schema.featureFlags });
+
+        // Deploy fan-out for any plan without a linked flag yet.
+        for (const plan of plans) {
+          if (plan.linkedFlag) {
+            resolved.push({
+              proposalId: plan.proposalId,
+              featureFlagId: plan.linkedFlag.id,
+              featureFlagName: plan.linkedFlag.name,
+              newPercentage: plan.newPercentage,
+            });
+            continue;
+          }
+
+          const featureSubgraphIds: string[] = [];
+          for (const ps of plan.proposalSubgraphs) {
+            if (ps.isDeleted) {
+              // Caching proposals shouldn't include deletions, but skip for safety.
+              continue;
+            }
+            const baseSubgraph = await txSubgraphRepo.byName(ps.subgraphName, federatedGraph.namespace);
+            if (!baseSubgraph) {
+              throw new BulkRolloutError(
+                EnumStatusCode.ERR_NOT_FOUND,
+                `Base subgraph "${ps.subgraphName}" not found in namespace "${federatedGraph.namespace}"`,
+              );
+            }
+
+            const featureSubgraphName = `${plan.proposalName}__${ps.subgraphName}__rollout`;
+            let featureSubgraph = await txSubgraphRepo.byName(featureSubgraphName, federatedGraph.namespace);
+            if (!featureSubgraph) {
+              featureSubgraph = await txSubgraphRepo.create({
+                name: featureSubgraphName,
+                namespace: federatedGraph.namespace,
+                namespaceId: federatedGraph.namespaceId,
+                createdBy: authContext.userId,
+                labels: baseSubgraph.labels,
+                routingUrl: baseSubgraph.routingUrl,
+                isEventDrivenGraph: false,
+                subscriptionUrl: baseSubgraph.subscriptionUrl,
+                subscriptionProtocol: baseSubgraph.subscriptionProtocol,
+                websocketSubprotocol: baseSubgraph.websocketSubprotocol,
+                featureSubgraphOptions: {
+                  isFeatureSubgraph: true,
+                  baseSubgraphID: baseSubgraph.id,
+                },
+                type: 'standard',
+              });
+              if (!featureSubgraph) {
+                throw new BulkRolloutError(
+                  EnumStatusCode.ERR,
+                  `Failed to create feature subgraph "${featureSubgraphName}"`,
+                );
+              }
+            }
+
+            // Publish the proposal's SDL onto the feature subgraph so the rollout
+            // routes through the cache-tuned schema while the URL stays identical.
+            await txSubgraphRepo.addSchemaVersion({
+              targetId: featureSubgraph.targetId,
+              subgraphSchema: ps.schemaSDL,
+            });
+
+            featureSubgraphIds.push(featureSubgraph.id);
+          }
+
+          if (featureSubgraphIds.length === 0) {
+            throw new BulkRolloutError(
+              EnumStatusCode.ERR,
+              `Proposal ${plan.proposalId} has no modified subgraphs to deploy as a rollout`,
+            );
+          }
+
+          // Use the full proposalId rather than an 8-char prefix to keep the
+          // collision probability negligible across the lifetime of an org.
+          const featureFlagName = `proposal_${plan.proposalId}_rollout`;
+          const featureFlag = await txFeatureFlagRepo.createFeatureFlag({
+            namespaceId: federatedGraph.namespaceId,
+            name: featureFlagName,
+            labels: fedGraphLabels,
+            featureSubgraphIds,
+            createdBy: authContext.userId,
+            isEnabled: true,
+          });
+
+          await txProposalRepo.setLinkedRolloutFlag({
+            featureFlagId: featureFlag.id,
+            proposalId: plan.proposalId,
+            trafficPercentage: plan.newPercentage,
+          });
+
+          await txAuditLogRepo.addAuditLog({
+            organizationId: authContext.organizationId,
+            organizationSlug: authContext.organizationSlug,
+            auditAction: 'feature_flag.created',
+            action: 'created',
+            actorId: authContext.userId,
+            auditableType: 'feature_flag',
+            auditableDisplayName: featureFlag.name,
+            apiKeyName: authContext.apiKeyName,
+            actorDisplayName: authContext.userDisplayName,
+            actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+            targetNamespaceId: federatedGraph.namespaceId,
+            targetNamespaceDisplayName: federatedGraph.namespace,
+          });
+
+          resolved.push({
+            proposalId: plan.proposalId,
+            featureFlagId: featureFlag.id,
+            featureFlagName: featureFlag.name,
+            newPercentage: plan.newPercentage,
+          });
+        }
+
+        // Cumulative budget check: sum of (a) the new pct for every FF in the
+        // batch + (b) current pct for every other FF on this federated graph
+        // that's an active rollout (proposalId set, traffic_percentage set) and
+        // not in this batch. Mirrors what the router computes at config-load.
+        // Read happens within the locked range (FOR UPDATE above), so concurrent
+        // bulkUpdates can't slip in additional pct between read and write.
+        const allActiveFFs = await tx
+          .select({
+            id: schema.featureFlags.id,
+            trafficPercentage: schema.featureFlags.trafficPercentage,
+          })
+          .from(schema.featureFlags)
+          .innerJoin(schema.proposals, eq(schema.featureFlags.proposalId, schema.proposals.id))
+          .where(
+            and(
+              eq(schema.proposals.federatedGraphId, federatedGraphId),
+              isNotNull(schema.featureFlags.trafficPercentage),
+            ),
+          );
+
+        const inBatch = new Set(resolved.map((r) => r.featureFlagId));
+        let cumulative = 0;
+        for (const r of resolved) {
+          cumulative += r.newPercentage;
+        }
+        for (const ff of allActiveFFs) {
+          if (inBatch.has(ff.id)) {
+            continue;
+          }
+          cumulative += ff.trafficPercentage ?? 0;
+        }
+        if (cumulative > 100) {
+          throw new BulkRolloutError(
+            EnumStatusCode.ERR,
+            `Cumulative rollout percentage across all active rollouts on this federated graph ` +
+              `would be ${cumulative}, exceeding 100. The router fails closed at >100 (all unpinned ` +
+              `traffic falls back to base). Reduce the requested percentages or teardown another rollout first.`,
+          );
+        }
+
+        // Update every FF row in one go. Newly-deployed flags had
+        // setLinkedRolloutFlag set the percentage already, but we still update
+        // here for consistency (idempotent same-value write). For pre-existing
+        // flags (the percentage-only path), this is the only write that touches
+        // traffic_percentage.
+        for (const r of resolved) {
+          await tx
+            .update(schema.featureFlags)
+            .set({ trafficPercentage: r.newPercentage, updatedAt: new Date() })
+            .where(eq(schema.featureFlags.id, r.featureFlagId));
+
+          // Audit the percentage-only update path so forensic queries can answer
+          // "who changed prod traffic from 5% to 95%". The new-FF path already
+          // emits a feature_flag.created log above.
+          const planForR = plans.find((p) => p.proposalId === r.proposalId)!;
+          if (planForR.linkedFlag) {
+            await txAuditLogRepo.addAuditLog({
+              organizationId: authContext.organizationId,
+              organizationSlug: authContext.organizationSlug,
+              auditAction: 'feature_flag.updated',
+              action: 'updated',
+              actorId: authContext.userId,
+              auditableType: 'feature_flag',
+              auditableDisplayName: r.featureFlagName,
+              apiKeyName: authContext.apiKeyName,
+              actorDisplayName: authContext.userDisplayName,
+              actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+              targetNamespaceId: federatedGraph.namespaceId,
+              targetNamespaceDisplayName: federatedGraph.namespace,
+            });
+          }
+        }
+
+        // Single composeAndDeployGraphs call → single CDN push → single router
+        // config reload. This is the whole point of the bulk endpoint. Running
+        // inside the transaction means a CDN/composition failure rolls the DB
+        // back so the router's stale config and the DB stay in sync.
+        const { compositionErrors } = await txFedGraphRepo.composeAndDeployGraphs({
+          actorId: authContext.userId,
+          admissionConfig: {
+            cdnBaseUrl: opts.cdnBaseUrl,
+            webhookJWTSecret: opts.admissionWebhookJWTSecret,
           },
+          blobStorage: opts.blobStorage,
+          chClient: opts.chClient!,
+          compositionOptions: {},
+          federatedGraphs: [federatedGraph],
+          webhookProxyUrl: opts.webhookProxyUrl,
+        });
+        const ffNamesInBatch = new Set(resolved.map((r) => r.featureFlagName));
+        for (const e of compositionErrors) {
+          if (ffNamesInBatch.has(e.featureFlag)) {
+            compositionFailures.push({ featureFlag: e.featureFlag, message: e.message });
+          }
+        }
+        if (compositionFailures.length > 0) {
+          throw new BulkRolloutError(
+            EnumStatusCode.ERR,
+            `One or more rollout feature flags failed to compose at the new percentages. ` +
+              `The router will keep falling back to base for those flags until fixed.\n` +
+              compositionFailures.map((e) => `${e.featureFlag}: ${e.message}`).join('\n'),
+          );
+        }
+      });
+    } catch (e) {
+      if (e instanceof BulkRolloutError) {
+        return {
+          response: { code: e.code, details: e.message },
           items: [],
         };
       }
+      throw e;
     }
 
     return {
@@ -372,4 +491,17 @@ export function bulkUpdateProposalRolloutPercentages(
       })),
     };
   });
+}
+
+// Internal sentinel: thrown to abort the transaction with a structured response.
+// `handleError` doesn't recognize it, but the catch block at the boundary of
+// `db.transaction` rolls back and we re-classify into a typed Connect response.
+class BulkRolloutError extends Error {
+  constructor(
+    public code: EnumStatusCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'BulkRolloutError';
+  }
 }
