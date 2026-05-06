@@ -11,6 +11,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { teardownProposalRolloutSideEffects } from './teardownProposalRolloutSideEffects.js';
 
 // TeardownProposalRollout deletes the feature flag created from a caching
 // proposal. The on-delete-cascade on featureFlagToFeatureSubgraphs and the
@@ -18,7 +19,9 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 // too. Recomposes so the rollout entry vanishes from the next router config.
 //
 // This is also the code path called from the auto-teardown hook in
-// updateProposal when a CACHING proposal transitions to PUBLISHED.
+// updateProposal when a CACHING proposal transitions to PUBLISHED — both go
+// through the shared `teardownProposalRolloutSideEffects` helper so the audit
+// trail and the recompose stay in lockstep.
 export function teardownProposalRollout(
   opts: RouterOptions,
   req: TeardownProposalRolloutRequest,
@@ -42,44 +45,22 @@ export function teardownProposalRollout(
       };
     }
 
-    const linked = await proposalRepo.getLinkedRolloutFlag(req.proposalId);
-    if (!linked) {
-      // Idempotent: tearing down a non-existent rollout is a no-op success.
+    const federatedGraph = await fedGraphRepo.byId(proposal.proposal.federatedGraphId);
+    if (!federatedGraph) {
+      // Idempotent: nothing to recompose if the federated graph vanished.
       return { response: { code: EnumStatusCode.OK } };
     }
 
-    await featureFlagRepo.delete(linked.id);
-
-    const federatedGraph = await fedGraphRepo.byId(proposal.proposal.federatedGraphId);
-    if (federatedGraph) {
-      await auditLogRepo.addAuditLog({
-        organizationId: authContext.organizationId,
-        organizationSlug: authContext.organizationSlug,
-        auditAction: 'feature_flag.deleted',
-        action: 'deleted',
-        actorId: authContext.userId,
-        auditableType: 'feature_flag',
-        auditableDisplayName: linked.name,
-        apiKeyName: authContext.apiKeyName,
-        actorDisplayName: authContext.userDisplayName,
-        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-        targetNamespaceId: federatedGraph.namespaceId,
-        targetNamespaceDisplayName: federatedGraph.namespace,
-      });
-
-      await fedGraphRepo.composeAndDeployGraphs({
-        actorId: authContext.userId,
-        admissionConfig: {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-        },
-        blobStorage: opts.blobStorage,
-        chClient: opts.chClient!,
-        compositionOptions: {},
-        federatedGraphs: [federatedGraph],
-        webhookProxyUrl: opts.webhookProxyUrl,
-      });
-    }
+    await teardownProposalRolloutSideEffects({
+      opts,
+      authContext,
+      proposalId: req.proposalId,
+      federatedGraph,
+      proposalRepo,
+      fedGraphRepo,
+      featureFlagRepo,
+      auditLogRepo,
+    });
 
     return { response: { code: EnumStatusCode.OK } };
   });

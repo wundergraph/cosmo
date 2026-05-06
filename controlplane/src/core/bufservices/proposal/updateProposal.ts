@@ -28,6 +28,7 @@ import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficIn
 import { Composer } from '../../composition/composer.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { hubUserAgent } from '../../constants.js';
+import { teardownProposalRolloutSideEffects } from './teardownProposalRolloutSideEffects.js';
 
 export function updateProposal(
   opts: RouterOptions,
@@ -194,28 +195,21 @@ export function updateProposal(
       // deployed against it has fulfilled its purpose (the change is now
       // mainlined). Delete the linked feature flag so the rollout slice stops
       // accumulating and the per-proposal feature subgraphs don't linger as
-      // zombies. Idempotent: a no-op if no rollout was deployed.
+      // zombies. Idempotent: a no-op if no rollout was deployed. Shares the
+      // helper with TeardownProposalRollout RPC so audit + recompose stay in
+      // lockstep across both call sites.
       if (stateValue === 'PUBLISHED') {
-        const linked = await proposalRepo.getLinkedRolloutFlag(proposal.proposal.id);
-        if (linked) {
-          const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
-          await featureFlagRepo.delete(linked.id);
-          // Recompose so the next router config (served from CDN) drops the
-          // rollout entry — without this, deletion is invisible to running
-          // routers until something else triggers a recomposition.
-          await federatedGraphRepo.composeAndDeployGraphs({
-            actorId: authContext.userId,
-            admissionConfig: {
-              cdnBaseUrl: opts.cdnBaseUrl,
-              webhookJWTSecret: opts.admissionWebhookJWTSecret,
-            },
-            blobStorage: opts.blobStorage,
-            chClient: opts.chClient!,
-            compositionOptions: {},
-            federatedGraphs: [federatedGraph],
-            webhookProxyUrl: opts.webhookProxyUrl,
-          });
-        }
+        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+        await teardownProposalRolloutSideEffects({
+          opts,
+          authContext,
+          proposalId: proposal.proposal.id,
+          federatedGraph,
+          proposalRepo,
+          fedGraphRepo: federatedGraphRepo,
+          featureFlagRepo,
+          auditLogRepo,
+        });
       }
 
       await auditLogRepo.addAuditLog({
