@@ -2972,7 +2972,6 @@ export class FederationFactory {
       }
 
       if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
-        // Fast path: existing single-object behavior, byte-for-byte unchanged.
         this.validateSubscriptionFilterAndGenerateConfiguration(
           data.directive,
           namedTypeData,
@@ -2989,11 +2988,10 @@ export class FederationFactory {
         continue;
       }
 
-      const kindLabel: 'union' | 'interface' =
-        namedTypeData.kind === Kind.UNION_TYPE_DEFINITION ? 'union' : 'interface';
-
       const targets = this.collectSubscriptionFilterConcreteTargets(namedTypeData.name);
       if (targets.length === 0) {
+        const kindLabel: 'union' | 'interface' =
+          namedTypeData.kind === Kind.UNION_TYPE_DEFINITION ? 'union' : 'interface';
         this.errors.push(
           invalidSubscriptionFilterDirectiveError(fieldPath, [
             subscriptionFilterNoAccessibleConcreteTypesErrorMessage(namedTypeData.name, kindLabel),
@@ -3012,7 +3010,7 @@ export class FederationFactory {
         );
         if (errors.length > 0) {
           const wrapped =
-            kindLabel === 'union'
+            namedTypeData.kind === Kind.UNION_TYPE_DEFINITION
               ? subscriptionFilterUnionMemberInvalidErrorMessage(namedTypeData.name, target.name, errors.join('\n'))
               : subscriptionFilterInterfaceImplementerInvalidErrorMessage(
                   namedTypeData.name,
