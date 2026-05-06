@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.169.0](https://github.com/wundergraph/cosmo/compare/studio@0.168.2...studio@0.169.0) (2026-05-05)
+
+### Bug Fixes
+
+* feature flag for onboarding not working ([#2819](https://github.com/wundergraph/cosmo/issues/2819)) ([805af8d](https://github.com/wundergraph/cosmo/commit/805af8dedb41ffa0a20946397955f0674ea73505)) (@comatory)
+* feature flags not being reloaded ([#2820](https://github.com/wundergraph/cosmo/issues/2820)) ([d55e80d](https://github.com/wundergraph/cosmo/commit/d55e80d220eeee06e3c247937708bd1dd41ce7ba)) (@comatory)
+* provide easy way to recover UI when graph is not found ([#2817](https://github.com/wundergraph/cosmo/issues/2817)) ([abfd628](https://github.com/wundergraph/cosmo/commit/abfd628a31214356c5598d3971dd045dc3aa8279)) (@comatory)
+
+### Features
+
+* display document titles during onboarding ([#2813](https://github.com/wundergraph/cosmo/issues/2813)) ([b6b1f9d](https://github.com/wundergraph/cosmo/commit/b6b1f9d662e29c2680226d90df5e025715882c89)) (@comatory)
+
 ## [0.168.2](https://github.com/wundergraph/cosmo/compare/studio@0.168.1...studio@0.168.2) (2026-05-01)
 
 **Note:** Version bump only for package studio
