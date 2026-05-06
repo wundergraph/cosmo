@@ -1299,6 +1299,12 @@ type IntrospectionConfiguration struct {
 	Secret  string `yaml:"secret" env:"INTROSPECTION_SECRET"`
 }
 
+// FeatureFlagRollouts toggles percentage-based traffic rollouts for feature
+// flags shipped in the execution config.
+type FeatureFlagRollouts struct {
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -1377,6 +1383,8 @@ type Config struct {
 	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`
 
 	WatchConfig WatchConfig `yaml:"watch_config" envPrefix:"WATCH_CONFIG_"`
+
+	FeatureFlagRollouts FeatureFlagRollouts `yaml:"feature_flag_rollouts,omitempty" envPrefix:"FEATURE_FLAG_ROLLOUTS_"`
 }
 
 type WatchConfig struct {

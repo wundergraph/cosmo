@@ -146,6 +146,7 @@ type Config struct {
 	subgraphErrorPropagation      config.SubgraphErrorPropagationConfiguration
 	clientHeader                  config.ClientHeader
 	cacheWarmup                   *config.CacheWarmupConfiguration
+	featureFlagRollouts           config.FeatureFlagRollouts
 	planningDurationOverride      func(content string) time.Duration
 	subscriptionHeartbeatInterval time.Duration
 	hostName                      string

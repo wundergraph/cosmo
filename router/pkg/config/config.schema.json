@@ -4193,6 +4193,18 @@
           }
         }
       }
+    },
+    "feature_flag_rollouts": {
+      "type": "object",
+      "description": "Toggles percentage-based traffic rollouts for feature flags. When enabled, every flag whose execution config has traffic_percentage set becomes a rollout flag (header/cookie pins ignored). Per-request bucket is uniformly random.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable percentage-based feature flag rollouts."
+        }
+      }
     }
   },
   "$defs": {

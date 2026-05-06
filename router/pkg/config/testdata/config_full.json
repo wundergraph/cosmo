@@ -1114,5 +1114,8 @@
       "Enabled": true,
       "Maximum": 10000000000
     }
+  },
+  "FeatureFlagRollouts": {
+    "Enabled": true
   }
 }

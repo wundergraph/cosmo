@@ -141,6 +141,7 @@ type buildMultiGraphHandlerOptions struct {
 	baseMux               *chi.Mux
 	featureFlagConfigs    map[string]*nodev1.FeatureFlagRouterExecutionConfig
 	reloadPersistentState *ReloadPersistentState
+	rolloutSelector       *rolloutSelector
 }
 
 // newGraphServer creates a new server instance.
@@ -349,10 +350,21 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
+	rolloutSel, err := newRolloutSelector(
+		&r.featureFlagRollouts,
+		featureFlagConfigMap,
+		routerConfig.GetVersion(),
+		s.logger,
+	)
+	if err != nil {
+		s.logger.Error("feature_flag_rollouts: invalid config; rollouts disabled", zap.Error(err))
+	}
+
 	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, buildMultiGraphHandlerOptions{
 		baseMux:               gm.mux,
 		featureFlagConfigs:    featureFlagConfigMap,
 		reloadPersistentState: r.reloadPersistentState,
+		rolloutSelector:       rolloutSel,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
@@ -525,15 +537,29 @@ func (s *graphServer) buildMultiGraphHandler(
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract the feature flag and run the corresponding mux
-		// 1. From the request header
-		// 2. From the cookie
+		// Flag selection precedence:
+		// 1. X-Feature-Flag header (preview flags only)
+		// 2. feature_flag cookie (preview flags only)
+		// 3. Rollout selector (rollout flags, by traffic %)
+		//
+		// Header/cookie pins targeting a *rollout* flag are ignored —
+		// rollout flags must not be steerable by clients.
 
 		ff := strings.TrimSpace(r.Header.Get(featureFlagHeader))
 		if ff == "" {
 			cookie, err := r.Cookie(featureFlagCookie)
 			if err == nil && cookie != nil {
 				ff = strings.TrimSpace(cookie.Value)
+			}
+		}
+
+		if ff != "" && opts.rolloutSelector != nil && opts.rolloutSelector.isRolloutFlag(ff) {
+			ff = ""
+		}
+
+		if ff == "" && opts.rolloutSelector != nil {
+			if picked, _, ok := opts.rolloutSelector.pick(w, r); ok {
+				ff = picked
 			}
 		}
 
