@@ -75,11 +75,19 @@ export type ContractBaseCompositionData = {
   schemaVersionId: string;
 };
 
-export function routerConfigToFeatureFlagExecutionConfig(routerConfig: RouterConfig): FeatureFlagRouterExecutionConfig {
+export function routerConfigToFeatureFlagExecutionConfig(
+  routerConfig: RouterConfig,
+  // Percentage of unpinned traffic to route to this flag's variant.
+  // null/undefined → preview-only flag (header/cookie-pinned, today's behavior).
+  // 0..100 → rollout flag, written into the proto so the router-side selector
+  // routes the configured share of traffic and ignores header/cookie pins.
+  trafficPercentage?: number | null,
+): FeatureFlagRouterExecutionConfig {
   return new FeatureFlagRouterExecutionConfig({
     engineConfig: routerConfig.engineConfig,
     subgraphs: routerConfig.subgraphs,
     version: routerConfig.version,
+    trafficPercentage: trafficPercentage == null ? undefined : trafficPercentage,
   });
 }
 

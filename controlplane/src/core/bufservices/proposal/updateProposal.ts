@@ -9,6 +9,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { ProposalOrigin, ProposalState } from '../../../db/models.js';
+import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
@@ -188,6 +189,34 @@ export function updateProposal(
         state: stateValue,
         proposalSubgraphs: [],
       });
+
+      // Auto-teardown: when a proposal transitions to PUBLISHED, any rollout
+      // deployed against it has fulfilled its purpose (the change is now
+      // mainlined). Delete the linked feature flag so the rollout slice stops
+      // accumulating and the per-proposal feature subgraphs don't linger as
+      // zombies. Idempotent: a no-op if no rollout was deployed.
+      if (stateValue === 'PUBLISHED') {
+        const linked = await proposalRepo.getLinkedRolloutFlag(proposal.proposal.id);
+        if (linked) {
+          const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+          await featureFlagRepo.delete(linked.id);
+          // Recompose so the next router config (served from CDN) drops the
+          // rollout entry — without this, deletion is invisible to running
+          // routers until something else triggers a recomposition.
+          await federatedGraphRepo.composeAndDeployGraphs({
+            actorId: authContext.userId,
+            admissionConfig: {
+              cdnBaseUrl: opts.cdnBaseUrl,
+              webhookJWTSecret: opts.admissionWebhookJWTSecret,
+            },
+            blobStorage: opts.blobStorage,
+            chClient: opts.chClient!,
+            compositionOptions: {},
+            federatedGraphs: [federatedGraph],
+            webhookProxyUrl: opts.webhookProxyUrl,
+          });
+        }
+      }
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,

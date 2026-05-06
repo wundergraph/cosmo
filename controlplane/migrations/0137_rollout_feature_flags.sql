@@ -1,0 +1,9 @@
+ALTER TABLE "feature_flags" ADD COLUMN "traffic_percentage" integer;--> statement-breakpoint
+ALTER TABLE "feature_flags" ADD COLUMN "proposal_id" uuid;--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "feature_flags" ADD CONSTRAINT "feature_flags_proposal_id_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "public"."proposals"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ff_proposal_id_idx" ON "feature_flags" USING btree ("proposal_id");

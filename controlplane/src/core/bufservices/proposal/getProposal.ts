@@ -50,6 +50,7 @@ export function getProposal(
     }
 
     const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
+    const linkedRollout = await proposalRepo.getLinkedRolloutFlag(proposal.proposal.id);
 
     const currentSubgraphs = [];
     for (const subgraph of proposal.proposalSubgraphs) {
@@ -90,6 +91,9 @@ export function getProposal(
         latestCheckSuccess: latestCheck?.isSuccessful || false,
         latestCheckId: latestCheck?.checkId || '',
         origin: fromProposalOriginEnum(proposal.proposal.origin),
+        rolloutFeatureFlagId: linkedRollout?.id,
+        rolloutPercentage:
+          linkedRollout?.trafficPercentage == null ? undefined : linkedRollout.trafficPercentage,
       }),
       currentSubgraphs,
     };

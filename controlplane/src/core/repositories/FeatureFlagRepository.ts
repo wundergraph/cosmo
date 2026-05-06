@@ -40,6 +40,9 @@ export interface FeatureFlagWithFeatureSubgraphs {
   id: string;
   name: string;
   featureSubgraphs: FeatureSubgraphDTO[];
+  // null → preview-only flag (header/cookie-pinned).
+  // 0..100 → rollout flag, traffic_percentage written into router config proto.
+  trafficPercentage: number | null;
 }
 
 export interface SubgraphsToCompose {
@@ -48,6 +51,9 @@ export interface SubgraphsToCompose {
   isFeatureFlagComposition: boolean;
   featureFlagName: string;
   featureFlagId: string;
+  // Carried through composition so routerConfigToFeatureFlagExecutionConfig
+  // can populate the FeatureFlagRouterExecutionConfig.traffic_percentage proto field.
+  trafficPercentage?: number | null;
 }
 
 export interface FeatureFlagListFilterOptions {
@@ -854,6 +860,7 @@ export class FeatureFlagRepository {
         name: featureFlags.name,
         labels: featureFlags.labels,
         isEnabled: featureFlags.isEnabled,
+        trafficPercentage: featureFlags.trafficPercentage,
       })
       .from(featureFlags)
       .innerJoin(featureFlagToFeatureSubgraphs, eq(featureFlags.id, featureFlagToFeatureSubgraphs.featureFlagId))
@@ -1054,6 +1061,7 @@ export class FeatureFlagRepository {
         id: featureFlag.id,
         name: featureFlag.name,
         featureSubgraphs: filteredFeatureSubgraphs,
+        trafficPercentage: featureFlag.trafficPercentage,
       });
     }
     return featureFlagWithEnabledFeatureGraphs;
@@ -1087,6 +1095,7 @@ export class FeatureFlagRepository {
         featureFlagName: flag.name,
         featureFlagId: flag.id,
         subgraphs: subgraphDTOs,
+        trafficPercentage: flag.trafficPercentage,
       });
     }
     return subgraphsToCompose;
