@@ -66,7 +66,7 @@ func (f *HttpFlushWriter) Complete() {
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
 
-	f.Close(resolve.SubscriptionCloseKindNormal)
+	f.close()
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
@@ -104,7 +104,23 @@ func (f *HttpFlushWriter) Heartbeat() error {
 	return nil
 }
 
-func (f *HttpFlushWriter) Close(_ resolve.SubscriptionCloseKind) {
+// Error delivers a terminal error payload to the subscription. The data is the
+// graphql-go-tools-formatted error JSON; we write it through the standard flush
+// path so SSE/multipart framing is preserved, then cancel the underlying context.
+func (f *HttpFlushWriter) Error(data []byte) {
+	if f.ctx.Err() != nil {
+		return
+	}
+	if len(data) > 0 {
+		_, _ = f.buf.Write(data)
+		_ = f.Flush()
+	}
+	f.close()
+}
+
+// close cancels the underlying context, terminating the subscription. Internal
+// helper used by the SubscriptionResponseWriter implementation.
+func (f *HttpFlushWriter) close() {
 	if f.ctx.Err() != nil {
 		return
 	}
@@ -159,7 +175,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	f.flusher.Flush()
 
 	if f.subscribeOnce {
-		defer f.Close(resolve.SubscriptionCloseKindNormal)
+		defer f.close()
 	}
 
 	return nil

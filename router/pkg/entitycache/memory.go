@@ -66,7 +66,7 @@ func (c *MemoryEntityCache) Get(_ context.Context, keys []string) ([]*resolve.Ca
 	return entries, nil
 }
 
-func (c *MemoryEntityCache) Set(_ context.Context, entries []*resolve.CacheEntry, ttl time.Duration) error {
+func (c *MemoryEntityCache) Set(_ context.Context, entries []*resolve.CacheEntry) error {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -74,7 +74,11 @@ func (c *MemoryEntityCache) Set(_ context.Context, entries []*resolve.CacheEntry
 		if entry == nil {
 			continue
 		}
-		// Check if key already exists (update vs new entry)
+		// Per-entry TTL semantics: <= 0 means no expiration in ristretto.
+		ttl := entry.TTL
+		if ttl < 0 {
+			ttl = 0
+		}
 		_, exists := c.cache.Get(entry.Key)
 		if c.cache.SetWithTTL(entry.Key, entry.Value, int64(len(entry.Value)), ttl) && !exists {
 			c.len.Add(1)

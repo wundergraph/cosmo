@@ -36,7 +36,7 @@ func TestMemoryEntityCache_SetThenGet(t *testing.T) {
 	err := c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
 		{Key: "k2", Value: []byte("v2")},
-	}, 5*time.Second)
+	})
 	require.NoError(t, err)
 
 	entries, err := c.Get(ctx, []string{"k1", "k2"})
@@ -51,7 +51,7 @@ func TestMemoryEntityCache_PartialHit(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
-	}, 5*time.Second))
+	}))
 
 	entries, err := c.Get(ctx, []string{"k1", "k2"})
 	require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestMemoryEntityCache_Delete(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
-	}, 5*time.Second))
+	}))
 
 	require.NoError(t, c.Delete(ctx, []string{"k1"}))
 
@@ -84,8 +84,8 @@ func TestMemoryEntityCache_TTLExpiry(t *testing.T) {
 	c := newTestCache(t)
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
-		{Key: "k1", Value: []byte("v1")},
-	}, 50*time.Millisecond))
+		{Key: "k1", Value: []byte("v1"), TTL: 50 * time.Millisecond},
+	}))
 
 	// Should be present immediately
 	entries, err := c.Get(ctx, []string{"k1"})
@@ -104,10 +104,10 @@ func TestMemoryEntityCache_Overwrite(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
-	}, 5*time.Second))
+	}))
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v2")},
-	}, 5*time.Second))
+	}))
 
 	entries, err := c.Get(ctx, []string{"k1"})
 	require.NoError(t, err)
@@ -122,7 +122,7 @@ func TestMemoryEntityCache_EmptyBatch(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, entries)
 
-	require.NoError(t, c.Set(ctx, nil, 0))
+	require.NoError(t, c.Set(ctx, nil))
 	require.NoError(t, c.Delete(ctx, nil))
 }
 
@@ -132,7 +132,7 @@ func TestMemoryEntityCache_NilEntriesInSet(t *testing.T) {
 		nil,
 		{Key: "k1", Value: []byte("v1")},
 		nil,
-	}, 5*time.Second)
+	})
 	require.NoError(t, err)
 
 	entries, err := c.Get(context.Background(), []string{"k1"})
@@ -161,7 +161,7 @@ func TestMemoryEntityCache_ConcurrentAccess(t *testing.T) {
 			key := "key" + string(rune('0'+n))
 			recordErr(c.Set(ctx, []*resolve.CacheEntry{
 				{Key: key, Value: []byte("val")},
-			}, 5*time.Second))
+			}))
 			_, err := c.Get(ctx, []string{key})
 			recordErr(err)
 			recordErr(c.Delete(ctx, []string{key}))
@@ -176,7 +176,7 @@ func TestMemoryEntityCache_NoExpiryWithZeroTTL(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
-	}, 0))
+	}))
 
 	// Should still be present (no expiry)
 	time.Sleep(10 * time.Millisecond)
@@ -189,8 +189,8 @@ func TestMemoryEntityCache_RemainingTTL(t *testing.T) {
 	c := newTestCache(t)
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
-		{Key: "k1", Value: []byte("v1")},
-	}, 5*time.Second))
+		{Key: "k1", Value: []byte("v1"), TTL: 5 * time.Second},
+	}))
 
 	entries, err := c.Get(ctx, []string{"k1"})
 	require.NoError(t, err)
@@ -224,7 +224,7 @@ func TestMemoryEntityCache_EvictsWhenFull(t *testing.T) {
 		key := "key" + string(rune('A'+i))
 		require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 			{Key: key, Value: val},
-		}, 5*time.Second))
+		}))
 	}
 
 	// Ristretto's admission policy and sampled counters make the exact number
@@ -259,7 +259,7 @@ func TestMemoryEntityCache_Close(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
-	}, 5*time.Second))
+	}))
 
 	c.Close()
 

@@ -61,7 +61,7 @@ func TestRedisEntityCache_SetThenGetReturnsStoredValues(t *testing.T) {
 	err := cache.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
 		{Key: "k2", Value: []byte("v2")},
-	}, time.Minute)
+	})
 	require.NoError(t, err)
 
 	entries, err := cache.Get(ctx, []string{"k1", "k2"})
@@ -78,7 +78,7 @@ func TestRedisEntityCache_KeyExpiresAfterTTL(t *testing.T) {
 
 	err := cache.Set(ctx, []*resolve.CacheEntry{
 		{Key: "ephemeral", Value: []byte("gone-soon")},
-	}, 5*time.Second)
+	})
 	require.NoError(t, err)
 
 	// Key exists before expiry
@@ -101,7 +101,7 @@ func TestRedisEntityCache_DeleteRemovesKey(t *testing.T) {
 
 	err := cache.Set(ctx, []*resolve.CacheEntry{
 		{Key: "delme", Value: []byte("val")},
-	}, time.Minute)
+	})
 	require.NoError(t, err)
 
 	err = cache.Delete(ctx, []string{"delme"})
@@ -119,7 +119,7 @@ func TestRedisEntityCache_KeyPrefixAppliedToStoredKey(t *testing.T) {
 
 	err := cache.Set(ctx, []*resolve.CacheEntry{
 		{Key: "item", Value: []byte("data")},
-	}, time.Minute)
+	})
 	require.NoError(t, err)
 
 	// The key in Redis should be prefixed
@@ -144,7 +144,7 @@ func TestRedisEntityCache_SetWithEmptyEntriesIsNoop(t *testing.T) {
 	cache, _ := newTestRedisCache(t, "pfx")
 	ctx := context.Background()
 
-	err := cache.Set(ctx, []*resolve.CacheEntry{}, time.Minute)
+	err := cache.Set(ctx, []*resolve.CacheEntry{})
 	require.NoError(t, err)
 }
 
@@ -183,7 +183,7 @@ func TestRedisEntityCache_SetAndDeleteAfterCloseReturnError(t *testing.T) {
 	require.NoError(t, cache.Close())
 
 	err := cache.Set(context.Background(),
-		[]*resolve.CacheEntry{{Key: "k", Value: []byte("v")}}, time.Minute)
+		[]*resolve.CacheEntry{{Key: "k", Value: []byte("v")}})
 	require.Error(t, err, "Set on closed client must return error")
 
 	err = cache.Delete(context.Background(), []string{"k"})
