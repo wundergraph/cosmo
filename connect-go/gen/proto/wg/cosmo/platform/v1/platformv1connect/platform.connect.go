@@ -547,6 +547,12 @@ const (
 	// PlatformServiceGetProposalChecksProcedure is the fully-qualified name of the PlatformService's
 	// GetProposalChecks RPC.
 	PlatformServiceGetProposalChecksProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalChecks"
+	// PlatformServiceBulkUpdateProposalRolloutPercentagesProcedure is the fully-qualified name of the
+	// PlatformService's BulkUpdateProposalRolloutPercentages RPC.
+	PlatformServiceBulkUpdateProposalRolloutPercentagesProcedure = "/wg.cosmo.platform.v1.PlatformService/BulkUpdateProposalRolloutPercentages"
+	// PlatformServiceTeardownProposalRolloutProcedure is the fully-qualified name of the
+	// PlatformService's TeardownProposalRollout RPC.
+	PlatformServiceTeardownProposalRolloutProcedure = "/wg.cosmo.platform.v1.PlatformService/TeardownProposalRollout"
 	// PlatformServiceGetOperationsProcedure is the fully-qualified name of the PlatformService's
 	// GetOperations RPC.
 	PlatformServiceGetOperationsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOperations"
@@ -750,6 +756,8 @@ var (
 	platformServiceGetNamespaceProposalConfigMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceProposalConfig")
 	platformServiceGetProposalsByFederatedGraphMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
 	platformServiceGetProposalChecksMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
+	platformServiceBulkUpdateProposalRolloutPercentagesMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("BulkUpdateProposalRolloutPercentages")
+	platformServiceTeardownProposalRolloutMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("TeardownProposalRollout")
 	platformServiceGetOperationsMethodDescriptor                                      = platformServiceServiceDescriptor.Methods().ByName("GetOperations")
 	platformServiceGetClientsFromAnalyticsMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetClientsFromAnalytics")
 	platformServiceGetOperationClientsMethodDescriptor                                = platformServiceServiceDescriptor.Methods().ByName("GetOperationClients")
@@ -1085,6 +1093,16 @@ type PlatformServiceClient interface {
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
 	// GetProposalChecks returns checks for a proposal.
 	GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error)
+	// BulkUpdateProposalRolloutPercentages atomically creates or updates rollout
+	// percentages across one or more proposals on the same federated graph. For
+	// proposals without an existing rollout, the handler creates feature subgraphs
+	// and a feature flag linked to the proposal (deploy semantics). For proposals
+	// already rolled out, only the percentage is updated. Single transaction +
+	// single composeAndDeployGraphs; sibling rollouts not in the batch keep their
+	// stored percentages.
+	BulkUpdateProposalRolloutPercentages(context.Context, *connect.Request[v1.BulkUpdateProposalRolloutPercentagesRequest]) (*connect.Response[v1.BulkUpdateProposalRolloutPercentagesResponse], error)
+	// TeardownProposalRollout deletes the linked feature flag and feature subgraphs.
+	TeardownProposalRollout(context.Context, *connect.Request[v1.TeardownProposalRolloutRequest]) (*connect.Response[v1.TeardownProposalRolloutResponse], error)
 	// GetOperations returns the operations of a federated graph.
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
 	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
@@ -2148,6 +2166,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetProposalChecksMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		bulkUpdateProposalRolloutPercentages: connect.NewClient[v1.BulkUpdateProposalRolloutPercentagesRequest, v1.BulkUpdateProposalRolloutPercentagesResponse](
+			httpClient,
+			baseURL+PlatformServiceBulkUpdateProposalRolloutPercentagesProcedure,
+			connect.WithSchema(platformServiceBulkUpdateProposalRolloutPercentagesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		teardownProposalRollout: connect.NewClient[v1.TeardownProposalRolloutRequest, v1.TeardownProposalRolloutResponse](
+			httpClient,
+			baseURL+PlatformServiceTeardownProposalRolloutProcedure,
+			connect.WithSchema(platformServiceTeardownProposalRolloutMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getOperations: connect.NewClient[v1.GetOperationsRequest, v1.GetOperationsResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOperationsProcedure,
@@ -2378,6 +2408,8 @@ type platformServiceClient struct {
 	getNamespaceProposalConfig                         *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
 	getProposalsByFederatedGraph                       *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
 	getProposalChecks                                  *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
+	bulkUpdateProposalRolloutPercentages               *connect.Client[v1.BulkUpdateProposalRolloutPercentagesRequest, v1.BulkUpdateProposalRolloutPercentagesResponse]
+	teardownProposalRollout                            *connect.Client[v1.TeardownProposalRolloutRequest, v1.TeardownProposalRolloutResponse]
 	getOperations                                      *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
 	getClientsFromAnalytics                            *connect.Client[v1.GetClientsFromAnalyticsRequest, v1.GetClientsFromAnalyticsResponse]
 	getOperationClients                                *connect.Client[v1.GetOperationClientsRequest, v1.GetOperationClientsResponse]
@@ -3282,6 +3314,17 @@ func (c *platformServiceClient) GetProposalChecks(ctx context.Context, req *conn
 	return c.getProposalChecks.CallUnary(ctx, req)
 }
 
+// BulkUpdateProposalRolloutPercentages calls
+// wg.cosmo.platform.v1.PlatformService.BulkUpdateProposalRolloutPercentages.
+func (c *platformServiceClient) BulkUpdateProposalRolloutPercentages(ctx context.Context, req *connect.Request[v1.BulkUpdateProposalRolloutPercentagesRequest]) (*connect.Response[v1.BulkUpdateProposalRolloutPercentagesResponse], error) {
+	return c.bulkUpdateProposalRolloutPercentages.CallUnary(ctx, req)
+}
+
+// TeardownProposalRollout calls wg.cosmo.platform.v1.PlatformService.TeardownProposalRollout.
+func (c *platformServiceClient) TeardownProposalRollout(ctx context.Context, req *connect.Request[v1.TeardownProposalRolloutRequest]) (*connect.Response[v1.TeardownProposalRolloutResponse], error) {
+	return c.teardownProposalRollout.CallUnary(ctx, req)
+}
+
 // GetOperations calls wg.cosmo.platform.v1.PlatformService.GetOperations.
 func (c *platformServiceClient) GetOperations(ctx context.Context, req *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error) {
 	return c.getOperations.CallUnary(ctx, req)
@@ -3652,6 +3695,16 @@ type PlatformServiceHandler interface {
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
 	// GetProposalChecks returns checks for a proposal.
 	GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error)
+	// BulkUpdateProposalRolloutPercentages atomically creates or updates rollout
+	// percentages across one or more proposals on the same federated graph. For
+	// proposals without an existing rollout, the handler creates feature subgraphs
+	// and a feature flag linked to the proposal (deploy semantics). For proposals
+	// already rolled out, only the percentage is updated. Single transaction +
+	// single composeAndDeployGraphs; sibling rollouts not in the batch keep their
+	// stored percentages.
+	BulkUpdateProposalRolloutPercentages(context.Context, *connect.Request[v1.BulkUpdateProposalRolloutPercentagesRequest]) (*connect.Response[v1.BulkUpdateProposalRolloutPercentagesResponse], error)
+	// TeardownProposalRollout deletes the linked feature flag and feature subgraphs.
+	TeardownProposalRollout(context.Context, *connect.Request[v1.TeardownProposalRolloutRequest]) (*connect.Response[v1.TeardownProposalRolloutResponse], error)
 	// GetOperations returns the operations of a federated graph.
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
 	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
@@ -4711,6 +4764,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetProposalChecksMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceBulkUpdateProposalRolloutPercentagesHandler := connect.NewUnaryHandler(
+		PlatformServiceBulkUpdateProposalRolloutPercentagesProcedure,
+		svc.BulkUpdateProposalRolloutPercentages,
+		connect.WithSchema(platformServiceBulkUpdateProposalRolloutPercentagesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceTeardownProposalRolloutHandler := connect.NewUnaryHandler(
+		PlatformServiceTeardownProposalRolloutProcedure,
+		svc.TeardownProposalRollout,
+		connect.WithSchema(platformServiceTeardownProposalRolloutMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetOperationsHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOperationsProcedure,
 		svc.GetOperations,
@@ -5109,6 +5174,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetProposalsByFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceGetProposalChecksProcedure:
 			platformServiceGetProposalChecksHandler.ServeHTTP(w, r)
+		case PlatformServiceBulkUpdateProposalRolloutPercentagesProcedure:
+			platformServiceBulkUpdateProposalRolloutPercentagesHandler.ServeHTTP(w, r)
+		case PlatformServiceTeardownProposalRolloutProcedure:
+			platformServiceTeardownProposalRolloutHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOperationsProcedure:
 			platformServiceGetOperationsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetClientsFromAnalyticsProcedure:
@@ -5818,6 +5887,14 @@ func (UnimplementedPlatformServiceHandler) GetProposalsByFederatedGraph(context.
 
 func (UnimplementedPlatformServiceHandler) GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposalChecks is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) BulkUpdateProposalRolloutPercentages(context.Context, *connect.Request[v1.BulkUpdateProposalRolloutPercentagesRequest]) (*connect.Response[v1.BulkUpdateProposalRolloutPercentagesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.BulkUpdateProposalRolloutPercentages is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) TeardownProposalRollout(context.Context, *connect.Request[v1.TeardownProposalRolloutRequest]) (*connect.Response[v1.TeardownProposalRolloutResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.TeardownProposalRollout is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error) {

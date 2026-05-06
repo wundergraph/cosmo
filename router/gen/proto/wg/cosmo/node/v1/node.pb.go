@@ -533,12 +533,16 @@ func (x *FeatureFlagRouterExecutionConfigs) GetConfigByFeatureFlagName() map[str
 }
 
 type FeatureFlagRouterExecutionConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EngineConfig  *EngineConfiguration   `protobuf:"bytes,1,opt,name=engine_config,json=engineConfig,proto3" json:"engine_config,omitempty"`
-	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
-	Subgraphs     []*Subgraph            `protobuf:"bytes,3,rep,name=subgraphs,proto3" json:"subgraphs,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	EngineConfig *EngineConfiguration   `protobuf:"bytes,1,opt,name=engine_config,json=engineConfig,proto3" json:"engine_config,omitempty"`
+	Version      string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Subgraphs    []*Subgraph            `protobuf:"bytes,3,rep,name=subgraphs,proto3" json:"subgraphs,omitempty"`
+	// Optional traffic percentage in [0, 100] for percentage-based rollouts.
+	// When set, the flag is reachable only via the rollout selector and
+	// header/cookie pins targeting it are ignored.
+	TrafficPercentage *uint32 `protobuf:"varint,4,opt,name=traffic_percentage,json=trafficPercentage,proto3,oneof" json:"traffic_percentage,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *FeatureFlagRouterExecutionConfig) Reset() {
@@ -590,6 +594,13 @@ func (x *FeatureFlagRouterExecutionConfig) GetSubgraphs() []*Subgraph {
 		return x.Subgraphs
 	}
 	return nil
+}
+
+func (x *FeatureFlagRouterExecutionConfig) GetTrafficPercentage() uint32 {
+	if x != nil && x.TrafficPercentage != nil {
+		return *x.TrafficPercentage
+	}
+	return 0
 }
 
 type RouterConfig struct {
@@ -5146,11 +5157,13 @@ const file_wg_cosmo_node_v1_node_proto_rawDesc = "" +
 	"\x1bconfig_by_feature_flag_name\x18\x01 \x03(\v2P.wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigs.ConfigByFeatureFlagNameEntryR\x17configByFeatureFlagName\x1a~\n" +
 	"\x1cConfigByFeatureFlagNameEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12H\n" +
-	"\x05value\x18\x02 \x01(\v22.wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigR\x05value:\x028\x01\"\xc2\x01\n" +
+	"\x05value\x18\x02 \x01(\v22.wg.cosmo.node.v1.FeatureFlagRouterExecutionConfigR\x05value:\x028\x01\"\x8d\x02\n" +
 	" FeatureFlagRouterExecutionConfig\x12J\n" +
 	"\rengine_config\x18\x01 \x01(\v2%.wg.cosmo.node.v1.EngineConfigurationR\fengineConfig\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x128\n" +
-	"\tsubgraphs\x18\x03 \x03(\v2\x1a.wg.cosmo.node.v1.SubgraphR\tsubgraphs\"\xe8\x02\n" +
+	"\tsubgraphs\x18\x03 \x03(\v2\x1a.wg.cosmo.node.v1.SubgraphR\tsubgraphs\x122\n" +
+	"\x12traffic_percentage\x18\x04 \x01(\rH\x00R\x11trafficPercentage\x88\x01\x01B\x15\n" +
+	"\x13_traffic_percentage\"\xe8\x02\n" +
 	"\fRouterConfig\x12J\n" +
 	"\rengine_config\x18\x01 \x01(\v2%.wg.cosmo.node.v1.EngineConfigurationR\fengineConfig\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x128\n" +
@@ -5805,6 +5818,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 	if File_wg_cosmo_node_v1_node_proto != nil {
 		return
 	}
+	file_wg_cosmo_node_v1_node_proto_msgTypes[2].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[3].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[4].OneofWrappers = []any{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[9].OneofWrappers = []any{}
