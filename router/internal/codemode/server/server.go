@@ -14,6 +14,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/codemode/harness"
 	"github.com/wundergraph/cosmo/router/internal/codemode/observability"
 	"github.com/wundergraph/cosmo/router/internal/codemode/sandbox"
+	"github.com/wundergraph/cosmo/router/internal/codemode/server/descriptions"
 	"github.com/wundergraph/cosmo/router/internal/codemode/storage"
 	"github.com/wundergraph/cosmo/router/internal/codemode/tsgen"
 	"github.com/wundergraph/cosmo/router/internal/codemode/yoko"
@@ -35,12 +36,6 @@ const (
 	statelessNamedOpsWarnMessage = "code mode named operations are disabled because MCP session stateless mode is enabled"
 	namedOpsDisabledMessage      = "named operations are disabled"
 )
-
-const searchAPIDescription = "Plan ALL data shapes you need up front, then call ONCE with every prompt in a single batch. Each extra search is a round-trip you pay for.\n\nDEFAULT TO ONE PROMPT. If the entities are related in any way — same domain, joinable, fetched together to answer one question, traversed via the same parent, or the user mentioned them in the same breath — combine them into a SINGLE prompt that describes the complete joined shape. Multiple prompts should be the exception, not the default.\n\nWrite each prompt as the COMPLETE final shape of data you want, including joins and correlation IDs. Yoko writes GraphQL across federated subgraphs, so a single prompt like \"employees with id, first name, last name, and their pets (name, type)\" returns one joined operation — never split this into \"list employees\" + \"list pets with owner\" that you'd then have to correlate in JS. If you DO split, every prompt MUST include the join keys (IDs / foreign keys) needed to correlate the results — otherwise the operations come back un-joinable and you'll have to search again.\n\nBE PRECISE about what you need. Vague prompts produce vague operations and force re-searches. Always state:\n- The exact fields you need on each entity (\"id, forename, surname\" — not \"name info\").\n- The relationships to traverse and how deep (\"employees with their pets and each pet's owner's department\").\n- Any required filters/arguments and the values or variable names (\"by id=42\", \"where status=ACTIVE\", \"limit 50\").\n- The shape of nested/related entities, field by field — do not say \"with all their data\".\n- Concrete entity and relationship names from the domain when you know them; otherwise describe the relationship explicitly (\"the team an employee belongs to\").\nA precise prompt: \"employee by id (variable: $id) returning id, forename, surname, role, and pets { name, type, age }\". A vague prompt: \"get employee details with related stuff\" — this will come back missing fields you need.\n\nWhen to use multiple prompts (rare): genuinely unrelated operations on disjoint domains, different argument shapes that can't share a parent, or queries vs mutations. Never slice one joinable shape into fragments. When in doubt, combine.\n\nDo NOT issue prompts for derived/computed values: averages, medians, counts, filters, exclusions (\"without X\"), sorting, top-N. Fetch the raw rows once and compute in code_mode_run_js. Yoko exposes data; arithmetic and reshaping happen in your JS.\n\nAnti-pattern: search → inspect result → notice a field or ID is missing → search again. One well-formed prompt beats three round-trips.\n\nThe response appends newly registered TypeScript declarations for use as `await tools.<name>(vars)` inside code_mode_run_js; the cumulative bundle is available at `yoko://persisted-ops.d.ts`."
-
-const executeAPISourceDescription = "JavaScript source containing a single async arrow function. The host wraps it as `(<source>)()` and awaits the resulting Promise; the resolved JSON-serializable value is the tool result."
-
-const executeAPIDescription = "Run JavaScript source as a single async arrow function in the Code Mode sandbox. Use `await tools.<name>(vars)` for operations registered by code_mode_search_tools; the cumulative tools namespace is available at `yoko://persisted-ops.d.ts`.\n\nStyle: write compact source — single line if it fits, no // comments, no blank lines, short variable names. The JSON wrapping that encodes your source charges you for every newline and indent space.\n\nBatch everything into ONE code_mode_run_js call. ≥3 `tools.*` invocations per call is normal; over-fetch and decide in JS, don't round-trip. A failing inner call degrades the result, not the whole script — wrap with try/catch and surface the error in the return value.\n\nThe return value of your async arrow is the only output channel — `console` is not available. To surface intermediate state, include it in the returned object (e.g. `return { result, debug: { ... } }`). For resilient fan-out use `Promise.allSettled` — `Promise.all` rejects on first failure and discards partial results. Up to 256 `tools.*` invocations per call. Non-serializable leaves in the return value (`BigInt`, functions, symbols, `undefined`, circular refs) are replaced with the sentinel string `<<non-serializable: KIND>>` and listed in the response's `warnings: [{path, kind}]` field; the rest of the value still comes through.\n\nExample: `async()=>{const o=await tools.getOrders({customerId:\"c_1\"});if(o.errors?.length)throw new Error(o.errors[0].message);return o.data.orders;}`\n\nType declarations for reference (consumed via `yoko://persisted-ops.d.ts`):\n\n```ts\ntype GraphQLError = { message: string; path?: (string | number)[]; extensions?: Record<string, unknown> };\ntype R<T> = Promise<{ data: T | null; errors?: GraphQLError[] }>;\n\ndeclare const tools: {};\n\ndeclare function notNull<T>(value: T | null | undefined, message?: string): T;\ndeclare function compact<T>(value: T): T;\n```"
 
 // Config configures the Code Mode MCP server.
 type Config struct {
@@ -254,6 +249,43 @@ func (s *Server) Reload(schema *ast.Document, sdl string) error {
 	}
 	if s.yokoClient != nil {
 		s.yokoClient.SetSchema(sdl)
+		// Eagerly index the new SDL in the background so the first user-facing
+		// code_mode_search_tools call doesn't pay the IndexSchema round-trip
+		// latency. Failures are logged and ignored — the lazy path inside
+		// Search will retry on the next call.
+		//
+		// recover guard: an unrecovered panic here would bring the whole
+		// router down because the goroutine runs outside any caller frame.
+		// The warm-up is best-effort, so a panic must never escape.
+		if sdl != "" {
+			yokoClient := s.yokoClient
+			logger := s.logger
+			sdlBytes := len(sdl)
+			go func() {
+				start := time.Now()
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Error("code mode eager schema index panicked",
+							zap.Any("panic", r),
+							zap.Duration("duration", time.Since(start)),
+						)
+					}
+				}()
+				logger.Info("code mode eager schema index started",
+					zap.Int("sdl_bytes", sdlBytes),
+				)
+				if err := yokoClient.EnsureIndexed(context.Background()); err != nil {
+					logger.Warn("code mode eager schema index failed",
+						zap.Error(err),
+						zap.Duration("duration", time.Since(start)),
+					)
+					return
+				}
+				logger.Info("code mode eager schema index completed",
+					zap.Duration("duration", time.Since(start)),
+				)
+			}()
+		}
 	}
 	if s.sessionStateless && s.namedOpsEnabled {
 		s.warnStatelessNamedOpsOnce()
@@ -265,13 +297,13 @@ func (s *Server) Reload(schema *ast.Document, sdl string) error {
 func (s *Server) registerTools() {
 	s.mcpServer.AddTool(&mcp.Tool{
 		Name:        "code_mode_search_tools",
-		Description: searchAPIDescription,
+		Description: descriptions.SearchTool,
 		InputSchema: searchAPIInputSchema(),
 	}, s.handleSearch)
 
 	s.mcpServer.AddTool(&mcp.Tool{
 		Name:        "code_mode_run_js",
-		Description: executeAPIDescription,
+		Description: descriptions.ExecuteTool,
 		InputSchema: executeAPIInputSchema(),
 	}, s.handleExecute)
 }
@@ -281,7 +313,7 @@ func (s *Server) registerPersistedOpsResource() {
 		URI:         persistedOpsURI,
 		Name:        "persisted-ops.d.ts",
 		Title:       "Persisted operations TypeScript definitions",
-		Description: "Cumulative TypeScript definitions for the current Code Mode MCP session's named operations.",
+		Description: descriptions.PersistedOpsResource,
 		MIMEType:    "text/plain",
 	}, s.handlePersistedOpsResource)
 }
@@ -430,7 +462,7 @@ func executeAPIInputSchema() map[string]any {
 			"source": map[string]any{
 				"type":        "string",
 				"minLength":   1,
-				"description": executeAPISourceDescription,
+				"description": descriptions.ExecuteSource,
 			},
 		},
 	}
