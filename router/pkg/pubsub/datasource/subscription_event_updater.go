@@ -19,7 +19,12 @@ const defaultTimeout = 5 * time.Second
 type SubscriptionEventUpdater interface {
 	Update(events []StreamEvent)
 	Complete()
-	Close(kind resolve.SubscriptionCloseKind)
+	// Done performs internal cleanup. Replaces the previous Close(kind) entry point now
+	// that the resolve.SubscriptionUpdater interface has split close into Done()/Error(data).
+	Done()
+	// Error delivers a terminal error payload to all subscriptions on the trigger,
+	// bypassing the resolve pipeline. Callers must follow with Done() for cleanup.
+	Error(data []byte)
 	SetHooks(hooks Hooks)
 }
 
@@ -84,8 +89,12 @@ func (s *subscriptionEventUpdater) Complete() {
 	s.eventUpdater.Complete()
 }
 
-func (s *subscriptionEventUpdater) Close(kind resolve.SubscriptionCloseKind) {
-	s.eventUpdater.Close(kind)
+func (s *subscriptionEventUpdater) Done() {
+	s.eventUpdater.Done()
+}
+
+func (s *subscriptionEventUpdater) Error(data []byte) {
+	s.eventUpdater.Error(data)
 }
 
 func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
@@ -124,7 +133,7 @@ func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Co
 
 	// In case there was an error we close the affected subscription.
 	if err != nil {
-		s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subID)
+		s.eventUpdater.CloseSubscription(subID)
 	}
 }
 
@@ -136,7 +145,7 @@ func (s *subscriptionEventUpdater) recoverPanic(subID resolve.SubscriptionIdenti
 			zap.Any("error", err),
 		)
 
-	s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindDownstreamServiceError, subID)
+	s.eventUpdater.CloseSubscription(subID)
 }
 
 func NewSubscriptionEventUpdater(

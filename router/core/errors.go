@@ -14,7 +14,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -64,9 +64,15 @@ func getErrorType(err error) errorType {
 	if errors.Is(err, context.Canceled) {
 		return errorTypeContextCanceled
 	}
-	var upgradeErr *graphql_datasource.UpgradeRequestError
-	if errors.As(err, &upgradeErr) {
+	// The subscriptions overhaul (graphql-go-tools, late 2025) replaced the typed
+	// UpgradeRequestError / InvalidWsSubprotocolError with sentinel errors from the
+	// subscriptionclient transport package (ErrDialFailed, ErrInitFailed). Map those
+	// to the existing cosmo error categories so error telemetry stays roughly stable.
+	if errors.Is(err, transport.ErrDialFailed) {
 		return errorTypeUpgradeFailed
+	}
+	if errors.Is(err, transport.ErrInitFailed) {
+		return errorTypeInvalidWsSubprotocol
 	}
 	var nErr net.Error
 	if errors.As(err, &nErr) {
@@ -81,10 +87,6 @@ func getErrorType(err error) errorType {
 	var streamsHandlerErr *StreamHandlerError
 	if errors.As(err, &streamsHandlerErr) {
 		return errorTypeStreamsHandlerError
-	}
-	var invalidWsSubprotocolErr graphql_datasource.InvalidWsSubprotocolError
-	if errors.As(err, &invalidWsSubprotocolErr) {
-		return errorTypeInvalidWsSubprotocol
 	}
 	var jsonParseErr *astjson.ParseError
 	if errors.As(err, &jsonParseErr) {

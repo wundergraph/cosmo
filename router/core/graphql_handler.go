@@ -21,7 +21,6 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
@@ -262,7 +261,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		info, err := h.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, hpw)
+		info, err := h.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, hpw)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
@@ -473,19 +472,11 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
 	case errorTypeUpgradeFailed:
-		var upgradeErr *graphql_datasource.UpgradeRequestError
-		if h.subgraphErrorPropagation.PropagateStatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
-			response.Errors[0].Extensions = &Extensions{
-				StatusCode: upgradeErr.StatusCode,
-			}
-			if subgraph := reqContext.subgraphResolver.BySubgraphURL(upgradeErr.URL); subgraph != nil {
-				response.Errors[0].Message = fmt.Sprintf("Subscription Upgrade request failed for Subgraph '%s'.", subgraph.Name)
-			} else {
-				response.Errors[0].Message = "Subscription Upgrade request failed"
-			}
-		} else {
-			response.Errors[0].Message = "Subscription Upgrade request failed"
-		}
+		// The subscriptions overhaul replaced the typed UpgradeRequestError (which carried
+		// StatusCode + URL) with a sentinel error; the per-subgraph status-code propagation
+		// path is no longer wired through. Surface the generic message until the new client
+		// exposes structured upgrade-failure context.
+		response.Errors[0].Message = "Subscription Upgrade request failed"
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusOK)
 		}
