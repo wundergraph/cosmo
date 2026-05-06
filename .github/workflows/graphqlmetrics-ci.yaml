@@ -44,7 +44,7 @@ jobs:
         run: make setup-build-tools
 
       - name: Generate code
-        run: rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
+        run: rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --path proto/wg/cosmo/cacheevents --template buf.graphqlmetrics.go.gen.yaml
 
       - uses: ./.github/actions/git-dirty-check
         with:
