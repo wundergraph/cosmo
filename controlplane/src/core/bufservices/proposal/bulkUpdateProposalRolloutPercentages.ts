@@ -54,12 +54,16 @@ export function bulkUpdateProposalRolloutPercentages(
 
     // Per-item validation. Cumulative validation happens after we resolve the
     // batch's federated graph and pull sibling FFs not in the batch.
+    // The DB-level CHECK on feature_flags.traffic_percentage enforces [0, 100]
+    // as a backstop; this is the friendlier app-level rejection. Reject
+    // non-integers / negatives explicitly so they can't slip past as e.g.
+    // -5 (which would free cumulative budget) or NaN/Infinity from JSON.
     for (const item of req.items) {
-      if (item.percentage > 100) {
+      if (!Number.isInteger(item.percentage) || item.percentage < 0 || item.percentage > 100) {
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: `percentage must be in [0, 100], got ${item.percentage} for proposalId=${item.proposalId}`,
+            details: `percentage must be an integer in [0, 100], got ${item.percentage} for proposalId=${item.proposalId}`,
           },
           items: [],
         };

@@ -1295,7 +1295,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "feature_flags_traffic_percentage_range_chk": {
+          "name": "feature_flags_traffic_percentage_range_chk",
+          "value": "\"traffic_percentage\" IS NULL OR (\"traffic_percentage\" BETWEEN 0 AND 100)"
+        }
+      }
     },
     "public.feature_subgraphs_to_base_subgraphs": {
       "name": "feature_subgraphs_to_base_subgraphs",

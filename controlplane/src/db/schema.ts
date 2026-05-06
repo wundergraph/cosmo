@@ -2,6 +2,7 @@ import { relations, sql } from 'drizzle-orm';
 import {
   AnyPgColumn,
   boolean,
+  check,
   integer,
   bigint,
   pgEnum,
@@ -348,6 +349,12 @@ export const featureFlags = pgTable(
       namespaceIdIndex: index('ff_namespace_id_idx').on(t.namespaceId),
       createdByIndex: index('ff_created_by_idx').on(t.createdBy),
       proposalIdIndex: index('ff_proposal_id_idx').on(t.proposalId),
+      // Mirror the DB CHECK from migration 0137: percentage is null
+      // (preview-only flag) or in [0, 100] (rollout flag).
+      trafficPercentageRange: check(
+        'feature_flags_traffic_percentage_range_chk',
+        sql`${t.trafficPercentage} IS NULL OR (${t.trafficPercentage} BETWEEN 0 AND 100)`,
+      ),
     };
   },
 );
