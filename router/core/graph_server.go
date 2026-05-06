@@ -91,9 +91,11 @@ type (
 		baseRouterConfigVersion string
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
-		// does not include websocket (hijacked) connections
-		inFlightRequests        *atomic.Uint64
-		graphMuxList            []*graphMux
+		// does not include websocket (hijacked) connections.
+		inFlightRequests *atomic.Uint64
+		// graphMuxList contains all graph muxes of this graph server.
+		// It's keyed by mux name (feature flag name or empty string for base graph).
+		graphMuxList            map[string]*graphMux
 		graphMuxListLock        sync.Mutex
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		otlpEngineMetrics       *rmetric.EngineMetrics
@@ -188,7 +190,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		traceDialer:             traceDialer,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
-		graphMuxList:            make([]*graphMux, 0, 1),
+		graphMuxList:            make(map[string]*graphMux, 1),
 		instanceData: InstanceData{
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
@@ -544,7 +546,8 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 }
 
 type graphMux struct {
-	mux *chi.Mux
+	mux    *chi.Mux
+	reused bool
 
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
@@ -1734,7 +1737,7 @@ func (s *graphServer) buildGraphMux(
 
 	s.graphMuxListLock.Lock()
 	defer s.graphMuxListLock.Unlock()
-	s.graphMuxList = append(s.graphMuxList, gm)
+	s.graphMuxList[opts.FeatureFlagName] = gm
 
 	return gm, nil
 }
@@ -1982,11 +1985,14 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	// Shutdown all graphs muxes to release resources
+	// Shutdown graphs muxes, which are not reused by the next graph server, to release resources
 	// e.g. planner cache
 	s.graphMuxListLock.Lock()
 	defer s.graphMuxListLock.Unlock()
 	for _, mux := range s.graphMuxList {
+		if mux.reused {
+			continue
+		}
 		if err := mux.Shutdown(ctx); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
@@ -2170,4 +2176,23 @@ func configureSubgraphOverwrites(
 	}
 
 	return subgraphs, nil
+}
+
+// currentGraphMuxes returns a list of currently active graph muxes
+// used by the currently running graph server.
+func currentGraphMuxes(r *Router) map[string]*graphMux {
+	currentState := r.httpServer.state.Load()
+	if currentState == nil {
+		return nil
+	}
+
+	currentGraphServer := currentState.graphServer
+	if currentGraphServer == nil {
+		return nil
+	}
+
+	currentGraphServer.graphMuxListLock.Lock()
+	defer currentGraphServer.graphMuxListLock.Unlock()
+
+	return maps.Clone(currentGraphServer.graphMuxList)
 }
