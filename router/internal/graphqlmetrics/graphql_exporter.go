@@ -22,25 +22,26 @@ func NewGraphQLMetricsExporter(
 	client graphqlmetricsv1connect.GraphQLMetricsServiceClient,
 	settings *exporter.ExporterSettings,
 ) (*GraphQLMetricsExporter, error) {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
 	sink := NewGraphQLMetricsSink(GraphQLMetricsSinkConfig{
 		Client: client,
 		Logger: logger,
 	})
-	if logger == nil {
-		logger = zap.NewNop()
-	}
 
 	if settings == nil {
 		settings = exporter.NewDefaultExporterSettings()
 	}
 
-	exporter, err := exporter.NewExporter(logger, sink, exporter.IsRetryableConnectError, settings)
+	exp, err := exporter.NewExporter(logger, sink, exporter.IsRetryableConnectError, settings)
 	if err != nil {
 		return nil, err
 	}
 
 	return &GraphQLMetricsExporter{
-		exporter: exporter,
+		exporter: exp,
 	}, nil
 }
 

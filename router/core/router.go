@@ -966,11 +966,14 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		if endpoint == "" {
 			return errors.New("entity cache events export requires an endpoint (entity_caching.events_export.endpoint or graphql_metrics.collector_endpoint)")
 		}
+		ceClientOpts := []connect.ClientOption{connect.WithSendGzip()}
+		if r.graphApiToken != "" {
+			ceClientOpts = append(ceClientOpts, exporter.WithBearerAuth(r.graphApiToken))
+		}
 		ceClient := cacheeventsv1connect.NewCacheEventsServiceClient(
 			http.DefaultClient,
 			endpoint,
-			connect.WithSendGzip(),
-			exporter.WithBearerAuth(r.graphApiToken),
+			ceClientOpts...,
 		)
 		ceSink := cacheevents.NewSink(cacheevents.SinkConfig{
 			Client: ceClient,

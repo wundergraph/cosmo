@@ -69,7 +69,7 @@ func (w *Writer) ProcessBatch(ctx context.Context, items []BatchItem) {
 					}
 					if err := appendCacheEventRow(batch, insertTime, item.Claims.OrganizationID, item.Claims.FederatedGraphID, ev); err != nil {
 						w.logger.Error("Failed to append cache event row", zap.Error(err))
-						continue
+						return fmt.Errorf("append cache event row: %w", err)
 					}
 					rows++
 				}

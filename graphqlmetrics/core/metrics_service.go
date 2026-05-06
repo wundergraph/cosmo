@@ -96,7 +96,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 
 	claims, err := utils.GetClaims(ctx)
 	if err != nil {
-		return nil, errNotAuthenticated
+		return nil, connect.NewError(connect.CodeUnauthenticated, errNotAuthenticated)
 	}
 
 	if len(req.Msg.SchemaUsage) == 0 {
@@ -117,7 +117,7 @@ func (s *MetricsService) PublishAggregatedGraphQLMetrics(ctx context.Context, re
 
 	claims, err := utils.GetClaims(ctx)
 	if err != nil {
-		return nil, errNotAuthenticated
+		return nil, connect.NewError(connect.CodeUnauthenticated, errNotAuthenticated)
 	}
 
 	if len(req.Msg.Aggregation) == 0 {
