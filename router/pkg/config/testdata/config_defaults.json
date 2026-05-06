@@ -671,6 +671,6 @@
     }
   },
   "FeatureFlagRollouts": {
-    "Enabled": true
+    "Enabled": false
   }
 }
