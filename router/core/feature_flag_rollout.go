@@ -51,7 +51,7 @@ func newRolloutSelector(
 	// across reloads.
 	var names []string
 	for name, ec := range ffConfigs {
-		if ec.TrafficPercentage != nil {
+		if ec.TrafficPercentage == nil {
 			continue
 		}
 		names = append(names, name)
