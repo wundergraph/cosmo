@@ -1,8 +1,6 @@
 package core
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	mathrand "math/rand/v2"
 	"net/http"
 	"sort"
@@ -145,13 +143,15 @@ func (s *rolloutSelector) pick(_ http.ResponseWriter, _ *http.Request) (flag, so
 }
 
 // randomBucket returns a uniform basis-point bucket in [0, rolloutBucketScale).
+//
+// math/rand/v2.Uint32N is lock-free per goroutine, ~5 ns, no syscall, and
+// rejection-samples to remove the modulo bias `crypto/rand % N` would have.
+// Traffic bucketing has no security requirement; predictability of the
+// per-request bucket would not let a client influence the gate (the bucket
+// itself is not visible to the client and is not derived from request
+// content under the current "no stickiness" design).
 func randomBucket() uint32 {
-	var b [4]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		// Vanishingly unlikely; fall back to math/rand so we still bucket.
-		return mathrand.Uint32() % rolloutBucketScale
-	}
-	return binary.BigEndian.Uint32(b[:]) % rolloutBucketScale
+	return mathrand.Uint32N(rolloutBucketScale)
 }
 
 // logRolloutFlagSummary emits one line per feature flag at config load so
