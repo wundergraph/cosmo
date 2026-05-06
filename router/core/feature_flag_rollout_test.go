@@ -58,8 +58,10 @@ func TestNewRolloutSelector_NoFlagsReturnsNil(t *testing.T) {
 	require.Nil(t, sel)
 }
 
-func TestNewRolloutSelector_FailsClosedOnOverflow(t *testing.T) {
+func TestNewRolloutSelector_DropsOverflowingFlagButKeepsSiblings(t *testing.T) {
 	t.Parallel()
+	// "a"=60, "b"=60 — alphabetical order means "a" lands inside the budget
+	// (60), and "b" would push to 120 → "b" is dropped, "a" is preserved.
 	sel, err := newRolloutSelector(
 		&config.FeatureFlagRollouts{Enabled: true},
 		map[string]*nodev1.FeatureFlagRouterExecutionConfig{
@@ -68,13 +70,16 @@ func TestNewRolloutSelector_FailsClosedOnOverflow(t *testing.T) {
 		},
 		"v1", zap.NewNop(),
 	)
-	require.Error(t, err)
-	require.Nil(t, sel)
-	require.Contains(t, err.Error(), "cumulative percentage")
+	require.NoError(t, err)
+	require.NotNil(t, sel)
+	require.True(t, sel.isRolloutFlag("a"), "a fits under budget and stays a rollout flag")
+	require.False(t, sel.isRolloutFlag("b"), "b would overflow budget and is dropped (falls through to base, no header/cookie pin)")
 }
 
-func TestNewRolloutSelector_RejectsPercentageAbove100(t *testing.T) {
+func TestNewRolloutSelector_DropsAbove100PercentFlag(t *testing.T) {
 	t.Parallel()
+	// Single flag with pct > 100 is always an operator typo — the flag is
+	// dropped (logged); selector returns nil because nothing is left.
 	sel, err := newRolloutSelector(
 		&config.FeatureFlagRollouts{Enabled: true},
 		map[string]*nodev1.FeatureFlagRouterExecutionConfig{
@@ -82,9 +87,8 @@ func TestNewRolloutSelector_RejectsPercentageAbove100(t *testing.T) {
 		},
 		"v1", zap.NewNop(),
 	)
-	require.Error(t, err)
+	require.NoError(t, err)
 	require.Nil(t, sel)
-	require.Contains(t, err.Error(), "exceeds 100")
 }
 
 func TestNewRolloutSelector_ZeroPercentFlagIsRolloutButUnreachable(t *testing.T) {

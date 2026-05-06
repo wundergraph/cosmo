@@ -3,7 +3,6 @@ package core
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
 	mathrand "math/rand/v2"
 	"net/http"
 	"sort"
@@ -58,15 +57,38 @@ func newRolloutSelector(
 	}
 	sort.Strings(names)
 
-	var sum uint64
-	var cursor uint32
-
-	rules := make([]rolloutRule, 0, len(names))
-	rolloutFlags := make(map[string]struct{}, len(names))
+	// First pass: drop any flag whose own pct is over 100. This is always an
+	// operator typo — a single rollout slice can never exceed the whole graph.
+	accepted := names[:0]
 	for _, name := range names {
 		pct := ffConfigs[name].GetTrafficPercentage()
 		if pct > 100 {
-			return nil, fmt.Errorf("feature_flag_rollouts: flag %q percentage %d exceeds 100", name, pct)
+			logger.Error("feature_flag_rollouts: flag percentage exceeds 100; flag dropped, traffic falls through to base for it",
+				zap.String("flag", name), zap.Uint32("percentage", pct))
+			continue
+		}
+		accepted = append(accepted, name)
+	}
+
+	// Second pass: greedy fit under the 100% budget, alphabetical order.
+	// If the next flag would push cumulative over 100 it is dropped (logged)
+	// and we keep filling with the remaining flags. Earlier choice: returning
+	// nil here disabled every rollout flag on the graph and silently restored
+	// header/cookie pinnability — a single typo blew up the entire rollout.
+	// Drop-the-offender preserves siblings; the operator sees an explicit
+	// error in the log and the dropped flag's traffic falls through to base.
+	var sum uint64
+	var cursor uint32
+	rules := make([]rolloutRule, 0, len(accepted))
+	rolloutFlags := make(map[string]struct{}, len(accepted))
+	for _, name := range accepted {
+		pct := ffConfigs[name].GetTrafficPercentage()
+		if sum+uint64(pct) > 100 {
+			logger.Error("feature_flag_rollouts: flag would push cumulative percentage over 100; flag dropped, traffic falls through to base for it",
+				zap.String("flag", name),
+				zap.Uint32("percentage", pct),
+				zap.Uint64("cumulative_so_far", sum))
+			continue
 		}
 		sum += uint64(pct)
 		rolloutFlags[name] = struct{}{}
@@ -80,15 +102,9 @@ func newRolloutSelector(
 		cursor += span
 	}
 
-	if sum > 100 {
-		logger.Error("feature_flag_rollouts: cumulative percentage exceeds 100; selector disabled, all unpinned traffic falls through to base",
-			zap.Uint64("cumulative_percentage", sum))
-		return nil, fmt.Errorf("cumulative percentage %d exceeds 100", sum)
-	}
-
-	// In case all ffs had 0 percentage
+	// In case all ffs had 0 percentage (or every flag was dropped above).
 	if len(rules) == 0 && len(rolloutFlags) == 0 {
-		logger.Warn("feature_flag_rollouts: flags totalled to 0")
+		logger.Warn("feature_flag_rollouts: no usable flags; selector disabled")
 		return nil, nil
 	}
 
