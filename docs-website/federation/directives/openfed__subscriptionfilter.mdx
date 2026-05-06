@@ -49,25 +49,25 @@ Members and implementers marked `@inaccessible` are skipped before validation. T
 ### Union example
 
 ```graphql
-type TaskUpdated @key(fields: "id channelId", resolvable: false) {
+type EntityUpdated @key(fields: "id code", resolvable: false) {
     id: ID! @external
-    channelId: ID! @external
+    code: String! @external
 }
 
-type TaskDeleted @key(fields: "id channelId", resolvable: false) {
+type EntityDeleted @key(fields: "id code", resolvable: false) {
     id: ID! @external
-    channelId: ID! @external
+    code: String! @external
 }
 
-union TaskEvent = TaskUpdated | TaskDeleted
+union EntityEvent = EntityUpdated | EntityDeleted
 
 type Subscription {
-    onTaskEvent(channelId: ID!): TaskEvent!
-        @edfs__kafkaSubscribe(topics: ["task:event"], providerId: "kafka")
+    onEntityEvent(code: String!): EntityEvent!
+        @edfs__kafkaSubscribe(topics: ["entity:event"], providerId: "kafka")
         @openfed__subscriptionFilter(condition: {
-            IN: { fieldPath: "channelId", values: ["{{ args.channelId }}"] }
+            IN: { fieldPath: "code", values: ["{{ args.code }}"] }
         })
 }
 ```
 
-The router checks `channelId` on every incoming event payload regardless of `__typename`. Events whose `__typename` is not a member of the union surface an `INVALID_GRAPHQL` error to the subscriber instead of being delivered.
+The router checks `code` on every incoming event payload regardless of `__typename`. Events whose `__typename` is not a member of the union surface an `INVALID_GRAPHQL` error to the subscriber instead of being delivered.
