@@ -17,6 +17,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -1591,15 +1592,15 @@ func (r *Router) Start(ctx context.Context) error {
 		)
 	}
 
-	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
+	r.configPoller.Subscribe(ctx, func(response *routerconfig.Response) error {
 		if r.shutdown.Load() {
 			r.logger.Warn("Router is in shutdown state. Skipping config update")
 			return nil
 		}
 
-		r.trackExecutionConfigUsage(newConfig, false)
+		r.trackExecutionConfigUsage(response.Config, false)
 
-		if err := r.newServer(ctx, newConfig); err != nil {
+		if err := r.newServer(ctx, response.Config); err != nil {
 			return err
 		}
 

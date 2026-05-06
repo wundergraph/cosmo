@@ -5,15 +5,16 @@ import (
 
 	"context"
 	"encoding/json"
+	"os"
+	"sync/atomic"
+	"testing"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"os"
-	"sync/atomic"
-	"testing"
-	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
@@ -33,11 +34,11 @@ var (
 
 type ConfigPollerMock struct {
 	initConfig   *nodev1.RouterConfig
-	updateConfig func(newConfig *nodev1.RouterConfig, oldVersion string) error
+	updateConfig func(response *routerconfig.Response) error
 	ready        chan struct{}
 }
 
-func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(response *routerconfig.Response) error) {
 	c.updateConfig = handler
 	close(c.ready)
 }
@@ -86,7 +87,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -156,7 +157,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 
 			// Swap config
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -223,7 +224,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 
 			// Swap config — the ReadJSON below expects a possible websocket close error,
 			// so use a deadline instead of WSReadJSON (which retries on errors)
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 			conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 			err = conn.ReadJSON(&msg)
 			conn.SetReadDeadline(time.Time{})
@@ -657,7 +658,7 @@ func BenchmarkConfigHotReload(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 		}
 
 	})
