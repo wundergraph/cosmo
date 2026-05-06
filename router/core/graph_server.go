@@ -304,15 +304,30 @@ func newGraphServer(ctx context.Context, r *Router, response *routerconfig.Respo
 		return nil, err
 	}
 
-	gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
-		RouterConfigVersion:   s.baseRouterConfigVersion,
-		EngineConfig:          response.Config.GetEngineConfig(),
-		ConfigSubgraphs:       response.Config.GetSubgraphs(),
-		RoutingUrlGroupings:   routingUrlGroupings,
-		ReloadPersistentState: r.reloadPersistentState,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to build base mux: %w", err)
+	currentMuxes := currentGraphMuxes(r)
+	var gm *graphMux
+
+	mux, oldBaseGraphMuxExists := currentMuxes[""]
+	needNewBaseGraphMux := response.Changes == nil || response.Changes.BaseGraphChanged() || !oldBaseGraphMuxExists
+
+	if needNewBaseGraphMux {
+		// build new base grap mux
+		gm, err = s.buildGraphMux(ctx, BuildGraphMuxOptions{
+			RouterConfigVersion:   s.baseRouterConfigVersion,
+			EngineConfig:          response.Config.GetEngineConfig(),
+			ConfigSubgraphs:       response.Config.GetSubgraphs(),
+			RoutingUrlGroupings:   routingUrlGroupings,
+			ReloadPersistentState: r.reloadPersistentState,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to build base mux: %w", err)
+		}
+	} else {
+		gm = mux
+		gm.reused.Store(true)
+		s.graphMuxListLock.Lock()
+		s.graphMuxList[""] = gm
+		s.graphMuxListLock.Unlock()
 	}
 
 	featureFlagConfigMap := response.Config.FeatureFlagConfigs.GetConfigByFeatureFlagName()
@@ -324,7 +339,7 @@ func newGraphServer(ctx context.Context, r *Router, response *routerconfig.Respo
 		baseMux:               gm.mux,
 		featureFlagConfigs:    featureFlagConfigMap,
 		reloadPersistentState: r.reloadPersistentState,
-		currentGraphMuxes:     currentGraphMuxes(r),
+		currentGraphMuxes:     currentMuxes,
 		changes:               response.Changes,
 	})
 	if err != nil {
