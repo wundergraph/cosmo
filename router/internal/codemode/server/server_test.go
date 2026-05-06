@@ -14,6 +14,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/internal/codemode/server/descriptions"
 	"github.com/wundergraph/cosmo/router/internal/codemode/storage"
 	"github.com/wundergraph/cosmo/router/internal/codemode/yoko"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -71,7 +72,7 @@ func TestListToolsReturnsCodeModeTools(t *testing.T) {
 	assert.Equal(t, mustJSON(t, []*mcp.Tool{
 		{
 			Name:        "code_mode_run_js",
-			Description: executeAPIDescription,
+			Description: descriptions.ExecuteTool,
 			InputSchema: map[string]any{
 				"type":     "object",
 				"required": []any{"source"},
@@ -79,14 +80,14 @@ func TestListToolsReturnsCodeModeTools(t *testing.T) {
 					"source": map[string]any{
 						"type":        "string",
 						"minLength":   float64(1),
-						"description": executeAPISourceDescription,
+						"description": descriptions.ExecuteSource,
 					},
 				},
 			},
 		},
 		{
 			Name:        "code_mode_search_tools",
-			Description: searchAPIDescription,
+			Description: descriptions.SearchTool,
 			InputSchema: map[string]any{
 				"type":     "object",
 				"required": []any{"prompts"},
@@ -270,6 +271,80 @@ func TestReloadForwardsSchemaAndSDL(t *testing.T) {
 	assert.Equal(t, schema, store.schema)
 	assert.Equal(t, 1, store.setSchemaCalls)
 	assert.Equal(t, "schema { query: Query }", client.Schema())
+}
+
+func TestReloadEagerlyIndexesViaBackgroundGoroutine(t *testing.T) {
+	core, recorded := observer.New(zap.InfoLevel)
+	searcher := newFakeYoko()
+	srv, err := New(Config{
+		ListenAddr:       "127.0.0.1:0",
+		CodeModeEnabled:  true,
+		NamedOpsEnabled:  false,
+		SessionStateless: false,
+		Storage:          newRecordingStorage(),
+		YokoClient:       searcher,
+		BundleRenderer:   storage.RendererFunc(func([]storage.SessionOp) (string, error) { return "", nil }),
+		Logger:           zap.New(core),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, srv.Reload(&ast.Document{}, "schema { query: Query }"))
+
+	require.Eventually(t, func() bool {
+		return searcher.ensureIndexedCallCount() == 1
+	}, 2*time.Second, 5*time.Millisecond, "eager index should fire once after Reload")
+
+	require.Eventually(t, func() bool {
+		return recorded.FilterMessage("code mode eager schema index started").Len() == 1 &&
+			recorded.FilterMessage("code mode eager schema index completed").Len() == 1
+	}, 2*time.Second, 5*time.Millisecond, "expected start+completed info logs")
+}
+
+func TestReloadEagerIndexLogsWarnOnFailure(t *testing.T) {
+	core, recorded := observer.New(zap.InfoLevel)
+	searcher := newFakeYoko()
+	searcher.ensureIndexedErr = errors.New("yoko unreachable")
+	srv, err := New(Config{
+		ListenAddr:       "127.0.0.1:0",
+		CodeModeEnabled:  true,
+		NamedOpsEnabled:  false,
+		SessionStateless: false,
+		Storage:          newRecordingStorage(),
+		YokoClient:       searcher,
+		BundleRenderer:   storage.RendererFunc(func([]storage.SessionOp) (string, error) { return "", nil }),
+		Logger:           zap.New(core),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, srv.Reload(&ast.Document{}, "schema { query: Query }"))
+
+	require.Eventually(t, func() bool {
+		return recorded.FilterMessage("code mode eager schema index started").Len() == 1 &&
+			recorded.FilterMessage("code mode eager schema index failed").Len() == 1 &&
+			recorded.FilterMessage("code mode eager schema index completed").Len() == 0
+	}, 2*time.Second, 5*time.Millisecond, "expected start+failed logs without completed log")
+}
+
+func TestReloadEagerIndexSkippedWhenSDLEmpty(t *testing.T) {
+	searcher := newFakeYoko()
+	srv, err := New(Config{
+		ListenAddr:       "127.0.0.1:0",
+		CodeModeEnabled:  true,
+		NamedOpsEnabled:  false,
+		SessionStateless: false,
+		Storage:          newRecordingStorage(),
+		YokoClient:       searcher,
+		BundleRenderer:   storage.RendererFunc(func([]storage.SessionOp) (string, error) { return "", nil }),
+		Logger:           zap.NewNop(),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, srv.Reload(&ast.Document{}, ""))
+
+	// Give the goroutine that EnsureIndexed *would* have launched a chance to
+	// run; assert it never did.
+	time.Sleep(50 * time.Millisecond)
+	assert.Equal(t, 0, searcher.ensureIndexedCallCount())
 }
 
 func TestReloadDisabledIsNoOp(t *testing.T) {
