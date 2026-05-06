@@ -64,6 +64,7 @@ type ExecuteResult struct {
 	OK         bool
 	Result     json.RawMessage
 	Error      *ErrorEnvelope
+	Warnings   []SerializationWarning
 	Truncated  bool
 	OutputSize int
 	HostCalls  int
@@ -74,6 +75,14 @@ type ErrorEnvelope struct {
 	Message string         `json:"message"`
 	Stack   string         `json:"stack"`
 	Cause   *ErrorEnvelope `json:"cause,omitempty"`
+}
+
+// SerializationWarning records a non-serializable value found in the script's
+// return value. The bad value is replaced in the response with the sentinel
+// string "<<non-serializable: KIND>>" where KIND matches the reported Kind.
+type SerializationWarning struct {
+	Path string `json:"path"`
+	Kind string `json:"kind"`
 }
 
 type ApprovalGate interface {

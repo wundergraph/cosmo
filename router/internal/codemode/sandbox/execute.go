@@ -124,7 +124,7 @@ func (s *Sandbox) Execute(ctx context.Context, req ExecuteRequest) (execResult E
 	}
 
 	resultValue := value.GetPropertyStr("result")
-	result, validationErr, err := validateResult(qctx, resultValue, s.cfg.MaxOutputSizeBytes)
+	result, warnings, validationErr, err := validateResult(qctx, resultValue, s.cfg.MaxOutputSizeBytes)
 	if err != nil {
 		return runtimeErrorResult(err, execCtx, int(state.hostCalls.Load())), nil
 	}
@@ -132,6 +132,7 @@ func (s *Sandbox) Execute(ctx context.Context, req ExecuteRequest) (execResult E
 		return ExecuteResult{
 			OK:         false,
 			Error:      validationErr,
+			Warnings:   warnings,
 			OutputSize: envelopeSize(nil, validationErr),
 			HostCalls:  int(state.hostCalls.Load()),
 		}, nil
@@ -139,6 +140,7 @@ func (s *Sandbox) Execute(ctx context.Context, req ExecuteRequest) (execResult E
 	return ExecuteResult{
 		OK:         true,
 		Result:     result,
+		Warnings:   warnings,
 		OutputSize: envelopeSize(result, nil),
 		HostCalls:  int(state.hostCalls.Load()),
 	}, nil

@@ -14,17 +14,20 @@ const defaultMaxResultBytes = 32 << 10
 const previewBytes = 1 << 10
 
 type ErrorEnvelope = sandbox.ErrorEnvelope
+type SerializationWarning = sandbox.SerializationWarning
 
 // ResultEnvelope is the MCP-facing tool-result body for code_mode_run_js.
 //
 // Wire shape:
 //   - result is always present (null if the agent threw).
+//   - warnings is omitted on the wire when empty.
 //   - truncated is omitted on the wire when false (only signals a non-default state).
 //   - error is omitted on the wire when nil (only present on the throw path).
 type ResultEnvelope struct {
-	Result    json.RawMessage `json:"result"`
-	Truncated bool            `json:"truncated,omitempty"`
-	Error     *ErrorEnvelope  `json:"error,omitempty"`
+	Result    json.RawMessage        `json:"result"`
+	Warnings  []SerializationWarning `json:"warnings,omitempty"`
+	Truncated bool                   `json:"truncated,omitempty"`
+	Error     *ErrorEnvelope         `json:"error,omitempty"`
 }
 
 func BuildEnvelope(sandboxResult sandbox.ExecuteResult, maxResultBytes int) (ResultEnvelope, error) {
@@ -34,12 +37,13 @@ func BuildEnvelope(sandboxResult sandbox.ExecuteResult, maxResultBytes int) (Res
 	if !sandboxResult.OK {
 		return ResultEnvelope{
 			Result:    json.RawMessage("null"),
+			Warnings:  sandboxResult.Warnings,
 			Truncated: false,
 			Error:     cloneErrorEnvelope(sandboxResult.Error),
 		}, nil
 	}
 	if len(sandboxResult.Result) <= maxResultBytes {
-		return ResultEnvelope{Result: sandboxResult.Result, Truncated: false, Error: nil}, nil
+		return ResultEnvelope{Result: sandboxResult.Result, Warnings: sandboxResult.Warnings, Truncated: false, Error: nil}, nil
 	}
 
 	truncated, ok, err := structurallyTruncate(sandboxResult.Result, maxResultBytes)
@@ -47,13 +51,13 @@ func BuildEnvelope(sandboxResult sandbox.ExecuteResult, maxResultBytes int) (Res
 		return ResultEnvelope{}, err
 	}
 	if ok {
-		return ResultEnvelope{Result: truncated, Truncated: true, Error: nil}, nil
+		return ResultEnvelope{Result: truncated, Warnings: sandboxResult.Warnings, Truncated: true, Error: nil}, nil
 	}
 	fallback, err := previewEnvelope(sandboxResult.Result)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ResultEnvelope{Result: fallback, Truncated: true, Error: nil}, nil
+	return ResultEnvelope{Result: fallback, Warnings: sandboxResult.Warnings, Truncated: true, Error: nil}, nil
 }
 
 func cloneErrorEnvelope(err *ErrorEnvelope) *ErrorEnvelope {
