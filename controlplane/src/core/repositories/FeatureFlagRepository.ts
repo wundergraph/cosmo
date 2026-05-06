@@ -6,6 +6,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
 import { parse } from 'graphql';
 import { alias } from 'drizzle-orm/pg-core';
+import { rewriteOverrideTargets } from '../composition/rewriteOverrideTargets.js';
 import * as schema from '../../db/schema.js';
 import {
   featureFlagToFeatureSubgraphs,
@@ -1089,6 +1090,28 @@ export class FeatureFlagRepository {
         });
         subgraphDTOs.push(featureGraph);
       }
+
+      // Follow the base->feature subgraph swap into other subgraphs'
+      // @override(from:) targets. Without this, a sibling subgraph that
+      // says @override(from: "<baseName>") gets orphaned by the swap and
+      // the FF composition fails with a @shareable collision - silently
+      // producing a router config with no featureFlagConfigs entry, so
+      // the router falls back to baseMux and the rollout no-ops.
+      // Worker re-parses each DTO from `schemaSDL` (composeGraphs.worker.ts
+      // toCompositionSubgraphs), so writing the rewrite back to schemaSDL
+      // is what counts; the parallel `compositionSubgraphs.definitions`
+      // AST is dead in this code path. .map() produces new DTO objects so
+      // the base composition entry pushed earlier with the original
+      // subgraph references stays untouched.
+      const overrideReplacements = new Map<string, string>();
+      for (const fg of flag.featureSubgraphs) {
+        overrideReplacements.set(fg.baseSubgraphName, fg.name);
+      }
+      subgraphDTOs = subgraphDTOs.map((dto) => {
+        const rewritten = rewriteOverrideTargets(dto.schemaSDL, overrideReplacements);
+        return rewritten === dto.schemaSDL ? dto : { ...dto, schemaSDL: rewritten };
+      });
+
       subgraphsToCompose.push({
         compositionSubgraphs,
         isFeatureFlagComposition: true,
