@@ -21,12 +21,12 @@ import (
 type Option func(s *Server)
 
 type Server struct {
-	server              *http.Server
-	listenAddr          string
-	logger              *zap.Logger
-	jwtSecret           []byte
-	metricsService      graphqlmetricsv1connect.GraphQLMetricsServiceHandler
-	cacheEventsService  cacheeventsv1connect.CacheEventsServiceHandler
+	server             *http.Server
+	listenAddr         string
+	logger             *zap.Logger
+	jwtSecret          []byte
+	metricsService     graphqlmetricsv1connect.GraphQLMetricsServiceHandler
+	cacheEventsService cacheeventsv1connect.CacheEventsServiceHandler
 
 	metricConfig     *telemetry.Config
 	prometheusServer *http.Server
