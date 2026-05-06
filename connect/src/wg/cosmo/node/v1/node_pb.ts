@@ -353,6 +353,11 @@ export class FeatureFlagRouterExecutionConfig extends Message<FeatureFlagRouterE
    * When set, the flag is reachable only via the rollout selector and
    * header/cookie pins targeting it are ignored.
    *
+   * The `optional` is load-bearing: explicit `0` means a paused rollout (no
+   * traffic, but still part of the cumulative budget), which is distinct from
+   * unset (preview-only flag, header/cookie-pinned). Do not drop `optional` —
+   * proto3 presence is the only way to tell the two apart.
+   *
    * @generated from field: optional uint32 traffic_percentage = 4;
    */
   trafficPercentage?: number;
