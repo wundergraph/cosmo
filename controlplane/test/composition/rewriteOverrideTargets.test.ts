@@ -9,10 +9,7 @@ describe('rewriteOverrideTargets', () => {
         notes: String @override(from: "employees")
       }
     `;
-    const result = rewriteOverrideTargets(
-      sdl,
-      new Map([['employees', 'p-16/a1__employees__rollout']]),
-    );
+    const result = rewriteOverrideTargets(sdl, new Map([['employees', 'p-16/a1__employees__rollout']]));
 
     expect(result).not.toBe(sdl);
     expect(result).toContain('@override(from: "p-16/a1__employees__rollout")');
@@ -27,10 +24,7 @@ describe('rewriteOverrideTargets', () => {
         salary: Int @override(from: "payroll")
       }
     `;
-    const result = rewriteOverrideTargets(
-      sdl,
-      new Map([['employees', 'employees__rollout']]),
-    );
+    const result = rewriteOverrideTargets(sdl, new Map([['employees', 'employees__rollout']]));
 
     expect(result).toContain('@override(from: "employees__rollout")');
     // payroll wasn't in the replacements map and must be left intact
@@ -44,10 +38,7 @@ describe('rewriteOverrideTargets', () => {
         notes: String @override(from: "payroll")
       }
     `;
-    const result = rewriteOverrideTargets(
-      sdl,
-      new Map([['employees', 'employees__rollout']]),
-    );
+    const result = rewriteOverrideTargets(sdl, new Map([['employees', 'employees__rollout']]));
 
     // Referential equality is part of the contract — callers depend on it
     // to skip cloning the surrounding DTO when nothing changed.
@@ -72,10 +63,7 @@ describe('rewriteOverrideTargets', () => {
         hello: String!
       }
     `;
-    const result = rewriteOverrideTargets(
-      sdl,
-      new Map([['employees', 'employees__rollout']]),
-    );
+    const result = rewriteOverrideTargets(sdl, new Map([['employees', 'employees__rollout']]));
 
     expect(result).toBe(sdl);
   });
@@ -92,10 +80,7 @@ describe('rewriteOverrideTargets', () => {
     // SDL with a non-string arg fails GraphQL parsing strictly, but if a
     // future variant of @override permitted other types we shouldn't crash —
     // assert the helper short-circuits to the input on parse failure.
-    const result = rewriteOverrideTargets(
-      sdl,
-      new Map([['employees', 'employees__rollout']]),
-    );
+    const result = rewriteOverrideTargets(sdl, new Map([['employees', 'employees__rollout']]));
     expect(result).toBe(sdl);
   });
 
@@ -134,10 +119,7 @@ describe('rewriteOverrideTargets', () => {
         hello: String! @override
       }
     `;
-    const result = rewriteOverrideTargets(
-      sdl,
-      new Map([['employees', 'employees__rollout']]),
-    );
+    const result = rewriteOverrideTargets(sdl, new Map([['employees', 'employees__rollout']]));
     expect(result).toBe(sdl);
   });
 });

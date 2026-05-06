@@ -1,17 +1,9 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
-  ProposalNamingConvention,
-  ProposalOrigin,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { ProposalNamingConvention, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  genID,
-  genUniqueLabel,
-} from '../../src/core/test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
 import {
   createFederatedGraph,
   createThenPublishSubgraph,
@@ -42,14 +34,7 @@ async function setupGraphAndCachingProposal(client: any, opts: { name: string })
     type Query { hello: String! }
   `;
 
-  await createThenPublishSubgraph(
-    client,
-    subgraphName,
-    DEFAULT_NAMESPACE,
-    baseSDL,
-    [label],
-    DEFAULT_SUBGRAPH_URL_ONE,
-  );
+  await createThenPublishSubgraph(client, subgraphName, DEFAULT_NAMESPACE, baseSDL, [label], DEFAULT_SUBGRAPH_URL_ONE);
 
   await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
   await enableProposalsForNamespace(client);

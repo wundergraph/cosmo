@@ -289,10 +289,7 @@ export function bulkUpdateProposalRolloutPercentages(
       .from(schema.featureFlags)
       .innerJoin(schema.proposals, eq(schema.featureFlags.proposalId, schema.proposals.id))
       .where(
-        and(
-          eq(schema.proposals.federatedGraphId, federatedGraphId),
-          isNotNull(schema.featureFlags.trafficPercentage),
-        ),
+        and(eq(schema.proposals.federatedGraphId, federatedGraphId), isNotNull(schema.featureFlags.trafficPercentage)),
       );
 
     const inBatch = new Set(resolved.map((r) => r.featureFlagId));

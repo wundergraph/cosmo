@@ -1773,7 +1773,10 @@ export class FederatedGraphRepository {
             }
             existingContractBaseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName.set(
               compositionResult.featureFlagName,
-              routerConfigToFeatureFlagExecutionConfig(contractRouterExecutionConfig, compositionResult.trafficPercentage),
+              routerConfigToFeatureFlagExecutionConfig(
+                contractRouterExecutionConfig,
+                compositionResult.trafficPercentage,
+              ),
             );
           }
         }

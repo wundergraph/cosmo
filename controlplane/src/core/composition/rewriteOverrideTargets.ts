@@ -23,10 +23,7 @@ import { type ArgumentNode, type DirectiveNode, Kind, parse, print, visit } from
  * `@composeDirective(name:)`, `@tag(name:)`, etc.) reference fields, cache
  * keys, directive names, or tags - never subgraphs.
  */
-export function rewriteOverrideTargets(
-  schemaSDL: string,
-  replacements: Map<string, string>,
-): string {
+export function rewriteOverrideTargets(schemaSDL: string, replacements: Map<string, string>): string {
   if (replacements.size === 0) {
     return schemaSDL;
   }
