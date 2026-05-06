@@ -1,0 +1,315 @@
+---
+title: "@composeDirective"
+icon: "pen-nib"
+description: "@composeDirective is a federation V2-only directive. Examples and usages are outlined herein."
+---
+
+## Definition
+
+```graphql
+directive @composeDirective(name: String!) repeatable on SCHEMA
+```
+
+### Arguments
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `name` | `String!` | The name of the imported directive (with leading `@`). |
+
+## Overview
+
+The `@composeDirective` directive declares that another (custom) directive should be propagated into the router schema
+(supergraph schema).
+By default, only specific machinery directives are persisted in the federated graph; custom directives are not.
+
+<Warning>
+  The directive to be propagated into the router schema must first be imported through the
+  [@link directive](./link).
+  See the [@link directive page](./link) for further details.
+</Warning>
+
+### Usage
+
+<Note>
+  Behavior attempts to mirror that of Apollo.
+  Warnings are added in certain cases to provide extra context and ensure the desired effect is reached.
+</Note>
+
+Once the custom directive is imported through an `@link` directive, the custom directive definition must also be added
+to the subgraph schema importing that directive.
+Please note that composition cannot cross-reference or verify the definitions declared in the feature URL and the
+schema in any way.
+Lastly, the name of the imported and defined directive (with leading `@`) must be provided as a value to the `name`
+argument of a `@composeDirective` directive:
+
+```graphql
+# subgraph 1
+schema
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.0"
+)
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective on FIELD_DEFINITION
+
+type Query {
+    echo(string: String!): String! @myDirective
+}
+```
+
+<Note>
+  For brevity, "composing a directive" will henceforth serve as a substitute for "providing the name of an imported and
+  defined directive to the `name` argument of a `@composeDirective` directive".
+</Note>
+
+### Edge cases
+#### Multiple versions
+For each subgraph that composes a directive in that subgraph, only the definition with the highest version will be
+propagated into the router schema.
+For example:
+
+```graphql
+# subgraph 1
+schema
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.1"
+)
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective(input: String!, option: Int) repeatable on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String! @myDirective(input: "a", option: 1)
+}
+
+# subgraph 2
+schema
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.0"
+)
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective(input: String!) repeatable on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String! @myDirective(input: "b")
+}
+
+# router schema
+schema {
+  query: Query
+}
+
+directive @myDirective(input: String! option: Int) on FIELD_DEFINITION
+
+type Query {
+    echo(string: String!): String! @myDirective(input: "a", option: 1) @myDirective(input: "b")
+}
+```
+
+#### Non-propagation
+
+If a directive is not referenced in at least one subgraph that also composes that directive, declarations of that
+directive will not be propagated into the router schema even if the directive is used in other subgraphs.
+The directive definition, however, will still be propagated:
+
+```graphql
+# subgraph 1
+schema
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.0"
+)
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String!
+}
+
+# subgraph 2
+schema {
+  query: Query
+}
+
+directive @myDirective on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String! @myDirective
+}
+
+# router schema
+schema {
+  query: Query
+}
+
+directive @myDirective(input: String!) on FIELD_DEFINITION
+
+type Query {
+    echo(string: String!): String!
+}
+```
+
+### Directive de-duplication
+
+If a composed directive is declared on the same coordinates across subgraphs, only unique declarations will be
+propagated.
+This behaviour is regardless of whether the directive definition is repeatable:
+
+```graphql
+# subgraph 1
+schema
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.0"
+)
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective(input: String!) repeatable on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String! @myDirective(input: "a")
+}
+
+# subgraph 2
+schema
+@link(import: ["@myDirective"], url: "https://company.org/my-feature/myDirective/v1.0")
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective(input: String!) repeatable on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String! @myDirective(input: "a")
+}
+
+# router schema
+schema {
+  query: Query
+}
+
+directive @myDirective(input: String!) repeatable on FIELD_DEFINITION
+
+type Query {
+    "note that the directive with argument value 'a' appears once"
+    echo(string: String!): String! @myDirective(input: "a")
+}
+```
+
+#### Multiple unique directive declarations with a non-repeatable definition
+
+If the highest version of the directive is _not_ defined as repeatable, but the directive is declared on a node in
+multiple subgraphs with disparate arguments (where applicable), only the first encountered instance of the directive
+will be propagated into the router schema for that node.
+This behaviour will also produce a warning.
+For example:
+
+```graphql
+# subgraph 1
+schema
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.1"
+)
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective(input: String!) on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String! @myDirective(input: "a")
+}
+
+# subgraph 2
+schema
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.0"
+)
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective(input: String!) repeatable on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String! @myDirective(input: "b")
+}
+
+# router schema
+schema {
+  query: Query
+}
+
+directive @myDirective(input: String!) on FIELD_DEFINITION
+
+type Query {
+    "note that the directive with argument value 'b' does not propagate"
+    echo(string: String!): String! @myDirective(input: "a")
+}
+```
+
+#### Incompatible inter-subgraph definitions
+
+Upon federation, all declarations of a composed directive will be validated against the definition of the composed
+directive with the highest version.
+This means a directive that is valid in subgraph may no longer be valid in the router schema.
+Such cases produce a composition error:
+
+```graphql
+# subgraph 1
+schema
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.1"
+)
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective repeatable on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String! @myDirective
+}
+
+# subgraph 2
+schema
+@link(
+  import: ["@myDirective"],
+  url: "https://company.org/my-feature/myDirective/v1.0"
+)
+@composeDirective(name: "@myDirective") {
+  query: Query
+}
+
+directive @myDirective(input: String!) repeatable on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String! @myDirective(input: "b")
+}
+```
+
+### Errors
+
+`@composeDirective` will produce composition errors if:
+- The directive name supplied to the `name` argument is not imported through a `@link` directive.
+- The string supplied to the `name` argument does not start with `@`.
+- The user attempts to provide a federation directive (e.g., `@key`) as an argument.
+- Directive declarations are incompatible across subgraphs.
