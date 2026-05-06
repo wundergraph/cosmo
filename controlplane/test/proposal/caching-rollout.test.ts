@@ -29,7 +29,7 @@ vi.mock('../../src/core/clickhouse/index.js', () => {
   return { ClickHouseClient };
 });
 
-async function enableProposalsForNamespace(client: any, namespace = DEFAULT_NAMESPACE) {
+function enableProposalsForNamespace(client: any, namespace = DEFAULT_NAMESPACE) {
   return client.enableProposalsForNamespace({ namespace, enableProposals: true });
 }
 
