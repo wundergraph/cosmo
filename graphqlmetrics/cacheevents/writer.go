@@ -134,6 +134,11 @@ func appendCacheEventRow(
 		ev.EntityType,                     // EntityType
 		ev.SubgraphId,                     // SubgraphID
 		ev.KeyHash,                        // KeyHash
+		ev.FieldName,                      // FieldName
+		ev.FieldHash,                      // FieldHash
+		fieldPathColumn(ev.FieldPath),     // FieldPath (Array(LowCardinality(String)))
+		ev.EntityCount,                    // EntityCount
+		ev.EntityUniqueKeys,               // EntityUniqueKeys
 		VerdictString(ev.Verdict),         // Verdict
 		ev.ByteSize,                       // ByteSize
 		ev.CacheAgeMs,                     // CacheAgeMs
@@ -158,11 +163,6 @@ func appendCacheEventRow(
 		ev.FreshBytes,                     // FreshBytes
 		ev.ConfiguredTtlMs,                // ConfiguredTTLMs
 		ev.MutationRootField,              // MutationRootField
-		ev.FieldName,                      // FieldName
-		ev.FieldHash,                      // FieldHash
-		fieldPathColumn(ev.FieldPath),     // FieldPath (Array(LowCardinality(String)))
-		ev.EntityCount,                    // EntityCount
-		ev.EntityUniqueKeys,               // EntityUniqueKeys
 		ev.HadCachedValue,                 // HadCachedValue
 		ev.IsStale,                        // IsStale
 		ev.BaseKeyHash,                    // BaseKeyHash
