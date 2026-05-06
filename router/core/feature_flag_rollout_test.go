@@ -18,7 +18,6 @@ func newSelector(t *testing.T, ffConfigs map[string]*nodev1.FeatureFlagRouterExe
 	sel, err := newRolloutSelector(
 		&config.FeatureFlagRollouts{Enabled: true},
 		ffConfigs,
-		"v1",
 		zap.NewNop(),
 	)
 	require.NoError(t, err)
@@ -32,7 +31,7 @@ func TestNewRolloutSelector_DisabledReturnsNil(t *testing.T) {
 		map[string]*nodev1.FeatureFlagRouterExecutionConfig{
 			"foo": {TrafficPercentage: u32p(10)},
 		},
-		"v1", zap.NewNop(),
+		zap.NewNop(),
 	)
 	require.NoError(t, err)
 	require.Nil(t, sel)
@@ -40,7 +39,7 @@ func TestNewRolloutSelector_DisabledReturnsNil(t *testing.T) {
 
 func TestNewRolloutSelector_NilCfgReturnsNil(t *testing.T) {
 	t.Parallel()
-	sel, err := newRolloutSelector(nil, nil, "v1", zap.NewNop())
+	sel, err := newRolloutSelector(nil, nil, zap.NewNop())
 	require.NoError(t, err)
 	require.Nil(t, sel)
 }
@@ -52,7 +51,7 @@ func TestNewRolloutSelector_NoFlagsReturnsNil(t *testing.T) {
 		map[string]*nodev1.FeatureFlagRouterExecutionConfig{
 			"preview_only": {}, // no traffic_percentage
 		},
-		"v1", zap.NewNop(),
+		zap.NewNop(),
 	)
 	require.NoError(t, err)
 	require.Nil(t, sel)
@@ -68,7 +67,7 @@ func TestNewRolloutSelector_DropsOverflowingFlagButKeepsSiblings(t *testing.T) {
 			"a": {TrafficPercentage: u32p(60)},
 			"b": {TrafficPercentage: u32p(60)},
 		},
-		"v1", zap.NewNop(),
+		zap.NewNop(),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, sel)
@@ -85,7 +84,7 @@ func TestNewRolloutSelector_DropsAbove100PercentFlag(t *testing.T) {
 		map[string]*nodev1.FeatureFlagRouterExecutionConfig{
 			"a": {TrafficPercentage: u32p(101)},
 		},
-		"v1", zap.NewNop(),
+		zap.NewNop(),
 	)
 	require.NoError(t, err)
 	require.Nil(t, sel)

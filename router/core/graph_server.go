@@ -353,7 +353,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	rolloutSel, err := newRolloutSelector(
 		&r.featureFlagRollouts,
 		featureFlagConfigMap,
-		routerConfig.GetVersion(),
 		s.logger,
 	)
 	if err != nil {
@@ -557,14 +556,25 @@ func (s *graphServer) buildMultiGraphHandler(
 			ff = ""
 		}
 
+		// pickedSource tracks how `ff` was chosen so the response can suppress
+		// the X-Feature-Flag echo for randomly-selected variants. Without this,
+		// a determined client can simply retry until the response header
+		// reveals the variant, then pin to it via header/cookie — which the
+		// rollout-selector's percentage gate is supposed to prevent. Echoing
+		// is fine for explicit (preview) pins because the client already
+		// chose the flag.
+		pickedSource := "explicit"
 		if ff == "" && opts.rolloutSelector != nil {
-			if picked, _, ok := opts.rolloutSelector.pick(w, r); ok {
+			if picked, source, ok := opts.rolloutSelector.pick(w, r); ok {
 				ff = picked
+				pickedSource = source
 			}
 		}
 
 		if mux, ok := featureFlagToMux[ff]; ok {
-			w.Header().Set(featureFlagHeader, ff)
+			if pickedSource != "random" {
+				w.Header().Set(featureFlagHeader, ff)
+			}
 			mux.ServeHTTP(w, r)
 			return
 		}

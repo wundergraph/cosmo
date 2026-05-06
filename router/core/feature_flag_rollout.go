@@ -36,7 +36,6 @@ type rolloutSelector struct {
 func newRolloutSelector(
 	cfg *config.FeatureFlagRollouts,
 	ffConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig,
-	_ string, // versionSeed: unused; bucketing is per-request random
 	logger *zap.Logger,
 ) (*rolloutSelector, error) {
 	if cfg == nil || !cfg.Enabled {
