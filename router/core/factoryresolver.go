@@ -84,7 +84,7 @@ type DefaultFactoryResolver struct {
 	baseTransport                 http.RoundTripper
 	transportFactory              ApiTransportFactory
 	defaultSubgraphRequestTimeout time.Duration
-	subscriptionClientOptions     []graphql_datasource.Options
+	subscriptionClientOptions     []graphql_datasource.SubscriptionClientOption
 }
 
 func NewDefaultFactoryResolver(
@@ -134,30 +134,25 @@ func NewDefaultFactoryResolver(
 		factoryLogger = abstractlogger.NewZapLogger(log, abstractlogger.DebugLevel)
 	}
 
-	var netPollConfig graphql_datasource.NetPollConfiguration
-
-	netPollConfig.ApplyDefaults()
-
-	netPollConfig.Enable = enableNetPoll
-
-	options := []graphql_datasource.Options{
+	// The subscriptions overhaul (graphql-go-tools subscriptions overhaul, late 2025) replaced the
+	// netpoll-based client with a channel-based one and removed NetPollConfiguration along with
+	// the per-frame ReadTimeout / FrameTimeout knobs. enableNetPoll is preserved on the cosmo
+	// config surface for backward compatibility but is no longer plumbed into the engine — the
+	// new client manages its own goroutines.
+	_ = enableNetPoll
+	options := []graphql_datasource.SubscriptionClientOption{
 		graphql_datasource.WithLogger(factoryLogger),
-		graphql_datasource.WithNetPollConfiguration(netPollConfig),
 	}
 
 	if subscriptionClientOptions != nil {
 		if subscriptionClientOptions.PingInterval > 0 {
 			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
 		}
-		if subscriptionClientOptions.ReadTimeout > 0 {
-			options = append(options, graphql_datasource.WithReadTimeout(subscriptionClientOptions.ReadTimeout))
-		}
 		if subscriptionClientOptions.PingTimeout > 0 {
 			options = append(options, graphql_datasource.WithPingTimeout(subscriptionClientOptions.PingTimeout))
 		}
-		if subscriptionClientOptions.FrameTimeout > 0 {
-			options = append(options, graphql_datasource.WithFrameTimeout(subscriptionClientOptions.FrameTimeout))
-		}
+		// ReadTimeout and FrameTimeout no longer have direct counterparts on the new client
+		// (they were tied to the netpoll loop). They are accepted but ignored.
 	}
 
 	return &DefaultFactoryResolver{
@@ -191,12 +186,11 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 
 	if d.transportFactory == nil || d.baseTransport == nil {
 		// dummy implementation for plan generator that doesn't make requests
-		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-			http.DefaultClient,
-			http.DefaultClient,
-			d.engineCtx,
-			d.subscriptionClientOptions...,
-		)
+		dummyOpts := append([]graphql_datasource.SubscriptionClientOption{
+			graphql_datasource.WithUpgradeClient(http.DefaultClient),
+			graphql_datasource.WithStreamingClient(http.DefaultClient),
+		}, d.subscriptionClientOptions...)
+		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.engineCtx, dummyOpts...)
 		return graphql_datasource.NewFactory(d.engineCtx, http.DefaultClient, subscriptionClient)
 	}
 
@@ -209,12 +203,11 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 		Transport: d.transportFactory.RoundTripper(d.baseTransport),
 	}
 
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		defaultHTTPClient,
-		streamingClient,
-		d.engineCtx,
-		d.subscriptionClientOptions...,
-	)
+	clientOpts := append([]graphql_datasource.SubscriptionClientOption{
+		graphql_datasource.WithUpgradeClient(defaultHTTPClient),
+		graphql_datasource.WithStreamingClient(streamingClient),
+	}, d.subscriptionClientOptions...)
+	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.engineCtx, clientOpts...)
 
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
 		// it's intentional that we're not using the subgraphClient for subscriptions
@@ -811,7 +804,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 		return out
 	}
 	for _, fw := range costConfig.GetFieldWeights() {
-		w := &plan.FieldWeight{}
+		w := &plan.FieldCost{}
 		if fw.Weight != nil {
 			w.HasWeight = true
 			w.Weight = int(*fw.Weight)

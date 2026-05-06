@@ -32,7 +32,7 @@ func (f *fakeCache) Get(_ context.Context, keys []string) ([]*resolve.CacheEntry
 	return make([]*resolve.CacheEntry, len(keys)), nil
 }
 
-func (f *fakeCache) Set(_ context.Context, _ []*resolve.CacheEntry, _ time.Duration) error {
+func (f *fakeCache) Set(_ context.Context, _ []*resolve.CacheEntry) error {
 	f.setCalls.Add(1)
 	if f.shouldFail.Load() {
 		return errFakeCache
@@ -65,7 +65,7 @@ func TestCircuitBreakerCache_ClosedState_PassThrough(t *testing.T) {
 	require.Len(t, entries, 2)
 	require.Equal(t, int32(1), inner.getCalls.Load())
 
-	err = cb.Set(context.Background(), []*resolve.CacheEntry{{Key: "a", Value: []byte("v")}}, time.Second)
+	err = cb.Set(context.Background(), []*resolve.CacheEntry{{Key: "a", Value: []byte("v"), TTL: time.Second}})
 	require.NoError(t, err)
 	require.Equal(t, int32(1), inner.setCalls.Load())
 
@@ -114,7 +114,7 @@ func TestCircuitBreakerCache_SetDeleteSkippedWhenOpen(t *testing.T) {
 	setBefore := inner.setCalls.Load()
 	delBefore := inner.delCalls.Load()
 
-	err := cb.Set(ctx, []*resolve.CacheEntry{{Key: "a"}}, time.Second)
+	err := cb.Set(ctx, []*resolve.CacheEntry{{Key: "a", TTL: time.Second}})
 	require.NoError(t, err)
 	require.Equal(t, setBefore, inner.setCalls.Load())
 
@@ -207,7 +207,7 @@ func TestCircuitBreakerCache_NeverErrorsToCallers(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
 
-	err = cb.Set(ctx, []*resolve.CacheEntry{{Key: "a"}}, time.Second)
+	err = cb.Set(ctx, []*resolve.CacheEntry{{Key: "a", TTL: time.Second}})
 	require.NoError(t, err)
 
 	err = cb.Delete(ctx, []string{"a"})
@@ -357,7 +357,7 @@ func TestCircuitBreakerCache_ConcurrentMixedSuccessFailure(t *testing.T) {
 			defer wg.Done()
 			for range 100 {
 				_, _ = cb.Get(ctx, []string{"x"})
-				_ = cb.Set(ctx, []*resolve.CacheEntry{{Key: "x", Value: []byte("v")}}, time.Second)
+				_ = cb.Set(ctx, []*resolve.CacheEntry{{Key: "x", Value: []byte("v"), TTL: time.Second}})
 				_ = cb.Delete(ctx, []string{"x"})
 			}
 		}()
