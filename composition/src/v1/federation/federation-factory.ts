@@ -3001,7 +3001,7 @@ export class FederationFactory {
       }
 
       const aggregatedErrors: string[] = [];
-      let firstSuccess: SubscriptionCondition | undefined = undefined;
+      let firstCondition: SubscriptionCondition | null = null;
       for (const target of targets) {
         const { condition, errors } = this.validateSubscriptionFilterForTarget(
           data.directive,
@@ -3020,8 +3020,8 @@ export class FederationFactory {
           aggregatedErrors.push(wrapped);
           continue;
         }
-        if (firstSuccess === undefined && condition) {
-          firstSuccess = condition;
+        if (firstCondition === null && condition) {
+          firstCondition = condition;
         }
       }
 
@@ -3030,7 +3030,7 @@ export class FederationFactory {
         continue;
       }
 
-      if (firstSuccess === undefined) {
+      if (firstCondition === null) {
         // Defensive — unreachable when targets is non-empty and no errors were collected.
         continue;
       }
@@ -3039,7 +3039,7 @@ export class FederationFactory {
         argumentNames: [],
         fieldName: data.fieldData.name,
         typeName: data.fieldData.renamedParentTypeName,
-      })).subscriptionFilterCondition = firstSuccess;
+      })).subscriptionFilterCondition = firstCondition;
     }
   }
 
