@@ -4,7 +4,6 @@ packages:
   - composition
   - docs-website
   - graphqlmetrics
-  - composition-go/shim
   - controlplane
   - controlplane/emails
   - proto

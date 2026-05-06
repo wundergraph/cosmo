@@ -13,12 +13,6 @@ pnpx tsx ../cli/src/index.ts router compose -i ../demo/graph-no-edg.yaml -o ../r
 
 #npx --verbose --yes wgc@latest router compose -i ../demo/graph.yaml -o ../router-tests/testenv/testdata/config.json
 
-# go composition wrapper
-
-# Can't use go wrapper because feature-graphs is not implemented in go yet
-#echo "Generating config using go wrapper"
-#go run ../demo/cmd/generateconfig/main.go
-
 # format test config
 
 echo "Formatting config"
