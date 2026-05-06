@@ -1133,12 +1133,8 @@ func TestKafkaEvents(t *testing.T) {
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 			testenv.Run(t, &testenv.Config{
-				RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
-				// All three providers must be enabled because configWithEdfs.json references
-				// nats/kafka/redis providers; the router refuses to start otherwise.
-				EnableNats:  true,
-				EnableKafka: true,
-				EnableRedis: true,
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+				EnableKafka:              true,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
@@ -1211,10 +1207,8 @@ func TestKafkaEvents(t *testing.T) {
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 			testenv.Run(t, &testenv.Config{
-				RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
-				EnableNats:               true,
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 				EnableKafka:              true,
-				EnableRedis:              true,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
 
@@ -1248,15 +1242,15 @@ func TestKafkaEvents(t *testing.T) {
 				events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0],
 					`{"__typename":"Employee","id":99,"tag":"match"}`)
 
-				// Expected response: a GraphQL-over-WebSocket "error" frame with code
+				// Expected response: a GraphQL-over-WebSocket with error code
 				// INVALID_GRAPHQL that names the offending typename. The router includes a
 				// non-deterministic internal subgraph id in the message (e.g. "8-kafka-5"),
 				// so we normalize it to "<id>" before asserting the full payload by equality.
 				require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
-				require.Equal(t, "error", msg.Type)
+				require.Equal(t, "next", msg.Type)
 				normalized := subgraphIDPattern.ReplaceAllString(string(msg.Payload), `Subgraph '<id>'`)
 				require.Equal(t,
-					`[{"message":"Subgraph '<id>' returned invalid value 'Employee' for __typename field.","path":["filteredEmployeeEventUnionMyKafka"],"extensions":{"code":"INVALID_GRAPHQL"}}]`,
+					`{"errors":[{"message":"Subgraph '<id>' returned invalid value 'Employee' for __typename field.","path":["filteredEmployeeEventUnionMyKafka"],"extensions":{"code":"INVALID_GRAPHQL"}}],"data":null}`,
 					normalized,
 				)
 
@@ -1383,10 +1377,10 @@ func TestKafkaEvents(t *testing.T) {
 				// Same INVALID_GRAPHQL error frame as the union variant. The dynamic subgraph id
 				// is normalized to "<id>" before the full-payload equality assertion.
 				require.NoError(t, testenv.WSReadJSON(t, conn, &msg))
-				require.Equal(t, "error", msg.Type)
+				require.Equal(t, "next", msg.Type)
 				normalized := subgraphIDPattern.ReplaceAllString(string(msg.Payload), `Subgraph '<id>'`)
 				require.Equal(t,
-					`[{"message":"Subgraph '<id>' returned invalid value 'Employee' for __typename field.","path":["filteredEmployeeChangeInterfaceMyKafka"],"extensions":{"code":"INVALID_GRAPHQL"}}]`,
+					`{"errors":[{"message":"Subgraph '<id>' returned invalid value 'Employee' for __typename field.","path":["filteredEmployeeChangeInterfaceMyKafka"],"extensions":{"code":"INVALID_GRAPHQL"}}],"data":null}`,
 					normalized,
 				)
 
