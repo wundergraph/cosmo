@@ -603,8 +603,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 }
 
 // newGraphServer creates a new server.
-func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	server, err := newGraphServer(ctx, r, cfg, r.proxy)
+func (r *Router) newServer(ctx context.Context, response *routerconfig.Response) error {
+	server, err := newGraphServer(ctx, r, response, r.proxy)
 	if err != nil {
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
 		return err
@@ -613,7 +613,7 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 	r.httpServer.SwapGraphServer(ctx, server)
 
 	// Cleanup any unused feature flags in case a feature flag was removed
-	r.reloadPersistentState.CleanupFeatureFlags(cfg)
+	r.reloadPersistentState.CleanupFeatureFlags(response.Config)
 
 	return nil
 }
@@ -793,7 +793,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
 		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by providing a config.")
-		return r.httpServer, r.newServer(ctx, r.staticExecutionConfig)
+		return r.httpServer, r.newServer(ctx, &routerconfig.Response{Config: r.staticExecutionConfig})
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -806,7 +806,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
-	if err := r.newServer(ctx, cfg.Config); err != nil {
+	if err := r.newServer(ctx, cfg); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return nil, err
 	}
@@ -1464,7 +1464,7 @@ func (r *Router) Start(ctx context.Context) error {
 			return err
 		}
 
-		if err := r.newServer(ctx, r.staticExecutionConfig); err != nil {
+		if err := r.newServer(ctx, &routerconfig.Response{Config: r.staticExecutionConfig}); err != nil {
 			return err
 		}
 
@@ -1508,7 +1508,7 @@ func (r *Router) Start(ctx context.Context) error {
 						return
 					}
 
-					if err := r.newServer(ctx, cfg); err != nil {
+					if err := r.newServer(ctx, &routerconfig.Response{Config: cfg}); err != nil {
 						ll.Error("Failed to update server with new config", zap.Error(err))
 						return
 					}
@@ -1558,7 +1558,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return err
 	}
 
-	if err := r.newServer(ctx, cfg.Config); err != nil {
+	if err := r.newServer(ctx, cfg); err != nil {
 		return err
 	}
 
@@ -1600,7 +1600,7 @@ func (r *Router) Start(ctx context.Context) error {
 
 		r.trackExecutionConfigUsage(response.Config, false)
 
-		if err := r.newServer(ctx, response.Config); err != nil {
+		if err := r.newServer(ctx, response); err != nil {
 			return err
 		}
 
