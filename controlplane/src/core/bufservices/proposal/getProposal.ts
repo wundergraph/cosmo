@@ -92,7 +92,7 @@ export function getProposal(
         latestCheckId: latestCheck?.checkId || '',
         origin: fromProposalOriginEnum(proposal.proposal.origin),
         rolloutFeatureFlagId: linkedRollout?.id,
-        rolloutPercentage: linkedRollout?.trafficPercentage == null ? undefined : linkedRollout.trafficPercentage,
+        rolloutPercentage: linkedRollout?.trafficPercentage ?? undefined,
       }),
       currentSubgraphs,
     };

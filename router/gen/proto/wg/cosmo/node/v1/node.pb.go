@@ -540,6 +540,11 @@ type FeatureFlagRouterExecutionConfig struct {
 	// Optional traffic percentage in [0, 100] for percentage-based rollouts.
 	// When set, the flag is reachable only via the rollout selector and
 	// header/cookie pins targeting it are ignored.
+	//
+	// The `optional` is load-bearing: explicit `0` means a paused rollout (no
+	// traffic, but still part of the cumulative budget), which is distinct from
+	// unset (preview-only flag, header/cookie-pinned). Do not drop `optional` —
+	// proto3 presence is the only way to tell the two apart.
 	TrafficPercentage *uint32 `protobuf:"varint,4,opt,name=traffic_percentage,json=trafficPercentage,proto3,oneof" json:"traffic_percentage,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache

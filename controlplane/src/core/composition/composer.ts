@@ -87,7 +87,7 @@ export function routerConfigToFeatureFlagExecutionConfig(
     engineConfig: routerConfig.engineConfig,
     subgraphs: routerConfig.subgraphs,
     version: routerConfig.version,
-    trafficPercentage: trafficPercentage == null ? undefined : trafficPercentage,
+    trafficPercentage: trafficPercentage ?? undefined,
   });
 }
 

@@ -861,6 +861,9 @@ export class ProposalRepository {
   public async getLinkedRolloutFlag(
     proposalId: string,
   ): Promise<{ id: string; name: string; trafficPercentage: number | null } | undefined> {
+    // Defense-in-depth: scope by organizationId even though all callers
+    // pre-validate via ById/ByName. Cheap and prevents a future careless
+    // caller from leaking a sibling org's flag.
     const rows = await this.db
       .select({
         id: schema.featureFlags.id,
@@ -868,7 +871,12 @@ export class ProposalRepository {
         trafficPercentage: schema.featureFlags.trafficPercentage,
       })
       .from(schema.featureFlags)
-      .where(eq(schema.featureFlags.proposalId, proposalId))
+      .where(
+        and(
+          eq(schema.featureFlags.proposalId, proposalId),
+          eq(schema.featureFlags.organizationId, this.organizationId),
+        ),
+      )
       .limit(1);
     return rows[0];
   }
