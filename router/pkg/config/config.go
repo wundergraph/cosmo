@@ -1300,10 +1300,7 @@ type IntrospectionConfiguration struct {
 }
 
 // FeatureFlagRollouts toggles percentage-based traffic rollouts for feature
-// flags shipped in the execution config. Off by default — enabling this
-// flips the routing semantics for every flag whose execution config carries
-// a traffic_percentage (header/cookie pins start being ignored), so it is an
-// opt-in to avoid surprising operators on upgrade.
+// flags shipped in the execution config.
 type FeatureFlagRollouts struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
