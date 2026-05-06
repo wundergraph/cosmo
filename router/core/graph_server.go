@@ -556,25 +556,22 @@ func (s *graphServer) buildMultiGraphHandler(
 			ff = ""
 		}
 
-		// pickedSource tracks how `ff` was chosen so the response can suppress
-		// the X-Feature-Flag echo for randomly-selected variants. Without this,
-		// a determined client can simply retry until the response header
-		// reveals the variant, then pin to it via header/cookie — which the
-		// rollout-selector's percentage gate is supposed to prevent. Echoing
-		// is fine for explicit (preview) pins because the client already
-		// chose the flag.
-		pickedSource := "explicit"
 		if ff == "" && opts.rolloutSelector != nil {
-			if picked, source, ok := opts.rolloutSelector.pick(w, r); ok {
+			if picked, _, ok := opts.rolloutSelector.pick(w, r); ok {
 				ff = picked
-				pickedSource = source
 			}
 		}
 
 		if mux, ok := featureFlagToMux[ff]; ok {
-			if pickedSource != "random" {
-				w.Header().Set(featureFlagHeader, ff)
-			}
+			// Always echo the active flag. A previous attempt suppressed it
+			// for random rollout picks on the theory that the header lets a
+			// client grind onto the variant — but the variant must have an
+			// observably different response shape (otherwise the rollout has
+			// no purpose), so a grinder already has a side-channel. Stripping
+			// just hides debug signal from honest clients, breaks downstream
+			// caches keyed on the flag, and complicates integration tests
+			// that need to know which variant served the request.
+			w.Header().Set(featureFlagHeader, ff)
 			mux.ServeHTTP(w, r)
 			return
 		}
