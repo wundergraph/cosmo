@@ -349,24 +349,56 @@ describe('Caching proposal kind + rollout RPCs', () => {
     });
     onTestFinished(() => server.close());
 
-    const a = await setupGraphAndCachingProposal(client, { name: genID('proposalA') });
-    const b = await setupGraphAndCachingProposal(client, { name: genID('proposalB') });
-    expect(a.create.response?.code).toBe(EnumStatusCode.OK);
-    expect(b.create.response?.code).toBe(EnumStatusCode.OK);
-    // Both must be APPROVED to even reach the multi-graph check.
-    await approveProposal(client, { proposalName: a.create.proposalId, federatedGraphName: a.fedGraphName }).catch(
-      () => undefined,
-    );
-    // We don't actually need approvals to fail at multi-graph — first-deploy
-    // gate happens per-item BEFORE multi-graph aggregation, so use already-approved A.
+    // Set up two independent federated graphs in the same namespace BEFORE
+    // enabling proposals — once proposals are enabled, every subsequent
+    // publish must match an approved proposal, which would block the second
+    // graph's setup.
+    const subgraphA = genID('cache_subgraph_a');
+    const fedA = genID('cache_fedgraph_a');
+    const labelA = genUniqueLabel('label_a');
+    const subgraphB = genID('cache_subgraph_b');
+    const fedB = genID('cache_fedgraph_b');
+    const labelB = genUniqueLabel('label_b');
+    const sdl = 'type Query { hello: String! }';
 
+    await createThenPublishSubgraph(client, subgraphA, DEFAULT_NAMESPACE, sdl, [labelA], DEFAULT_SUBGRAPH_URL_ONE);
+    await createFederatedGraph(client, fedA, DEFAULT_NAMESPACE, [joinLabel(labelA)], DEFAULT_ROUTER_URL);
+    await createThenPublishSubgraph(client, subgraphB, DEFAULT_NAMESPACE, sdl, [labelB], DEFAULT_SUBGRAPH_URL_ONE);
+    await createFederatedGraph(client, fedB, DEFAULT_NAMESPACE, [joinLabel(labelB)], DEFAULT_ROUTER_URL);
+
+    await enableProposalsForNamespace(client);
+
+    const proposalAName = genID('proposalA');
+    const proposalBName = genID('proposalB');
+
+    const createA = await client.createProposal({
+      federatedGraphName: fedA,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalAName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.INTERNAL,
+      subgraphs: [{ name: subgraphA, schemaSDL: sdl, isDeleted: false, isNew: false, labels: [] }],
+    });
+    expect(createA.response?.code).toBe(EnumStatusCode.OK);
+    const createB = await client.createProposal({
+      federatedGraphName: fedB,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalBName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.INTERNAL,
+      subgraphs: [{ name: subgraphB, schemaSDL: sdl, isDeleted: false, isNew: false, labels: [] }],
+    });
+    expect(createB.response?.code).toBe(EnumStatusCode.OK);
+
+    // Both proposals are DRAFT — the per-item DRAFT-rejection runs before the
+    // multi-graph aggregation, so we'd see ERR either way. The point of this
+    // test is that a multi-graph batch never reaches the deploy path.
     const resp = await client.bulkUpdateProposalRolloutPercentages({
       items: [
-        { proposalId: a.create.proposalId, percentage: 10 },
-        { proposalId: b.create.proposalId, percentage: 10 },
+        { proposalId: createA.proposalId, percentage: 10 },
+        { proposalId: createB.proposalId, percentage: 10 },
       ],
     });
-    // Either DRAFT-rejection on B or multi-graph rejection — either way ERR.
     expect(resp.response?.code).toBe(EnumStatusCode.ERR);
   });
 
