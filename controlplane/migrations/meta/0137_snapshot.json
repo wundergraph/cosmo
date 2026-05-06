@@ -1237,6 +1237,22 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "ff_proposal_id_uniq_idx": {
+          "name": "ff_proposal_id_uniq_idx",
+          "columns": [
+            {
+              "expression": "proposal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"proposal_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1276,7 +1292,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "feature_flags_created_by_users_id_fk": {

@@ -335,8 +335,10 @@ export const featureFlags = pgTable(
     // When the flag was created from a proposal's "Deploy as rollout" action,
     // this links back so the UI can navigate proposal ↔ rollout, and so the
     // proposal state-transition handler can auto-teardown on PUBLISHED.
-    // Forward reference to the `proposals` table defined later in this file.
-    proposalId: uuid('proposal_id').references((): AnyPgColumn => proposals.id, { onDelete: 'set null' }),
+    // ON DELETE CASCADE: deleting a proposal also deletes its rollout flag, so
+    // we never leave an orphaned flag routing traffic against a vanished
+    // proposal. Forward reference to the `proposals` table defined later.
+    proposalId: uuid('proposal_id').references((): AnyPgColumn => proposals.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     createdBy: uuid('created_by').references(() => users.id, {
@@ -349,6 +351,11 @@ export const featureFlags = pgTable(
       namespaceIdIndex: index('ff_namespace_id_idx').on(t.namespaceId),
       createdByIndex: index('ff_created_by_idx').on(t.createdBy),
       proposalIdIndex: index('ff_proposal_id_idx').on(t.proposalId),
+      // At most one rollout flag per proposal — keeps getLinkedRolloutFlag's
+      // LIMIT 1 deterministic and prevents race-introduced duplicates.
+      proposalIdUnique: uniqueIndex('ff_proposal_id_uniq_idx')
+        .on(t.proposalId)
+        .where(sql`${t.proposalId} IS NOT NULL`),
       // Mirror the DB CHECK from migration 0137: percentage is null
       // (preview-only flag) or in [0, 100] (rollout flag).
       trafficPercentageRange: check(
