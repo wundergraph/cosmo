@@ -363,34 +363,77 @@ func TestExecuteMemoryLimit(t *testing.T) {
 	assert.Equal(t, "MemoryLimit", got.Error.Name)
 }
 
-func TestExecuteNotSerializableResult(t *testing.T) {
+func TestExecuteSanitizesNonSerializableField(t *testing.T) {
 	s := newTestSandbox(t, "", lookup{}, nil)
 
 	got := execute(t, s, ExecuteRequest{WrappedJS: `async () => ({ x: () => 1 })`})
 
-	assert.Equal(t, false, got.OK)
-	assert.Equal(t, json.RawMessage(nil), got.Result)
-	require.NotNil(t, got.Error)
-	assert.Equal(t, ErrorEnvelope{
-		Name:    "NotSerializable",
-		Message: "return value contains non-JSON-serializable values at $.x",
-		Stack:   "",
-	}, *got.Error)
+	assert.Equal(t, true, got.OK)
+	assert.Nil(t, got.Error)
+	assert.Equal(t, json.RawMessage(`{"x":"<<non-serializable: function>>"}`), got.Result)
+	assert.Equal(t, []SerializationWarning{{Path: "$.x", Kind: "function"}}, got.Warnings)
 }
 
-func TestExecuteNotSerializableProducesErrorEnvelope(t *testing.T) {
+func TestExecuteSanitizesMixedNonSerializableValues(t *testing.T) {
 	s := newTestSandbox(t, "", lookup{}, nil)
 
 	got := execute(t, s, ExecuteRequest{WrappedJS: `async () => { return { x: () => 1, y: 5n, cycle: (() => { const o = {}; o.self = o; return o; })() }; }`})
 
-	assert.Equal(t, false, got.OK)
-	assert.Equal(t, json.RawMessage(nil), got.Result)
-	require.NotNil(t, got.Error)
-	assert.Equal(t, ErrorEnvelope{
-		Name:    "NotSerializable",
-		Message: "return value contains non-JSON-serializable values at $.x, $.y, $.cycle.self",
-		Stack:   "",
-	}, *got.Error)
+	assert.Equal(t, true, got.OK)
+	assert.Nil(t, got.Error)
+	assert.Equal(t, json.RawMessage(`{"x":"<<non-serializable: function>>","y":"<<non-serializable: bigint>>","cycle":{"self":"<<non-serializable: cycle>>"}}`), got.Result)
+	assert.Equal(t, []SerializationWarning{
+		{Path: "$.x", Kind: "function"},
+		{Path: "$.y", Kind: "bigint"},
+		{Path: "$.cycle.self", Kind: "cycle"},
+	}, got.Warnings)
+}
+
+func TestExecuteSanitizesRootBigInt(t *testing.T) {
+	s := newTestSandbox(t, "", lookup{}, nil)
+
+	got := execute(t, s, ExecuteRequest{WrappedJS: `async () => 5n`})
+
+	assert.Equal(t, true, got.OK)
+	assert.Nil(t, got.Error)
+	assert.Equal(t, json.RawMessage(`"<<non-serializable: bigint>>"`), got.Result)
+	assert.Equal(t, []SerializationWarning{{Path: "$", Kind: "bigint"}}, got.Warnings)
+}
+
+func TestExecuteSanitizesRootUndefined(t *testing.T) {
+	s := newTestSandbox(t, "", lookup{}, nil)
+
+	got := execute(t, s, ExecuteRequest{WrappedJS: `async () => undefined`})
+
+	assert.Equal(t, true, got.OK)
+	assert.Nil(t, got.Error)
+	assert.Equal(t, json.RawMessage(`"<<non-serializable: undefined>>"`), got.Result)
+	assert.Equal(t, []SerializationWarning{{Path: "$", Kind: "undefined"}}, got.Warnings)
+}
+
+func TestExecuteSanitizesNonSerializableInArray(t *testing.T) {
+	s := newTestSandbox(t, "", lookup{}, nil)
+
+	got := execute(t, s, ExecuteRequest{WrappedJS: `async () => [1, undefined, () => 2]`})
+
+	assert.Equal(t, true, got.OK)
+	assert.Nil(t, got.Error)
+	assert.Equal(t, json.RawMessage(`[1,"<<non-serializable: undefined>>","<<non-serializable: function>>"]`), got.Result)
+	assert.Equal(t, []SerializationWarning{
+		{Path: "$[1]", Kind: "undefined"},
+		{Path: "$[2]", Kind: "function"},
+	}, got.Warnings)
+}
+
+func TestExecuteCleanResultProducesNoWarnings(t *testing.T) {
+	s := newTestSandbox(t, "", lookup{}, nil)
+
+	got := execute(t, s, ExecuteRequest{WrappedJS: `async () => ({ ok: true, n: 1, items: [1, 2, 3] })`})
+
+	assert.Equal(t, true, got.OK)
+	assert.Nil(t, got.Error)
+	assert.Equal(t, json.RawMessage(`{"ok":true,"n":1,"items":[1,2,3]}`), got.Result)
+	assert.Equal(t, []SerializationWarning(nil), got.Warnings)
 }
 
 func TestExecuteOutputTooLarge(t *testing.T) {
