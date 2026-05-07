@@ -2,11 +2,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { JsonObject, PlainMessage } from '@bufbuild/protobuf';
 import { FeatureFlagRouterExecutionConfig, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import {
-  CompositionError,
-  CompositionWarning,
-  DeploymentError,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
@@ -19,9 +15,12 @@ import {
 } from '@wundergraph/composition';
 import * as schema from '../../db/schema.js';
 import {
+  ComposeAndDeployResult,
   COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
   FeatureFlagDTO,
+  FederatedGraphAndCompositionResults,
   FederatedGraphDTO,
+  OrganizationFeatures,
   SPLIT_CONFIG_LOADING_FEATURE_ID,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
@@ -49,22 +48,6 @@ import { ContractRepository } from './../repositories/ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './../repositories/FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './../repositories/GraphCompositionRepository.js';
 import { SubgraphRepository } from './../repositories/SubgraphRepository.js';
-
-export interface ComposeAndDeployResult {
-  deploymentErrors: PlainMessage<DeploymentError>[];
-  compositionErrors: PlainMessage<CompositionError>[];
-  compositionWarnings: PlainMessage<CompositionWarning>[];
-}
-
-interface OrganizationFeatures {
-  ignoreExternalKeys: boolean;
-  splitConfigLoading: boolean;
-}
-
-interface FederatedGraphAndCompositionResults {
-  federatedGraph: FederatedGraphDTO;
-  results: ComposeGraphsTaskResultItem[];
-}
 
 @traced
 export class CompositionService {
@@ -205,7 +188,9 @@ export class CompositionService {
     if (federatedGraphs.length === 0) {
       // The feature flag is not associated with any federated graphs
       return result;
-    } else if (!enabled) {
+    }
+
+    if (!enabled) {
       // The feature flag is disabled; instead of recomposing, we are just going to delete the router configuration
       // from the federated graphs the feature flag is associated with
       const deleteError = await this.#deleteFeatureFlagConfigs(featureFlag, federatedGraphs);

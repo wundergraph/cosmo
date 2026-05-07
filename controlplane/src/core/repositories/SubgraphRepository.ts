@@ -48,6 +48,7 @@ import {
   SubgraphDTO,
   SubgraphListFilterOptions,
   SubgraphMemberDTO,
+  ComposeAndDeployResult,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
@@ -68,7 +69,7 @@ import {
 } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { traced } from '../tracing.js';
-import { ComposeAndDeployResult, CompositionService } from '../services/CompositionService.js';
+import type { CompositionService } from '../services/CompositionService.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';

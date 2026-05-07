@@ -53,6 +53,7 @@ import {
   GraphApiKeyDTO,
   Label,
   RouterRequestKeysDTO,
+  ComposeAndDeployResult,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import {
@@ -75,7 +76,7 @@ import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
-import type { CompositionService, ComposeAndDeployResult } from '../services/CompositionService.js';
+import type { CompositionService } from '../services/CompositionService.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';

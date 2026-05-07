@@ -161,7 +161,7 @@ export function updateMonograph(
         admissionWebhookSecret: req.admissionWebhookSecret,
       });
 
-      // TODO: Update the subgraph
+      // Update the subgraph
       await subgraphRepo.update(
         {
           targetId: subgraph.targetId,
