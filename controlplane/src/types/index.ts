@@ -4,6 +4,7 @@ import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, 
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 
 export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
+export const SPLIT_CONFIG_LOADING_FEATURE_ID = 'split-config-loading';
 
 export type FeatureIds =
   | 'users'

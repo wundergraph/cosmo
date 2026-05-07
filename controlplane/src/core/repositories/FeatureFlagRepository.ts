@@ -1042,6 +1042,7 @@ export class FeatureFlagRepository {
       }
 
       const baseSubgraphNamesOfFeatureFlags = featureSubgraphsByFlag.map((ff) => ff.baseSubgraphName);
+
       // check if all base subgraphs of feature flags are one of the base subgraphs of this composition
       const isSubset = baseSubgraphNamesOfFeatureFlags.every((name) => baseSubgraphNames.includes(name));
       if (!isSubset) {
@@ -1124,6 +1125,7 @@ export class FeatureFlagRepository {
         baseSubgraphNames: baseCompositionSubgraphs.map((baseSubgraph) => baseSubgraph.name),
         excludeDisabled: true,
       });
+
       for (const flag of enabledFeatureFlags) {
         if (featureFlagToComposeByFlagId.has(flag.id)) {
           continue;

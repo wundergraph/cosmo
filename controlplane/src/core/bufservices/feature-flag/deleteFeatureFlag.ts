@@ -1,24 +1,17 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
-  CompositionError,
-  CompositionWarning,
   DeleteFeatureFlagRequest,
   DeleteFeatureFlagResponse,
-  DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
-import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function deleteFeatureFlag(
   opts: RouterOptions,
@@ -33,17 +26,8 @@ export function deleteFeatureFlag(
 
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-    const orgWebhooks = new OrganizationWebhookService(
-      opts.db,
-      authContext.organizationId,
-      opts.logger,
-      opts.billingDefaultPlanId,
-      opts.webhookProxyUrl,
-    );
 
     req.namespace = req.namespace || DefaultNamespace;
-
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
@@ -106,21 +90,20 @@ export function deleteFeatureFlag(
       });
     }
 
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-    });
-
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
-
-    await opts.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+    const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
       const auditLogRepo = new AuditLogRepository(tx);
+      const compositionService = new CompositionService(
+        tx,
+        authContext.organizationId,
+        logger,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.blobStorage,
+        opts.chClient,
+        opts.webhookProxyUrl,
+        req.disableResolvabilityValidation,
+      );
 
       await featureFlagRepo.delete(featureFlag.id);
-
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
         organizationSlug: authContext.organizationSlug,
@@ -136,74 +119,21 @@ export function deleteFeatureFlag(
         targetNamespaceDisplayName: namespace.name,
       });
 
-      const composition = await fedGraphRepo.composeAndDeployGraphs({
+      return await compositionService.deleteFeatureFlag({
         actorId: authContext.userId,
-        admissionConfig: {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-        },
-        blobStorage: opts.blobStorage,
-        chClient: opts.chClient!,
-        compositionOptions: {
-          disableResolvabilityValidation: req.disableResolvabilityValidation,
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-        },
+        featureFlag,
         federatedGraphs,
-        webhookProxyUrl: opts.webhookProxyUrl,
       });
-
-      compositionErrors.push(...composition.compositionErrors);
-      deploymentErrors.push(...composition.deploymentErrors);
-      compositionWarnings.push(...composition.compositionWarnings);
     });
-
-    for (const graph of federatedGraphs) {
-      orgWebhooks.send(
-        {
-          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-          payload: {
-            federated_graph: {
-              id: graph.id,
-              name: graph.name,
-              namespace: graph.namespace,
-            },
-            organization: {
-              id: authContext.organizationId,
-              slug: authContext.organizationSlug,
-            },
-            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-            actor_id: authContext.userId,
-          },
-        },
-        authContext.userId,
-      );
-    }
-
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        deploymentErrors: [],
-        compositionWarnings,
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
-      };
-    }
 
     return {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
       compositionErrors,
       deploymentErrors,
