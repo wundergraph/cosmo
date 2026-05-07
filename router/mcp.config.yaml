@@ -1,0 +1,82 @@
+# MCP (Model Context Protocol) multi-graph demo
+# yaml-language-server: $schema=./pkg/config/config.schema.json
+#
+# Quick start:
+#   go run ./cmd/router -config mcp.config.yaml
+
+execution_config:
+  file:
+    path: "../router-tests/testenv/testdata/config.json"
+    watch: true
+    watch_interval: 20s
+
+mcp:
+  enabled: true
+  graph_name: "my-graph"
+  omit_tool_name_prefix: true
+
+  servers:
+    - name: "anilist"
+      path: /anilist
+      expose_schema: true
+      enable_arbitrary_operations: true
+      omit_tool_name_prefix: true
+      storage:
+        provider_id: anilist
+        watch: true
+        watch_interval: 1s
+      upstream:
+        url: "https://graphql.anilist.co"
+    - name: "countries"
+      path: /countries
+      expose_schema: true
+      enable_arbitrary_operations: true
+      omit_tool_name_prefix: true
+      storage:
+        provider_id: countries
+        watch: true
+        watch_interval: 1s
+      upstream:
+        url: "https://countries.trevorblades.com"
+    - name: "rickandmorty"
+      path: /rickandmorty
+      expose_schema: true
+      enable_arbitrary_operations: true
+      omit_tool_name_prefix: true
+      storage:
+        provider_id: rickandmorty
+        watch: true
+        watch_interval: 1s
+      upstream:
+        url: "https://rickandmortyapi.com/graphql"
+    - name: "swapi"
+      path: /swapi
+      expose_schema: true
+      enable_arbitrary_operations: true
+      omit_tool_name_prefix: true
+      storage:
+        provider_id: swapi
+        watch: true
+        watch_interval: 1s
+      upstream:
+        url: "https://swapi-graphql.netlify.app/graphql"
+
+  session:
+    stateless: true
+
+  exclude_mutations: false
+  enable_arbitrary_operations: true
+  expose_schema: true
+
+  router_url: "http://localhost:3002/graphql"
+
+storage_providers:
+  file_system:
+    - id: rickandmorty
+      path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/rickandmorty
+    - id: countries
+      path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/countries
+    - id: anilist
+      path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/anilist
+    - id: swapi
+      path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/swapi
