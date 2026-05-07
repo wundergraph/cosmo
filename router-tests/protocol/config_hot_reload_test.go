@@ -583,14 +583,14 @@ func TestFlakyConfigHotReloadPoller(t *testing.T) {
 	})
 }
 
-// TestConfigHotReloadReusedFeatureFlagMuxKeepsWebSocketsAlive verifies that after a
-// config update that changes only one feature flag's mux, websocket connections on
-// unchanged muxes (base graph and unmodified feature flags) remain active, while
-// connections on the changed mux are closed by the server.
 func TestConfigHotReloadGraphServerSwap(t *testing.T) {
 	t.Parallel()
 
 	t.Run("verify only ws connections on swapped muxes are closed", func(t *testing.T) {
+		// verifies that after a config update that changes only one feature flag's mux, websocket connections on
+		// unchanged muxes (base graph and unmodified feature flags) remain active, while
+		// connections on the changed mux are closed by the server.
+
 		pm := ConfigPollerMock{
 			ready: make(chan struct{}),
 		}
