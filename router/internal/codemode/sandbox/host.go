@@ -134,9 +134,19 @@ func (s *Sandbox) invokeTool(ctx context.Context, state *executeState, name stri
 		}
 	}
 
+	// The operation name passed to /graphql must match the named operation
+	// inside op.Body. op.Name is the content-derived ShortSHA we expose to
+	// the model as `tools.<sha>`, but the document body still carries
+	// yoko's original operation name — so we send op.DocumentName when
+	// available, falling back to op.Name for legacy sessions written
+	// before this field existed.
+	opName := op.DocumentName
+	if opName == "" {
+		opName = name
+	}
 	body, err := json.Marshal(graphQLRequest{
 		Query:         op.Body,
-		OperationName: name,
+		OperationName: opName,
 		Variables:     vars,
 	})
 	if err != nil {

@@ -83,6 +83,15 @@ func NewMemoryBackend(config MemoryConfig) *MemoryBackend {
 	}
 }
 
+// Append resolves each input op against the session and returns one
+// SessionOp per input — either the freshly-registered op or the
+// pre-existing op it was deduped against. The model receives declarations
+// for every matched op regardless of whether it was new, so a fresh
+// context never has to introspect the session to discover prior ops.
+//
+// Operation identity is op.Name (a content-derived SHA produced by the
+// caller via ShortSHA). Body and Name are 1:1 — the same body always
+// hashes to the same Name, so dedup is a single CanonicalBody check.
 func (b *MemoryBackend) Append(ctx context.Context, sessionID string, ops []SessionOp) ([]SessionOp, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -93,24 +102,37 @@ func (b *MemoryBackend) Append(ctx context.Context, sessionID string, ops []Sess
 
 	session := b.loadOrCreateSession(sessionID)
 	session.mu.Lock()
-	appended := make([]SessionOp, 0, len(ops))
-	taken := make(map[string]struct{}, len(session.ops)+len(ops))
-	for _, op := range session.ops {
-		taken[op.Name] = struct{}{}
+
+	byBody := make(map[string]SessionOp, len(session.ops)+len(ops))
+	for _, existing := range session.ops {
+		byBody[CanonicalBody(existing.Body)] = existing
 	}
+
+	resolved := make([]SessionOp, 0, len(ops))
+	appendedAny := false
 	for _, op := range ops {
-		op.Name = SuffixedName(NormalizeName(op.Name), taken)
-		taken[op.Name] = struct{}{}
+		canonical := CanonicalBody(op.Body)
+		if existing, ok := byBody[canonical]; ok {
+			resolved = append(resolved, existing)
+			continue
+		}
 		session.ops = append(session.ops, op)
-		appended = append(appended, op)
+		byBody[canonical] = op
+		resolved = append(resolved, op)
+		appendedAny = true
 	}
-	session.lastUsed = b.now()
-	session.bundle = ""
-	session.bundleValid = false
+
+	if appendedAny {
+		session.lastUsed = b.now()
+		session.bundle = ""
+		session.bundleValid = false
+	}
 	session.mu.Unlock()
 
-	b.enforceMaxSessions()
-	return appended, nil
+	if appendedAny {
+		b.enforceMaxSessions()
+	}
+	return resolved, nil
 }
 
 func (b *MemoryBackend) GetOp(ctx context.Context, sessionID string, name string) (SessionOp, bool, error) {

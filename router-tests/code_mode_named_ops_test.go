@@ -22,6 +22,9 @@ import (
 
 	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"crypto/sha256"
+	"encoding/hex"
+
 	yokov1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/code_mode/yoko/v1"
 	yokoconnect "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/code_mode/yoko/v1/yokov1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -42,16 +45,34 @@ const (
 	updateTagMutation  = `mutation updateEmployeeTag($id: Int!, $tag: String!) { updateEmployeeTag(id: $id, tag: $tag) { id tag } }`
 )
 
-const firstEmployeeTS = `/** Fetch the first employee. */
-firstEmployee(): R<{ firstEmployee: { id: number; details: { forename: string; surname: string } | null } }>;`
+// codeModeShortSHA mirrors router/internal/codemode/storage.ShortSHA. We
+// duplicate it because router-tests is a separate module and can't import
+// the internal package; if the production helper changes, this must too.
+func codeModeShortSHA(body string) string {
+	canonical := strings.Join(strings.Fields(body), " ")
+	sum := sha256.Sum256([]byte(canonical))
+	return "o" + hex.EncodeToString(sum[:])[:8]
+}
 
-const employeeByIDTS = `/** Fetch employee by id. */
-employeeByID(vars: { id: number }): R<{ employee: { id: number; details: { forename: string; surname: string } | null } | null }>;`
+// SHA-derived JS identifiers — operations are exposed to the model as
+// tools.<sha>(...) so collisions on document name don't conflate distinct
+// bodies. Computed once at init to keep test expectations readable.
+var (
+	firstEmployeeSHA = codeModeShortSHA(firstEmployeeQuery)
+	employeeByIDSHA  = codeModeShortSHA(employeeByIDQuery)
+	updateTagSHA     = codeModeShortSHA(updateTagMutation)
+)
 
-const updateTagTS = `/** Update employee tag. */
-updateEmployeeTag(vars: { id: number; tag: string }): R<{ updateEmployeeTag: { id: number; tag: string } | null }>;`
+var firstEmployeeTS = `/** Fetch the first employee. */
+` + firstEmployeeSHA + `(): R<{ firstEmployee: { id: number; details: { forename: string; surname: string } | null } }>;`
 
-const twoOpsFragment = firstEmployeeTS + "\n\n" + employeeByIDTS
+var employeeByIDTS = `/** Fetch employee by id. */
+` + employeeByIDSHA + `(vars: { id: number }): R<{ employee: { id: number; details: { forename: string; surname: string } | null } | null }>;`
+
+var updateTagTS = `/** Update employee tag. */
+` + updateTagSHA + `(vars: { id: number; tag: string }): R<{ updateEmployeeTag: { id: number; tag: string } | null }>;`
+
+var twoOpsFragment = firstEmployeeTS + "\n\n" + employeeByIDTS
 
 // indentBundleEntry mirrors tsgen's behavior: every line of a per-op block
 // (JSDoc + signature) is indented by 2 spaces inside the tools object.
@@ -61,7 +82,6 @@ func indentBundleEntry(s string) string {
 
 const emptyOpsBundle = `type GraphQLError = { message: string; path?: (string | number)[]; extensions?: Record<string, unknown> };
 type R<T> = Promise<{ data: T | null; errors?: GraphQLError[] }>;
-// Known limitation: union and interface selections are typed as unknown.
 
 declare const tools: {};
 
@@ -70,7 +90,6 @@ declare function compact<T>(value: T): T;`
 
 var firstEmployeeBundle = `type GraphQLError = { message: string; path?: (string | number)[]; extensions?: Record<string, unknown> };
 type R<T> = Promise<{ data: T | null; errors?: GraphQLError[] }>;
-// Known limitation: union and interface selections are typed as unknown.
 
 declare const tools: {
 ` + indentBundleEntry(firstEmployeeTS) + `
@@ -81,7 +100,6 @@ declare function compact<T>(value: T): T;`
 
 var employeeByIDBundle = `type GraphQLError = { message: string; path?: (string | number)[]; extensions?: Record<string, unknown> };
 type R<T> = Promise<{ data: T | null; errors?: GraphQLError[] }>;
-// Known limitation: union and interface selections are typed as unknown.
 
 declare const tools: {
 ` + indentBundleEntry(employeeByIDTS) + `
@@ -92,7 +110,6 @@ declare function compact<T>(value: T): T;`
 
 var twoOpsBundle = `type GraphQLError = { message: string; path?: (string | number)[]; extensions?: Record<string, unknown> };
 type R<T> = Promise<{ data: T | null; errors?: GraphQLError[] }>;
-// Known limitation: union and interface selections are typed as unknown.
 
 declare const tools: {
 ` + indentBundleEntry(firstEmployeeTS) + `
@@ -115,12 +132,11 @@ func TestCodeModeNamedOpsMemoryBackendStatefulSearchExecuteAndResource(t *testin
 			"prompts": []string{"first employee", "employee by id"},
 		})
 		assert.Equal(t, twoOpsFragment, searchText)
-		assert.Equal(t, []*yokov1.IndexRequest{{SchemaSdl: yoko.indexRequests()[0].GetSchemaSdl()}}, yoko.indexRequests())
-		assert.Equal(t, []*yokov1.SearchRequest{{
-			Prompts:   []string{"first employee", "employee by id"},
-			SchemaId:  "schema-1",
-			SessionId: yoko.searchRequests()[0].GetSessionId(),
-		}}, yoko.searchRequests())
+		assert.Equal(t, []*yokov1.IndexSchemaRequest{{Sdl: yoko.indexRequests()[0].GetSdl()}}, yoko.indexRequests())
+		assert.Equal(t, []*yokov1.GenerateQueryRequest{
+			{Prompt: "first employee", SchemaId: "schema-1"},
+			{Prompt: "employee by id", SchemaId: "schema-1"},
+		}, yoko.generateRequests())
 
 		resource := readPersistedOpsResource(t, ctx, session)
 		assert.Equal(t, &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{{
@@ -130,7 +146,7 @@ func TestCodeModeNamedOpsMemoryBackendStatefulSearchExecuteAndResource(t *testin
 		}}}, resource)
 
 		executeText := callCodeModeToolText(t, ctx, session, "code_mode_run_js", map[string]any{
-			"source": `async () => { return await tools.employeeByID({ id: 1 }); }`,
+			"source": fmt.Sprintf(`async () => { return await tools.%s({ id: 1 }); }`, employeeByIDSHA),
 		})
 		assert.Equal(t, map[string]any{
 			"result": map[string]any{
@@ -188,13 +204,13 @@ func TestCodeModeNamedOpsSchemaReloadEvictsSession(t *testing.T) {
 		require.NoError(t, poller.updateConfig(poller.initConfig, "before-code-mode-reload"))
 
 		executeText := callCodeModeToolText(t, ctx, session, "code_mode_run_js", map[string]any{
-			"source": `async () => { return await tools.employeeByID({ id: 1 }); }`,
+			"source": fmt.Sprintf(`async () => { return await tools.%s({ id: 1 }); }`, employeeByIDSHA),
 		})
 		assert.Equal(t, map[string]any{
 			"result": nil,
 			"error": map[string]any{
 				"name":    "TypeError",
-				"message": "tools.employeeByID is not a function",
+				"message": fmt.Sprintf("tools.%s is not a function", employeeByIDSHA),
 				"stack":   "    at __agentMain (codemode_agent.js:agent.ts:1:34)\n    at <anonymous> (codemode_agent.js:73:42)\n    at <eval> (codemode_agent.js:77:1)\n",
 			},
 		}, decodeJSON(t, executeText))
@@ -215,7 +231,7 @@ func TestCodeModeNamedOpsMutationElicitationRejection(t *testing.T) {
 		assert.Equal(t, updateTagTS, searchText)
 
 		executeText := callCodeModeToolText(t, ctx, session, "code_mode_run_js", map[string]any{
-			"source": `async () => { return await tools.updateEmployeeTag({ id: 1, tag: "x" }); }`,
+			"source": fmt.Sprintf(`async () => { return await tools.%s({ id: 1, tag: "x" }); }`, updateTagSHA),
 		})
 		assert.Equal(t, map[string]any{
 			"result": map[string]any{
@@ -334,7 +350,7 @@ func TestCodeModeNamedOpsRedisBackendTransparent(t *testing.T) {
 		assert.Equal(t, twoOpsBundle, resource.Contents[0].Text)
 
 		executeText := callCodeModeToolText(t, ctx, session, "code_mode_run_js", map[string]any{
-			"source": `async () => { return await tools.employeeByID({ id: 1 }); }`,
+			"source": fmt.Sprintf(`async () => { return await tools.%s({ id: 1 }); }`, employeeByIDSHA),
 		})
 		assert.Equal(t, map[string]any{
 			"result": map[string]any{
@@ -504,33 +520,33 @@ func mark3ResourcesContain(resources []mark3mcp.Resource, uri string) bool {
 }
 
 type fakeCodeModeYoko struct {
-	mu               sync.Mutex
-	indexCounter     int
-	indexRequestLog  []*yokov1.IndexRequest
-	searchRequestLog []*yokov1.SearchRequest
-	opsByPrompt      map[string]*yokov1.GeneratedOperation
+	mu                 sync.Mutex
+	indexCounter       int
+	indexRequestLog    []*yokov1.IndexSchemaRequest
+	generateRequestLog []*yokov1.GenerateQueryRequest
+	queriesByPrompt    map[string]*yokov1.ResolvedQuery
 }
 
 func newFakeCodeModeYoko() *fakeCodeModeYoko {
 	return &fakeCodeModeYoko{
-		opsByPrompt: map[string]*yokov1.GeneratedOperation{
+		queriesByPrompt: map[string]*yokov1.ResolvedQuery{
 			"first employee": {
-				Name:        firstEmployeeOpName,
-				Body:        firstEmployeeQuery,
-				Kind:        yokov1.OperationKind_OPERATION_KIND_QUERY,
-				Description: "Fetch the first employee.",
+				OperationName: firstEmployeeOpName,
+				Document:      firstEmployeeQuery,
+				OperationType: "query",
+				Description:   "Fetch the first employee.",
 			},
 			"employee by id": {
-				Name:        employeeByIDOpName,
-				Body:        employeeByIDQuery,
-				Kind:        yokov1.OperationKind_OPERATION_KIND_QUERY,
-				Description: "Fetch employee by id.",
+				OperationName: employeeByIDOpName,
+				Document:      employeeByIDQuery,
+				OperationType: "query",
+				Description:   "Fetch employee by id.",
 			},
 			"update employee tag": {
-				Name:        updateTagOpName,
-				Body:        updateTagMutation,
-				Kind:        yokov1.OperationKind_OPERATION_KIND_MUTATION,
-				Description: "Update employee tag.",
+				OperationName: updateTagOpName,
+				Document:      updateTagMutation,
+				OperationType: "mutation",
+				Description:   "Update employee tag.",
 			},
 		},
 	}
@@ -551,50 +567,48 @@ func startFakeCodeModeYoko(t *testing.T, svc *fakeCodeModeYoko) *httptest.Server
 	return server
 }
 
-func (f *fakeCodeModeYoko) Index(_ context.Context, req *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
+func (f *fakeCodeModeYoko) IndexSchema(_ context.Context, req *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.indexCounter++
-	f.indexRequestLog = append(f.indexRequestLog, &yokov1.IndexRequest{SchemaSdl: req.Msg.GetSchemaSdl()})
-	return connect.NewResponse(&yokov1.IndexResponse{SchemaId: fmt.Sprintf("schema-%d", f.indexCounter)}), nil
+	f.indexRequestLog = append(f.indexRequestLog, &yokov1.IndexSchemaRequest{Sdl: req.Msg.GetSdl()})
+	return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: fmt.Sprintf("schema-%d", f.indexCounter)}), nil
 }
 
-func (f *fakeCodeModeYoko) Search(_ context.Context, req *connect.Request[yokov1.SearchRequest]) (*connect.Response[yokov1.SearchResponse], error) {
+func (f *fakeCodeModeYoko) GenerateQuery(_ context.Context, req *connect.Request[yokov1.GenerateQueryRequest]) (*connect.Response[yokov1.GenerateQueryResponse], error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.searchRequestLog = append(f.searchRequestLog, &yokov1.SearchRequest{
-		Prompts:   append([]string(nil), req.Msg.GetPrompts()...),
-		SchemaId:  req.Msg.GetSchemaId(),
-		SessionId: req.Msg.GetSessionId(),
+	f.generateRequestLog = append(f.generateRequestLog, &yokov1.GenerateQueryRequest{
+		SchemaId: req.Msg.GetSchemaId(),
+		Prompt:   req.Msg.GetPrompt(),
 	})
-	ops := make([]*yokov1.GeneratedOperation, 0, len(req.Msg.GetPrompts()))
-	for _, prompt := range req.Msg.GetPrompts() {
-		if op := f.opsByPrompt[prompt]; op != nil {
-			ops = append(ops, op)
-		}
+	queries := make([]*yokov1.ResolvedQuery, 0, 1)
+	if q := f.queriesByPrompt[req.Msg.GetPrompt()]; q != nil {
+		queries = append(queries, q)
 	}
-	return connect.NewResponse(&yokov1.SearchResponse{Operations: ops}), nil
+	return connect.NewResponse(&yokov1.GenerateQueryResponse{
+		Resolution: &yokov1.Resolution{Queries: queries},
+	}), nil
 }
 
-func (f *fakeCodeModeYoko) indexRequests() []*yokov1.IndexRequest {
+func (f *fakeCodeModeYoko) indexRequests() []*yokov1.IndexSchemaRequest {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	out := make([]*yokov1.IndexRequest, 0, len(f.indexRequestLog))
+	out := make([]*yokov1.IndexSchemaRequest, 0, len(f.indexRequestLog))
 	for _, req := range f.indexRequestLog {
-		out = append(out, &yokov1.IndexRequest{SchemaSdl: req.GetSchemaSdl()})
+		out = append(out, &yokov1.IndexSchemaRequest{Sdl: req.GetSdl()})
 	}
 	return out
 }
 
-func (f *fakeCodeModeYoko) searchRequests() []*yokov1.SearchRequest {
+func (f *fakeCodeModeYoko) generateRequests() []*yokov1.GenerateQueryRequest {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	out := make([]*yokov1.SearchRequest, 0, len(f.searchRequestLog))
-	for _, req := range f.searchRequestLog {
-		out = append(out, &yokov1.SearchRequest{
-			Prompts:   append([]string(nil), req.GetPrompts()...),
-			SchemaId:  req.GetSchemaId(),
-			SessionId: req.GetSessionId(),
+	out := make([]*yokov1.GenerateQueryRequest, 0, len(f.generateRequestLog))
+	for _, req := range f.generateRequestLog {
+		out = append(out, &yokov1.GenerateQueryRequest{
+			SchemaId: req.GetSchemaId(),
+			Prompt:   req.GetPrompt(),
 		})
 	}
 	return out
