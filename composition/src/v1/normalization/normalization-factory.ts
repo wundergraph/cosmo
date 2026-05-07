@@ -2558,9 +2558,11 @@ export class NormalizationFactory {
       sizedFields: [],
       requireOneSlicingArgument: true, // per IBM cost spec
     };
-    // For each accepted slicing argument, capture the full resolved chain:
-    // (argument + each intermediate input field + leaf).
-    // Later we check the assumedSize against the default value of every element of the chain.
+    /**
+     * For each accepted slicing argument, capture the full resolved chain:
+     * (argument + each intermediate input field + leaf).
+     * Later we check the assumedSize against the default value of every element of the chain.
+     */
     const slicingArgChainByPath = new Map<string, InputValueData[]>();
 
     for (const argumentNode of args) {
