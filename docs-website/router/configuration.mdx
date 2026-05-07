@@ -1967,6 +1967,30 @@ engine:
     always_skip_loader: false
 ```
 
+### Subgraph Response Extensions Forwarding
+
+Forwards `extensions` returned by subgraphs to the client response. Use the allow list to restrict which root extension fields are propagated, and the algorithm to pick a winner when multiple subgraphs return the same root field.
+
+| Environment Variable                                                | YAML                                     | Required               | Description                                                                                                                                                                       | Default Value |
+|---------------------------------------------------------------------|------------------------------------------|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| ENGINE_RESPONSE_EXTENSIONS_FORWARDING_ENABLED                       | extensions.enabled                       | <Icon icon="square" /> | Enable forwarding of subgraph response extensions to the client.                                                                                                                  | false         |
+| ENGINE_RESPONSE_EXTENSIONS_FORWARDING_ALLOWED_EXTENSION_ROOT_FIELDS | extensions.allowed_extension_root_fields | <Icon icon="square" /> | Root extension fields that are allowed to be propagated from subgraphs to the client. Any root field not in this list is dropped. If empty, all root extension fields are forwarded. | []            |
+| ENGINE_RESPONSE_EXTENSIONS_FORWARDING_ALGORITHM                     | extensions.algorithm                     | <Icon icon="square" /> | Conflict resolution when multiple subgraphs return the same root extension field. `first_write` keeps the value from the first subgraph that wrote it; `last_write` keeps the last. | first_write   |
+
+### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+engine:
+  extensions:
+    enabled: true
+    allowed_extension_root_fields:
+      - rateLimit
+      - auth
+    algorithm: last_write
+```
+
 ## Rate Limiting
 
 Configures a rate limiter on the outgoing subgraphs requests. When enabled, a rate of 10 req/s with a burst of 10 requests is configured.
