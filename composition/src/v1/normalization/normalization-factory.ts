@@ -2611,10 +2611,12 @@ export class NormalizationFactory {
               continue;
             }
 
-            // Walk the rest of the path in the slicingArgument.
-            // `current` tracks the input value reached so far:
-            // the argument itself for a flat path, or the nested input field for each step of a
-            // dot-path. After the loop it is the leaf, which must be Int/Int!.
+            /**
+             * Walk the rest of the path in the slicingArgument.
+             * `current` tracks the input value reached so far:
+             * the argument itself for a flat path, or the nested input field for each step of a
+             * dot-path. After the loop it is the leaf, which must be Int/Int!.
+             */
             let current: InputValueData = argData;
             const chain: Array<InputValueData> = [argData];
             let isPathInvalid = false;
