@@ -5,6 +5,7 @@ import (
 
 	"context"
 	"encoding/json"
+	"net/http"
 	"os"
 	"sync/atomic"
 	"testing"
@@ -578,6 +579,118 @@ func TestFlakyConfigHotReloadPoller(t *testing.T) {
 
 				metricdatatest.AssertEqual(t, afterUpdate, scopeMetricAfterUpdate.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			}, 2*time.Second, 100*time.Millisecond)
+		})
+	})
+}
+
+func TestConfigHotReloadGraphServerSwap(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify only ws connections on swapped muxes are closed", func(t *testing.T) {
+		// verifies that after a config update that changes only one feature flag's mux, websocket connections on
+		// unchanged muxes (base graph and unmodified feature flags) remain active, while
+		// connections on the changed mux are closed by the server.
+
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(cfg *nodev1.RouterConfig) configpoller.ConfigPoller {
+					// Add "myff2" as a second feature flag (clone of "myff") so the router
+					// starts with three distinct muxes: base graph, myff, and myff2.
+					if cfg.FeatureFlagConfigs != nil {
+						if myff, ok := cfg.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]; ok {
+							cfg.FeatureFlagConfigs.ConfigByFeatureFlagName["myff2"] = &nodev1.FeatureFlagRouterExecutionConfig{
+								EngineConfig: myff.EngineConfig,
+								Version:      "myff2-initial",
+								Subgraphs:    myff.Subgraphs,
+							}
+						}
+					}
+					pm.initConfig = cfg
+					return &pm
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Wait for the config poller to be ready before establishing connections.
+			<-pm.ready
+
+			// subscribe dials a WebSocket, starts a currentTime subscription, and reads
+			// one initial message to confirm the subscription is live before returning.
+			subscribe := func(header http.Header) *websocket.Conn {
+				t.Helper()
+				conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+				err := conn.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+				var msg testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &msg)
+				require.NoError(t, err)
+				require.Equal(t, "next", msg.Type)
+				return conn
+			}
+
+			// Establish 2 connections on each of the three muxes (6 total).
+			baseConn1 := subscribe(nil)
+			baseConn2 := subscribe(nil)
+			myffConn1 := subscribe(http.Header{"X-Feature-Flag": []string{"myff"}})
+			myffConn2 := subscribe(http.Header{"X-Feature-Flag": []string{"myff"}})
+			myff2Conn1 := subscribe(http.Header{"X-Feature-Flag": []string{"myff2"}})
+			myff2Conn2 := subscribe(http.Header{"X-Feature-Flag": []string{"myff2"}})
+
+			// Trigger a config update where only "myff" has changed.
+			// The base graph mux and "myff2" mux are unchanged and will be reused.
+			pm.initConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"].Version = "myff-v2"
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{
+				Config: pm.initConfig,
+				Changes: &routerconfig.Changes{
+					ChangedConfigs: map[string]struct{}{"myff": {}},
+				},
+			}))
+
+			// assertConnectionClosed drains any pending subscription messages then expects
+			// a WebSocket close error, confirming the server closed the connection.
+			// A single absolute deadline is set on the connection before the loop so that
+			// continuous data messages cannot prevent the timeout from firing.
+			assertConnectionClosed := func(conn *websocket.Conn) {
+				t.Helper()
+				conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+				defer conn.SetReadDeadline(time.Time{})
+				for {
+					var msg testenv.WebSocketMessage
+					err := conn.ReadJSON(&msg)
+					if err != nil {
+						var wsErr *websocket.CloseError
+						require.ErrorAs(t, err, &wsErr, "expected websocket close error, got: %v", err)
+						return
+					}
+					// A data message arrived before the close — keep draining.
+					require.Equal(t, "next", msg.Type)
+				}
+			}
+
+			// The "myff" connections must be closed because their mux was rebuilt.
+			assertConnectionClosed(myffConn1)
+			assertConnectionClosed(myffConn2)
+
+			// The base graph and "myff2" connections must still receive data because their
+			// muxes were reused and their per-mux contexts were not cancelled.
+			for _, conn := range []*websocket.Conn{baseConn1, baseConn2, myff2Conn1, myff2Conn2} {
+				var msg testenv.WebSocketMessage
+				err := testenv.WSReadJSON(t, conn, &msg)
+				require.NoError(t, err)
+				require.Equal(t, "next", msg.Type)
+			}
+
+			// Close the remaining connections.
+			for _, conn := range []*websocket.Conn{baseConn1, baseConn2, myff2Conn1, myff2Conn2} {
+				require.NoError(t, conn.Close())
+			}
 		})
 	})
 }
