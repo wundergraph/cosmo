@@ -188,9 +188,9 @@ export function createFeatureFlag(
       };
     }
 
-    // const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction((tx) => {
+    const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction((tx) => {
       const compositionService = new CompositionService(
-        opts.db,
+        tx,
         authContext.organizationId,
         logger,
         { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
@@ -200,11 +200,11 @@ export function createFeatureFlag(
         req.disableResolvabilityValidation,
       );
 
-    const { deploymentErrors, compositionErrors, compositionWarnings } = await compositionService.composeAndDeployFeatureFlag({
+      return compositionService.composeAndDeployFeatureFlag({
         actorId: authContext.userId,
         featureFlag: createdFeatureFlag,
       });
-    // });
+    });
 
     return {
       response: {
