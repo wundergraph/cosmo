@@ -580,16 +580,6 @@ type Queries {
   searchThings(input: ProductSearchInput!): [Thing!]! @listSize(slicingArguments: ["input.pagination.first"])
 }
 
-input ProductSearchPagination {
-  first: Int
-  after: String
-}
-
-input ProductSearchInput {
-  pagination: ProductSearchPagination
-  query: String
-}
-
 type Mutation {
   addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [["write:fact"], ["write:all"]])
 }
@@ -602,6 +592,16 @@ input TopSecretFactInput {
   title: String!
   description: FactContent!
   factType: TopSecretFactType!
+}
+
+input ProductSearchPagination {
+  first: Int
+  after: String
+}
+
+input ProductSearchInput {
+  pagination: ProductSearchPagination
+  query: String
 }
 
 enum TopSecretFactType @authenticated {
