@@ -295,6 +295,7 @@ import {
   LEVELS,
   LIST_SIZE,
   LITERAL_AT,
+  LITERAL_PERIOD,
   MUTATION,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
@@ -2592,7 +2593,7 @@ export class NormalizationFactory {
 
             // slicingArgPath could be just an argument "inputA" or a dot-path "inputA.page.first".
             const slicingArgPath = (valueNode as StringValueNode).value;
-            const segments = slicingArgPath.split('.');
+            const segments = slicingArgPath.split(LITERAL_PERIOD);
 
             // Reject empty segments (e.g. "", "a.", ".b", "a..b").
             if (segments.length === 0 || segments.some((s) => s.length === 0)) {
@@ -2613,8 +2614,8 @@ export class NormalizationFactory {
             // the argument itself for a flat path, or the nested input field for each step of a
             // dot-path. After the loop it is the leaf, which must be Int/Int!.
             let current: InputValueData = argData;
-            const chain: InputValueData[] = [argData];
-            let pathInvalid = false;
+            const chain: Array<InputValueData> = [argData];
+            let isPathInvalid = false;
 
             for (let i = 1; i < segments.length; i++) {
               // Non-leaf step: `current` must unwrap to an Input Object. Lists are rejected here.
@@ -2633,7 +2634,7 @@ export class NormalizationFactory {
                     printTypeNode(current.type),
                   ),
                 );
-                pathInvalid = true;
+                isPathInvalid = true;
                 break;
               }
               const inputValue = parentTypeData.inputValueDataByName.get(segments[i]);
@@ -2646,20 +2647,20 @@ export class NormalizationFactory {
                     current.namedTypeName,
                   ),
                 );
-                pathInvalid = true;
+                isPathInvalid = true;
                 break;
               }
               current = inputValue;
               chain.push(inputValue);
             }
 
-            if (pathInvalid) {
+            if (isPathInvalid) {
               continue;
             }
 
             // Leaf check: the final value must be Int or Int!
-            const unwrappedLeaf = current.type.kind === Kind.NON_NULL_TYPE ? current.type.type : current.type;
-            if (unwrappedLeaf.kind === Kind.LIST_TYPE || current.namedTypeName !== INT_SCALAR) {
+            const unwrappedType = current.type.kind === Kind.NON_NULL_TYPE ? current.type.type : current.type;
+            if (unwrappedType.kind === Kind.LIST_TYPE || current.namedTypeName !== INT_SCALAR) {
               errorMessages.push(
                 listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgPath, printTypeNode(current.type)),
               );
@@ -2733,19 +2734,21 @@ export class NormalizationFactory {
       if (listSizeConfig.requireOneSlicingArgument) {
         errorMessages.push(listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords));
       } else {
-        // When assumedSize is set together with slicingArguments, the slicing argument must not have
-        // a default in any element of the slicingArgument's chain. That should be checked for all slicing Arguments.
-        // For example, if the query is defined like this:
-        //  search(a: SearchInput): [Book]
-        //    @listSize(assumedSize: 50, slicingArguments: ["a.b.c"], requireOneSlicingArgument: false)
-        // any of those defaults are forbidden:
-        //  input SearchInput { b: PaginationInput = { c: 10 } }
-        //  input PaginationInput { c: Int = 10 }
-        // Notably, this query definition is also forbidden with the @listSize above:
-        //  search(a: SearchInput = { b: { c: 10 } }): [Book]
-        // A default anywhere along the chain (argument, any intermediate input field, the leaf)
-        // means the slicing value can resolve via that default rather than assumedSize.
-        // which violates the IBM cost spec rule.
+        /**
+         * When assumedSize is set together with slicingArguments, the slicing argument must not have
+         * a default in any element of the slicingArgument's chain. That should be checked for all slicing Arguments.
+         * For example, if the query is defined like this:
+         *    search(a: SearchInput): [Book]
+         *        @listSize(assumedSize: 50, slicingArguments: ["a.b.c"], requireOneSlicingArgument: false)
+         * any of those defaults are forbidden:
+         *     input SearchInput { b: PaginationInput = { c: 10 } }
+         *     input PaginationInput { c: Int = 10 }
+         * Notably, this query definition is also forbidden with the @listSize above:
+         *     search(a: SearchInput = { b: { c: 10 } }): [Book]
+         * A default anywhere along the chain (argument, any intermediate input field, the leaf)
+         * means the slicing value can resolve via that default rather than assumedSize.
+         * which violates the IBM cost spec rule.
+         */
         for (const slicingArgPath of listSizeConfig.slicingArguments) {
           const chain = slicingArgChainByPath.get(slicingArgPath);
           if (chain?.some((node) => node.defaultValue)) {
