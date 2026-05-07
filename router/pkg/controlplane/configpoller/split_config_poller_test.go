@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.uber.org/zap"
 )
 
@@ -150,7 +151,7 @@ func TestSplitGetRouterConfig_ConfigFetchError(t *testing.T) {
 
 // pollOnce manually executes one poll iteration using the poller's internal logic.
 // It extracts the subscribe callback by using a fake controlplane.Poller.
-func pollOnce(p *splitConfigPoller, handler func(*nodev1.RouterConfig, string) error) {
+func pollOnce(p *splitConfigPoller, handler func(_ *routerconfig.Response) error) {
 	var tickFn func()
 	p.poller = &capturingPoller{capture: &tickFn}
 	p.Subscribe(context.Background(), handler) // sets tickFn
@@ -182,7 +183,7 @@ func TestSplitSubscribe_NoChanges(t *testing.T) {
 	p.latestVersion = computeCompositeVersion(p.knownHashes)
 
 	handlerCalled := false
-	pollOnce(p, func(_ *nodev1.RouterConfig, _ string) error {
+	pollOnce(p, func(_ *routerconfig.Response) error {
 		handlerCalled = true
 		return nil
 	})
@@ -207,8 +208,8 @@ func TestSplitSubscribe_BaseGraphChanged(t *testing.T) {
 	p.latestVersion = computeCompositeVersion(p.knownHashes)
 
 	var received *nodev1.RouterConfig
-	pollOnce(p, func(cfg *nodev1.RouterConfig, _ string) error {
-		received = cfg
+	pollOnce(p, func(resp *routerconfig.Response) error {
+		received = resp.Config
 		return nil
 	})
 
@@ -246,8 +247,8 @@ func TestSplitSubscribe_SingleFFChanged(t *testing.T) {
 	p.latestVersion = computeCompositeVersion(p.knownHashes)
 
 	var received *nodev1.RouterConfig
-	pollOnce(p, func(cfg *nodev1.RouterConfig, _ string) error {
-		received = cfg
+	pollOnce(p, func(resp *routerconfig.Response) error {
+		received = resp.Config
 		return nil
 	})
 
@@ -278,8 +279,8 @@ func TestSplitSubscribe_FFAdded(t *testing.T) {
 	p.latestVersion = computeCompositeVersion(p.knownHashes)
 
 	var received *nodev1.RouterConfig
-	pollOnce(p, func(cfg *nodev1.RouterConfig, _ string) error {
-		received = cfg
+	pollOnce(p, func(resp *routerconfig.Response) error {
+		received = resp.Config
 		return nil
 	})
 
@@ -311,8 +312,8 @@ func TestSplitSubscribe_FFRemoved(t *testing.T) {
 	p.latestVersion = computeCompositeVersion(p.knownHashes)
 
 	var received *nodev1.RouterConfig
-	pollOnce(p, func(cfg *nodev1.RouterConfig, _ string) error {
-		received = cfg
+	pollOnce(p, func(resp *routerconfig.Response) error {
+		received = resp.Config
 		return nil
 	})
 
@@ -353,8 +354,8 @@ func TestSplitSubscribe_MultipleChanges(t *testing.T) {
 	p.latestVersion = computeCompositeVersion(p.knownHashes)
 
 	var received *nodev1.RouterConfig
-	pollOnce(p, func(cfg *nodev1.RouterConfig, _ string) error {
-		received = cfg
+	pollOnce(p, func(resp *routerconfig.Response) error {
+		received = resp.Config
 		return nil
 	})
 
@@ -379,7 +380,7 @@ func TestSplitSubscribe_MapperFetchFailure(t *testing.T) {
 	p.latestVersion = initialVersion
 
 	handlerCalled := false
-	pollOnce(p, func(_ *nodev1.RouterConfig, _ string) error {
+	pollOnce(p, func(_ *routerconfig.Response) error {
 		handlerCalled = true
 		return nil
 	})
@@ -403,7 +404,7 @@ func TestSplitSubscribe_ConfigFetchFailure(t *testing.T) {
 	p.latestVersion = initialVersion
 
 	handlerCalled := false
-	pollOnce(p, func(_ *nodev1.RouterConfig, _ string) error {
+	pollOnce(p, func(_ *routerconfig.Response) error {
 		handlerCalled = true
 		return nil
 	})
@@ -428,7 +429,7 @@ func TestSplitSubscribe_HandlerError_StateNotUpdated(t *testing.T) {
 	initialVersion := computeCompositeVersion(p.knownHashes)
 	p.latestVersion = initialVersion
 
-	pollOnce(p, func(_ *nodev1.RouterConfig, _ string) error {
+	pollOnce(p, func(_ *routerconfig.Response) error {
 		return errors.New("handler failed")
 	})
 

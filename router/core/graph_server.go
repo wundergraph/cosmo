@@ -22,6 +22,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -91,9 +92,11 @@ type (
 		baseRouterConfigVersion string
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
-		// does not include websocket (hijacked) connections
-		inFlightRequests        *atomic.Uint64
-		graphMuxList            []*graphMux
+		// does not include websocket (hijacked) connections.
+		inFlightRequests *atomic.Uint64
+		// graphMuxList contains all graph muxes of this graph server.
+		// It's keyed by mux name (feature flag name or empty string for base graph).
+		graphMuxList            map[string]*graphMux
 		graphMuxListLock        sync.Mutex
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		otlpEngineMetrics       *rmetric.EngineMetrics
@@ -127,18 +130,20 @@ type buildMultiGraphHandlerOptions struct {
 	baseMux               *chi.Mux
 	featureFlagConfigs    map[string]*nodev1.FeatureFlagRouterExecutionConfig
 	reloadPersistentState *ReloadPersistentState
+	currentGraphMuxes     map[string]*graphMux
+	changes               *routerconfig.Changes
 }
 
 // newGraphServer creates a new server instance.
-func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
+func newGraphServer(ctx context.Context, r *Router, response *routerconfig.Response, proxy ProxyFunc) (*graphServer, error) {
 	/* Older versions of composition will not populate a compatibility version.
 	 * Currently, all "old" router execution configurations are compatible as there have been no breaking
 	 * changes.
 	 * Upon the first breaking change to the execution config, an unpopulated compatibility version will
 	 * also be unsupported (and the logic for IsRouterCompatibleWithExecutionConfig will need to be updated).
 	 */
-	if !execution_config.IsRouterCompatibleWithExecutionConfig(r.logger, routerConfig.CompatibilityVersion) {
-		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
+	if !execution_config.IsRouterCompatibleWithExecutionConfig(r.logger, response.Config.CompatibilityVersion) {
+		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, response.Config.CompatibilityVersion)
 	}
 
 	isConnStoreEnabled := r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
@@ -186,9 +191,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		subgraphTransports:      subgraphTransports,
 		playgroundHandler:       r.playgroundHandler,
 		traceDialer:             traceDialer,
-		baseRouterConfigVersion: routerConfig.GetVersion(),
+		baseRouterConfigVersion: response.Config.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
-		graphMuxList:            make([]*graphMux, 0, 1),
+		graphMuxList:            make(map[string]*graphMux, 1),
 		instanceData: InstanceData{
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
@@ -294,23 +299,38 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.circuitBreakerManager = manager
 	}
 
-	routingUrlGroupings, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, s.overrideRoutingURLConfiguration, s.overrides)
+	routingUrlGroupings, err := getRoutingUrlGroupingForCircuitBreakers(response.Config, s.overrideRoutingURLConfiguration, s.overrides)
 	if err != nil {
 		return nil, err
 	}
 
-	gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
-		RouterConfigVersion:   s.baseRouterConfigVersion,
-		EngineConfig:          routerConfig.GetEngineConfig(),
-		ConfigSubgraphs:       routerConfig.GetSubgraphs(),
-		RoutingUrlGroupings:   routingUrlGroupings,
-		ReloadPersistentState: r.reloadPersistentState,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to build base mux: %w", err)
+	currentMuxes := currentGraphMuxes(r)
+	var gm *graphMux
+
+	mux, oldBaseGraphMuxExists := currentMuxes[""]
+	needNewBaseGraphMux := response.Changes == nil || response.Changes.BaseGraphChanged() || !oldBaseGraphMuxExists
+
+	if needNewBaseGraphMux {
+		// build new base grap mux
+		gm, err = s.buildGraphMux(ctx, BuildGraphMuxOptions{
+			RouterConfigVersion:   s.baseRouterConfigVersion,
+			EngineConfig:          response.Config.GetEngineConfig(),
+			ConfigSubgraphs:       response.Config.GetSubgraphs(),
+			RoutingUrlGroupings:   routingUrlGroupings,
+			ReloadPersistentState: r.reloadPersistentState,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to build base mux: %w", err)
+		}
+	} else {
+		gm = mux
+		gm.reused.Store(true)
+		s.graphMuxListLock.Lock()
+		s.graphMuxList[""] = gm
+		s.graphMuxListLock.Unlock()
 	}
 
-	featureFlagConfigMap := routerConfig.FeatureFlagConfigs.GetConfigByFeatureFlagName()
+	featureFlagConfigMap := response.Config.FeatureFlagConfigs.GetConfigByFeatureFlagName()
 	if len(featureFlagConfigMap) > 0 {
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
@@ -319,6 +339,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		baseMux:               gm.mux,
 		featureFlagConfigs:    featureFlagConfigMap,
 		reloadPersistentState: r.reloadPersistentState,
+		currentGraphMuxes:     currentMuxes,
+		changes:               response.Changes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
@@ -477,6 +499,24 @@ func (s *graphServer) buildMultiGraphHandler(
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range opts.featureFlagConfigs {
+		if opts.changes != nil {
+			// if the ff is unchanged and still needed, we reuse it
+			_, hasChanged := opts.changes.ChangedConfigs[featureFlagName]
+			_, wasAdded := opts.changes.AddedConfigs[featureFlagName]
+
+			if !hasChanged && !wasAdded {
+				oldGraphMux, exists := opts.currentGraphMuxes[featureFlagName]
+				if exists {
+					featureFlagToMux[featureFlagName] = oldGraphMux.mux
+					s.graphMuxListLock.Lock()
+					s.graphMuxList[featureFlagName] = oldGraphMux
+					s.graphMuxListLock.Unlock()
+					oldGraphMux.reused.Store(true)
+					continue
+				}
+			}
+		}
+
 		gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
 			FeatureFlagName:       featureFlagName,
 			RouterConfigVersion:   executionConfig.GetVersion(),
@@ -544,7 +584,8 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 }
 
 type graphMux struct {
-	mux *chi.Mux
+	mux    *chi.Mux
+	reused atomic.Bool
 
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
@@ -1734,7 +1775,7 @@ func (s *graphServer) buildGraphMux(
 
 	s.graphMuxListLock.Lock()
 	defer s.graphMuxListLock.Unlock()
-	s.graphMuxList = append(s.graphMuxList, gm)
+	s.graphMuxList[opts.FeatureFlagName] = gm
 
 	return gm, nil
 }
@@ -1982,11 +2023,15 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	// Shutdown all graphs muxes to release resources
+	// Shutdown graphs muxes, which are not reused by the next graph server, to release resources
 	// e.g. planner cache
 	s.graphMuxListLock.Lock()
 	defer s.graphMuxListLock.Unlock()
 	for _, mux := range s.graphMuxList {
+		if mux.reused.Load() {
+			mux.reused.Store(false) // set to false to avoid the mux from being skipped forever
+			continue
+		}
 		if err := mux.Shutdown(ctx); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
@@ -2170,4 +2215,23 @@ func configureSubgraphOverwrites(
 	}
 
 	return subgraphs, nil
+}
+
+// currentGraphMuxes returns a list of currently active graph muxes
+// used by the currently running graph server.
+func currentGraphMuxes(r *Router) map[string]*graphMux {
+	currentState := r.httpServer.state.Load()
+	if currentState == nil {
+		return nil
+	}
+
+	currentGraphServer := currentState.graphServer
+	if currentGraphServer == nil {
+		return nil
+	}
+
+	currentGraphServer.graphMuxListLock.Lock()
+	defer currentGraphServer.graphMuxListLock.Unlock()
+
+	return maps.Clone(currentGraphServer.graphMuxList)
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
 	"go.uber.org/zap"
 )
@@ -19,9 +18,9 @@ var ErrConfigNotFound = errors.New("config not found")
 
 type ConfigPoller interface {
 	// Subscribe subscribes to the config poller with a handler function that will be invoked
-	// with the latest router config and the previous version string. If the handler takes longer than the poll interval
+	// with the latest router config. If the handler takes longer than the poll interval
 	// to execute, the next invocation will be skipped.
-	Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error)
+	Subscribe(ctx context.Context, handler func(response *routerconfig.Response) error)
 	// GetRouterConfig returns the latest router config from the CDN
 	// If the Config is nil, no new config is available and the current config should be used.
 	// and updates the latest router config version. This method is only used for the initial config
@@ -63,7 +62,7 @@ func (c *configPoller) Version() string {
 	return c.latestRouterConfigVersion
 }
 
-func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, _ string) error) {
+func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *routerconfig.Response) error) {
 	c.poller.Subscribe(ctx, func() {
 		start := time.Now()
 
@@ -99,7 +98,12 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 
 		start = time.Now()
 
-		if err := handler(cfg.Config, c.latestRouterConfigVersion); err != nil {
+		response := &routerconfig.Response{
+			Config:  cfg.Config,
+			Changes: nil, // purposefully leaving this nil to indicate we don't know what changed
+		}
+
+		if err := handler(response); err != nil {
 			c.logger.Error("Error invoking config poll handler", zap.Error(err))
 			return
 		}

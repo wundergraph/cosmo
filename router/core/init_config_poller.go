@@ -136,6 +136,7 @@ func InitializeConfigPoller(r *Router, registry *ProviderRegistry) (*configpolle
 	if hasSplitCfgFeature {
 		providerID := r.routerConfigPollerConfig.Storage.ProviderID
 		if providerID == "" {
+			r.logger.Debug("Use split-config poller to fetch execution config")
 			return newSplitConfigPoller(r)
 		}
 		r.logger.Info("split-config-loading feature is enabled but a custom storage provider is configured; falling back to regular config polling",
