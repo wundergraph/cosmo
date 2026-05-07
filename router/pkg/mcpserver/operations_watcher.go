@@ -68,7 +68,7 @@ func WatchOperationsDir(ctx context.Context, dir string, interval time.Duration,
 				}
 				if pendingReload {
 					pendingReload = false
-					logger.Info("operations directory changed; reloading tools")
+					logger.Info("operations directory changed; reloading tools and notifying connected clients")
 					onChange()
 				}
 			}

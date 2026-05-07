@@ -22,6 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/codemode/sandbox"
 	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -700,12 +701,13 @@ func (s *GraphQLSchemaServer) applyToolDiff(desired map[string]desiredTool) {
 	}
 
 	if len(added)+len(changed)+len(removed) == 0 {
-		s.logger.Debug("MCP tool reload: no changes detected, no notifications sent")
+		s.logger.Debug("MCP tool refresh: no changes detected, no notification sent to clients")
 	} else {
-		s.logger.Info("MCP tool reload applied",
+		s.logger.Info("MCP tool refresh broadcast to connected clients (tools/list_changed)",
 			zap.Strings("added", added),
 			zap.Strings("changed", changed),
 			zap.Strings("removed", removed),
+			zap.Int("total_tools", len(desired)),
 		)
 	}
 
