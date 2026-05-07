@@ -5,7 +5,6 @@ This is a beginner-friendly guide to the `composition` package.
 Scope:
 
 - In scope: `composition/*`
-- Out of scope: `composition-go/*`
 
 ## Who this is for
 
