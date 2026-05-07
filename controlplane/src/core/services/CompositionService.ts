@@ -162,6 +162,7 @@ export class CompositionService {
     };
 
     const featureFlagRepo = new FeatureFlagRepository(this.logger, this.db, this.organizationId);
+    const contractRepo = new ContractRepository(this.logger, this.db, this.organizationId);
     const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
       featureFlagId: featureFlag.id,
       namespaceId: featureFlag.namespaceId,
@@ -225,6 +226,13 @@ export class CompositionService {
         [],
       );
 
+      const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
+      const tagOptionsByContractName = contracts.map((contract) => ({
+        contractName: contract.downstreamFederatedGraph.target.name,
+        excludeTags: contract.excludeTags,
+        includeTags: contract.includeTags,
+      }));
+
       const { results } = await composeGraphsInWorker({
         federatedGraph: graph,
         subgraphsToCompose: subgraphsToCompose.map((s) => ({
@@ -233,7 +241,7 @@ export class CompositionService {
           featureFlagName: s.featureFlagName,
           featureFlagId: s.featureFlagId,
         })),
-        tagOptionsByContractName: [],
+        tagOptionsByContractName,
         compositionOptions,
       });
 
