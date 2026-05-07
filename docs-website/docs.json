@@ -204,6 +204,7 @@
                   "router/proxy-capabilities/subgraph-request-header-operations",
                   "router/proxy-capabilities/subgraph-response-header-operations",
                   "router/proxy-capabilities/forward-client-extensions",
+                  "router/proxy-capabilities/forward-subgraph-extensions",
                   "router/proxy-capabilities/adjusting-cache-control",
                   "router/proxy-capabilities/override-subgraph-config",
                   "router/proxy-capabilities/router-response-header-operations"
