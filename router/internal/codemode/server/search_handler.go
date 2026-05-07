@@ -15,12 +15,8 @@ import (
 )
 
 const (
-	maxSearchPrompts              = 20
-	emptySearchAPIResponseMessage = "// 0 new ops; previous code_mode_search_tools calls already cover these prompts."
-
-	// The generated proto currently has query and mutation constants. Yoko may
-	// still send the planned subscription enum value; host behavior is to drop it.
-	yokoOperationKindSubscription yokov1.OperationKind = 3
+	maxSearchPrompts    = 20
+	noOperationsMessage = "// yoko returned no operations for these prompts. Restate with concrete entity/field names."
 )
 
 type searchAPIInput struct {
@@ -28,11 +24,17 @@ type searchAPIInput struct {
 }
 
 type legacyCatalogueOperation struct {
-	Name        string  `json:"name"`
-	Body        string  `json:"body"`
-	Kind        string  `json:"kind"`
-	Description string  `json:"description"`
-	Variables   *string `json:"variables"`
+	Name            string `json:"name"`
+	Body            string `json:"body"`
+	Kind            string `json:"kind"`
+	Description     string `json:"description"`
+	VariablesSchema string `json:"variables_schema,omitempty"`
+}
+
+type legacyCatalogueResponse struct {
+	Operations  []legacyCatalogueOperation `json:"operations"`
+	Unsatisfied []string                   `json:"unsatisfied,omitempty"`
+	Truncated   bool                       `json:"truncated,omitempty"`
 }
 
 func (s *Server) handleSearchAPI(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -83,39 +85,36 @@ func decodeSearchPrompts(req *mcp.CallToolRequest) ([]string, error) {
 }
 
 func (s *Server) handleSearchStateless(ctx context.Context, prompts []string) *mcp.CallToolResult {
-	response, err := s.searchYoko(ctx, "", prompts)
+	resolution, err := s.searchYoko(ctx, prompts)
 	if err != nil {
 		return toolErrorResult(fmt.Sprintf("code_mode_search_tools: yoko search failed: %v", err))
 	}
 
-	catalogue := make([]legacyCatalogueOperation, 0, len(response.GetOperations()))
-	droppedSubscription := false
-	for _, op := range response.GetOperations() {
-		kind, ok, subscription := yokoOperationKindLabel(op.GetKind())
-		if subscription {
-			droppedSubscription = true
-			continue
-		}
+	catalogue := make([]legacyCatalogueOperation, 0, len(resolution.GetQueries()))
+	for _, q := range resolution.GetQueries() {
+		kind, ok := operationKindLabel(q.GetOperationType())
 		if !ok {
 			s.logger.Warn("code_mode_search_tools dropped unsupported operation kind",
-				zap.String("name", op.GetName()),
-				zap.String("kind", op.GetKind().String()),
+				zap.String("name", q.GetOperationName()),
+				zap.String("kind", q.GetOperationType()),
 			)
 			continue
 		}
 		catalogue = append(catalogue, legacyCatalogueOperation{
-			Name:        op.GetName(),
-			Body:        op.GetBody(),
-			Kind:        kind,
-			Description: op.GetDescription(),
-			Variables:   extractGraphQLVariablesBlock(op.GetBody()),
+			Name:            storage.ShortSHA(q.GetDocument()),
+			Body:            q.GetDocument(),
+			Kind:            kind,
+			Description:     q.GetDescription(),
+			VariablesSchema: q.GetVariablesSchema(),
 		})
 	}
-	if droppedSubscription {
-		s.logger.Warn("code_mode_search_tools dropped subscription operations returned by yoko")
-	}
 
-	encoded, err := json.Marshal(catalogue)
+	response := legacyCatalogueResponse{
+		Operations:  catalogue,
+		Unsatisfied: unsatisfiedReasons(resolution),
+		Truncated:   resolution.GetTruncated(),
+	}
+	encoded, err := json.Marshal(response)
 	if err != nil {
 		return toolErrorResult(fmt.Sprintf("code_mode_search_tools: failed to encode legacy catalogue: %v", err))
 	}
@@ -123,92 +122,136 @@ func (s *Server) handleSearchStateless(ctx context.Context, prompts []string) *m
 }
 
 func (s *Server) handleSearchStateful(ctx context.Context, sessionID string, prompts []string) *mcp.CallToolResult {
-	response, err := s.searchYoko(ctx, sessionID, prompts)
+	resolution, err := s.searchYoko(ctx, prompts)
 	if err != nil {
 		return toolErrorResult(fmt.Sprintf("code_mode_search_tools: yoko search failed: %v", err))
 	}
 
-	rawOps := make([]storage.SessionOp, 0, len(response.GetOperations()))
-	droppedSubscription := false
-	for _, op := range response.GetOperations() {
-		kind, ok, subscription := storageOperationKind(op.GetKind())
-		if subscription {
-			droppedSubscription = true
-			continue
-		}
+	rawOps := make([]storage.SessionOp, 0, len(resolution.GetQueries()))
+	for _, q := range resolution.GetQueries() {
+		kind, ok := storageOperationKind(q.GetOperationType())
 		if !ok {
 			s.logger.Warn("code_mode_search_tools dropped unsupported operation kind",
-				zap.String("name", op.GetName()),
-				zap.String("kind", op.GetKind().String()),
+				zap.String("name", q.GetOperationName()),
+				zap.String("kind", q.GetOperationType()),
 			)
 			continue
 		}
 		rawOps = append(rawOps, storage.SessionOp{
-			Name:        storage.NormalizeName(op.GetName()),
-			Body:        op.GetBody(),
-			Kind:        kind,
-			Description: op.GetDescription(),
+			Name:         storage.ShortSHA(q.GetDocument()),
+			Body:         q.GetDocument(),
+			Kind:         kind,
+			DocumentName: q.GetOperationName(),
+			Description:  q.GetDescription(),
 		})
 	}
-	if droppedSubscription {
-		s.logger.Warn("code_mode_search_tools dropped subscription operations returned by yoko")
-	}
+
+	notes := unsatisfactionNotes(resolution)
 
 	if len(rawOps) == 0 {
-		return textResult(emptySearchAPIResponseMessage)
+		if notes != "" {
+			return textResult(notes + noOperationsMessage)
+		}
+		return textResult(noOperationsMessage)
 	}
 	if s.storage == nil {
 		return toolErrorResult("code_mode_search_tools: failed to register ops: code mode storage is not configured")
 	}
 
-	// Collision handling approach: Append-applies-suffix. The storage backend is
-	// the serialization point for a session and returns the final stored names.
-	appendedOps, err := s.storage.Append(ctx, sessionID, rawOps)
+	// Append returns one resolved SessionOp per input, mapping each yoko
+	// query to either a freshly-registered op or a pre-existing op it
+	// dedupes against by canonical body. Operation identity is the SHA
+	// over the body, so the same body always lands on the same op — yoko
+	// regenerating an operation under a different document name produces
+	// the same identifier. The model receives declarations for every
+	// match including reused ones, so a fresh context never has to
+	// introspect the session.
+	matchedOps, err := s.storage.Append(ctx, sessionID, rawOps)
 	if err != nil {
 		return toolErrorResult(fmt.Sprintf("code_mode_search_tools: failed to register ops: %v", err))
 	}
-	if len(appendedOps) == 0 {
-		return textResult(emptySearchAPIResponseMessage)
-	}
 
-	rendered, err := s.newOpsFragment(appendedOps, s.storage.Schema())
+	rendered, err := s.opsFragment(matchedOps, s.storage.Schema())
 	if err != nil {
-		return toolErrorResult(fmt.Sprintf("code_mode_search_tools: failed to render new ops: %v", err))
+		return toolErrorResult(fmt.Sprintf("code_mode_search_tools: failed to render ops: %v", err))
+	}
+	if notes != "" {
+		rendered = notes + "\n" + rendered
 	}
 	return textResult(rendered)
 }
 
-func (s *Server) searchYoko(ctx context.Context, sessionID string, prompts []string) (*yokov1.SearchResponse, error) {
+func (s *Server) searchYoko(ctx context.Context, prompts []string) (*yokov1.Resolution, error) {
 	if s.yokoClient == nil {
 		return nil, errors.New("yoko client is not configured")
 	}
-	return s.yokoClient.Search(ctx, sessionID, prompts)
+	return s.yokoClient.Search(ctx, prompts)
 }
 
-func storageOperationKind(kind yokov1.OperationKind) (storage.OperationKind, bool, bool) {
-	switch kind {
-	case yokov1.OperationKind_OPERATION_KIND_QUERY:
-		return storage.OperationKindQuery, true, false
-	case yokov1.OperationKind_OPERATION_KIND_MUTATION:
-		return storage.OperationKindMutation, true, false
-	case yokoOperationKindSubscription:
-		return "", false, true
+func storageOperationKind(operationType string) (storage.OperationKind, bool) {
+	switch strings.ToLower(operationType) {
+	case "query":
+		return storage.OperationKindQuery, true
+	case "mutation":
+		return storage.OperationKindMutation, true
 	default:
-		return "", false, false
+		return "", false
 	}
 }
 
-func yokoOperationKindLabel(kind yokov1.OperationKind) (string, bool, bool) {
-	switch kind {
-	case yokov1.OperationKind_OPERATION_KIND_QUERY:
-		return "Query", true, false
-	case yokov1.OperationKind_OPERATION_KIND_MUTATION:
-		return "Mutation", true, false
-	case yokoOperationKindSubscription:
-		return "", false, true
+func operationKindLabel(operationType string) (string, bool) {
+	switch strings.ToLower(operationType) {
+	case "query":
+		return "Query", true
+	case "mutation":
+		return "Mutation", true
 	default:
-		return "", false, false
+		return "", false
 	}
+}
+
+func unsatisfiedReasons(resolution *yokov1.Resolution) []string {
+	items := resolution.GetUnsatisfied()
+	if len(items) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(items))
+	for _, u := range items {
+		reason := strings.TrimSpace(u.GetReason())
+		if reason == "" {
+			continue
+		}
+		out = append(out, reason)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// unsatisfactionNotes formats unsatisfied requirements (and the truncated flag)
+// as a leading TS-comment block prepended to the bundle fragment, so the model
+// reading the search response can see what could not be satisfied.
+func unsatisfactionNotes(resolution *yokov1.Resolution) string {
+	reasons := unsatisfiedReasons(resolution)
+	truncated := resolution.GetTruncated()
+	if len(reasons) == 0 && !truncated {
+		return ""
+	}
+
+	var b strings.Builder
+	if len(reasons) > 0 {
+		b.WriteString("// unsatisfied: yoko could not satisfy the following requirement(s):\n")
+		for _, reason := range reasons {
+			b.WriteString("//   - ")
+			b.WriteString(reason)
+			b.WriteByte('\n')
+		}
+	}
+	if truncated {
+		b.WriteString("// truncated: yoko ran out of turns before committing every requirement; consider tightening the prompt.\n")
+	}
+	return b.String()
 }
 
 func searchSingleFlightKey(sessionID string, prompts []string) string {
@@ -219,32 +262,6 @@ func searchSingleFlightKey(sessionID string, prompts []string) string {
 		keyParts = append(keyParts, fmt.Sprintf("%d:%s", len(p), p))
 	}
 	return strings.Join(keyParts, "|")
-}
-
-func extractGraphQLVariablesBlock(body string) *string {
-	open := strings.IndexByte(body, '(')
-	if open < 0 {
-		return nil
-	}
-	selection := strings.IndexByte(body, '{')
-	if selection >= 0 && selection < open {
-		return nil
-	}
-
-	depth := 0
-	for i := open; i < len(body); i++ {
-		switch body[i] {
-		case '(':
-			depth++
-		case ')':
-			depth--
-			if depth == 0 {
-				value := strings.TrimSpace(body[open : i+1])
-				return &value
-			}
-		}
-	}
-	return nil
 }
 
 func textResult(text string) *mcp.CallToolResult {

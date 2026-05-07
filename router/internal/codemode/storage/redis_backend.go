@@ -78,6 +78,11 @@ func NewRedisBackend(cfg RedisConfig) (*RedisBackend, error) {
 	}, nil
 }
 
+// Append resolves each input op against the session and returns one
+// SessionOp per input — either the freshly-registered op or the
+// pre-existing op it was deduped against. See MemoryBackend.Append for
+// the resolution rule (CanonicalBody match); this implementation is
+// identical apart from running inside a Redis WATCH transaction.
 func (b *RedisBackend) Append(ctx context.Context, sessionID string, ops []SessionOp) ([]SessionOp, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -87,7 +92,7 @@ func (b *RedisBackend) Append(ctx context.Context, sessionID string, ops []Sessi
 	}
 
 	backoff := 5 * time.Millisecond
-	var appended []SessionOp
+	var resolved []SessionOp
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -102,19 +107,31 @@ func (b *RedisBackend) Append(ctx context.Context, sessionID string, ops []Sessi
 				return err
 			}
 
-			taken := make(map[string]struct{}, len(entries)+len(ops))
+			byBody := make(map[string]SessionOp, len(entries)+len(ops))
 			for _, entry := range entries {
-				taken[entry.Name] = struct{}{}
+				byBody[CanonicalBody(entry.Body)] = entry.SessionOp
 			}
-			appended = make([]SessionOp, 0, len(ops))
+
+			currentResolved := make([]SessionOp, 0, len(ops))
+			appendedAny := false
 			for _, op := range ops {
-				op.Name = SuffixedName(NormalizeName(op.Name), taken)
-				taken[op.Name] = struct{}{}
+				canonical := CanonicalBody(op.Body)
+				if existing, ok := byBody[canonical]; ok {
+					currentResolved = append(currentResolved, existing)
+					continue
+				}
 				entries = append(entries, redisOpEntry{
 					SessionOp: op,
 					LastUsed:  now,
 				})
-				appended = append(appended, op)
+				byBody[canonical] = op
+				currentResolved = append(currentResolved, op)
+				appendedAny = true
+			}
+
+			resolved = currentResolved
+			if !appendedAny {
+				return nil
 			}
 			payload, err := json.Marshal(entries)
 			if err != nil {
@@ -130,7 +147,7 @@ func (b *RedisBackend) Append(ctx context.Context, sessionID string, ops []Sessi
 			return err
 		}, opsKey)
 		if err == nil {
-			return appended, nil
+			return resolved, nil
 		}
 
 		b.logger.Debug("retrying code mode redis append",

@@ -49,7 +49,7 @@ type Customer {
 }
 `
 
-const emptySearchMessage = "// 0 new ops; previous code_mode_search_tools calls already cover these prompts."
+const noQueriesFromYokoMessage = "// yoko returned no operations for these prompts. Restate with concrete entity/field names."
 
 func TestHandleSearchValidatesPrompts(t *testing.T) {
 	tests := []struct {
@@ -99,20 +99,23 @@ func TestHandleSearchValidatesPrompts(t *testing.T) {
 
 func TestHandleSearchStatelessReturnsLegacyJSONCatalogue(t *testing.T) {
 	searcher := newFakeYoko()
-	searcher.responses <- &yokov1.SearchResponse{Operations: []*yokov1.GeneratedOperation{
-		{
-			Name:        "getOrders",
-			Body:        "query GetOrders($limit: Int) { orders(limit: $limit) { id } }",
-			Kind:        yokov1.OperationKind_OPERATION_KIND_QUERY,
-			Description: "Fetch orders.",
+	searcher.responses <- &yokov1.Resolution{
+		Queries: []*yokov1.ResolvedQuery{
+			{
+				OperationName:   "getOrders",
+				Document:        "query GetOrders($limit: Int) { orders(limit: $limit) { id } }",
+				OperationType:   "query",
+				Description:     "Fetch orders.",
+				VariablesSchema: `{"type":"object","properties":{"limit":{"type":["integer","null"]}}}`,
+			},
+			{
+				OperationName: "watchOrders",
+				Document:      "subscription WatchOrders { orders { id } }",
+				OperationType: "subscription",
+				Description:   "Watch orders.",
+			},
 		},
-		{
-			Name:        "watchOrders",
-			Body:        "subscription WatchOrders { orders { id } }",
-			Kind:        yokoOperationKindSubscription,
-			Description: "Watch orders.",
-		},
-	}}
+	}
 	store := newSearchTestStorage(t)
 	srv := newSearchTestServer(t, true, searcher, store)
 
@@ -121,42 +124,47 @@ func TestHandleSearchStatelessReturnsLegacyJSONCatalogue(t *testing.T) {
 	}))
 
 	require.NoError(t, err)
-	expectedJSON := mustJSON(t, []legacyCatalogueEntry{
-		{
-			Name:        "getOrders",
-			Body:        "query GetOrders($limit: Int) { orders(limit: $limit) { id } }",
-			Kind:        "Query",
-			Description: "Fetch orders.",
-			Variables:   ptrString("($limit: Int)"),
+	getOrdersBody := "query GetOrders($limit: Int) { orders(limit: $limit) { id } }"
+	expectedJSON := mustJSON(t, legacyCatalogueResponse{
+		Operations: []legacyCatalogueOperation{
+			{
+				Name:            storage.ShortSHA(getOrdersBody),
+				Body:            getOrdersBody,
+				Kind:            "Query",
+				Description:     "Fetch orders.",
+				VariablesSchema: `{"type":"object","properties":{"limit":{"type":["integer","null"]}}}`,
+			},
 		},
 	})
 	assert.Equal(t, textToolResult(expectedJSON), got)
-	assert.Equal(t, []searchCall{{sessionID: "", prompts: []string{"orders"}}}, searcher.callsSnapshot())
+	assert.Equal(t, []searchCall{{prompts: []string{"orders"}}}, searcher.callsSnapshot())
 	assert.Equal(t, []storage.SessionOp(nil), store.opsSnapshot("session-1"))
 }
 
 func TestHandleSearchStatefulAppendsAndReturnsNewOpsFragment(t *testing.T) {
 	searcher := newFakeYoko()
-	searcher.responses <- &yokov1.SearchResponse{Operations: []*yokov1.GeneratedOperation{
-		{
-			Name:        "getOrders",
-			Body:        "query GetOrders($limit: Int) { orders(limit: $limit) { id total } }",
-			Kind:        yokov1.OperationKind_OPERATION_KIND_QUERY,
-			Description: "Fetch orders.",
+	searcher.responses <- &yokov1.Resolution{
+		Queries: []*yokov1.ResolvedQuery{
+			{
+				OperationName: "getOrders",
+				Document:      "query GetOrders($limit: Int) { orders(limit: $limit) { id total } }",
+				OperationType: "query",
+				Description:   "Fetch orders.",
+			},
+			{
+				OperationName: "cancelOrder",
+				Document:      "mutation CancelOrder($id: ID!) { cancelOrder(id: $id) { id } }",
+				OperationType: "mutation",
+				Description:   "Cancel an order.",
+			},
+			{
+				OperationName: "watchOrders",
+				Document:      "subscription WatchOrders { orders { id } }",
+				OperationType: "subscription",
+				Description:   "Watch orders.",
+			},
 		},
-		{
-			Name:        "cancelOrder",
-			Body:        "mutation CancelOrder($id: ID!) { cancelOrder(id: $id) { id } }",
-			Kind:        yokov1.OperationKind_OPERATION_KIND_MUTATION,
-			Description: "Cancel an order.",
-		},
-		{
-			Name:        "watchOrders",
-			Body:        "subscription WatchOrders { orders { id } }",
-			Kind:        yokoOperationKindSubscription,
-			Description: "Watch orders.",
-		},
-	}}
+	}
 	store := newSearchTestStorage(t)
 	srv := newSearchTestServer(t, false, searcher, store)
 
@@ -165,34 +173,164 @@ func TestHandleSearchStatefulAppendsAndReturnsNewOpsFragment(t *testing.T) {
 	}))
 
 	require.NoError(t, err)
+	getOrdersBody := "query GetOrders($limit: Int) { orders(limit: $limit) { id total } }"
+	cancelOrderBody := "mutation CancelOrder($id: ID!) { cancelOrder(id: $id) { id } }"
 	wantOps := []storage.SessionOp{
 		{
-			Name:        "getOrders",
-			Body:        "query GetOrders($limit: Int) { orders(limit: $limit) { id total } }",
-			Kind:        storage.OperationKindQuery,
-			Description: "Fetch orders.",
+			Name:         storage.ShortSHA(getOrdersBody),
+			Body:         getOrdersBody,
+			Kind:         storage.OperationKindQuery,
+			DocumentName: "getOrders",
+			Description:  "Fetch orders.",
 		},
 		{
-			Name:        "cancelOrder",
-			Body:        "mutation CancelOrder($id: ID!) { cancelOrder(id: $id) { id } }",
-			Kind:        storage.OperationKindMutation,
-			Description: "Cancel an order.",
+			Name:         storage.ShortSHA(cancelOrderBody),
+			Body:         cancelOrderBody,
+			Kind:         storage.OperationKindMutation,
+			DocumentName: "cancelOrder",
+			Description:  "Cancel an order.",
 		},
 	}
 	wantFragment, err := tsgen.NewOpsFragment(wantOps, searchHandlerTestSchema(t))
 	require.NoError(t, err)
 	assert.Equal(t, textToolResult(wantFragment), got)
 	assert.Equal(t, wantOps, store.opsSnapshot("session-1"))
-	assert.Equal(t, []searchCall{{sessionID: "session-1", prompts: []string{"orders", "cancel order"}}}, searcher.callsSnapshot())
+	assert.Equal(t, []searchCall{{prompts: []string{"orders", "cancel order"}}}, searcher.callsSnapshot())
+}
+
+func TestHandleSearchStatefulHashesNameButPreservesDocumentName(t *testing.T) {
+	// Regression: yoko returns operation_name in any casing it likes,
+	// and the same document name can mask different bodies. Storage Name
+	// must be the content-derived ShortSHA so collisions on the document
+	// name don't conflate distinct operations, but DocumentName must be
+	// the original name so the host bridge can match the operation
+	// inside Body when invoking.
+	searcher := newFakeYoko()
+	searcher.responses <- &yokov1.Resolution{
+		Queries: []*yokov1.ResolvedQuery{{
+			OperationName: "GetCustomerContractDetails",
+			Document:      "query GetCustomerContractDetails { orders { id } }",
+			OperationType: "query",
+			Description:   "Fetch contract details.",
+		}},
+	}
+	store := newSearchTestStorage(t)
+	srv := newSearchTestServer(t, false, searcher, store)
+
+	_, err := srv.handleSearch(context.Background(), searchToolRequest(t, "session-1", map[string]any{
+		"prompts": []string{"contract"},
+	}))
+
+	require.NoError(t, err)
+	body := "query GetCustomerContractDetails { orders { id } }"
+	wantOps := []storage.SessionOp{{
+		Name:         storage.ShortSHA(body),
+		Body:         body,
+		Kind:         storage.OperationKindQuery,
+		DocumentName: "GetCustomerContractDetails",
+		Description:  "Fetch contract details.",
+	}}
+	assert.Equal(t, wantOps, store.opsSnapshot("session-1"))
+}
+
+func TestHandleSearchStatefulForwardsUnsatisfiedAndTruncated(t *testing.T) {
+	searcher := newFakeYoko()
+	searcher.responses <- &yokov1.Resolution{
+		Queries: []*yokov1.ResolvedQuery{{
+			OperationName: "getOrders",
+			Document:      "query GetOrders { orders { id } }",
+			OperationType: "query",
+			Description:   "Fetch orders.",
+		}},
+		Unsatisfied: []*yokov1.Unsatisfied{
+			{Reason: "no field on the schema carries that filter dimension"},
+			{Reason: "customer filter not supported"},
+		},
+		Truncated: true,
+	}
+	store := newSearchTestStorage(t)
+	srv := newSearchTestServer(t, false, searcher, store)
+
+	got, err := srv.handleSearch(context.Background(), searchToolRequest(t, "session-1", map[string]any{
+		"prompts": []string{"orders", "filtered orders"},
+	}))
+
+	require.NoError(t, err)
+	getOrdersBody := "query GetOrders { orders { id } }"
+	wantOps := []storage.SessionOp{{
+		Name:        storage.ShortSHA(getOrdersBody),
+		Body:        getOrdersBody,
+		Kind:        storage.OperationKindQuery,
+		Description: "Fetch orders.",
+	}}
+	wantFragment, err := tsgen.NewOpsFragment(wantOps, searchHandlerTestSchema(t))
+	require.NoError(t, err)
+	wantText := "// unsatisfied: yoko could not satisfy the following requirement(s):\n" +
+		"//   - no field on the schema carries that filter dimension\n" +
+		"//   - customer filter not supported\n" +
+		"// truncated: yoko ran out of turns before committing every requirement; consider tightening the prompt.\n" +
+		"\n" + wantFragment
+	assert.Equal(t, textToolResult(wantText), got)
+}
+
+func TestHandleSearchStatefulNoOpsWithUnsatisfiedReturnsNotes(t *testing.T) {
+	searcher := newFakeYoko()
+	searcher.responses <- &yokov1.Resolution{
+		Unsatisfied: []*yokov1.Unsatisfied{{Reason: "not possible"}},
+	}
+	srv := newSearchTestServer(t, false, searcher, newSearchTestStorage(t))
+
+	got, err := srv.handleSearch(context.Background(), searchToolRequest(t, "session-1", map[string]any{
+		"prompts": []string{"orders"},
+	}))
+
+	require.NoError(t, err)
+	wantText := "// unsatisfied: yoko could not satisfy the following requirement(s):\n" +
+		"//   - not possible\n" +
+		noQueriesFromYokoMessage
+	assert.Equal(t, textToolResult(wantText), got)
+}
+
+func TestHandleSearchStatelessForwardsUnsatisfiedAndTruncated(t *testing.T) {
+	searcher := newFakeYoko()
+	searcher.responses <- &yokov1.Resolution{
+		Queries: []*yokov1.ResolvedQuery{{
+			OperationName: "getOrders",
+			Document:      "query GetOrders { orders { id } }",
+			OperationType: "query",
+			Description:   "Fetch orders.",
+		}},
+		Unsatisfied: []*yokov1.Unsatisfied{{Reason: "no field for that filter"}},
+		Truncated:   true,
+	}
+	srv := newSearchTestServer(t, true, searcher, newSearchTestStorage(t))
+
+	got, err := srv.handleSearch(context.Background(), searchToolRequest(t, "", map[string]any{
+		"prompts": []string{"orders"},
+	}))
+
+	require.NoError(t, err)
+	getOrdersBody := "query GetOrders { orders { id } }"
+	expectedJSON := mustJSON(t, legacyCatalogueResponse{
+		Operations: []legacyCatalogueOperation{{
+			Name:        storage.ShortSHA(getOrdersBody),
+			Body:        getOrdersBody,
+			Kind:        "Query",
+			Description: "Fetch orders.",
+		}},
+		Unsatisfied: []string{"no field for that filter"},
+		Truncated:   true,
+	})
+	assert.Equal(t, textToolResult(expectedJSON), got)
 }
 
 func TestHandleSearchFallsBackToStatelessWhenSessionIDMissing(t *testing.T) {
 	searcher := newFakeYoko()
-	searcher.responses <- &yokov1.SearchResponse{Operations: []*yokov1.GeneratedOperation{{
-		Name:        "getOrders",
-		Body:        "query GetOrders { orders { id } }",
-		Kind:        yokov1.OperationKind_OPERATION_KIND_QUERY,
-		Description: "Fetch orders.",
+	searcher.responses <- &yokov1.Resolution{Queries: []*yokov1.ResolvedQuery{{
+		OperationName: "getOrders",
+		Document:      "query GetOrders { orders { id } }",
+		OperationType: "query",
+		Description:   "Fetch orders.",
 	}}}
 	store := newSearchTestStorage(t)
 	srv := newSearchTestServer(t, false, searcher, store)
@@ -202,30 +340,37 @@ func TestHandleSearchFallsBackToStatelessWhenSessionIDMissing(t *testing.T) {
 	}))
 
 	require.NoError(t, err)
-	expectedJSON := mustJSON(t, []legacyCatalogueEntry{{
-		Name:        "getOrders",
-		Body:        "query GetOrders { orders { id } }",
-		Kind:        "Query",
-		Description: "Fetch orders.",
-		Variables:   nil,
-	}})
+	getOrdersBody := "query GetOrders { orders { id } }"
+	expectedJSON := mustJSON(t, legacyCatalogueResponse{
+		Operations: []legacyCatalogueOperation{{
+			Name:        storage.ShortSHA(getOrdersBody),
+			Body:        getOrdersBody,
+			Kind:        "Query",
+			Description: "Fetch orders.",
+		}},
+	})
 	assert.Equal(t, textToolResult(expectedJSON), got)
 	assert.Equal(t, []storage.SessionOp(nil), store.opsSnapshot("session-1"))
 }
 
-func TestHandleSearchNamingCollisionUsesFinalStoredName(t *testing.T) {
+func TestHandleSearchSameDocumentNameDifferentBodiesRegistersBoth(t *testing.T) {
+	// Regression: yoko regenerates the same document name with a different
+	// body. With SHA-based identity each body lands as its own entry —
+	// previously the new body was silently dropped under the old name.
 	searcher := newFakeYoko()
-	searcher.responses <- &yokov1.SearchResponse{Operations: []*yokov1.GeneratedOperation{{
-		Name:        "getOrders",
-		Body:        "query GetOrdersAgain { orders { total } }",
-		Kind:        yokov1.OperationKind_OPERATION_KIND_QUERY,
-		Description: "Fetch order totals.",
+	searcher.responses <- &yokov1.Resolution{Queries: []*yokov1.ResolvedQuery{{
+		OperationName: "getOrders",
+		Document:      "query getOrders { orders { id total } }",
+		OperationType: "query",
+		Description:   "Fetch order totals.",
 	}}}
 	store := newSearchTestStorage(t)
+	originalBody := "query getOrders { orders { id } }"
 	_, err := store.Append(context.Background(), "session-1", []storage.SessionOp{{
-		Name: "getOrders",
-		Body: "query GetOrders { orders { id } }",
-		Kind: storage.OperationKindQuery,
+		Name:         storage.ShortSHA(originalBody),
+		Body:         originalBody,
+		Kind:         storage.OperationKindQuery,
+		DocumentName: "getOrders",
 	}})
 	require.NoError(t, err)
 	srv := newSearchTestServer(t, false, searcher, store)
@@ -235,19 +380,72 @@ func TestHandleSearchNamingCollisionUsesFinalStoredName(t *testing.T) {
 	}))
 
 	require.NoError(t, err)
-	wantOps := []storage.SessionOp{
-		{Name: "getOrders", Body: "query GetOrders { orders { id } }", Kind: storage.OperationKindQuery},
-		{Name: "getOrders_2", Body: "query GetOrdersAgain { orders { total } }", Kind: storage.OperationKindQuery, Description: "Fetch order totals."},
+	newBody := "query getOrders { orders { id total } }"
+	newOp := storage.SessionOp{
+		Name:         storage.ShortSHA(newBody),
+		Body:         newBody,
+		Kind:         storage.OperationKindQuery,
+		DocumentName: "getOrders",
+		Description:  "Fetch order totals.",
 	}
-	wantFragment, err := tsgen.NewOpsFragment(wantOps[1:], searchHandlerTestSchema(t))
+	wantFragment, err := tsgen.NewOpsFragment([]storage.SessionOp{newOp}, searchHandlerTestSchema(t))
+	require.NoError(t, err)
+	assert.Equal(t, textToolResult(wantFragment), got)
+	assert.Equal(t, []storage.SessionOp{
+		{
+			Name:         storage.ShortSHA(originalBody),
+			Body:         originalBody,
+			Kind:         storage.OperationKindQuery,
+			DocumentName: "getOrders",
+		},
+		newOp,
+	}, store.opsSnapshot("session-1"))
+}
+
+func TestHandleSearchExistingOpsAreReRenderedOnRepeatPrompt(t *testing.T) {
+	// Regression for the fresh-context bug: when yoko returns ops that the
+	// session already has, the handler must still emit their TS declarations
+	// so a fresh model context can use them without introspecting `tools`.
+	body := "query GetOrders { orders { id } }"
+	sha := storage.ShortSHA(body)
+
+	searcher := newFakeYoko()
+	searcher.responses <- &yokov1.Resolution{Queries: []*yokov1.ResolvedQuery{{
+		OperationName: "GetOrders",
+		Document:      body,
+		OperationType: "query",
+		Description:   "Fetch orders.",
+	}}}
+	store := newSearchTestStorage(t)
+	_, err := store.Append(context.Background(), "session-1", []storage.SessionOp{{
+		Name:         sha,
+		Body:         body,
+		Kind:         storage.OperationKindQuery,
+		DocumentName: "GetOrders",
+	}})
+	require.NoError(t, err)
+	srv := newSearchTestServer(t, false, searcher, store)
+
+	got, err := srv.handleSearch(context.Background(), searchToolRequest(t, "session-1", map[string]any{
+		"prompts": []string{"orders"},
+	}))
+
+	require.NoError(t, err)
+	wantOps := []storage.SessionOp{{
+		Name:         sha,
+		Body:         body,
+		Kind:         storage.OperationKindQuery,
+		DocumentName: "GetOrders",
+	}}
+	wantFragment, err := tsgen.NewOpsFragment(wantOps, searchHandlerTestSchema(t))
 	require.NoError(t, err)
 	assert.Equal(t, textToolResult(wantFragment), got)
 	assert.Equal(t, wantOps, store.opsSnapshot("session-1"))
 }
 
-func TestHandleSearchEmptyYokoResponseIsSuccess(t *testing.T) {
+func TestHandleSearchEmptyYokoResponseReturnsNoQueriesMessage(t *testing.T) {
 	searcher := newFakeYoko()
-	searcher.responses <- &yokov1.SearchResponse{}
+	searcher.responses <- &yokov1.Resolution{}
 	srv := newSearchTestServer(t, false, searcher, newSearchTestStorage(t))
 
 	got, err := srv.handleSearch(context.Background(), searchToolRequest(t, "session-1", map[string]any{
@@ -255,7 +453,7 @@ func TestHandleSearchEmptyYokoResponseIsSuccess(t *testing.T) {
 	}))
 
 	require.NoError(t, err)
-	assert.Equal(t, textToolResult(emptySearchMessage), got)
+	assert.Equal(t, textToolResult(noQueriesFromYokoMessage), got)
 }
 
 func TestHandleSearchDoesNotRetryNotFoundFromSearcher(t *testing.T) {
@@ -289,10 +487,10 @@ func TestHandleSearchSingleFlight(t *testing.T) {
 	t.Run("identical calls share leader result", func(t *testing.T) {
 		searcher := newFakeYoko()
 		searcher.block = make(chan struct{})
-		searcher.responses <- &yokov1.SearchResponse{Operations: []*yokov1.GeneratedOperation{{
-			Name: "getOrders",
-			Body: "query GetOrders { orders { id } }",
-			Kind: yokov1.OperationKind_OPERATION_KIND_QUERY,
+		searcher.responses <- &yokov1.Resolution{Queries: []*yokov1.ResolvedQuery{{
+			OperationName: "getOrders",
+			Document:      "query GetOrders { orders { id } }",
+			OperationType: "query",
 		}}}
 		srv := newSearchTestServer(t, false, searcher, newSearchTestStorage(t))
 
@@ -328,8 +526,8 @@ func TestHandleSearchSingleFlight(t *testing.T) {
 
 	t.Run("different calls do not share result", func(t *testing.T) {
 		searcher := newFakeYoko()
-		searcher.responses <- &yokov1.SearchResponse{}
-		searcher.responses <- &yokov1.SearchResponse{}
+		searcher.responses <- &yokov1.Resolution{}
+		searcher.responses <- &yokov1.Resolution{}
 		srv := newSearchTestServer(t, false, searcher, newSearchTestStorage(t))
 
 		var wg sync.WaitGroup
@@ -351,8 +549,8 @@ func TestHandleSearchSingleFlight(t *testing.T) {
 	t.Run("ambiguous spacing prompt sets do not share result", func(t *testing.T) {
 		searcher := newFakeYoko()
 		searcher.block = make(chan struct{})
-		searcher.responses <- &yokov1.SearchResponse{}
-		searcher.responses <- &yokov1.SearchResponse{}
+		searcher.responses <- &yokov1.Resolution{}
+		searcher.responses <- &yokov1.Resolution{}
 		srv := newSearchTestServer(t, false, searcher, newSearchTestStorage(t))
 
 		var wg sync.WaitGroup
@@ -381,13 +579,13 @@ func TestHandleSearchSingleFlight(t *testing.T) {
 
 func TestHandleSearchRenderErrorIsToolError(t *testing.T) {
 	searcher := newFakeYoko()
-	searcher.responses <- &yokov1.SearchResponse{Operations: []*yokov1.GeneratedOperation{{
-		Name: "getOrders",
-		Body: "query GetOrders { orders { id } }",
-		Kind: yokov1.OperationKind_OPERATION_KIND_QUERY,
+	searcher.responses <- &yokov1.Resolution{Queries: []*yokov1.ResolvedQuery{{
+		OperationName: "getOrders",
+		Document:      "query GetOrders { orders { id } }",
+		OperationType: "query",
 	}}}
 	srv := newSearchTestServer(t, false, searcher, newSearchTestStorage(t))
-	srv.newOpsFragment = func([]storage.SessionOp, *ast.Document) (string, error) {
+	srv.opsFragment = func([]storage.SessionOp, *ast.Document) (string, error) {
 		return "", errors.New("render exploded")
 	}
 
@@ -396,7 +594,7 @@ func TestHandleSearchRenderErrorIsToolError(t *testing.T) {
 	}))
 
 	require.NoError(t, err)
-	assert.Equal(t, toolError("code_mode_search_tools: failed to render new ops: render exploded"), got)
+	assert.Equal(t, toolError("code_mode_search_tools: failed to render ops: render exploded"), got)
 }
 
 func TestHandleSearchCancelMaySurfaceLeaderCancellationToFollower(t *testing.T) {
@@ -440,29 +638,30 @@ func TestHandleSearchCancelMaySurfaceLeaderCancellationToFollower(t *testing.T) 
 }
 
 type searchCall struct {
-	sessionID string
-	prompts   []string
+	prompts []string
 }
 
 type fakeYoko struct {
-	mu        sync.Mutex
-	calls     []searchCall
-	responses chan *yokov1.SearchResponse
-	errs      chan error
-	block     chan struct{}
-	schema    string
+	mu                  sync.Mutex
+	calls               []searchCall
+	responses           chan *yokov1.Resolution
+	errs                chan error
+	block               chan struct{}
+	schema              string
+	ensureIndexedCalled int
+	ensureIndexedErr    error
 }
 
 func newFakeYoko() *fakeYoko {
 	return &fakeYoko{
-		responses: make(chan *yokov1.SearchResponse, 16),
+		responses: make(chan *yokov1.Resolution, 16),
 		errs:      make(chan error, 16),
 	}
 }
 
-func (f *fakeYoko) Search(ctx context.Context, sessionID string, prompts []string) (*yokov1.SearchResponse, error) {
+func (f *fakeYoko) Search(ctx context.Context, prompts []string) (*yokov1.Resolution, error) {
 	f.mu.Lock()
-	f.calls = append(f.calls, searchCall{sessionID: sessionID, prompts: append([]string(nil), prompts...)})
+	f.calls = append(f.calls, searchCall{prompts: append([]string(nil), prompts...)})
 	f.mu.Unlock()
 
 	if f.block != nil {
@@ -482,7 +681,7 @@ func (f *fakeYoko) Search(ctx context.Context, sessionID string, prompts []strin
 	case response := <-f.responses:
 		return response, nil
 	default:
-		return &yokov1.SearchResponse{}, nil
+		return &yokov1.Resolution{}, nil
 	}
 }
 
@@ -498,6 +697,22 @@ func (f *fakeYoko) Schema() string {
 	return f.schema
 }
 
+// EnsureIndexed records that eager warm-up was requested and returns the
+// stubbed ensureIndexedErr (nil by default). The fake does not model an
+// index cache; the body is otherwise a no-op.
+func (f *fakeYoko) EnsureIndexed(context.Context) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.ensureIndexedCalled++
+	return f.ensureIndexedErr
+}
+
+func (f *fakeYoko) ensureIndexedCallCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.ensureIndexedCalled
+}
+
 func (f *fakeYoko) callCount() int {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -509,7 +724,7 @@ func (f *fakeYoko) callsSnapshot() []searchCall {
 	defer f.mu.Unlock()
 	calls := make([]searchCall, 0, len(f.calls))
 	for _, call := range f.calls {
-		calls = append(calls, searchCall{sessionID: call.sessionID, prompts: append([]string(nil), call.prompts...)})
+		calls = append(calls, searchCall{prompts: append([]string(nil), call.prompts...)})
 	}
 	return calls
 }
@@ -535,19 +750,23 @@ func (s *searchTestStorage) Append(ctx context.Context, sessionID string, ops []
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	taken := make(map[string]struct{}, len(s.ops[sessionID])+len(ops))
-	for _, op := range s.ops[sessionID] {
-		taken[op.Name] = struct{}{}
+	byBody := make(map[string]storage.SessionOp, len(s.ops[sessionID])+len(ops))
+	for _, existing := range s.ops[sessionID] {
+		byBody[storage.CanonicalBody(existing.Body)] = existing
 	}
 
-	appended := make([]storage.SessionOp, 0, len(ops))
+	resolved := make([]storage.SessionOp, 0, len(ops))
 	for _, op := range ops {
-		op.Name = storage.SuffixedName(storage.NormalizeName(op.Name), taken)
-		taken[op.Name] = struct{}{}
+		canonical := storage.CanonicalBody(op.Body)
+		if existing, ok := byBody[canonical]; ok {
+			resolved = append(resolved, existing)
+			continue
+		}
 		s.ops[sessionID] = append(s.ops[sessionID], op)
-		appended = append(appended, op)
+		byBody[canonical] = op
+		resolved = append(resolved, op)
 	}
-	return appended, nil
+	return resolved, nil
 }
 
 func (s *searchTestStorage) GetOp(_ context.Context, sessionID string, name string) (storage.SessionOp, bool, error) {
@@ -608,14 +827,6 @@ func (s *searchTestStorage) opsSnapshot(sessionID string) []storage.SessionOp {
 	return append([]storage.SessionOp(nil), s.ops[sessionID]...)
 }
 
-type legacyCatalogueEntry struct {
-	Name        string  `json:"name"`
-	Body        string  `json:"body"`
-	Kind        string  `json:"kind"`
-	Description string  `json:"description"`
-	Variables   *string `json:"variables"`
-}
-
 func newSearchTestServer(t *testing.T, stateless bool, searcher *fakeYoko, store *searchTestStorage) *Server {
 	t.Helper()
 	srv, err := New(Config{
@@ -648,10 +859,6 @@ func textToolResult(text string) *mcp.CallToolResult {
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: text}},
 	}
-}
-
-func ptrString(value string) *string {
-	return &value
 }
 
 func searchHandlerTestSchema(t *testing.T) *ast.Document {

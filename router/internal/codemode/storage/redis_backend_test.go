@@ -67,33 +67,116 @@ func TestRedisBackendAppendGetOpRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	backend, _, _ := newTestRedisBackend(t, nil, time.Hour)
 
+	queryBody := "query GetUser { user { id } }"
+	mutationBody := "mutation DeleteUser { deleteUser(id: 1) }"
+	querySHA := ShortSHA(queryBody)
+	mutationSHA := ShortSHA(mutationBody)
+
 	ops := []SessionOp{
-		{Name: "get-user", Body: "query GetUser { user { id } }", Kind: OperationKindQuery, Description: "Fetch a user"},
-		{Name: "op_delete", Body: "mutation DeleteUser { deleteUser(id: 1) }", Kind: OperationKindMutation, Description: "Delete a user"},
-		{Name: "get-user", Body: "query GetUserAgain { user { name } }", Kind: OperationKindQuery, Description: "Fetch user name"},
+		{Name: querySHA, Body: queryBody, Kind: OperationKindQuery, Description: "Fetch a user"},
+		{Name: mutationSHA, Body: mutationBody, Kind: OperationKindMutation, Description: "Delete a user"},
 	}
 	appended, err := backend.Append(ctx, "session-1", ops)
 	require.NoError(t, err)
-	assert.Equal(t, []SessionOp{
-		{Name: "getUser", Body: "query GetUser { user { id } }", Kind: OperationKindQuery, Description: "Fetch a user"},
-		{Name: "op_delete", Body: "mutation DeleteUser { deleteUser(id: 1) }", Kind: OperationKindMutation, Description: "Delete a user"},
-		{Name: "getUser_2", Body: "query GetUserAgain { user { name } }", Kind: OperationKindQuery, Description: "Fetch user name"},
-	}, appended)
+	assert.Equal(t, ops, appended)
 
-	gotQuery, ok, err := backend.GetOp(ctx, "session-1", "getUser")
+	gotQuery, ok, err := backend.GetOp(ctx, "session-1", querySHA)
 	require.NoError(t, err)
 	assert.Equal(t, true, ok)
-	assert.Equal(t, SessionOp{Name: "getUser", Body: "query GetUser { user { id } }", Kind: OperationKindQuery, Description: "Fetch a user"}, gotQuery)
+	assert.Equal(t, ops[0], gotQuery)
 
-	gotCollision, ok, err := backend.GetOp(ctx, "session-1", "getUser_2")
+	gotMutation, ok, err := backend.GetOp(ctx, "session-1", mutationSHA)
 	require.NoError(t, err)
 	assert.Equal(t, true, ok)
-	assert.Equal(t, SessionOp{Name: "getUser_2", Body: "query GetUserAgain { user { name } }", Kind: OperationKindQuery, Description: "Fetch user name"}, gotCollision)
+	assert.Equal(t, ops[1], gotMutation)
 
 	gotMissing, ok, err := backend.GetOp(ctx, "session-1", "missing")
 	require.NoError(t, err)
 	assert.Equal(t, false, ok)
 	assert.Equal(t, SessionOp{}, gotMissing)
+}
+
+func TestRedisBackendAppendIdempotentOnIdenticalBody(t *testing.T) {
+	ctx := context.Background()
+	backend, _, _ := newTestRedisBackend(t, nil, time.Hour)
+
+	body := "query GetUser { user { id } }"
+	sha := ShortSHA(body)
+
+	first, err := backend.Append(ctx, "s1", []SessionOp{
+		{Name: sha, Body: body, Kind: OperationKindQuery, Description: "v1"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []SessionOp{
+		{Name: sha, Body: body, Kind: OperationKindQuery, Description: "v1"},
+	}, first)
+
+	// Whitespace-only differences canonicalize to the same SHA, so the
+	// backend reuses the first registration.
+	second, err := backend.Append(ctx, "s1", []SessionOp{
+		{Name: sha, Body: "  query GetUser {\n  user { id }\n}\n", Kind: OperationKindQuery, Description: "v2"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []SessionOp{
+		{Name: sha, Body: body, Kind: OperationKindQuery, Description: "v1"},
+	}, second)
+
+	names, err := backend.ListNames(ctx, "s1")
+	require.NoError(t, err)
+	assert.Equal(t, []string{sha}, names)
+}
+
+func TestRedisBackendAppendDedupsBodyAcrossPromptNames(t *testing.T) {
+	ctx := context.Background()
+	backend, _, _ := newTestRedisBackend(t, nil, time.Hour)
+
+	body := "query GetUser { user { id } }"
+	sha := ShortSHA(body)
+
+	_, err := backend.Append(ctx, "s1", []SessionOp{
+		{Name: sha, Body: body, Kind: OperationKindQuery, DocumentName: "GetUser"},
+	})
+	require.NoError(t, err)
+
+	second, err := backend.Append(ctx, "s1", []SessionOp{
+		{Name: sha, Body: body, Kind: OperationKindQuery, DocumentName: "FetchUser"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []SessionOp{
+		{Name: sha, Body: body, Kind: OperationKindQuery, DocumentName: "GetUser"},
+	}, second)
+
+	names, err := backend.ListNames(ctx, "s1")
+	require.NoError(t, err)
+	assert.Equal(t, []string{sha}, names)
+}
+
+func TestRedisBackendAppendDifferentBodiesGetSeparateEntries(t *testing.T) {
+	ctx := context.Background()
+	backend, _, _ := newTestRedisBackend(t, nil, time.Hour)
+
+	bodyV1 := "query GetUser { user { id } }"
+	bodyV2 := "query GetUser { user { name } }"
+	shaV1 := ShortSHA(bodyV1)
+	shaV2 := ShortSHA(bodyV2)
+	require.NotEqual(t, shaV1, shaV2)
+
+	_, err := backend.Append(ctx, "s1", []SessionOp{
+		{Name: shaV1, Body: bodyV1, Kind: OperationKindQuery, DocumentName: "GetUser"},
+	})
+	require.NoError(t, err)
+
+	resolved, err := backend.Append(ctx, "s1", []SessionOp{
+		{Name: shaV2, Body: bodyV2, Kind: OperationKindQuery, DocumentName: "GetUser"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []SessionOp{
+		{Name: shaV2, Body: bodyV2, Kind: OperationKindQuery, DocumentName: "GetUser"},
+	}, resolved)
+
+	names, err := backend.ListNames(ctx, "s1")
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{shaV1, shaV2}, names)
 }
 
 func TestRedisBackendBundleRendersAndReadsFromCache(t *testing.T) {
@@ -104,17 +187,19 @@ func TestRedisBackendBundleRendersAndReadsFromCache(t *testing.T) {
 		return fmt.Sprintf("render-%d:%s", renders.Load(), ops[0].Name), nil
 	}), time.Hour)
 
-	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: "getUser", Body: "query { user { id } }", Kind: OperationKindQuery}})
+	body := "query { user { id } }"
+	sha := ShortSHA(body)
+	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: sha, Body: body, Kind: OperationKindQuery}})
 	require.NoError(t, err)
 
 	first, err := backend.Bundle(ctx, "session-1")
 	require.NoError(t, err)
-	assert.Equal(t, "render-1:getUser", first)
+	assert.Equal(t, "render-1:"+sha, first)
 	assert.Equal(t, true, mr.Exists(backend.bundleKey("session-1")))
 
 	second, err := backend.Bundle(ctx, "session-1")
 	require.NoError(t, err)
-	assert.Equal(t, "render-1:getUser", second)
+	assert.Equal(t, "render-1:"+sha, second)
 	assert.Equal(t, int64(1), renders.Load())
 }
 
@@ -122,7 +207,9 @@ func TestRedisBackendResetClearsOpsAndBundleKeys(t *testing.T) {
 	ctx := context.Background()
 	backend, mr, _ := newTestRedisBackend(t, nil, time.Hour)
 
-	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: "getUser", Body: "query { user { id } }", Kind: OperationKindQuery}})
+	body := "query { user { id } }"
+	sha := ShortSHA(body)
+	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: sha, Body: body, Kind: OperationKindQuery}})
 	require.NoError(t, err)
 	_, err = backend.Bundle(ctx, "session-1")
 	require.NoError(t, err)
@@ -146,7 +233,9 @@ func TestRedisBackendSetSchemaRotatesKeysAndKeepsOldKeysUntilTTL(t *testing.T) {
 	}), time.Hour)
 	backend.SetSchema(schemaA)
 
-	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: "getUser", Body: "query { user { id } }", Kind: OperationKindQuery}})
+	body := "query { user { id } }"
+	sha := ShortSHA(body)
+	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: sha, Body: body, Kind: OperationKindQuery}})
 	require.NoError(t, err)
 	oldOpsKey := backend.opsKey("session-1")
 	oldBundleKey := backend.bundleKey("session-1")
@@ -164,7 +253,7 @@ func TestRedisBackendSetSchemaRotatesKeysAndKeepsOldKeysUntilTTL(t *testing.T) {
 	assert.Equal(t, true, mr.Exists(oldOpsKey))
 	assert.Equal(t, true, mr.Exists(oldBundleKey))
 
-	_, err = backend.Append(ctx, "session-1", []SessionOp{{Name: "getUser", Body: "query { user { id } }", Kind: OperationKindQuery}})
+	_, err = backend.Append(ctx, "session-1", []SessionOp{{Name: sha, Body: body, Kind: OperationKindQuery}})
 	require.NoError(t, err)
 	second, err := backend.Bundle(ctx, "session-1")
 	require.NoError(t, err)
@@ -181,13 +270,18 @@ func TestRedisBackendConcurrentAppendRetriesWatchConflicts(t *testing.T) {
 
 	var wg sync.WaitGroup
 	errs := make(chan error, goroutines)
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		wg.Add(1)
 		go func(worker int) {
 			defer wg.Done()
 			ops := make([]SessionOp, 0, opsPerGoroutine)
-			for j := 0; j < opsPerGoroutine; j++ {
-				ops = append(ops, SessionOp{Name: fmt.Sprintf("op_%02d_%02d", worker, j), Body: "query { ok }", Kind: OperationKindQuery})
+			for j := range opsPerGoroutine {
+				body := fmt.Sprintf("query Q_%02d_%02d { f_%02d_%02d }", worker, j, worker, j)
+				ops = append(ops, SessionOp{
+					Name: ShortSHA(body),
+					Body: body,
+					Kind: OperationKindQuery,
+				})
 			}
 			_, err := backend.Append(ctx, "session-1", ops)
 			errs <- err
@@ -212,7 +306,8 @@ func TestRedisBackendAppendAbandonsOnContextDone(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
 	defer cancel()
 
-	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: "getUser", Body: "query { user { id } }", Kind: OperationKindQuery}})
+	body := "query { user { id } }"
+	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: ShortSHA(body), Body: body, Kind: OperationKindQuery}})
 
 	require.Error(t, err)
 	assert.Equal(t, true, errors.Is(err, context.DeadlineExceeded))
@@ -222,7 +317,8 @@ func TestRedisBackendExpiresKeysOnWrites(t *testing.T) {
 	ctx := context.Background()
 	backend, mr, _ := newTestRedisBackend(t, nil, 10*time.Second)
 
-	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: "getUser", Body: "query { user { id } }", Kind: OperationKindQuery}})
+	body := "query { user { id } }"
+	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: ShortSHA(body), Body: body, Kind: OperationKindQuery}})
 	require.NoError(t, err)
 	opsKey := backend.opsKey("session-1")
 	assert.Equal(t, 10*time.Second, mr.TTL(opsKey))
@@ -242,7 +338,9 @@ func TestRedisBackendBundleWriteBackIsBestEffort(t *testing.T) {
 	backend, mr, _ := newTestRedisBackend(t, testRedisRenderer(func(_ context.Context, ops []SessionOp, _ *ast.Document) (string, error) {
 		return "rendered:" + ops[0].Name, nil
 	}), time.Hour)
-	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: "getUser", Body: "query { user { id } }", Kind: OperationKindQuery}})
+	body := "query { user { id } }"
+	sha := ShortSHA(body)
+	_, err := backend.Append(ctx, "session-1", []SessionOp{{Name: sha, Body: body, Kind: OperationKindQuery}})
 	require.NoError(t, err)
 
 	mr.Server().SetPreHook(func(c *miniredisserver.Peer, cmd string, _ ...string) bool {
@@ -259,6 +357,6 @@ func TestRedisBackendBundleWriteBackIsBestEffort(t *testing.T) {
 	bundle, err := backend.Bundle(ctx, "session-1")
 
 	require.NoError(t, err)
-	assert.Equal(t, "rendered:getUser", bundle)
+	assert.Equal(t, "rendered:"+sha, bundle)
 	assert.Equal(t, false, mr.Exists(backend.bundleKey("session-1")))
 }
