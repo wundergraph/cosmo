@@ -875,7 +875,8 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
-	s.cancel()
+	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
+	defer s.cancel()
 
 	s.planCache.Close()
 	s.planFallbackCache.Close()
@@ -1987,7 +1988,7 @@ func (s *graphServer) wait(ctx context.Context) error {
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
 func (s *graphServer) Shutdown(ctx context.Context) error {
 	// Cancel the context after the graceful shutdown is done
-	// to clean up resources like websocket connections, pools, etc.
+	// to clean up resources.
 	defer s.graphServerCancel()
 
 	s.logger.Debug("Shutdown of graph server initiated. Waiting for in-flight requests to finish.",
