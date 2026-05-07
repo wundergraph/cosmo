@@ -1,0 +1,96 @@
+import { type FieldData, type InputValueData, type ParentDefinitionData } from '../../schema-building/types/types';
+import {
+  type ArgumentName,
+  type DirectiveName,
+  type FieldName,
+  type SubgraphName,
+  type TypeName,
+} from '../../types/types';
+
+export type IncompatibleMergedTypesErrorParams = {
+  actualType: string;
+  expectedType: string;
+  coords: string;
+  isArgument?: boolean;
+};
+
+export type InvalidNamedTypeErrorParams = {
+  data: FieldData | InputValueData;
+  namedTypeData: ParentDefinitionData;
+  nodeType: string;
+};
+
+export type SemanticNonNullLevelsIndexOutOfBoundsErrorParams = {
+  maxIndex: number;
+  typeString: string;
+  value: string;
+};
+
+export type SemanticNonNullLevelsNonNullErrorParams = {
+  typeString: string;
+  value: string;
+};
+
+export type OneOfRequiredFieldsErrorParams = {
+  requiredFieldNames: Array<FieldName>;
+  typeName: TypeName;
+};
+
+export type IncompatibleParentTypeMergeErrorParams = {
+  existingData: ParentDefinitionData;
+  incomingSubgraphName: SubgraphName;
+  incomingNodeType?: string;
+};
+
+export type IncompatibleTypeWithProvidesErrorMessageParams = {
+  fieldCoords: string;
+  responseType: TypeName;
+  subgraphName: SubgraphName;
+};
+
+export type NonExternalConditionalFieldErrorParams = {
+  directiveCoords: string;
+  fieldSet: string;
+  directiveName: DirectiveName;
+  subgraphName: SubgraphName;
+  targetCoords: string;
+};
+
+export type invalidVersionLinkDirectiveUrlErrorParams = {
+  url: string;
+  versionString: string;
+};
+
+export type InvalidSubValueFieldLinkDirectiveImportErrorParams = {
+  fieldName: FieldName;
+  value: string;
+};
+
+export type InvalidLinkDirectiveImportObjectErrorParams = {
+  name: string;
+  rename: string;
+};
+
+export type InvalidCustomDirectiveErrorParams = {
+  directiveCoords: string;
+  directiveName: DirectiveName;
+  errors: Array<Error>;
+  ordinal: string;
+};
+
+export type InvalidDirectiveLocationErrorParams = {
+  directiveCoords: string;
+  directiveName: DirectiveName;
+  location: string;
+};
+
+export type InvalidRepeatedDirectiveErrorParams = {
+  directiveCoords: string;
+  directiveName: DirectiveName;
+};
+
+export type InvalidArgumentValueErrorParams = {
+  argumentName: ArgumentName;
+  value: string;
+  expectedTypeString: string;
+};

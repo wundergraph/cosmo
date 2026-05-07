@@ -151,7 +151,7 @@ func TestReload_ReservedToolNameCollision(t *testing.T) {
 		assert.Equal(t, "get_operation_info", entry.ContextMap()["conflicting_tool"])
 	}
 
-	assert.ElementsMatch(t, []string{"get_schema", "list_employees", "get_operation_info"}, srv.registeredTools)
+	assert.ElementsMatch(t, []string{"get_schema", "list_employees", "get_operation_info", "code_mode_run_js"}, srv.registeredTools)
 }
 
 func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
@@ -193,5 +193,6 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 		"execute_operation_get_operation_info",
 		"execute_operation_list_employees",
 		"get_operation_info",
+		"code_mode_run_js",
 	}, srv.registeredTools)
 }

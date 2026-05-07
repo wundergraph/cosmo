@@ -26,6 +26,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/internal/codemode/sandbox"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -157,6 +158,10 @@ type GraphQLSchemaServer struct {
 	lastToolFingerprints map[string]string
 	// ctx is the per-server context (cancelled on Stop) — used for operation watchers.
 	ctx context.Context
+	// codeModeSandbox is the V8 isolate used by the code_mode_run_js tool.
+	// Lazily initialized on first use; reused across reloads since it only
+	// depends on the upstream endpoint, not the op catalog.
+	codeModeSandbox *sandbox.Sandbox
 }
 
 // desiredTool bundles a Tool spec, its handler, and a content fingerprint so
@@ -930,6 +935,18 @@ func (s *GraphQLSchemaServer) buildDesiredTools() (map[string]desiredTool, error
 		tool:        getOpInfo,
 		handler:     s.handleGraphQLOperationInfo(),
 		fingerprint: fingerprintTool(getOpInfo, ""),
+	}
+
+	// code_mode_run_js — when at least one operation is loaded, expose a single
+	// V8-sandboxed tool where every operation is bound as `tools.<name>(vars)`.
+	// Lets an LLM compose multiple ops in one round-trip instead of N MCP calls.
+	if len(operations) > 0 {
+		codeModeTool := s.codeModeToolDescriptor()
+		desired[codeModeTool.Name] = desiredTool{
+			tool:        codeModeTool,
+			handler:     s.handleCodeModeRunJS(),
+			fingerprint: fingerprintTool(codeModeTool, fmt.Sprintf("ops=%d", len(operations))),
+		}
 	}
 
 	return desired, nil

@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	connectrpc.com/connect v1.19.1
 	github.com/MicahParks/jwkset v0.11.0
+	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/buger/jsonparser v1.1.2
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -25,11 +26,12 @@ require (
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/astjson v1.1.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20260213130455-6e3277e7b850
+	github.com/wundergraph/cosmo/demo v0.0.0-20260323091151-a7de617c31d0
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
-	github.com/wundergraph/cosmo/router v0.0.0-20260318232543-0e5fa811a191
+	github.com/wundergraph/cosmo/router v0.0.0-20260323091151-a7de617c31d0
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0
+	github.com/wundergraph/cosmo/speedtrap v0.0.0-00010101000000-000000000000
+	github.com/wundergraph/graphql-go-tools/v2 v2.1.0
 	go.opentelemetry.io/otel v1.39.0
 	go.opentelemetry.io/otel/sdk v1.39.0
 	go.opentelemetry.io/otel/sdk/metric v1.39.0
@@ -50,6 +52,7 @@ require (
 	github.com/KimMachineGun/automemlimit v0.6.1 // indirect
 	github.com/MicahParks/keyfunc/v3 v3.6.2 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
+	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
@@ -60,7 +63,7 @@ require (
 	github.com/cep21/circuit/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cilium/ebpf v0.16.0 // indirect
-	github.com/coder/websocket v1.8.13 // indirect
+	github.com/coder/websocket v1.8.14 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
@@ -73,7 +76,9 @@ require (
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/evanw/esbuild v0.27.3 // indirect
 	github.com/expr-lang/expr v1.17.7 // indirect
+	github.com/fastschema/qjs v0.0.6 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-chi/chi/v5 v5.2.2 // indirect
@@ -102,6 +107,7 @@ require (
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/jensneuse/abstractlogger v0.0.4 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56 // indirect
+	github.com/kinbiko/jsonassert v1.2.0 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
@@ -132,7 +138,7 @@ require (
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/r3labs/sse/v2 v2.8.1 // indirect
-	github.com/rs/xid v1.5.0 // indirect
+	github.com/rs/xid v1.6.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
@@ -144,6 +150,8 @@ require (
 	github.com/sosodev/duration v1.3.1 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/tdewolff/parse/v2 v2.8.12 // indirect
+	github.com/tetratelabs/wazero v1.9.0 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
@@ -159,6 +167,7 @@ require (
 	github.com/wundergraph/go-arena v1.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0 // indirect
@@ -215,5 +224,6 @@ replace (
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects => ../demo/pkg/subgraphs/projects
 	github.com/wundergraph/cosmo/router => ../router
 	github.com/wundergraph/cosmo/router-plugin => ../router-plugin
-// github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+	github.com/wundergraph/cosmo/speedtrap => ../speedtrap
+//github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
 )

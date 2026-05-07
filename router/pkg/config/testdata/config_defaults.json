@@ -161,6 +161,43 @@
     "Session": {
       "Stateless": true
     },
+    "CodeMode": {
+      "Enabled": false,
+      "Server": {
+        "ListenAddr": "localhost:5027"
+      },
+      "RequireMutationApproval": true,
+      "ExecuteTimeout": 120000000000,
+      "MaxResultBytes": 32768,
+      "Sandbox": {
+        "Timeout": 5000000000,
+        "MaxMemoryMB": 16,
+        "MaxInputSizeBytes": 65536,
+        "MaxOutputSizeBytes": 1048576
+      },
+      "QueryGeneration": {
+        "Enabled": false,
+        "Endpoint": "",
+        "Timeout": 10000000000,
+        "Auth": {
+          "Type": "static",
+          "StaticToken": "",
+          "TokenEndpoint": "",
+          "ClientID": "",
+          "ClientSecret": ""
+        }
+      },
+      "NamedOps": {
+        "Enabled": false,
+        "SessionTTL": 1800000000000,
+        "MaxSessions": 1000,
+        "MaxBundleBytes": 262144,
+        "Storage": {
+          "ProviderID": "",
+          "KeyPrefix": "cosmo_code_mode"
+        }
+      }
+    },
     "GraphName": "mygraph",
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
@@ -447,13 +484,6 @@
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,
     "EnableNetPoll": true,
-    "WebSocketClientPollTimeout": 1000000000,
-    "WebSocketClientConnBufferSize": 128,
-    "WebSocketClientReadTimeout": 5000000000,
-    "WebSocketClientWriteTimeout": 10000000000,
-    "WebSocketClientPingInterval": 15000000000,
-    "WebSocketClientPingTimeout": 30000000000,
-    "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
     "SlowPlanCacheSize": 300,
     "SlowPlanCacheThreshold": 100000000,
@@ -471,6 +501,15 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "WebSocketServerReadTimeout": 5000000000,
+    "WebSocketServerWriteTimeout": 10000000000,
+    "WebSocketServerPollTimeout": 1000000000,
+    "WebSocketServerConnBufferSize": 128,
+    "WebSocketClientWriteTimeout": 10000000000,
+    "WebSocketClientReadLimit": 1000000,
+    "WebSocketClientPingInterval": 15000000000,
+    "WebSocketClientPingTimeout": 30000000000,
+    "WebSocketClientAckTimeout": 30000000000,
     "ValidateRequiredExternalFields": false,
     "RelaxSubgraphOperationFieldSelectionMergingNullability": false
   },

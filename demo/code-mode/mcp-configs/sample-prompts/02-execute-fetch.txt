@@ -1,0 +1,1 @@
+Use yoko. Search for an op that fetches an employee by id, then write a code_mode_run_js program that fetches employee 1 and returns the forename + surname.

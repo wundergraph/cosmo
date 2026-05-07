@@ -367,6 +367,10 @@ type Config struct {
 	MCP                                config.MCPConfiguration
 	MCPOperationsPath                  string
 	MCPAuthToken                       string // Optional Bearer token for MCP authentication
+	// CodeModeRedisURL, when paired with MCP.CodeMode.NamedOps.Storage.ProviderID,
+	// registers a Redis storage provider with that ID so the named-ops backend can
+	// resolve it from the central provider registry.
+	CodeModeRedisURL string
 	EnableRedis                        bool
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
@@ -434,8 +438,10 @@ type MCPConfig struct {
 	Port    int
 }
 
-var redisHost = "redis://localhost:6379"
-var redisClusterHost = "redis://localhost:7001"
+var (
+	redisHost        = "redis://localhost:6379"
+	redisClusterHost = "redis://localhost:7001"
+)
 
 // CreateTestSupervisorEnv is currently tailored specifically for /lifecycle/supervisor_test.go, refer to that test
 // for usage example. CreateTestSupervisorEnv is not a drop-in replacement for CreateTestEnv!
@@ -1383,9 +1389,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			PrintQueryPlans:            false,
 			EnableCacheResponseHeaders: true,
 		},
-		WebSocketClientPollTimeout:    300 * time.Millisecond,
-		WebSocketClientConnBufferSize: 1,
-		WebSocketClientReadTimeout:    1 * time.Second,
+		WebSocketServerPollTimeout:    300 * time.Millisecond,
+		WebSocketServerConnBufferSize: 1,
+		WebSocketServerReadTimeout:    1 * time.Second,
+		WebSocketServerWriteTimeout:   2 * time.Second,
 		WebSocketClientWriteTimeout:   2 * time.Second,
 		// Avoid get in conflict with any test that doesn't expect to handle pings
 		WebSocketClientPingInterval:    30 * time.Second,
@@ -1517,14 +1524,23 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		if testConfig.MCPOperationsPath != "" {
 			mcpOperationsPath = testConfig.MCPOperationsPath
 		}
-		routerOpts = append(routerOpts, core.WithStorageProviders(config.StorageProviders{
+		storageProviders := config.StorageProviders{
 			FileSystem: []config.FileSystemStorageProvider{
 				{
 					ID:   "test",
 					Path: mcpOperationsPath,
 				},
 			},
-		}))
+		}
+		// Append a Redis provider for code mode named ops when the test set a
+		// provider_id and supplied a URL via CodeModeRedisURL.
+		if id := testConfig.MCP.CodeMode.NamedOps.Storage.ProviderID; id != "" && testConfig.CodeModeRedisURL != "" {
+			storageProviders.Redis = append(storageProviders.Redis, config.RedisStorageProvider{
+				ID:   id,
+				URLs: []string{testConfig.CodeModeRedisURL},
+			})
+		}
+		routerOpts = append(routerOpts, core.WithStorageProviders(storageProviders))
 
 		testConfig.MCP.Storage.ProviderID = "test"
 
@@ -1850,10 +1866,10 @@ func grpcURL(endpoint string) string {
 	return "dns:///" + endpoint
 }
 
-func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v any) (err error) {
 	_, payload, err := conn.ReadMessage()
 	if err != nil {
-		return err
+		return fmt.Errorf("read message: %w", err)
 	}
 	if err := json.Unmarshal(payload, &v); err != nil {
 		t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
@@ -3015,6 +3031,8 @@ func ReadSSEField(t testing.TB, reader *bufio.Reader) string {
 }
 
 func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	t.Helper()
+
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
 	attempts := 0

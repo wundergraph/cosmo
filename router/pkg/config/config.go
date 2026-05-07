@@ -426,18 +426,11 @@ type EngineExecutionConfiguration struct {
 	ForceEnableInboundRequestDeduplication bool `envDefault:"false" env:"ENGINE_FORCE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"force_enable_inbound_request_deduplication"`
 	EnableRequestTracing                   bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
 
-	// EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
+	// Deprecated: EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
 	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 
 	MaxConcurrentResolvers                           int           `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
 	EnableNetPoll                                    bool          `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
-	WebSocketClientPollTimeout                       time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
-	WebSocketClientConnBufferSize                    int           `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
-	WebSocketClientReadTimeout                       time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
-	WebSocketClientWriteTimeout                      time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
-	WebSocketClientPingInterval                      time.Duration `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
-	WebSocketClientPingTimeout                       time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
-	WebSocketClientFrameTimeout                      time.Duration `envDefault:"100ms" env:"ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT" yaml:"websocket_client_frame_timeout,omitempty"`
 	ExecutionPlanCacheSize                           int64         `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	SlowPlanCacheSize                                int64         `envDefault:"300" env:"ENGINE_SLOW_PLAN_CACHE_SIZE" yaml:"slow_plan_cache_size,omitempty"`
 	SlowPlanCacheThreshold                           time.Duration `envDefault:"100ms" env:"ENGINE_SLOW_PLAN_CACHE_THRESHOLD" yaml:"slow_plan_cache_threshold,omitempty"`
@@ -455,6 +448,19 @@ type EngineExecutionConfiguration struct {
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
+
+	// Server-side WebSocket handler options (router accepting client connections)
+	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
+	WebSocketServerWriteTimeout   time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT" yaml:"websocket_server_write_timeout,omitempty"`
+	WebSocketServerPollTimeout    time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT" yaml:"websocket_server_poll_timeout,omitempty"`
+	WebSocketServerConnBufferSize int           `envDefault:"128" env:"ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE" yaml:"websocket_server_conn_buffer_size,omitempty"`
+
+	// Subscription client options (router connecting to subgraphs)
+	WebSocketClientWriteTimeout time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
+	WebSocketClientReadLimit    BytesString   `envDefault:"1MB" env:"ENGINE_WEBSOCKET_CLIENT_READ_LIMIT" yaml:"websocket_client_read_limit,omitempty"`
+	WebSocketClientPingInterval time.Duration `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
+	WebSocketClientPingTimeout  time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
+	WebSocketClientAckTimeout   time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_ACK_TIMEOUT" yaml:"websocket_client_ack_timeout,omitempty"`
 
 	ValidateRequiredExternalFields bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
 
@@ -1136,15 +1142,16 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPConfiguration struct {
-	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	Server                    MCPServer        `yaml:"server,omitempty"`
-	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
-	Session                   MCPSessionConfig `yaml:"session,omitempty"`
-	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
-	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
-	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
-	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
-	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	Enabled                   bool                     `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer                `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig         `yaml:"storage,omitempty"`
+	Session                   MCPSessionConfig         `yaml:"session,omitempty"`
+	CodeMode                  MCPCodeModeConfiguration `yaml:"code_mode,omitempty" envPrefix:"MCP_CODE_MODE_"`
+	GraphName                 string                   `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool                     `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool                     `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool                     `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	RouterURL                 string                   `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
 	OmitToolNamePrefix bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
@@ -1294,6 +1301,56 @@ type MCPOAuthScopesConfiguration struct {
 
 type MCPSessionConfig struct {
 	Stateless bool `yaml:"stateless" envDefault:"true" env:"MCP_SESSION_STATELESS"`
+}
+
+type MCPCodeModeConfiguration struct {
+	Enabled                 bool                      `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Server                  MCPCodeModeServerConfig   `yaml:"server,omitempty" envPrefix:""`
+	RequireMutationApproval bool                      `yaml:"require_mutation_approval" envDefault:"true" env:"REQUIRE_MUTATION_APPROVAL"`
+	ExecuteTimeout          time.Duration             `yaml:"execute_timeout" envDefault:"120s" env:"EXECUTE_TIMEOUT"`
+	MaxResultBytes          int                       `yaml:"max_result_bytes" envDefault:"32768" env:"MAX_RESULT_BYTES"`
+	Sandbox                 MCPCodeModeSandboxConfig  `yaml:"sandbox,omitempty" envPrefix:"SANDBOX_"`
+	QueryGeneration         MCPCodeModeQueryGenConfig `yaml:"query_generation,omitempty" envPrefix:"QUERY_GENERATION_"`
+	NamedOps                MCPCodeModeNamedOpsConfig `yaml:"named_ops,omitempty" envPrefix:"NAMED_OPS_"`
+}
+
+type MCPCodeModeServerConfig struct {
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5027" env:"LISTEN_ADDR"`
+}
+
+type MCPCodeModeSandboxConfig struct {
+	Timeout            time.Duration `yaml:"timeout" envDefault:"5s" env:"TIMEOUT"`
+	MaxMemoryMB        int           `yaml:"max_memory_mb" envDefault:"16" env:"MAX_MEMORY_MB"`
+	MaxInputSizeBytes  int           `yaml:"max_input_size_bytes" envDefault:"65536" env:"MAX_INPUT_SIZE_BYTES"`
+	MaxOutputSizeBytes int           `yaml:"max_output_size_bytes" envDefault:"1048576" env:"MAX_OUTPUT_SIZE_BYTES"`
+}
+
+type MCPCodeModeQueryGenConfig struct {
+	Enabled  bool                          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Endpoint string                        `yaml:"endpoint,omitempty" env:"ENDPOINT"`
+	Timeout  time.Duration                 `yaml:"timeout" envDefault:"10s" env:"TIMEOUT"`
+	Auth     MCPCodeModeQueryGenAuthConfig `yaml:"auth,omitempty" envPrefix:"AUTH_"`
+}
+
+type MCPCodeModeQueryGenAuthConfig struct {
+	Type          string `yaml:"type" envDefault:"static" env:"TYPE"`
+	StaticToken   string `yaml:"static_token,omitempty" env:"STATIC_TOKEN"`
+	TokenEndpoint string `yaml:"token_endpoint,omitempty" env:"TOKEN_ENDPOINT"`
+	ClientID      string `yaml:"client_id,omitempty" env:"CLIENT_ID"`
+	ClientSecret  string `yaml:"client_secret,omitempty" env:"CLIENT_SECRET"`
+}
+
+type MCPCodeModeNamedOpsConfig struct {
+	Enabled        bool                             `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	SessionTTL     time.Duration                    `yaml:"session_ttl" envDefault:"30m" env:"SESSION_TTL"`
+	MaxSessions    int                              `yaml:"max_sessions" envDefault:"1000" env:"MAX_SESSIONS"`
+	MaxBundleBytes int                              `yaml:"max_bundle_bytes" envDefault:"262144" env:"MAX_BUNDLE_BYTES"`
+	Storage        MCPCodeModeNamedOpsStorageConfig `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
+}
+
+type MCPCodeModeNamedOpsStorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	KeyPrefix  string `yaml:"key_prefix" envDefault:"cosmo_code_mode" env:"KEY_PREFIX"`
 }
 
 type MCPStorageConfig struct {
@@ -1560,6 +1617,10 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
 		cfg.Config.SubgraphErrorPropagation.OmitLocations = false
 		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
+	}
+
+	if err := ValidateMCPCodeMode(&cfg.Config.MCP.CodeMode, cfg.Config.MCP.Session.Stateless); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil
