@@ -2441,8 +2441,9 @@ type WebSocketMessage struct {
 }
 
 type GraphQLResponse struct {
-	Data   json.RawMessage `json:"data,omitempty"`
-	Errors []GraphQLError  `json:"errors,omitempty"`
+	Data       json.RawMessage `json:"data,omitempty"`
+	Errors     []GraphQLError  `json:"errors,omitempty"`
+	Extensions json.RawMessage `json:"extensions,omitempty"`
 }
 
 type GraphQLErrorExtensions struct {

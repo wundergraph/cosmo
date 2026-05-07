@@ -90,6 +90,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		PropagateFetchReasons:                  opts.RouterEngineConfig.Execution.EnableRequireFetchReasons,
 		ValidateRequiredExternalFields:         opts.RouterEngineConfig.Execution.ValidateRequiredExternalFields,
 		SetDeduplicationShardCountToGOMAXPROCS: true,
+		AllowCustomExtensionProperties:         opts.RouterEngineConfig.Execution.ExtensionForwarding.Enabled,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
@@ -107,6 +108,17 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 
 	if opts.ApolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled {
 		options.ApolloRouterCompatibilitySubrequestHTTPError = true
+	}
+
+	if allowedRootFields := opts.RouterEngineConfig.Execution.ExtensionForwarding.AllowedExtensionRootFields; len(allowedRootFields) > 0 {
+		options.ResolvableOptions.AllowedSubgraphExtensions = make(map[string]struct{})
+		for _, field := range allowedRootFields {
+			options.ResolvableOptions.AllowedSubgraphExtensions[field] = struct{}{}
+		}
+	}
+
+	if algorithm := string(opts.RouterEngineConfig.Execution.ExtensionForwarding.Algorithm); algorithm != "" {
+		options.ResolvableOptions.ExtensionForwardingAlgorithm = resolve.MapExtensionForwardingAlgorithm(algorithm)
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
