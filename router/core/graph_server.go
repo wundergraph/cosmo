@@ -876,7 +876,7 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
 	// cancel the graph muxes context to close its resources like websocket connections, resolvers, etc.
-	defer s.cancel()
+	s.cancel()
 
 	s.planCache.Close()
 	s.planFallbackCache.Close()
