@@ -94,6 +94,32 @@ func (r *queriesResolver) SharedThings(ctx context.Context, numOfA int, numOfB i
 	return things, nil
 }
 
+// SlicedThings is the resolver for the slicedThings field.
+func (r *queriesResolver) SlicedThings(ctx context.Context, first *int, last *int) ([]*model.Thing, error) {
+	const maxSliceSize = 1000
+	if first == nil && last == nil {
+		return nil, nil
+	}
+	var size int
+	// just pick the first non-nil value
+	if first != nil {
+		size = *first
+	} else {
+		size = *last
+	}
+	if size < 0 || size > maxSliceSize {
+		return nil, errors.New("slicing argument is out of allowed range")
+	}
+	things := make([]*model.Thing, 0, size)
+	for i := 0; i < size; i++ {
+		thing := &model.Thing{
+			A: fmt.Sprintf("a-%d", i),
+		}
+		things = append(things, thing)
+	}
+	return things, nil
+}
+
 // Documentation returns generated.DocumentationResolver implementation.
 func (r *Resolver) Documentation() generated.DocumentationResolver { return &documentationResolver{r} }
 

@@ -71,6 +71,16 @@ docs-website/
 
 ## Writing Guidelines
 
+### Tone and Style
+- Write as reference documentation, not as an answer to a question. State facts directly.
+- Avoid em dashes. Use periods or restructure the sentence instead.
+- Avoid filler and hedging ("simply", "just", "easily", "of course", "it should be noted that").
+- Do not over-explain. One clear sentence beats three cautious ones.
+- Prefer short, declarative sentences. If a sentence has more than one comma-separated clause, consider splitting it.
+- Use structured lists when presenting multiple distinct items. Do not pack them into a single paragraph.
+- Do not sound like an LLM. No "This powerful feature allows you to..." or "In other words...". Describe what things do, not how impressive they are.
+
+### Format
 1. Use MDX format for all documentation
 2. Place images in the appropriate `images/` subdirectory
 3. Follow the existing navigation structure in `docs.json`

@@ -7,8 +7,10 @@ import {
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import { DateRange, Field, TimeFilters } from '../../../types/index.js';
 import { flipDateRangeValuesIfNeeded } from '../../util.js';
+import { traced } from '../../tracing.js';
 import { parseTimeFilters } from './util.js';
 
+@traced
 export class UsageRepository {
   constructor(private client: ClickHouseClient) {}
 

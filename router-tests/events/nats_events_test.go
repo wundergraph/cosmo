@@ -30,9 +30,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
-var (
-	_ configpoller.ConfigPoller = (*ConfigPollerMock)(nil)
-)
+var _ configpoller.ConfigPoller = (*ConfigPollerMock)(nil)
 
 type ConfigPollerMock struct {
 	initConfig   *nodev1.RouterConfig
@@ -55,7 +53,6 @@ func (c *ConfigPollerMock) GetRouterConfig(_ context.Context) (*routerconfig.Res
 func (c *ConfigPollerMock) Stop(_ context.Context) error {
 	return nil
 }
-
 
 type natsSubscriptionArgs struct {
 	dataValue []byte
@@ -155,10 +152,9 @@ func TestNatsEvents(t *testing.T) {
 			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableNetPoll = false
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
+				engineExecutionConfiguration.WebSocketServerReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			var subscription struct {
 				employeeUpdated struct {
 					ID      float64 `graphql:"id"`
@@ -248,7 +244,6 @@ func TestNatsEvents(t *testing.T) {
 					KeyFile:  "../testdata/tls/key.pem",
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
 				req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
@@ -297,7 +292,6 @@ func TestNatsEvents(t *testing.T) {
 					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
 				client := &http.Client{}
@@ -322,7 +316,6 @@ func TestNatsEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe with closing channel", func(t *testing.T) {
-
 			testenv.Run(t, &testenv.Config{
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
@@ -398,7 +391,6 @@ func TestNatsEvents(t *testing.T) {
 				},
 				EnableNats: true,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-
 				subscribePayload := []byte(`{"query":"subscription { countFor(count: 0) }"}`)
 
 				client := http.Client{}
@@ -430,7 +422,6 @@ func TestNatsEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-
 				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
 				client := http.Client{}
 				req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
@@ -488,7 +479,6 @@ func TestNatsEvents(t *testing.T) {
 				},
 				EnableNats: true,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-
 				subscribePayload := []byte(`{"query":"subscription { countFor(count: 0) }"}`)
 
 				client := http.Client{}
@@ -527,7 +517,6 @@ func TestNatsEvents(t *testing.T) {
 				},
 				EnableNats: true,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-
 				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
 
 				client := http.Client{}
@@ -560,7 +549,6 @@ func TestNatsEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
 			client := http.Client{}
@@ -575,7 +563,7 @@ func TestNatsEvents(t *testing.T) {
 			req.Header.Set("Connection", "keep-alive")
 			req.Header.Set("Cache-Control", "no-cache")
 
-			var clientDoCh = make(chan struct {
+			clientDoCh := make(chan struct {
 				resp *http.Response
 				err  error
 			})
@@ -602,11 +590,11 @@ func TestNatsEvents(t *testing.T) {
 			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientDoCh, func(t *testing.T, clientDo struct {
 				resp *http.Response
 				err  error
-			}) {
+			},
+			) {
 				require.NoError(t, clientDo.err)
 				require.Equal(t, http.StatusOK, clientDo.resp.StatusCode)
 				resp = clientDo.resp
-
 			})
 			defer resp.Body.Close()
 			reader := bufio.NewReader(resp.Body)
@@ -640,7 +628,6 @@ func TestNatsEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
 			client := http.Client{}
@@ -652,7 +639,7 @@ func TestNatsEvents(t *testing.T) {
 			req.Header.Set("Connection", "keep-alive")
 			req.Header.Set("Cache-Control", "no-cache")
 
-			var clientDoCh = make(chan struct {
+			clientDoCh := make(chan struct {
 				resp *http.Response
 				err  error
 			})
@@ -681,7 +668,8 @@ func TestNatsEvents(t *testing.T) {
 			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientDoCh, func(t *testing.T, clientDo struct {
 				resp *http.Response
 				err  error
-			}) {
+			},
+			) {
 				require.NoError(t, clientDo.err)
 				require.Equal(t, http.StatusOK, clientDo.resp.StatusCode)
 				resp = clientDo.resp
@@ -778,7 +766,6 @@ func TestNatsEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			firstSubscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
 
 			client := http.Client{}
@@ -790,7 +777,7 @@ func TestNatsEvents(t *testing.T) {
 			req.Header.Set("Connection", "keep-alive")
 			req.Header.Set("Cache-Control", "no-cache")
 
-			var clientDoCh = make(chan struct {
+			clientDoCh := make(chan struct {
 				resp *http.Response
 				err  error
 			})
@@ -816,7 +803,8 @@ func TestNatsEvents(t *testing.T) {
 			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientDoCh, func(t *testing.T, clientDo struct {
 				resp *http.Response
 				err  error
-			}) {
+			},
+			) {
 				require.NoError(t, clientDo.err)
 				require.Equal(t, http.StatusOK, clientDo.resp.StatusCode)
 				resp = clientDo.resp
@@ -851,7 +839,6 @@ func TestNatsEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			firstSub, err := xEnv.NatsConnectionDefault.Subscribe(xEnv.GetPubSubName("getEmployee.3"), func(msg *nats.Msg) {
 				err := msg.Respond([]byte(`{"id": 3, "__typename": "Employee"}`))
 				require.NoError(t, err)
@@ -972,7 +959,7 @@ func TestNatsEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
+				engineExecutionConfiguration.WebSocketServerReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -1217,7 +1204,7 @@ func TestNatsEvents(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			var clientRunCh = make(chan error)
+			clientRunCh := make(chan error)
 			go func() {
 				clientRunCh <- client.Run()
 			}()
@@ -1432,7 +1419,6 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-
 	t.Run("subscribe to multiple subjects", func(t *testing.T) {
 		t.Parallel()
 
@@ -1440,7 +1426,7 @@ func TestNatsEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
+				engineExecutionConfiguration.WebSocketServerReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -1868,7 +1854,6 @@ func TestFlakyNatsEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
 
 			// Use a context with timeout to prevent SSE reads from blocking
@@ -1885,7 +1870,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			req.Header.Set("Connection", "keep-alive")
 			req.Header.Set("Cache-Control", "no-cache")
 
-			var clientDoCh = make(chan struct {
+			clientDoCh := make(chan struct {
 				resp *http.Response
 				err  error
 			})
@@ -1908,7 +1893,8 @@ func TestFlakyNatsEvents(t *testing.T) {
 			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientDoCh, func(t *testing.T, clientDo struct {
 				resp *http.Response
 				err  error
-			}) {
+			},
+			) {
 				resp = clientDo.resp
 				require.NoError(t, clientDo.err)
 			})
@@ -1965,7 +1951,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
+				engineExecutionConfiguration.WebSocketServerReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {

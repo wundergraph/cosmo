@@ -173,22 +173,41 @@ services:
     depends_on:
       - postgres
 
-  minio:
-    image: bitnamilegacy/minio:${DC_MINIO_VERSION:-2024.7.16-debian-12-r0}
+  # Due to previous use of minio and to ensure that data is correctly migrated, we need to
+  # ensure that rustfs is able to access it. Rustfs runs under a different user than minio, so this
+  # is a one-off run to fix permissions on the volume.
+  rustfs_perms:
+    image: alpine
+    user: root
+    volumes:
+      - minio:/data
+    command: chown -R 10001:10001 /data
+
+  rustfs:
+    image: rustfs/rustfs:1.0.0-alpha.92
+    depends_on:
+      rustfs_perms:
+        condition: service_completed_successfully
+    command: "rustfs server /data"
     environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
-      - MINIO_DEFAULT_BUCKETS=cosmo
+      RUSTFS_CONSOLE_ENABLE: 'true'
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-admin}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-changeme}
     ports:
       - '10000:9000'
       - '10001:9001'
     volumes:
-      - minio:/bitnami/minio/data
+      # We've previously used minio for S3 provider. Since rustfs is storage-compatible
+      # with minio, we want to reuse the existing minio volume so that existing data is kept.
+      - minio:/data
     restart: unless-stopped
     networks:
       - primary
     profiles:
       - default
+    post_start:
+      - command: sh -c "sleep 10 && apk add minio-client && mcli alias set rustfs http://localhost:9000 ${S3_ACCESS_KEY_ID:-admin} ${S3_SECRET_ACCESS_KEY:-changeme} && mcli mb -p rustfs/cosmo"
+        user: root
 
   nats:
     image: nats:${DC_NATS_VERSION:-2.10.6}
@@ -235,10 +254,10 @@ services:
       NODE_ENV: development
       AUTH_JWT_SECRET: fkczyomvdprgvtmvkuhvprxuggkbgwld
       AUTH_ADMISSION_JWT_SECRET: uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW
-      S3_STORAGE_URL: ${S3_STORAGE_URL:-http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo}
+      S3_STORAGE_URL: ${S3_STORAGE_URL:-http://rustfs:9000/cosmo}
       S3_REGION: ${S3_REGION_CDN:-${S3_REGION:-auto}}
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-admin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-changeme}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
     ports:
       - '11000:11000'
@@ -301,10 +320,10 @@ services:
       KC_API_URL: 'http://keycloak:8080'
       KC_FRONTEND_URL: 'http://localhost:8080'
       PROMETHEUS_API_URL: 'http://admin:test@prometheus:9090/api/v1'
-      S3_STORAGE_URL: ${S3_STORAGE_URL:-http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo}
+      S3_STORAGE_URL: ${S3_STORAGE_URL:-http://rustfs:9000/cosmo}
       S3_REGION: ${S3_REGION_CONTROLPLANE:-${S3_REGION:-auto}}
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-admin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-changeme}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
       CDN_BASE_URL: 'http://cdn:11000'
       REDIS_HOST: redis

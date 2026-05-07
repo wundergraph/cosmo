@@ -6,6 +6,7 @@ import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layo
 import { PageHeader } from '@/components/layout/head';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
+import { Pagination } from '@/components/ui/pagination';
 import {
   Table,
   TableBody,
@@ -23,7 +24,6 @@ import { cn } from '@/lib/utils';
 import { ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useQuery } from '@connectrpc/connect-query';
 import {
-  ColumnDef,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -50,6 +50,10 @@ const OverridesPage: NextPageWithLayout = () => {
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
 
+  const pageNumber = router.query.page ? parseInt(router.query.page as string, 10) : 1;
+  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
+  const offset = (pageNumber - 1) * pageSize;
+
   const constructLink = (name: string, hash: string, mode: 'metrics' | 'traces') => {
     const filterState = createFilterState({
       operationName: name,
@@ -68,6 +72,8 @@ const OverridesPage: NextPageWithLayout = () => {
     {
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
+      limit: pageSize,
+      offset,
     },
     {
       placeholderData: (prev) => prev,
@@ -166,7 +172,10 @@ const OverridesPage: NextPageWithLayout = () => {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
   });
+
+  const noOfPages = Math.ceil((data?.totalCount ?? 0) / pageSize);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -180,7 +189,7 @@ const OverridesPage: NextPageWithLayout = () => {
       />
     );
 
-  if (data.overrides.length === 0) {
+  if (data.totalCount === 0) {
     return (
       <EmptyState
         icon={<InformationCircleIcon />}
@@ -209,7 +218,7 @@ const OverridesPage: NextPageWithLayout = () => {
       </div>
       <TableWrapper>
         <Table>
-          <TableCaption>Found {table.getRowModel().rows?.length} operations with overrides</TableCaption>
+          <TableCaption>Found a total of {data.totalCount} operations with overrides</TableCaption>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -252,6 +261,7 @@ const OverridesPage: NextPageWithLayout = () => {
           </TableBody>
         </Table>
       </TableWrapper>
+      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} />
       <ConfigureOverride />
     </div>
   );

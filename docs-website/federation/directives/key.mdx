@@ -1,0 +1,190 @@
+---
+title: "@key"
+icon: "fingerprint"
+description: "The @key directive designates an object type as a federation entity and specifies the fields that uniquely identify it across subgraphs."
+---
+
+## Definition
+
+```graphql
+directive @key(fields: FieldSet!, resolvable: Boolean = true) repeatable on OBJECT | INTERFACE
+```
+
+## Arguments
+
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `fields` | `FieldSet!` | — | A selection set (as a string) of one or more fields that together uniquely identify an instance of the entity. |
+| `resolvable` | `Boolean` | `true` | When `false`, indicates that this subgraph does not implement a reference resolver for the entity. The router will not route queries to this subgraph solely to resolve entity fields. |
+
+## Overview
+
+The `@key` directive is the foundation of GraphQL Federation entities. Applying `@key` to an object type declares it an _entity_: a type whose fields can be distributed across multiple subgraphs and resolved independently by each. The key fields uniquely identify an instance of the entity so the router can correlate data from different subgraphs.
+
+Any subgraph that resolves or references an entity must declare at least one `@key`. Different subgraphs may use different key fields as long as the router can traverse between them — either directly (both subgraphs share a common key) or through an intermediary subgraph that declares both keys. See [When Multiple Keys Are Needed](#when-multiple-keys-are-needed) for an example. The router uses these keys to construct _representations_ when fetching entity data from subgraphs that contribute additional fields.
+
+## Single Key
+
+The most common case is identifying an entity by a single scalar field. Here both the scheduling and analytics subgraphs contribute fields to the `Event` entity:
+
+```graphql
+# scheduling subgraph
+type Event @key(fields: "id") {
+  id: ID!
+  name: String!
+  startsAt: String!
+}
+```
+
+```graphql
+# analytics subgraph
+type Event @key(fields: "id") {
+  id: ID!
+  totalRegistrations: Int!
+  pageViews: Int!
+}
+```
+
+Both subgraphs declare `Event` as an entity with the `id` key. The router can now combine fields from both subgraphs into a single `Event` response.
+
+## Multiple Keys
+
+A type can have more than one `@key` directive. Each additional key gives the query planner another set of fields it can use to jump between subgraphs when resolving the entity.
+
+```graphql
+type Event @key(fields: "id") @key(fields: "slug") {
+  id: ID!
+  slug: String!
+  name: String!
+}
+```
+
+The entity must be resolvable by any one of its declared keys.
+
+<Warning>
+Multiple keys increase the number of possible query plan paths, which adds complexity to query planning. In most cases a single key is sufficient. The primary reason to declare a second key is during a key migration, where the old key is kept temporarily while subgraphs transition to the new one. Avoid permanent multi-key setups unless you have a clear need.
+</Warning>
+
+### When Multiple Keys Are Needed
+
+Multiple keys become necessary when different subgraphs can only resolve an entity by different identifiers. Consider a `User` entity with a public `id` and an `internalId`. Subgraph A can only resolve users by `id`, subgraph B can only resolve users by `internalId`, and subgraph C defines both keys:
+
+```graphql
+# subgraph A — resolves by public id only
+type User @key(fields: "id") {
+  id: ID!
+  displayName: String!
+}
+```
+
+```graphql
+# subgraph B — resolves by internal id only
+type User @key(fields: "internalId") {
+  internalId: ID!
+  role: String!
+}
+```
+
+```graphql
+# subgraph C — resolves by either key
+type User @key(fields: "id") @key(fields: "internalId") {
+  id: ID!
+  internalId: ID!
+  email: String!
+}
+```
+
+Subgraph C acts as a bridge: it can accept either key and resolve the other. The router uses this to jump between subgraphs that share no common key.
+
+<Warning>
+This bridge pattern introduces extra hops. If a query starts at subgraph B and needs a field from subgraph A, the router must go B → C → A because B and A share no common key. This "leap-frogging" adds latency and indicates a design problem. If possible, align subgraphs on a single shared key to avoid unnecessary indirection.
+</Warning>
+
+## Compound Keys
+
+A compound key spans multiple fields, including nested object fields. All fields in the compound key's selection set must be present on the type:
+
+```graphql
+type Session @key(fields: "id event { id }") {
+  id: ID!
+  event: Event!
+  title: String!
+  speakerName: String!
+}
+
+type Event {
+  id: ID!
+}
+```
+
+When the key includes nested fields, the router passes the full nested structure in representations so the subgraph can resolve the entity. For the schema above, a representation looks like this:
+
+```json
+{
+  "__typename": "Session",
+  "id": "session-1",
+  "event": {
+    "id": "event-42"
+  }
+}
+```
+
+The subgraph's entity resolver receives both `id` and the nested `event.id` to uniquely identify the `Session`.
+
+## Non-Resolvable Keys (`resolvable: false`)
+
+A subgraph sometimes needs to return a reference to an entity it does not resolve. For example, a ticketing subgraph stores which event a ticket belongs to, but the event's details (name, date, venue) live in a separate scheduling subgraph. Setting `resolvable: false` tells the router to never send entity resolution requests to this subgraph for the `Event` type:
+
+```graphql
+# ticketing subgraph
+type Event @key(fields: "id", resolvable: false) {
+  id: ID!
+}
+
+type Ticket @key(fields: "id") {
+  id: ID!
+  event: Event!
+  seatNumber: String!
+  attendeeName: String!
+}
+```
+
+The subgraph can return `Event` references (e.g. `Ticket.event`), but the router will resolve `Event` fields through subgraphs that declare a resolvable key for it. If you need to use the `id` field in [`@requires`](/federation/directives/requires) or [`@provides`](/federation/directives/provides) within this subgraph, mark it as [`@external`](/federation/directives/external).
+
+<Note>
+In Federation v1, each entity had a single "origin" subgraph (the type definition). All other subgraphs used type extensions and had to mark key fields as `@external`. Federation v2 removed the origin concept entirely. Entities can now be defined as regular types across multiple subgraphs, and key fields are implicitly shareable. See [Understanding Federation Versions](https://wundergraph.com/blog/understanding-federation-versions) for more details.
+</Note>
+
+## Keys on Interfaces
+
+Applying `@key` to an interface creates an _entity interface_, allowing a subgraph to contribute fields to every object type that implements the interface across subgraphs.
+
+### Rules
+
+- The subgraph that defines the entity interface must also define every entity type that implements it. Other subgraphs may also define these entities.
+- Every implementing entity must include all `@key` directives from the interface. Additional keys are permitted but generally discouraged (see [Multiple Keys](#multiple-keys)).
+- Key field values must be unique across all implementing types. No instance of `Concert` can have the same key value as any instance of `Workshop`.
+- The interface must have at least one `@key` directive.
+
+```graphql
+# scheduling subgraph
+interface ScheduledItem @key(fields: "id") {
+  id: ID!
+  startsAt: String!
+}
+
+# Both implementing types repeat @key(fields: "id") from the interface.
+type Concert implements ScheduledItem @key(fields: "id") {
+  id: ID!
+  startsAt: String!
+}
+
+type Workshop implements ScheduledItem @key(fields: "id") {
+  id: ID!
+  startsAt: String!
+}
+```
+
+## See Also
+
+[`@external`](/federation/directives/external) declares that a field is not independently resolvable by the current subgraph, making it available for use in `@requires` or `@provides`. [`@requires`](/federation/directives/requires) declares that an entity field depends on external fields that must be fetched from another subgraph first. [`@provides`](/federation/directives/provides) declares that a subgraph can resolve certain external entity fields at a specific query path.

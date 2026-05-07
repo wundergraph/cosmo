@@ -51,6 +51,36 @@ var Employees = []*model.Employee{
 		Notes:     strPtr("Jens notes resolved by employees"),
 		StartDate: "January 2020",
 		UpdatedAt: "2021-09-01T00:00:00Z",
+		PrimaryWorkItem: model.TechnicalWorkItem{
+			Name:      "API Development",
+			Priority:  1,
+			CodeCount: 15000,
+			Handler: &model.WorkItemHandler{
+				Name: "Alice Manager",
+				AssignedItem: model.ManagementWorkItem{
+					Name:     "Team Planning",
+					Priority: 2,
+					TeamSize: "large",
+				},
+			},
+			Specs: &model.TechnicalSpecs{
+				Name:       "Backend Specs",
+				Complexity: 8.5,
+				Metrics:    &model.WorkMetrics{Score: 95.5, Efficiency: 0.9},
+			},
+		},
+		LastWorkReview: model.WorkApproval{
+			Comment:    "Excellent work on the API",
+			ApprovedAt: "2024-01-15",
+		},
+		WorkSetup: &model.WorkSetup{
+			Priority: "high",
+			PrimaryItem: model.TechnicalWorkItem{
+				Name:      "API Development",
+				Priority:  1,
+				CodeCount: 15000,
+			},
+		},
 	},
 	{
 		Details: &model.Details{
@@ -92,6 +122,36 @@ var Employees = []*model.Employee{
 		Notes:     strPtr("Dustin notes resolved by employees"),
 		StartDate: "July 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
+		PrimaryWorkItem: model.ManagementWorkItem{
+			Name:     "Sprint Planning",
+			Priority: 2,
+			TeamSize: "medium",
+			Handler: &model.WorkItemHandler{
+				Name: "Bob Lead",
+				AssignedItem: model.TechnicalWorkItem{
+					Name:      "Code Review",
+					Priority:  3,
+					CodeCount: 5000,
+				},
+			},
+			Specs: &model.ManagementSpecs{
+				Name:    "Leadership Specs",
+				Scope:   7.0,
+				Metrics: &model.WorkMetrics{Score: 88.0, Efficiency: 0.9},
+			},
+		},
+		LastWorkReview: model.WorkRejection{
+			Reason:        "Needs more documentation",
+			RejectionCode: "DOC_001",
+		},
+		WorkSetup: &model.WorkSetup{
+			Priority: "medium",
+			PrimaryItem: model.ManagementWorkItem{
+				Name:     "Sprint Planning",
+				Priority: 2,
+				TeamSize: "medium",
+			},
+		},
 	},
 	{
 		Details: &model.Details{

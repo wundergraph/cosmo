@@ -26,6 +26,7 @@ type Queries {
   topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
   factTypes: [TopSecretFactType!]
   sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @listSize(slicingArguments: ["numOfA"]) @shareable
+  slicedThings(first: Int, last: Int): [Thing] @listSize(slicingArguments: ["first", "last"])
 }
 
 type Mutation {

@@ -16,6 +16,8 @@ type PersistedOperation struct {
 
 type Client interface {
 	Enabled() bool
+	// IsDistributed returns true when the APQ store is shared across router instances (e.g. Redis).
+	IsDistributed() bool
 	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
 	SaveOperation(ctx context.Context, clientName, sha256Hash string, operationBody []byte) error
 	Close()
@@ -67,6 +69,10 @@ func NewClient(opts *Options) (Client, error) {
 
 func (c *client) Enabled() bool {
 	return c.enabled
+}
+
+func (c *client) IsDistributed() bool {
+	return c.kvClient != nil
 }
 
 func (c *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {

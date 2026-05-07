@@ -153,6 +153,7 @@ export function setGraphRouterCompatibilityVersion(
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
         federatedGraphs: [federatedGraph],
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       if (composition.compositionErrors.length > 0) {

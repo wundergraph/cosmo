@@ -3,6 +3,8 @@
 Before contributing to the WunderGraph Cosmo repository, please open an issue to discuss the changes you would like to make. Alternatively, you can also open a discussion in the [WunderGraph Discussions](https://github.com/wundergraph/cosmo/discussions).
 We are open to all kinds of contributions, including bug fixes, new features, and documentation improvements.
 
+This project follows the principles of the [Open Source AI Manifesto](https://human-oss.dev). Please ensure your contributions align with its principles.
+
 The following sections provide a guide on how to contribute to the WunderGraph Cosmo repository.
 
 ## Prerequisites
@@ -84,6 +86,8 @@ export PATH="$PATH:$(go env GOPATH)/bin"
 ### Pull Requests Conventions
 
 We merge all pull requests in `squash merge` mode. You're not enforced to use [conventional commit standard](https://www.conventionalcommits.org/en/v1.0.0-beta.2/#why-use-conventional-commits) across all your commits, but it's a good practice and increase transparency. At the end it's important that the squashed commit message follow the standard.
+
+When updating your branch after a review has been requested, prefer using a merge strategy (e.g. `git merge main`) rather than rebasing. This preserves the review context and avoids force-pushes that can disrupt the review process.
 
 ## Local Development
 

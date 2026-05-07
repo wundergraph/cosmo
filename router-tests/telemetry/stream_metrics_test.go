@@ -10,9 +10,9 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router-tests/events"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	otelattrs "github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -279,7 +279,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				MetricReader:                       metricReader,
 				RouterConfigJSONTemplate:           testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:                         true,
-				ModifyEngineExecutionConfiguration: func(ec *config.EngineExecutionConfiguration) { ec.WebSocketClientReadTimeout = time.Second },
+				ModifyEngineExecutionConfiguration: func(ec *config.EngineExecutionConfiguration) { ec.WebSocketServerReadTimeout = time.Second },
 				MetricOptions:                      testenv.MetricOptions{EnableOTLPStreamMetrics: true},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				var subscriptionOne struct {

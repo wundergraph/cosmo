@@ -120,6 +120,8 @@ High metric cardinality can lead to performance issues by consuming excessive re
 
 You can configure multiple exporters. A common case is to forward telemetry data to Cosmo Cloud and e.g. Datadog Agent which has native support to ingest [OpenTelemetry](https://docs.datadoghq.com/opentelemetry/) data.
 
+For a Dynatrace example that exports to Dynatrace and Cosmo Cloud at the same time, see [Dynatrace](/router/open-telemetry/dynatrace).
+
 <CodeGroup>
   ```bash config.yaml
   telemetry:

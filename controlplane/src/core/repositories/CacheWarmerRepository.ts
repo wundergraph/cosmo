@@ -17,6 +17,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { S3RouterConfigMetadata } from '../composition/composer.js';
 import { CacheWarmupOperation } from '../../db/models.js';
+import { traced } from '../tracing.js';
 import { getDateRange, isoDateRangeToTimestamps } from './analytics/util.js';
 import { OperationsRepository } from './OperationsRepository.js';
 
@@ -28,6 +29,7 @@ interface ComputeCacheWarmerOperationsProps {
   maxOperationsCount: number;
 }
 
+@traced
 export class CacheWarmerRepository {
   constructor(
     private client: ClickHouseClient,

@@ -10,6 +10,7 @@ pnpm run dev
 ```
 
 Open the browser and navigate to the following URL:
+
 ```
 open http://localhost:3009
 ```
@@ -29,15 +30,17 @@ wgc federated-graph create mygraph -r http://127.0.0.1:3001/graphql --admission-
 ```
 
 2. Publish a subgraph
+
 ```bash
 wgc subgraph publish employees --schema ../demo/pkg/subgraphs/employees/subgraph/schema.graphqls --labels team=A
 ```
 
 3. Start the router with the same signing key as the admission server
+
 ```yaml
 version: '1'
 
-graph: 
+graph:
   sign_key: 'sign_key'
 ```
 

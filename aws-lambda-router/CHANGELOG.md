@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.40.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.40.1...aws-lambda-router@0.40.2) (2026-03-31)
+
+### Bug Fixes
+
+* jsonparser upgrade ([#2709](https://github.com/wundergraph/cosmo/issues/2709)) ([f2860f8](https://github.com/wundergraph/cosmo/commit/f2860f8dce5488da3f47f53068f0e3ad522280d0)) (@SkArchon)
+
 ## [0.40.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.40.0...aws-lambda-router@0.40.1) (2026-03-19)
 
 **Note:** Version bump only for package aws-lambda-router

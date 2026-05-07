@@ -24,7 +24,7 @@ introspection:
   enabled: true
   secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
-log_service_name: "my-custom-router"
+log_service_name: 'my-custom-router'
 shutdown_delay: 15s
 grace_period: 20s
 poll_interval: 10s
@@ -205,7 +205,6 @@ telemetry:
       schema_usage:
         enabled: true
         include_operation_sha: true
-        sample_rate: 1.0  # Supports any rate: 1.0, 0.8, 0.5, 0.1, 0.01, etc.
 
 cache_control_policy:
   enabled: true
@@ -322,6 +321,7 @@ authentication:
       - url: 'https://example.com/.well-known/jwks3.json'
     header_name: Authorization
     header_value_prefix: Bearer
+    scope_claim: customscp
     header_sources:
       - type: header
         name: X-Authorization
@@ -376,13 +376,15 @@ engine:
   max_concurrent_resolvers: 32
   enable_net_poll: true
   enable_subgraph_fetch_operation_name: true
-  websocket_client_poll_timeout: 1s
-  websocket_client_conn_buffer_size: 128
-  websocket_client_read_timeout: 5s
   websocket_client_write_timeout: 10s
-  websocket_client_frame_timeout: 100ms
+  websocket_server_read_timeout: 5s
+  websocket_server_write_timeout: 10s
+  websocket_server_poll_timeout: 1s
+  websocket_server_conn_buffer_size: 128
+  websocket_client_read_limit: 1MB
   websocket_client_ping_interval: 10s
   websocket_client_ping_timeout: 30s
+  websocket_client_ack_timeout: 30s
   execution_plan_cache_size: 1024
   resolver_max_recyclable_parser_size: 4096
   debug:
@@ -404,6 +406,11 @@ rate_limit:
     burst: 60
     period: '60s'
     reject_exceeding_requests: true
+    overrides:
+      - matching: '^premium-.*'
+        rate: 200
+        burst: 200
+        period: '60s'
 
 override_routing_url:
   subgraphs:
@@ -463,6 +470,7 @@ security:
     enabled: true
     size: 1024
   complexity_limits:
+    mode: enforce
     depth:
       enabled: true
       limit: 5
@@ -495,6 +503,11 @@ persisted_operations:
   storage:
     provider_id: s3
     object_prefix: '5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo'
+  manifest:
+    enabled: true
+    file_name: manifest.json
+    poll_interval: 30s
+    poll_jitter: 10s
 
 automatic_persisted_queries:
   enabled: true

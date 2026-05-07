@@ -20,7 +20,6 @@ import {
 import { safeParse } from '@wundergraph/composition';
 import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELDS, REQUIRES_DIRECTIVE_NAME } from './string-constants.js';
 import { SelectionSetValidationVisitor } from './selection-set-validation-visitor.js';
-
 /**
  * Type mapping from Kind enum values to their corresponding AST node types
  */
@@ -375,9 +374,15 @@ export class SDLValidationVisitor {
 
     const hasArgs = (ctx.node.arguments?.length ?? 0) > 0;
     const hasResolverDirective = ctx.node.directives?.some((d) => d.name.value === CONNECT_FIELD_RESOLVER) ?? false;
+    const hasRequiresDirective = ctx.node.directives?.some((d) => d.name.value === REQUIRES_DIRECTIVE_NAME) ?? false;
 
     // Skip fields without args unless they have the @connect__fieldResolver directive
     if (!hasArgs && !hasResolverDirective) {
+      return;
+    }
+
+    // @requires fields with arguments are handled by RequiredFieldsVisitor, not as resolver fields
+    if (hasRequiresDirective) {
       return;
     }
 

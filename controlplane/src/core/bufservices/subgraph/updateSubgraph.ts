@@ -46,6 +46,7 @@ export function updateSubgraph(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
 
     req.namespace = req.namespace || DefaultNamespace;
@@ -219,6 +220,7 @@ export function updateSubgraph(
           disableResolvabilityValidation: req.disableResolvabilityValidation,
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
+        opts.webhookProxyUrl,
       );
 
     await auditLogRepo.addAuditLog({

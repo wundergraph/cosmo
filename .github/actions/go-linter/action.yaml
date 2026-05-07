@@ -21,3 +21,14 @@ runs:
         version: 2025.1.1
         install-go: false
         working-directory: ${{ inputs.working-directory }}
+
+    - name: Check gofmt formatting
+      run: |
+        files=$(gofmt -l .)
+        if [ -n "$files" ]; then
+          echo "The following files are not gofmt-formatted:"
+          echo "$files"
+          exit 1
+        fi
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}

@@ -4,6 +4,7 @@ import type { DB } from '../../db/index.js';
 import { billingPlans, billingSubscriptions, organizationBilling } from '../../db/schema.js';
 import { BillingPlanDTO } from '../../types/index.js';
 import { BillingService } from '../services/BillingService.js';
+import { traced } from '../tracing.js';
 
 export const billingSchema = z.object({
   plans: z.record(
@@ -26,6 +27,7 @@ export const billingSchema = z.object({
 /**
  * BillingRepository for billing related operations.
  */
+@traced
 export class BillingRepository {
   constructor(private db: DB) {}
 

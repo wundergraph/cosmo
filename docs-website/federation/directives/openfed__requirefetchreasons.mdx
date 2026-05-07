@@ -1,0 +1,153 @@
+---
+title: "@openfed requireFetchReasons"
+icon: "magnifying-glass-chart"
+description: "The @openfed__requireFetchReasons directive enables fetch reason propagation to subgraphs for debugging and observability."
+---
+
+## Definition
+
+```graphql
+directive @openfed__requireFetchReasons repeatable on
+  FIELD_DEFINITION | INTERFACE | OBJECT
+```
+
+## Overview
+
+`@openfed__requireFetchReasons` is a marker directive that tells the router to include
+fetch reason metadata in subgraph requests for the annotated fields.
+
+In a federated graph,
+a field may be fetched for several reasons:
+the client requested it,
+another subgraph depends on it via `@key` or `@requires`,
+or it is part of an entity key.
+By default,
+the subgraph has no visibility into why a field is being fetched.
+This directive enables that visibility by adding a `fetch_reasons` extension
+to the subgraph request body.
+
+This is particularly useful for compliance-sensitive data.
+In a federated graph,
+any subgraph can use `@requires` to declare a dependency on a field from another subgraph.
+When that happens,
+the router fetches the field automatically — no explicit permission from the providing subgraph is needed.
+For fields containing regulated or personally identifiable information,
+this means another team's subgraph could gain access to protected data
+without an explicit handshake.
+
+With `@openfed__requireFetchReasons`,
+the providing subgraph can inspect every incoming request to see whether a field
+was requested by the end user or by another subgraph,
+and which subgraph it was.
+This allows the subgraph to maintain an allow list of subgraphs
+that are permitted to access specific fields,
+ensuring the data owner stays compliant with regulations.
+
+## Router configuration
+
+Fetch reason propagation must be enabled in the router configuration:
+
+```yaml
+engine:
+  enable_require_fetch_reasons: true
+```
+
+Environment variable: `ENGINE_ENABLE_REQUIRE_FETCH_REASONS` (default: `false`).
+
+Without this setting,
+the directive has no effect at runtime.
+
+## Subgraph request format
+
+When enabled,
+the router adds a `fetch_reasons` array to `extensions` in the subgraph request:
+
+```json
+{
+  "query": "...",
+  "variables": {},
+  "extensions": {
+    "fetch_reasons": [
+      {
+        "typename": "User",
+        "field": "id",
+        "by_user": true
+      },
+      {
+        "typename": "User",
+        "field": "email",
+        "by_subgraphs": ["account"],
+        "is_requires": true
+      }
+    ]
+  }
+}
+```
+
+Each entry includes:
+
+| Field          | Type       | Description                                                        |
+| -------------- | ---------- | ------------------------------------------------------------------ |
+| `typename`     | `String`   | The type containing the field.                                    |
+| `field`        | `String`   | The field name.                                                   |
+| `by_user`      | `Boolean`  | `true` if the client query explicitly requested this field.       |
+| `by_subgraphs` | `[String]` | Subgraph names whose `@key` or `@requires` caused this fetch.    |
+| `is_key`       | `Boolean`  | `true` if the field is fetched as part of an entity key.          |
+| `is_requires`  | `Boolean`  | `true` if the field is fetched to satisfy a `@requires` dependency. |
+
+Only fields annotated with `@openfed__requireFetchReasons`
+(directly or through type-level inheritance)
+have their reasons included.
+Other fields in the same request are not tracked.
+
+## Inheritance and scoping
+
+When applied to an object or interface type,
+the directive is inherited by all fields defined in that same declaration block.
+
+```graphql
+# All fields in this block inherit the directive
+type User @openfed__requireFetchReasons {
+  id: ID!
+  name: String!
+  email: String!
+}
+
+# Fields in a separate extension do NOT inherit it
+extend type User {
+  avatar: String!
+}
+```
+
+To mark only specific fields,
+apply the directive at the field level:
+
+```graphql
+type User {
+  id: ID!
+  name: String!
+  email: String! @openfed__requireFetchReasons
+}
+```
+
+Fields in `extend` blocks require their own annotation
+or a type-level directive on the extension:
+
+```graphql
+extend type User @openfed__requireFetchReasons {
+  phone: String!
+}
+```
+
+## Use cases
+
+- **Debugging**: Inspect why a subgraph is receiving certain fields in its requests.
+- **Observability**: Log or metric fetch reasons in subgraph middleware to track
+  cross-subgraph dependencies.
+- **Conditional logic**: Subgraphs can optimize responses based on whether a field
+  was requested by the client or by the federation engine.
+
+## See also
+
+- [`@requires`](/federation/directives/requires) for declaring cross-subgraph field dependencies.
+- [`@key`](/federation/directives/key) for defining entity keys.

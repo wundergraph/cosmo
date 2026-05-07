@@ -87,6 +87,39 @@ rate_limit:
     key_prefix: cosmo_rate_limit
 ```
 </Note>
+
+### Per-Key Rate Limit Overrides
+
+You can apply different rate limits to specific keys by defining overrides under `simple_strategy`. Each override includes a `matching` field, a [Go regex](https://pkg.go.dev/regexp/syntax) tested against the suffix portion of the rate-limit key (the result of `key_suffix_expression`), not the full prefixed Redis key. The first matching override wins; unmatched keys fall back to the global defaults.
+
+This can be useful when different consumers of your API need different throughput allowances. For example, you might assign a restrictive limit to LLM-based clients that generate high query volumes, a moderate limit to external API consumers, and a permissive limit to internal services:
+
+```yaml router.yaml
+rate_limit:
+  enabled: true
+  storage:
+    cluster_enabled: false
+    urls:
+      - redis://localhost:6379
+    key_prefix: cosmo_rate_limit
+  simple_strategy:
+    rate: 100
+    burst: 200
+    period: 1s
+    key_suffix_expression: "request.auth.claims.consumer_type"
+    overrides:
+      - matching: "^mcp$"
+        rate: 20
+        burst: 30
+        period: 1s
+      - matching: "^internal$"
+        rate: 5000
+        burst: 10000
+        period: 1s
+```
+
+In this configuration, requests with a JWT `consumer_type` claim of `mcp` are limited to 20 req/s, those with `internal` get 5000 req/s, and all other consumers fall back to the default 100 req/s.
+
 ## Configure CORS
 
 If you don't have an intermediate proxy handling CORS requests, we recommend allowing only the origins you trust. This also applies to headers and methods.
@@ -127,10 +160,13 @@ By default the subgraph routing URL from the [wgc subgraph create](/cli/subgraph
 
 [Persistent operations](/router/persisted-queries/persisted-operations) are a great way to save bandwidth but also to reduce the attack vectors by only allowing known queries to be executed.
 
-By default, both persistent queries and regular queries are allowed. To allow only persistent queries, the following configuration should be applied:
+We recommend enabling the [PQL manifest](/router/persisted-queries/persisted-operations#pql-manifest) to load all persisted operations at startup and serve them from memory. This eliminates per-request network calls and ensures the router has a complete, authoritative view of all allowed operations.
 
 <CodeGroup>
   ```yaml router.yaml
+  persisted_operations:
+    manifest:
+      enabled: true
   security:
     block_non_persisted_operations:
       enabled: true

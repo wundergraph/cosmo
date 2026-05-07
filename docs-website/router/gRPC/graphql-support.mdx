@@ -18,7 +18,7 @@ The following table lists each gRPC integration feature, its current status, and
 | **Federation Entity Lookups (Multiple Keys)** | ✅ | Multi-key entity resolution |
 | **Federation Entity Lookups (Compound Keys)** | ✅ | Complex key combinations |
 | **Federation Entity Lookups (Nested Keys)** | ❌ | Complex nested key resolution not yet supported |
-| **@requires Directive** | ❌ | Field dependencies across services not implemented |
+| **@requires Directive** | ✅ | Field dependencies across services, with automatic batching |
 | **Scalar Arguments** | ✅ | All standard scalars supported |
 | **Complex Input Types** | ✅ | Nested input structures |
 | **Nullable Scalar Types** | ✅ | Optional fields supported |
@@ -44,9 +44,8 @@ Development is in progress to address these limitations and expand gRPC integrat
 
 | Feature | Category | Description |
 |---------|----------|-------------|
-| **@requires Directive Support** | Federation | Field dependencies across services |
+| **Cross-service Field Dependencies** | Federation | Advanced field dependency management beyond @requires |
 | **Nested Key Entity Lookups** | Federation | Complex nested key resolution |
-| **Cross-service Field Dependencies** | Federation | Advanced field dependency management |
 | **Lazy Loading** | Performance | Lazy loading capabilities for better performance |
 | **GraphQL Subscriptions** | Real-time | Real-time data subscriptions |
 | **Event-driven Updates** | Real-time | Event-based data updates |

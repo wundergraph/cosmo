@@ -2,6 +2,7 @@ import { randomFill } from 'node:crypto';
 import { isIPv4, isIPv6 } from 'node:net';
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
+import * as Sentry from '@sentry/node';
 import {
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
@@ -18,6 +19,7 @@ import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
 import { ProposalOrigin, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
 import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
+import { paginationDefaults } from './constants.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 
@@ -73,6 +75,7 @@ export async function handleError<T extends ResponseMessage>(
 }
 
 export const fastifyLoggerId = Symbol('logger');
+export const sentrySpanId = Symbol('sentrySpan');
 
 export const getLogger = (ctx: HandlerContext, defaultLogger: FastifyBaseLogger) => {
   return ctx.values.get<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: defaultLogger });
@@ -93,6 +96,25 @@ export const enrichLogger = (
   });
 
   ctx.values.set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: newLogger }, newLogger);
+
+  Sentry.setUser({
+    id: authContext.userId,
+    username: authContext.userDisplayName,
+  });
+
+  const spanAttributes = Object.fromEntries(
+    Object.entries({
+      'user.id': authContext.userId,
+      'user.displayName': authContext.userDisplayName,
+      'organization.id': authContext.organizationId,
+      'organization.slug': authContext.organizationSlug,
+    }).filter(([, v]) => v),
+  );
+
+  const activeSpan = Sentry.getActiveSpan();
+  if (activeSpan) {
+    Sentry.getRootSpan(activeSpan).setAttributes(spanAttributes);
+  }
 
   return newLogger;
 };
@@ -543,6 +565,23 @@ export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: 
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Normalizes pagination parameters by applying defaults and clamping to safe bounds.
+ * Uses the standard pagination defaults from constants unless overridden.
+ */
+export function normalizePagination(
+  opts: { limit?: number; offset?: number },
+  overrides?: { maxLimit?: number; maxOffset?: number },
+): { limit: number; offset: number } {
+  const maxLimit = overrides?.maxLimit ?? paginationDefaults.maxLimit;
+  const maxOffset = overrides?.maxOffset ?? paginationDefaults.maxOffset;
+
+  return {
+    limit: clamp(opts.limit || paginationDefaults.defaultLimit, paginationDefaults.minLimit, maxLimit),
+    offset: clamp(opts.offset || 0, paginationDefaults.minOffset, maxOffset),
+  };
 }
 
 export const isCheckSuccessful = ({

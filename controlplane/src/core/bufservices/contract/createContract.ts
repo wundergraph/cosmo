@@ -207,6 +207,7 @@ export function createContract(
           disableResolvabilityValidation: req.disableResolvabilityValidation,
         },
         federatedGraphs: [{ ...contractGraph, contract }],
+        webhookProxyUrl: opts.webhookProxyUrl,
       });
 
       compositionErrors.push(...composition.compositionErrors);

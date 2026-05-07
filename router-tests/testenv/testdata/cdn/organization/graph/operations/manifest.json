@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "revision": "test-revision-001",
+  "generatedAt": "2024-01-01T00:00:00Z",
+  "operations": {
+    "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f": "query Employees {\n  employees {\n    id\n    }\n}",
+    "33651da3d80e420709520fb900c7ab8ec4151555da56062feeee428cf7f3a5dd": "query Employees {\n employees {\n id\n }\n}",
+    "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38": "{__typename}"
+  }
+}

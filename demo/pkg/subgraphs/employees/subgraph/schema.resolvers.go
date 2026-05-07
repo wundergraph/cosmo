@@ -68,14 +68,17 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 				details.Location = employee.Details.Location
 			}
 			return &model.Employee{
-				ID:        employee.ID,
-				Details:   details,
-				Tag:       tag,
-				Expertise: employee.Expertise,
-				Role:      employee.Role,
-				Notes:     employee.Notes,
-				UpdatedAt: time.Now().String(),
-				StartDate: employee.StartDate,
+				ID:              employee.ID,
+				Details:         details,
+				Tag:             tag,
+				Expertise:       employee.Expertise,
+				Role:            employee.Role,
+				Notes:           employee.Notes,
+				UpdatedAt:       time.Now().String(),
+				StartDate:       employee.StartDate,
+				PrimaryWorkItem: employee.PrimaryWorkItem,
+				LastWorkReview:  employee.LastWorkReview,
+				WorkSetup:       employee.WorkSetup,
 			}, nil
 		}
 	}
@@ -118,12 +121,15 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 					Surname:  employee.Details.Surname,
 					Location: employee.Details.Location,
 				},
-				UpdatedAt: time.Now().String(),
-				Tag:       employee.Tag,
-				Expertise: employee.Expertise,
-				Role:      employee.Role,
-				Notes:     employee.Notes,
-				StartDate: employee.StartDate,
+				UpdatedAt:       time.Now().String(),
+				Tag:             employee.Tag,
+				Expertise:       employee.Expertise,
+				Role:            employee.Role,
+				Notes:           employee.Notes,
+				StartDate:       employee.StartDate,
+				PrimaryWorkItem: employee.PrimaryWorkItem,
+				LastWorkReview:  employee.LastWorkReview,
+				WorkSetup:       employee.WorkSetup,
 			}, nil
 		}
 	}
@@ -147,14 +153,17 @@ func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error
 	out := make([]*model.Employee, len(Employees))
 	for i, employee := range r.EmployeesData {
 		out[i] = &model.Employee{
-			ID:        employee.ID,
-			Details:   employee.Details,
-			Tag:       employee.Tag,
-			Expertise: employee.Expertise,
-			Role:      employee.Role,
-			Notes:     employee.Notes,
-			UpdatedAt: time.Now().String(),
-			StartDate: employee.StartDate,
+			ID:              employee.ID,
+			Details:         employee.Details,
+			Tag:             employee.Tag,
+			Expertise:       employee.Expertise,
+			Role:            employee.Role,
+			Notes:           employee.Notes,
+			UpdatedAt:       time.Now().String(),
+			StartDate:       employee.StartDate,
+			PrimaryWorkItem: employee.PrimaryWorkItem,
+			LastWorkReview:  employee.LastWorkReview,
+			WorkSetup:       employee.WorkSetup,
 		}
 	}
 	return out, nil

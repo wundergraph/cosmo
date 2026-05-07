@@ -1,13 +1,13 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"reflect"
+	"regexp"
 	"sync"
 
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
@@ -15,6 +15,7 @@ import (
 	"github.com/expr-lang/expr/vm"
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -30,10 +31,18 @@ type CosmoRateLimiterOptions struct {
 
 	KeySuffixExpression string
 	ExprManager         *expr.Manager
+
+	Overrides []config.RateLimitOverride
+}
+
+type compiledOverride struct {
+	pattern *regexp.Regexp
+	limit   redis_rate.Limit
 }
 
 func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, err error) {
 	limiter := redis_rate.NewLimiter(opts.RedisClient)
+
 	rl = &CosmoRateLimiter{
 		client:           opts.RedisClient,
 		limiter:          limiter,
@@ -43,12 +52,30 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 	if rl.rejectStatusCode == 0 {
 		rl.rejectStatusCode = 200
 	}
+
 	if opts.KeySuffixExpression != "" {
 		rl.keySuffixProgram, err = opts.ExprManager.CompileExpression(opts.KeySuffixExpression, reflect.String)
 		if err != nil {
 			return nil, err
 		}
 	}
+
+	for _, o := range opts.Overrides {
+		re, err := regexp.Compile(o.Matching)
+		if err != nil {
+			return nil, fmt.Errorf("invalid regex '%s' for rate limit override: %w", o.Matching, err)
+		}
+
+		rl.overrides = append(rl.overrides, compiledOverride{
+			pattern: re,
+			limit: redis_rate.Limit{
+				Rate:   o.Rate,
+				Burst:  o.Burst,
+				Period: o.Period,
+			},
+		})
+	}
+
 	return rl, nil
 }
 
@@ -60,53 +87,75 @@ type CosmoRateLimiter struct {
 	rejectStatusCode int
 
 	keySuffixProgram *vm.Program
+	overrides        []compiledOverride
+}
+
+func (c *CosmoRateLimiter) resolveLimit(key string, defaultLimit redis_rate.Limit) redis_rate.Limit {
+	for _, o := range c.overrides {
+		if o.pattern.MatchString(key) {
+			return o.limit
+		}
+	}
+
+	return defaultLimit
 }
 
 func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve.FetchInfo, input json.RawMessage) (result *resolve.RateLimitDeny, err error) {
 	if c.isIntrospectionQuery(info.RootFields) {
 		return nil, nil
 	}
+
 	requestRate := c.calculateRate()
-	limit := redis_rate.Limit{
+	defaultLimit := redis_rate.Limit{
 		Rate:   ctx.RateLimitOptions.Rate,
 		Burst:  ctx.RateLimitOptions.Burst,
 		Period: ctx.RateLimitOptions.Period,
 	}
-	key, err := c.generateKey(ctx)
+
+	key, suffix, err := c.generateKey(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	limit := c.resolveLimit(suffix, defaultLimit)
+
 	allow, err := c.limiter.AllowN(ctx.Context(), key, limit, requestRate)
 	if err != nil {
 		return nil, err
 	}
+
 	c.setRateLimitStats(ctx, key, requestRate, allow.Remaining, allow.RetryAfter.Milliseconds(), allow.ResetAfter.Milliseconds())
+
 	if allow.Allowed >= requestRate {
 		return nil, nil
 	}
+
 	if ctx.RateLimitOptions.RejectExceedingRequests {
 		return nil, ErrRateLimitExceeded
 	}
+
 	return &resolve.RateLimitDeny{}, nil
 }
 
-func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (string, error) {
+// generateKey returns the full Redis key and the suffix used for override matching.
+// When no key_suffix_expression is configured, the suffix equals the full key.
+func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (fullKey, suffix string, err error) {
 	if c.keySuffixProgram == nil {
-		return ctx.RateLimitOptions.RateLimitKey, nil
+		key := ctx.RateLimitOptions.RateLimitKey
+		return key, key, nil
 	}
+
 	rc := getRequestContext(ctx.Context())
 	if rc == nil {
-		return "", errors.New("no request context")
+		return "", "", errors.New("no request context")
 	}
-	str, err := expr.ResolveStringExpression(c.keySuffixProgram, rc.expressionContext)
+
+	suffix, err = expr.ResolveStringExpression(c.keySuffixProgram, rc.expressionContext)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
+		return "", "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
 	}
-	buf := bytes.NewBuffer(make([]byte, 0, len(ctx.RateLimitOptions.RateLimitKey)+len(str)+1))
-	_, _ = buf.WriteString(ctx.RateLimitOptions.RateLimitKey)
-	_ = buf.WriteByte(':')
-	_, _ = buf.WriteString(str)
-	return buf.String(), nil
+
+	return ctx.RateLimitOptions.RateLimitKey + ":" + suffix, suffix, nil
 }
 
 func (c *CosmoRateLimiter) RejectStatusCode() int {
@@ -126,7 +175,9 @@ func (c *CosmoRateLimiter) RenderResponseExtension(ctx *resolve.Context, out io.
 	if err != nil {
 		return err
 	}
+
 	_, err = out.Write(data)
+
 	return err
 }
 
@@ -134,12 +185,15 @@ func (c *CosmoRateLimiter) isIntrospectionQuery(rootFields []resolve.GraphCoordi
 	if len(rootFields) != 1 {
 		return false
 	}
+
 	if rootFields[0].TypeName == "Query" {
 		return rootFields[0].FieldName == "__schema" || rootFields[0].FieldName == "__type"
 	}
+
 	if rootFields[0].TypeName == "__Type" {
 		return true
 	}
+
 	return false
 }
 
@@ -155,6 +209,7 @@ func (c *CosmoRateLimiter) statsJSON(ctx *resolve.Context) ([]byte, error) {
 	} else {
 		stats.Key = "" // hide key when not in debug mode
 	}
+
 	return json.Marshal(stats)
 }
 
@@ -163,6 +218,7 @@ func (c *CosmoRateLimiter) setRateLimitStats(ctx *resolve.Context, key string, r
 	if v == nil {
 		return
 	}
+
 	statsCtx := v.(*rateLimitStatsCtx)
 	statsCtx.mux.Lock()
 	statsCtx.stats.Key = key
@@ -178,7 +234,11 @@ func (c *CosmoRateLimiter) getRateLimitStats(ctx *resolve.Context) RateLimitStat
 	if v == nil {
 		return RateLimitStats{}
 	}
+
 	statsCtx := v.(*rateLimitStatsCtx)
+	statsCtx.mux.Lock()
+	defer statsCtx.mux.Unlock()
+
 	return statsCtx.stats
 }
 
@@ -192,5 +252,6 @@ type rateLimitStatsCtxKey struct{}
 func WithRateLimiterStats(ctx *resolve.Context) *resolve.Context {
 	stats := &rateLimitStatsCtx{}
 	withStats := context.WithValue(ctx.Context(), rateLimitStatsCtxKey{}, stats)
+
 	return ctx.WithContext(withStats)
 }

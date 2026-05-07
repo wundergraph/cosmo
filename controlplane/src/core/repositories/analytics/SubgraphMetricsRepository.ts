@@ -10,6 +10,7 @@ import { DateRange, Label } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../FederatedGraphRepository.js';
 import * as schema from '../../../db/schema.js';
 import { flipDateRangeValuesIfNeeded } from '../../util.js';
+import { traced } from '../../tracing.js';
 import {
   BaseFilters,
   buildAnalyticsViewFilters,
@@ -61,6 +62,7 @@ interface LatencySeries {
   p99?: number;
 }
 
+@traced
 export class SubgraphMetricsRepository {
   constructor(
     private logger: FastifyBaseLogger,

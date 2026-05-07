@@ -33,6 +33,7 @@ import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js'
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
+import { traced } from '../tracing.js';
 import {
   composeGraphsInWorker,
   DeserializedComposedGraph,
@@ -136,6 +137,7 @@ export type CheckSubgraph = {
   // will be used only for new subgraphs
   labels?: Label[];
 };
+@traced
 export class Composer {
   constructor(
     private logger: FastifyBaseLogger,
@@ -145,6 +147,7 @@ export class Composer {
     private contractRepo: ContractRepository,
     private graphCompositionRepository: GraphCompositionRepository,
     private chClient?: ClickHouseClient,
+    private proxyUrl?: string,
   ) {}
 
   composeRouterConfigWithFeatureFlags({
@@ -266,6 +269,7 @@ export class Composer {
             this.logger,
             admissionWebhookURL,
             admissionWebhookSecret,
+            this.proxyUrl,
           );
           const resp = await admissionWebhookController.validateConfig(
             {

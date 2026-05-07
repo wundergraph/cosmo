@@ -1,0 +1,106 @@
+---
+title: "@connect__fieldResolver"
+icon: "function"
+description: "The @connect__fieldResolver directive turns a field into a dedicated gRPC RPC call with explicit parent context."
+---
+
+## Definition
+
+```graphql
+directive @connect__fieldResolver(context: connect__FieldSet!) on FIELD_DEFINITION
+```
+
+## Arguments
+
+| Argument  | Type                 | Default | Description                                                                                |
+| --------- | -------------------- | ------- | ------------------------------------------------------------------------------------------ |
+| `context` | `connect__FieldSet!` | —       | A space-separated list of sibling fields from the parent type to pass as resolver context. |
+
+## Overview
+
+`@connect__fieldResolver` is part of the [Cosmo Connect](/connect/intro) gRPC integration.
+It marks a field so that the router resolves it through a separate RPC call
+instead of including it in the parent type's response.
+
+Without this directive,
+all fields on a type are resolved together in a single RPC call.
+This is efficient when every field comes from the same data source,
+but not when some fields are expensive to compute or served by a different backend.
+For example,
+`id` and `price` on a `Product` type might come from a local database,
+while `shippingEstimate` requires a call to an external shipping service
+with higher latency.
+By annotating `shippingEstimate` with `@connect__fieldResolver`,
+the router only calls the shipping service when the client actually requests that field.
+
+The `context` argument specifies which fields from the parent type the resolver needs.
+These fields are fetched first,
+then passed to a generated `Resolve{TypeName}{FieldName}` RPC method.
+The router batches all context entries into a single call using a `repeated` message,
+eliminating N+1 problems.
+
+For a complete guide including protobuf generation,
+Go implementation examples,
+and batching behavior,
+see [Field Resolvers](/router/gRPC/field-resolvers).
+
+## Example
+
+```graphql
+type Product @key(fields: "id") {
+  id: ID!
+  name: String!
+  price: Float!
+  shippingEstimate(zip: String!): Float!
+    @connect__fieldResolver(context: "id price")
+}
+```
+
+In this example,
+the router first resolves `id` and `price` from the parent RPC.
+It then calls `ResolveProductShippingEstimate` with those values as context
+and `zip` as a field argument.
+
+## Generated protobuf
+
+For the `shippingEstimate` field in the example above,
+the protographic tooling generates:
+
+```protobuf
+service ProductService {
+  rpc ResolveProductShippingEstimate(ResolveProductShippingEstimateRequest)
+    returns (ResolveProductShippingEstimateResponse) {}
+}
+
+message ResolveProductShippingEstimateArgs {
+  string zip = 1;
+}
+
+message ResolveProductShippingEstimateContext {
+  string id = 1;
+  double price = 2;
+}
+
+message ResolveProductShippingEstimateRequest {
+  repeated ResolveProductShippingEstimateContext context = 1;
+  ResolveProductShippingEstimateArgs field_args = 2;
+}
+
+message ResolveProductShippingEstimateResult {
+  double shipping_estimate = 1;
+}
+
+message ResolveProductShippingEstimateResponse {
+  repeated ResolveProductShippingEstimateResult result = 1;
+}
+```
+
+The `context` message contains the fields listed in the directive (`id` and `price`).
+Because the field has a GraphQL argument (`zip`),
+an `Args` message and `field_args` field are added to the request.
+
+## See also
+
+- [Field Resolvers guide](/router/gRPC/field-resolvers) for implementation details and batching behavior.
+- [`@requires`](/federation/directives/requires) for declaring cross-subgraph field dependencies.
+- [Cosmo Connect](/connect/intro) for the full gRPC integration overview.

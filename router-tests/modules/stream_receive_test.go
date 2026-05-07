@@ -11,11 +11,11 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router-tests/events"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	stream_receive "github.com/wundergraph/cosmo/router-tests/modules/stream-receive"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -635,15 +635,15 @@ func TestReceiveHook(t *testing.T) {
 
 			events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			// Wait for server to close the subscription connection
+			// Wait for server to close the subscription
 			xEnv.WaitForSubscriptionCount(0, Timeout)
+			xEnv.WaitForTriggerCount(0, Timeout)
 
-			// Verify that client.Run() completed when server closed the connection
+			// Errors are non-terminal to the connection, so explicitly close
+			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, Timeout, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-			}, "client should have completed when server closed connection")
-
-			xEnv.WaitForTriggerCount(0, Timeout)
+			}, "client should have completed after explicit close")
 		})
 	})
 

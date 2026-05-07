@@ -1,0 +1,19 @@
+{
+  "operations": [
+    {
+      "hint": "This persisted operation also exists in the PQL manifest. When both cache warmup and manifest warmup are enabled, it should be processed only once.",
+      "request": {
+        "query": "query Employees {\n  employees {\n    id\n    }\n}",
+        "extensions": {
+          "persistedQuery": {
+            "version": 1,
+            "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
+          }
+        }
+      },
+      "client": {
+        "name": "my-client"
+      }
+    }
+  ]
+}

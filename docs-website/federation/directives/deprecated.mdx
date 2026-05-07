@@ -1,0 +1,89 @@
+---
+title: "@deprecated"
+icon: "triangle-exclamation"
+description: "The @deprecated directive marks fields, arguments, input fields, and enum values as deprecated in the schema."
+---
+
+## Definition
+
+```graphql
+directive @deprecated(reason: String = "No longer supported") on
+  FIELD_DEFINITION | ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION | ENUM_VALUE
+```
+
+## Arguments
+
+| Argument | Type     | Default                | Description                                                       |
+| -------- | -------- | ---------------------- | ----------------------------------------------------------------- |
+| `reason` | `String` | `"No longer supported"` | Explains why the element is deprecated and what to use instead. |
+
+## Overview
+
+`@deprecated` is a built-in GraphQL directive defined in the
+[GraphQL specification](https://spec.graphql.org/October2021/#sec--deprecated).
+It signals to API consumers that a schema element should no longer be used.
+
+Deprecated elements remain fully functional.
+The directive is a documentation and tooling signal,
+not a removal mechanism.
+GraphQL IDEs such as GraphiQL display deprecation warnings,
+and introspection exposes `isDeprecated` and `deprecationReason` fields
+so tools can surface this information automatically.
+
+### Supported locations
+
+- **Field definitions** on object and interface types.
+- **Argument definitions** on fields and directives.
+- **Input field definitions** on input object types.
+- **Enum values**.
+
+## Examples
+
+### Deprecating a field
+
+```graphql
+type Product {
+  id: ID!
+  name: String!
+  sku: String! @deprecated(reason: "Use `id` instead.")
+}
+```
+
+### Deprecating an enum value
+
+```graphql
+enum Status {
+  ACTIVE
+  INACTIVE @deprecated(reason: "Use ARCHIVED.")
+  ARCHIVED
+}
+```
+
+### Deprecating a field argument
+
+```graphql
+type Query {
+  users(
+    limit: Int
+    first: Int @deprecated(reason: "Use `limit`.")
+  ): [User!]!
+}
+```
+
+### Deprecating an input field
+
+```graphql
+input CreateUserInput {
+  name: String!
+  username: String @deprecated(reason: "Usernames are auto-generated.")
+}
+```
+
+## Federation behavior
+
+During composition,
+if the same field or enum value is marked `@deprecated` in multiple subgraphs with different reasons,
+Cosmo keeps the longest reason string.
+
+`@deprecated` is preserved in both the client-facing schema and the router schema.
+It appears in introspection responses so that consumers can detect deprecated usage.

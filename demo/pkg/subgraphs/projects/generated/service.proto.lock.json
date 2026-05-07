@@ -525,6 +525,80 @@
     },
     "QueryPanicRequest": {
       "fields": {}
+    },
+    "EmployeeWorkItemImplementations": {
+      "fields": {
+        "TechnicalWorkItem": 1,
+        "ManagementWorkItem": 2
+      }
+    },
+    "TechnicalWorkItem": {
+      "fields": {
+        "name": 1,
+        "priority": 2,
+        "codeCount": 3,
+        "handler": 4,
+        "specs": 5
+      }
+    },
+    "ManagementWorkItem": {
+      "fields": {
+        "name": 1,
+        "priority": 2,
+        "teamSize": 3,
+        "handler": 4,
+        "specs": 5
+      }
+    },
+    "WorkItemHandler": {
+      "fields": {
+        "name": 1,
+        "assignedItem": 2
+      }
+    },
+    "TechnicalSpecs": {
+      "fields": {
+        "name": 1,
+        "complexity": 2,
+        "metrics": 3
+      }
+    },
+    "ManagementSpecs": {
+      "fields": {
+        "name": 1,
+        "scope": 2,
+        "metrics": 3
+      }
+    },
+    "WorkMetrics": {
+      "fields": {
+        "score": 1,
+        "efficiency": 2
+      }
+    },
+    "WorkReviewResultMembers": {
+      "fields": {
+        "WorkApproval": 1,
+        "WorkRejection": 2
+      }
+    },
+    "WorkApproval": {
+      "fields": {
+        "comment": 1,
+        "approvedAt": 2
+      }
+    },
+    "WorkRejection": {
+      "fields": {
+        "reason": 1,
+        "rejectionCode": 2
+      }
+    },
+    "WorkSetup": {
+      "fields": {
+        "priority": 1,
+        "primaryItem": 2
+      }
     }
   },
   "enums": {

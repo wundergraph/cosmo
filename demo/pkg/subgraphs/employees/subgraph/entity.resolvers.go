@@ -33,14 +33,17 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 	for _, employee := range r.EmployeesData {
 		if id == employee.ID {
 			emp := &model.Employee{
-				Details:   employee.Details,
-				ID:        employee.ID,
-				Tag:       employee.Tag,
-				Expertise: employee.Expertise,
-				Role:      employee.Role,
-				Notes:     employee.Notes,
-				StartDate: employee.StartDate,
-				UpdatedAt: time.Now().String(),
+				Details:         employee.Details,
+				ID:              employee.ID,
+				Tag:             employee.Tag,
+				Expertise:       employee.Expertise,
+				Role:            employee.Role,
+				Notes:           employee.Notes,
+				StartDate:       employee.StartDate,
+				UpdatedAt:       time.Now().String(),
+				PrimaryWorkItem: employee.PrimaryWorkItem,
+				LastWorkReview:  employee.LastWorkReview,
+				WorkSetup:       employee.WorkSetup,
 			}
 			return emp, nil
 		}

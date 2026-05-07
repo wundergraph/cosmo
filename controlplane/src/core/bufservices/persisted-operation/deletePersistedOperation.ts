@@ -5,12 +5,10 @@ import type {
   DeletePersistedOperationRequest,
   DeletePersistedOperationResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import type { BlobStorage } from '../../blobstorage/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import type { PersistedOperationWithClientDTO } from '../../../types/index.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { createBlobStoragePath } from './utils.js';
 
@@ -76,22 +74,7 @@ export function deletePersistedOperation(
     });
 
     try {
-      await opts.blobStorage.deleteObject({
-        key: path,
-      });
-      return {
-        response: {
-          code: EnumStatusCode.OK,
-        },
-        operation: deletedOperation
-          ? {
-              id: deletedOperation.id,
-              operationId: deletedOperation.operationId,
-              clientName: deletedOperation.clientName,
-              operationNames: deletedOperation.operationNames,
-            }
-          : undefined,
-      };
+      await opts.blobStorage.deleteObject({ key: path });
     } catch (e) {
       const error = e instanceof Error ? e : new Error('Unknown error');
       logger.error(error, `Could not delete operation for ${operation.operationId} at ${path}`);
@@ -103,5 +86,33 @@ export function deletePersistedOperation(
         },
       };
     }
+
+    try {
+      await operationsRepo.generateAndUploadManifest({
+        organizationId: authContext.organizationId,
+        blobStorage: opts.blobStorage,
+        logger,
+      });
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      logger.error(error, `Failed to regenerate PQL manifest after deleting operation ${operation.operationId}`, {
+        federatedGraphId: federatedGraph.id,
+        organizationId: authContext.organizationId,
+      });
+    }
+
+    return {
+      response: {
+        code: EnumStatusCode.OK,
+      },
+      operation: deletedOperation
+        ? {
+            id: deletedOperation.id,
+            operationId: deletedOperation.operationId,
+            clientName: deletedOperation.clientName,
+            operationNames: deletedOperation.operationNames,
+          }
+        : undefined,
+    };
   });
 }

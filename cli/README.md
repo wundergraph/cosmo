@@ -37,7 +37,7 @@ Whether you're building monolithic or federated GraphQL architectures, `wgc` pro
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) v20 LTS or higher
+- [Node.js](https://nodejs.org/) v22+ (>=22.11.0)
 
 ### Install via npm
 
