@@ -61,7 +61,6 @@ func (s *Sandbox) Execute(ctx context.Context, req ExecuteRequest) (execResult E
 	qctx := rt.Context()
 	state := &executeState{req: req}
 	defer func() {
-		state.wg.Wait()
 		// qjs panics on Close when the runtime context has already been cancelled.
 		// Treat the runtime as best-effort cleanup; a leaked WASM instance is bounded
 		// by GC and the per-call freshness contract.

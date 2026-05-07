@@ -28,7 +28,6 @@ type executeState struct {
 	req       ExecuteRequest
 	hostCalls atomic.Int32
 	qjsMu     sync.Mutex
-	wg        sync.WaitGroup
 }
 
 func (s *Sandbox) installHostInvoke(ctx context.Context, qctx *qjs.Context, state *executeState) {

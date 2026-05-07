@@ -28,11 +28,11 @@ import (
 )
 
 const (
-	defaultListenAddr              = "localhost:5027"
-	defaultExecuteTimeout          = 120 * time.Second
-	defaultMaxResultBytes          = 32 << 10
-	mcpPath                        = "/mcp"
-	persistedOpsURI                = "yoko://persisted-ops.d.ts"
+	defaultListenAddr            = "localhost:5027"
+	defaultExecuteTimeout        = 120 * time.Second
+	defaultMaxResultBytes        = 32 << 10
+	mcpPath                      = "/mcp"
+	persistedOpsURI              = "yoko://persisted-ops.d.ts"
 	statelessNamedOpsWarnMessage = "code mode named operations are disabled because MCP session stateless mode is enabled"
 	namedOpsDisabledMessage      = "named operations are disabled"
 )
@@ -74,9 +74,9 @@ type Server struct {
 	tracerProvider    trace.TracerProvider
 	callTraceRecorder calltrace.Recorder
 
-	mcpServer      *mcp.Server
-	searchGroup    singleflight.Group
-	newOpsFragment func([]storage.SessionOp, *ast.Document) (string, error)
+	mcpServer   *mcp.Server
+	searchGroup singleflight.Group
+	opsFragment func([]storage.SessionOp, *ast.Document) (string, error)
 
 	mu                      sync.Mutex
 	httpServer              *http.Server
@@ -132,7 +132,7 @@ func New(cfg Config) (*Server, error) {
 		meter:             meter,
 		tracerProvider:    cfg.TracerProvider,
 		callTraceRecorder: cfg.CallTraceRecorder,
-		newOpsFragment:    tsgen.NewOpsFragment,
+		opsFragment:       tsgen.NewOpsFragment,
 	}
 
 	s.mcpServer = mcp.NewServer(&mcp.Implementation{
@@ -174,12 +174,16 @@ func (s *Server) Start(ctx context.Context) error {
 		return err
 	}
 
+	// WriteTimeout must exceed executeTimeout — net/http enforces it as a
+	// hard deadline on the whole response phase, which would cut off
+	// legitimately long code_mode_run_js calls. ReadHeaderTimeout bounds the
+	// header read separately so the listener still resists slow-loris clients.
 	httpServer := &http.Server{
-		Addr:         s.listenAddr,
-		Handler:      s.handler(),
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:              s.listenAddr,
+		Handler:           s.handler(),
+		ReadHeaderTimeout: 30 * time.Second,
+		WriteTimeout:      s.executeTimeout + 30*time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	s.mu.Lock()
