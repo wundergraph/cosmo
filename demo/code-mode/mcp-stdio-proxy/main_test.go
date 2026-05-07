@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -147,6 +148,93 @@ func TestProxyMirrorsUpstreamSurfaceAndForwardsElicitation(t *testing.T) {
 			tt.run(ctx, t, session)
 		})
 	}
+}
+
+func TestProxyReconnectsAfterUpstreamDisconnect(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	server := mcp.NewServer(&mcp.Implementation{Name: "test-upstream", Version: "0.1.0"}, nil)
+	server.AddTool(&mcp.Tool{
+		Name:        "echo",
+		Description: "Echo the input.",
+		InputSchema: map[string]any{
+			"type":                 "object",
+			"additionalProperties": true,
+		},
+	}, func(_ context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return &mcp.CallToolResult{
+			Content:           []mcp.Content{&mcp.TextContent{Text: string(req.Params.Arguments)}},
+			StructuredContent: req.Params.Arguments,
+		}, nil
+	})
+	mcpHandler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
+		return server
+	}, nil)
+
+	// Switchable handler: when "off", every request returns 503 so both the
+	// keepalive ping on the live session and any reconnect dials fail.
+	var upstreamUp atomic.Bool
+	upstreamUp.Store(true)
+	httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !upstreamUp.Load() {
+			http.Error(w, "upstream off", http.StatusServiceUnavailable)
+			return
+		}
+		mcpHandler.ServeHTTP(w, r)
+	}))
+	defer httpServer.Close()
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- runProxy(ctx, proxyOptions{
+			upstreamURL:    httpServer.URL,
+			transport:      serverTransport,
+			httpClient:     httpServer.Client(),
+			keepAlive:      100 * time.Millisecond,
+			initialBackoff: 50 * time.Millisecond,
+		})
+	}()
+
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "0.1.0"}, nil)
+	session, err := client.Connect(ctx, clientTransport, nil)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, session.Close())
+		err := <-errCh
+		if !errors.Is(err, context.Canceled) {
+			require.NoError(t, err)
+		}
+	}()
+
+	resp, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name:      "echo",
+		Arguments: map[string]any{"x": 1},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, &mcp.CallToolResult{
+		Content:           []mcp.Content{&mcp.TextContent{Text: `{"x":1}`}},
+		StructuredContent: map[string]any{"x": float64(1)},
+	}, resp)
+
+	upstreamUp.Store(false)
+	time.Sleep(400 * time.Millisecond)
+	upstreamUp.Store(true)
+
+	require.Eventually(t, func() bool {
+		resp, err := session.CallTool(ctx, &mcp.CallToolParams{
+			Name:      "echo",
+			Arguments: map[string]any{"x": 2},
+		})
+		if err != nil {
+			return false
+		}
+		return assert.ObjectsAreEqual(&mcp.CallToolResult{
+			Content:           []mcp.Content{&mcp.TextContent{Text: `{"x":2}`}},
+			StructuredContent: map[string]any{"x": float64(2)},
+		}, resp)
+	}, 10*time.Second, 100*time.Millisecond, "expected proxy to reconnect and serve calls")
 }
 
 func newTestUpstream(t *testing.T) *httptest.Server {
