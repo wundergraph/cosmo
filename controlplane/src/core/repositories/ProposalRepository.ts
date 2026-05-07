@@ -471,7 +471,13 @@ export class ProposalRepository {
       .innerJoin(schema.proposals, eq(schema.proposalSubgraphs.proposalId, schema.proposals.id))
       .innerJoin(schema.federatedGraphs, eq(schema.proposals.federatedGraphId, schema.federatedGraphs.id))
       .innerJoin(schema.targets, eq(schema.federatedGraphs.targetId, schema.targets.id))
-      .where(and(eq(schema.proposalSubgraphs.subgraphName, subgraphName), eq(schema.targets.namespaceId, namespaceId)));
+      .where(
+        and(
+          eq(schema.proposalSubgraphs.subgraphName, subgraphName),
+          eq(schema.targets.namespaceId, namespaceId),
+          eq(schema.targets.organizationId, this.organizationId),
+        ),
+      );
 
     return proposalSubgraphs;
   }
