@@ -1969,7 +1969,7 @@ engine:
 
 ### Subgraph Response Extensions Forwarding
 
-Forwards `extensions` returned by subgraphs to the client response. Use the allow list to restrict which root extension fields are propagated, and the algorithm to pick a winner when multiple subgraphs return the same root field.
+The router forwards subgraph response `extensions` to the client. An allow list restricts which root extension fields are propagated, and an algorithm selects a winner when multiple subgraphs return the same root field.
 
 | Environment Variable                                                | YAML                                     | Required               | Description                                                                                                                                                                       | Default Value |
 |---------------------------------------------------------------------|------------------------------------------|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
