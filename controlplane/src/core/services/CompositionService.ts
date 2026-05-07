@@ -333,10 +333,6 @@ export class CompositionService {
       result.compositionWarnings.push(...compositionWarnings);
     }
 
-    if (affectedFeatureFlags.length === 0) {
-      return result;
-    }
-
     // Compose all affected feature flags
     for (const featureFlag of affectedFeatureFlags) {
       const { deploymentErrors, compositionErrors, compositionWarnings } = await this.composeAndDeployFeatureFlag({
