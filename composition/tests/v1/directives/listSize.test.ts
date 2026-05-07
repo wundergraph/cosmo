@@ -896,6 +896,63 @@ describe('@listSize directive tests', () => {
         ]),
       );
     });
+
+    test('that an argument default with empty intermediate object that does not supply the leaf is allowed', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithNestedSlicingArgIntermediateEmptyDefault,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const ls = costs.listSizes.get('Query.search');
+      expect(ls).toBeDefined();
+      expect(ls!.assumedSize).toBe(50);
+      expect(ls!.slicingArguments).toEqual(['input.pagination.first']);
+    });
+
+    test('that an argument default with null intermediate that does not supply the leaf is allowed', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithNestedSlicingArgIntermediateNullDefault,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const ls = costs.listSizes.get('Query.search');
+      expect(ls).toBeDefined();
+      expect(ls!.assumedSize).toBe(50);
+      expect(ls!.slicingArguments).toEqual(['input.pagination.first']);
+    });
+
+    test('that an intermediate-field null default that does not supply the leaf is allowed', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithNestedSlicingArgIntermediateFieldNullDefault,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const ls = costs.listSizes.get('Query.search');
+      expect(ls).toBeDefined();
+      expect(ls!.assumedSize).toBe(50);
+      expect(ls!.slicingArguments).toEqual(['input.pagination.first']);
+    });
+
+    test('that an argument default that does not contain the leaf key is allowed', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithNestedSlicingArgArgumentDefaultMissingLeaf,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const ls = costs.listSizes.get('Query.search');
+      expect(ls).toBeDefined();
+      expect(ls!.assumedSize).toBe(50);
+      expect(ls!.slicingArguments).toEqual(['input.first']);
+    });
+
+    test('that an argument default with explicit null leaf is rejected (explicitly defined)', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNestedSlicingArgArgumentDefaultExplicitNullLeaf,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.search', FIRST_ORDINAL, [
+          listSizeAssumedSizeSlicingArgDefaultErrorMessage('Query.search', 'input.pagination.first'),
+        ]),
+      );
+    });
   });
 });
 
@@ -1563,6 +1620,80 @@ const subgraphWithNestedSlicingArgLeafDefaultPlusAssumedSize: Subgraph = {
         @listSize(assumedSize: 50, slicingArguments: ["input.first"], requireOneSlicingArgument: false)
     }
     input PaginationInput { first: Int = 10 }
+    type Book { id: ID! }
+  `),
+};
+
+// Argument default has the intermediate key but its value is an empty object, leaf is not supplied.
+const subgraphWithNestedSlicingArgIntermediateEmptyDefault: Subgraph = {
+  name: 'subgraph-listsize-nested-intermediate-empty-default',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput = { pagination: {} }): [Book]
+        @listSize(assumedSize: 50, slicingArguments: ["input.pagination.first"], requireOneSlicingArgument: false)
+    }
+    input SearchInput { pagination: PaginationInput }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+// Argument default has the intermediate key set to null; walk cannot continue, leaf is not supplied.
+const subgraphWithNestedSlicingArgIntermediateNullDefault: Subgraph = {
+  name: 'subgraph-listsize-nested-intermediate-null-default',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput = { pagination: null }): [Book]
+        @listSize(assumedSize: 50, slicingArguments: ["input.pagination.first"], requireOneSlicingArgument: false)
+    }
+    input SearchInput { pagination: PaginationInput }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+// Intermediate input field defaults to null; walk through that node cannot supply the leaf.
+const subgraphWithNestedSlicingArgIntermediateFieldNullDefault: Subgraph = {
+  name: 'subgraph-listsize-nested-intermediate-field-null-default',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Book]
+        @listSize(assumedSize: 50, slicingArguments: ["input.pagination.first"], requireOneSlicingArgument: false)
+    }
+    input SearchInput { pagination: PaginationInput = null }
+    input PaginationInput { first: Int }
+    type Book { id: ID! }
+  `),
+};
+
+// Argument default exists but does not contain the leaf key.
+const subgraphWithNestedSlicingArgArgumentDefaultMissingLeaf: Subgraph = {
+  name: 'subgraph-listsize-nested-argument-default-missing-leaf',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput = { other: 7 }): [Book]
+        @listSize(assumedSize: 50, slicingArguments: ["input.first"], requireOneSlicingArgument: false)
+    }
+    input PaginationInput { first: Int, other: Int }
+    type Book { id: ID! }
+  `),
+};
+
+// Argument default explicitly sets the leaf to null; the leaf IS defined (just to null), so it is rejected.
+const subgraphWithNestedSlicingArgArgumentDefaultExplicitNullLeaf: Subgraph = {
+  name: 'subgraph-listsize-nested-argument-default-explicit-null-leaf',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput = { pagination: { first: null } }): [Book]
+        @listSize(assumedSize: 50, slicingArguments: ["input.pagination.first"], requireOneSlicingArgument: false)
+    }
+    input SearchInput { pagination: PaginationInput }
+    input PaginationInput { first: Int }
     type Book { id: ID! }
   `),
 };

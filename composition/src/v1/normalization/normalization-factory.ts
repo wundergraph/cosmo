@@ -2740,7 +2740,8 @@ export class NormalizationFactory {
       } else {
         /**
          * When assumedSize is set together with slicingArguments, the slicing argument must not have
-         * a default in any element of the slicingArgument's chain. That should be checked for all slicing Arguments.
+         * a default leaf value in any element of the slicingArgument's chain.
+         * That should be checked for all slicing Arguments.
          * For example, if the query is defined like this:
          *    search(a: SearchInput): [Book]
          *        @listSize(assumedSize: 50, slicingArguments: ["a.b.c"], requireOneSlicingArgument: false)
@@ -2749,15 +2750,32 @@ export class NormalizationFactory {
          *     input PaginationInput { c: Int = 10 }
          * Notably, this query definition is also forbidden with the @listSize above:
          *     search(a: SearchInput = { b: { c: 10 } }): [Book]
-         * A default anywhere along the chain (argument, any intermediate input field, the leaf)
-         * means the slicing value can resolve via that default rather than assumedSize.
-         * which violates the IBM cost spec rule.
+         * A default along the chain only matters if it actually supplies a value for the leaf:
+         * walk the remaining tail through the default's AST and reject only when the walk resolves.
+         * E.g. `a: SearchInput = { b: {} }` is allowed, and the leaf stays undefined.
          */
         for (const slicingArgPath of listSizeConfig.slicingArguments) {
           const chain = slicingArgChainByPath.get(slicingArgPath);
-          if (chain?.some((node) => node.defaultValue)) {
-            // At least one node in the chain has a defaultValue set.
-            errorMessages.push(listSizeAssumedSizeSlicingArgDefaultErrorMessage(directiveCoords, slicingArgPath));
+          if (!chain) {
+            continue;
+          }
+          const segments = slicingArgPath.split(LITERAL_PERIOD);
+          // Outer loop: which default are we starting from?
+          for (let i = 0; i < chain.length; i++) {
+            let value: ConstValueNode | undefined = chain[i].defaultValue;
+            // Inner loop: try to find a defined leaf in the chain:
+            for (let j = i + 1; j < segments.length; j++) {
+              if (!value || value.kind !== Kind.OBJECT) {
+                value = undefined;
+                break;
+              }
+              const field = value.fields.find((f) => f.name.value === segments[j]);
+              value = field?.value;
+            }
+            if (value !== undefined) {
+              errorMessages.push(listSizeAssumedSizeSlicingArgDefaultErrorMessage(directiveCoords, slicingArgPath));
+              break;
+            }
           }
         }
       }
