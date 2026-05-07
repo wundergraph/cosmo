@@ -80,8 +80,9 @@ type (
 	// All fields are shared between all feature muxes. On shutdown, all graph instances are shutdown.
 	graphServer struct {
 		*Config
-		context                 context.Context
-		cancelFunc              context.CancelFunc
+		graphServerCtx          context.Context
+		graphServerCancel       context.CancelFunc
+		routerCtx               context.Context
 		storageProviders        *config.StorageProviders
 		engineStats             statistics.EngineStatistics
 		playgroundHandler       func(http.Handler) http.Handler
@@ -135,7 +136,7 @@ type buildMultiGraphHandlerOptions struct {
 }
 
 // newGraphServer creates a new server instance.
-func newGraphServer(ctx context.Context, r *Router, response *routerconfig.Response, proxy ProxyFunc) (*graphServer, error) {
+func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig.Response, proxy ProxyFunc) (*graphServer, error) {
 	/* Older versions of composition will not populate a compatibility version.
 	 * Currently, all "old" router execution configurations are compatible as there have been no breaking
 	 * changes.
@@ -181,10 +182,11 @@ func newGraphServer(ctx context.Context, r *Router, response *routerconfig.Respo
 		}
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	graphServerCtx, graphServerCancel := context.WithCancel(routerCtx)
 	s := &graphServer{
-		context:                 ctx,
-		cancelFunc:              cancel,
+		graphServerCtx:          graphServerCtx,
+		graphServerCancel:       graphServerCancel,
+		routerCtx:               routerCtx,
 		Config:                  &r.Config,
 		engineStats:             r.EngineStats,
 		baseTransport:           baseTransport,
@@ -312,7 +314,8 @@ func newGraphServer(ctx context.Context, r *Router, response *routerconfig.Respo
 
 	if needNewBaseGraphMux {
 		// build new base grap mux
-		gm, err = s.buildGraphMux(ctx, BuildGraphMuxOptions{
+		s.logger.Debug("Will build a new base graph mux for new graph server")
+		gm, err = s.buildGraphMux(BuildGraphMuxOptions{
 			RouterConfigVersion:   s.baseRouterConfigVersion,
 			EngineConfig:          response.Config.GetEngineConfig(),
 			ConfigSubgraphs:       response.Config.GetSubgraphs(),
@@ -323,6 +326,7 @@ func newGraphServer(ctx context.Context, r *Router, response *routerconfig.Respo
 			return nil, fmt.Errorf("failed to build base mux: %w", err)
 		}
 	} else {
+		s.logger.Debug("Will reuse old base graph mux for new graph server")
 		gm = mux
 		gm.reused.Store(true)
 		s.graphMuxListLock.Lock()
@@ -335,7 +339,7 @@ func newGraphServer(ctx context.Context, r *Router, response *routerconfig.Respo
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, buildMultiGraphHandlerOptions{
+	multiGraphHandler, err := s.buildMultiGraphHandler(buildMultiGraphHandlerOptions{
 		baseMux:               gm.mux,
 		featureFlagConfigs:    featureFlagConfigMap,
 		reloadPersistentState: r.reloadPersistentState,
@@ -488,7 +492,6 @@ func getRoutingUrlGroupingForCircuitBreakers(
 }
 
 func (s *graphServer) buildMultiGraphHandler(
-	ctx context.Context,
 	opts buildMultiGraphHandlerOptions,
 ) (http.HandlerFunc, error) {
 	if len(opts.featureFlagConfigs) == 0 {
@@ -507,6 +510,8 @@ func (s *graphServer) buildMultiGraphHandler(
 			if !hasChanged && !wasAdded {
 				oldGraphMux, exists := opts.currentGraphMuxes[featureFlagName]
 				if exists {
+					s.logger.Debug("will reuse feature flag mux for new graph server",
+						zap.String("flag", featureFlagName))
 					featureFlagToMux[featureFlagName] = oldGraphMux.mux
 					s.graphMuxListLock.Lock()
 					s.graphMuxList[featureFlagName] = oldGraphMux
@@ -517,7 +522,10 @@ func (s *graphServer) buildMultiGraphHandler(
 			}
 		}
 
-		gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
+		s.logger.Debug("will create a new feature flag mux for new graph server",
+			zap.String("flag", featureFlagName))
+
+		gm, err := s.buildGraphMux(BuildGraphMuxOptions{
 			FeatureFlagName:       featureFlagName,
 			RouterConfigVersion:   executionConfig.GetVersion(),
 			EngineConfig:          executionConfig.GetEngineConfig(),
@@ -584,6 +592,9 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 }
 
 type graphMux struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	mux    *chi.Mux
 	reused atomic.Bool
 
@@ -864,6 +875,8 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
+	s.cancel()
+
 	s.planCache.Close()
 	s.planFallbackCache.Close()
 	s.persistedOperationCache.Close()
@@ -923,10 +936,13 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 // It also creates a new execution plan cache for the mux. The mux is not mounted on the server.
 // The mux is appended internally to the graph server's list of muxes to clean up later when the server is swapped.
 func (s *graphServer) buildGraphMux(
-	ctx context.Context,
 	opts BuildGraphMuxOptions,
 ) (*graphMux, error) {
+	graphMuxCtx, graphMuxCancel := context.WithCancel(s.routerCtx)
+
 	gm := &graphMux{
+		ctx:               graphMuxCtx,
+		cancel:            graphMuxCancel,
 		metricStore:       rmetric.NewNoopMetrics(),
 		streamMetricStore: rmetric.NewNoopStreamMetricStore(),
 	}
@@ -1320,7 +1336,7 @@ func (s *graphServer) buildGraphMux(
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	if err := s.setupConnector(ctx, opts.EngineConfig, opts.ConfigSubgraphs, telemetryAttExpressions, tracingAttExpressions); err != nil {
+	if err := s.setupConnector(s.graphServerCtx, opts.EngineConfig, opts.ConfigSubgraphs, telemetryAttExpressions, tracingAttExpressions); err != nil {
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
@@ -1369,7 +1385,7 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	executor, providers, err := ecb.Build(
-		ctx,
+		graphMuxCtx,
 		&ExecutorBuildOptions{
 			EngineConfig:                   opts.EngineConfig,
 			Subgraphs:                      opts.ConfigSubgraphs,
@@ -1387,7 +1403,7 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	s.pubSubProviders = providers
-	if pubSubStartupErr := s.startupPubSubProviders(ctx); pubSubStartupErr != nil {
+	if pubSubStartupErr := s.startupPubSubProviders(s.graphServerCtx); pubSubStartupErr != nil {
 		return nil, pubSubStartupErr
 	}
 
@@ -1458,7 +1474,7 @@ func (s *graphServer) buildGraphMux(
 		}
 
 		warmupConfig.AfterOperation = func(item *CacheWarmupOperationPlanResult) {
-			gm.metricStore.MeasureOperationPlanningTime(ctx,
+			gm.metricStore.MeasureOperationPlanningTime(graphMuxCtx,
 				item.PlanningTime,
 				nil,
 				otelmetric.WithAttributes(
@@ -1510,7 +1526,7 @@ func (s *graphServer) buildGraphMux(
 			return nil, fmt.Errorf("unexpected cache warmer source provided")
 		}
 
-		err = WarmupCaches(ctx, warmupConfig)
+		err = WarmupCaches(graphMuxCtx, warmupConfig)
 		if err != nil {
 			// We don't want to fail the server if the cache warmup fails
 			s.logger.Error("Failed to warmup caches. It will retry after server restart or graph execution config update", zap.Error(err))
@@ -1537,7 +1553,7 @@ func (s *graphServer) buildGraphMux(
 			})
 
 			manifestAfterOperation := func(item *CacheWarmupOperationPlanResult) {
-				gm.metricStore.MeasureOperationPlanningTime(ctx,
+				gm.metricStore.MeasureOperationPlanningTime(graphMuxCtx,
 					item.PlanningTime,
 					nil,
 					otelmetric.WithAttributes(
@@ -1564,7 +1580,7 @@ func (s *graphServer) buildGraphMux(
 				AfterOperation: manifestAfterOperation,
 			}
 
-			err = WarmupCaches(ctx, manifestWarmupConfig)
+			err = WarmupCaches(graphMuxCtx, manifestWarmupConfig)
 			if err != nil {
 				s.logger.Error("Failed to warmup PQL manifest operations", zap.Error(err))
 			}
@@ -1583,7 +1599,7 @@ func (s *graphServer) buildGraphMux(
 					AfterOperation: manifestAfterOperation,
 				}
 
-				if rewarmErr := WarmupCaches(ctx, rewarmConfig); rewarmErr != nil {
+				if rewarmErr := WarmupCaches(graphMuxCtx, rewarmConfig); rewarmErr != nil {
 					s.logger.Error("Failed to re-warm PQL manifest operations after update", zap.Error(rewarmErr))
 				}
 			})
@@ -1711,7 +1727,7 @@ func (s *graphServer) buildGraphMux(
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
-		wsMiddleware := NewWebsocketMiddleware(ctx, WebsocketMiddlewareOptions{
+		wsMiddleware := NewWebsocketMiddleware(graphMuxCtx, WebsocketMiddlewareOptions{
 			OperationProcessor:        operationProcessor,
 			OperationBlocker:          operationBlocker,
 			Planner:                   operationPlanner,
@@ -1972,7 +1988,7 @@ func (s *graphServer) wait(ctx context.Context) error {
 func (s *graphServer) Shutdown(ctx context.Context) error {
 	// Cancel the context after the graceful shutdown is done
 	// to clean up resources like websocket connections, pools, etc.
-	defer s.cancelFunc()
+	defer s.graphServerCancel()
 
 	s.logger.Debug("Shutdown of graph server initiated. Waiting for in-flight requests to finish.",
 		zap.String("config_version", s.baseRouterConfigVersion),
