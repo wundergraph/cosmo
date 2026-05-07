@@ -397,19 +397,21 @@
                 "icon": "sign-post",
                 "pages": [
                   "federation/federation-directives-index",
+                  "federation/directives/authenticated",
+                  "federation/directives/composeddirective",
+                  "federation/directives/connect__fieldresolver",
                   "federation/directives/deprecated",
-                  "federation/directives/specifiedby",
-                  "federation/directives/key",
                   "federation/directives/external",
+                  "federation/directives/key",
+                  "federation/directives/link",
+                  "federation/directives/openfed__configuredescription",
+                  "federation/directives/openfed__requirefetchreasons",
+                  "federation/directives/openfed__subscriptionfilter",
                   "federation/directives/provides",
                   "federation/directives/requires",
                   "federation/directives/shareable",
-                  "federation/directives/authenticated",
-                  "federation/directives/requiresscopes",
-                  "federation/directives/connect__fieldresolver",
-                  "federation/directives/openfed__subscriptionfilter",
-                  "federation/directives/openfed__configuredescription",
-                  "federation/directives/openfed__requirefetchreasons"
+                  "federation/directives/specifiedby",
+                  "federation/directives/requiresscopes"
                 ]
               },
               {
