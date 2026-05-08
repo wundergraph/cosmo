@@ -50,6 +50,7 @@ import { getFeatureSubgraphs } from './feature-flag/getFeatureSubgraphs.js';
 import { getFeatureSubgraphsByFederatedGraph } from './feature-flag/getFeatureSubgraphsByFederatedGraph.js';
 import { getFeatureSubgraphsByFeatureFlag } from './feature-flag/getFeatureSubgraphsByFeatureFlag.js';
 import { updateFeatureFlag } from './feature-flag/updateFeatureFlag.js';
+import { recomposeFeatureFlag } from './feature-flag/recomposeFeatureFlag.js';
 import { checkFederatedGraph } from './federated-graph/checkFederatedGraph.js';
 import { createFederatedGraph } from './federated-graph/createFederatedGraph.js';
 import { createFederatedGraphToken } from './federated-graph/createFederatedGraphToken.js';
@@ -157,6 +158,7 @@ import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberGroup } from './user/updateOrgMemberGroup.js';
 import { deleteCacheWarmerOperation } from './cache-warmer/deleteCacheWarmerOperation.js';
 import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompatibilityVersion.js';
+import { recomposeGraph } from './graph/recomposeGraph.js';
 import { getOrganizationBySlug } from './organization/getOrganizationBySlug.js';
 import { getProposedSchemaOfCheckedSubgraph } from './check/getProposedSchemaOfCheckedSubgraph.js';
 import { getProposalsByFederatedGraph } from './proposal/getProposalsByFederatedGraph.js';
@@ -180,7 +182,6 @@ import { getSubgraphCheckExtensionsConfig } from './check-extensions/getSubgraph
 import { configureSubgraphCheckExtensions } from './check-extensions/configureSubgraphCheckExtensions.js';
 import { initializeCosmoUser } from './user/initializeCosmoUser.js';
 import { listOrganizations } from './organization/listOrganizations.js';
-import { recomposeGraph } from './graph/recomposeGraph.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -916,5 +917,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     recomposeGraph: (req, ctx) => {
       return recomposeGraph(opts, req, ctx);
     },
+
+    recomposeFeatureFlag: (req, ctx) => {
+      return recomposeFeatureFlag(opts, req, ctx);
+    }
   };
 }

@@ -3215,6 +3215,20 @@ message RecomposeGraphResponse {
   optional SubgraphPublishStats errorCounts = 5;
 }
 
+message RecomposeFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+  optional int32 limit = 3;
+  optional bool disable_resolvability_validation = 5;
+}
+
+message RecomposeFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3614,4 +3628,6 @@ service PlatformService {
   rpc VerifyAPIKeyGraphAccess(VerifyAPIKeyGraphAccessRequest) returns (VerifyAPIKeyGraphAccessResponse) {}
   // RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
   rpc RecomposeGraph(RecomposeGraphRequest) returns (RecomposeGraphResponse) {}
+  // RecomposeFeatureFlag triggers a recomposition of the feature flag using its current subgraphs
+  rpc RecomposeFeatureFlag(RecomposeFeatureFlagRequest) returns (RecomposeFeatureFlagResponse) {}
 }

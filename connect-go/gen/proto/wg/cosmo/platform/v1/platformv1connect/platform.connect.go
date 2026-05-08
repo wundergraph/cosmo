@@ -574,6 +574,9 @@ const (
 	// PlatformServiceRecomposeGraphProcedure is the fully-qualified name of the PlatformService's
 	// RecomposeGraph RPC.
 	PlatformServiceRecomposeGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/RecomposeGraph"
+	// PlatformServiceRecomposeFeatureFlagProcedure is the fully-qualified name of the PlatformService's
+	// RecomposeFeatureFlag RPC.
+	PlatformServiceRecomposeFeatureFlagProcedure = "/wg.cosmo.platform.v1.PlatformService/RecomposeFeatureFlag"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -759,6 +762,7 @@ var (
 	platformServiceUnlinkSubgraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
 	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
 	platformServiceRecomposeGraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
+	platformServiceRecomposeFeatureFlagMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("RecomposeFeatureFlag")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -1103,6 +1107,8 @@ type PlatformServiceClient interface {
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
 	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
+	// RecomposeFeatureFlag triggers a recomposition of the feature flag using its current subgraphs
+	RecomposeFeatureFlag(context.Context, *connect.Request[v1.RecomposeFeatureFlagRequest]) (*connect.Response[v1.RecomposeFeatureFlagResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -2202,6 +2208,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		recomposeFeatureFlag: connect.NewClient[v1.RecomposeFeatureFlagRequest, v1.RecomposeFeatureFlagResponse](
+			httpClient,
+			baseURL+PlatformServiceRecomposeFeatureFlagProcedure,
+			connect.WithSchema(platformServiceRecomposeFeatureFlagMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2387,6 +2399,7 @@ type platformServiceClient struct {
 	unlinkSubgraph                                     *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
 	verifyAPIKeyGraphAccess                            *connect.Client[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse]
 	recomposeGraph                                     *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
+	recomposeFeatureFlag                               *connect.Client[v1.RecomposeFeatureFlagRequest, v1.RecomposeFeatureFlagResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -3328,6 +3341,11 @@ func (c *platformServiceClient) RecomposeGraph(ctx context.Context, req *connect
 	return c.recomposeGraph.CallUnary(ctx, req)
 }
 
+// RecomposeFeatureFlag calls wg.cosmo.platform.v1.PlatformService.RecomposeFeatureFlag.
+func (c *platformServiceClient) RecomposeFeatureFlag(ctx context.Context, req *connect.Request[v1.RecomposeFeatureFlagRequest]) (*connect.Response[v1.RecomposeFeatureFlagResponse], error) {
+	return c.recomposeFeatureFlag.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3670,6 +3688,8 @@ type PlatformServiceHandler interface {
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
 	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
+	// RecomposeFeatureFlag triggers a recomposition of the feature flag using its current subgraphs
+	RecomposeFeatureFlag(context.Context, *connect.Request[v1.RecomposeFeatureFlagRequest]) (*connect.Response[v1.RecomposeFeatureFlagResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4765,6 +4785,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceRecomposeFeatureFlagHandler := connect.NewUnaryHandler(
+		PlatformServiceRecomposeFeatureFlagProcedure,
+		svc.RecomposeFeatureFlag,
+		connect.WithSchema(platformServiceRecomposeFeatureFlagMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -5127,6 +5153,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceVerifyAPIKeyGraphAccessHandler.ServeHTTP(w, r)
 		case PlatformServiceRecomposeGraphProcedure:
 			platformServiceRecomposeGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceRecomposeFeatureFlagProcedure:
+			platformServiceRecomposeFeatureFlagHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5854,4 +5882,8 @@ func (UnimplementedPlatformServiceHandler) VerifyAPIKeyGraphAccess(context.Conte
 
 func (UnimplementedPlatformServiceHandler) RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RecomposeGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) RecomposeFeatureFlag(context.Context, *connect.Request[v1.RecomposeFeatureFlagRequest]) (*connect.Response[v1.RecomposeFeatureFlagResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RecomposeFeatureFlag is not implemented"))
 }
