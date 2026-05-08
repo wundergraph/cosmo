@@ -920,6 +920,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     recomposeFeatureFlag: (req, ctx) => {
       return recomposeFeatureFlag(opts, req, ctx);
-    }
+    },
   };
 }
