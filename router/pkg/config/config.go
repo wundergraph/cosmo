@@ -1218,6 +1218,12 @@ type MCPServerEntry struct {
 	OmitToolNamePrefix        bool             `yaml:"omit_tool_name_prefix"`
 	Session                   MCPSessionConfig `yaml:"session,omitempty"`
 	ResourceDocumentation     string           `yaml:"resource_documentation,omitempty"`
+	// CodeMode opts this server into PR #2825's Code Mode surface (yoko search +
+	// JS sandbox) instead of the regular per-operation tools. When enabled, this
+	// server's MCP mount exposes only code_mode_search_tools, code_mode_run_js,
+	// and yoko://persisted-ops.d.ts — the per-op tools, execute_graphql, schema
+	// resource, and get_operation_info are suppressed for that server.
+	CodeMode MCPCodeModeConfiguration `yaml:"code_mode,omitempty"`
 }
 
 // MCPUpstreamConfig points an MCP server at a non-Cosmo GraphQL endpoint.
@@ -1289,6 +1295,7 @@ func (c *MCPConfiguration) NormalizeServers() ([]MCPServerEntry, error) {
 		OmitToolNamePrefix:        c.OmitToolNamePrefix,
 		Session:                   c.Session,
 		ResourceDocumentation:     c.ResourceDocumentation,
+		CodeMode:                  c.CodeMode,
 	}}, nil
 }
 

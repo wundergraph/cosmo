@@ -171,7 +171,7 @@ func (s *Server) handleSearchStateful(ctx context.Context, sessionID string, pro
 		return toolErrorResult(fmt.Sprintf("code_mode_search_tools: failed to register ops: %v", err))
 	}
 
-	rendered, err := s.opsFragment(matchedOps, s.storage.Schema())
+	rendered, err := s.newOpsFragment(matchedOps, s.storage.Schema())
 	if err != nil {
 		return toolErrorResult(fmt.Sprintf("code_mode_search_tools: failed to render ops: %v", err))
 	}

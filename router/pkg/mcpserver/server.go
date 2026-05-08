@@ -22,7 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/codemode/sandbox"
+	codemodeserver "github.com/wundergraph/cosmo/router/internal/codemode/server"
 	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -115,6 +115,12 @@ type Options struct {
 	WatchOperations bool
 	// OperationsWatchInterval is the polling interval used when WatchOperations is true.
 	OperationsWatchInterval time.Duration
+	// CodeMode, when non-nil, mounts PR #2825's Code Mode tools
+	// (code_mode_search_tools, code_mode_run_js, persisted-ops resource) onto
+	// this server's MCP. Per-op tools, execute_graphql, get_schema, and
+	// get_operation_info are suppressed for that server — Code Mode replaces
+	// the regular tool surface entirely.
+	CodeMode *codemodeserver.Server
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -158,6 +164,10 @@ type GraphQLSchemaServer struct {
 	lastToolFingerprints map[string]string
 	// ctx is the per-server context (cancelled on Stop) — used for operation watchers.
 	ctx context.Context
+	// codeMode, when non-nil, owns the per-tenant Code Mode lifecycle (yoko
+	// client + session storage + sandbox + pipeline). When set, the regular
+	// per-op tools are suppressed and only Code Mode's tools are exposed.
+	codeMode *codemodeserver.Server
 }
 
 // desiredTool bundles a Tool spec, its handler, and a content fingerprint so
@@ -382,6 +392,15 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		watchOperations:           options.WatchOperations,
 		operationsWatchInterval:   options.OperationsWatchInterval,
 		ctx:                       ctx,
+		codeMode:                  options.CodeMode,
+	}
+
+	if gs.codeMode != nil {
+		gs.codeMode.RegisterOn(mcpServer)
+		if err := gs.codeMode.EnsureStarted(ctx); err != nil {
+			cancel()
+			return nil, fmt.Errorf("start code mode storage: %w", err)
+		}
 	}
 
 	return gs, nil
@@ -521,6 +540,17 @@ func WithResourceDocumentation(url string) func(*Options) {
 	}
 }
 
+// WithCodeMode mounts a pre-built Code Mode server onto this MCP server.
+// When set, this server's MCP mount exposes only the Code Mode tool surface
+// (code_mode_search_tools, code_mode_run_js, yoko://persisted-ops.d.ts) and
+// suppresses the regular per-op tools, execute_graphql, get_schema, and
+// get_operation_info.
+func WithCodeMode(srv *codemodeserver.Server) func(*Options) {
+	return func(o *Options) {
+		o.CodeMode = srv
+	}
+}
+
 // RegisterRoutes registers this server's HTTP handlers (the MCP endpoint and,
 // if OAuth is enabled, the RFC 9728 Protected Resource Metadata endpoint) on the
 // given mux. The CORS middleware configured on this server is applied to its handlers.
@@ -619,6 +649,17 @@ func (s *GraphQLSchemaServer) Start() error {
 func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev1.FieldConfiguration) error {
 	if s.server == nil {
 		return fmt.Errorf("server is not started")
+	}
+
+	// Code Mode replaces the regular tool surface. Forward the schema to the
+	// embedded Code Mode server so yoko can index it, and skip the per-op tool
+	// build entirely.
+	if s.codeMode != nil {
+		sdl, err := astprinter.PrintString(schema)
+		if err != nil {
+			return fmt.Errorf("print schema SDL for code mode: %w", err)
+		}
+		return s.codeMode.Reload(schema, sdl)
 	}
 
 	s.lastSchema = schema
@@ -741,6 +782,12 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 	// Create a shutdown context with timeout
 	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
+	if s.codeMode != nil {
+		if err := s.codeMode.Stop(shutdownCtx); err != nil {
+			s.logger.Warn("failed to stop embedded code mode server", zap.Error(err))
+		}
+	}
 
 	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to gracefully shutdown MCP server: %w", err)

@@ -1254,6 +1254,37 @@ func (r *Router) buildMCPHandler(ctx context.Context, entry *config.MCPServerEnt
 		mcpOpts = append(mcpOpts, mcpserver.WithResourceDocumentation(entry.ResourceDocumentation))
 	}
 
+	if entry.CodeMode.Enabled {
+		cmLogger := r.logger.With(logFields...)
+		var redisProvider *config.RedisStorageProvider
+		if entry.CodeMode.NamedOps.Enabled && entry.CodeMode.NamedOps.Storage.ProviderID != "" {
+			provider, ok := r.providerRegistry.Redis(entry.CodeMode.NamedOps.Storage.ProviderID)
+			if !ok {
+				return nil, fmt.Errorf("redis storage provider %q for code_mode named_ops not found", entry.CodeMode.NamedOps.Storage.ProviderID)
+			}
+			redisProvider = &provider
+		}
+		cm, err := codemodeserver.BuildFromConfig(codemodeserver.BuildOptions{
+			Config:           entry.CodeMode,
+			SessionStateless: entry.Session.Stateless,
+			RouterGraphQLURL: endpoint,
+			Logger:           cmLogger,
+			TracerProvider:   r.tracerProvider,
+			MeterProvider:    r.otlpMeterProvider,
+			RedisProvider:    redisProvider,
+			RedisFactory: func(opts *rd.RedisCloserOptions) (rd.RDCloser, error) {
+				if opts.Logger == nil {
+					opts.Logger = cmLogger
+				}
+				return rd.NewRedisCloser(opts)
+			},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create per-server code mode: %w", err)
+		}
+		mcpOpts = append(mcpOpts, mcpserver.WithCodeMode(cm))
+	}
+
 	return mcpserver.NewGraphQLSchemaServer(ctx, endpoint, mcpOpts...)
 }
 

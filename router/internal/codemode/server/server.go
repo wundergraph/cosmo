@@ -74,9 +74,9 @@ type Server struct {
 	tracerProvider    trace.TracerProvider
 	callTraceRecorder calltrace.Recorder
 
-	mcpServer   *mcp.Server
-	searchGroup singleflight.Group
-	opsFragment func([]storage.SessionOp, *ast.Document) (string, error)
+	mcpServer      *mcp.Server
+	searchGroup    singleflight.Group
+	newOpsFragment func([]storage.SessionOp, *ast.Document) (string, error)
 
 	mu                      sync.Mutex
 	httpServer              *http.Server
@@ -132,7 +132,7 @@ func New(cfg Config) (*Server, error) {
 		meter:             meter,
 		tracerProvider:    cfg.TracerProvider,
 		callTraceRecorder: cfg.CallTraceRecorder,
-		opsFragment:       tsgen.NewOpsFragment,
+		newOpsFragment:    tsgen.NewOpsFragment,
 	}
 
 	s.mcpServer = mcp.NewServer(&mcp.Implementation{
@@ -299,27 +299,64 @@ func (s *Server) Reload(schema *ast.Document, sdl string) error {
 }
 
 func (s *Server) registerTools() {
-	s.mcpServer.AddTool(&mcp.Tool{
+	s.registerToolsOn(s.mcpServer)
+}
+
+func (s *Server) registerPersistedOpsResource() {
+	s.registerPersistedOpsResourceOn(s.mcpServer)
+}
+
+func (s *Server) registerToolsOn(target *mcp.Server) {
+	target.AddTool(&mcp.Tool{
 		Name:        "code_mode_search_tools",
 		Description: descriptions.SearchTool,
 		InputSchema: searchAPIInputSchema(),
 	}, s.handleSearch)
 
-	s.mcpServer.AddTool(&mcp.Tool{
+	target.AddTool(&mcp.Tool{
 		Name:        "code_mode_run_js",
 		Description: descriptions.ExecuteTool,
 		InputSchema: executeAPIInputSchema(),
 	}, s.handleExecute)
 }
 
-func (s *Server) registerPersistedOpsResource() {
-	s.mcpServer.AddResource(&mcp.Resource{
+func (s *Server) registerPersistedOpsResourceOn(target *mcp.Server) {
+	target.AddResource(&mcp.Resource{
 		URI:         persistedOpsURI,
 		Name:        "persisted-ops.d.ts",
 		Title:       "Persisted operations TypeScript definitions",
 		Description: descriptions.PersistedOpsResource,
 		MIMEType:    "text/plain",
 	}, s.handlePersistedOpsResource)
+}
+
+// RegisterOn registers the Code Mode tools (code_mode_search_tools,
+// code_mode_run_js) and the persisted-ops resource onto the supplied
+// *mcp.Server. Use this when mounting Code Mode onto an externally-owned MCP
+// server (e.g. one of the multi-tenant per-server MCP mounts) instead of
+// running the standalone listener via Start().
+//
+// Caller is responsible for invoking Reload(schema, sdl) on schema changes and
+// Stop(ctx) at shutdown to release the underlying session storage and yoko
+// client. Calling Start() in addition to RegisterOn is supported but unusual —
+// the caller would then have two MCP surfaces (mounted + standalone listener).
+func (s *Server) RegisterOn(target *mcp.Server) {
+	if !s.codeModeEnabled {
+		return
+	}
+	s.registerToolsOn(target)
+	if s.namedOpsEnabled && !s.sessionStateless {
+		s.registerPersistedOpsResourceOn(target)
+	}
+}
+
+// EnsureStarted starts the storage backend without binding an HTTP listener.
+// Call this from external mounts before serving requests.
+func (s *Server) EnsureStarted(ctx context.Context) error {
+	if !s.codeModeEnabled || s.storage == nil {
+		return nil
+	}
+	return s.storage.Start(ctx)
 }
 
 func (s *Server) handler() http.Handler {

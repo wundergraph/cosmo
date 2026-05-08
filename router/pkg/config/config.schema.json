@@ -2868,7 +2868,8 @@
                 "type": "string",
                 "description": "URL to a human-readable page describing this MCP resource. Included in RFC 9728 Protected Resource Metadata if set.",
                 "format": "http-url"
-              }
+              },
+              "code_mode": { "$ref": "#/properties/mcp/properties/code_mode" }
             }
           }
         }

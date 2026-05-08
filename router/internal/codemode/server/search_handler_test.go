@@ -585,7 +585,7 @@ func TestHandleSearchRenderErrorIsToolError(t *testing.T) {
 		OperationType: "query",
 	}}}
 	srv := newSearchTestServer(t, false, searcher, newSearchTestStorage(t))
-	srv.opsFragment = func([]storage.SessionOp, *ast.Document) (string, error) {
+	srv.newOpsFragment = func([]storage.SessionOp, *ast.Document) (string, error) {
 		return "", errors.New("render exploded")
 	}
 
