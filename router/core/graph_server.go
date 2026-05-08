@@ -341,7 +341,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			LivenessCheckPath:   s.livenessCheckPath,
 			CompositePropagator: s.compositePropagator,
 			TracerProvider:      s.tracerProvider,
-			SpanNameFormatter:   SpanNameFormatter,
+			SpanNameFormatter: func(_ string, r *http.Request) string {
+				return s.spanNameFormatter(r)
+			},
 		})
 		httpRouter.Use(handler)
 	}
@@ -1321,6 +1323,7 @@ func (s *graphServer) buildGraphMux(
 			RetryOptions:                  *processedRetryOptions,
 			TracerProvider:                s.tracerProvider,
 			TracePropagators:              s.compositePropagator,
+			SpanNameFormatter:             s.spanNameFormatter,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 			EnableTraceClient:             enableTraceClient,
@@ -1669,6 +1672,7 @@ func (s *graphServer) buildGraphMux(
 		HasPreOriginHandlers:                   len(s.preOriginHandlers) != 0,
 		HeaderPropagation:                      s.headerPropagation,
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
+		SpanNameFormatter:                      s.spanNameFormatter,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -1804,6 +1808,7 @@ func (s *graphServer) setupConnector(
 		getTraceAttributes := CreateGRPCTraceGetter(
 			telemetryAttributeExpressions,
 			tracingAttributeExpressions,
+			s.spanNameFormatter,
 		)
 
 		if imgRef := pluginConfig.GetImageReference(); imgRef != nil {
