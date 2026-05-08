@@ -76,6 +76,7 @@ import {
   unknownFieldSubgraphNameError,
   unknownNamedTypeError,
 } from '../../errors/errors';
+import { type ExecutionMultiFailure, type ExecutionSuccess } from '../../types/results';
 import {
   type ChildTagData,
   getDescriptionFromString,
@@ -3480,19 +3481,13 @@ export class FederationFactory {
   }
 }
 
-type SubscriptionFilterTargetSuccess = {
-  success: true;
+interface SubscriptionFilterTargetSuccess extends ExecutionSuccess {
   condition: SubscriptionCondition;
-};
+}
 
-type SubscriptionFilterTargetFailure = {
-  success: false;
-  errors: string[];
-};
+type SubscriptionFilterTargetResult = SubscriptionFilterTargetSuccess | ExecutionMultiFailure;
 
-type SubscriptionFilterTargetResult = SubscriptionFilterTargetSuccess | SubscriptionFilterTargetFailure;
-
-type SubscriptionFilterConditionResult = { success: true } | { success: false; errors: string[] };
+type SubscriptionFilterConditionResult = ExecutionSuccess | ExecutionMultiFailure;
 
 type FederationFactoryResultSuccess = {
   federationFactory: FederationFactory;

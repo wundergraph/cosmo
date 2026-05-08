@@ -1327,11 +1327,11 @@ export function subscriptionFilterUnsupportedNamedTypeKindErrorMessage(namedType
   );
 }
 
-export function subscriptionFilterConditionDepthExceededErrorMessage(inputPath: string): string {
-  return (
-    ` The input path "${inputPath}" exceeds the maximum depth of ${MAX_SUBSCRIPTION_FILTER_DEPTH}` +
-    ` for any one filter condition.\n` +
-    ` If you require a larger maximum depth, please contact support.`
+export function subscriptionFilterConditionDepthExceededErrorMessage(inputPath: string): Error {
+  return new Error(
+    `The input path "${inputPath}" exceeds the maximum depth of ${MAX_SUBSCRIPTION_FILTER_DEPTH}` +
+      ` for any one filter condition.\n` +
+      ` If you require a larger maximum depth, please contact support.`,
   );
 }
 
@@ -1342,17 +1342,19 @@ const subscriptionFilterConditionFieldsString =
 export function subscriptionFilterConditionInvalidInputFieldNumberErrorMessage(
   inputPath: string,
   fieldNumber: number,
-): string {
-  return subscriptionFilterConditionFieldsString + ` However, input path "${inputPath}" defines ${fieldNumber} fields.`;
+): Error {
+  return new Error(
+    subscriptionFilterConditionFieldsString + ` However, input path "${inputPath}" defines ${fieldNumber} fields.`,
+  );
 }
 
 export function subscriptionFilterConditionInvalidInputFieldErrorMessage(
   inputPath: string,
   invalidFieldName: string,
-): string {
-  return (
+): Error {
+  return new Error(
     subscriptionFilterConditionFieldsString +
-    ` However, input path "${inputPath}" defines the invalid input value field "${invalidFieldName}".`
+      ` However, input path "${inputPath}" defines the invalid input value field "${invalidFieldName}".`,
   );
 }
 
@@ -1360,10 +1362,10 @@ export function subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
   inputPath: string,
   expectedTypeString: string,
   actualTypeString: string,
-): string {
-  return (
+): Error {
+  return new Error(
     ` Expected the value of input path "${inputPath}" to be type "${expectedTypeString}"` +
-    ` but received type "${actualTypeString}"`
+      ` but received type "${actualTypeString}"`,
   );
 }
 
@@ -1414,7 +1416,7 @@ export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
   duplicatedFieldNames: string[],
   invalidFieldNames: string[],
   fieldErrorMessages: string[],
-): string {
+): Error {
   let message =
     ` Each "${SUBSCRIPTION_FIELD_CONDITION}" input object must only define the following two` +
     ` input value fields: "${FIELD_PATH}" and "${VALUES}".\n However, input path "${inputPath}" is invalid because:`;
@@ -1445,7 +1447,7 @@ export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
   if (fieldErrorMessages.length > 0) {
     message += `\n ` + fieldErrorMessages.join(`\n `);
   }
-  return message;
+  return new Error(message);
 }
 
 const subscriptionFieldConditionValuesString =
