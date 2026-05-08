@@ -6,17 +6,16 @@
 
 execution_config:
   file:
-    path: "../router-tests/testenv/testdata/config.json"
+    path: '../router-tests/testenv/testdata/config.json'
     watch: true
     watch_interval: 20s
 
 mcp:
   enabled: true
-  graph_name: "my-graph"
+  graph_name: 'my-graph'
   omit_tool_name_prefix: true
-
   servers:
-    - name: "anilist"
+    - name: 'anilist'
       path: /anilist
       expose_schema: true
       enable_arbitrary_operations: true
@@ -26,8 +25,8 @@ mcp:
         watch: true
         watch_interval: 1s
       upstream:
-        url: "https://graphql.anilist.co"
-    - name: "countries"
+        url: 'https://graphql.anilist.co'
+    - name: 'countries'
       path: /countries
       expose_schema: true
       enable_arbitrary_operations: true
@@ -37,8 +36,8 @@ mcp:
         watch: true
         watch_interval: 1s
       upstream:
-        url: "https://countries.trevorblades.com"
-    - name: "rickandmorty"
+        url: 'https://countries.trevorblades.com'
+    - name: 'rickandmorty'
       path: /rickandmorty
       expose_schema: true
       enable_arbitrary_operations: true
@@ -48,8 +47,8 @@ mcp:
         watch: true
         watch_interval: 1s
       upstream:
-        url: "https://rickandmortyapi.com/graphql"
-    - name: "swapi"
+        url: 'https://rickandmortyapi.com/graphql'
+    - name: 'swapi'
       path: /swapi
       expose_schema: true
       enable_arbitrary_operations: true
@@ -59,7 +58,7 @@ mcp:
         watch: true
         watch_interval: 1s
       upstream:
-        url: "https://swapi-graphql.netlify.app/graphql"
+        url: 'https://swapi-graphql.netlify.app/graphql'
 
   session:
     stateless: true
@@ -68,7 +67,7 @@ mcp:
   enable_arbitrary_operations: true
   expose_schema: true
 
-  router_url: "http://localhost:3002/graphql"
+  router_url: 'http://localhost:3002/graphql'
 
 storage_providers:
   file_system:
