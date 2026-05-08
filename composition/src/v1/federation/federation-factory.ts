@@ -2869,14 +2869,15 @@ export class FederationFactory {
     directiveNode: ConstDirectiveNode,
     target: ObjectDefinitionData,
     directiveSubgraphName: string,
-  ): { condition?: SubscriptionCondition; errors: string[] } {
-    // directive validation occurs elsewhere
+  ): SubscriptionFilterTargetResult {
+    // directive validation occurs elsewhere; an empty errors array signals "skip silently".
     if (!directiveNode.arguments || directiveNode.arguments.length !== 1) {
-      return { errors: [] };
+      return { success: false, errors: [] };
     }
     const argumentNode = directiveNode.arguments[0];
     if (argumentNode.value.kind !== Kind.OBJECT) {
       return {
+        success: false,
         errors: [
           subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
             CONDITION,
@@ -2900,9 +2901,9 @@ export class FederationFactory {
       errorMessages,
     );
     if (!ok) {
-      return { errors: errorMessages };
+      return { success: false, errors: errorMessages };
     }
-    return { condition, errors: [] };
+    return { success: true, condition };
   }
 
   validateSubscriptionFilterAndGenerateConfiguration(
@@ -2912,24 +2913,19 @@ export class FederationFactory {
     fieldName: string,
     parentTypeName: string,
     directiveSubgraphName: string,
-  ) {
-    const { condition, errors } = this.validateSubscriptionFilterForTarget(
-      directiveNode,
-      objectData,
-      directiveSubgraphName,
-    );
-    if (errors.length > 0) {
-      this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, errors));
-      return;
-    }
-    if (!condition) {
+  ): void {
+    const result = this.validateSubscriptionFilterForTarget(directiveNode, objectData, directiveSubgraphName);
+    if (!result.success) {
+      if (result.errors.length > 0) {
+        this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, result.errors));
+      }
       return;
     }
     getValueOrDefault(this.fieldConfigurationByFieldCoords, fieldPath, () => ({
       argumentNames: [],
       fieldName,
       typeName: parentTypeName,
-    })).subscriptionFilterCondition = condition;
+    })).subscriptionFilterCondition = result.condition;
   }
 
   collectSubscriptionFilterConcreteTargets(abstractTypeName: string): ObjectDefinitionData[] {
@@ -3041,25 +3037,29 @@ export class FederationFactory {
     const aggregatedErrors: string[] = [];
     let firstCondition: SubscriptionCondition | null = null;
     for (const target of targets) {
-      const { condition, errors } = this.validateSubscriptionFilterForTarget(
-        directiveNode,
-        target,
-        directiveSubgraphName,
-      );
-      if (errors.length > 0) {
+      const result = this.validateSubscriptionFilterForTarget(directiveNode, target, directiveSubgraphName);
+      if (!result.success) {
+        if (result.errors.length === 0) {
+          // The directive is malformed — that error is reported elsewhere; skip silently.
+          continue;
+        }
         const wrapped =
           abstractTypeData.kind === Kind.UNION_TYPE_DEFINITION
-            ? subscriptionFilterUnionMemberInvalidErrorMessage(abstractTypeData.name, target.name, errors.join('\n'))
+            ? subscriptionFilterUnionMemberInvalidErrorMessage(
+                abstractTypeData.name,
+                target.name,
+                result.errors.join('\n'),
+              )
             : subscriptionFilterInterfaceImplementationInvalidErrorMessage(
                 abstractTypeData.name,
                 target.name,
-                errors.join('\n'),
+                result.errors.join('\n'),
               );
         aggregatedErrors.push(wrapped);
         continue;
       }
-      if (firstCondition === null && condition) {
-        firstCondition = condition;
+      if (firstCondition === null) {
+        firstCondition = result.condition;
       }
     }
     return { aggregatedErrors, condition: firstCondition };
@@ -3469,6 +3469,18 @@ export class FederationFactory {
     return this.buildFederationResult();
   }
 }
+
+type SubscriptionFilterTargetSuccess = {
+  success: true;
+  condition: SubscriptionCondition;
+};
+
+type SubscriptionFilterTargetFailure = {
+  success: false;
+  errors: string[];
+};
+
+type SubscriptionFilterTargetResult = SubscriptionFilterTargetSuccess | SubscriptionFilterTargetFailure;
 
 type FederationFactoryResultSuccess = {
   federationFactory: FederationFactory;
