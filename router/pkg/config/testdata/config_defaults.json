@@ -471,12 +471,7 @@
     "WebSocketClientPingTimeout": 30000000000,
     "WebSocketClientAckTimeout": 30000000000,
     "ValidateRequiredExternalFields": false,
-    "RelaxSubgraphOperationFieldSelectionMergingNullability": false,
-    "ExtensionForwarding": {
-      "Enabled": false,
-      "AllowedExtensionRootFields": null,
-      "Algorithm": "first_write"
-    }
+    "RelaxSubgraphOperationFieldSelectionMergingNullability": false
   },
   "WebSocket": {
     "Enabled": true,
@@ -532,6 +527,11 @@
       "code"
     ],
     "AllowedFields": null
+  },
+  "SubgraphExtensionPropagation": {
+    "Enabled": false,
+    "AllowedExtensionFields": null,
+    "Algorithm": "first_write"
   },
   "StorageProviders": {
     "S3": null,

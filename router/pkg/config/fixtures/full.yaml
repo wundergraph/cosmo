@@ -391,12 +391,6 @@ engine:
     report_websocket_connections: false
     report_memory_usage: false
     enable_cache_response_headers: false
-  extensions:
-    enabled: true
-    allowed_extension_root_fields:
-      - rateLimit
-      - auth
-    algorithm: last_write
 
 rate_limit:
   enabled: true
@@ -536,6 +530,13 @@ subgraph_error_propagation:
     - 'field1'
     - 'field2'
   allow_all_extension_fields: true
+
+subgraph_extension_propagation:
+  enabled: true
+  allowed_extension_fields:
+    - rateLimit
+    - auth
+  algorithm: last_write
 
 execution_config:
   storage:

@@ -141,6 +141,7 @@ type Config struct {
 	rateLimit                     *config.RateLimitConfiguration
 	webSocketConfiguration        *config.WebSocketConfiguration
 	subgraphErrorPropagation      config.SubgraphErrorPropagationConfiguration
+	subgraphExtensionPropagation  config.SubgraphExtensionPropagationConfiguration
 	clientHeader                  config.ClientHeader
 	cacheWarmup                   *config.CacheWarmupConfiguration
 	planningDurationOverride      func(content string) time.Duration

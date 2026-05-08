@@ -465,24 +465,7 @@ type EngineExecutionConfiguration struct {
 	ValidateRequiredExternalFields bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
 
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool `envDefault:"false" env:"ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY" yaml:"relax_subgraph_operation_field_selection_merging_nullability"`
-
-	ExtensionForwarding ExtensionForwardingConfiguration `envPrefix:"ENGINE_RESPONSE_EXTENSIONS_FORWARDING_" yaml:"extensions"`
 }
-
-type ExtensionForwardingConfiguration struct {
-	Enabled                    bool                         `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	AllowedExtensionRootFields []string                     `yaml:"allowed_extension_root_fields" env:"ALLOWED_EXTENSION_ROOT_FIELDS"`
-	Algorithm                  ExtensionForwardingAlgorithm `yaml:"algorithm,omitempty" envDefault:"first_write" env:"ALGORITHM"`
-}
-
-type ExtensionForwardingAlgorithm string
-
-const (
-	// ExtensionForwardingAlgorithmFirstWrite propagates the first extension root field from a subgraph to the client
-	ExtensionForwardingAlgorithmFirstWrite ExtensionForwardingAlgorithm = "first_write"
-	// ExtensionForwardingAlgorithmLastWrite propagates the last extension root field from a subgraph to the client
-	ExtensionForwardingAlgorithmLastWrite ExtensionForwardingAlgorithm = "last_write"
-)
 
 type BlockOperationConfiguration struct {
 	Enabled   bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
@@ -947,6 +930,21 @@ type SubgraphErrorPropagationConfiguration struct {
 	AllowedFields           []string                     `yaml:"allowed_fields" env:"ALLOWED_FIELDS"`
 }
 
+type SubgraphExtensionPropagationAlgorithm string
+
+const (
+	// SubgraphExtensionPropagationAlgorithmFirstWrite propagates the first extension root field from a subgraph to the client
+	SubgraphExtensionPropagationAlgorithmFirstWrite SubgraphExtensionPropagationAlgorithm = "first_write"
+	// SubgraphExtensionPropagationAlgorithmLastWrite propagates the last extension root field from a subgraph to the client
+	SubgraphExtensionPropagationAlgorithmLastWrite SubgraphExtensionPropagationAlgorithm = "last_write"
+)
+
+type SubgraphExtensionPropagationConfiguration struct {
+	Enabled                bool                                  `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	AllowedExtensionFields []string                              `yaml:"allowed_extension_fields" env:"ALLOWED_EXTENSION_FIELDS"`
+	Algorithm              SubgraphExtensionPropagationAlgorithm `yaml:"algorithm,omitempty" envDefault:"first_write" env:"ALGORITHM"`
+}
+
 type StorageProviders struct {
 	S3         []S3StorageProvider         `yaml:"s3,omitempty" envPrefix:"S3_"`
 	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty" envPrefix:"CDN_"`
@@ -1325,6 +1323,8 @@ type Config struct {
 	WebSocket WebSocketConfiguration `yaml:"websocket,omitempty"`
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
+
+	SubgraphExtensionPropagation SubgraphExtensionPropagationConfiguration `yaml:"subgraph_extension_propagation" envPrefix:"SUBGRAPH_EXTENSION_PROPAGATION_"`
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers" envPrefix:"STORAGE_PROVIDER_"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`

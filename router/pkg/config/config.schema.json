@@ -3720,31 +3720,6 @@
           "type": "boolean",
           "default": false,
           "description": "Relaxes nullability validation for field selection merging when enclosing types are non-overlapping concrete object types. When enabled, fields with differing nullability (e.g. String! vs String) in inline fragments on different union member types will not cause validation errors."
-        },
-        "extensions": {
-          "type": "object",
-          "description": "Configuration for forwarding response extensions from subgraphs to the client. Allows controlling which root extension fields are propagated and how conflicts between subgraphs are resolved.",
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": false,
-              "description": "Enable forwarding of subgraph response extensions to the client."
-            },
-            "allowed_extension_root_fields": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "The list of root extension fields that are allowed to be propagated from subgraphs to the client. If left empty, all extension root fields will be forwarded."
-            },
-            "algorithm": {
-              "type": "string",
-              "enum": ["first_write", "last_write"],
-              "default": "first_write",
-              "description": "The conflict resolution algorithm when multiple subgraphs return the same extension root field. 'first_write' propagates the first response that wrote the field; 'last_write' propagates the last."
-            }
-          }
         }
       }
     },
@@ -3816,6 +3791,31 @@
           "type": "boolean",
           "default": false,
           "description": "Propagate Subgraph HTTP status codes. If the value is true (default: false), Subgraph HTTP response status codes will be propagated to the client in the extensions statusCode field."
+        }
+      }
+    },
+    "subgraph_extension_propagation": {
+      "type": "object",
+      "description": "Configuration for forwarding the response 'extensions' object from subgraphs to the client. Allows controlling which extension fields are propagated and how conflicts between subgraphs are resolved.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable forwarding of subgraph response extensions to the client."
+        },
+        "allowed_extension_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The extension fields that are allowed to be propagated from subgraphs to the client. If left empty, all extension fields will be forwarded."
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["first_write", "last_write"],
+          "default": "first_write",
+          "description": "The conflict resolution algorithm when multiple subgraphs return the same extension field. 'first_write' propagates the first response that wrote the field; 'last_write' propagates the last."
         }
       }
     },

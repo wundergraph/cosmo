@@ -26,11 +26,11 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.ExtensionForwarding = config.ExtensionForwardingConfiguration{
-					Enabled:                    true,
-					Algorithm:                  config.ExtensionForwardingAlgorithmFirstWrite,
-					AllowedExtensionRootFields: []string{"myExtension", "myOtherExtension"},
+			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
+				*cfg = config.SubgraphExtensionPropagationConfiguration{
+					Enabled:                true,
+					Algorithm:              config.SubgraphExtensionPropagationAlgorithmFirstWrite,
+					AllowedExtensionFields: []string{"myExtension", "myOtherExtension"},
 				}
 			},
 			Subgraphs: testenv.SubgraphsConfig{
@@ -74,11 +74,11 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.ExtensionForwarding = config.ExtensionForwardingConfiguration{
-					Enabled:                    true,
-					Algorithm:                  config.ExtensionForwardingAlgorithmFirstWrite,
-					AllowedExtensionRootFields: []string{"myExtension", "myOtherExtension"},
+			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
+				*cfg = config.SubgraphExtensionPropagationConfiguration{
+					Enabled:                true,
+					Algorithm:              config.SubgraphExtensionPropagationAlgorithmFirstWrite,
+					AllowedExtensionFields: []string{"myExtension", "myOtherExtension"},
 				}
 			},
 			Subgraphs: testenv.SubgraphsConfig{
@@ -142,11 +142,11 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.ExtensionForwarding = config.ExtensionForwardingConfiguration{
-					Enabled:                    true,
-					Algorithm:                  config.ExtensionForwardingAlgorithmLastWrite,
-					AllowedExtensionRootFields: []string{"myExtension", "myOtherExtension"},
+			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
+				*cfg = config.SubgraphExtensionPropagationConfiguration{
+					Enabled:                true,
+					Algorithm:              config.SubgraphExtensionPropagationAlgorithmLastWrite,
+					AllowedExtensionFields: []string{"myExtension", "myOtherExtension"},
 				}
 			},
 			Subgraphs: testenv.SubgraphsConfig{
@@ -210,11 +210,11 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.ExtensionForwarding = config.ExtensionForwardingConfiguration{
-					Enabled:                    false,
-					Algorithm:                  config.ExtensionForwardingAlgorithmFirstWrite,
-					AllowedExtensionRootFields: []string{"myExtension"},
+			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
+				*cfg = config.SubgraphExtensionPropagationConfiguration{
+					Enabled:                false,
+					Algorithm:              config.SubgraphExtensionPropagationAlgorithmFirstWrite,
+					AllowedExtensionFields: []string{"myExtension"},
 				}
 			},
 			Subgraphs: testenv.SubgraphsConfig{
@@ -279,11 +279,11 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 		}
 
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.ExtensionForwarding = config.ExtensionForwardingConfiguration{
-					Enabled:                    true,
-					Algorithm:                  config.ExtensionForwardingAlgorithmFirstWrite,
-					AllowedExtensionRootFields: []string{"employeesExt", "familyExt", "hobbiesExt", "productsExt"},
+			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
+				*cfg = config.SubgraphExtensionPropagationConfiguration{
+					Enabled:                true,
+					Algorithm:              config.SubgraphExtensionPropagationAlgorithmFirstWrite,
+					AllowedExtensionFields: []string{"employeesExt", "familyExt", "hobbiesExt", "productsExt"},
 				}
 			},
 			Subgraphs: testenv.SubgraphsConfig{
@@ -341,11 +341,11 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.ExtensionForwarding = config.ExtensionForwardingConfiguration{
-					Enabled:                    true,
-					Algorithm:                  config.ExtensionForwardingAlgorithmFirstWrite,
-					AllowedExtensionRootFields: []string{"hobbiesExt"},
+			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
+				*cfg = config.SubgraphExtensionPropagationConfiguration{
+					Enabled:                true,
+					Algorithm:              config.SubgraphExtensionPropagationAlgorithmFirstWrite,
+					AllowedExtensionFields: []string{"hobbiesExt"},
 				}
 			},
 			Subgraphs: testenv.SubgraphsConfig{
@@ -389,11 +389,11 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.ExtensionForwarding = config.ExtensionForwardingConfiguration{
-					Enabled:                    true,
-					Algorithm:                  config.ExtensionForwardingAlgorithmFirstWrite,
-					AllowedExtensionRootFields: []string{"allowedButNeverReturned"},
+			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
+				*cfg = config.SubgraphExtensionPropagationConfiguration{
+					Enabled:                true,
+					Algorithm:              config.SubgraphExtensionPropagationAlgorithmFirstWrite,
+					AllowedExtensionFields: []string{"allowedButNeverReturned"},
 				}
 			},
 			Subgraphs: testenv.SubgraphsConfig{
@@ -444,11 +444,11 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 		var callCount atomic.Int32
 
 		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.ExtensionForwarding = config.ExtensionForwardingConfiguration{
-					Enabled:                    true,
-					Algorithm:                  config.ExtensionForwardingAlgorithmFirstWrite,
-					AllowedExtensionRootFields: []string{"callExt", "onlyFirst", "onlySecond", "onlyThird"},
+			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
+				*cfg = config.SubgraphExtensionPropagationConfiguration{
+					Enabled:                true,
+					Algorithm:              config.SubgraphExtensionPropagationAlgorithmFirstWrite,
+					AllowedExtensionFields: []string{"callExt", "onlyFirst", "onlySecond", "onlyThird"},
 				}
 			},
 			Subgraphs: testenv.SubgraphsConfig{
