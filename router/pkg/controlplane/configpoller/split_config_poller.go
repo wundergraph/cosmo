@@ -18,7 +18,8 @@ import (
 // SplitConfigFetcher fetches individual graph configs from CDN using the split-config strategy.
 type SplitConfigFetcher interface {
 	// FetchMapper fetches the mapper file listing all active graphs and their hashes.
-	FetchMapper(ctx context.Context) (*nodev1.ActiveGraphs, error)
+	// The returned has the flags name as key, and it's hash as value.
+	FetchMapper(ctx context.Context) (map[string]string, error)
 	// FetchConfig fetches the router config for the given feature flag name.
 	// featureFlagName="" fetches the base graph (manifest/latest.json).
 	// featureFlagName="X" fetches the feature flag config (manifest/feature-flags/X.json).
@@ -88,7 +89,7 @@ func computeCompositeVersion(graphConfigs map[string]string) string {
 }
 
 // fetchAndAssembleAll fetches every config listed in activeGraphs and assembles a full RouterConfig.
-func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraphs *nodev1.ActiveGraphs) (*nodev1.RouterConfig, error) {
+func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraphs map[string]string) (*nodev1.RouterConfig, error) {
 	// Fetch base graph.
 	baseConfig, err := p.fetcher.FetchConfig(ctx, "")
 	if err != nil {
@@ -103,7 +104,7 @@ func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraph
 	}
 
 	// Fetch feature flag configs.
-	for name := range activeGraphs.GetGraphConfigs() {
+	for name := range activeGraphs {
 		if name == "" {
 			continue // base graph already handled above
 		}
@@ -133,19 +134,14 @@ func (p *splitConfigPoller) GetRouterConfig(ctx context.Context) (*routerconfig.
 		return nil, fmt.Errorf("failed to fetch mapper: %w", err)
 	}
 
-	graphConfigs := activeGraphs.GetGraphConfigs()
-	if len(graphConfigs) == 0 {
-		return nil, fmt.Errorf("mapper returned empty graph configs")
-	}
-
 	config, err := p.fetchAndAssembleAll(ctx, activeGraphs)
 	if err != nil {
 		return nil, err
 	}
 
-	p.knownHashes = graphConfigs
+	p.knownHashes = activeGraphs
 	p.currentConfig = config
-	p.latestVersion = computeCompositeVersion(graphConfigs)
+	p.latestVersion = computeCompositeVersion(activeGraphs)
 
 	response := &routerconfig.Response{
 		Config:  config,
@@ -166,18 +162,12 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			return
 		}
 
-		graphConfigs := activeGraphs.GetGraphConfigs()
-		if len(graphConfigs) == 0 {
-			p.logger.Warn("Mapper returned empty graph configs, keeping existing config")
-			return
-		}
-
-		if _, ok := graphConfigs[""]; !ok {
+		if _, ok := activeGraphs[""]; !ok {
 			p.logger.Warn("Mapper missing base graph entry, keeping existing config")
 			return
 		}
 
-		newVersion := computeCompositeVersion(graphConfigs)
+		newVersion := computeCompositeVersion(activeGraphs)
 		if newVersion == p.latestVersion {
 			p.logger.Debug("No changes detected in engine config, keeping existing config")
 			return
@@ -196,7 +186,7 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			ChangedConfigs: make(map[string]struct{}),
 		}
 
-		for name, hash := range graphConfigs {
+		for name, hash := range activeGraphs {
 			if oldHash, exists := p.knownHashes[name]; !exists {
 				changes.AddedConfigs[name] = struct{}{}
 			} else if oldHash != hash {
@@ -204,7 +194,7 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			}
 		}
 		for name := range p.knownHashes {
-			if _, exists := graphConfigs[name]; !exists {
+			if _, exists := activeGraphs[name]; !exists {
 				changes.RemovedConfigs[name] = struct{}{}
 			}
 		}
@@ -278,7 +268,7 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 
 		// Only update internal state after the handler succeeds,
 		// i.e. the newly created engine config is actually used by the graph server.
-		p.knownHashes = graphConfigs
+		p.knownHashes = activeGraphs
 		p.currentConfig = patched
 		p.latestVersion = newVersion
 	})
