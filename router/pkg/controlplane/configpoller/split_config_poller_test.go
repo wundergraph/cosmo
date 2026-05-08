@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.uber.org/zap"
 )
@@ -141,6 +142,163 @@ func TestSplitGetRouterConfig_ConfigFetchError(t *testing.T) {
 	_, err := p.GetRouterConfig(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "CDN unavailable")
+}
+
+// ---- ConfigRules tests ----
+
+func TestSplitGetRouterConfig_IgnoredFeatureFlag_NotFetched(t *testing.T) {
+	baseCfg := makeRouterConfig("v1")
+	activeCfg := makeRouterConfig("active-v1")
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{
+			"":        "hash-base",
+			"active":  "hash-active",
+			"ignored": "hash-ignored",
+		},
+		configResults: map[string]*nodev1.RouterConfig{
+			"":        baseCfg,
+			"active":  activeCfg,
+			"ignored": makeRouterConfig("ignored-v1"),
+		},
+	}
+
+	p := newTestPoller(mock)
+	p.configRules = ConfigRules{
+		IgnoredFeatureFlags: map[string]struct{}{"ignored": {}},
+	}
+
+	resp, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err)
+
+	require.NotNil(t, resp.Config.FeatureFlagConfigs)
+	assert.Contains(t, resp.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "active")
+	assert.NotContains(t, resp.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "ignored",
+		"ignored feature flag must not appear in the assembled config")
+
+	assert.Contains(t, mock.fetchConfigCalls, "active")
+	assert.NotContains(t, mock.fetchConfigCalls, "ignored",
+		"ignored feature flag must not be fetched from the CDN")
+}
+
+func TestSplitGetRouterConfig_AllFeatureFlagsIgnored(t *testing.T) {
+	baseCfg := makeRouterConfig("v1")
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{
+			"":    "hash-base",
+			"ff1": "hash-ff1",
+			"ff2": "hash-ff2",
+		},
+		configResults: map[string]*nodev1.RouterConfig{"": baseCfg},
+	}
+
+	p := newTestPoller(mock)
+	p.configRules = ConfigRules{
+		IgnoredFeatureFlags: map[string]struct{}{
+			"ff1": {},
+			"ff2": {},
+		},
+	}
+
+	resp, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err)
+
+	assert.Nil(t, resp.Config.FeatureFlagConfigs,
+		"FeatureFlagConfigs should be nil when every feature flag is ignored")
+	assert.Equal(t, []string{""}, mock.fetchConfigCalls,
+		"only the base graph should be fetched when all feature flags are ignored")
+}
+
+func TestSplitGetRouterConfig_SkipMissingFeatureFlag_FileNotFoundSkipped(t *testing.T) {
+	baseCfg := makeRouterConfig("v1")
+	availableCfg := makeRouterConfig("available-v1")
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{
+			"":          "hash-base",
+			"available": "hash-available",
+			"missing":   "hash-missing",
+		},
+		configResults: map[string]*nodev1.RouterConfig{
+			"":          baseCfg,
+			"available": availableCfg,
+		},
+		configErrors: map[string]error{
+			"missing": errs.ErrFileNotFound,
+		},
+	}
+
+	p := newTestPoller(mock)
+	p.configRules = ConfigRules{SkipMissingFeatureFlags: true}
+
+	resp, err := p.GetRouterConfig(context.Background())
+	require.NoError(t, err, "ErrFileNotFound must be tolerated when SkipMissingFeatureFlags is true")
+
+	require.NotNil(t, resp.Config.FeatureFlagConfigs)
+	assert.Contains(t, resp.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "available")
+	assert.NotContains(t, resp.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "missing")
+}
+
+func TestSplitGetRouterConfig_SkipMissingFeatureFlag_DisabledByDefault(t *testing.T) {
+	baseCfg := makeRouterConfig("v1")
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{
+			"":        "hash-base",
+			"missing": "hash-missing",
+		},
+		configResults: map[string]*nodev1.RouterConfig{"": baseCfg},
+		configErrors:  map[string]error{"missing": errs.ErrFileNotFound},
+	}
+
+	p := newTestPoller(mock)
+	// SkipMissingFeatureFlags defaults to false.
+
+	_, err := p.GetRouterConfig(context.Background())
+	require.Error(t, err, "ErrFileNotFound must abort the poll when SkipMissingFeatureFlags is false")
+	assert.ErrorIs(t, err, errs.ErrFileNotFound)
+	assert.Contains(t, err.Error(), `"missing"`)
+}
+
+func TestSplitGetRouterConfig_SkipMissingFeatureFlag_OnlyFileNotFoundSuppressed(t *testing.T) {
+	baseCfg := makeRouterConfig("v1")
+	transientErr := errors.New("transient CDN failure")
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{
+			"":      "hash-base",
+			"flaky": "hash-flaky",
+		},
+		configResults: map[string]*nodev1.RouterConfig{"": baseCfg},
+		configErrors:  map[string]error{"flaky": transientErr},
+	}
+
+	p := newTestPoller(mock)
+	p.configRules = ConfigRules{SkipMissingFeatureFlags: true}
+
+	_, err := p.GetRouterConfig(context.Background())
+	require.Error(t, err, "non-ErrFileNotFound errors must propagate even with SkipMissingFeatureFlags enabled")
+	assert.ErrorIs(t, err, transientErr)
+	assert.NotErrorIs(t, err, errs.ErrFileNotFound)
+}
+
+func TestSplitGetRouterConfig_BaseConfigCannotBeSkippedOrIgnored(t *testing.T) {
+	// The skip/ignore rules apply to feature flags only. A missing base config must always
+	// abort the poll, even when both rules are configured aggressively.
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{
+			"":    "hash-base",
+			"ff1": "hash-ff1",
+		},
+		configErrors: map[string]error{"": errs.ErrFileNotFound},
+	}
+
+	p := newTestPoller(mock)
+	p.configRules = ConfigRules{
+		SkipMissingFeatureFlags: true,
+		IgnoredFeatureFlags:     map[string]struct{}{"": {}},
+	}
+
+	_, err := p.GetRouterConfig(context.Background())
+	require.Error(t, err, "missing base config must always abort, regardless of skip/ignore rules")
+	assert.ErrorIs(t, err, errs.ErrFileNotFound)
+	assert.Contains(t, err.Error(), "base config")
 }
 
 // ---- Subscribe / polling tests ----

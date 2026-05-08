@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -123,7 +124,7 @@ func TestFetchMapper_HTTPErrors(t *testing.T) {
 		{
 			name:       "not found",
 			statusCode: http.StatusNotFound,
-			wantErr:    cdn.ErrConfigNotFound,
+			wantErr:    errs.ErrFileNotFound,
 		},
 		{
 			name:       "unauthorized",
@@ -316,7 +317,7 @@ func TestFetchMapper_Signature(t *testing.T) {
 		{
 			name:    "missing signature header",
 			sigKey:  sigKey,
-			wantErr: cdn.ErrMissingSignatureHeader,
+			wantErr: errs.ErrMissingSignatureHeader,
 		},
 		{
 			name:       "invalid base64 in signature",
@@ -328,7 +329,7 @@ func TestFetchMapper_Signature(t *testing.T) {
 			name:    "signature mismatch",
 			sigKey:  sigKey,
 			respSig: wrongSig,
-			wantErr: cdn.ErrInvalidSignature,
+			wantErr: errs.ErrInvalidSignature,
 		},
 	}
 

@@ -993,6 +993,13 @@
       "ObjectPath": ""
     }
   },
+  "SplitConfigPoller": {
+    "SkipMissingFeatureFlags": true,
+    "IgnoredFeatureFlags": [
+      "experimental-checkout",
+      "ab-test-foo"
+    ]
+  },
   "PersistedOperationsConfig": {
     "Disabled": false,
     "LogUnknown": true,
