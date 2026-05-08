@@ -140,11 +140,13 @@ func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraph
 			}
 			return nil, fmt.Errorf("failed to fetch config for feature flag %q: %w", name, err)
 		}
+
 		if assembled.FeatureFlagConfigs == nil {
 			assembled.FeatureFlagConfigs = &nodev1.FeatureFlagRouterExecutionConfigs{
 				ConfigByFeatureFlagName: make(map[string]*nodev1.FeatureFlagRouterExecutionConfig),
 			}
 		}
+
 		assembled.FeatureFlagConfigs.ConfigByFeatureFlagName[name] = &nodev1.FeatureFlagRouterExecutionConfig{
 			EngineConfig: ffConfig.EngineConfig,
 			Version:      ffConfig.Version,
@@ -161,6 +163,7 @@ func (p *splitConfigPoller) GetRouterConfig(ctx context.Context) (*routerconfig.
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch mapper: %w", err)
 	}
+
 	if len(activeGraphs) == 0 {
 		return nil, fmt.Errorf("empty graph configs")
 	}
