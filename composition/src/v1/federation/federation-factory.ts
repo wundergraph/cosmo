@@ -63,10 +63,11 @@ import {
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldNumberErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
-  subscriptionFilterInterfaceImplementerInvalidErrorMessage,
+  subscriptionFilterInterfaceImplementationInvalidErrorMessage,
   subscriptionFilterNamedTypeErrorMessage,
   subscriptionFilterNoAccessibleConcreteTypesErrorMessage,
   subscriptionFilterUnionMemberInvalidErrorMessage,
+  subscriptionFilterUnsupportedNamedTypeKindErrorMessage,
   undefinedEntityInterfaceImplementationsError,
   undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
   undefinedTypeError,
@@ -2984,7 +2985,13 @@ export class FederationFactory {
       }
 
       if (namedTypeData.kind !== Kind.UNION_TYPE_DEFINITION && namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
-        // Other kinds (scalar/enum/input) are caught at normalization time.
+        // Other kinds (scalar/enum/input) should be caught at normalization time.
+        // Emit an explicit composition error so the directive cannot be silently dropped here again.
+        this.errors.push(
+          invalidSubscriptionFilterDirectiveError(fieldPath, [
+            subscriptionFilterUnsupportedNamedTypeKindErrorMessage(namedTypeData.name, namedTypeData.kind),
+          ]),
+        );
         continue;
       }
 
@@ -3000,37 +3007,19 @@ export class FederationFactory {
         continue;
       }
 
-      const aggregatedErrors: string[] = [];
-      let firstCondition: SubscriptionCondition | null = null;
-      for (const target of targets) {
-        const { condition, errors } = this.validateSubscriptionFilterForTarget(
-          data.directive,
-          target,
-          data.directiveSubgraphName,
-        );
-        if (errors.length > 0) {
-          const wrapped =
-            namedTypeData.kind === Kind.UNION_TYPE_DEFINITION
-              ? subscriptionFilterUnionMemberInvalidErrorMessage(namedTypeData.name, target.name, errors.join('\n'))
-              : subscriptionFilterInterfaceImplementerInvalidErrorMessage(
-                  namedTypeData.name,
-                  target.name,
-                  errors.join('\n'),
-                );
-          aggregatedErrors.push(wrapped);
-          continue;
-        }
-        if (firstCondition === null && condition) {
-          firstCondition = condition;
-        }
-      }
+      const { aggregatedErrors, condition } = this.mergeSubscriptionFilterTargetResults(
+        data.directive,
+        namedTypeData,
+        targets,
+        data.directiveSubgraphName,
+      );
 
       if (aggregatedErrors.length > 0) {
         this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, aggregatedErrors));
         continue;
       }
 
-      if (firstCondition === null) {
+      if (condition === null) {
         // Defensive — unreachable when targets is non-empty and no errors were collected.
         continue;
       }
@@ -3039,8 +3028,41 @@ export class FederationFactory {
         argumentNames: [],
         fieldName: data.fieldData.name,
         typeName: data.fieldData.renamedParentTypeName,
-      })).subscriptionFilterCondition = firstCondition;
+      })).subscriptionFilterCondition = condition;
     }
+  }
+
+  mergeSubscriptionFilterTargetResults(
+    directiveNode: ConstDirectiveNode,
+    abstractTypeData: ParentDefinitionData,
+    targets: ObjectDefinitionData[],
+    directiveSubgraphName: string,
+  ): { aggregatedErrors: string[]; condition: SubscriptionCondition | null } {
+    const aggregatedErrors: string[] = [];
+    let firstCondition: SubscriptionCondition | null = null;
+    for (const target of targets) {
+      const { condition, errors } = this.validateSubscriptionFilterForTarget(
+        directiveNode,
+        target,
+        directiveSubgraphName,
+      );
+      if (errors.length > 0) {
+        const wrapped =
+          abstractTypeData.kind === Kind.UNION_TYPE_DEFINITION
+            ? subscriptionFilterUnionMemberInvalidErrorMessage(abstractTypeData.name, target.name, errors.join('\n'))
+            : subscriptionFilterInterfaceImplementationInvalidErrorMessage(
+                abstractTypeData.name,
+                target.name,
+                errors.join('\n'),
+              );
+        aggregatedErrors.push(wrapped);
+        continue;
+      }
+      if (firstCondition === null && condition) {
+        firstCondition = condition;
+      }
+    }
+    return { aggregatedErrors, condition: firstCondition };
   }
 
   buildFederationResult(): FederationResult {

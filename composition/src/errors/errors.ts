@@ -1297,27 +1297,34 @@ export function subscriptionFilterUnionMemberInvalidErrorMessage(
   detail: string,
 ): string {
   return (
-    ` The "@openfed__subscriptionFilter" condition is invalid for union member "${memberTypeName}" of union "${unionTypeName}":\n` +
+    `The "@openfed__subscriptionFilter" condition is invalid for union member "${memberTypeName}" of union "${unionTypeName}":\n` +
     detail
   );
 }
 
-export function subscriptionFilterInterfaceImplementerInvalidErrorMessage(
+export function subscriptionFilterInterfaceImplementationInvalidErrorMessage(
   interfaceTypeName: string,
   implementerTypeName: string,
   detail: string,
 ): string {
   return (
-    ` The "@openfed__subscriptionFilter" condition is invalid for concrete type "${implementerTypeName}" implementing interface "${interfaceTypeName}":\n` +
+    `The "@openfed__subscriptionFilter" condition is invalid for concrete type "${implementerTypeName}" implementing interface "${interfaceTypeName}":\n` +
     detail
   );
 }
 
 export function subscriptionFilterNoAccessibleConcreteTypesErrorMessage(
   abstractTypeName: string,
-  abstractKind: 'union' | 'interface',
+  abstractKind: 'Union' | 'Interface',
 ): string {
-  return ` The ${abstractKind} "${abstractTypeName}" has no accessible concrete types against which the "@openfed__subscriptionFilter" condition can be validated.`;
+  return `The ${abstractKind} "${abstractTypeName}" has no accessible concrete types against which the "@openfed__subscriptionFilter" condition can be validated.`;
+}
+
+export function subscriptionFilterUnsupportedNamedTypeKindErrorMessage(namedTypeName: string, kind: string): string {
+  return (
+    `The named type "${namedTypeName}" of kind "${kind}" is not supported by the "@${SUBSCRIPTION_FILTER}" directive.` +
+    `Only object, union, and interface return types are supported.`
+  );
 }
 
 export function subscriptionFilterConditionDepthExceededErrorMessage(inputPath: string): string {
