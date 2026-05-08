@@ -25,7 +25,7 @@ import {
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 
 // Change to true to enable a longer timeout
-const isDebugMode = false;
+const isDebugMode = true;
 let dbname = '';
 
 vi.mock('../src/core/clickhouse/index.js', () => {
@@ -479,7 +479,6 @@ describe('Feature flag integration tests v2', () => {
     },
   );
 
-  // TODO: Validate
   test(
     'that a feature flag can compose when base federated graph fails',
     getDebugTestOptions(isDebugMode),
@@ -541,7 +540,7 @@ describe('Feature flag integration tests v2', () => {
       const ffKey = blobStorage.keys().at(-1);
       expect(ffKey).toContain(`${baseGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
 
-      // There will be a failed base composition, and two feature flag compositions
+      // There will be a failed base composition and one feature flag compositions
       await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
       await createAndPublishSubgraph(
         client,
@@ -1189,7 +1188,6 @@ describe('Feature flag integration tests v2', () => {
     },
   );
 
-  // TODO: Validate
   test(
     'that a federated graph with feature flags and feature subgraphs can be moved',
     getDebugTestOptions(isDebugMode),
@@ -1223,6 +1221,7 @@ describe('Feature flag integration tests v2', () => {
         namespace,
         newNamespace,
       });
+
       expect(moveFederatedGraphResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
       expect(moveFederatedGraphResponse.compositionErrors).toHaveLength(2);
       expect(moveFederatedGraphResponse.compositionErrors[0].message).toBe(
@@ -1231,10 +1230,23 @@ describe('Feature flag integration tests v2', () => {
       expect(moveFederatedGraphResponse.compositionErrors[1]).toStrictEqual(
         unsuccessfulBaseCompositionError(baseGraphName, namespace),
       );
+
+      /**
+       * The federated graph is moved without its subgraphs.
+       * Subgraphs that form the base of feature subgraphs cannot be moved
+       */
+      const fedGraphByNameResp = await client.getFederatedGraphByName({ name: baseGraphName, namespace: newNamespace });
+      expect(fedGraphByNameResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // The feature flag cannot be moved because the feature subgraphs cannot be moved
+      const featureFlagByNameResp = await client.getFeatureFlagByName({
+        name: featureFlagName,
+        namespace: newNamespace,
+      });
+      expect(featureFlagByNameResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     },
   );
 
-  // TODO: Validate
   test(
     'that a federated graph with a contract, feature flags, and feature subgraphs can be moved',
     getDebugTestOptions(isDebugMode),
@@ -1286,6 +1298,23 @@ describe('Feature flag integration tests v2', () => {
       expect(moveFederatedGraphResponse.compositionErrors[1]).toStrictEqual(
         unsuccessfulBaseCompositionError(baseGraphName, namespace),
       );
+
+      /**
+       * The federated graph is moved without its subgraphs.
+       * Subgraphs that form the base of feature subgraphs cannot be moved
+       */
+      const fedGraphByNameResp = await client.getFederatedGraphByName({ name: baseGraphName, namespace: newNamespace });
+      expect(fedGraphByNameResp.response?.code).toBe(EnumStatusCode.OK);
+
+      const contractResp = await client.getFederatedGraphByName({ name: contractName, namespace: newNamespace });
+      expect(contractResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // The feature flag cannot be moved because the feature subgraphs cannot be moved
+      const featureFlagByNameResp = await client.getFeatureFlagByName({
+        name: featureFlagName,
+        namespace: newNamespace,
+      });
+      expect(featureFlagByNameResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     },
   );
 

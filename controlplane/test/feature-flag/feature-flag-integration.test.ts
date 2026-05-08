@@ -1030,6 +1030,20 @@ describe('Feature flag integration tests', () => {
       expect(moveFederatedGraphResponse.compositionErrors[1]).toStrictEqual(
         unsuccessfulBaseCompositionError(baseGraphName, namespace),
       );
+
+      /**
+       * The federated graph is moved without its subgraphs.
+       * Subgraphs that form the base of feature subgraphs cannot be moved
+       */
+      const fedGraphByNameResp = await client.getFederatedGraphByName({ name: baseGraphName, namespace: newNamespace });
+      expect(fedGraphByNameResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // The feature flag cannot be moved because the feature subgraphs cannot be moved
+      const featureFlagByNameResp = await client.getFeatureFlagByName({
+        name: featureFlagName,
+        namespace: newNamespace,
+      });
+      expect(featureFlagByNameResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     },
   );
 
@@ -1084,6 +1098,23 @@ describe('Feature flag integration tests', () => {
       expect(moveFederatedGraphResponse.compositionErrors[1]).toStrictEqual(
         unsuccessfulBaseCompositionError(baseGraphName, namespace),
       );
+
+      /**
+       * The federated graph is moved without its subgraphs.
+       * Subgraphs that form the base of feature subgraphs cannot be moved
+       */
+      const fedGraphByNameResp = await client.getFederatedGraphByName({ name: baseGraphName, namespace: newNamespace });
+      expect(fedGraphByNameResp.response?.code).toBe(EnumStatusCode.OK);
+
+      const contractResp = await client.getFederatedGraphByName({ name: contractName, namespace: newNamespace });
+      expect(contractResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // The feature flag cannot be moved because the feature subgraphs cannot be moved
+      const featureFlagByNameResp = await client.getFeatureFlagByName({
+        name: featureFlagName,
+        namespace: newNamespace,
+      });
+      expect(featureFlagByNameResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     },
   );
 
