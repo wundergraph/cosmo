@@ -532,6 +532,7 @@ export class CompositionService {
       })
       .from(schema.routerConfigHash)
       .leftJoin(schema.featureFlags, eq(schema.featureFlags.id, schema.routerConfigHash.featureFlagId))
+      .where(eq(schema.routerConfigHash.federatedGraphId, federatedGraphId))
       .execute();
 
     // Load hashes from database
@@ -952,11 +953,11 @@ export class CompositionService {
         });
 
         if (splitConfig) {
-          await this.#updateMapperForFederatedGraph(federatedGraph.id);
+          await this.#updateMapperForFederatedGraph(contractDTO.id);
         }
       }
 
-      //
+      // Upload the manifest file when the split config loading is enabled
       if (splitConfig) {
         await this.#updateMapperForFederatedGraph(federatedGraph.id);
       }
