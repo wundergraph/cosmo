@@ -442,46 +442,6 @@ export class RouterConfig extends Message<RouterConfig> {
 }
 
 /**
- * @generated from message wg.cosmo.node.v1.ActiveGraphs
- */
-export class ActiveGraphs extends Message<ActiveGraphs> {
-  /**
-   * key = feature flag name, empty means base graph
-   * value = hash of engine_config
-   *
-   * @generated from field: map<string, string> graphConfigs = 1;
-   */
-  graphConfigs: { [key: string]: string } = {};
-
-  constructor(data?: PartialMessage<ActiveGraphs>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.ActiveGraphs";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graphConfigs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ActiveGraphs {
-    return new ActiveGraphs().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ActiveGraphs {
-    return new ActiveGraphs().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ActiveGraphs {
-    return new ActiveGraphs().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ActiveGraphs | PlainMessage<ActiveGraphs> | undefined, b: ActiveGraphs | PlainMessage<ActiveGraphs> | undefined): boolean {
-    return proto3.util.equals(ActiveGraphs, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.node.v1.Response
  */
 export class Response extends Message<Response> {
