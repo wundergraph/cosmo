@@ -157,9 +157,10 @@ type (
 
 	RouterConfigPollerConfig struct {
 		config.ExecutionConfig
-		PollInterval time.Duration
-		PollJitter   time.Duration
-		GraphSignKey string
+		PollInterval      time.Duration
+		PollJitter        time.Duration
+		GraphSignKey      string
+		SplitConfigPoller config.SplitConfigPollerRules
 	}
 
 	ExecutionConfig struct {

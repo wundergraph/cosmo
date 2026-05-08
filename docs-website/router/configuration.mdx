@@ -1282,6 +1282,31 @@ You can configure a fallback storage for fetching the execution config in the ev
 | EXECUTION_CONFIG_FALLBACK_STORAGE_PROVIDER_ID | execution_config.fallback_storage.provider_id | <Icon icon="square" />                        | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                |               |
 | EXECUTION_CONFIG_FALLBACK_STORAGE_OBJECT_PATH | execution_config.fallback_storage.object_path | <Icon icon="square" />                        | The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket.                                                                     |               |
 
+## Split Config Poller
+
+The split-config polling strategy assembles the final router execution config by fetching the base graph and each feature flag config as separate files from the CDN. These rules govern its behavior when individual feature flag files are missing or should be excluded entirely. They are only applied when the router is enrolled in split-config loading; with a custom storage provider the router falls back to the regular polling strategy and these rules have no effect.
+
+The base graph is always required. Skip and ignore rules apply to feature flags only. A missing or unfetchable base graph always aborts the poll cycle, regardless of these rules.
+
+### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+split_config_poller:
+  skip_missing_feature_flags: true
+  ignored_feature_flags:
+    - "experimental-checkout"
+    - "ab-test-foo"
+```
+
+### Split config poller options
+
+| Environment Variable                              | YAML                                                | Required               | Description                                                                                                                                                                                          | Default Value |
+| ------------------------------------------------- | --------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| SPLIT_CONFIG_POLLER_SKIP_MISSING_FEATURE_FLAGS    | split_config_poller.skip_missing_feature_flags      | <Icon icon="square" /> | Keep polling alive when a feature flag listed in the mapper cannot be fetched (responds with `file not found`). When false, a single missing feature flag aborts the poll cycle.                     | false         |
+| SPLIT_CONFIG_POLLER_IGNORED_FEATURE_FLAGS         | split_config_poller.ignored_feature_flags           | <Icon icon="square" /> | Feature flag names to skip entirely during polling. Listed flags are not fetched even when present in the mapper, and are absent from the assembled execution config.                                | []            |
+
 ## Traffic Shaping
 
 Configure rules for traffic shaping like maximum request body size, timeouts, retry behavior, etc. For more info, check this section in the docs: [Traffic shaping](/router/traffic-shaping)

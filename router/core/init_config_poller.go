@@ -204,10 +204,19 @@ func newSplitConfigPoller(r *Router) (*configpoller.ConfigPoller, error) {
 		return nil, fmt.Errorf("failed to create split config fetcher: %w", err)
 	}
 
+	ignoredFeatureFlags := make(map[string]struct{})
+	for _, featureFlag := range r.routerConfigPollerConfig.SplitConfigPoller.IgnoredFeatureFlags {
+		ignoredFeatureFlags[featureFlag] = struct{}{}
+	}
+
 	splitPoller := configpoller.NewSplitConfigPoller(
 		fetcher,
 		configpoller.WithSplitLogger(r.logger),
 		configpoller.WithSplitPolling(r.routerConfigPollerConfig.PollInterval, r.routerConfigPollerConfig.PollJitter),
+		configpoller.WithConfigRules(configpoller.ConfigRules{
+			SkipMissingFeatureFlags: r.routerConfigPollerConfig.SplitConfigPoller.SkipMissingFeatureFlags,
+			IgnoredFeatureFlags:     ignoredFeatureFlags,
+		}),
 	)
 	return &splitPoller, nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
@@ -12,9 +13,6 @@ import (
 )
 
 type Option func(cp *configPoller)
-
-var ErrConfigNotModified = errors.New("config not modified")
-var ErrConfigNotFound = errors.New("config not found")
 
 type ConfigPoller interface {
 	// Subscribe subscribes to the config poller with a handler function that will be invoked
@@ -68,7 +66,7 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *ro
 
 		cfg, err := c.getRouterConfig(ctx)
 		if err != nil {
-			if errors.Is(err, ErrConfigNotModified) {
+			if errors.Is(err, errs.ErrConfigNotModified) {
 				c.logger.Debug("No new router config available. Trying again ...",
 					zap.String("poll_interval", c.pollInterval.String()),
 					zap.String("fetch_time", time.Since(start).String()),
@@ -135,11 +133,11 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 		return config, nil
 	}
 
-	if errors.Is(err, ErrConfigNotModified) {
+	if errors.Is(err, errs.ErrConfigNotModified) {
 		return nil, err
 	}
 
-	if c.demoMode && c.fallbackConfigClient == nil && errors.Is(err, ErrConfigNotFound) {
+	if c.demoMode && c.fallbackConfigClient == nil && errors.Is(err, errs.ErrRouterConfigNotFound) {
 		c.logger.Warn("The router is running in demo mode and no execution config has been found, using a demo execution config for testing purposes.")
 		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
 	}
@@ -151,7 +149,7 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 	c.logger.Warn("Failed to retrieve execution config. Attempting with fallback storage")
 
 	config, err = (*c.fallbackConfigClient).RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
-	if c.demoMode && errors.Is(err, ErrConfigNotFound) {
+	if c.demoMode && errors.Is(err, errs.ErrRouterConfigNotFound) {
 		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
 	}
 	if err != nil {
