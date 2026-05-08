@@ -30,7 +30,7 @@ import {
   subscriptionFilterConditionDepthExceededErrorMessage,
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
-  subscriptionFilterInterfaceImplementerInvalidErrorMessage,
+  subscriptionFilterInterfaceImplementationInvalidErrorMessage,
   subscriptionFilterUnionMemberInvalidErrorMessage,
   undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
 } from '../../../src';
@@ -543,7 +543,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors![0]).toStrictEqual(
         invalidSubscriptionFilterDirectiveError(`Subscription.onEntityEvent`, [
-          subscriptionFilterInterfaceImplementerInvalidErrorMessage(
+          subscriptionFilterInterfaceImplementationInvalidErrorMessage(
             'EntityEvent',
             'EntityDeleted',
             subscriptionFieldConditionInvalidInputFieldErrorMessage(
