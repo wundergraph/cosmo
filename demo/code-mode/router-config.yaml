@@ -39,7 +39,7 @@ mcp:
       # the MCP stdio proxy) get refused — point them at 127.0.0.1 directly
       # in start.sh and the proxy defaults.
       listen_addr: 127.0.0.1:5027
-    require_mutation_approval: true
+    require_mutation_approval: false
     # Sandbox wall-clock cap. Default is 5s (plan §13), which is fine for
     # compute-only agent code but too short whenever the host blocks the JS
     # thread on an interactive elicitation. Bump to 180s so a human can review

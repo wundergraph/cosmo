@@ -126,15 +126,15 @@ mkdir -p "$GOCACHE_DIR"
 rm -f "$PID_FILE"
 trap cleanup EXIT INT TERM
 
-start_background employees "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4001 go run ./cmd/employees
-start_background family "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4002 go run ./cmd/family
-start_background hobbies "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4003 go run ./cmd/hobbies
-start_background products "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4004 go run ./cmd/products
-start_background test1 "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4006 go run ./cmd/test1
-start_background availability "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4007 go run ./cmd/availability
-start_background mood "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4008 go run ./cmd/mood
-start_background countries "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4009 go run ./cmd/countries
-start_background products_fg "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4010 go run ./cmd/products_fg
+# Use cmd/all so all subgraphs run in one process with the NATS pubsub
+# adapter wired up. The individual cmd/<name> binaries pass nil for the
+# NATS adapter map, which makes mood/availability mutations fail at
+# runtime with "no nats pubsub default provider found".
+# NATS_URL falls back to nats://localhost:4222 — bring NATS up via
+# `make edfs-infra-up` before running this demo.
+start_background subgraphs "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" go run ./cmd/all \
+  -employees=4001 -family=4002 -hobbies=4003 -products=4004 \
+  -test1=4006 -availability=4007 -mood=4008 -countries=4009 -products_fg=4010
 
 wait_url employees http://localhost:4001/
 wait_url family http://localhost:4002/

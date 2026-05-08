@@ -7,6 +7,7 @@ package subgraph
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/model"
@@ -14,33 +15,30 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 )
 
+// publishMoodEvent emits an Employee-updated event for subscription consumers.
+// Failures (missing adapter, broker down) are logged but never fail the
+// mutation — local storage has already been updated.
+func (r *mutationResolver) publishMoodEvent(ctx context.Context, providerID, subject, payload string) {
+	adapter := r.NatsPubSubByProviderID[providerID]
+	if adapter == nil {
+		log.Printf("mood: nats provider %q unavailable, skipping publish to %s", providerID, subject)
+		return
+	}
+	err := adapter.Publish(ctx, &nats.PublishAndRequestEventConfiguration{
+		Subject: subject,
+	}, []datasource.StreamEvent{&nats.MutableEvent{Data: []byte(payload)}})
+	if err != nil {
+		log.Printf("mood: nats publish failed via %q to %s: %v", providerID, subject, err)
+	}
+}
+
 // UpdateMood is the resolver for the updateMood field.
 func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood model.Mood) (*model.Employee, error) {
 	storage.Set(employeeID, mood)
-	myNatsTopic := r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID))
 	payload := fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)
-	if r.NatsPubSubByProviderID["default"] != nil {
-		err := r.NatsPubSubByProviderID["default"].Publish(ctx, &nats.PublishAndRequestEventConfiguration{
-			Subject: myNatsTopic,
-		}, []datasource.StreamEvent{&nats.MutableEvent{Data: []byte(payload)}})
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		return nil, fmt.Errorf("no nats pubsub default provider found")
-	}
 
-	defaultTopic := r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID))
-	if r.NatsPubSubByProviderID["my-nats"] != nil {
-		err := r.NatsPubSubByProviderID["my-nats"].Publish(ctx, &nats.PublishAndRequestEventConfiguration{
-			Subject: defaultTopic,
-		}, []datasource.StreamEvent{&nats.MutableEvent{Data: []byte(payload)}})
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		return nil, fmt.Errorf("no nats pubsub my-nats provider found")
-	}
+	r.publishMoodEvent(ctx, "default", r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID)), payload)
+	r.publishMoodEvent(ctx, "my-nats", r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID)), payload)
 
 	return &model.Employee{ID: employeeID, CurrentMood: mood}, nil
 }

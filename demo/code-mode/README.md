@@ -10,6 +10,8 @@ The set mirrors `demo/graph-no-edg.yaml`. The `employeeupdated` subgraph is inte
 - Node + `pnpm` (used by `wgc` to compose `demo/code-mode/graph.yaml`).
 - A running Yoko service reachable at `http://127.0.0.1:3400` (override with `YOKO_URL=...`).
   The router calls Yoko for `code_mode_search_tools`; without it, query generation will fail.
+- A running NATS server reachable at `nats://localhost:4222` (override with `NATS_URL=...`).
+  The `mood` and `availability` mutation resolvers publish to NATS via the `default` provider; without NATS, those mutations fail at runtime with `no nats pubsub default provider found`. Bring it up with `make edfs-infra-up` from the repo root (also starts Kafka — both are part of the `edfs` Docker Compose profile). Tear down with `make edfs-infra-down`.
 
 ## Quick start
 
@@ -59,7 +61,7 @@ curl -sS http://localhost:3002/graphql \
 
 ## Other notes
 
-The subset runner is `demo/code-mode/run_subgraphs_subset.sh`. It starts every non-EDFS subgraph used by this demo (`employees`, `family`, `hobbies`, `products`, `test1`, `availability`, `mood`, `countries`, `products_fg`) via `npx concurrently`. The full demo `demo/run_subgraphs.sh` additionally starts the EDFS-dependent `employeeupdated` subgraph and is intentionally not used here.
+The subset runner is `demo/code-mode/run_subgraphs_subset.sh`. It runs `demo/cmd/all` with explicit per-subgraph port flags so every non-EDFS subgraph (`employees`, `family`, `hobbies`, `products`, `test1`, `availability`, `mood`, `countries`, `products_fg`) starts in a single process. `cmd/all` wires up the NATS pubsub adapter automatically; the per-subgraph `cmd/<name>` binaries pass `nil` for that adapter and would fail mood/availability mutations at runtime. The full demo `demo/run_subgraphs.sh` additionally starts the EDFS-dependent `employeeupdated` subgraph and is intentionally not used here.
 
 Client configuration for Code Mode MCP clients (Claude Code, Claude Desktop, Codex CLI) lives under `demo/code-mode/mcp-configs/` — see the README there.
 
