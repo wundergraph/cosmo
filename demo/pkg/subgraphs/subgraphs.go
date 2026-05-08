@@ -204,6 +204,24 @@ func CountriesHandler(opts *SubgraphOptions) http.Handler {
 	return subgraphHandler(countries.NewSchema(opts.NatsPubSubByProviderID))
 }
 
+// startNatsAdapter creates and starts a single NATS adapter. Failures are
+// logged and nil is returned so callers can continue without NATS — pubsub
+// publishes simply become no-ops in the resolvers.
+func startNatsAdapter(ctx context.Context, providerID, url string) natsPubsub.Adapter {
+	adapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", false, datasource.ProviderOpts{
+		StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
+	})
+	if err != nil {
+		log.Printf("nats adapter %q unavailable: create failed: %v", providerID, err)
+		return nil
+	}
+	if err := adapter.Startup(ctx); err != nil {
+		log.Printf("nats adapter %q unavailable: startup failed: %v", providerID, err)
+		return nil
+	}
+	return adapter
+}
+
 func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	url := nats.DefaultURL
 	if defaultSourceNameURL := os.Getenv("NATS_URL"); defaultSourceNameURL != "" {
@@ -211,44 +229,25 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	}
 
 	natsPubSubByProviderID := map[string]natsPubsub.Adapter{}
-
-	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", false, datasource.ProviderOpts{
-		StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create default nats adapter: %w", err)
+	if a := startNatsAdapter(ctx, "default", url); a != nil {
+		natsPubSubByProviderID["default"] = a
 	}
-	if err := defaultAdapter.Startup(ctx); err != nil {
-		return nil, fmt.Errorf("failed to start default nats adapter: %w", err)
-	}
-	natsPubSubByProviderID["default"] = defaultAdapter
-
-	myNatsAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", false, datasource.ProviderOpts{
-		StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create my-nats adapter: %w", err)
-	}
-	if err := myNatsAdapter.Startup(ctx); err != nil {
-		return nil, fmt.Errorf("failed to start my-nats adapter: %w", err)
-	}
-	natsPubSubByProviderID["my-nats"] = myNatsAdapter
-
-	defaultConnection, err := nats.Connect(url)
-	if err != nil {
-		log.Printf("failed to connect to nats source \"nats\": %v", err)
-	}
-	defaultJetStream, err := jetstream.New(defaultConnection)
-	if err != nil {
-		return nil, err
+	if a := startNatsAdapter(ctx, "my-nats", url); a != nil {
+		natsPubSubByProviderID["my-nats"] = a
 	}
 
-	_, err = defaultJetStream.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+	// JetStream stream provisioning is also best-effort — when NATS is not
+	// reachable we just skip it. The subgraphs' subscription functionality
+	// will be unavailable, but plain queries and mutations keep working.
+	if defaultConnection, err := nats.Connect(url); err != nil {
+		log.Printf("nats: skipping jetstream stream provisioning (connect failed): %v", err)
+	} else if defaultJetStream, err := jetstream.New(defaultConnection); err != nil {
+		log.Printf("nats: skipping jetstream stream provisioning (jetstream init failed): %v", err)
+	} else if _, err := defaultJetStream.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:     "streamName",
 		Subjects: []string{"employeeUpdated.>"},
-	})
-	if err != nil {
-		return nil, err
+	}); err != nil {
+		log.Printf("nats: skipping jetstream stream provisioning (CreateOrUpdateStream failed): %v", err)
 	}
 
 	var servers []*http.Server
