@@ -902,3 +902,34 @@ export function isValidGrpcNamingScheme(url: string): boolean {
     }
   }
 }
+
+/**
+ * Validates a routing URL accepted for a GRPC_SERVICE subgraph. The router
+ * can reach a gRPC subgraph over either native gRPC (via the gRPC name
+ * resolver schemes) or ConnectRPC over HTTP/1.1, and the protocol is chosen
+ * at request time by the router via the `grpc_protocol` configuration block.
+ *
+ * Accepts:
+ * - any URL using one of the gRPC naming schemes recognised by
+ *   isValidGrpcNamingScheme (dns:, unix:, unix-abstract:, vsock:, ipv4:, ipv6:),
+ * - any well-formed http:// or https:// URL.
+ */
+export function isValidGrpcSubgraphRoutingURL(url: string): boolean {
+  const value = url.trim();
+  if (!value) {
+    return false;
+  }
+
+  const lower = value.toLowerCase();
+  if (lower.startsWith('http://') || lower.startsWith('https://')) {
+    try {
+      // eslint-disable-next-line no-new
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  return isValidGrpcNamingScheme(value);
+}
