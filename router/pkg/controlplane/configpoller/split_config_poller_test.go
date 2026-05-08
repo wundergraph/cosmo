@@ -15,7 +15,7 @@ import (
 
 // mockSplitFetcher is a controllable implementation of SplitConfigFetcher for tests.
 type mockSplitFetcher struct {
-	mapperResult *nodev1.ActiveGraphs
+	mapperResult map[string]string
 	mapperErr    error
 	// configResults maps feature flag name -> result (use "" for base graph)
 	configResults map[string]*nodev1.RouterConfig
@@ -25,7 +25,7 @@ type mockSplitFetcher struct {
 	fetchMapperCalls int
 }
 
-func (m *mockSplitFetcher) FetchMapper(_ context.Context) (*nodev1.ActiveGraphs, error) {
+func (m *mockSplitFetcher) FetchMapper(_ context.Context) (map[string]string, error) {
 	m.fetchMapperCalls++
 	return m.mapperResult, m.mapperErr
 }
@@ -51,10 +51,6 @@ func makeRouterConfig(version string) *nodev1.RouterConfig {
 	}
 }
 
-func makeActiveGraphs(entries map[string]string) *nodev1.ActiveGraphs {
-	return &nodev1.ActiveGraphs{GraphConfigs: entries}
-}
-
 // newTestPoller builds a splitConfigPoller wired to the given mock fetcher.
 // The polling interval is set long enough that Subscribe won't fire automatically in tests.
 func newTestPoller(fetcher SplitConfigFetcher) *splitConfigPoller {
@@ -73,7 +69,7 @@ func newTestPoller(fetcher SplitConfigFetcher) *splitConfigPoller {
 func TestSplitGetRouterConfig_BaseOnly(t *testing.T) {
 	baseCfg := makeRouterConfig("v1")
 	mock := &mockSplitFetcher{
-		mapperResult:  makeActiveGraphs(map[string]string{"": "hash-base"}),
+		mapperResult:  map[string]string{"": "hash-base"},
 		configResults: map[string]*nodev1.RouterConfig{"": baseCfg},
 	}
 
@@ -92,10 +88,10 @@ func TestSplitGetRouterConfig_WithFeatureFlags(t *testing.T) {
 	baseCfg := makeRouterConfig("v1")
 	ffCfg := makeRouterConfig("ff-v1")
 	mock := &mockSplitFetcher{
-		mapperResult: makeActiveGraphs(map[string]string{
+		mapperResult: map[string]string{
 			"":    "hash-base",
 			"ff1": "hash-ff1",
-		}),
+		},
 		configResults: map[string]*nodev1.RouterConfig{
 			"":    baseCfg,
 			"ff1": ffCfg,
@@ -128,7 +124,7 @@ func TestSplitGetRouterConfig_MapperError(t *testing.T) {
 
 func TestSplitGetRouterConfig_EmptyMapper(t *testing.T) {
 	mock := &mockSplitFetcher{
-		mapperResult: makeActiveGraphs(map[string]string{}),
+		mapperResult: map[string]string{},
 	}
 	p := newTestPoller(mock)
 	_, err := p.GetRouterConfig(context.Background())
@@ -138,7 +134,7 @@ func TestSplitGetRouterConfig_EmptyMapper(t *testing.T) {
 
 func TestSplitGetRouterConfig_ConfigFetchError(t *testing.T) {
 	mock := &mockSplitFetcher{
-		mapperResult: makeActiveGraphs(map[string]string{"": "hash-base"}),
+		mapperResult: map[string]string{"": "hash-base"},
 		configErrors: map[string]error{"": errors.New("CDN unavailable")},
 	}
 	p := newTestPoller(mock)
@@ -172,7 +168,7 @@ func (c *capturingPoller) Subscribe(_ context.Context, fn func()) {
 func TestSplitSubscribe_NoChanges(t *testing.T) {
 	baseCfg := makeRouterConfig("v1")
 	mock := &mockSplitFetcher{
-		mapperResult:  makeActiveGraphs(map[string]string{"": "hash-base"}),
+		mapperResult:  map[string]string{"": "hash-base"},
 		configResults: map[string]*nodev1.RouterConfig{"": baseCfg},
 	}
 
@@ -198,7 +194,7 @@ func TestSplitSubscribe_BaseGraphChanged(t *testing.T) {
 	newBase := makeRouterConfig("v2")
 	mock := &mockSplitFetcher{
 		// Mapper now reports a new hash for the base graph.
-		mapperResult:  makeActiveGraphs(map[string]string{"": "hash-base-new"}),
+		mapperResult:  map[string]string{"": "hash-base-new"},
 		configResults: map[string]*nodev1.RouterConfig{"": newBase},
 	}
 
@@ -226,10 +222,10 @@ func TestSplitSubscribe_SingleFFChanged(t *testing.T) {
 	oldFF := makeRouterConfig("ff-v1")
 	newFF := makeRouterConfig("ff-v2")
 	mock := &mockSplitFetcher{
-		mapperResult: makeActiveGraphs(map[string]string{
+		mapperResult: map[string]string{
 			"":    "hash-base",
 			"ff1": "hash-ff1-new",
-		}),
+		},
 		configResults: map[string]*nodev1.RouterConfig{"ff1": newFF},
 	}
 
@@ -266,10 +262,10 @@ func TestSplitSubscribe_FFAdded(t *testing.T) {
 	baseCfg := makeRouterConfig("v1")
 	newFF := makeRouterConfig("ff-v1")
 	mock := &mockSplitFetcher{
-		mapperResult: makeActiveGraphs(map[string]string{
+		mapperResult: map[string]string{
 			"":    "hash-base",
 			"ff1": "hash-ff1",
-		}),
+		},
 		configResults: map[string]*nodev1.RouterConfig{"ff1": newFF},
 	}
 
@@ -295,7 +291,7 @@ func TestSplitSubscribe_FFRemoved(t *testing.T) {
 	oldFF := makeRouterConfig("ff-v1")
 	mock := &mockSplitFetcher{
 		// Mapper no longer contains ff1.
-		mapperResult: makeActiveGraphs(map[string]string{"": "hash-base"}),
+		mapperResult: map[string]string{"": "hash-base"},
 	}
 
 	p := newTestPoller(mock)
@@ -330,10 +326,10 @@ func TestSplitSubscribe_MultipleChanges(t *testing.T) {
 	oldFF1 := makeRouterConfig("ff1-v1")
 	mock := &mockSplitFetcher{
 		// base changed, ff2 added, ff1 removed.
-		mapperResult: makeActiveGraphs(map[string]string{
+		mapperResult: map[string]string{
 			"":    "hash-base-new",
 			"ff2": "hash-ff2",
-		}),
+		},
 		configResults: map[string]*nodev1.RouterConfig{
 			"":    newBase,
 			"ff2": newFF2,
@@ -393,7 +389,7 @@ func TestSplitSubscribe_MapperFetchFailure(t *testing.T) {
 func TestSplitSubscribe_ConfigFetchFailure(t *testing.T) {
 	baseCfg := makeRouterConfig("v1")
 	mock := &mockSplitFetcher{
-		mapperResult: makeActiveGraphs(map[string]string{"": "hash-base-new"}),
+		mapperResult: map[string]string{"": "hash-base-new"},
 		configErrors: map[string]error{"": errors.New("config fetch failed")},
 	}
 
@@ -419,7 +415,7 @@ func TestSplitSubscribe_HandlerError_StateNotUpdated(t *testing.T) {
 	baseCfg := makeRouterConfig("v1")
 	newBase := makeRouterConfig("v2")
 	mock := &mockSplitFetcher{
-		mapperResult:  makeActiveGraphs(map[string]string{"": "hash-base-new"}),
+		mapperResult:  map[string]string{"": "hash-base-new"},
 		configResults: map[string]*nodev1.RouterConfig{"": newBase},
 	}
 

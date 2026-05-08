@@ -7,6 +7,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -51,7 +52,7 @@ func newFetcher(t *testing.T, serverURL string, opts *cdn.Options) *cdn.SplitFet
 
 func marshalActiveGraphs(t *testing.T, configs map[string]string) []byte {
 	t.Helper()
-	b, err := protojson.Marshal(&nodev1.ActiveGraphs{GraphConfigs: configs})
+	b, err := json.Marshal(configs)
 	require.NoError(t, err)
 	return b
 }
@@ -235,8 +236,8 @@ func TestFetchMapper_GzipEncoded(t *testing.T) {
 	result, err := newFetcher(t, srv.URL, nil).FetchMapper(context.Background())
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Equal(t, "hash-base", result.GraphConfigs[""])
-	assert.Equal(t, "hash-ff1", result.GraphConfigs["ff1"])
+	assert.Equal(t, "hash-base", result[""])
+	assert.Equal(t, "hash-ff1", result["ff1"])
 }
 
 // ─── FetchMapper: parsing & URL path ─────────────────────────────────────────
@@ -254,8 +255,8 @@ func TestFetchMapper_Success(t *testing.T) {
 	result, err := newFetcher(t, srv.URL, nil).FetchMapper(context.Background())
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Equal(t, "hash-base", result.GraphConfigs[""])
-	assert.Equal(t, "hash-ff1", result.GraphConfigs["ff1"])
+	assert.Equal(t, "hash-base", result[""])
+	assert.Equal(t, "hash-ff1", result["ff1"])
 }
 
 func TestFetchMapper_InvalidJSON(t *testing.T) {

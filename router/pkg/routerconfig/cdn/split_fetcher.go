@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
@@ -20,7 +21,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // SplitFetcher fetches mapper and individual router configs from the CDN
@@ -177,7 +177,7 @@ func (f *SplitFetcher) post(ctx context.Context, path string) ([]byte, error) {
 }
 
 // FetchMapper fetches the mapper file and returns the active graph configs and their hashes.
-func (f *SplitFetcher) FetchMapper(ctx context.Context) (*nodev1.ActiveGraphs, error) {
+func (f *SplitFetcher) FetchMapper(ctx context.Context) (map[string]string, error) {
 	path, err := url.JoinPath("/", f.organizationID, f.federatedGraphID, "manifest/mapper.json")
 	if err != nil {
 		return nil, fmt.Errorf("could not join path: %w", err)
@@ -187,13 +187,13 @@ func (f *SplitFetcher) FetchMapper(ctx context.Context) (*nodev1.ActiveGraphs, e
 		return nil, fmt.Errorf("could not fetch mapper: %w", err)
 	}
 
-	var activeGraphs nodev1.ActiveGraphs
-	ms := protojson.UnmarshalOptions{DiscardUnknown: true}
-	if err := ms.Unmarshal(body, &activeGraphs); err != nil {
+	var activeGraphs map[string]string
+
+	if err := json.Unmarshal(body, &activeGraphs); err != nil {
 		return nil, fmt.Errorf("could not unmarshal mapper: %w", err)
 	}
 
-	return &activeGraphs, nil
+	return activeGraphs, nil
 }
 
 // FetchConfig fetches a single router config from CDN.
