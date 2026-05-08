@@ -19,6 +19,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/zap"
 )
@@ -108,7 +109,7 @@ func (f *SplitFetcher) post(ctx context.Context, path string) ([]byte, error) {
 	case http.StatusOK:
 		// handled below
 	case http.StatusNotFound:
-		return nil, ErrConfigNotFound
+		return nil, errs.ErrFileNotFound
 	case http.StatusUnauthorized:
 		return nil, errors.New("could not authenticate against CDN")
 	case http.StatusBadRequest:
@@ -143,9 +144,9 @@ func (f *SplitFetcher) post(ctx context.Context, path string) ([]byte, error) {
 		if configSignature == "" {
 			f.logger.Error(
 				"Signature header not found in CDN response. Ensure that your Admission Controller was able to sign the config.",
-				zap.Error(ErrMissingSignatureHeader),
+				zap.Error(errs.ErrMissingSignatureHeader),
 			)
-			return nil, ErrMissingSignatureHeader
+			return nil, errs.ErrMissingSignatureHeader
 		}
 
 		if _, err := f.hash.Write(body); err != nil {
@@ -162,9 +163,9 @@ func (f *SplitFetcher) post(ctx context.Context, path string) ([]byte, error) {
 		if subtle.ConstantTimeCompare(rawSignature, dataHmac) != 1 {
 			f.logger.Error(
 				"Invalid config signature, potential tampering detected.",
-				zap.Error(ErrInvalidSignature),
+				zap.Error(errs.ErrInvalidSignature),
 			)
-			return nil, ErrInvalidSignature
+			return nil, errs.ErrInvalidSignature
 		}
 
 		f.logger.Info("Config signature validation successful",

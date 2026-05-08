@@ -2,6 +2,7 @@ package configpoller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -10,6 +11,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -29,6 +31,11 @@ type SplitConfigFetcher interface {
 // SplitConfigPollerOption configures a splitConfigPoller.
 type SplitConfigPollerOption func(*splitConfigPoller)
 
+type ConfigRules struct {
+	SkipMissingFeatureFlags bool
+	IgnoredFeatureFlags     map[string]struct{}
+}
+
 type splitConfigPoller struct {
 	logger       *zap.Logger
 	poller       controlplane.Poller
@@ -40,6 +47,7 @@ type splitConfigPoller struct {
 	knownHashes   map[string]string    // name -> hash from last successful mapper fetch ("" = base)
 	currentConfig *nodev1.RouterConfig // last successfully assembled full config
 	latestVersion string               // composite hash used for change detection
+	configRules   ConfigRules          // config rules to apply to the config
 }
 
 // NewSplitConfigPoller creates a ConfigPoller that uses the split-config strategy.
@@ -73,6 +81,12 @@ func WithSplitPolling(interval time.Duration, jitter time.Duration) SplitConfigP
 	}
 }
 
+func WithConfigRules(rules ConfigRules) SplitConfigPollerOption {
+	return func(p *splitConfigPoller) {
+		p.configRules = rules
+	}
+}
+
 // computeCompositeVersion returns a deterministic version string derived from all mapper entries.
 func computeCompositeVersion(graphConfigs map[string]string) string {
 	keys := make([]string, 0, len(graphConfigs))
@@ -103,13 +117,27 @@ func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraph
 		CompatibilityVersion: baseConfig.CompatibilityVersion,
 	}
 
+	hasIgnoredFeatureFlags := len(p.configRules.IgnoredFeatureFlags) > 0
+
 	// Fetch feature flag configs.
 	for name := range activeGraphs {
 		if name == "" {
 			continue // base graph already handled above
 		}
+
+		if hasIgnoredFeatureFlags {
+			if _, ok := p.configRules.IgnoredFeatureFlags[name]; ok {
+				p.logger.Info("Feature flag is ignored, skipping", zap.String("feature_flag", name))
+				continue
+			}
+		}
+
 		ffConfig, err := p.fetcher.FetchConfig(ctx, name)
 		if err != nil {
+			if p.configRules.SkipMissingFeatureFlags && errors.Is(err, errs.ErrFileNotFound) {
+				p.logger.Warn("Feature flag config not found, skipping", zap.String("feature_flag", name))
+				continue
+			}
 			return nil, fmt.Errorf("failed to fetch config for feature flag %q: %w", name, err)
 		}
 		if assembled.FeatureFlagConfigs == nil {
