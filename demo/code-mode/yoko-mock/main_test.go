@@ -18,69 +18,122 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestIndexThenSearchReturnsGeneratedOperations(t *testing.T) {
+const testSDL = `type Query { viewer: User } type User { id: ID! }`
+
+func TestIndexSchemaThenGenerateQueryReturnsResolvedQuery(t *testing.T) {
 	writeFakeCodex(t,
 		`{"type":"thread.started","thread_id":"fake-thread"}`,
-		`{"operations":[{"name":"getViewer","body":"query getViewer { viewer { id } }","kind":"query","description":"Fetches the current viewer."}]}`,
+		`{"queries":[{"description":"Fetches the current viewer.","document":"query getViewer { viewer { id } }","operation_name":"getViewer","operation_type":"query"}],"unsatisfied":[],"truncated":false}`,
 	)
 	client := newTestClient(t)
 
-	indexResp, err := client.Index(context.Background(), connect.NewRequest(&yokov1.IndexRequest{
-		SchemaSdl: "type Query { viewer: User } type User { id: ID! }",
+	indexResp, err := client.IndexSchema(context.Background(), connect.NewRequest(&yokov1.IndexSchemaRequest{
+		Sdl: testSDL,
 	}))
 	require.NoError(t, err)
 
-	searchResp, err := client.Search(context.Background(), connect.NewRequest(&yokov1.SearchRequest{
-		SchemaId:  indexResp.Msg.GetSchemaId(),
-		Prompts:   []string{"get the viewer"},
-		SessionId: "session-1",
+	resp, err := client.GenerateQuery(context.Background(), connect.NewRequest(&yokov1.GenerateQueryRequest{
+		SchemaId: indexResp.Msg.GetSchemaId(),
+		Prompt:   "get the viewer",
 	}))
 	require.NoError(t, err)
 
-	expected := &yokov1.SearchResponse{
-		Operations: []*yokov1.GeneratedOperation{
-			{
-				Name:        "getViewer",
-				Body:        "query getViewer { viewer { id } }",
-				Kind:        yokov1.OperationKind_OPERATION_KIND_QUERY,
-				Description: "Fetches the current viewer.",
-			},
+	expected := &yokov1.GenerateQueryResponse{
+		Resolution: &yokov1.Resolution{
+			Queries: []*yokov1.ResolvedQuery{{
+				Description:     "Fetches the current viewer.",
+				Document:        "query getViewer { viewer { id } }",
+				OperationName:   "getViewer",
+				OperationType:   "query",
+				VariablesSchema: `{"type":"object","properties":{}}`,
+			}},
 		},
 	}
-	assert.Equal(t, normalizeSearchResponse(t, expected), normalizeSearchResponse(t, searchResp.Msg))
+	assert.Equal(t, normalizeGenerateResponse(t, expected), normalizeGenerateResponse(t, resp.Msg))
 }
 
-func TestSearchUnknownSchemaIDReturnsNotFound(t *testing.T) {
+func TestGenerateQueryDerivesVariablesSchemaFromOperation(t *testing.T) {
 	writeFakeCodex(t,
 		`{"type":"thread.started","thread_id":"fake-thread"}`,
-		`{"operations":[]}`,
+		`{"queries":[{"description":"Fetch viewer by id.","document":"query GetViewer($id: ID!) { viewer(id: $id) { id } }","operation_name":"GetViewer","operation_type":"query"}],"unsatisfied":[],"truncated":false}`,
 	)
 	client := newTestClient(t)
 
-	_, err := client.Search(context.Background(), connect.NewRequest(&yokov1.SearchRequest{
+	indexResp, err := client.IndexSchema(context.Background(), connect.NewRequest(&yokov1.IndexSchemaRequest{
+		Sdl: `type Query { viewer(id: ID!): User } type User { id: ID! }`,
+	}))
+	require.NoError(t, err)
+
+	resp, err := client.GenerateQuery(context.Background(), connect.NewRequest(&yokov1.GenerateQueryRequest{
+		SchemaId: indexResp.Msg.GetSchemaId(),
+		Prompt:   "viewer",
+	}))
+	require.NoError(t, err)
+
+	queries := resp.Msg.GetResolution().GetQueries()
+	require.Len(t, queries, 1)
+	assert.Equal(t, `{"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}`, queries[0].GetVariablesSchema())
+}
+
+func TestGenerateQueryForwardsUnsatisfiedAndTruncated(t *testing.T) {
+	writeFakeCodex(t,
+		`{"type":"thread.started","thread_id":"fake-thread"}`,
+		`{"queries":[],"unsatisfied":[{"reason":"no field on the schema carries that filter dimension"}],"truncated":true}`,
+	)
+	client := newTestClient(t)
+
+	indexResp, err := client.IndexSchema(context.Background(), connect.NewRequest(&yokov1.IndexSchemaRequest{
+		Sdl: testSDL,
+	}))
+	require.NoError(t, err)
+
+	resp, err := client.GenerateQuery(context.Background(), connect.NewRequest(&yokov1.GenerateQueryRequest{
+		SchemaId: indexResp.Msg.GetSchemaId(),
+		Prompt:   "viewer filtered by some unknown thing",
+	}))
+	require.NoError(t, err)
+
+	expected := &yokov1.GenerateQueryResponse{
+		Resolution: &yokov1.Resolution{
+			Queries:     []*yokov1.ResolvedQuery{},
+			Unsatisfied: []*yokov1.Unsatisfied{{Reason: "no field on the schema carries that filter dimension"}},
+			Truncated:   true,
+		},
+	}
+	assert.Equal(t, normalizeGenerateResponse(t, expected), normalizeGenerateResponse(t, resp.Msg))
+}
+
+func TestGenerateQueryUnknownSchemaIDReturnsNotFound(t *testing.T) {
+	writeFakeCodex(t,
+		`{"type":"thread.started","thread_id":"fake-thread"}`,
+		`{"queries":[],"unsatisfied":[],"truncated":false}`,
+	)
+	client := newTestClient(t)
+
+	_, err := client.GenerateQuery(context.Background(), connect.NewRequest(&yokov1.GenerateQueryRequest{
 		SchemaId: "unknown",
-		Prompts:  []string{"get the viewer"},
+		Prompt:   "get the viewer",
 	}))
 
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }
 
-func TestSearchBadJSONReturnsInternal(t *testing.T) {
+func TestGenerateQueryBadJSONReturnsInternal(t *testing.T) {
 	writeFakeCodex(t,
 		`{"type":"thread.started","thread_id":"fake-thread"}`,
 		`not json`,
 	)
 	client := newTestClient(t)
 
-	indexResp, err := client.Index(context.Background(), connect.NewRequest(&yokov1.IndexRequest{
-		SchemaSdl: "type Query { viewer: ID! }",
+	indexResp, err := client.IndexSchema(context.Background(), connect.NewRequest(&yokov1.IndexSchemaRequest{
+		Sdl: testSDL,
 	}))
 	require.NoError(t, err)
 
-	_, err = client.Search(context.Background(), connect.NewRequest(&yokov1.SearchRequest{
+	_, err = client.GenerateQuery(context.Background(), connect.NewRequest(&yokov1.GenerateQueryRequest{
 		SchemaId: indexResp.Msg.GetSchemaId(),
-		Prompts:  []string{"get the viewer"},
+		Prompt:   "get the viewer",
 	}))
 
 	require.Error(t, err)
@@ -104,13 +157,13 @@ func newTestClient(t *testing.T) yokov1connect.YokoServiceClient {
 }
 
 // writeFakeCodex installs a stub `codex` binary on PATH that mocks both the
-// initial `codex exec` (Index pre-warm) and `codex exec resume` (Search) calls.
-// The stub detects "resume" in its argv to switch modes.
+// initial `codex exec` (IndexSchema pre-warm) and `codex exec resume`
+// (GenerateQuery) calls. The stub detects "resume" in its argv to switch modes.
 //
-//   - indexStdout is printed to stdout for the Index call (e.g. a JSONL line
-//     like {"type":"thread.started","thread_id":"..."}).
-//   - resumeMessage is written to the file passed via -o <FILE> for the Search
-//     call (codex's --output-last-message contract).
+//   - indexStdout is printed to stdout for the IndexSchema call (e.g. a JSONL
+//     line like {"type":"thread.started","thread_id":"..."}).
+//   - resumeMessage is written to the file passed via -o <FILE> for the
+//     GenerateQuery call (codex's --output-last-message contract).
 func writeFakeCodex(t *testing.T, indexStdout, resumeMessage string) {
 	t.Helper()
 
@@ -127,7 +180,7 @@ func writeFakeCodex(t *testing.T, indexStdout, resumeMessage string) {
 	path := filepath.Join(dir, name)
 	var script string
 	if runtime.GOOS == "windows" {
-		// Minimal Windows fallback — only Index path is exercised in CI on Unix.
+		// Minimal Windows fallback — only IndexSchema path is exercised in CI on Unix.
 		script = "@echo off\r\ntype \"" + indexFile + "\"\r\n"
 	} else {
 		script = "#!/bin/sh\n" +
@@ -152,12 +205,12 @@ func writeFakeCodex(t *testing.T, indexStdout, resumeMessage string) {
 
 var _ http.Handler = (*http.ServeMux)(nil)
 
-func normalizeSearchResponse(t *testing.T, resp *yokov1.SearchResponse) *yokov1.SearchResponse {
+func normalizeGenerateResponse(t *testing.T, resp *yokov1.GenerateQueryResponse) *yokov1.GenerateQueryResponse {
 	t.Helper()
 
 	data, err := proto.Marshal(resp)
 	require.NoError(t, err)
-	normalized := &yokov1.SearchResponse{}
+	normalized := &yokov1.GenerateQueryResponse{}
 	require.NoError(t, proto.Unmarshal(data, normalized))
 	return normalized
 }

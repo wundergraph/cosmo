@@ -48,7 +48,7 @@ mcp:
       timeout: 180s
     query_generation:
       enabled: true
-      endpoint: http://localhost:5028
+      endpoint: http://127.0.0.1:3400
       timeout: 180s
     execute_timeout: 180s
     named_ops:

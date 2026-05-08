@@ -15,7 +15,10 @@ YOKO_DIR="${YOKO_DIR:?YOKO_DIR is required (path to your yoko checkout)}"
 
 ROUTER_BIN="$ROOT_DIR/router/router"
 ROUTER_CONFIG="$CONNECT_DIR/router-config.yaml"
-YOKO_BIN="$DEMO_DIR/code-mode/yoko-mock/yoko-mock"
+
+# Yoko is a separate service expected at http://127.0.0.1:3400. start.sh no
+# longer launches a local mock — bring up your real yoko service before running.
+YOKO_URL="${YOKO_URL:-http://127.0.0.1:3400}"
 
 append_pid() {
   local name="$1"
@@ -55,6 +58,12 @@ cleanup() {
   trap - EXIT INT TERM
   kill_pid_file
   exit "$status"
+}
+
+on_signal() {
+  trap - EXIT INT TERM
+  kill_pid_file
+  exit 0
 }
 
 wait_url() {
@@ -112,12 +121,6 @@ if [ ! -x "$ROUTER_BIN" ]; then
   exit 1
 fi
 
-if [ ! -x "$YOKO_BIN" ]; then
-  echo "Yoko mock binary not found or not executable: $YOKO_BIN" >&2
-  echo "Run: make -C demo/code-mode build-yoko" >&2
-  exit 1
-fi
-
 if [ ! -f "$YOKO_DIR/config.json" ]; then
   echo "Composed yoko supergraph not found: $YOKO_DIR/config.json" >&2
   echo "Run: cd $YOKO_DIR && make compose" >&2
@@ -127,19 +130,29 @@ fi
 mkdir -p "$LOG_DIR"
 mkdir -p "$GOCACHE_DIR"
 rm -f "$PID_FILE"
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap on_signal INT TERM
 
-# yoko-mock listens on a different port than the regular code-mode-demo so the
-# two demos can coexist (5028 vs 5038).
-start_background_root yoko "$YOKO_BIN" -listen-addr localhost:5038
-
-wait_url yoko http://localhost:5038/health
+# Verify the external yoko service is reachable. We don't probe a specific
+# path because the real service doesn't necessarily expose /health — just
+# confirm the TCP/HTTP socket accepts a connection. Any HTTP response (200,
+# 404, 405 …) means the server is up; only a connection failure aborts.
+# Override with YOKO_URL when yoko runs at a different address.
+if ! curl -sS -o /dev/null --max-time 3 "$YOKO_URL" >/dev/null 2>&1; then
+  echo "Yoko service is not reachable at $YOKO_URL" >&2
+  echo "Start your yoko service (or set YOKO_URL=...) before running this demo." >&2
+  exit 1
+fi
+echo "yoko is ready at $YOKO_URL"
 
 echo "Starting router in foreground (CWD=$YOKO_DIR)"
+echo "Router output is being teed to $LOG_DIR/router.log"
+# Tee stdout+stderr so the user still sees live output AND we keep a persistent
+# log for post-mortem debugging when the router exits unexpectedly.
 (
   cd "$YOKO_DIR"
   exec "$ROUTER_BIN" -config "$ROUTER_CONFIG"
-) &
+) 2>&1 | tee "$LOG_DIR/router.log" &
 router_pid="$!"
 append_pid router "$router_pid"
 

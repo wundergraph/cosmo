@@ -21,14 +21,17 @@ strip_auth() {
   local out="$2"
   # Remove @requiresScopes(scopes: [[...], [...]]) — match the doubly-nested
   # bracket payload, then drop @authenticated standalone uses. The directive
-  # imports inside @link(import: [...]) stay (they're string literals, not
-  # directive applications, so they don't trigger enforcement).
+  # imports inside @link(import: [...]) are quoted string literals, so the
+  # @authenticated rule requires a non-quote, non-word predecessor (start of
+  # line or whitespace) to leave those imports intact.
+  #
+  # POSIX-portable: avoid \b (BSD sed treats it as a literal `b`).
   sed -E '
     s/[[:space:]]*@requiresScopes\(scopes:[[:space:]]*\[(\[[^][]*\][, ]*)+\]\)//g
-    s/[[:space:]]*@authenticated\b//g
+    s/(^|[[:space:]])@authenticated([^a-zA-Z0-9_]|$)/\1\2/g
   ' "$in" > "$out"
 }
 
-for sg in employees family availability mood; do
+for sg in employees family availability mood hobbies products test1 countries products_fg; do
   strip_auth "$SRC_DIR/$sg/subgraph/schema.graphqls" "$OUT_DIR/$sg.graphqls"
 done

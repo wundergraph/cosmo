@@ -116,6 +116,65 @@ func TestExecuteHappyPathToolCall(t *testing.T) {
 	}, ExecuteResult{OK: got.OK, Result: got.Result, HostCalls: got.HostCalls})
 }
 
+func TestExecuteUsesDocumentNameWhenInvokingGraphQL(t *testing.T) {
+	// Regression: registered Name (camelCase, exposed as tools.<name>) and
+	// the operation name baked into Body can differ. The host bridge must
+	// send the document's actual name as `operationName` so the router can
+	// match the operation definition; otherwise /graphql returns
+	// "operation with name 'X' not found".
+	var gotBody map[string]any
+	client := clientFunc(func(r *http.Request) (*http.Response, error) {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		return jsonResponse(http.StatusOK, `{"data":{"order":{"id":"o1"}}}`), nil
+	})
+
+	s := newTestSandbox(t, "http://router/graphql", lookup{
+		"getOrder": {
+			Name:         "getOrder",
+			Body:         "query GetOrder($id: ID!) { order(id: $id) { id } }",
+			Kind:         storage.OperationKindQuery,
+			DocumentName: "GetOrder",
+		},
+	}, func(cfg *Config) { cfg.HTTPClient = client })
+
+	got := execute(t, s, ExecuteRequest{
+		SessionID: "s1",
+		ToolNames: []string{"getOrder"},
+		WrappedJS: `async () => await tools.getOrder({ id: "o1" })`,
+	})
+
+	assert.Equal(t, "GetOrder", gotBody["operationName"])
+	assert.Equal(t, ExecuteResult{
+		OK:        true,
+		Result:    raw(`{"data":{"order":{"id":"o1"}}}`),
+		HostCalls: 1,
+	}, ExecuteResult{OK: got.OK, Result: got.Result, HostCalls: got.HostCalls})
+}
+
+func TestExecuteFallsBackToNameWhenDocumentNameEmpty(t *testing.T) {
+	// Sessions written before the DocumentName field existed have an empty
+	// DocumentName. The bridge must fall back to op.Name so legacy entries
+	// keep working until they age out.
+	var gotBody map[string]any
+	client := clientFunc(func(r *http.Request) (*http.Response, error) {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		return jsonResponse(http.StatusOK, `{"data":null}`), nil
+	})
+
+	s := newTestSandbox(t, "http://router/graphql", lookup{
+		"getOrder": {Name: "getOrder", Body: "query getOrder { order { id } }", Kind: storage.OperationKindQuery},
+	}, func(cfg *Config) { cfg.HTTPClient = client })
+
+	got := execute(t, s, ExecuteRequest{
+		SessionID: "s1",
+		ToolNames: []string{"getOrder"},
+		WrappedJS: `async () => await tools.getOrder()`,
+	})
+
+	assert.Equal(t, "getOrder", gotBody["operationName"])
+	require.True(t, got.OK)
+}
+
 func TestExecuteGraphQLErrorsResolveVerbatimAndRecordSpan(t *testing.T) {
 	client := clientFunc(func(r *http.Request) (*http.Response, error) {
 		return jsonResponse(http.StatusOK, `{"data":null,"errors":[{"message":"x"}]}`), nil

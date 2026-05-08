@@ -1,8 +1,8 @@
 version: "1"
 
-# Different ports than demo/code-mode/router-config.yaml so both demos can run
-# side-by-side. See demo/code-mode-connect/start.sh for the matching yoko-mock
-# port.
+# Different router/MCP ports than demo/code-mode/router-config.yaml so both
+# demos can run side-by-side. They share the same external yoko service
+# (http://127.0.0.1:3400) — start.sh no longer launches a local yoko-mock.
 listen_addr: "localhost:3012"
 graphql_path: "/graphql"
 playground_enabled: false
@@ -75,7 +75,7 @@ mcp:
       timeout: 180s
     query_generation:
       enabled: true
-      endpoint: http://localhost:5038
+      endpoint: http://127.0.0.1:3400
       timeout: 180s
     execute_timeout: 180s
     named_ops:
