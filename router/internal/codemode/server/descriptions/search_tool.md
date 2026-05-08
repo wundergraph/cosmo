@@ -18,9 +18,24 @@ Always state:
 - Any required filters/arguments but never specific values ("employee by id - not "employee 123", "employee filtered by department name" - not "employee in department 'Engineering'").
 - Concrete entity and relationship names from the domain when you know them; otherwise describe the relationship explicitly ("the team an employee belongs to").
 
-When to use multiple prompts (rare): genuinely unrelated operations on disjoint domains, different argument shapes that can't share a parent, or queries vs mutations.
+When to use multiple prompts (rare for reads): genuinely unrelated operations on disjoint domains, different argument shapes that can't share a parent, or queries vs mutations.
 Never slice one joinable shape into fragments.
-When in doubt, combine.
+When in doubt for reads, combine.
+
+MUTATIONS ARE DIFFERENT — DEFAULT TO ONE PROMPT PER LOGICAL WRITE.
+Mutations have side effects and are imperative, not joinable.
+Bundling unrelated writes into one prompt produces tangled operations with mixed argument shapes and unclear failure semantics.
+Issue a SEPARATE prompt for each mutation that is not tightly correlated with the others.
+Tightly correlated means: same target entity (e.g. update name + update email on the same user), a parent/child cascade that must be authored together (create order + add line items to that order), or writes that share the same input shape and variables.
+Unrelated mutations on different entities, different argument shapes, or independently triggered by the user MUST be issued as separate prompts — even if you are calling them in the same code_mode_run_js batch.
+A read prompt and a write prompt never share a single search prompt; describe reads and writes separately.
+
+Mutation example (correct, two prompts):
+- "mutation: update employee by id, set forename and surname; return the updated employee with id, forename, surname"
+- "mutation: archive a project by id; return the archived project with id, status, archivedAt"
+
+Mutation example (correct, one prompt — tightly correlated cascade):
+- "mutation: create a project with title and ownerId, then add an array of tasks (each with title, dueDate) to the new project; return the project with id, title and its tasks with id, title, dueDate"
 
 Do NOT issue prompts for derived/computed values: averages, medians, counts, filters, exclusions ("without X"), sorting, top-N.
 Fetch the raw rows once and compute in code_mode_run_js.
