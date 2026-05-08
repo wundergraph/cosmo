@@ -25247,6 +25247,11 @@ export class RecomposeFeatureFlagResponse extends Message<RecomposeFeatureFlagRe
    */
   compositionWarnings: CompositionWarning[] = [];
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.SubgraphPublishStats errorCounts = 5;
+   */
+  errorCounts?: SubgraphPublishStats;
+
   constructor(data?: PartialMessage<RecomposeFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -25259,6 +25264,7 @@ export class RecomposeFeatureFlagResponse extends Message<RecomposeFeatureFlagRe
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
     { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 5, name: "errorCounts", kind: "message", T: SubgraphPublishStats, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RecomposeFeatureFlagResponse {

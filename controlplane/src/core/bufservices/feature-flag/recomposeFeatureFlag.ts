@@ -7,11 +7,13 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
+import { maxRowLimitForChecks } from '../../constants.js';
 
 export function recomposeFeatureFlag(
   opts: RouterOptions,
@@ -106,6 +108,35 @@ export function recomposeFeatureFlag(
       });
     });
 
+    const auditLogRepo = new AuditLogRepository(opts.db);
+    await auditLogRepo.addAuditLog({
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      auditAction: 'feature_flag.recomposed',
+      action: 'recomposed',
+      actorId: authContext.userId,
+      auditableType: 'feature_flag',
+      auditableDisplayName: featureFlag.name,
+      actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
+      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+      targetNamespaceId: featureFlag.namespaceId,
+      targetNamespaceDisplayName: featureFlag.namespace,
+    });
+
+    // If req.limit is not provided, use maxRowLimitForChecks as default
+    const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
+
+    const boundedDeploymentErrors = deploymentErrors.slice(0, boundedLimit);
+    const boundedCompositionErrors = compositionErrors.slice(0, boundedLimit);
+    const boundedCompositionWarnings = compositionWarnings.slice(0, boundedLimit);
+
+    const errorCounts = {
+      compositionErrors: compositionErrors.length,
+      compositionWarnings: compositionWarnings.length,
+      deploymentErrors: deploymentErrors.length,
+    };
+
     return {
       response: {
         code:
@@ -115,9 +146,10 @@ export function recomposeFeatureFlag(
               ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
               : EnumStatusCode.OK,
       },
-      deploymentErrors,
-      compositionErrors,
-      compositionWarnings,
+      deploymentErrors: boundedDeploymentErrors,
+      compositionErrors: boundedCompositionErrors,
+      compositionWarnings: boundedCompositionWarnings,
+      errorCounts,
     };
   });
 }

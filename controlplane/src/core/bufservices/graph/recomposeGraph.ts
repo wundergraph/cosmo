@@ -119,38 +119,19 @@ export function recomposeGraph(
       deploymentErrors: deploymentErrors.length,
     };
 
-    if (boundedCompositionErrors.length > 0) {
-      return {
-        compositionErrors: boundedCompositionErrors,
-        compositionWarnings: boundedCompositionWarnings,
-        deploymentErrors: boundedDeploymentErrors,
-        errorCounts,
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-      };
-    }
-
-    if (boundedDeploymentErrors.length > 0) {
-      return {
-        compositionErrors: [],
-        compositionWarnings: boundedCompositionWarnings,
-        deploymentErrors: boundedDeploymentErrors,
-        errorCounts,
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-      };
-    }
-
     return {
-      compositionErrors: [],
-      compositionWarnings: boundedCompositionWarnings,
-      deploymentErrors: [],
-      errorCounts,
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          boundedCompositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : boundedDeploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
+      compositionErrors: boundedCompositionErrors,
+      compositionWarnings: boundedCompositionWarnings,
+      deploymentErrors: boundedDeploymentErrors,
+      errorCounts,
     };
   });
 }
