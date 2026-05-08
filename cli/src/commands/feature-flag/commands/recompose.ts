@@ -89,7 +89,7 @@ export default (opts: BaseCommandOptions) => {
 
     try {
       handleCompositionResult({
-        totalErrorCounts: {},
+        totalErrorCounts: resp.errorCounts,
         responseCode: resp.response.code,
         responseDetails: resp.response.details,
         compositionErrors: resp.compositionErrors,
