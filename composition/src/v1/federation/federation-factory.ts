@@ -2997,8 +2997,8 @@ export class FederationFactory {
 
       const targets = this.collectSubscriptionFilterConcreteTargets(namedTypeData.name);
       if (targets.length === 0) {
-        const kindLabel: 'union' | 'interface' =
-          namedTypeData.kind === Kind.UNION_TYPE_DEFINITION ? 'union' : 'interface';
+        const kindLabel: 'Union' | 'Interface' =
+          namedTypeData.kind === Kind.UNION_TYPE_DEFINITION ? 'Union' : 'Interface';
         this.errors.push(
           invalidSubscriptionFilterDirectiveError(fieldPath, [
             subscriptionFilterNoAccessibleConcreteTypesErrorMessage(namedTypeData.name, kindLabel),
