@@ -546,11 +546,20 @@ export class CompositionService {
       serializableMapper[key] = value;
     }
 
+    // Serialize the mapper content and generate the file signature
+    const mapperVersion = randomUUID();
+    const mapperContent = JSON.stringify(serializableMapper);
+    const signatureSha256 = createHash('sha256').update(mapperVersion).update(mapperContent).digest('hex');
+
     // Upload the mapper file to the CDN
     await this.blobStorage.putObject({
       key: `${this.#getManifestBasePath(federatedGraphId)}/mapper.json`,
-      body: Buffer.from(JSON.stringify(serializableMapper), 'utf8'),
+      body: Buffer.from(mapperContent, 'utf8'),
       contentType: 'application/json; charset=utf-8',
+      metadata: {
+        version: mapperVersion,
+        'signature-sha256': signatureSha256,
+      },
     });
   }
 
@@ -941,6 +950,10 @@ export class CompositionService {
           result,
           splitConfig,
         });
+
+        if (splitConfig) {
+          await this.#updateMapperForFederatedGraph(federatedGraph.id);
+        }
       }
 
       //
