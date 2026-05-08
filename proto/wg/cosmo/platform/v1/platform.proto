@@ -3227,6 +3227,7 @@ message RecomposeFeatureFlagResponse {
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
   repeated CompositionWarning compositionWarnings = 4;
+  optional SubgraphPublishStats errorCounts = 5;
 }
 
 service PlatformService {
