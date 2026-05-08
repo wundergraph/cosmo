@@ -17,6 +17,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function moveFederatedGraph(
   opts: RouterOptions,
@@ -113,6 +114,17 @@ export function moveFederatedGraph(
         throw new UnauthorizedError();
       }
 
+      const compositionService = new CompositionService(
+        tx,
+        authContext.organizationId,
+        logger,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.blobStorage,
+        opts.chClient,
+        opts.webhookProxyUrl,
+        req.disableResolvabilityValidation,
+      );
+
       const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.move(
         {
           targetId: graph.targetId,
@@ -120,14 +132,7 @@ export function moveFederatedGraph(
           updatedBy: authContext.userId,
           federatedGraph: graph,
         },
-        opts.blobStorage,
-        {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          jwtSecret: opts.admissionWebhookJWTSecret,
-        },
-        opts.chClient!,
-        undefined,
-        opts.webhookProxyUrl,
+        compositionService,
       );
 
       const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
@@ -141,7 +146,6 @@ export function moveFederatedGraph(
       const movedGraphs = [graph];
 
       const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
-
       for (const contract of contracts) {
         const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
         if (!contractGraph) {
@@ -160,14 +164,7 @@ export function moveFederatedGraph(
             federatedGraph: contractGraph,
             skipDeployment: compositionErrors.length > 0,
           },
-          opts.blobStorage,
-          {
-            cdnBaseUrl: opts.cdnBaseUrl,
-            jwtSecret: opts.admissionWebhookJWTSecret,
-          },
-          opts.chClient!,
-          undefined,
-          opts.webhookProxyUrl,
+          compositionService,
         );
 
         allCompositionErrors.push(...contractErrors);
@@ -219,34 +216,17 @@ export function moveFederatedGraph(
         );
       }
 
-      if (allCompositionErrors.length > 0) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-          },
-          deploymentErrors: [],
-          compositionErrors: allCompositionErrors,
-          compositionWarnings: allCompositionWarnings,
-        };
-      }
-
-      if (allDeploymentErrors.length > 0) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-          },
-          deploymentErrors: allDeploymentErrors,
-          compositionErrors: [],
-          compositionWarnings: allCompositionWarnings,
-        };
-      }
-
       return {
         response: {
-          code: EnumStatusCode.OK,
+          code:
+            allCompositionErrors.length > 0
+              ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+              : allDeploymentErrors.length > 0
+                ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+                : EnumStatusCode.OK,
         },
-        compositionErrors: [],
-        deploymentErrors: [],
+        compositionErrors: allCompositionErrors,
+        deploymentErrors: allDeploymentErrors,
         compositionWarnings: allCompositionWarnings,
       };
     });

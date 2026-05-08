@@ -960,6 +960,13 @@
       "when": 1772187315878,
       "tag": "0136_eminent_vermin",
       "breakpoints": true
+    },
+    {
+      "idx": 137,
+      "version": "7",
+      "when": 1778091023284,
+      "tag": "0137_long_warbound",
+      "breakpoints": true
     }
   ]
 }
