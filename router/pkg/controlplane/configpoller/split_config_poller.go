@@ -3,6 +3,7 @@ package configpoller
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
@@ -146,11 +147,16 @@ func (p *splitConfigPoller) GetRouterConfig(ctx context.Context) (*routerconfig.
 	p.currentConfig = config
 	p.latestVersion = computeCompositeVersion(graphConfigs)
 
-	return &routerconfig.Response{Config: config}, nil
+	response := &routerconfig.Response{
+		Config:  config,
+		Changes: nil, // purposefully nil to tell callers to rebuild everything since this is the initial fetch
+	}
+
+	return response, nil
 }
 
 // Subscribe starts the polling loop and calls handler whenever the assembled config changes.
-func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response *routerconfig.Response) error) {
 	p.poller.Subscribe(ctx, func() {
 		fetchStart := time.Now()
 
@@ -184,20 +190,22 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(newConfi
 		)
 
 		// Determine what changed, was added, or was removed.
-		changed := make(map[string]struct{})
-		added := make(map[string]struct{})
-		removed := make(map[string]struct{})
+		changes := routerconfig.Changes{
+			AddedConfigs:   make(map[string]struct{}),
+			RemovedConfigs: make(map[string]struct{}),
+			ChangedConfigs: make(map[string]struct{}),
+		}
 
 		for name, hash := range graphConfigs {
 			if oldHash, exists := p.knownHashes[name]; !exists {
-				added[name] = struct{}{}
+				changes.AddedConfigs[name] = struct{}{}
 			} else if oldHash != hash {
-				changed[name] = struct{}{}
+				changes.ChangedConfigs[name] = struct{}{}
 			}
 		}
 		for name := range p.knownHashes {
 			if _, exists := graphConfigs[name]; !exists {
-				removed[name] = struct{}{}
+				changes.RemovedConfigs[name] = struct{}{}
 			}
 		}
 
@@ -205,13 +213,9 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(newConfi
 		patched := proto.Clone(p.currentConfig).(*nodev1.RouterConfig)
 
 		// Apply changes and additions.
-		toFetch := make(map[string]struct{}, len(changed)+len(added))
-		for name := range changed {
-			toFetch[name] = struct{}{}
-		}
-		for name := range added {
-			toFetch[name] = struct{}{}
-		}
+		toFetch := make(map[string]struct{}, len(changes.ChangedConfigs)+len(changes.AddedConfigs))
+		maps.Copy(toFetch, changes.ChangedConfigs)
+		maps.Copy(toFetch, changes.AddedConfigs)
 
 		for name := range toFetch {
 			fetchedConfig, err := p.fetcher.FetchConfig(ctx, name)
@@ -244,7 +248,7 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(newConfi
 		}
 
 		// Remove deleted feature flags.
-		for name := range removed {
+		for name := range changes.RemovedConfigs {
 			if name == "" {
 				continue // base graph cannot be removed
 			}
@@ -256,10 +260,13 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(newConfi
 			}
 		}
 
-		oldVersion := p.latestVersion
+		response := &routerconfig.Response{
+			Config:  patched,
+			Changes: &changes,
+		}
 
 		handlerStart := time.Now()
-		if err := handler(patched, oldVersion); err != nil {
+		if err := handler(response); err != nil {
 			p.logger.Error("Error invoking config poll handler", zap.Error(err))
 			return
 		}
@@ -269,7 +276,8 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(newConfi
 			zap.String("config_version", newVersion),
 		)
 
-		// Only update internal state after the handler succeeds.
+		// Only update internal state after the handler succeeds,
+		// i.e. the newly created engine config is actually used by the graph server.
 		p.knownHashes = graphConfigs
 		p.currentConfig = patched
 		p.latestVersion = newVersion

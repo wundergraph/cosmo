@@ -11,6 +11,21 @@ import (
 type Response struct {
 	// Config is the marshaled router config
 	Config *nodev1.RouterConfig
+	// Changes is a summary of which parts of Config
+	// have changed since the last successful config apply.
+	// Nil means changes are unknown -> expect everything to be changed.
+	Changes *Changes
+}
+
+type Changes struct {
+	AddedConfigs   map[string]struct{}
+	RemovedConfigs map[string]struct{}
+	ChangedConfigs map[string]struct{}
+}
+
+func (c *Changes) BaseGraphChanged() bool {
+	_, exists := c.ChangedConfigs[""]
+	return exists
 }
 
 type Client interface {
