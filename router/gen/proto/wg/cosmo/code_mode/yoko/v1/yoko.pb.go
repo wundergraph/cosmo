@@ -7,6 +7,7 @@
 package yokov1
 
 import (
+	_ "github.com/wundergraph/cosmo/router/gen/proto/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -21,79 +22,29 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type OperationKind int32
-
-const (
-	OperationKind_OPERATION_KIND_UNSPECIFIED OperationKind = 0
-	OperationKind_OPERATION_KIND_QUERY       OperationKind = 1
-	OperationKind_OPERATION_KIND_MUTATION    OperationKind = 2
-)
-
-// Enum value maps for OperationKind.
-var (
-	OperationKind_name = map[int32]string{
-		0: "OPERATION_KIND_UNSPECIFIED",
-		1: "OPERATION_KIND_QUERY",
-		2: "OPERATION_KIND_MUTATION",
-	}
-	OperationKind_value = map[string]int32{
-		"OPERATION_KIND_UNSPECIFIED": 0,
-		"OPERATION_KIND_QUERY":       1,
-		"OPERATION_KIND_MUTATION":    2,
-	}
-)
-
-func (x OperationKind) Enum() *OperationKind {
-	p := new(OperationKind)
-	*p = x
-	return p
-}
-
-func (x OperationKind) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (OperationKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_code_mode_yoko_v1_yoko_proto_enumTypes[0].Descriptor()
-}
-
-func (OperationKind) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_enumTypes[0]
-}
-
-func (x OperationKind) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use OperationKind.Descriptor instead.
-func (OperationKind) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescGZIP(), []int{0}
-}
-
-type IndexRequest struct {
+type IndexSchemaRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The supergraph SDL to index. Sent in full on every Index call;
-	// Yoko deduplicates internally and is free to short-circuit when
-	// the SDL is already known.
-	SchemaSdl     string `protobuf:"bytes,1,opt,name=schema_sdl,json=schemaSdl,proto3" json:"schema_sdl,omitempty"`
+	// GraphQL Schema Definition Language (SDL) for the target API.
+	// Must contain at least one non-whitespace character.
+	Sdl           string `protobuf:"bytes,1,opt,name=sdl,proto3" json:"sdl,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *IndexRequest) Reset() {
-	*x = IndexRequest{}
+func (x *IndexSchemaRequest) Reset() {
+	*x = IndexSchemaRequest{}
 	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *IndexRequest) String() string {
+func (x *IndexSchemaRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*IndexRequest) ProtoMessage() {}
+func (*IndexSchemaRequest) ProtoMessage() {}
 
-func (x *IndexRequest) ProtoReflect() protoreflect.Message {
+func (x *IndexSchemaRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -105,43 +56,40 @@ func (x *IndexRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use IndexRequest.ProtoReflect.Descriptor instead.
-func (*IndexRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use IndexSchemaRequest.ProtoReflect.Descriptor instead.
+func (*IndexSchemaRequest) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *IndexRequest) GetSchemaSdl() string {
+func (x *IndexSchemaRequest) GetSdl() string {
 	if x != nil {
-		return x.SchemaSdl
+		return x.Sdl
 	}
 	return ""
 }
 
-type IndexResponse struct {
+type IndexSchemaResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Opaque, Yoko-assigned identifier for this schema. Stable for as
-	// long as Yoko retains the index. Subsequent Search calls pass this
-	// back instead of the full SDL. Idempotent: the same SDL returns
-	// the same schema_id.
+	// Stable id derived from the indexed SDL; pass to GenerateQuery.
 	SchemaId      string `protobuf:"bytes,1,opt,name=schema_id,json=schemaId,proto3" json:"schema_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *IndexResponse) Reset() {
-	*x = IndexResponse{}
+func (x *IndexSchemaResponse) Reset() {
+	*x = IndexSchemaResponse{}
 	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *IndexResponse) String() string {
+func (x *IndexSchemaResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*IndexResponse) ProtoMessage() {}
+func (*IndexSchemaResponse) ProtoMessage() {}
 
-func (x *IndexResponse) ProtoReflect() protoreflect.Message {
+func (x *IndexSchemaResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -153,49 +101,42 @@ func (x *IndexResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use IndexResponse.ProtoReflect.Descriptor instead.
-func (*IndexResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use IndexSchemaResponse.ProtoReflect.Descriptor instead.
+func (*IndexSchemaResponse) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *IndexResponse) GetSchemaId() string {
+func (x *IndexSchemaResponse) GetSchemaId() string {
 	if x != nil {
 		return x.SchemaId
 	}
 	return ""
 }
 
-type SearchRequest struct {
+type GenerateQueryRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Batch of natural-language prompts. Bounded at 20 by the host.
-	Prompts []string `protobuf:"bytes,1,rep,name=prompts,proto3" json:"prompts,omitempty"`
-	// Identifier returned by a prior Index call. If Yoko no longer
-	// recognizes the id (e.g. eviction, restart), it MUST return the
-	// Connect error code NOT_FOUND; the router re-indexes and retries
-	// the call exactly once.
-	SchemaId string `protobuf:"bytes,2,opt,name=schema_id,json=schemaId,proto3" json:"schema_id,omitempty"`
-	// Opaque MCP session ID for telemetry correlation only.
-	// Yoko MUST NOT use this for stateful behavior — sessions are owned
-	// by the router.
-	SessionId     string `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// schema_id from a prior IndexSchema call.
+	SchemaId string `protobuf:"bytes,1,opt,name=schema_id,json=schemaId,proto3" json:"schema_id,omitempty"`
+	// Natural-language description of what the caller wants to fetch.
+	Prompt        string `protobuf:"bytes,2,opt,name=prompt,proto3" json:"prompt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SearchRequest) Reset() {
-	*x = SearchRequest{}
+func (x *GenerateQueryRequest) Reset() {
+	*x = GenerateQueryRequest{}
 	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SearchRequest) String() string {
+func (x *GenerateQueryRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SearchRequest) ProtoMessage() {}
+func (*GenerateQueryRequest) ProtoMessage() {}
 
-func (x *SearchRequest) ProtoReflect() protoreflect.Message {
+func (x *GenerateQueryRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -207,56 +148,46 @@ func (x *SearchRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SearchRequest.ProtoReflect.Descriptor instead.
-func (*SearchRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GenerateQueryRequest.ProtoReflect.Descriptor instead.
+func (*GenerateQueryRequest) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *SearchRequest) GetPrompts() []string {
-	if x != nil {
-		return x.Prompts
-	}
-	return nil
-}
-
-func (x *SearchRequest) GetSchemaId() string {
+func (x *GenerateQueryRequest) GetSchemaId() string {
 	if x != nil {
 		return x.SchemaId
 	}
 	return ""
 }
 
-func (x *SearchRequest) GetSessionId() string {
+func (x *GenerateQueryRequest) GetPrompt() string {
 	if x != nil {
-		return x.SessionId
+		return x.Prompt
 	}
 	return ""
 }
 
-type SearchResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Operations across all prompts, already deduplicated and ranked.
-	// Order is significant: earlier entries rank higher and are preferred
-	// when bundle truncation drops from the tail.
-	Operations    []*GeneratedOperation `protobuf:"bytes,1,rep,name=operations,proto3" json:"operations,omitempty"`
+type GenerateQueryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Resolution    *Resolution            `protobuf:"bytes,1,opt,name=resolution,proto3" json:"resolution,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SearchResponse) Reset() {
-	*x = SearchResponse{}
+func (x *GenerateQueryResponse) Reset() {
+	*x = GenerateQueryResponse{}
 	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SearchResponse) String() string {
+func (x *GenerateQueryResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SearchResponse) ProtoMessage() {}
+func (*GenerateQueryResponse) ProtoMessage() {}
 
-func (x *SearchResponse) ProtoReflect() protoreflect.Message {
+func (x *GenerateQueryResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -268,50 +199,47 @@ func (x *SearchResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SearchResponse.ProtoReflect.Descriptor instead.
-func (*SearchResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GenerateQueryResponse.ProtoReflect.Descriptor instead.
+func (*GenerateQueryResponse) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *SearchResponse) GetOperations() []*GeneratedOperation {
+func (x *GenerateQueryResponse) GetResolution() *Resolution {
 	if x != nil {
-		return x.Operations
+		return x.Resolution
 	}
 	return nil
 }
 
-type GeneratedOperation struct {
+type Resolution struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Suggested operation name (camelCase preferred). The host applies
-	// its own identifier normalization and in-session collision-suffix
-	// logic on top of this — see §6.
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// GraphQL operation body (query or mutation source text).
-	Body string `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
-	// Operation kind. Subscriptions are out of scope; if Yoko returns
-	// one, the host drops it with a single warn log.
-	Kind OperationKind `protobuf:"varint,3,opt,name=kind,proto3,enum=wundergraph.cosmo.code_mode.yoko.v1.OperationKind" json:"kind,omitempty"`
-	// Human-readable description, surfaced as JSDoc on the typed
-	// `tools.<name>` signature in the rendered bundle.
-	Description   string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// One entry per produced query; each is a self-contained operation
+	// with a natural-language description of what it does.
+	Queries []*ResolvedQuery `protobuf:"bytes,1,rep,name=queries,proto3" json:"queries,omitempty"`
+	// One entry per requirement we could not satisfy; each carries a
+	// natural-language reason.
+	Unsatisfied []*Unsatisfied `protobuf:"bytes,2,rep,name=unsatisfied,proto3" json:"unsatisfied,omitempty"`
+	// True when the propose agent ran out of turns before committing
+	// every requirement; clients may want to retry with a tighter prompt.
+	Truncated     bool `protobuf:"varint,3,opt,name=truncated,proto3" json:"truncated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GeneratedOperation) Reset() {
-	*x = GeneratedOperation{}
+func (x *Resolution) Reset() {
+	*x = Resolution{}
 	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GeneratedOperation) String() string {
+func (x *Resolution) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GeneratedOperation) ProtoMessage() {}
+func (*Resolution) ProtoMessage() {}
 
-func (x *GeneratedOperation) ProtoReflect() protoreflect.Message {
+func (x *Resolution) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -323,35 +251,159 @@ func (x *GeneratedOperation) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GeneratedOperation.ProtoReflect.Descriptor instead.
-func (*GeneratedOperation) Descriptor() ([]byte, []int) {
+// Deprecated: Use Resolution.ProtoReflect.Descriptor instead.
+func (*Resolution) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GeneratedOperation) GetName() string {
+func (x *Resolution) GetQueries() []*ResolvedQuery {
 	if x != nil {
-		return x.Name
+		return x.Queries
 	}
-	return ""
+	return nil
 }
 
-func (x *GeneratedOperation) GetBody() string {
+func (x *Resolution) GetUnsatisfied() []*Unsatisfied {
 	if x != nil {
-		return x.Body
+		return x.Unsatisfied
 	}
-	return ""
+	return nil
 }
 
-func (x *GeneratedOperation) GetKind() OperationKind {
+func (x *Resolution) GetTruncated() bool {
 	if x != nil {
-		return x.Kind
+		return x.Truncated
 	}
-	return OperationKind_OPERATION_KIND_UNSPECIFIED
+	return false
 }
 
-func (x *GeneratedOperation) GetDescription() string {
+type ResolvedQuery struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// One short user-facing sentence describing what this query does.
+	Description string `protobuf:"bytes,1,opt,name=description,proto3" json:"description,omitempty"`
+	// GraphQL operation document — exactly one named operation.
+	Document string `protobuf:"bytes,2,opt,name=document,proto3" json:"document,omitempty"`
+	// Operation name parsed from the document (e.g. "GetUserPosts").
+	OperationName string `protobuf:"bytes,3,opt,name=operation_name,json=operationName,proto3" json:"operation_name,omitempty"`
+	// One of "query", "mutation", "subscription".
+	OperationType string `protobuf:"bytes,4,opt,name=operation_type,json=operationType,proto3" json:"operation_type,omitempty"`
+	// JSON Schema for the operation's $variables object, derived
+	// statically from the document. Carried as a JSON-encoded string so
+	// JSON clients see a readable schema (a `bytes` field would surface
+	// as base64 over JSON transport).
+	VariablesSchema string `protobuf:"bytes,5,opt,name=variables_schema,json=variablesSchema,proto3" json:"variables_schema,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ResolvedQuery) Reset() {
+	*x = ResolvedQuery{}
+	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResolvedQuery) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolvedQuery) ProtoMessage() {}
+
+func (x *ResolvedQuery) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolvedQuery.ProtoReflect.Descriptor instead.
+func (*ResolvedQuery) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ResolvedQuery) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *ResolvedQuery) GetDocument() string {
+	if x != nil {
+		return x.Document
+	}
+	return ""
+}
+
+func (x *ResolvedQuery) GetOperationName() string {
+	if x != nil {
+		return x.OperationName
+	}
+	return ""
+}
+
+func (x *ResolvedQuery) GetOperationType() string {
+	if x != nil {
+		return x.OperationType
+	}
+	return ""
+}
+
+func (x *ResolvedQuery) GetVariablesSchema() string {
+	if x != nil {
+		return x.VariablesSchema
+	}
+	return ""
+}
+
+type Unsatisfied struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Natural-language explanation of why this requirement could not
+	// be satisfied (e.g. "no field on the schema carries that filter
+	// dimension").
+	Reason        string `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Unsatisfied) Reset() {
+	*x = Unsatisfied{}
+	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Unsatisfied) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Unsatisfied) ProtoMessage() {}
+
+func (x *Unsatisfied) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Unsatisfied.ProtoReflect.Descriptor instead.
+func (*Unsatisfied) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Unsatisfied) GetReason() string {
+	if x != nil {
+		return x.Reason
 	}
 	return ""
 }
@@ -360,34 +412,35 @@ var File_wg_cosmo_code_mode_yoko_v1_yoko_proto protoreflect.FileDescriptor
 
 const file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDesc = "" +
 	"\n" +
-	"%wg/cosmo/code_mode/yoko/v1/yoko.proto\x12#wundergraph.cosmo.code_mode.yoko.v1\"-\n" +
-	"\fIndexRequest\x12\x1d\n" +
+	"%wg/cosmo/code_mode/yoko/v1/yoko.proto\x12\ayoko.v1\x1a\x1bbuf/validate/validate.proto\"1\n" +
+	"\x12IndexSchemaRequest\x12\x1b\n" +
+	"\x03sdl\x18\x01 \x01(\tB\t\xbaH\x06r\x042\x02\\SR\x03sdl\"2\n" +
+	"\x13IndexSchemaResponse\x12\x1b\n" +
+	"\tschema_id\x18\x01 \x01(\tR\bschemaId\"a\n" +
+	"\x14GenerateQueryRequest\x12&\n" +
+	"\tschema_id\x18\x01 \x01(\tB\t\xbaH\x06r\x042\x02\\SR\bschemaId\x12!\n" +
+	"\x06prompt\x18\x02 \x01(\tB\t\xbaH\x06r\x042\x02\\SR\x06prompt\"L\n" +
+	"\x15GenerateQueryResponse\x123\n" +
 	"\n" +
-	"schema_sdl\x18\x01 \x01(\tR\tschemaSdl\",\n" +
-	"\rIndexResponse\x12\x1b\n" +
-	"\tschema_id\x18\x01 \x01(\tR\bschemaId\"e\n" +
-	"\rSearchRequest\x12\x18\n" +
-	"\aprompts\x18\x01 \x03(\tR\aprompts\x12\x1b\n" +
-	"\tschema_id\x18\x02 \x01(\tR\bschemaId\x12\x1d\n" +
+	"resolution\x18\x01 \x01(\v2\x13.yoko.v1.ResolutionR\n" +
+	"resolution\"\x94\x01\n" +
 	"\n" +
-	"session_id\x18\x03 \x01(\tR\tsessionId\"i\n" +
-	"\x0eSearchResponse\x12W\n" +
-	"\n" +
-	"operations\x18\x01 \x03(\v27.wundergraph.cosmo.code_mode.yoko.v1.GeneratedOperationR\n" +
-	"operations\"\xa6\x01\n" +
-	"\x12GeneratedOperation\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
-	"\x04body\x18\x02 \x01(\tR\x04body\x12F\n" +
-	"\x04kind\x18\x03 \x01(\x0e22.wundergraph.cosmo.code_mode.yoko.v1.OperationKindR\x04kind\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription*f\n" +
-	"\rOperationKind\x12\x1e\n" +
-	"\x1aOPERATION_KIND_UNSPECIFIED\x10\x00\x12\x18\n" +
-	"\x14OPERATION_KIND_QUERY\x10\x01\x12\x1b\n" +
-	"\x17OPERATION_KIND_MUTATION\x10\x022\xf0\x01\n" +
-	"\vYokoService\x12n\n" +
-	"\x05Index\x121.wundergraph.cosmo.code_mode.yoko.v1.IndexRequest\x1a2.wundergraph.cosmo.code_mode.yoko.v1.IndexResponse\x12q\n" +
-	"\x06Search\x122.wundergraph.cosmo.code_mode.yoko.v1.SearchRequest\x1a3.wundergraph.cosmo.code_mode.yoko.v1.SearchResponseB\xb2\x02\n" +
-	"'com.wundergraph.cosmo.code_mode.yoko.v1B\tYokoProtoP\x01ZOgithub.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/code_mode/yoko/v1;yokov1\xa2\x02\x04WCCY\xaa\x02\"Wundergraph.Cosmo.CodeMode.Yoko.V1\xca\x02\"Wundergraph\\Cosmo\\CodeMode\\Yoko\\V1\xe2\x02.Wundergraph\\Cosmo\\CodeMode\\Yoko\\V1\\GPBMetadata\xea\x02&Wundergraph::Cosmo::CodeMode::Yoko::V1b\x06proto3"
+	"Resolution\x120\n" +
+	"\aqueries\x18\x01 \x03(\v2\x16.yoko.v1.ResolvedQueryR\aqueries\x126\n" +
+	"\vunsatisfied\x18\x02 \x03(\v2\x14.yoko.v1.UnsatisfiedR\vunsatisfied\x12\x1c\n" +
+	"\ttruncated\x18\x03 \x01(\bR\ttruncated\"\xc6\x01\n" +
+	"\rResolvedQuery\x12 \n" +
+	"\vdescription\x18\x01 \x01(\tR\vdescription\x12\x1a\n" +
+	"\bdocument\x18\x02 \x01(\tR\bdocument\x12%\n" +
+	"\x0eoperation_name\x18\x03 \x01(\tR\roperationName\x12%\n" +
+	"\x0eoperation_type\x18\x04 \x01(\tR\roperationType\x12)\n" +
+	"\x10variables_schema\x18\x05 \x01(\tR\x0fvariablesSchema\"%\n" +
+	"\vUnsatisfied\x12\x16\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason2\xa7\x01\n" +
+	"\vYokoService\x12H\n" +
+	"\vIndexSchema\x12\x1b.yoko.v1.IndexSchemaRequest\x1a\x1c.yoko.v1.IndexSchemaResponse\x12N\n" +
+	"\rGenerateQuery\x12\x1d.yoko.v1.GenerateQueryRequest\x1a\x1e.yoko.v1.GenerateQueryResponseB\xa6\x01\n" +
+	"\vcom.yoko.v1B\tYokoProtoP\x01ZOgithub.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/code_mode/yoko/v1;yokov1\xa2\x02\x03YXX\xaa\x02\aYoko.V1\xca\x02\aYoko\\V1\xe2\x02\x13Yoko\\V1\\GPBMetadata\xea\x02\bYoko::V1b\x06proto3"
 
 var (
 	file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescOnce sync.Once
@@ -401,28 +454,29 @@ func file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescGZIP() []byte {
 	return file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDescData
 }
 
-var file_wg_cosmo_code_mode_yoko_v1_yoko_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_wg_cosmo_code_mode_yoko_v1_yoko_proto_goTypes = []any{
-	(OperationKind)(0),         // 0: wundergraph.cosmo.code_mode.yoko.v1.OperationKind
-	(*IndexRequest)(nil),       // 1: wundergraph.cosmo.code_mode.yoko.v1.IndexRequest
-	(*IndexResponse)(nil),      // 2: wundergraph.cosmo.code_mode.yoko.v1.IndexResponse
-	(*SearchRequest)(nil),      // 3: wundergraph.cosmo.code_mode.yoko.v1.SearchRequest
-	(*SearchResponse)(nil),     // 4: wundergraph.cosmo.code_mode.yoko.v1.SearchResponse
-	(*GeneratedOperation)(nil), // 5: wundergraph.cosmo.code_mode.yoko.v1.GeneratedOperation
+	(*IndexSchemaRequest)(nil),    // 0: yoko.v1.IndexSchemaRequest
+	(*IndexSchemaResponse)(nil),   // 1: yoko.v1.IndexSchemaResponse
+	(*GenerateQueryRequest)(nil),  // 2: yoko.v1.GenerateQueryRequest
+	(*GenerateQueryResponse)(nil), // 3: yoko.v1.GenerateQueryResponse
+	(*Resolution)(nil),            // 4: yoko.v1.Resolution
+	(*ResolvedQuery)(nil),         // 5: yoko.v1.ResolvedQuery
+	(*Unsatisfied)(nil),           // 6: yoko.v1.Unsatisfied
 }
 var file_wg_cosmo_code_mode_yoko_v1_yoko_proto_depIdxs = []int32{
-	5, // 0: wundergraph.cosmo.code_mode.yoko.v1.SearchResponse.operations:type_name -> wundergraph.cosmo.code_mode.yoko.v1.GeneratedOperation
-	0, // 1: wundergraph.cosmo.code_mode.yoko.v1.GeneratedOperation.kind:type_name -> wundergraph.cosmo.code_mode.yoko.v1.OperationKind
-	1, // 2: wundergraph.cosmo.code_mode.yoko.v1.YokoService.Index:input_type -> wundergraph.cosmo.code_mode.yoko.v1.IndexRequest
-	3, // 3: wundergraph.cosmo.code_mode.yoko.v1.YokoService.Search:input_type -> wundergraph.cosmo.code_mode.yoko.v1.SearchRequest
-	2, // 4: wundergraph.cosmo.code_mode.yoko.v1.YokoService.Index:output_type -> wundergraph.cosmo.code_mode.yoko.v1.IndexResponse
-	4, // 5: wundergraph.cosmo.code_mode.yoko.v1.YokoService.Search:output_type -> wundergraph.cosmo.code_mode.yoko.v1.SearchResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4, // 0: yoko.v1.GenerateQueryResponse.resolution:type_name -> yoko.v1.Resolution
+	5, // 1: yoko.v1.Resolution.queries:type_name -> yoko.v1.ResolvedQuery
+	6, // 2: yoko.v1.Resolution.unsatisfied:type_name -> yoko.v1.Unsatisfied
+	0, // 3: yoko.v1.YokoService.IndexSchema:input_type -> yoko.v1.IndexSchemaRequest
+	2, // 4: yoko.v1.YokoService.GenerateQuery:input_type -> yoko.v1.GenerateQueryRequest
+	1, // 5: yoko.v1.YokoService.IndexSchema:output_type -> yoko.v1.IndexSchemaResponse
+	3, // 6: yoko.v1.YokoService.GenerateQuery:output_type -> yoko.v1.GenerateQueryResponse
+	5, // [5:7] is the sub-list for method output_type
+	3, // [3:5] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_wg_cosmo_code_mode_yoko_v1_yoko_proto_init() }
@@ -435,14 +489,13 @@ func file_wg_cosmo_code_mode_yoko_v1_yoko_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDesc), len(file_wg_cosmo_code_mode_yoko_v1_yoko_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   5,
+			NumEnums:      0,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_wg_cosmo_code_mode_yoko_v1_yoko_proto_goTypes,
 		DependencyIndexes: file_wg_cosmo_code_mode_yoko_v1_yoko_proto_depIdxs,
-		EnumInfos:         file_wg_cosmo_code_mode_yoko_v1_yoko_proto_enumTypes,
 		MessageInfos:      file_wg_cosmo_code_mode_yoko_v1_yoko_proto_msgTypes,
 	}.Build()
 	File_wg_cosmo_code_mode_yoko_v1_yoko_proto = out.File

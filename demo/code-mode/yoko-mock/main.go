@@ -24,6 +24,10 @@ import (
 	"github.com/dgraph-io/ristretto/v2"
 	yokov1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/code_mode/yoko/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/code_mode/yoko/v1/yokov1connect"
+	"github.com/wundergraph/cosmo/router/pkg/codemode/varschema"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 )
 
 const badOutputPath = "/tmp/yoko-mock-last-bad-output.log"
@@ -32,45 +36,47 @@ type yokoService struct {
 	codexBin             string
 	codexTimeout         time.Duration
 	codexReasoningEffort string
-	rotateAfter          int // re-warm the codex session after this many Search calls; 0 disables
+	rotateAfter          int // re-warm the codex session after this many GenerateQuery calls; 0 disables
 
-	// promptCache memoizes (schemaID, prompt) -> GeneratedOperation. A cache
-	// hit lets us skip codex entirely for that prompt. nil if the cache is
+	// promptCache memoizes (schemaID, prompt) -> ResolvedQuery. A cache hit
+	// lets us skip codex entirely for that prompt. nil if the cache is
 	// disabled (size <= 0).
-	promptCache *ristretto.Cache[string, *yokov1.GeneratedOperation]
+	promptCache *ristretto.Cache[string, *yokov1.ResolvedQuery]
 
 	mu      sync.RWMutex
 	schemas map[string]*schemaEntry
 }
 
 // schemaEntry records the on-disk schema dir (so codex can read schema.graphql
-// once at Index time) plus the codex session id created during that pre-warm.
-// Search uses `codex exec resume <sessionID>` to reuse the already-loaded
-// schema context instead of re-reading it on every call.
-//
-// To bound session-file growth, every yokoService.rotateAfter Search calls a
-// background goroutine pre-warms a fresh session and atomically swaps the
-// sessionID. searchCount tracks calls; rotationActive ensures only one
-// rotation runs at a time.
+// once at IndexSchema time) plus the codex session id created during that
+// pre-warm and the parsed schema document used to derive variables_schema for
+// each generated operation.
 type schemaEntry struct {
-	dir string
+	dir    string
+	schema *ast.Document
 
 	mu        sync.RWMutex
 	sessionID string
 
-	searchCount    atomic.Int64
+	generateCount  atomic.Int64
 	rotationActive atomic.Bool
 }
 
-type codexOperation struct {
-	Name        string `json:"name"`
-	Body        string `json:"body"`
-	Kind        string `json:"kind"`
-	Description string `json:"description"`
+type codexResolvedQuery struct {
+	Description   string `json:"description"`
+	Document      string `json:"document"`
+	OperationName string `json:"operation_name"`
+	OperationType string `json:"operation_type"`
 }
 
-type codexOutput struct {
-	Operations []codexOperation `json:"operations"`
+type codexUnsatisfied struct {
+	Reason string `json:"reason"`
+}
+
+type codexResolution struct {
+	Queries     []codexResolvedQuery `json:"queries"`
+	Unsatisfied []codexUnsatisfied   `json:"unsatisfied"`
+	Truncated   bool                 `json:"truncated"`
 }
 
 func main() {
@@ -78,8 +84,8 @@ func main() {
 	codexBin := flag.String("codex-bin", "codex", "codex CLI binary path or name")
 	codexTimeout := flag.Duration("codex-timeout", 60*time.Second, "codex CLI timeout")
 	codexReasoningEffort := flag.String("codex-reasoning-effort", "low", "codex reasoning effort: minimal | low | medium | high")
-	codexRotateAfter := flag.Int("codex-rotate-after", 20, "re-warm the codex session after N Search calls (0 = disable rotation)")
-	promptCacheSize := flag.Int("prompt-cache-size", 1000, "max items in the (schema_id, prompt) -> operation cache (0 = disable)")
+	codexRotateAfter := flag.Int("codex-rotate-after", 20, "re-warm the codex session after N GenerateQuery calls (0 = disable rotation)")
+	promptCacheSize := flag.Int("prompt-cache-size", 1000, "max items in the (schema_id, prompt) -> resolved_query cache (0 = disable)")
 	flag.Parse()
 
 	svc, err := newYokoService(*codexBin, *codexTimeout, *codexReasoningEffort, *codexRotateAfter, *promptCacheSize)
@@ -126,7 +132,7 @@ func newYokoService(codexBin string, codexTimeout time.Duration, reasoningEffort
 	if promptCacheSize > 0 {
 		// Each cache entry has cost 1, so MaxCost is the item ceiling.
 		// NumCounters is conventionally 10× expected items.
-		cache, err := ristretto.NewCache(&ristretto.Config[string, *yokov1.GeneratedOperation]{
+		cache, err := ristretto.NewCache(&ristretto.Config[string, *yokov1.ResolvedQuery]{
 			NumCounters: int64(promptCacheSize) * 10,
 			MaxCost:     int64(promptCacheSize),
 			BufferItems: 64,
@@ -150,9 +156,9 @@ func newHTTPMux(svc *yokoService) *http.ServeMux {
 	return mux
 }
 
-func (s *yokoService) Index(ctx context.Context, req *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
-	schemaSDL := req.Msg.GetSchemaSdl()
-	id := schemaID(schemaSDL)
+func (s *yokoService) IndexSchema(ctx context.Context, req *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
+	sdl := req.Msg.GetSdl()
+	id := schemaID(sdl)
 
 	s.mu.Lock()
 	if existing, ok := s.schemas[id]; ok {
@@ -160,16 +166,21 @@ func (s *yokoService) Index(ctx context.Context, req *connect.Request[yokov1.Ind
 		existing.mu.RLock()
 		existingSession := existing.sessionID
 		existing.mu.RUnlock()
-		log.Printf("Index schema_id=%s reused dir=%s session_id=%s", id, existing.dir, existingSession)
-		return connect.NewResponse(&yokov1.IndexResponse{SchemaId: id}), nil
+		log.Printf("IndexSchema schema_id=%s reused dir=%s session_id=%s", id, existing.dir, existingSession)
+		return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: id}), nil
 	}
 	s.mu.Unlock()
+
+	schemaDoc, err := parseSchemaSDL(sdl)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parse schema SDL: %w", err))
+	}
 
 	dir, err := os.MkdirTemp("", "yoko-schema-"+id+"-")
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create schema temp dir: %w", err))
 	}
-	if err := os.WriteFile(filepath.Join(dir, "schema.graphql"), []byte(schemaSDL), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "schema.graphql"), []byte(sdl), 0o600); err != nil {
 		_ = os.RemoveAll(dir)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("write schema.graphql: %w", err))
 	}
@@ -180,16 +191,16 @@ func (s *yokoService) Index(ctx context.Context, req *connect.Request[yokov1.Ind
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("codex pre-warm: %w", err))
 	}
 
-	entry := &schemaEntry{dir: dir, sessionID: sessionID}
+	entry := &schemaEntry{dir: dir, schema: schemaDoc, sessionID: sessionID}
 	s.mu.Lock()
 	s.schemas[id] = entry
 	s.mu.Unlock()
 
-	log.Printf("Index schema_id=%s schema_sdl_size=%d schema_dir=%s session_id=%s rotate_after=%d", id, len(schemaSDL), dir, sessionID, s.rotateAfter)
-	return connect.NewResponse(&yokov1.IndexResponse{SchemaId: id}), nil
+	log.Printf("IndexSchema schema_id=%s sdl_size=%d schema_dir=%s session_id=%s rotate_after=%d", id, len(sdl), dir, sessionID, s.rotateAfter)
+	return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: id}), nil
 }
 
-// Close removes every per-schema temp dir created by Index. Safe to call
+// Close removes every per-schema temp dir created by IndexSchema. Safe to call
 // multiple times; subsequent calls are no-ops. Codex session rollout files
 // live under ~/.codex/sessions/ and are intentionally left in place — they
 // belong to the user's codex install.
@@ -210,124 +221,101 @@ func (s *yokoService) Close() {
 	}
 }
 
-func (s *yokoService) Search(ctx context.Context, req *connect.Request[yokov1.SearchRequest]) (*connect.Response[yokov1.SearchResponse], error) {
+func (s *yokoService) GenerateQuery(ctx context.Context, req *connect.Request[yokov1.GenerateQueryRequest]) (*connect.Response[yokov1.GenerateQueryResponse], error) {
 	schemaID := req.Msg.GetSchemaId()
-	prompts := req.Msg.GetPrompts()
+	prompt := req.Msg.GetPrompt()
 
 	s.mu.RLock()
 	entry, ok := s.schemas[schemaID]
 	s.mu.RUnlock()
 	if !ok {
-		log.Printf("Search schema_id=%s prompt_count=%d not_found=true", schemaID, len(prompts))
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("schema_id %q not found; call Index before Search", schemaID))
+		log.Printf("GenerateQuery schema_id=%s not_found=true", schemaID)
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("schema_id %q not found; call IndexSchema before GenerateQuery", schemaID))
 	}
 
 	// Bump per-session call counter; if we crossed the threshold and no
 	// rotation is in flight, kick one off in the background. The CAS makes
 	// the trigger one-shot until rotation completes and clears the flag.
-	count := entry.searchCount.Add(1)
+	count := entry.generateCount.Add(1)
 	if s.rotateAfter > 0 && count >= int64(s.rotateAfter) && entry.rotationActive.CompareAndSwap(false, true) {
 		go s.rotateSession(schemaID, entry, count)
 	}
 
-	// Cache lookup: collect cached ops in their original positions, batch
-	// only the misses to codex.
-	results := make([]*yokov1.GeneratedOperation, len(prompts))
-	missing := make([]string, 0, len(prompts))
-	missingIdx := make([]int, 0, len(prompts))
-	hits := 0
-	for i, p := range prompts {
-		if op, ok := s.cacheGet(schemaID, p); ok {
-			results[i] = op
-			hits++
-		} else {
-			missing = append(missing, p)
-			missingIdx = append(missingIdx, i)
-		}
-	}
-
-	if len(missing) == 0 {
-		log.Printf("Search schema_id=%s prompt_count=%d cache_hits=%d cache_misses=0 codex_skipped=true", schemaID, len(prompts), hits)
-		return connect.NewResponse(&yokov1.SearchResponse{Operations: filterNonNil(results)}), nil
+	if cached, ok := s.cacheGet(schemaID, prompt); ok {
+		log.Printf("GenerateQuery schema_id=%s cache_hit=true codex_skipped=true", schemaID)
+		return connect.NewResponse(&yokov1.GenerateQueryResponse{
+			Resolution: &yokov1.Resolution{Queries: []*yokov1.ResolvedQuery{cached}},
+		}), nil
 	}
 
 	entry.mu.RLock()
 	sessionID := entry.sessionID
 	entry.mu.RUnlock()
 
-	prompt := buildCodexPrompt(missing)
-	stdout, err := s.runCodexResume(ctx, sessionID, prompt)
+	codexPrompt := buildCodexPrompt(prompt)
+	stdout, err := s.runCodexResume(ctx, sessionID, codexPrompt)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	generated, err := parseCodexOperations(stdout)
+	resolution, err := parseCodexResolution(stdout)
 	if err != nil {
 		if writeErr := os.WriteFile(badOutputPath, stdout, 0o600); writeErr != nil {
 			log.Printf("warning: failed to write bad codex output path=%s err=%v", badOutputPath, writeErr)
 		}
-		log.Printf("warning: codex output was not valid JSON schema_id=%s prompt_count=%d stdout_size=%d err=%v", schemaID, len(missing), len(stdout), err)
+		log.Printf("warning: codex output was not valid JSON schema_id=%s stdout_size=%d err=%v", schemaID, len(stdout), err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("codex output was not valid JSON; raw output saved to %s", badOutputPath))
 	}
 
-	// Pair generated ops back into the original prompt slots and cache the
-	// successful ones. We trust order: codex was instructed to return one
-	// operation per missing prompt in the same order. If codex returned
-	// fewer ops than asked, the trailing prompts have no slot filled (and
-	// don't get cached).
-	for k, idx := range missingIdx {
-		if k >= len(generated) {
-			break
-		}
-		op := generated[k]
-		if op == nil || op.GetBody() == "" {
-			// Failed prompt — don't cache, leave slot nil (filtered out below).
+	for _, q := range resolution.GetQueries() {
+		// Derive variables_schema statically from the parsed schema. If
+		// derivation fails we leave variables_schema empty so the client
+		// still gets a usable response — the agent can validate manually.
+		varsSchema, derr := varschema.ForOperation(q.GetDocument(), entry.schema)
+		if derr != nil {
+			log.Printf("warning: derive variables_schema schema_id=%s op=%q err=%v", schemaID, q.GetOperationName(), derr)
 			continue
 		}
-		results[idx] = op
-		s.cachePut(schemaID, missing[k], op)
+		q.VariablesSchema = varsSchema
 	}
 
-	log.Printf("Search schema_id=%s prompt_count=%d cache_hits=%d cache_misses=%d codex_stdout_size=%d parsed_op_count=%d", schemaID, len(prompts), hits, len(missing), len(stdout), len(generated))
-	return connect.NewResponse(&yokov1.SearchResponse{Operations: filterNonNil(results)}), nil
-}
-
-func filterNonNil(ops []*yokov1.GeneratedOperation) []*yokov1.GeneratedOperation {
-	out := ops[:0]
-	for _, op := range ops {
-		if op != nil {
-			out = append(out, op)
-		}
+	// Cache successful single-query resolutions only — caching multi-query
+	// or unsatisfied resolutions would hide real codex variation.
+	if len(resolution.GetQueries()) == 1 && len(resolution.GetUnsatisfied()) == 0 && !resolution.GetTruncated() {
+		s.cachePut(schemaID, prompt, resolution.GetQueries()[0])
 	}
-	return out
+
+	log.Printf("GenerateQuery schema_id=%s codex_stdout_size=%d query_count=%d unsatisfied_count=%d truncated=%v",
+		schemaID, len(stdout), len(resolution.GetQueries()), len(resolution.GetUnsatisfied()), resolution.GetTruncated())
+	return connect.NewResponse(&yokov1.GenerateQueryResponse{Resolution: resolution}), nil
 }
 
 // cacheKey returns the (schema_id, prompt) lookup key. We include schema_id
 // so the same prompt against a different supergraph doesn't return a stale
-// operation.
+// query.
 func cacheKey(schemaID, prompt string) string {
 	return schemaID + "\x00" + prompt
 }
 
-func (s *yokoService) cacheGet(schemaID, prompt string) (*yokov1.GeneratedOperation, bool) {
+func (s *yokoService) cacheGet(schemaID, prompt string) (*yokov1.ResolvedQuery, bool) {
 	if s.promptCache == nil {
 		return nil, false
 	}
 	return s.promptCache.Get(cacheKey(schemaID, prompt))
 }
 
-func (s *yokoService) cachePut(schemaID, prompt string, op *yokov1.GeneratedOperation) {
+func (s *yokoService) cachePut(schemaID, prompt string, q *yokov1.ResolvedQuery) {
 	if s.promptCache == nil {
 		return
 	}
-	s.promptCache.Set(cacheKey(schemaID, prompt), op, 1)
+	s.promptCache.Set(cacheKey(schemaID, prompt), q, 1)
 }
 
-// rotateSession is launched in a goroutine when Search counts cross
+// rotateSession is launched in a goroutine when GenerateQuery counts cross
 // rotateAfter. It pre-warms a fresh codex session against the same on-disk
-// schema, then atomically swaps in the new sessionID and resets the search
-// counter. While rotation is running, concurrent Search calls keep using the
-// old sessionID — they just don't trigger a second rotation.
+// schema, then atomically swaps in the new sessionID and resets the call
+// counter. While rotation is running, concurrent calls keep using the old
+// sessionID — they just don't trigger a second rotation.
 func (s *yokoService) rotateSession(schemaID string, entry *schemaEntry, triggerCount int64) {
 	start := time.Now()
 	log.Printf("rotation kickoff schema_id=%s trigger_count=%d", schemaID, triggerCount)
@@ -347,17 +335,28 @@ func (s *yokoService) rotateSession(schemaID string, entry *schemaEntry, trigger
 	entry.sessionID = newSessionID
 	entry.mu.Unlock()
 
-	// Reset count BEFORE clearing rotationActive so a Search arriving in this
+	// Reset count BEFORE clearing rotationActive so a call arriving in this
 	// gap can't trigger a second rotation on a freshly-rotated session.
-	entry.searchCount.Store(0)
+	entry.generateCount.Store(0)
 	entry.rotationActive.Store(false)
 
 	log.Printf("rotation complete schema_id=%s old_session=%s new_session=%s elapsed=%s", schemaID, oldSessionID, newSessionID, time.Since(start).Round(time.Millisecond))
 }
 
-func schemaID(schemaSDL string) string {
-	sum := sha256.Sum256([]byte(schemaSDL))
+func schemaID(sdl string) string {
+	sum := sha256.Sum256([]byte(sdl))
 	return fmt.Sprintf("%x", sum)[:16]
+}
+
+func parseSchemaSDL(sdl string) (*ast.Document, error) {
+	doc, report := astparser.ParseGraphqlDocumentString(sdl)
+	if report.HasErrors() {
+		return nil, fmt.Errorf("parse SDL: %s", report.Error())
+	}
+	if err := asttransform.MergeDefinitionWithBaseSchema(&doc); err != nil {
+		return nil, fmt.Errorf("merge base schema: %w", err)
+	}
+	return &doc, nil
 }
 
 const indexCodexPrompt = `Read the COMPLETE content of the file ./schema.graphql in your current working directory using your file-reading tool. Read the ENTIRE file (it is approximately 17KB and 824 lines) — do not truncate, do not skim, do not read only a portion. The file is a federated GraphQL supergraph SDL.
@@ -368,14 +367,14 @@ Once the full schema is loaded into your context, output exactly this JSON objec
 
 Do not include preamble, prose, markdown fences, or commentary.`
 
-func buildCodexPrompt(prompts []string) string {
+func buildCodexPrompt(prompt string) string {
 	var b strings.Builder
 	b.WriteString("You already loaded the federated GraphQL supergraph SDL from\n")
 	b.WriteString("./schema.graphql earlier in this session. Use it as the source of\n")
 	b.WriteString("truth — do not re-read the file.\n\n")
-	b.WriteString("For each user prompt below, generate ONE corresponding GraphQL\n")
-	b.WriteString("operation (query or mutation) that fulfills the prompt against\n")
-	b.WriteString("the schema. Return one operation per prompt, in the same order.\n\n")
+	b.WriteString("Generate one or more GraphQL operations (query or mutation) that\n")
+	b.WriteString("together fulfill the user prompt below against the schema. Each\n")
+	b.WriteString("operation must be self-contained and named.\n\n")
 	b.WriteString("PARAMETERIZATION REQUIREMENT (load-bearing):\n")
 	b.WriteString("Whenever an argument's value depends on the caller's intent (an id,\n")
 	b.WriteString("a filter, a name, a tag, a limit, etc.), you MUST declare a GraphQL\n")
@@ -387,28 +386,30 @@ func buildCodexPrompt(prompts []string) string {
 	b.WriteString("(for example, 'list ALL employees' might pass no args at all). Variable\n")
 	b.WriteString("types must match the schema, including non-null bangs.\n\n")
 	b.WriteString("OUTPUT FORMAT (strict, machine-parsed):\n")
-	b.WriteString("- Output a single JSON object with one key: \"operations\" (array).\n")
-	b.WriteString("- Each operation has keys: name (camelCase), body (operation\n")
-	b.WriteString("  source text starting with 'query <name>(...)' or\n")
-	b.WriteString("  'mutation <name>(...)' when variables are declared, or\n")
-	b.WriteString("  'query <name> { ... }' / 'mutation <name> { ... }' when truly\n")
-	b.WriteString("  variable-free), kind ('query' or 'mutation'), description\n")
-	b.WriteString("  (one short sentence).\n")
-	b.WriteString("- operations.length MUST equal the number of user prompts below,\n")
-	b.WriteString("  in the same order.\n")
+	b.WriteString("- Output a single JSON object with these keys:\n")
+	b.WriteString("  - queries: array of objects, each with keys:\n")
+	b.WriteString("      description (one short sentence describing what this query does),\n")
+	b.WriteString("      document (operation source text starting with 'query <name>(...)'\n")
+	b.WriteString("      or 'mutation <name>(...)' when variables are declared, or\n")
+	b.WriteString("      'query <name> { ... }' / 'mutation <name> { ... }' when\n")
+	b.WriteString("      variable-free),\n")
+	b.WriteString("      operation_name (the name parsed from the document),\n")
+	b.WriteString("      operation_type (\"query\" or \"mutation\").\n")
+	b.WriteString("  - unsatisfied: array of {\"reason\": \"...\"} for any requirement that\n")
+	b.WriteString("      cannot be satisfied against the schema. Empty array if everything\n")
+	b.WriteString("      could be satisfied.\n")
+	b.WriteString("  - truncated: boolean. true only if you ran out of room before\n")
+	b.WriteString("      committing every requirement.\n")
 	b.WriteString("- No prose, no preamble, no markdown fences.\n\n")
-	b.WriteString("USER PROMPTS:\n")
-	for _, prompt := range prompts {
-		b.WriteString("- ")
-		b.WriteString(prompt)
-		b.WriteByte('\n')
-	}
+	b.WriteString("USER PROMPT:\n")
+	b.WriteString(prompt)
+	b.WriteByte('\n')
 	return b.String()
 }
 
 // runCodexIndex performs the one-time pre-warm: codex reads schema.graphql in
 // schemaDir and a session is started. The session id (UUID) is parsed from
-// codex's first JSONL event and returned so subsequent Search calls can resume
+// codex's first JSONL event and returned so subsequent calls can resume
 // the same session.
 func (s *yokoService) runCodexIndex(ctx context.Context, schemaDir string) (string, error) {
 	cmdCtx, cancel := context.WithTimeout(ctx, s.codexTimeout)
@@ -457,13 +458,13 @@ func (s *yokoService) runCodexIndex(ctx context.Context, schemaDir string) (stri
 }
 
 // runCodexResume resumes the previously-warmed session and runs the user
-// prompts. The agent's last message (a JSON object of operations) is captured
-// via `--output-last-message` and returned for parsing.
+// prompt. The agent's last message (a JSON resolution) is captured via
+// `--output-last-message` and returned for parsing.
 func (s *yokoService) runCodexResume(ctx context.Context, sessionID, prompt string) ([]byte, error) {
 	cmdCtx, cancel := context.WithTimeout(ctx, s.codexTimeout)
 	defer cancel()
 
-	outFile, err := os.CreateTemp("", "yoko-search-out-*.txt")
+	outFile, err := os.CreateTemp("", "yoko-generate-out-*.txt")
 	if err != nil {
 		return nil, fmt.Errorf("create output temp file: %w", err)
 	}
@@ -532,34 +533,33 @@ func parseThreadID(stdout []byte) (string, error) {
 	return ev.ThreadID, nil
 }
 
-func parseCodexOperations(stdout []byte) ([]*yokov1.GeneratedOperation, error) {
+func parseCodexResolution(stdout []byte) (*yokov1.Resolution, error) {
 	payload := extractJSONObject(stdout)
-	var parsed codexOutput
+	var parsed codexResolution
 	if err := json.Unmarshal(payload, &parsed); err != nil {
 		return nil, err
 	}
 
-	ops := make([]*yokov1.GeneratedOperation, 0, len(parsed.Operations))
-	for _, op := range parsed.Operations {
-		ops = append(ops, &yokov1.GeneratedOperation{
-			Name:        op.Name,
-			Body:        op.Body,
-			Kind:        operationKind(op.Kind),
-			Description: op.Description,
+	queries := make([]*yokov1.ResolvedQuery, 0, len(parsed.Queries))
+	for _, q := range parsed.Queries {
+		queries = append(queries, &yokov1.ResolvedQuery{
+			Description:   q.Description,
+			Document:      q.Document,
+			OperationName: q.OperationName,
+			OperationType: strings.ToLower(strings.TrimSpace(q.OperationType)),
 		})
 	}
-	return ops, nil
-}
 
-func operationKind(kind string) yokov1.OperationKind {
-	switch strings.ToLower(kind) {
-	case "query":
-		return yokov1.OperationKind_OPERATION_KIND_QUERY
-	case "mutation":
-		return yokov1.OperationKind_OPERATION_KIND_MUTATION
-	default:
-		return yokov1.OperationKind_OPERATION_KIND_UNSPECIFIED
+	unsatisfied := make([]*yokov1.Unsatisfied, 0, len(parsed.Unsatisfied))
+	for _, u := range parsed.Unsatisfied {
+		unsatisfied = append(unsatisfied, &yokov1.Unsatisfied{Reason: u.Reason})
 	}
+
+	return &yokov1.Resolution{
+		Queries:     queries,
+		Unsatisfied: unsatisfied,
+		Truncated:   parsed.Truncated,
+	}, nil
 }
 
 // extractJSONObject returns the substring from the first '{' to the last '}'

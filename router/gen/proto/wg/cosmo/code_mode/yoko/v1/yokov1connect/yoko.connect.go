@@ -22,7 +22,7 @@ const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// YokoServiceName is the fully-qualified name of the YokoService service.
-	YokoServiceName = "wundergraph.cosmo.code_mode.yoko.v1.YokoService"
+	YokoServiceName = "yoko.v1.YokoService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -33,45 +33,50 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// YokoServiceIndexProcedure is the fully-qualified name of the YokoService's Index RPC.
-	YokoServiceIndexProcedure = "/wundergraph.cosmo.code_mode.yoko.v1.YokoService/Index"
-	// YokoServiceSearchProcedure is the fully-qualified name of the YokoService's Search RPC.
-	YokoServiceSearchProcedure = "/wundergraph.cosmo.code_mode.yoko.v1.YokoService/Search"
+	// YokoServiceIndexSchemaProcedure is the fully-qualified name of the YokoService's IndexSchema RPC.
+	YokoServiceIndexSchemaProcedure = "/yoko.v1.YokoService/IndexSchema"
+	// YokoServiceGenerateQueryProcedure is the fully-qualified name of the YokoService's GenerateQuery
+	// RPC.
+	YokoServiceGenerateQueryProcedure = "/yoko.v1.YokoService/GenerateQuery"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	yokoServiceServiceDescriptor      = v1.File_wg_cosmo_code_mode_yoko_v1_yoko_proto.Services().ByName("YokoService")
-	yokoServiceIndexMethodDescriptor  = yokoServiceServiceDescriptor.Methods().ByName("Index")
-	yokoServiceSearchMethodDescriptor = yokoServiceServiceDescriptor.Methods().ByName("Search")
+	yokoServiceServiceDescriptor             = v1.File_wg_cosmo_code_mode_yoko_v1_yoko_proto.Services().ByName("YokoService")
+	yokoServiceIndexSchemaMethodDescriptor   = yokoServiceServiceDescriptor.Methods().ByName("IndexSchema")
+	yokoServiceGenerateQueryMethodDescriptor = yokoServiceServiceDescriptor.Methods().ByName("GenerateQuery")
 )
 
-// YokoServiceClient is a client for the wundergraph.cosmo.code_mode.yoko.v1.YokoService service.
+// YokoServiceClient is a client for the yoko.v1.YokoService service.
 type YokoServiceClient interface {
-	Index(context.Context, *connect.Request[v1.IndexRequest]) (*connect.Response[v1.IndexResponse], error)
-	Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error)
+	// IndexSchema parses, enriches, embeds and indexes a GraphQL SDL.
+	// Returns the deterministic schema_id callers pass to GenerateQuery.
+	IndexSchema(context.Context, *connect.Request[v1.IndexSchemaRequest]) (*connect.Response[v1.IndexSchemaResponse], error)
+	// GenerateQuery turns a natural-language prompt into one or more
+	// compiled GraphQL operations against the previously indexed schema.
+	GenerateQuery(context.Context, *connect.Request[v1.GenerateQueryRequest]) (*connect.Response[v1.GenerateQueryResponse], error)
 }
 
-// NewYokoServiceClient constructs a client for the wundergraph.cosmo.code_mode.yoko.v1.YokoService
-// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
-// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
-// the connect.WithGRPC() or connect.WithGRPCWeb() options.
+// NewYokoServiceClient constructs a client for the yoko.v1.YokoService service. By default, it uses
+// the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
+// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
+// connect.WithGRPCWeb() options.
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
 func NewYokoServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) YokoServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &yokoServiceClient{
-		index: connect.NewClient[v1.IndexRequest, v1.IndexResponse](
+		indexSchema: connect.NewClient[v1.IndexSchemaRequest, v1.IndexSchemaResponse](
 			httpClient,
-			baseURL+YokoServiceIndexProcedure,
-			connect.WithSchema(yokoServiceIndexMethodDescriptor),
+			baseURL+YokoServiceIndexSchemaProcedure,
+			connect.WithSchema(yokoServiceIndexSchemaMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		search: connect.NewClient[v1.SearchRequest, v1.SearchResponse](
+		generateQuery: connect.NewClient[v1.GenerateQueryRequest, v1.GenerateQueryResponse](
 			httpClient,
-			baseURL+YokoServiceSearchProcedure,
-			connect.WithSchema(yokoServiceSearchMethodDescriptor),
+			baseURL+YokoServiceGenerateQueryProcedure,
+			connect.WithSchema(yokoServiceGenerateQueryMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -79,25 +84,28 @@ func NewYokoServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // yokoServiceClient implements YokoServiceClient.
 type yokoServiceClient struct {
-	index  *connect.Client[v1.IndexRequest, v1.IndexResponse]
-	search *connect.Client[v1.SearchRequest, v1.SearchResponse]
+	indexSchema   *connect.Client[v1.IndexSchemaRequest, v1.IndexSchemaResponse]
+	generateQuery *connect.Client[v1.GenerateQueryRequest, v1.GenerateQueryResponse]
 }
 
-// Index calls wundergraph.cosmo.code_mode.yoko.v1.YokoService.Index.
-func (c *yokoServiceClient) Index(ctx context.Context, req *connect.Request[v1.IndexRequest]) (*connect.Response[v1.IndexResponse], error) {
-	return c.index.CallUnary(ctx, req)
+// IndexSchema calls yoko.v1.YokoService.IndexSchema.
+func (c *yokoServiceClient) IndexSchema(ctx context.Context, req *connect.Request[v1.IndexSchemaRequest]) (*connect.Response[v1.IndexSchemaResponse], error) {
+	return c.indexSchema.CallUnary(ctx, req)
 }
 
-// Search calls wundergraph.cosmo.code_mode.yoko.v1.YokoService.Search.
-func (c *yokoServiceClient) Search(ctx context.Context, req *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error) {
-	return c.search.CallUnary(ctx, req)
+// GenerateQuery calls yoko.v1.YokoService.GenerateQuery.
+func (c *yokoServiceClient) GenerateQuery(ctx context.Context, req *connect.Request[v1.GenerateQueryRequest]) (*connect.Response[v1.GenerateQueryResponse], error) {
+	return c.generateQuery.CallUnary(ctx, req)
 }
 
-// YokoServiceHandler is an implementation of the wundergraph.cosmo.code_mode.yoko.v1.YokoService
-// service.
+// YokoServiceHandler is an implementation of the yoko.v1.YokoService service.
 type YokoServiceHandler interface {
-	Index(context.Context, *connect.Request[v1.IndexRequest]) (*connect.Response[v1.IndexResponse], error)
-	Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error)
+	// IndexSchema parses, enriches, embeds and indexes a GraphQL SDL.
+	// Returns the deterministic schema_id callers pass to GenerateQuery.
+	IndexSchema(context.Context, *connect.Request[v1.IndexSchemaRequest]) (*connect.Response[v1.IndexSchemaResponse], error)
+	// GenerateQuery turns a natural-language prompt into one or more
+	// compiled GraphQL operations against the previously indexed schema.
+	GenerateQuery(context.Context, *connect.Request[v1.GenerateQueryRequest]) (*connect.Response[v1.GenerateQueryResponse], error)
 }
 
 // NewYokoServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -106,24 +114,24 @@ type YokoServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewYokoServiceHandler(svc YokoServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	yokoServiceIndexHandler := connect.NewUnaryHandler(
-		YokoServiceIndexProcedure,
-		svc.Index,
-		connect.WithSchema(yokoServiceIndexMethodDescriptor),
+	yokoServiceIndexSchemaHandler := connect.NewUnaryHandler(
+		YokoServiceIndexSchemaProcedure,
+		svc.IndexSchema,
+		connect.WithSchema(yokoServiceIndexSchemaMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	yokoServiceSearchHandler := connect.NewUnaryHandler(
-		YokoServiceSearchProcedure,
-		svc.Search,
-		connect.WithSchema(yokoServiceSearchMethodDescriptor),
+	yokoServiceGenerateQueryHandler := connect.NewUnaryHandler(
+		YokoServiceGenerateQueryProcedure,
+		svc.GenerateQuery,
+		connect.WithSchema(yokoServiceGenerateQueryMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	return "/wundergraph.cosmo.code_mode.yoko.v1.YokoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return "/yoko.v1.YokoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case YokoServiceIndexProcedure:
-			yokoServiceIndexHandler.ServeHTTP(w, r)
-		case YokoServiceSearchProcedure:
-			yokoServiceSearchHandler.ServeHTTP(w, r)
+		case YokoServiceIndexSchemaProcedure:
+			yokoServiceIndexSchemaHandler.ServeHTTP(w, r)
+		case YokoServiceGenerateQueryProcedure:
+			yokoServiceGenerateQueryHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -133,10 +141,10 @@ func NewYokoServiceHandler(svc YokoServiceHandler, opts ...connect.HandlerOption
 // UnimplementedYokoServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedYokoServiceHandler struct{}
 
-func (UnimplementedYokoServiceHandler) Index(context.Context, *connect.Request[v1.IndexRequest]) (*connect.Response[v1.IndexResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wundergraph.cosmo.code_mode.yoko.v1.YokoService.Index is not implemented"))
+func (UnimplementedYokoServiceHandler) IndexSchema(context.Context, *connect.Request[v1.IndexSchemaRequest]) (*connect.Response[v1.IndexSchemaResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("yoko.v1.YokoService.IndexSchema is not implemented"))
 }
 
-func (UnimplementedYokoServiceHandler) Search(context.Context, *connect.Request[v1.SearchRequest]) (*connect.Response[v1.SearchResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wundergraph.cosmo.code_mode.yoko.v1.YokoService.Search is not implemented"))
+func (UnimplementedYokoServiceHandler) GenerateQuery(context.Context, *connect.Request[v1.GenerateQueryRequest]) (*connect.Response[v1.GenerateQueryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("yoko.v1.YokoService.GenerateQuery is not implemented"))
 }

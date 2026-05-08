@@ -11,7 +11,10 @@ GOCACHE_DIR="${GOCACHE:-/tmp/cosmo-code-mode-go-build-cache}"
 
 ROUTER_BIN="$ROOT_DIR/router/router"
 ROUTER_CONFIG="$CODE_MODE_DIR/router-config.yaml"
-YOKO_BIN="$CODE_MODE_DIR/yoko-mock/yoko-mock"
+
+# Yoko is a separate service expected at http://127.0.0.1:3400. start.sh no
+# longer launches a local mock — bring up your real yoko service before running.
+YOKO_URL="${YOKO_URL:-http://127.0.0.1:3400}"
 
 append_pid() {
   local name="$1"
@@ -112,12 +115,6 @@ if [ ! -x "$ROUTER_BIN" ]; then
   exit 1
 fi
 
-if [ ! -x "$YOKO_BIN" ]; then
-  echo "Yoko mock binary not found or not executable: $YOKO_BIN" >&2
-  echo "Run: cd demo/code-mode/yoko-mock && go build -o yoko-mock ." >&2
-  exit 1
-fi
-
 if [ ! -f "$CODE_MODE_DIR/config.json" ]; then
   echo "Composed router config not found: $CODE_MODE_DIR/config.json" >&2
   echo "Run: make -C demo/code-mode compose" >&2
@@ -131,18 +128,41 @@ trap cleanup EXIT INT TERM
 
 start_background employees "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4001 go run ./cmd/employees
 start_background family "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4002 go run ./cmd/family
+start_background hobbies "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4003 go run ./cmd/hobbies
+start_background products "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4004 go run ./cmd/products
+start_background test1 "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4006 go run ./cmd/test1
 start_background availability "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4007 go run ./cmd/availability
 start_background mood "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4008 go run ./cmd/mood
-start_background_root yoko "$YOKO_BIN" -listen-addr localhost:5028
+start_background countries "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4009 go run ./cmd/countries
+start_background products_fg "$DEMO_DIR" env GOCACHE="$GOCACHE_DIR" PORT=4010 go run ./cmd/products_fg
 
 wait_url employees http://localhost:4001/
 wait_url family http://localhost:4002/
+wait_url hobbies http://localhost:4003/
+wait_url products http://localhost:4004/
+wait_url test1 http://localhost:4006/
 wait_url availability http://localhost:4007/
 wait_url mood http://localhost:4008/
-wait_url yoko http://localhost:5028/health
+wait_url countries http://localhost:4009/
+wait_url products_fg http://localhost:4010/
+
+# Verify the external yoko service is reachable. We don't probe a specific
+# path because the real service doesn't necessarily expose /health — just
+# confirm the TCP/HTTP socket accepts a connection. Any HTTP response (200,
+# 404, 405 …) means the server is up; only a connection failure aborts.
+# Override with YOKO_URL when yoko runs at a different address.
+if ! curl -sS -o /dev/null --max-time 3 "$YOKO_URL" >/dev/null 2>&1; then
+  echo "Yoko service is not reachable at $YOKO_URL" >&2
+  echo "Start your yoko service (or set YOKO_URL=...) before running this demo." >&2
+  exit 1
+fi
+echo "yoko is ready at $YOKO_URL"
 
 echo "Starting router in foreground"
-"$ROUTER_BIN" -config "$ROUTER_CONFIG" &
+echo "Router output is being teed to $LOG_DIR/router.log"
+# Tee stdout+stderr so the user still sees live output AND we keep a persistent
+# log for post-mortem debugging when the router exits unexpectedly.
+"$ROUTER_BIN" -config "$ROUTER_CONFIG" 2>&1 | tee "$LOG_DIR/router.log" &
 router_pid="$!"
 append_pid router "$router_pid"
 

@@ -7,9 +7,12 @@ import (
 )
 
 type Searcher interface {
-	Search(ctx context.Context, sessionID string, prompts []string) (*yokov1.SearchResponse, error)
+	Search(ctx context.Context, prompts []string) (*yokov1.Resolution, error)
 	SetSchema(string)
 	Schema() string
+	// EnsureIndexed proactively warms the schema_id cache so the first
+	// Search after a (re)load doesn't pay the IndexSchema round-trip.
+	EnsureIndexed(ctx context.Context) error
 }
 
 var _ Searcher = (*Client)(nil)

@@ -1,84 +1,85 @@
 syntax = "proto3";
 
-package wundergraph.cosmo.code_mode.yoko.v1;
+package yoko.v1;
 
-// Yoko generates GraphQL operations for natural-language prompts.
-//
-// Two-step flow:
-//   1. Index(schema_sdl) -> schema_id. Idempotent: the same SDL
-//      always returns the same schema_id for as long as the index
-//      is retained. The router caches schema_id and re-indexes only
-//      on supergraph reload (or when Search returns NOT_FOUND).
-//   2. Search(prompts, schema_id) -> operations. Yoko owns prompt
-//      fan-out, partial-failure handling, cross-prompt deduplication,
-//      and ranking.
-//
-// The router never sends a schema hash. Yoko is the sole authority
-// on schema identity; the router only sends raw SDL on Index and an
-// opaque id on Search.
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/wundergraph/yoko/gen/yoko/v1;yokov1";
+
+// YokoService turns natural-language prompts into validated GraphQL
+// operations against an indexed schema. Clients first index a schema
+// (returning a stable schema_id) and then call GenerateQuery with that
+// id and a prompt to receive one or more compiled operations.
 service YokoService {
-  rpc Index(IndexRequest) returns (IndexResponse);
-  rpc Search(SearchRequest) returns (SearchResponse);
+  // IndexSchema parses, enriches, embeds and indexes a GraphQL SDL.
+  // Returns the deterministic schema_id callers pass to GenerateQuery.
+  rpc IndexSchema(IndexSchemaRequest) returns (IndexSchemaResponse);
+
+  // GenerateQuery turns a natural-language prompt into one or more
+  // compiled GraphQL operations against the previously indexed schema.
+  rpc GenerateQuery(GenerateQueryRequest) returns (GenerateQueryResponse);
 }
 
-message IndexRequest {
-  // The supergraph SDL to index. Sent in full on every Index call;
-  // Yoko deduplicates internally and is free to short-circuit when
-  // the SDL is already known.
-  string schema_sdl = 1;
+message IndexSchemaRequest {
+  // GraphQL Schema Definition Language (SDL) for the target API.
+  // Must contain at least one non-whitespace character.
+  string sdl = 1 [(buf.validate.field).string.pattern = "\\S"];
 }
 
-message IndexResponse {
-  // Opaque, Yoko-assigned identifier for this schema. Stable for as
-  // long as Yoko retains the index. Subsequent Search calls pass this
-  // back instead of the full SDL. Idempotent: the same SDL returns
-  // the same schema_id.
+message IndexSchemaResponse {
+  // Stable id derived from the indexed SDL; pass to GenerateQuery.
   string schema_id = 1;
 }
 
-message SearchRequest {
-  // Batch of natural-language prompts. Bounded at 20 by the host.
-  repeated string prompts = 1;
+message GenerateQueryRequest {
+  // schema_id from a prior IndexSchema call.
+  string schema_id = 1 [(buf.validate.field).string.pattern = "\\S"];
 
-  // Identifier returned by a prior Index call. If Yoko no longer
-  // recognizes the id (e.g. eviction, restart), it MUST return the
-  // Connect error code NOT_FOUND; the router re-indexes and retries
-  // the call exactly once.
-  string schema_id = 2;
-
-  // Opaque MCP session ID for telemetry correlation only.
-  // Yoko MUST NOT use this for stateful behavior — sessions are owned
-  // by the router.
-  string session_id = 3;
+  // Natural-language description of what the caller wants to fetch.
+  string prompt = 2 [(buf.validate.field).string.pattern = "\\S"];
 }
 
-message SearchResponse {
-  // Operations across all prompts, already deduplicated and ranked.
-  // Order is significant: earlier entries rank higher and are preferred
-  // when bundle truncation drops from the tail.
-  repeated GeneratedOperation operations = 1;
+message GenerateQueryResponse {
+  Resolution resolution = 1;
 }
 
-message GeneratedOperation {
-  // Suggested operation name (camelCase preferred). The host applies
-  // its own identifier normalization and in-session collision-suffix
-  // logic on top of this — see §6.
-  string name = 1;
+message Resolution {
+  // One entry per produced query; each is a self-contained operation
+  // with a natural-language description of what it does.
+  repeated ResolvedQuery queries = 1;
 
-  // GraphQL operation body (query or mutation source text).
-  string body = 2;
+  // One entry per requirement we could not satisfy; each carries a
+  // natural-language reason.
+  repeated Unsatisfied unsatisfied = 2;
 
-  // Operation kind. Subscriptions are out of scope; if Yoko returns
-  // one, the host drops it with a single warn log.
-  OperationKind kind = 3;
-
-  // Human-readable description, surfaced as JSDoc on the typed
-  // `tools.<name>` signature in the rendered bundle.
-  string description = 4;
+  // True when the propose agent ran out of turns before committing
+  // every requirement; clients may want to retry with a tighter prompt.
+  bool truncated = 3;
 }
 
-enum OperationKind {
-  OPERATION_KIND_UNSPECIFIED = 0;
-  OPERATION_KIND_QUERY = 1;
-  OPERATION_KIND_MUTATION = 2;
+message ResolvedQuery {
+  // One short user-facing sentence describing what this query does.
+  string description = 1;
+
+  // GraphQL operation document — exactly one named operation.
+  string document = 2;
+
+  // Operation name parsed from the document (e.g. "GetUserPosts").
+  string operation_name = 3;
+
+  // One of "query", "mutation", "subscription".
+  string operation_type = 4;
+
+  // JSON Schema for the operation's $variables object, derived
+  // statically from the document. Carried as a JSON-encoded string so
+  // JSON clients see a readable schema (a `bytes` field would surface
+  // as base64 over JSON transport).
+  string variables_schema = 5;
+}
+
+message Unsatisfied {
+  // Natural-language explanation of why this requirement could not
+  // be satisfied (e.g. "no field on the schema carries that filter
+  // dimension").
+  string reason = 1;
 }

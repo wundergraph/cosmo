@@ -116,7 +116,7 @@ generate:
 	make generate-go
 
 generate-go:
-	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/code_mode/yoko/v1 --template buf.router.go.gen.yaml
+	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/code_mode/yoko/v1 --include-imports --template buf.router.go.gen.yaml
 	rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
 	rm -rf connect-go/wg && buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/notifications --path proto/wg/cosmo/common --path proto/wg/cosmo/node --template buf.connect-go.go.gen.yaml
 
@@ -191,14 +191,16 @@ CODE_MODE_GOCACHE ?= /tmp/cosmo-code-mode-go-build-cache
 
 .PHONY: code-mode-demo code-mode-demo-down code-mode-connect-demo code-mode-connect-demo-down
 
-# Local Code Mode demo: small federation (employees, family, availability,
-# mood) + Yoko mock + Cosmo Router with Code Mode and named operations.
-# Router GraphQL on :3002, MCP on :5027. Full instructions, prerequisites
-# (codex CLI on PATH), and tear-down: demo/code-mode/README.md.
+# Local Code Mode demo: federation of all non-EDFS demo subgraphs
+# (employees, family, hobbies, products, test1, availability, mood, countries,
+# plus the products_fg feature graph) + Cosmo Router with Code Mode and
+# named operations. Router GraphQL on :3002, MCP on :5027. Yoko runs as a
+# separate external service expected at http://127.0.0.1:3400 — start it
+# before this target (override with YOKO_URL=...). Full instructions,
+# prerequisites, and tear-down: demo/code-mode/README.md.
 code-mode-demo:
 	mkdir -p $(CODE_MODE_GOCACHE)
 	GOCACHE=$(CODE_MODE_GOCACHE) $(MAKE) -C router build
-	GOCACHE=$(CODE_MODE_GOCACHE) $(MAKE) -C demo/code-mode build-yoko
 	GOCACHE=$(CODE_MODE_GOCACHE) $(MAKE) -C demo/code-mode build-stdio-proxy
 	$(MAKE) -C demo/code-mode compose
 	./demo/code-mode/start.sh
@@ -208,9 +210,11 @@ code-mode-demo-down:
 	./demo/code-mode/start.sh --down
 
 # Runs the code-mode router from source against the yoko Connect supergraph
-# (plugins + composed config live in $(YOKO_DIR)). Uses different ports than
-# code-mode-demo (router 3012, MCP 5037, yoko-mock 5038) so both can run at
-# the same time. Set YOKO_DIR to your local yoko checkout, e.g.
+# (plugins + composed config live in $(YOKO_DIR)). Uses different router/MCP
+# ports than code-mode-demo (router 3012, MCP 5037) so both can run at the
+# same time, and shares the same external yoko service expected at
+# http://127.0.0.1:3400 (override with YOKO_URL=...). Set YOKO_DIR to your
+# local yoko checkout, e.g.
 # `make code-mode-connect-demo YOKO_DIR=/path/to/yoko`.
 # Full instructions and prerequisites: demo/code-mode-connect/README.md.
 YOKO_DIR ?=
@@ -219,7 +223,6 @@ code-mode-connect-demo:
 	@if [ -z "$(YOKO_DIR)" ]; then echo "YOKO_DIR is required (path to your yoko checkout). See demo/code-mode-connect/README.md" >&2; exit 1; fi
 	mkdir -p $(CODE_MODE_GOCACHE)
 	GOCACHE=$(CODE_MODE_GOCACHE) $(MAKE) -C router build
-	GOCACHE=$(CODE_MODE_GOCACHE) $(MAKE) -C demo/code-mode build-yoko
 	YOKO_DIR=$(YOKO_DIR) ./demo/code-mode-connect/start.sh
 
 # Tear down anything left behind by code-mode-connect-demo.

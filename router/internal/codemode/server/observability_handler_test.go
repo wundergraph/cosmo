@@ -24,10 +24,10 @@ import (
 func TestHandleSearchRecordsObservability(t *testing.T) {
 	traces, meterProvider, reader := newHandlerTelemetry()
 	searcher := newFakeYoko()
-	searcher.responses <- &yokov1.SearchResponse{Operations: []*yokov1.GeneratedOperation{{
-		Name: "getOrders",
-		Body: "query GetOrders { orders { id } }",
-		Kind: yokov1.OperationKind_OPERATION_KIND_QUERY,
+	searcher.responses <- &yokov1.Resolution{Queries: []*yokov1.ResolvedQuery{{
+		OperationName: "getOrders",
+		Document:      "query GetOrders { orders { id } }",
+		OperationType: "query",
 	}}}
 	store := newSearchTestStorage(t)
 	srv, err := New(Config{

@@ -3,7 +3,7 @@
 This demo runs the Code Mode router against an external `yoko` Connect supergraph instead of the local employees federation used by `make code-mode-demo`.
 It is useful when you want to exercise Code Mode against a richer set of plugins (Pylon, Linear, PostHog, Circleback, Slack, Notion) served by the `yoko` project.
 
-It is designed to coexist with `make code-mode-demo`: it uses different ports (router 3012, MCP 5037, yoko-mock 5038), so both demos can run side-by-side.
+It is designed to coexist with `make code-mode-demo`: it uses different router/MCP ports (router 3012, MCP 5037), and both demos share the same external Yoko service at `http://127.0.0.1:3400` (override with `YOKO_URL=...`).
 
 ## Prerequisites
 
@@ -12,7 +12,8 @@ It is designed to coexist with `make code-mode-demo`: it uses different ports (r
   - `config.json` — the composed router config for the yoko supergraph.
   - `plugins/` — the plugin binaries the router will load.
 - Go (toolchain matching the repo `go.mod`).
-- The `codex` CLI on `PATH`, authenticated. The Yoko mock shells out to `codex` for query generation.
+- A running Yoko service reachable at `http://127.0.0.1:3400` (override with `YOKO_URL=...`).
+  The router calls Yoko for query generation; without it, `code_mode_search_tools` cannot generate operations.
 
 ## Run
 
@@ -28,16 +29,15 @@ The target fails fast with a clear error if it is missing or if the directory do
 What the target does:
 
 1. Builds `router/router`.
-2. Builds `demo/code-mode/yoko-mock/yoko-mock`.
-3. Starts `yoko-mock` on `localhost:5038`.
-4. Starts the router with `YOKO_DIR` as its working directory and `demo/code-mode-connect/router-config.yaml` as its config.
+2. Health-checks the external Yoko service at `$YOKO_URL/health` (default `http://127.0.0.1:3400`).
+3. Starts the router with `YOKO_DIR` as its working directory and `demo/code-mode-connect/router-config.yaml` as its config.
    The router resolves `config.json` and `plugins/` relative to that CWD, which is why `YOKO_DIR` must be a real composed yoko checkout.
 
 Expected ports:
 
 - Router GraphQL: `http://localhost:3012/graphql`
 - Code Mode MCP: `http://127.0.0.1:5037/mcp`
-- Yoko mock: `http://localhost:5038`
+- Yoko (external): `http://127.0.0.1:3400`
 
 ## Tearing down
 

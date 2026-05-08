@@ -1,5 +1,7 @@
 version: v2
 modules:
   - path: proto
+deps:
+  - buf.build/bufbuild/protovalidate
 lint:
   disallow_comment_ignores: true

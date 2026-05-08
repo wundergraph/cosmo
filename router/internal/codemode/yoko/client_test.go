@@ -16,14 +16,14 @@ import (
 type fakeYokoServiceClient struct {
 	mu sync.Mutex
 
-	indexRequests  []*yokov1.IndexRequest
-	searchRequests []*yokov1.SearchRequest
+	indexRequests    []*yokov1.IndexSchemaRequest
+	generateRequests []*yokov1.GenerateQueryRequest
 
-	indexFunc  func(context.Context, *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error)
-	searchFunc func(context.Context, *connect.Request[yokov1.SearchRequest]) (*connect.Response[yokov1.SearchResponse], error)
+	indexFunc    func(context.Context, *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error)
+	generateFunc func(context.Context, *connect.Request[yokov1.GenerateQueryRequest]) (*connect.Response[yokov1.GenerateQueryResponse], error)
 }
 
-func (f *fakeYokoServiceClient) Index(ctx context.Context, req *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
+func (f *fakeYokoServiceClient) IndexSchema(ctx context.Context, req *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
 	f.mu.Lock()
 	f.indexRequests = append(f.indexRequests, req.Msg)
 	indexFunc := f.indexFunc
@@ -32,31 +32,31 @@ func (f *fakeYokoServiceClient) Index(ctx context.Context, req *connect.Request[
 	if indexFunc != nil {
 		return indexFunc(ctx, req)
 	}
-	return connect.NewResponse(&yokov1.IndexResponse{SchemaId: "schema-1"}), nil
+	return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: "schema-1"}), nil
 }
 
-func (f *fakeYokoServiceClient) Search(ctx context.Context, req *connect.Request[yokov1.SearchRequest]) (*connect.Response[yokov1.SearchResponse], error) {
+func (f *fakeYokoServiceClient) GenerateQuery(ctx context.Context, req *connect.Request[yokov1.GenerateQueryRequest]) (*connect.Response[yokov1.GenerateQueryResponse], error) {
 	f.mu.Lock()
-	f.searchRequests = append(f.searchRequests, req.Msg)
-	searchFunc := f.searchFunc
+	f.generateRequests = append(f.generateRequests, req.Msg)
+	generateFunc := f.generateFunc
 	f.mu.Unlock()
 
-	if searchFunc != nil {
-		return searchFunc(ctx, req)
+	if generateFunc != nil {
+		return generateFunc(ctx, req)
 	}
-	return connect.NewResponse(searchResponse("op")), nil
+	return connect.NewResponse(generateResponse(req.Msg.GetPrompt())), nil
 }
 
-func (f *fakeYokoServiceClient) indexRequestMessages() []*yokov1.IndexRequest {
+func (f *fakeYokoServiceClient) indexRequestMessages() []*yokov1.IndexSchemaRequest {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return append([]*yokov1.IndexRequest(nil), f.indexRequests...)
+	return append([]*yokov1.IndexSchemaRequest(nil), f.indexRequests...)
 }
 
-func (f *fakeYokoServiceClient) searchRequestMessages() []*yokov1.SearchRequest {
+func (f *fakeYokoServiceClient) generateRequestMessages() []*yokov1.GenerateQueryRequest {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return append([]*yokov1.SearchRequest(nil), f.searchRequests...)
+	return append([]*yokov1.GenerateQueryRequest(nil), f.generateRequests...)
 }
 
 func newTestClient(fake *fakeYokoServiceClient) *Client {
@@ -65,14 +65,17 @@ func newTestClient(fake *fakeYokoServiceClient) *Client {
 	return client
 }
 
-func searchResponse(name string) *yokov1.SearchResponse {
-	return &yokov1.SearchResponse{
-		Operations: []*yokov1.GeneratedOperation{
-			{
-				Name:        name,
-				Body:        "query " + name + " { product { id } }",
-				Kind:        yokov1.OperationKind_OPERATION_KIND_QUERY,
-				Description: "Fetch product",
+func generateResponse(prompt string) *yokov1.GenerateQueryResponse {
+	return &yokov1.GenerateQueryResponse{
+		Resolution: &yokov1.Resolution{
+			Queries: []*yokov1.ResolvedQuery{
+				{
+					Description:     "Fetch product for prompt: " + prompt,
+					Document:        "query GetProduct { product { id } }",
+					OperationName:   "GetProduct",
+					OperationType:   "query",
+					VariablesSchema: `{"type":"object","properties":{}}`,
+				},
 			},
 		},
 	}
@@ -82,225 +85,223 @@ func connectError(code connect.Code, message string) error {
 	return connect.NewError(code, errors.New(message))
 }
 
-func TestSearchFirstCallIndexesSchemaThenSearchesWithReturnedID(t *testing.T) {
+func TestSearchFirstCallIndexesSchemaThenGeneratesPerPrompt(t *testing.T) {
 	fake := &fakeYokoServiceClient{
-		indexFunc: func(context.Context, *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
-			return connect.NewResponse(&yokov1.IndexResponse{SchemaId: "schema-from-yoko"}), nil
-		},
-		searchFunc: func(context.Context, *connect.Request[yokov1.SearchRequest]) (*connect.Response[yokov1.SearchResponse], error) {
-			return connect.NewResponse(searchResponse("fromSearch")), nil
+		indexFunc: func(context.Context, *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
+			return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: "schema-from-yoko"}), nil
 		},
 	}
 	client := newTestClient(fake)
 
-	actual, err := client.Search(context.Background(), "session-1", []string{"find products"})
+	actual, err := client.Search(context.Background(), []string{"find products", "find more products"})
 
 	require.NoError(t, err)
-	require.Equal(t, searchResponse("fromSearch"), actual)
-	require.Equal(t, []*yokov1.IndexRequest{
-		{SchemaSdl: "type Query { product: Product }"},
-	}, fake.indexRequestMessages())
-	require.Equal(t, []*yokov1.SearchRequest{
-		{
-			Prompts:   []string{"find products"},
-			SchemaId:  "schema-from-yoko",
-			SessionId: "session-1",
+	require.Equal(t, &yokov1.Resolution{
+		Queries: []*yokov1.ResolvedQuery{
+			generateResponse("find products").GetResolution().GetQueries()[0],
+			generateResponse("find more products").GetResolution().GetQueries()[0],
 		},
-	}, fake.searchRequestMessages())
+	}, actual)
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
+	}, fake.indexRequestMessages())
+	require.Equal(t, []*yokov1.GenerateQueryRequest{
+		{SchemaId: "schema-from-yoko", Prompt: "find products"},
+		{SchemaId: "schema-from-yoko", Prompt: "find more products"},
+	}, fake.generateRequestMessages())
 }
 
 func TestSearchSubsequentCallUsesCachedSchemaID(t *testing.T) {
 	fake := &fakeYokoServiceClient{}
 	client := newTestClient(fake)
 
-	first, firstErr := client.Search(context.Background(), "session-1", []string{"first"})
-	second, secondErr := client.Search(context.Background(), "session-2", []string{"second"})
+	first, firstErr := client.Search(context.Background(), []string{"first"})
+	second, secondErr := client.Search(context.Background(), []string{"second"})
 
 	require.NoError(t, firstErr)
 	require.NoError(t, secondErr)
-	require.Equal(t, searchResponse("op"), first)
-	require.Equal(t, searchResponse("op"), second)
-	require.Equal(t, []*yokov1.IndexRequest{
-		{SchemaSdl: "type Query { product: Product }"},
+	require.Equal(t, generateResponse("first").GetResolution(), first)
+	require.Equal(t, generateResponse("second").GetResolution(), second)
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
 	}, fake.indexRequestMessages())
-	require.Equal(t, []*yokov1.SearchRequest{
-		{
-			Prompts:   []string{"first"},
-			SchemaId:  "schema-1",
-			SessionId: "session-1",
-		},
-		{
-			Prompts:   []string{"second"},
-			SchemaId:  "schema-1",
-			SessionId: "session-2",
-		},
-	}, fake.searchRequestMessages())
+	require.Equal(t, []*yokov1.GenerateQueryRequest{
+		{SchemaId: "schema-1", Prompt: "first"},
+		{SchemaId: "schema-1", Prompt: "second"},
+	}, fake.generateRequestMessages())
 }
 
-func TestSearchReindexesAndRetriesOnceAfterNotFound(t *testing.T) {
-	var searchCount int
-	fake := &fakeYokoServiceClient{}
-	indexIDs := []string{"schema-initial", "schema-reindexed"}
-	fake.indexFunc = func(context.Context, *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
-		id := indexIDs[len(fake.indexRequestMessages())-1]
-		return connect.NewResponse(&yokov1.IndexResponse{SchemaId: id}), nil
-	}
-	fake.searchFunc = func(context.Context, *connect.Request[yokov1.SearchRequest]) (*connect.Response[yokov1.SearchResponse], error) {
-		searchCount++
-		if searchCount == 1 {
-			return nil, connectError(connect.CodeNotFound, "schema evicted")
-		}
-		return connect.NewResponse(searchResponse("retried")), nil
+func TestSearchAggregatesResolutionAcrossPrompts(t *testing.T) {
+	calls := 0
+	fake := &fakeYokoServiceClient{
+		generateFunc: func(_ context.Context, req *connect.Request[yokov1.GenerateQueryRequest]) (*connect.Response[yokov1.GenerateQueryResponse], error) {
+			calls++
+			switch calls {
+			case 1:
+				return connect.NewResponse(&yokov1.GenerateQueryResponse{
+					Resolution: &yokov1.Resolution{
+						Queries: []*yokov1.ResolvedQuery{{Document: "q1"}},
+					},
+				}), nil
+			case 2:
+				return connect.NewResponse(&yokov1.GenerateQueryResponse{
+					Resolution: &yokov1.Resolution{
+						Unsatisfied: []*yokov1.Unsatisfied{{Reason: "no field for that filter"}},
+						Truncated:   true,
+					},
+				}), nil
+			}
+			return connect.NewResponse(&yokov1.GenerateQueryResponse{}), nil
+		},
 	}
 	client := newTestClient(fake)
 
-	actual, err := client.Search(context.Background(), "session-1", []string{"find products"})
+	actual, err := client.Search(context.Background(), []string{"a", "b"})
 
 	require.NoError(t, err)
-	require.Equal(t, searchResponse("retried"), actual)
-	require.Equal(t, []*yokov1.IndexRequest{
-		{SchemaSdl: "type Query { product: Product }"},
-		{SchemaSdl: "type Query { product: Product }"},
+	require.Equal(t, &yokov1.Resolution{
+		Queries:     []*yokov1.ResolvedQuery{{Document: "q1"}},
+		Unsatisfied: []*yokov1.Unsatisfied{{Reason: "no field for that filter"}},
+		Truncated:   true,
+	}, actual)
+}
+
+func TestSearchReindexesAndRetriesOnceAfterNotFound(t *testing.T) {
+	var generateCount int
+	fake := &fakeYokoServiceClient{}
+	indexIDs := []string{"schema-initial", "schema-reindexed"}
+	fake.indexFunc = func(context.Context, *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
+		id := indexIDs[len(fake.indexRequestMessages())-1]
+		return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: id}), nil
+	}
+	fake.generateFunc = func(_ context.Context, req *connect.Request[yokov1.GenerateQueryRequest]) (*connect.Response[yokov1.GenerateQueryResponse], error) {
+		generateCount++
+		if generateCount == 1 {
+			return nil, connectError(connect.CodeNotFound, "schema evicted")
+		}
+		return connect.NewResponse(generateResponse(req.Msg.GetPrompt())), nil
+	}
+	client := newTestClient(fake)
+
+	actual, err := client.Search(context.Background(), []string{"find products"})
+
+	require.NoError(t, err)
+	require.Equal(t, generateResponse("find products").GetResolution(), actual)
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
+		{Sdl: "type Query { product: Product }"},
 	}, fake.indexRequestMessages())
-	require.Equal(t, []*yokov1.SearchRequest{
-		{
-			Prompts:   []string{"find products"},
-			SchemaId:  "schema-initial",
-			SessionId: "session-1",
-		},
-		{
-			Prompts:   []string{"find products"},
-			SchemaId:  "schema-reindexed",
-			SessionId: "session-1",
-		},
-	}, fake.searchRequestMessages())
+	require.Equal(t, []*yokov1.GenerateQueryRequest{
+		{SchemaId: "schema-initial", Prompt: "find products"},
+		{SchemaId: "schema-reindexed", Prompt: "find products"},
+	}, fake.generateRequestMessages())
 }
 
 func TestSearchRetryFailureSurfacesErrorAndLeavesCacheEmpty(t *testing.T) {
 	retryErr := connectError(connect.CodeUnavailable, "retry transport down")
 	indexIDs := []string{"schema-initial", "schema-reindexed", "schema-after-failure"}
 	fake := &fakeYokoServiceClient{}
-	fake.indexFunc = func(context.Context, *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
+	fake.indexFunc = func(context.Context, *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
 		id := indexIDs[len(fake.indexRequestMessages())-1]
-		return connect.NewResponse(&yokov1.IndexResponse{SchemaId: id}), nil
+		return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: id}), nil
 	}
-	searchErrors := []error{
+	generateErrors := []error{
 		connectError(connect.CodeNotFound, "schema evicted"),
 		retryErr,
 		nil,
 	}
-	fake.searchFunc = func(context.Context, *connect.Request[yokov1.SearchRequest]) (*connect.Response[yokov1.SearchResponse], error) {
-		err := searchErrors[len(fake.searchRequestMessages())-1]
+	fake.generateFunc = func(_ context.Context, req *connect.Request[yokov1.GenerateQueryRequest]) (*connect.Response[yokov1.GenerateQueryResponse], error) {
+		err := generateErrors[len(fake.generateRequestMessages())-1]
 		if err != nil {
 			return nil, err
 		}
-		return connect.NewResponse(searchResponse("afterFailure")), nil
+		return connect.NewResponse(generateResponse(req.Msg.GetPrompt())), nil
 	}
 	client := newTestClient(fake)
 
-	actual, err := client.Search(context.Background(), "session-1", []string{"find products"})
+	actual, err := client.Search(context.Background(), []string{"find products"})
 
 	require.Nil(t, actual)
 	require.ErrorIs(t, err, retryErr)
 
-	actualAfterFailure, errAfterFailure := client.Search(context.Background(), "session-2", []string{"find products again"})
+	actualAfterFailure, errAfterFailure := client.Search(context.Background(), []string{"find products again"})
 
 	require.NoError(t, errAfterFailure)
-	require.Equal(t, searchResponse("afterFailure"), actualAfterFailure)
-	require.Equal(t, []*yokov1.IndexRequest{
-		{SchemaSdl: "type Query { product: Product }"},
-		{SchemaSdl: "type Query { product: Product }"},
-		{SchemaSdl: "type Query { product: Product }"},
+	require.Equal(t, generateResponse("find products again").GetResolution(), actualAfterFailure)
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
+		{Sdl: "type Query { product: Product }"},
+		{Sdl: "type Query { product: Product }"},
 	}, fake.indexRequestMessages())
-	require.Equal(t, []*yokov1.SearchRequest{
-		{
-			Prompts:   []string{"find products"},
-			SchemaId:  "schema-initial",
-			SessionId: "session-1",
-		},
-		{
-			Prompts:   []string{"find products"},
-			SchemaId:  "schema-reindexed",
-			SessionId: "session-1",
-		},
-		{
-			Prompts:   []string{"find products again"},
-			SchemaId:  "schema-after-failure",
-			SessionId: "session-2",
-		},
-	}, fake.searchRequestMessages())
+	require.Equal(t, []*yokov1.GenerateQueryRequest{
+		{SchemaId: "schema-initial", Prompt: "find products"},
+		{SchemaId: "schema-reindexed", Prompt: "find products"},
+		{SchemaId: "schema-after-failure", Prompt: "find products again"},
+	}, fake.generateRequestMessages())
 }
 
 func TestSearchRetryNotFoundSurfacesErrorAndLeavesCacheEmpty(t *testing.T) {
 	retryErr := connectError(connect.CodeNotFound, "schema evicted again")
 	indexIDs := []string{"schema-initial", "schema-reindexed", "schema-after-failure"}
 	fake := &fakeYokoServiceClient{}
-	fake.indexFunc = func(context.Context, *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
+	fake.indexFunc = func(context.Context, *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
 		id := indexIDs[len(fake.indexRequestMessages())-1]
-		return connect.NewResponse(&yokov1.IndexResponse{SchemaId: id}), nil
+		return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: id}), nil
 	}
-	searchErrors := []error{
+	generateErrors := []error{
 		connectError(connect.CodeNotFound, "schema evicted"),
 		retryErr,
 		nil,
 	}
-	fake.searchFunc = func(context.Context, *connect.Request[yokov1.SearchRequest]) (*connect.Response[yokov1.SearchResponse], error) {
-		err := searchErrors[len(fake.searchRequestMessages())-1]
+	fake.generateFunc = func(_ context.Context, req *connect.Request[yokov1.GenerateQueryRequest]) (*connect.Response[yokov1.GenerateQueryResponse], error) {
+		err := generateErrors[len(fake.generateRequestMessages())-1]
 		if err != nil {
 			return nil, err
 		}
-		return connect.NewResponse(searchResponse("afterFailure")), nil
+		return connect.NewResponse(generateResponse(req.Msg.GetPrompt())), nil
 	}
 	client := newTestClient(fake)
 
-	actual, err := client.Search(context.Background(), "session-1", []string{"find products"})
+	actual, err := client.Search(context.Background(), []string{"find products"})
 
 	require.Nil(t, actual)
 	require.ErrorIs(t, err, retryErr)
 
-	actualAfterFailure, errAfterFailure := client.Search(context.Background(), "session-2", []string{"find products again"})
+	actualAfterFailure, errAfterFailure := client.Search(context.Background(), []string{"find products again"})
 
 	require.NoError(t, errAfterFailure)
-	require.Equal(t, searchResponse("afterFailure"), actualAfterFailure)
-	require.Equal(t, []*yokov1.IndexRequest{
-		{SchemaSdl: "type Query { product: Product }"},
-		{SchemaSdl: "type Query { product: Product }"},
-		{SchemaSdl: "type Query { product: Product }"},
+	require.Equal(t, generateResponse("find products again").GetResolution(), actualAfterFailure)
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
+		{Sdl: "type Query { product: Product }"},
+		{Sdl: "type Query { product: Product }"},
 	}, fake.indexRequestMessages())
 }
 
 func TestSetSchemaInvalidatesCachedIDAndNextSearchReindexes(t *testing.T) {
 	indexIDs := []string{"schema-v1", "schema-v2"}
 	fake := &fakeYokoServiceClient{}
-	fake.indexFunc = func(context.Context, *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
+	fake.indexFunc = func(context.Context, *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
 		id := indexIDs[len(fake.indexRequestMessages())-1]
-		return connect.NewResponse(&yokov1.IndexResponse{SchemaId: id}), nil
+		return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: id}), nil
 	}
 	client := newTestClient(fake)
 
-	_, firstErr := client.Search(context.Background(), "session-1", []string{"first"})
+	_, firstErr := client.Search(context.Background(), []string{"first"})
 	client.SetSchema("type Query { review: Review }")
-	_, secondErr := client.Search(context.Background(), "session-2", []string{"second"})
+	_, secondErr := client.Search(context.Background(), []string{"second"})
 
 	require.NoError(t, firstErr)
 	require.NoError(t, secondErr)
 	require.Equal(t, "type Query { review: Review }", client.Schema())
-	require.Equal(t, []*yokov1.IndexRequest{
-		{SchemaSdl: "type Query { product: Product }"},
-		{SchemaSdl: "type Query { review: Review }"},
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
+		{Sdl: "type Query { review: Review }"},
 	}, fake.indexRequestMessages())
-	require.Equal(t, []*yokov1.SearchRequest{
-		{
-			Prompts:   []string{"first"},
-			SchemaId:  "schema-v1",
-			SessionId: "session-1",
-		},
-		{
-			Prompts:   []string{"second"},
-			SchemaId:  "schema-v2",
-			SessionId: "session-2",
-		},
-	}, fake.searchRequestMessages())
+	require.Equal(t, []*yokov1.GenerateQueryRequest{
+		{SchemaId: "schema-v1", Prompt: "first"},
+		{SchemaId: "schema-v2", Prompt: "second"},
+	}, fake.generateRequestMessages())
 }
 
 func TestConcurrentFirstSearchIndexesOnce(t *testing.T) {
@@ -308,28 +309,28 @@ func TestConcurrentFirstSearchIndexesOnce(t *testing.T) {
 	releaseIndex := make(chan struct{})
 	var indexStartedOnce sync.Once
 	fake := &fakeYokoServiceClient{
-		indexFunc: func(context.Context, *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
+		indexFunc: func(context.Context, *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
 			indexStartedOnce.Do(func() {
 				close(indexStarted)
 			})
 			<-releaseIndex
-			return connect.NewResponse(&yokov1.IndexResponse{SchemaId: "schema-shared"}), nil
+			return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: "schema-shared"}), nil
 		},
 	}
 	client := newTestClient(fake)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	results := make([]*yokov1.SearchResponse, 2)
+	results := make([]*yokov1.Resolution, 2)
 	errs := make([]error, 2)
 	go func() {
 		defer wg.Done()
-		results[0], errs[0] = client.Search(context.Background(), "session-1", []string{"first"})
+		results[0], errs[0] = client.Search(context.Background(), []string{"first"})
 	}()
 	<-indexStarted
 	go func() {
 		defer wg.Done()
-		results[1], errs[1] = client.Search(context.Background(), "session-2", []string{"second"})
+		results[1], errs[1] = client.Search(context.Background(), []string{"second"})
 	}()
 	time.Sleep(25 * time.Millisecond)
 	close(releaseIndex)
@@ -337,12 +338,12 @@ func TestConcurrentFirstSearchIndexesOnce(t *testing.T) {
 
 	require.NoError(t, errs[0])
 	require.NoError(t, errs[1])
-	require.Equal(t, searchResponse("op"), results[0])
-	require.Equal(t, searchResponse("op"), results[1])
-	require.Equal(t, []*yokov1.IndexRequest{
-		{SchemaSdl: "type Query { product: Product }"},
+	require.Equal(t, generateResponse("first").GetResolution(), results[0])
+	require.Equal(t, generateResponse("second").GetResolution(), results[1])
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
 	}, fake.indexRequestMessages())
-	assert.Equal(t, 2, len(fake.searchRequestMessages()))
+	assert.Equal(t, 2, len(fake.generateRequestMessages()))
 }
 
 func TestConcurrentFirstSearchIndexFailureReturnsErrorToBothAndLeavesCacheEmpty(t *testing.T) {
@@ -351,7 +352,7 @@ func TestConcurrentFirstSearchIndexFailureReturnsErrorToBothAndLeavesCacheEmpty(
 	releaseIndex := make(chan struct{})
 	var indexStartedOnce sync.Once
 	fake := &fakeYokoServiceClient{
-		indexFunc: func(context.Context, *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
+		indexFunc: func(context.Context, *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
 			indexStartedOnce.Do(func() {
 				close(indexStarted)
 			})
@@ -363,16 +364,16 @@ func TestConcurrentFirstSearchIndexFailureReturnsErrorToBothAndLeavesCacheEmpty(
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	results := make([]*yokov1.SearchResponse, 2)
+	results := make([]*yokov1.Resolution, 2)
 	errs := make([]error, 2)
 	go func() {
 		defer wg.Done()
-		results[0], errs[0] = client.Search(context.Background(), "session-1", []string{"first"})
+		results[0], errs[0] = client.Search(context.Background(), []string{"first"})
 	}()
 	<-indexStarted
 	go func() {
 		defer wg.Done()
-		results[1], errs[1] = client.Search(context.Background(), "session-2", []string{"second"})
+		results[1], errs[1] = client.Search(context.Background(), []string{"second"})
 	}()
 	time.Sleep(25 * time.Millisecond)
 	close(releaseIndex)
@@ -382,47 +383,73 @@ func TestConcurrentFirstSearchIndexFailureReturnsErrorToBothAndLeavesCacheEmpty(
 	require.Nil(t, results[1])
 	require.ErrorIs(t, errs[0], indexErr)
 	require.ErrorIs(t, errs[1], indexErr)
-	require.Equal(t, []*yokov1.IndexRequest{
-		{SchemaSdl: "type Query { product: Product }"},
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
 	}, fake.indexRequestMessages())
-	require.Equal(t, []*yokov1.SearchRequest(nil), fake.searchRequestMessages())
+	require.Equal(t, []*yokov1.GenerateQueryRequest(nil), fake.generateRequestMessages())
 
-	fake.indexFunc = func(context.Context, *connect.Request[yokov1.IndexRequest]) (*connect.Response[yokov1.IndexResponse], error) {
-		return connect.NewResponse(&yokov1.IndexResponse{SchemaId: "schema-after-error"}), nil
+	fake.indexFunc = func(context.Context, *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
+		return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: "schema-after-error"}), nil
 	}
-	actual, err := client.Search(context.Background(), "session-3", []string{"third"})
+	actual, err := client.Search(context.Background(), []string{"third"})
 
 	require.NoError(t, err)
-	require.Equal(t, searchResponse("op"), actual)
-	require.Equal(t, []*yokov1.IndexRequest{
-		{SchemaSdl: "type Query { product: Product }"},
-		{SchemaSdl: "type Query { product: Product }"},
+	require.Equal(t, generateResponse("third").GetResolution(), actual)
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
+		{Sdl: "type Query { product: Product }"},
 	}, fake.indexRequestMessages())
 }
 
 func TestSearchBubblesUpArbitraryConnectErrors(t *testing.T) {
-	searchErr := connectError(connect.CodeUnavailable, "search unavailable")
+	generateErr := connectError(connect.CodeUnavailable, "generate unavailable")
 	fake := &fakeYokoServiceClient{
-		searchFunc: func(context.Context, *connect.Request[yokov1.SearchRequest]) (*connect.Response[yokov1.SearchResponse], error) {
-			return nil, searchErr
+		generateFunc: func(context.Context, *connect.Request[yokov1.GenerateQueryRequest]) (*connect.Response[yokov1.GenerateQueryResponse], error) {
+			return nil, generateErr
 		},
 	}
 	client := newTestClient(fake)
 
-	actual, err := client.Search(context.Background(), "session-1", []string{"find products"})
+	actual, err := client.Search(context.Background(), []string{"find products"})
 
 	require.Nil(t, actual)
-	require.ErrorIs(t, err, searchErr)
-	require.Equal(t, []*yokov1.IndexRequest{
-		{SchemaSdl: "type Query { product: Product }"},
+	require.ErrorIs(t, err, generateErr)
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
 	}, fake.indexRequestMessages())
-	require.Equal(t, []*yokov1.SearchRequest{
-		{
-			Prompts:   []string{"find products"},
-			SchemaId:  "schema-1",
-			SessionId: "session-1",
+	require.Equal(t, []*yokov1.GenerateQueryRequest{
+		{SchemaId: "schema-1", Prompt: "find products"},
+	}, fake.generateRequestMessages())
+}
+
+func TestEnsureIndexedSendsIndexSchemaAndCachesID(t *testing.T) {
+	fake := &fakeYokoServiceClient{
+		indexFunc: func(context.Context, *connect.Request[yokov1.IndexSchemaRequest]) (*connect.Response[yokov1.IndexSchemaResponse], error) {
+			return connect.NewResponse(&yokov1.IndexSchemaResponse{SchemaId: "schema-warm"}), nil
 		},
-	}, fake.searchRequestMessages())
+	}
+	client := newTestClient(fake)
+
+	require.NoError(t, client.EnsureIndexed(context.Background()))
+
+	// Cached schema_id is reused by the next Search — no second IndexSchema RPC.
+	_, err := client.Search(context.Background(), []string{"first"})
+	require.NoError(t, err)
+
+	require.Equal(t, []*yokov1.IndexSchemaRequest{
+		{Sdl: "type Query { product: Product }"},
+	}, fake.indexRequestMessages())
+	require.Equal(t, []*yokov1.GenerateQueryRequest{
+		{SchemaId: "schema-warm", Prompt: "first"},
+	}, fake.generateRequestMessages())
+}
+
+func TestEnsureIndexedNoOpWhenSchemaUnset(t *testing.T) {
+	fake := &fakeYokoServiceClient{}
+	client := New(nil, "http://yoko.example", nil, WithServiceClient(fake))
+
+	require.NoError(t, client.EnsureIndexed(context.Background()))
+	require.Empty(t, fake.indexRequestMessages())
 }
 
 func TestSchemaGetterReturnsCurrentSchema(t *testing.T) {
