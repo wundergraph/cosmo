@@ -1277,7 +1277,7 @@ export function invalidSubscriptionFilterLocationError(path: string): Error {
   );
 }
 
-export function invalidSubscriptionFilterDirectiveError(fieldPath: string, errorMessages: string[]): Error {
+export function invalidSubscriptionFilterDirectiveError(fieldPath: string, errorMessages: Error[]): Error {
   return new Error(
     `The "@${SUBSCRIPTION_FILTER}" directive defined on path "${fieldPath}" is invalid for the` +
       ` following reason` +
@@ -1287,18 +1287,18 @@ export function invalidSubscriptionFilterDirectiveError(fieldPath: string, error
   );
 }
 
-export function subscriptionFilterNamedTypeErrorMessage(namedTypeName: string): string {
-  return ` Unknown type "${namedTypeName}".`;
+export function subscriptionFilterNamedTypeErrorMessage(namedTypeName: string): Error {
+  return new Error(`Unknown type "${namedTypeName}".`);
 }
 
 export function subscriptionFilterUnionMemberInvalidErrorMessage(
   unionTypeName: string,
   memberTypeName: string,
   detail: string,
-): string {
-  return (
+): Error {
+  return new Error(
     `The "@openfed__subscriptionFilter" condition is invalid for union member "${memberTypeName}" of union "${unionTypeName}":\n` +
-    detail
+      detail,
   );
 }
 
@@ -1306,24 +1306,26 @@ export function subscriptionFilterInterfaceImplementationInvalidErrorMessage(
   interfaceTypeName: string,
   implementerTypeName: string,
   detail: string,
-): string {
-  return (
+): Error {
+  return new Error(
     `The "@openfed__subscriptionFilter" condition is invalid for concrete type "${implementerTypeName}" implementing interface "${interfaceTypeName}":\n` +
-    detail
+      detail,
   );
 }
 
 export function subscriptionFilterNoAccessibleConcreteTypesErrorMessage(
   abstractTypeName: string,
   abstractKind: 'Union' | 'Interface',
-): string {
-  return `The ${abstractKind} "${abstractTypeName}" has no accessible concrete types against which the "@openfed__subscriptionFilter" condition can be validated.`;
+): Error {
+  return new Error(
+    `The ${abstractKind} "${abstractTypeName}" has no accessible concrete types against which the "@openfed__subscriptionFilter" condition can be validated.`,
+  );
 }
 
-export function subscriptionFilterUnsupportedNamedTypeKindErrorMessage(namedTypeName: string, kind: string): string {
-  return (
+export function subscriptionFilterUnsupportedNamedTypeKindErrorMessage(namedTypeName: string, kind: string): Error {
+  return new Error(
     `The named type "${namedTypeName}" of kind "${kind}" is not supported by the "@${SUBSCRIPTION_FILTER}" directive.` +
-    `Only object, union, and interface return types are supported.`
+      `Only object, union, and interface return types are supported.`,
   );
 }
 
@@ -1376,26 +1378,26 @@ const subscriptionFilterConditionArrayString =
 export function subscriptionFilterArrayConditionInvalidItemTypeErrorMessage(
   inputPath: string,
   invalidIndices: number[],
-): string {
+): Error {
   const isPlural = invalidIndices.length > 1;
-  return (
+  return new Error(
     subscriptionFilterConditionArrayString +
-    ` However, the following ` +
-    (isPlural ? `indices` : 'index') +
-    ` defined on input path "${inputPath}" ` +
-    (isPlural ? `are` : `is`) +
-    ` not type "object": ` +
-    invalidIndices.join(`, `)
+      ` However, the following ` +
+      (isPlural ? `indices` : 'index') +
+      ` defined on input path "${inputPath}" ` +
+      (isPlural ? `are` : `is`) +
+      ` not type "object": ` +
+      invalidIndices.join(`, `),
   );
 }
 
 export function subscriptionFilterArrayConditionInvalidLengthErrorMessage(
   inputPath: string,
   actualLength: number,
-): string {
-  return (
+): Error {
+  return new Error(
     subscriptionFilterConditionArrayString +
-    ` However, the list defined on input path "${inputPath}" has a length of ${actualLength}.`
+      ` However, the list defined on input path "${inputPath}" has a length of ${actualLength}.`,
   );
 }
 

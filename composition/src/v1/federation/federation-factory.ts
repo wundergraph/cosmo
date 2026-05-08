@@ -2823,7 +2823,7 @@ export class FederationFactory {
           };
         }
         let isValid = true;
-        const aggregatedErrors: string[] = [];
+        const aggregatedErrors: Error[] = [];
         const invalidIndices: number[] = [];
         for (let i = 0; i < objectFieldNode.value.values.length; i++) {
           const arrayIndexPath = inputFieldPath + `[${i}]`;
@@ -3014,20 +3014,14 @@ export class FederationFactory {
         continue;
       }
 
-      const { aggregatedErrors, condition } = this.mergeSubscriptionFilterTargetResults(
+      const result = this.mergeSubscriptionFilterTargetResults(
         data.directive,
         namedTypeData,
         targets,
         data.directiveSubgraphName,
       );
-
-      if (aggregatedErrors.length > 0) {
-        this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, aggregatedErrors));
-        continue;
-      }
-
-      if (condition === null) {
-        // Defensive — unreachable when targets is non-empty and no errors were collected.
+      if (!result.success) {
+        this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, result.errors));
         continue;
       }
 
@@ -3035,7 +3029,7 @@ export class FederationFactory {
         argumentNames: [],
         fieldName: data.fieldData.name,
         typeName: data.fieldData.renamedParentTypeName,
-      })).subscriptionFilterCondition = condition;
+      })).subscriptionFilterCondition = result.condition;
     }
   }
 
@@ -3044,8 +3038,8 @@ export class FederationFactory {
     abstractTypeData: ParentDefinitionData,
     targets: ObjectDefinitionData[],
     directiveSubgraphName: string,
-  ): { aggregatedErrors: string[]; condition: SubscriptionCondition | null } {
-    const aggregatedErrors: string[] = [];
+  ): SubscriptionFilterTargetResult {
+    const aggregatedErrors: Error[] = [];
     let firstCondition: SubscriptionCondition | null = null;
     for (const target of targets) {
       const result = this.validateSubscriptionFilterForTarget(directiveNode, target, directiveSubgraphName);
@@ -3073,7 +3067,10 @@ export class FederationFactory {
         firstCondition = result.condition;
       }
     }
-    return { aggregatedErrors, condition: firstCondition };
+    if (firstCondition === null || aggregatedErrors.length > 0) {
+      return { errors: aggregatedErrors, success: false };
+    }
+    return { condition: firstCondition, success: true };
   }
 
   buildFederationResult(): FederationResult {
