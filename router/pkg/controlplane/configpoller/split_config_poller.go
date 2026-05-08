@@ -133,6 +133,9 @@ func (p *splitConfigPoller) GetRouterConfig(ctx context.Context) (*routerconfig.
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch mapper: %w", err)
 	}
+	if len(activeGraphs) == 0 {
+		return nil, fmt.Errorf("empty graph configs")
+	}
 
 	config, err := p.fetchAndAssembleAll(ctx, activeGraphs)
 	if err != nil {
