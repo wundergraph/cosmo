@@ -200,11 +200,20 @@ export function deleteFederatedSubgraph(
           req.disableResolvabilityValidation,
         );
 
+        if (subgraph.isFeatureSubgraph) {
+          // To avoid having to re-fetch the feature flags for v2, we are just going to update the feature flag
+          // reference to remove the deleted feature subgraph, that way, we have an up-to-date view of the feature flag
+          for (const featureFlag of affectedFeatureFlags) {
+            featureFlag.featureSubgraphs = featureFlag.featureSubgraphs.filter((fs) => fs.id !== subgraph.id);
+          }
+        }
+
         const { deploymentErrors, compositionErrors, compositionWarnings } =
           await compositionService.recomposeAndDeployAffected({
             actorId: authContext.userId,
             affectedFederatedGraphs,
             affectedFeatureFlags,
+            isFeatureSubgraph: subgraph.isFeatureSubgraph,
           });
 
         // Re-fetch the federated graphs to get the updated composedSchemaVersionId

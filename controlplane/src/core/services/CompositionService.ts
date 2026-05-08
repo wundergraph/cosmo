@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { JsonObject, PlainMessage } from '@bufbuild/protobuf';
 import { FeatureFlagRouterExecutionConfig, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
@@ -162,11 +162,11 @@ export class CompositionService {
     };
 
     const featureFlagRepo = new FeatureFlagRepository(this.logger, this.db, this.organizationId);
-    const contractRepo = new ContractRepository(this.logger, this.db, this.organizationId);
     const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
       featureFlagId: featureFlag.id,
       namespaceId: featureFlag.namespaceId,
       excludeDisabled: enabled,
+      includeContracts: true,
     });
 
     // If the feature flag belonged to one or more federated graphs, we need to delete the router config for the
@@ -226,13 +226,6 @@ export class CompositionService {
         [],
       );
 
-      const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
-      const tagOptionsByContractName = contracts.map((contract) => ({
-        contractName: contract.downstreamFederatedGraph.target.name,
-        excludeTags: contract.excludeTags,
-        includeTags: contract.includeTags,
-      }));
-
       const { results } = await composeGraphsInWorker({
         federatedGraph: graph,
         subgraphsToCompose: subgraphsToCompose.map((s) => ({
@@ -241,7 +234,21 @@ export class CompositionService {
           featureFlagName: s.featureFlagName,
           featureFlagId: s.featureFlagId,
         })),
-        tagOptionsByContractName,
+        /**
+         * Do not recompose contracts of a base graph; if the feature flag also belongs to a contract, the
+         * contract will be itself added to the `federatedGraphs` array.
+         *
+         * Consequently, if `graph` is a contract, pass the tag data through to the feature flag composition.
+         */
+        tagOptionsByContractName: graph.contract
+          ? [
+              {
+                contractName: graph.name,
+                excludeTags: graph.contract.excludeTags,
+                includeTags: graph.contract.includeTags,
+              },
+            ]
+          : [],
         compositionOptions,
       });
 
@@ -262,15 +269,40 @@ export class CompositionService {
   public async deleteFeatureFlag({
     actorId,
     featureFlag,
-    federatedGraphs,
+    authorize,
   }: {
     actorId: string;
     featureFlag: FeatureFlagDTO;
-    federatedGraphs: FederatedGraphDTO[];
+    authorize: (graph: FederatedGraphDTO) => Promise<void>;
   }): Promise<ComposeAndDeployResult> {
     const orgFeatures = await this.#getOrganizationFeatures();
+    const featureFlagRepo = new FeatureFlagRepository(this.logger, this.db, this.organizationId);
+
+    // Collect the federated graph DTOs that have the feature flag enabled because they will be re-composed
+    const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
+      featureFlagId: featureFlag.id,
+      namespaceId: featureFlag.namespaceId,
+      // if deleting when already disabled, there are no compositions to be done.
+      excludeDisabled: true,
+      includeContracts: orgFeatures.splitConfigLoading,
+    });
+
+    // Check that the user is authorized to delete the feature flag.
+    // The user must have authorization for each related federated graph
+    for (const federatedGraph of federatedGraphs) {
+      // Check if the user is authorized to perform the action
+      await authorize(federatedGraph);
+    }
+
+    /**
+     * We need to have the actual deletion here because the legacy implementation needs the feature flag to be
+     * deleted before composition; however, v2 needs it to happen after we know the graphs the feature flag is applied
+     * to because, instead of recomposing everything, we just remove the feature flag composition.
+     */
+    await featureFlagRepo.delete(featureFlag.id);
+
     if (!orgFeatures.splitConfigLoading) {
-      return this.#legacyComposeAndDeploy({
+      return await this.#legacyComposeAndDeploy({
         actorId,
         federatedGraphs,
         compositionOptions: {
@@ -291,10 +323,12 @@ export class CompositionService {
     actorId,
     affectedFederatedGraphs,
     affectedFeatureFlags,
+    isFeatureSubgraph,
   }: {
     actorId: string;
     affectedFederatedGraphs: FederatedGraphDTO[];
     affectedFeatureFlags: FeatureFlagDTO[];
+    isFeatureSubgraph: boolean;
   }): Promise<ComposeAndDeployResult> {
     const orgFeatures = await this.#getOrganizationFeatures();
     if (!orgFeatures.splitConfigLoading) {
@@ -314,16 +348,19 @@ export class CompositionService {
       compositionWarnings: [],
     };
 
-    // Compose all affected federated graphs
-    for (const federatedGraph of affectedFederatedGraphs) {
-      const { deploymentErrors, compositionErrors, compositionWarnings } = await this.composeAndDeployFederatedGraph({
-        actorId,
-        federatedGraph,
-      });
+    // Compose all affected federated graphs only when the subgraph we are updating is not a feature subgraph
+    // as these should not affect federated graphs
+    if (!isFeatureSubgraph) {
+      for (const federatedGraph of affectedFederatedGraphs) {
+        const { deploymentErrors, compositionErrors, compositionWarnings } = await this.composeAndDeployFederatedGraph({
+          actorId,
+          federatedGraph,
+        });
 
-      result.deploymentErrors.push(...deploymentErrors);
-      result.compositionErrors.push(...compositionErrors);
-      result.compositionWarnings.push(...compositionWarnings);
+        result.deploymentErrors.push(...deploymentErrors);
+        result.compositionErrors.push(...compositionErrors);
+        result.compositionWarnings.push(...compositionWarnings);
+      }
     }
 
     // Compose all affected feature flags
@@ -525,6 +562,21 @@ export class CompositionService {
       return [];
     }
 
+    // First, we need to delete all the hashes from the database, so we can correctly update the mapper files
+    await this.db
+      .delete(schema.routerConfigHash)
+      .where(
+        and(
+          eq(schema.routerConfigHash.featureFlagId, featureFlag.id),
+          inArray(
+            schema.routerConfigHash.federatedGraphId,
+            federatedGraphs.map((graph) => graph.id),
+          ),
+        ),
+      )
+      .execute();
+
+    // Then, we can proceed with deleting the router config for the feature flag and update the mapper files
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     await Promise.all(
       federatedGraphs.map(async (graph) => {

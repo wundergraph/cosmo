@@ -488,6 +488,7 @@ export class SubgraphRepository {
         actorId: data.updatedBy,
         affectedFederatedGraphs: updatedFederatedGraphs.filter((graph) => !graph.contract),
         affectedFeatureFlags: updatedFeatureFlags,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
       });
 
       deploymentErrors.push(...result.deploymentErrors);
@@ -564,6 +565,7 @@ export class SubgraphRepository {
         actorId: data.updatedBy,
         affectedFederatedGraphs: updatedFederatedGraphs,
         affectedFeatureFlags: [], // Feature subgraphs cannot be moved
+        isFeatureSubgraph: false,
       });
 
     // Re-fetch the federated graphs to get the updated composedSchemaVersionId

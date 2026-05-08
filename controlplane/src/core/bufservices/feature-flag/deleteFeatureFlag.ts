@@ -66,32 +66,9 @@ export function deleteFeatureFlag(
       throw new UnauthorizedError();
     }
 
-    // Collect the federated graph DTOs that have the feature flag enabled because they will be re-composed
-    const federatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
-      featureFlagId: featureFlag.id,
-      namespaceId: namespace.id,
-      // if deleting when already disabled, there are no compositions to be done.
-      excludeDisabled: true,
-    });
-
-    /* Check that the user is authorized to delete the feature flag
-     * The user must have authorization for each related federated graph
-     * */
-    for (const federatedGraph of federatedGraphs) {
-      // check if the user is authorized to perform the action
-      await opts.authorizer.authorize({
-        db: opts.db,
-        graph: {
-          targetId: federatedGraph.targetId,
-          targetType: 'federatedGraph',
-        },
-        headers: ctx.requestHeader,
-        authContext,
-      });
-    }
-
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
       const auditLogRepo = new AuditLogRepository(tx);
+      const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
@@ -103,7 +80,19 @@ export function deleteFeatureFlag(
         req.disableResolvabilityValidation,
       );
 
-      await featureFlagRepo.delete(featureFlag.id);
+      const result = await compositionService.deleteFeatureFlag({
+        actorId: authContext.userId,
+        featureFlag,
+        authorize(graph) {
+          return opts.authorizer.authorize({
+            db: tx,
+            graph: { targetId: graph.targetId, targetType: 'federatedGraph' },
+            headers: ctx.requestHeader,
+            authContext,
+          });
+        },
+      });
+
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
         organizationSlug: authContext.organizationSlug,
@@ -119,11 +108,7 @@ export function deleteFeatureFlag(
         targetNamespaceDisplayName: namespace.name,
       });
 
-      return await compositionService.deleteFeatureFlag({
-        actorId: authContext.userId,
-        featureFlag,
-        federatedGraphs,
-      });
+      return result;
     });
 
     return {

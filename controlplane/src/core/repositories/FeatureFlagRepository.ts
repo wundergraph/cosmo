@@ -734,16 +734,16 @@ export class FeatureFlagRepository {
     includeContracts?: boolean;
   }): Promise<FederatedGraphDTO[]> {
     const federatedGraphs: FederatedGraphDTO[] = [];
-    const featureSubraphsOfFeatureFlag = await this.getFeatureSubgraphsByFeatureFlagId({
+    const featureSubgraphsOfFeatureFlag = await this.getFeatureSubgraphsByFeatureFlagId({
       featureFlagId,
       namespaceId,
     });
-    if (featureSubraphsOfFeatureFlag.length === 0) {
+    if (featureSubgraphsOfFeatureFlag.length === 0) {
       return [];
     }
-    const baseSubgraphIds = featureSubraphsOfFeatureFlag.map((f) => f.baseSubgraphId);
+    const baseSubgraphIds = featureSubgraphsOfFeatureFlag.map((f) => f.baseSubgraphId);
 
-    // fetches the federated graphs which contains all the base subgraphs of the feature subgraphs
+    // fetches the federated graphs which contain all the base subgraphs of the feature subgraphs
     const federatedGraphIds = await this.db
       .select({
         federatedGraphId: subgraphsToFederatedGraph.federatedGraphId,
