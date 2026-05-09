@@ -49,6 +49,20 @@ const getConfig = () => {
       password: process.env.S3_SECRET_ACCESS_KEY,
       forcePathStyle: process.env.S3_FORCE_PATH_STYLE === undefined ? true : process.env.S3_FORCE_PATH_STYLE === 'true',
     },
+
+    s3StorageFailover: process.env.S3_FAILOVER_STORAGE_URL
+      ? {
+          url: process.env.S3_FAILOVER_STORAGE_URL,
+          endpoint: process.env.S3_FAILOVER_ENDPOINT,
+          region: process.env.S3_FAILOVER_REGION || 'auto',
+          username: process.env.S3_FAILOVER_ACCESS_KEY_ID,
+          password: process.env.S3_FAILOVER_SECRET_ACCESS_KEY,
+          forcePathStyle:
+            process.env.S3_FAILOVER_FORCE_PATH_STYLE === undefined
+              ? true
+              : process.env.S3_FAILOVER_FORCE_PATH_STYLE === 'true',
+        }
+      : undefined,
   };
 };
 

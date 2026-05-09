@@ -66,7 +66,7 @@ func (f *HttpFlushWriter) Complete() {
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
 
-	f.Close(resolve.SubscriptionCloseKindNormal)
+	f.cancel()
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
@@ -104,11 +104,12 @@ func (f *HttpFlushWriter) Heartbeat() error {
 	return nil
 }
 
-func (f *HttpFlushWriter) Close(_ resolve.SubscriptionCloseKind) {
+func (f *HttpFlushWriter) Error(data []byte) {
 	if f.ctx.Err() != nil {
 		return
 	}
-
+	_, _ = f.buf.Write(data)
+	_ = f.Flush()
 	f.cancel()
 }
 
@@ -159,7 +160,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	f.flusher.Flush()
 
 	if f.subscribeOnce {
-		defer f.Close(resolve.SubscriptionCloseKindNormal)
+		defer f.cancel()
 	}
 
 	return nil

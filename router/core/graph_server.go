@@ -341,7 +341,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			LivenessCheckPath:   s.livenessCheckPath,
 			CompositePropagator: s.compositePropagator,
 			TracerProvider:      s.tracerProvider,
-			SpanNameFormatter:   SpanNameFormatter,
+			SpanNameFormatter: func(_ string, r *http.Request) string {
+				return s.spanNameFormatter(r)
+			},
 		})
 		httpRouter.Use(handler)
 	}
@@ -1305,10 +1307,12 @@ func (s *graphServer) buildGraphMux(
 		logger:           s.logger,
 		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
-			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
-			PingTimeout:  s.engineExecutionConfiguration.WebSocketClientPingTimeout,
-			ReadTimeout:  s.engineExecutionConfiguration.WebSocketClientReadTimeout,
-			FrameTimeout: s.engineExecutionConfiguration.WebSocketClientFrameTimeout,
+			PingInterval:              s.engineExecutionConfiguration.WebSocketClientPingInterval,
+			PingTimeout:               s.engineExecutionConfiguration.WebSocketClientPingTimeout,
+			WriteTimeout:              s.engineExecutionConfiguration.WebSocketClientWriteTimeout,
+			AckTimeout:                s.engineExecutionConfiguration.WebSocketClientAckTimeout,
+			ReadLimit:                 int64(s.engineExecutionConfiguration.WebSocketClientReadLimit),
+			DefaultErrorExtensionCode: s.subgraphErrorPropagation.DefaultExtensionCode,
 		},
 		transportOptions: &TransportOptions{
 			SubgraphTransportOptions:      s.subgraphTransportOptions,
@@ -1319,6 +1323,7 @@ func (s *graphServer) buildGraphMux(
 			RetryOptions:                  *processedRetryOptions,
 			TracerProvider:                s.tracerProvider,
 			TracePropagators:              s.compositePropagator,
+			SpanNameFormatter:             s.spanNameFormatter,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 			EnableTraceClient:             enableTraceClient,
@@ -1393,7 +1398,7 @@ func (s *graphServer) buildGraphMux(
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
-		if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
+		if mErr := s.mcpServer.Reload(executor.ClientSchema, opts.EngineConfig.FieldConfigurations); mErr != nil {
 			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
 		}
 	}
@@ -1667,6 +1672,7 @@ func (s *graphServer) buildGraphMux(
 		HasPreOriginHandlers:                   len(s.preOriginHandlers) != 0,
 		HeaderPropagation:                      s.headerPropagation,
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
+		SpanNameFormatter:                      s.spanNameFormatter,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -1680,11 +1686,11 @@ func (s *graphServer) buildGraphMux(
 			AccessController:          s.accessController,
 			Logger:                    s.logger,
 			Stats:                     s.engineStats,
-			ReadTimeout:               s.engineExecutionConfiguration.WebSocketClientReadTimeout,
-			WriteTimeout:              s.engineExecutionConfiguration.WebSocketClientWriteTimeout,
+			ReadTimeout:               s.engineExecutionConfiguration.WebSocketServerReadTimeout,
+			WriteTimeout:              s.engineExecutionConfiguration.WebSocketServerWriteTimeout,
 			EnableNetPoll:             s.engineExecutionConfiguration.EnableNetPoll,
-			NetPollTimeout:            s.engineExecutionConfiguration.WebSocketClientPollTimeout,
-			NetPollConnBufferSize:     s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
+			NetPollTimeout:            s.engineExecutionConfiguration.WebSocketServerPollTimeout,
+			NetPollConnBufferSize:     s.engineExecutionConfiguration.WebSocketServerConnBufferSize,
 			WebSocketConfiguration:    s.webSocketConfiguration,
 			ClientHeader:              s.clientHeader,
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
@@ -1773,7 +1779,6 @@ func (s *graphServer) setupConnector(
 				Logger:   s.logger,
 				Endpoint: sg.RoutingUrl,
 			})
-
 			if err != nil {
 				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)
 			}
@@ -1803,6 +1808,7 @@ func (s *graphServer) setupConnector(
 		getTraceAttributes := CreateGRPCTraceGetter(
 			telemetryAttributeExpressions,
 			tracingAttributeExpressions,
+			s.spanNameFormatter,
 		)
 
 		if imgRef := pluginConfig.GetImageReference(); imgRef != nil {
@@ -1929,9 +1935,9 @@ func (s *graphServer) wait(ctx context.Context) error {
 // After all requests are done, it will shut down the metric store and runtime metrics.
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
 func (s *graphServer) Shutdown(ctx context.Context) error {
-	// Cancel the context after the graceful shutdown is done
-	// to clean up resources like websocket connections, pools, etc.
-	defer s.cancelFunc()
+	// Cancel context immediately so long-lived websocket handlers start graceful close with GoingAway.
+	// Non-hijacked HTTP requests are still governed by in-flight tracking and the shutdown context below.
+	s.cancelFunc()
 
 	s.logger.Debug("Shutdown of graph server initiated. Waiting for in-flight requests to finish.",
 		zap.String("config_version", s.baseRouterConfigVersion),

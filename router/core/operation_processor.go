@@ -24,6 +24,7 @@ import (
 	"github.com/tidwall/sjson"
 
 	fastjson "github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -1469,7 +1470,8 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 				if value.Kind != ast.ValueKindVariable {
 					continue
 				}
-				variableName := o.kit.doc.VariableValueNameString(value.Ref)
+				// explicitly convert to string to not store unsafe reference in a map
+				variableName := string(o.kit.doc.VariableValueNameBytes(value.Ref))
 				variableNames[variableName] = struct{}{}
 			}
 		}

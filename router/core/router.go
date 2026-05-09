@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"slices"
 	"sync"
 	"time"
 
@@ -640,6 +641,8 @@ func (r *Router) listenAndServe() error {
 }
 
 func (r *Router) initModules(ctx context.Context) error {
+	var spanNameFormatterChain []func(SpanNameFormatterFunc) SpanNameFormatterFunc
+
 	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
 
 	for _, module := range modules {
@@ -724,6 +727,10 @@ func (r *Router) initModules(ctx context.Context) error {
 			}
 		}
 
+		if provider, ok := moduleInstance.(SpanNameFormatterProvider); ok {
+			spanNameFormatterChain = append(spanNameFormatterChain, provider.WrapSpanNameFormatter)
+		}
+
 		if handler, ok := moduleInstance.(SubscriptionOnStartHandler); ok {
 			r.subscriptionHooks.onStart.handlers = append(r.subscriptionHooks.onStart.handlers, handler.SubscriptionOnStart)
 		}
@@ -743,6 +750,16 @@ func (r *Router) initModules(ctx context.Context) error {
 			zap.String("duration", time.Since(now).String()),
 		)
 	}
+
+	// Fold module-provided span name formatter wrappers over the default
+	// implementation. Wrappers were collected in module Priority order
+	// (sortModules); folding right-to-left ensures the lowest-priority
+	// wrapper sits outermost and the default sits at the bottom.
+	formatter := SpanNameFormatterFunc(DefaultSpanNameFormatter)
+	for _, wrap := range slices.Backward(spanNameFormatterChain) {
+		formatter = wrap(formatter)
+	}
+	r.spanNameFormatter = formatter
 
 	return nil
 }
@@ -944,68 +961,8 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
-	if r.mcp.Enabled {
-		var operationsDir string
-
-		// If storage provider ID is set, resolve it to a directory path
-		if r.mcp.Storage.ProviderID != "" {
-			r.logger.Debug("Resolving storage provider for MCP operations",
-				zap.String("provider_id", r.mcp.Storage.ProviderID))
-
-			provider, ok := r.providerRegistry.FileSystem(r.mcp.Storage.ProviderID)
-			if !ok {
-				return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
-			}
-			r.logger.Debug("Found file_system storage provider for MCP",
-				zap.String("id", provider.ID),
-				zap.String("path", provider.Path))
-			operationsDir = provider.Path
-		}
-
-		logFields := []zap.Field{
-			zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
-		}
-
-		// Initialize the MCP server with the resolved operations directory
-		mcpOpts := []func(*mcpserver.Options){
-			mcpserver.WithGraphName(r.mcp.GraphName),
-			mcpserver.WithOperationsDir(operationsDir),
-			mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
-			mcpserver.WithLogger(r.logger.With(logFields...)),
-			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
-			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
-			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
-			mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
-			mcpserver.WithStateless(r.mcp.Session.Stateless),
-		}
-
-		if r.corsOptions != nil {
-			mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
-		}
-
-		mcpGraphQLEndpoint := r.graphqlEndpointURL
-		if r.mcp.RouterURL != "" {
-			mcpGraphQLEndpoint = r.mcp.RouterURL
-		}
-
-		mcpss, err := mcpserver.NewGraphQLSchemaServer(
-			mcpGraphQLEndpoint,
-			mcpOpts...,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to create mcp server: %w", err)
-		}
-
-		err = mcpss.Start()
-		if err != nil {
-			// Cleanup the server if Start() fails to prevent resource leaks
-			if stopErr := mcpss.Stop(ctx); stopErr != nil {
-				r.logger.Warn("Failed to stop MCP server during error cleanup", zap.Error(stopErr))
-			}
-			return fmt.Errorf("failed to start MCP server: %w", err)
-		}
-
-		r.mcpServer = mcpss
+	if err := r.startMCPServer(ctx); err != nil {
+		return err
 	}
 
 	if r.connectRPC.Enabled {
@@ -1092,7 +1049,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.playgroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Html:             graphiql.PlaygroundHTML(),
 			GraphqlURL:       r.graphqlWebURL,
-			PlaygroundPath:   r.playgroundPath,
+			PlaygroundPath:   r.playgroundConfig.Path,
 			ConcurrencyLimit: int64(r.playgroundConfig.ConcurrencyLimit),
 		})
 	}
@@ -1124,6 +1081,89 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+// startMCPServer initializes and starts the MCP server if enabled.
+func (r *Router) startMCPServer(ctx context.Context) error {
+	if !r.mcp.Enabled {
+		return nil
+	}
+
+	var operationsDir string
+
+	// If storage provider ID is set, resolve it to a directory path
+	if r.mcp.Storage.ProviderID != "" {
+		r.logger.Debug("Resolving storage provider for MCP operations",
+			zap.String("provider_id", r.mcp.Storage.ProviderID))
+
+		provider, ok := r.providerRegistry.FileSystem(r.mcp.Storage.ProviderID)
+		if !ok {
+			return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
+		}
+		r.logger.Debug("Found file_system storage provider for MCP",
+			zap.String("id", provider.ID),
+			zap.String("path", provider.Path))
+		operationsDir = provider.Path
+	}
+
+	logFields := []zap.Field{
+		zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
+	}
+
+	// Initialize the MCP server with the resolved operations directory
+	mcpOpts := []func(*mcpserver.Options){
+		mcpserver.WithGraphName(r.mcp.GraphName),
+		mcpserver.WithOperationsDir(operationsDir),
+		mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
+		mcpserver.WithLogger(r.logger.With(logFields...)),
+		mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
+		mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
+		mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
+		mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
+		mcpserver.WithStateless(r.mcp.Session.Stateless),
+	}
+
+	if r.corsOptions != nil {
+		mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
+	}
+
+	// Add OAuth configuration if enabled
+	if r.mcp.OAuth.Enabled {
+		mcpOpts = append(mcpOpts, mcpserver.WithOAuth(&r.mcp.OAuth))
+
+		if r.mcp.Server.BaseURL != "" {
+			mcpOpts = append(mcpOpts, mcpserver.WithServerBaseURL(r.mcp.Server.BaseURL))
+		}
+	}
+
+	if r.mcp.ResourceDocumentation != "" {
+		mcpOpts = append(mcpOpts, mcpserver.WithResourceDocumentation(r.mcp.ResourceDocumentation))
+	}
+
+	mcpGraphQLEndpoint := r.graphqlEndpointURL
+	if r.mcp.RouterURL != "" {
+		mcpGraphQLEndpoint = r.mcp.RouterURL
+	}
+
+	mcpss, err := mcpserver.NewGraphQLSchemaServer(
+		ctx,
+		mcpGraphQLEndpoint,
+		mcpOpts...,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create mcp server: %w", err)
+	}
+
+	if err := mcpss.Start(); err != nil {
+		// Cleanup the server if Start() fails to prevent resource leaks
+		if stopErr := mcpss.Stop(ctx); stopErr != nil {
+			r.logger.Warn("Failed to stop MCP server during error cleanup", zap.Error(stopErr))
+		}
+		return fmt.Errorf("failed to start MCP server: %w", err)
+	}
+
+	r.mcpServer = mcpss
 	return nil
 }
 

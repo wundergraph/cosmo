@@ -18,6 +18,11 @@ descripton: "Kafka event provider support for Cosmo Streams"
 | router       | 0.88.0          |
 | wgc          | 0.55.0          |
 
+<Note>
+  Kafka topic arguments support the same [argument template syntax](/router/cosmo-streams#the-“subjects”-argument) as the other event providers, for example `employeeUpdated.{{ args.employeeID }}`.
+  When you use topic templates with Kafka, you must create the resulting name as a Kafka topic in your broker ahead of time. The Router does not create Kafka topics automatically.
+</Note>
+
 ## Full schema example
 
 Below is a comprehensive example of how to use Kafka with Cosmo Streams. This guide covers publish, subscribe, and the filter directive. All examples can be modified to suit your specific needs. The schema directives and `edfs__*` types belong to the Cosmo Streams schema contract and must not be modified.

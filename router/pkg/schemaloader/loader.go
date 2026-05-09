@@ -8,11 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
-	"go.uber.org/zap"
 )
 
 // Operation represents a GraphQL operation with its AST document and schema information
@@ -23,7 +24,8 @@ type Operation struct {
 	OperationString string
 	Description     string
 	JSONSchema      json.RawMessage
-	OperationType   string // "query", "mutation", or "subscription"
+	OperationType   string     // "query", "mutation", or "subscription"
+	RequiredScopes  [][]string // OR-of-AND scope groups from @requiresScopes (nil = no scope check)
 }
 
 // OperationLoader loads GraphQL operations from files in a directory

@@ -75,6 +75,7 @@ type PreHandlerOptions struct {
 	EnableInboundRequestDeduplication      bool
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
+	SpanNameFormatter                      SpanNameFormatterFunc
 }
 
 type PreHandler struct {
@@ -114,6 +115,7 @@ type PreHandler struct {
 	hasPreOriginHandlers                   bool
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
+	spanNameFormatter                      SpanNameFormatterFunc
 }
 
 type httpOperation struct {
@@ -137,6 +139,10 @@ const (
 )
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
+	spanNameFormatter := opts.SpanNameFormatter
+	if spanNameFormatter == nil {
+		spanNameFormatter = DefaultSpanNameFormatter
+	}
 	return &PreHandler{
 		log:                         opts.Logger,
 		executor:                    opts.Executor,
@@ -177,6 +183,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		enableInboundRequestDeduplication:      opts.EnableInboundRequestDeduplication,
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
+		spanNameFormatter:                      spanNameFormatter,
 	}
 }
 
@@ -419,14 +426,19 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		})
 		if err != nil {
 			requestContext.SetError(err)
-			// Mark the root span of the router as failed, so we can easily identify failed requests
-			rtrace.AttachErrToSpan(routerSpan, err)
-
-			if h.operationProcessor.costControl != nil && h.operationProcessor.costControl.ExposeHeaders &&
-				// Report the estimated cost in case of errors.
-				// The actual cost is only available for successful requests.
-				requestContext.operation != nil && requestContext.operation.costEstimatedSet {
-				ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
+			if errors.Is(err, context.Canceled) {
+				// Client disconnections are not server-side errors and should not mark the root span as ERROR
+				// or write error responses (which would produce a 500 status code visible to otelhttp).
+				routerSpan.RecordError(err)
+			} else {
+				// Mark the root span of the router as failed, so we can easily identify failed requests.
+				rtrace.AttachErrToSpan(routerSpan, err)
+				if h.operationProcessor.costControl != nil && h.operationProcessor.costControl.ExposeHeaders &&
+					// Report the estimated cost in case of errors.
+					// The actual cost is only available for successful requests.
+					requestContext.operation != nil && requestContext.operation.costEstimatedSet {
+					ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
+				}
 			}
 
 			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
@@ -624,7 +636,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
 		if err != nil {
 			span.RecordError(err)
-			rtrace.SetSanitizedSpanStatus(span, codes.Error, err.Error())
+			if !errors.Is(err, context.Canceled) {
+				rtrace.SetSanitizedSpanStatus(span, codes.Error, err.Error())
+			}
 
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
@@ -758,13 +772,12 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 			statusCode: http.StatusBadRequest,
 		}
 		if !h.omitBatchExtensions {
-			unsupportedErr.extensionCode = ExtensionCodeBatchSubscriptionsUnsupported
+			unsupportedErr.extensionCode = ExtCodeErrBatchSubscriptionsUnsupported
 		}
 		return unsupportedErr
 	}
 
-	// Set the router span name after we have the operation name
-	httpOperation.routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
+	httpOperation.routerSpan.SetName(h.spanNameFormatter(req))
 
 	if req.Method == http.MethodGet && operationKit.parsedOperation.Type == "mutation" {
 		return &httpGraphqlError{

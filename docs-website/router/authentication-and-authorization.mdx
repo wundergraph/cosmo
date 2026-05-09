@@ -42,6 +42,7 @@ In the current router version, the configuration and behavior of authentication 
           secret: <your_secret>
           header_key_id: some-key-id
       header_name: Authorization # Optional, Authorization is the default value
+      scope_claim: scope # Optional, scope is the default value
       header_value_prefix: Bearer # Optional, Bearer is the default value
       header_sources:
         - type: header
@@ -53,6 +54,8 @@ In the current router version, the configuration and behavior of authentication 
 </CodeGroup>
 
 The router configuration facilitates the setup of multiple JWKS (JSON Web Key Set) endpoints, each customizable with distinct retrieval settings. It allows specification of supported JWT (JSON Web Token) algorithms per endpoint. It also allows the use of secrets for symmetric algorithms, as it would be a security risk to expose them over a JWKS endpoint. Centralizing header rules application across all keys from every JWKS endpoint simplifies management. This setup grants centralized control while offering flexibility in the retrieval and processing of keys.
+
+Use `scope_claim` when your provider stores authorization scopes in a claim other than `scope`, such as `scp` or `roles`.
 
 For more information on the attributes, visit the auth configuration parameter section page [here](/router/configuration#authentication).
 
@@ -176,4 +179,3 @@ If we send 6 simultaneous requests with unknown KIDs:
 The 2nd, 3rd and 4th requests are rate-limited because the burst capacity is set to 1. After the first request passes, the number of available burst tokens is 0 and subsequent requests must wait until the `interval` elapses. If `burst` were set to 2, the second request would also pass immediately.
 
 The `max_wait` setting prevents excessive wait times. In this example, since the 5th and 6th requests would require waiting longer than the configured `max_wait` of 110s, they immediately return with a 401 Unauthorized status instead of attempting to refresh.
-
