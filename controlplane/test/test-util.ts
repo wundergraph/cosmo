@@ -116,7 +116,7 @@ export const SetupTest = async function ({
 
   const realm = 'test';
   const loginRealm = 'master';
-  const apiUrl = process.env.KC_API_URL || 'http://localhost:8080';
+  const apiUrl = process.env.KC_API_URL || 'http://localhost:8090';
   const clientId = 'studio';
   const adminUser = 'admin';
   const adminPassword = 'changeme';
@@ -889,7 +889,11 @@ export async function assertExecutionConfigSubgraphNames(
   }
 }
 
-export async function assertMapperContentIsCorrect(blobStorage: InMemoryBlobStorage, expectedMapperKeysCount: number) {
+export async function assertMapperContentIsCorrect(
+  blobStorage: InMemoryBlobStorage,
+  expectedMapperKeysCount: number,
+  expectedNumberOfFeatureFlags = 1,
+) {
   const blobKeys = blobStorage.keys();
   const existingMappers = blobKeys.filter((key) => key.endsWith('mapper.json'));
   expect(existingMappers).toHaveLength(expectedMapperKeysCount);
@@ -904,6 +908,16 @@ export async function assertMapperContentIsCorrect(blobStorage: InMemoryBlobStor
 
     const keyPrefix = mapperKey.split('/').slice(0, -1).join('/');
     const mapperEntries = Object.entries(mapper);
+
+    /**
+     * The mapper should always contain the number of expected feature flags plus one (the federated graph.
+     *
+     * If the expected number of feature flags is `-1`, we are skipping this check.
+     */
+    if (expectedNumberOfFeatureFlags !== -1) {
+      expect(mapperEntries).toHaveLength(expectedNumberOfFeatureFlags + 1);
+    }
+
     for (const [featureFlagName, hash] of mapperEntries) {
       const key =
         featureFlagName === '' ? `${keyPrefix}/latest.json` : `${keyPrefix}/feature-flags/${featureFlagName}.json`;

@@ -1459,7 +1459,8 @@ describe('Feature flag integration tests v2', () => {
         ]),
       );
 
-      await assertMapperContentIsCorrect(blobStorage, 2);
+      // Skip the number of feature flag check as we have two federated graphs with a different number of feature flags
+      await assertMapperContentIsCorrect(blobStorage, 2, -1);
     },
   );
 });
