@@ -452,7 +452,7 @@ export class ProposalRepository {
     return proposalConfig[0];
   }
 
-  public async getApprovedProposalSubgraphsBySubgraph({
+  public async getProposalSubgraphsBySubgraph({
     subgraphName,
     namespaceId,
   }: {
@@ -474,8 +474,8 @@ export class ProposalRepository {
       .where(
         and(
           eq(schema.proposalSubgraphs.subgraphName, subgraphName),
-          eq(schema.proposals.state, 'APPROVED'),
           eq(schema.targets.namespaceId, namespaceId),
+          eq(schema.targets.organizationId, this.organizationId),
         ),
       );
 
@@ -497,7 +497,7 @@ export class ProposalRepository {
     routerCompatibilityVersion: string;
     isDeleted: boolean;
   }): Promise<{ proposalId: string; proposalSubgraphId: string }[]> {
-    const proposalSubgraphs = await this.getApprovedProposalSubgraphsBySubgraph({
+    const proposalSubgraphs = await this.getProposalSubgraphsBySubgraph({
       subgraphName,
       namespaceId,
     });

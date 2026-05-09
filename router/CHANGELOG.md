@@ -4,6 +4,38 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.313.2](https://github.com/wundergraph/cosmo/compare/router@0.313.1...router@0.313.2) (2026-05-08)
+
+### Bug Fixes
+
+* pass the right path to the playground (closes [#2821](https://github.com/wundergraph/cosmo/issues/2821)) ([#2835](https://github.com/wundergraph/cosmo/issues/2835)) ([b54d565](https://github.com/wundergraph/cosmo/commit/b54d565d9665c1fbc344cef611b910db9abbf1d7)) (@alepane21)
+
+## [0.313.1](https://github.com/wundergraph/cosmo/compare/router@0.313.0...router@0.313.1) (2026-05-05)
+
+### Bug Fixes
+
+* fix corruption of persisted operation cache key ([#2824](https://github.com/wundergraph/cosmo/issues/2824)) ([6f43c77](https://github.com/wundergraph/cosmo/commit/6f43c77696e3d8e5fd35f3db0c16614e577c1ada)) (@devsergiy)
+
+# [0.313.0](https://github.com/wundergraph/cosmo/compare/router@0.312.0...router@0.313.0) (2026-04-30)
+
+### Features
+
+* subscriptions overhaul ([#2486](https://github.com/wundergraph/cosmo/issues/2486)) ([5febd84](https://github.com/wundergraph/cosmo/commit/5febd846f5717ec39ff33bb11819712212b9d720)) (@endigma)
+
+# [0.312.0](https://github.com/wundergraph/cosmo/compare/router@0.311.1...router@0.312.0) (2026-04-29)
+
+### Features
+
+* centralize TS dependency management via catalogs ([#2782](https://github.com/wundergraph/cosmo/issues/2782)) ([a6a6956](https://github.com/wundergraph/cosmo/commit/a6a69565727f01a942a16e6d560d0fedabcb531e)) (@comatory)
+* **router:** support costs on arguments of directives ([#2781](https://github.com/wundergraph/cosmo/issues/2781)) ([b70a55b](https://github.com/wundergraph/cosmo/commit/b70a55b85b3f50468e3d1218d6746d51cc1b4733)) (@ysmolski)
+
+## [0.311.1](https://github.com/wundergraph/cosmo/compare/router@0.311.0...router@0.311.1) (2026-04-27)
+
+### Bug Fixes
+
+* add extension code for po errors from websockets ([#2792](https://github.com/wundergraph/cosmo/issues/2792)) ([b1c17b0](https://github.com/wundergraph/cosmo/commit/b1c17b0c331f3be8f0a6d97d17b4909c42a7759e)) (@SkArchon)
+* remediate several vulnerabilities ([#2787](https://github.com/wundergraph/cosmo/issues/2787)) ([fdd035b](https://github.com/wundergraph/cosmo/commit/fdd035b8bfd491a45e00e2b60e9c28b695b64f48)) (@pepol)
+
 # [0.311.0](https://github.com/wundergraph/cosmo/compare/router@0.310.0...router@0.311.0) (2026-04-24)
 
 ### Features
