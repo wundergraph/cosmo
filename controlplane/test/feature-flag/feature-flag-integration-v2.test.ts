@@ -8,6 +8,7 @@ import { unsuccessfulBaseCompositionError } from '../../src/core/errors/errors.j
 import {
   assertExecutionConfigSubgraphNames,
   assertFeatureFlagExecutionConfig,
+  assertMapperContentIsCorrect,
   assertNumberOfCompositions,
   createAndPublishSubgraph,
   createFeatureFlag,
@@ -95,6 +96,8 @@ describe('Feature flag integration tests v2', () => {
       const ffKey = blobStorage.keys().at(-1);
       expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
 
+      await assertMapperContentIsCorrect(blobStorage, 1);
+
       // The base recomposition and the feature flag composition
       await assertNumberOfCompositions(client, baseGraphName, 2);
 
@@ -160,6 +163,8 @@ describe('Feature flag integration tests v2', () => {
       expect(blobStorage.keys()).toHaveLength(3);
       const ffKey = blobStorage.keys().at(-1);
       expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+      await assertMapperContentIsCorrect(blobStorage, 1);
 
       // The base recomposition and the feature flag composition
       await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -234,6 +239,8 @@ describe('Feature flag integration tests v2', () => {
       expect(blobStorage.keys()).toHaveLength(3);
       const ffKey = blobStorage.keys().at(-1);
       expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+      await assertMapperContentIsCorrect(blobStorage, 1);
 
       // The feature flag is disabled again and trigger a base recomposition
       await toggleFeatureFlag(client, featureFlagName, false, namespace);
@@ -322,6 +329,8 @@ describe('Feature flag integration tests v2', () => {
           expect.stringContaining(`${contractResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`),
         ]),
       );
+
+      await assertMapperContentIsCorrect(blobStorage, 2);
 
       // The base recomposition and the feature flag composition
       await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -417,6 +426,8 @@ describe('Feature flag integration tests v2', () => {
           expect.stringContaining(`${contractResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`),
         ]),
       );
+
+      await assertMapperContentIsCorrect(blobStorage, 2);
 
       // The base recomposition and the feature flag composition
       await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -540,6 +551,8 @@ describe('Feature flag integration tests v2', () => {
       const ffKey = blobStorage.keys().at(-1);
       expect(ffKey).toContain(`${baseGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
 
+      await assertMapperContentIsCorrect(blobStorage, 1);
+
       // There will be a failed base composition and one feature flag compositions
       await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
       await createAndPublishSubgraph(
@@ -633,6 +646,8 @@ describe('Feature flag integration tests v2', () => {
           expect.stringContaining(`${contractResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`),
         ]),
       );
+
+      await assertMapperContentIsCorrect(blobStorage, 2);
 
       // The base recomposition and the feature flag composition
       await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -743,6 +758,8 @@ describe('Feature flag integration tests v2', () => {
           expect.stringContaining(`${contractResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`),
         ]),
       );
+
+      await assertMapperContentIsCorrect(blobStorage, 2);
 
       // There should be a base recomposition, a feature flag composition, and an embedded feature flag config
       for (const { name, key } of graphNamesAndKeys) {
@@ -899,6 +916,8 @@ describe('Feature flag integration tests v2', () => {
         ]),
       );
 
+      await assertMapperContentIsCorrect(blobStorage, 4);
+
       /*
        * Each federated graph should have produced two total compositions:
        *  1. The original base composition
@@ -1046,6 +1065,8 @@ describe('Feature flag integration tests v2', () => {
       const ffKey = blobStorage.keys()[2];
       expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
 
+      await assertMapperContentIsCorrect(blobStorage, 1);
+
       // The base recomposition and the feature flag composition
       await assertNumberOfCompositions(client, baseGraphName, 2);
       await assertFeatureFlagExecutionConfig(blobStorage, key, false);
@@ -1167,6 +1188,8 @@ describe('Feature flag integration tests v2', () => {
       expect(blobStorage.keys()).toHaveLength(3);
       const ffKey = blobStorage.keys().at(-1);
       expect(ffKey).toContain(`${baseGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+      await assertMapperContentIsCorrect(blobStorage, 1);
 
       // The feature flag composition
       await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
@@ -1435,6 +1458,8 @@ describe('Feature flag integration tests v2', () => {
           ),
         ]),
       );
+
+      await assertMapperContentIsCorrect(blobStorage, 2);
     },
   );
 });
