@@ -318,6 +318,12 @@ func (s *Server) registerToolsOn(target *mcp.Server) {
 		Description: descriptions.ExecuteTool,
 		InputSchema: executeAPIInputSchema(),
 	}, s.handleExecute)
+
+	target.AddTool(&mcp.Tool{
+		Name:        "code_mode_generate_query",
+		Description: descriptions.GenerateQueryTool,
+		InputSchema: generateQueryInputSchema(),
+	}, s.handleGenerateQuery)
 }
 
 func (s *Server) registerPersistedOpsResourceOn(target *mcp.Server) {
@@ -387,6 +393,10 @@ func (s *Server) handleSearch(ctx context.Context, req *mcp.CallToolRequest) (*m
 
 func (s *Server) handleExecute(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return s.handleTool(ctx, req, "code_mode_run_js", s.handleExecuteAPI)
+}
+
+func (s *Server) handleGenerateQuery(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.handleTool(ctx, req, "code_mode_generate_query", s.handleGenerateQueryAPI)
 }
 
 func (s *Server) handleTool(ctx context.Context, req *mcp.CallToolRequest, toolName string, next func(context.Context, *mcp.CallToolRequest) (*mcp.CallToolResult, error)) (result *mcp.CallToolResult, err error) {

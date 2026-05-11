@@ -58,7 +58,7 @@ func TestListToolsReturnsCodeModeTools(t *testing.T) {
 
 	got, err := session.ListTools(ctx, &mcp.ListToolsParams{})
 	require.NoError(t, err)
-	require.Len(t, got.Tools, 2)
+	require.Len(t, got.Tools, 3)
 	slices.SortFunc(got.Tools, func(a, b *mcp.Tool) int {
 		if a.Name < b.Name {
 			return -1
@@ -70,6 +70,21 @@ func TestListToolsReturnsCodeModeTools(t *testing.T) {
 	})
 
 	assert.Equal(t, mustJSON(t, []*mcp.Tool{
+		{
+			Name:        "code_mode_generate_query",
+			Description: descriptions.GenerateQueryTool,
+			InputSchema: map[string]any{
+				"type":     "object",
+				"required": []any{"prompt"},
+				"properties": map[string]any{
+					"prompt": map[string]any{
+						"type":        "string",
+						"minLength":   float64(1),
+						"description": "Natural-language description of the data shape the developer wants to query. State exact fields, filters by argument name (not literal value), and concrete entity/relationship names when known.",
+					},
+				},
+			},
+		},
 		{
 			Name:        "code_mode_run_js",
 			Description: descriptions.ExecuteTool,

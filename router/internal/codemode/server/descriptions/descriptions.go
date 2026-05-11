@@ -22,6 +22,9 @@ var rawExecuteSource string
 //go:embed persisted_ops_resource.md
 var rawPersistedOpsResource string
 
+//go:embed generate_query_tool.md
+var rawGenerateQueryTool string
+
 // SearchTool is the description of the code_mode_search_tools MCP tool.
 var SearchTool = strings.TrimRight(rawSearchTool, "\n")
 
@@ -35,3 +38,6 @@ var ExecuteSource = strings.TrimRight(rawExecuteSource, "\n")
 // PersistedOpsResource is the description of the yoko://persisted-ops.d.ts MCP
 // resource.
 var PersistedOpsResource = strings.TrimRight(rawPersistedOpsResource, "\n")
+
+// GenerateQueryTool is the description of the code_mode_generate_query MCP tool.
+var GenerateQueryTool = strings.TrimRight(rawGenerateQueryTool, "\n")
