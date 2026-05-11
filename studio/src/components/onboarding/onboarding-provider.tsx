@@ -25,6 +25,8 @@ export interface OnboardingState {
   currentStep: number | undefined;
   setStep: (step: number | undefined) => void;
   skipped: boolean;
+  initialized: boolean;
+  setInitialized: () => void;
   setSkipped: () => void;
   resetSkipped: () => void;
 }
@@ -36,6 +38,8 @@ export const OnboardingContext = createContext<OnboardingState>({
   currentStep: undefined,
   setStep: () => undefined,
   skipped: false,
+  initialized: false,
+  setInitialized: () => undefined,
   setSkipped: () => undefined,
   resetSkipped: () => undefined,
 });
@@ -47,6 +51,7 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   const [onboarding, setOnboarding] = useState<Onboarding | undefined>(undefined);
   const [currentStep, setCurrentStep] = useSessionStorage<undefined | number>('cosmo-onboarding-v1-step', undefined);
   const [skipped, setSkippedValue] = useSessionStorage('cosmo-onboarding-v1-skipped', false);
+  const [initialized, setInitializedValue] = useSessionStorage('cosmo-onboarding-v1-initialized', false);
 
   const setSkipped = useCallback(() => {
     setSkippedValue(true);
@@ -70,6 +75,8 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
     [setCurrentStep, resetSkipped],
   );
 
+  const setInitialized = useCallback(() => setInitializedValue(true), [setInitializedValue]);
+
   const value = useMemo(
     () => ({
       onboarding,
@@ -80,8 +87,21 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
       setSkipped,
       resetSkipped,
       skipped,
+      initialized,
+      setInitialized,
     }),
-    [onboarding, onboardingFlag, featureFlagStatus, currentStep, setStep, setSkipped, resetSkipped, skipped],
+    [
+      onboarding,
+      onboardingFlag,
+      featureFlagStatus,
+      currentStep,
+      setStep,
+      setSkipped,
+      resetSkipped,
+      skipped,
+      initialized,
+      setInitialized,
+    ],
   );
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;
