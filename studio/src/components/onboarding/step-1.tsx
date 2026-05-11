@@ -55,7 +55,10 @@ export const Step1 = () => {
     mode: 'onChange',
     schema: onboardingSchema,
     defaultValues: {
-      channels: onboarding,
+      channels: {
+        slack: onboarding?.slack ?? true,
+        email: onboarding?.email ?? false,
+      },
     },
   });
 
