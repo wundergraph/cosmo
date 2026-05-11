@@ -550,6 +550,10 @@
       "ObjectPath": ""
     }
   },
+  "SplitConfigPoller": {
+    "SkipMissingFeatureFlags": false,
+    "IgnoredFeatureFlags": null
+  },
   "PersistedOperationsConfig": {
     "Disabled": false,
     "LogUnknown": false,

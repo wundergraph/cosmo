@@ -1016,7 +1016,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -1061,7 +1061,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -1110,7 +1110,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id customDetails: details { forename } } }`,
@@ -1412,11 +1412,11 @@ func writeTestConfig(t *testing.T, version string, path string) {
 
 type ConfigPollerMock struct {
 	initConfig   *nodev1.RouterConfig
-	updateConfig func(newConfig *nodev1.RouterConfig, oldVersion string) error
+	updateConfig func(newConfig *routerconfig.Response) error
 	ready        chan struct{}
 }
 
-func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(_ *routerconfig.Response) error) {
 	c.updateConfig = handler
 	close(c.ready)
 }
