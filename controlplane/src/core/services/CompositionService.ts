@@ -532,6 +532,7 @@ export class CompositionService {
       })
       .from(schema.routerConfigHash)
       .leftJoin(schema.featureFlags, eq(schema.featureFlags.id, schema.routerConfigHash.featureFlagId))
+      .where(eq(schema.routerConfigHash.federatedGraphId, federatedGraphId))
       .execute();
 
     // Load hashes from database
@@ -930,6 +931,10 @@ export class CompositionService {
         });
       }
 
+      if (splitConfig) {
+        await this.#updateMapperForFederatedGraph(federatedGraph.id);
+      }
+
       // Handle contracts
       for (const [
         contractId,
@@ -952,13 +957,8 @@ export class CompositionService {
         });
 
         if (splitConfig) {
-          await this.#updateMapperForFederatedGraph(federatedGraph.id);
+          await this.#updateMapperForFederatedGraph(contractDTO.id);
         }
-      }
-
-      //
-      if (splitConfig) {
-        await this.#updateMapperForFederatedGraph(federatedGraph.id);
       }
     }
   }
