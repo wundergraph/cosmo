@@ -331,10 +331,10 @@ func TestSplitSubscribe_SkipMissingFeatureFlag_ExcludedFromChangesAndKnownHashes
 
 	mock := &mockSplitFetcher{
 		mapperResult: map[string]string{
-			"":             "hash-base",
-			"keep":         "hash-keep-new",     // existed before, hash changed, fetch succeeds
-			"missing-add":  "hash-missing-add",  // new in the mapper, fetch returns ErrFileNotFound
-			"missing-chg":  "hash-missing-chg",  // existed before, hash changed, fetch returns ErrFileNotFound
+			"":            "hash-base",
+			"keep":        "hash-keep-new",    // existed before, hash changed, fetch succeeds
+			"missing-add": "hash-missing-add", // new in the mapper, fetch returns ErrFileNotFound
+			"missing-chg": "hash-missing-chg", // existed before, hash changed, fetch returns ErrFileNotFound
 		},
 		configResults: map[string]*nodev1.RouterConfig{
 			"":     baseCfg,
