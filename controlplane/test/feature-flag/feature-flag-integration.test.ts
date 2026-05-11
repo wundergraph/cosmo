@@ -1028,7 +1028,7 @@ describe('Feature flag integration tests', () => {
         'At least one subgraph is required for federation.',
       );
       expect(moveFederatedGraphResponse.compositionErrors[1]).toStrictEqual(
-        unsuccessfulBaseCompositionError(baseGraphName, namespace),
+        unsuccessfulBaseCompositionError(baseGraphName, newNamespace),
       );
 
       /**
@@ -1096,7 +1096,7 @@ describe('Feature flag integration tests', () => {
         'At least one subgraph is required for federation.',
       );
       expect(moveFederatedGraphResponse.compositionErrors[1]).toStrictEqual(
-        unsuccessfulBaseCompositionError(baseGraphName, namespace),
+        unsuccessfulBaseCompositionError(baseGraphName, newNamespace),
       );
 
       /**
