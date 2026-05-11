@@ -202,7 +202,6 @@ export class FederatedGraphRepository {
     admissionWebhookSecret?: string;
     admissionWebhookURL?: string;
     readme?: string;
-    unsetAdmissionWebhookURL?: boolean;
     unsetLabelMatchers?: boolean;
   }): Promise<ComposeAndDeployResult | undefined> {
     const routingUrl = normalizeURL(data.routingUrl);
