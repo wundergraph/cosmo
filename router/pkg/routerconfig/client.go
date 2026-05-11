@@ -24,6 +24,12 @@ type Changes struct {
 }
 
 func (c *Changes) BaseGraphChanged() bool {
+	// c being nil means we don't know if there are changes, so
+	// callers should expect it to have changed.
+	if c == nil {
+		return true
+	}
+
 	_, exists := c.ChangedConfigs[""]
 	return exists
 }
