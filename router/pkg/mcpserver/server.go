@@ -732,15 +732,30 @@ func (s *GraphQLSchemaServer) applyToolDiff(desired map[string]desiredTool) {
 
 	// Apply the diff. RemoveTools batches into one notification; AddTool sends
 	// one per call but we only invoke it for actually-changed tools.
+	// Each call below causes the SDK to emit one notifications/tools/list_changed
+	// to every connected MCP client — log on the way out so propagation delays
+	// are visible at the source.
 	if len(removed) > 0 {
+		s.logger.Info("MCP notifications/tools/list_changed fired",
+			zap.String("reason", "remove"),
+			zap.Strings("tools", removed),
+		)
 		s.server.RemoveTools(removed...)
 	}
 	for _, name := range added {
 		d := desired[name]
+		s.logger.Info("MCP notifications/tools/list_changed fired",
+			zap.String("reason", "add"),
+			zap.String("tool", name),
+		)
 		s.server.AddTool(d.tool, d.handler)
 	}
 	for _, name := range changed {
 		d := desired[name]
+		s.logger.Info("MCP notifications/tools/list_changed fired",
+			zap.String("reason", "change"),
+			zap.String("tool", name),
+		)
 		s.server.AddTool(d.tool, d.handler)
 	}
 
