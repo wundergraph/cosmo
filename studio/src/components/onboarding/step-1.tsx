@@ -47,7 +47,7 @@ export const Step1 = () => {
   const router = useRouter();
   const posthog = usePostHog();
   const { toast } = useToast();
-  const { setStep, setSkipped, setOnboarding, onboarding } = useOnboarding();
+  const { setStep, setSkipped, setOnboarding, onboarding, initialized, setInitialized } = useOnboarding();
   // Referrer can be `wgc` when onboarding is opened via `wgc demo` command
   const referrer = normalizeReferrer(router.query.referrer || document?.referrer);
 
@@ -119,13 +119,14 @@ export const Step1 = () => {
 
   useEffect(() => {
     setStep(1);
-  }, [setStep]);
+    setInitialized();
+  }, [setStep, setInitialized]);
 
   useEffect(() => {
-    // We want to trigger the onboarding only for the first time when the onboarding record
-    // does not exist in the database yet. Users can navigate to this first step as well
-    // and in that case we want to ignore it.
-    if (onboarding) return;
+    // We only want to trigger the started event once, when user is shown the first
+    // step of the onboarding. In case the user re-visits by going back, we don't
+    // fire it again.
+    if (initialized) return;
 
     captureOnboardingEvent(posthog, {
       name: 'onboarding_started',
@@ -133,7 +134,7 @@ export const Step1 = () => {
         entry_source: referrer,
       },
     });
-  }, [onboarding, referrer, posthog]);
+  }, [initialized, referrer, posthog]);
 
   return (
     <OnboardingContainer>
