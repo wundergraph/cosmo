@@ -4,8 +4,6 @@
 // instead of being moved into core
 package context
 
-type CurrentSubgraphContextKey struct{}
-
 type ContextKey int
 
 const (
