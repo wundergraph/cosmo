@@ -143,6 +143,18 @@ autoscaling:
   maxReplicas: 100
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
+  extraMetrics: []
+    # Additional HPA metrics appended to the rendered HPA's `metrics:` list.
+    # Each entry must be a full `autoscaling/v2` metric object.
+    # Useful for scaling on metrics provided by an external metrics adapter on top of CPU/memory.
+    # Example of using an external metric:
+    # - type: External
+    #   external:
+    #     metric:
+    #       name: router.http.requests.in_flight
+    #     target:
+    #       type: AverageValue
+    #       averageValue: "50"
   behavior: {}
     # Configures the HPA scaling behavior. When unset, Kubernetes applies its defaults
     # (300s scale-down stabilization window, no scale-up window).

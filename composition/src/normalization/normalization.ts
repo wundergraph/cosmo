@@ -1,15 +1,10 @@
 import {
-  batchNormalize as batchNormalizeV1,
   normalizeSubgraph as normalizeSubgraphV1,
   normalizeSubgraphFromString as normalizeSubgraphFromStringV1,
 } from '../v1/normalization/normalization-factory';
 import { ROUTER_COMPATIBILITY_VERSION_ONE } from '../router-compatibility-version/router-compatibility-version';
-import { type BatchNormalizationResult, type NormalizationResult } from './types';
-import {
-  type BatchNormalizeParams,
-  type NormalizeSubgraphFromStringParams,
-  type NormalizeSubgraphParams,
-} from './params';
+import { type NormalizationResult } from './types';
+import { type NormalizeSubgraphFromStringParams, type NormalizeSubgraphParams } from './params';
 
 export function normalizeSubgraphFromString({
   noLocation = true,
@@ -34,18 +29,6 @@ export function normalizeSubgraph({
   switch (version) {
     default: {
       return normalizeSubgraphV1({ document, internalGraph, options, subgraphName });
-    }
-  }
-}
-
-export function batchNormalize({
-  options,
-  subgraphs,
-  version = ROUTER_COMPATIBILITY_VERSION_ONE,
-}: BatchNormalizeParams): BatchNormalizationResult {
-  switch (version) {
-    default: {
-      return batchNormalizeV1({ options, subgraphs });
     }
   }
 }

@@ -97,6 +97,8 @@ export function setGraphRouterCompatibilityVersion(
     // If there are no subgraphs, we don't need to compose anything
     // and avoid producing a version with a composition error
     if (subgraphs.length === 0) {
+      const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+      await fedGraphRepo.updateRouterCompatibilityVersion(federatedGraph.id, version);
       return {
         response: {
           code: EnumStatusCode.OK,

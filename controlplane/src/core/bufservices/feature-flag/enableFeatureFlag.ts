@@ -79,13 +79,14 @@ export function enableFeatureFlag(
       };
     }
 
-    await featureFlagRepo.enableFeatureFlag({
-      featureFlagId: featureFlag.id,
-      namespaceId: namespace.id,
-      isEnabled: req.enabled,
-    });
+    const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
+      const txFeatureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
+      await txFeatureFlagRepo.enableFeatureFlag({
+        featureFlagId: featureFlag.id,
+        namespaceId: namespace.id,
+        isEnabled: req.enabled,
+      });
 
-    const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction((tx) => {
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,

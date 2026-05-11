@@ -8,6 +8,10 @@ directive @tag(
 
 directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 
+directive @myDirective(a: String!) on FIELD_DEFINITION
+
+directive @hello on FIELD_DEFINITION
+
 type Query {
   allPandas: [Panda]
   panda(name: ID!): Panda
@@ -69,7 +73,7 @@ interface ProductItf implements SkuItf {
 type Product implements ProductItf & SkuItf {
   id: ID! @tag(name: "hi-from-products")
   sku: String
-  name: String
+  name: String @hello
   package: String
   variation: ProductVariation
   dimensions: ProductDimension

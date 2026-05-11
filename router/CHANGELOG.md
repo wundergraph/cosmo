@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.314.0](https://github.com/wundergraph/cosmo/compare/router@0.313.2...router@0.314.0) (2026-05-11)
+
+### Features
+
+* **router:** add SpanNameFormatterProvider module interface ([#2843](https://github.com/wundergraph/cosmo/issues/2843)) ([992b6c6](https://github.com/wundergraph/cosmo/commit/992b6c6e3bc86669e738f34ccc7c0ec356310b35)) (@endigma)
+
+## [0.313.2](https://github.com/wundergraph/cosmo/compare/router@0.313.1...router@0.313.2) (2026-05-08)
+
+### Bug Fixes
+
+* pass the right path to the playground (closes [#2821](https://github.com/wundergraph/cosmo/issues/2821)) ([#2835](https://github.com/wundergraph/cosmo/issues/2835)) ([b54d565](https://github.com/wundergraph/cosmo/commit/b54d565d9665c1fbc344cef611b910db9abbf1d7)) (@alepane21)
+
+## [0.313.1](https://github.com/wundergraph/cosmo/compare/router@0.313.0...router@0.313.1) (2026-05-05)
+
+### Bug Fixes
+
+* fix corruption of persisted operation cache key ([#2824](https://github.com/wundergraph/cosmo/issues/2824)) ([6f43c77](https://github.com/wundergraph/cosmo/commit/6f43c77696e3d8e5fd35f3db0c16614e577c1ada)) (@devsergiy)
+
+# [0.313.0](https://github.com/wundergraph/cosmo/compare/router@0.312.0...router@0.313.0) (2026-04-30)
+
+### Features
+
+* subscriptions overhaul ([#2486](https://github.com/wundergraph/cosmo/issues/2486)) ([5febd84](https://github.com/wundergraph/cosmo/commit/5febd846f5717ec39ff33bb11819712212b9d720)) (@endigma)
+
 # [0.312.0](https://github.com/wundergraph/cosmo/compare/router@0.311.1...router@0.312.0) (2026-04-29)
 
 ### Features

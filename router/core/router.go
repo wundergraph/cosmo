@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"slices"
 	"sync"
 	"time"
 
@@ -642,6 +643,8 @@ func (r *Router) listenAndServe() error {
 }
 
 func (r *Router) initModules(ctx context.Context) error {
+	var spanNameFormatterChain []func(SpanNameFormatterFunc) SpanNameFormatterFunc
+
 	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
 
 	for _, module := range modules {
@@ -726,6 +729,10 @@ func (r *Router) initModules(ctx context.Context) error {
 			}
 		}
 
+		if provider, ok := moduleInstance.(SpanNameFormatterProvider); ok {
+			spanNameFormatterChain = append(spanNameFormatterChain, provider.WrapSpanNameFormatter)
+		}
+
 		if handler, ok := moduleInstance.(SubscriptionOnStartHandler); ok {
 			r.subscriptionHooks.onStart.handlers = append(r.subscriptionHooks.onStart.handlers, handler.SubscriptionOnStart)
 		}
@@ -745,6 +752,16 @@ func (r *Router) initModules(ctx context.Context) error {
 			zap.String("duration", time.Since(now).String()),
 		)
 	}
+
+	// Fold module-provided span name formatter wrappers over the default
+	// implementation. Wrappers were collected in module Priority order
+	// (sortModules); folding right-to-left ensures the lowest-priority
+	// wrapper sits outermost and the default sits at the bottom.
+	formatter := SpanNameFormatterFunc(DefaultSpanNameFormatter)
+	for _, wrap := range slices.Backward(spanNameFormatterChain) {
+		formatter = wrap(formatter)
+	}
+	r.spanNameFormatter = formatter
 
 	return nil
 }
@@ -1034,7 +1051,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.playgroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Html:             graphiql.PlaygroundHTML(),
 			GraphqlURL:       r.graphqlWebURL,
-			PlaygroundPath:   r.playgroundPath,
+			PlaygroundPath:   r.playgroundConfig.Path,
 			ConcurrencyLimit: int64(r.playgroundConfig.ConcurrencyLimit),
 		})
 	}

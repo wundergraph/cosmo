@@ -651,3 +651,61 @@ func TestOperationProcessorIntrospectionQuery(t *testing.T) {
 		})
 	}
 }
+
+// TestSkipIncludeVariableNamesStableAfterKitReuse verifies that skipIncludeVariableNames
+// returns owned strings (not unsafe aliases into kit.doc.Input.RawBytes) so that the slice
+// stored in persistedOperationVariableNames remains valid after the kit is returned to the
+// pool and reused for a different query. Without explicit string creation the aliased strings would
+// silently read garbage, causing cache-key corruption for every subsequent APQ request.
+func TestSkipIncludeVariableNamesStableAfterKitReuse(t *testing.T) {
+	executor := &Executor{
+		PlanConfig:      plan.Configuration{},
+		RouterSchema:    nil,
+		Resolver:        nil,
+		RenameTypeNames: nil,
+	}
+	// Pool of exactly one kit so that kit2 is guaranteed to reuse kit1's buffer.
+	processor := NewOperationProcessor(OperationProcessorOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        1,
+	})
+
+	// A query whose @include directives bind two variables.  The variable names
+	// "withAligators" and "withCats" live at well-known byte offsets inside the
+	// raw query bytes written to kit.doc.Input.RawBytes by Parse().
+	const skipIncludeQuery = `query Employee($withAligators: Boolean!, $withCats: Boolean!) { employee(id: 1) { details { pets { ... on Alligator @include(if: $withAligators) { name } ... on Cat @include(if: $withCats) { name } } } } }`
+
+	kit1, err := processor.NewKit()
+	require.NoError(t, err)
+
+	kit1.parsedOperation.Request.Query = skipIncludeQuery
+	require.NoError(t, kit1.Parse())
+
+	names := kit1.skipIncludeVariableNames()
+	require.Equal(t, []string{"withAligators", "withCats"}, names,
+		"skipIncludeVariableNames should return sorted variable names")
+
+	kit1.Free() // returns kit to pool; RawBytes are zeroed in length but NOT zeroed in content
+
+	// Acquire the same kit slot and parse a different query with reversed order of fragments and variables,
+	// whose bytes overwrite the positions where "withAligators" and "withCats" used to live.
+	const polluterQuery = `query Employee($withCats: Boolean! $withAligators: Boolean!) { employee(id: 1) { details { pets { ... on Cat @include(if: $withCats) { name } ... on Alligator @include(if: $withAligators) { name } } } } }`
+
+	kit2, err := processor.NewKit()
+	require.NoError(t, err)
+	defer kit2.Free()
+
+	kit2.parsedOperation.Request.Query = polluterQuery
+	require.NoError(t, kit2.Parse())
+
+	// Without strings.Clone in skipIncludeVariableNames, names[0] and names[1]
+	// are unsafe aliases into the now-overwritten RawBytes — they will read the
+	// polluter query's bytes and no longer equal the original variable names.
+	require.Equal(t, "withAligators", names[0],
+		"skipIncludeVariableNames must return cloned (not aliased) strings: "+
+			"'withAligators' was corrupted after kit reuse")
+	require.Equal(t, "withCats", names[1],
+		"skipIncludeVariableNames must return cloned (not aliased) strings: "+
+			"'withCats' was corrupted after kit reuse")
+}

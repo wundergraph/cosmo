@@ -4,7 +4,6 @@ packages:
   - composition
   - docs-website
   - graphqlmetrics
-  - composition-go/shim
   - controlplane
   - controlplane/emails
   - proto
@@ -21,7 +20,7 @@ packages:
 
 catalog:
   # Build/test tooling
-  typescript: 5.5.2
+  typescript: 5.6.2
   vitest: ^3.2.4
   '@vitest/coverage-v8': 3.2.4
   tsx: ^4.16.0
