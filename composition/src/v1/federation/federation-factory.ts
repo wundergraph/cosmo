@@ -255,6 +255,7 @@ import {
   type FederationParams,
   type MergeSubscriptionFilterTargetResultParams,
   type UpsertDirectiveArgumentDataParams,
+  type ValidateSubscriptionFilterAndGenerateConfigurationParams,
   type ValidateOneOfDirectiveParams,
 } from './types/params';
 import { INACCESSIBLE_DEFINITION } from '../constants/directive-definitions';
@@ -2918,14 +2919,14 @@ export class FederationFactory {
     return { success: true, condition };
   }
 
-  validateSubscriptionFilterAndGenerateConfiguration(
-    directiveNode: ConstDirectiveNode,
-    objectData: ObjectDefinitionData,
-    fieldPath: string,
-    fieldName: string,
-    parentTypeName: string,
-    directiveSubgraphName: string,
-  ): void {
+  validateSubscriptionFilterAndGenerateConfiguration({
+    directiveNode,
+    objectData,
+    fieldPath,
+    fieldName,
+    parentTypeName,
+    directiveSubgraphName,
+  }: ValidateSubscriptionFilterAndGenerateConfigurationParams): void {
     const result = this.validateSubscriptionFilterForTarget(directiveNode, objectData, directiveSubgraphName);
     if (!result.success) {
       if (result.errors.length > 0) {
@@ -2981,14 +2982,14 @@ export class FederationFactory {
       }
 
       if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
-        this.validateSubscriptionFilterAndGenerateConfiguration(
-          data.directive,
-          namedTypeData,
+        this.validateSubscriptionFilterAndGenerateConfiguration({
+          directiveNode: data.directive,
+          objectData: namedTypeData,
           fieldPath,
-          data.fieldData.name,
-          data.fieldData.renamedParentTypeName,
-          data.directiveSubgraphName,
-        );
+          fieldName: data.fieldData.name,
+          parentTypeName: data.fieldData.renamedParentTypeName,
+          directiveSubgraphName: data.directiveSubgraphName,
+        });
         continue;
       }
 
