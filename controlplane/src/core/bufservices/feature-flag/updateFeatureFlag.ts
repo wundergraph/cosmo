@@ -96,71 +96,89 @@ export function updateFeatureFlag(
       };
     }
 
-    const auditLogRepo = new AuditLogRepository(opts.db);
     const prevFederatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
       featureFlagId: featureFlagDTO.id,
       namespaceId: namespace.id,
       excludeDisabled: true,
     });
 
-    await featureFlagRepo.updateFeatureFlag({
-      featureFlag: featureFlagDTO,
-      labels: req.labels,
-      featureSubgraphIds,
-      unsetLabels: req.unsetLabels ?? false,
-    });
+    const { deploymentErrors, compositionErrors, compositionWarnings, notFoundError } = await opts.db.transaction(
+      async (tx) => {
+        const txFeatureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
+        await txFeatureFlagRepo.updateFeatureFlag({
+          featureFlag: featureFlagDTO,
+          labels: req.labels,
+          featureSubgraphIds,
+          unsetLabels: req.unsetLabels ?? false,
+        });
 
-    await auditLogRepo.addAuditLog({
-      organizationId: authContext.organizationId,
-      organizationSlug: authContext.organizationSlug,
-      auditAction: 'feature_flag.updated',
-      action: 'updated',
-      actorId: authContext.userId,
-      auditableType: 'feature_flag',
-      auditableDisplayName: featureFlagDTO.name,
-      apiKeyName: authContext.apiKeyName,
-      actorDisplayName: authContext.userDisplayName,
-      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-      targetNamespaceId: namespace.id,
-      targetNamespaceDisplayName: namespace.name,
-    });
+        const auditLogRepo = new AuditLogRepository(tx);
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+          auditAction: 'feature_flag.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'feature_flag',
+          auditableDisplayName: featureFlagDTO.name,
+          apiKeyName: authContext.apiKeyName,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: namespace.id,
+          targetNamespaceDisplayName: namespace.name,
+        });
 
-    const updatedFeatureFlag = await featureFlagRepo.getFeatureFlagById({
-      featureFlagId: featureFlagDTO.id,
-      namespaceId: namespace.id,
-      includeSubgraphs: true,
-    });
+        const updatedFeatureFlag = await txFeatureFlagRepo.getFeatureFlagById({
+          featureFlagId: featureFlagDTO.id,
+          namespaceId: namespace.id,
+          includeSubgraphs: true,
+        });
 
-    if (!updatedFeatureFlag) {
+        if (!updatedFeatureFlag) {
+          return {
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            notFoundError: `Feature flag "${featureFlagDTO.name}" was not found after updating.`,
+          };
+        }
+
+        const compositionService = new CompositionService(
+          tx,
+          authContext.organizationId,
+          logger,
+          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+          opts.blobStorage,
+          opts.chClient,
+          opts.webhookProxyUrl,
+          req.disableResolvabilityValidation,
+        );
+
+        const compositionResult = await compositionService.composeAndDeployFeatureFlag({
+          actorId: authContext.userId,
+          featureFlag: updatedFeatureFlag,
+          prevFederatedGraphs,
+        });
+
+        return {
+          deploymentErrors: compositionResult.deploymentErrors,
+          compositionErrors: compositionResult.compositionErrors,
+          compositionWarnings: compositionResult.compositionWarnings,
+        };
+      },
+    );
+
+    if (notFoundError) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Feature flag "${featureFlagDTO.name}" was not found after updating.`,
+          details: notFoundError,
         },
         compositionErrors: [],
         deploymentErrors: [],
         compositionWarnings: [],
       };
     }
-
-    const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction((tx) => {
-      const compositionService = new CompositionService(
-        tx,
-        authContext.organizationId,
-        logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
-        opts.chClient,
-        opts.webhookProxyUrl,
-        req.disableResolvabilityValidation,
-      );
-
-      return compositionService.composeAndDeployFeatureFlag({
-        actorId: authContext.userId,
-        featureFlag: updatedFeatureFlag,
-        prevFederatedGraphs,
-      });
-    });
 
     return {
       response: {
