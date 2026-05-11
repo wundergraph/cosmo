@@ -119,7 +119,7 @@ export const Step1 = () => {
 
   useEffect(() => {
     setStep(1);
-  }, [setStep, posthog, referrer]);
+  }, [setStep]);
 
   useEffect(() => {
     // We want to trigger the onboarding only for the first time when the onboarding record
