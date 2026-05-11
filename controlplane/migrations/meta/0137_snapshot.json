@@ -1,5 +1,5 @@
 {
-  "id": "6e36817e-24db-4cd7-9715-4fad10112819",
+  "id": "0bd8c2b5-5d88-4e49-92c8-f96c654a74b9",
   "prevId": "d474eefb-2a0d-4a07-8887-3260aee174d4",
   "version": "7",
   "dialect": "postgresql",
@@ -50,12 +50,8 @@
           "name": "api_key_permissions_api_key_id_api_keys_id_fk",
           "tableFrom": "api_key_permissions",
           "tableTo": "api_keys",
-          "columnsFrom": [
-            "api_key_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["api_key_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -125,12 +121,8 @@
           "name": "api_key_resources_api_key_id_api_keys_id_fk",
           "tableFrom": "api_key_resources",
           "tableTo": "api_keys",
-          "columnsFrom": [
-            "api_key_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["api_key_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -138,12 +130,8 @@
           "name": "api_key_resources_target_id_targets_id_fk",
           "tableFrom": "api_key_resources",
           "tableTo": "targets",
-          "columnsFrom": [
-            "target_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -278,12 +266,8 @@
           "name": "api_keys_user_id_users_id_fk",
           "tableFrom": "api_keys",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -291,12 +275,8 @@
           "name": "api_keys_organization_id_organizations_id_fk",
           "tableFrom": "api_keys",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -304,12 +284,8 @@
           "name": "api_keys_group_id_organization_groups_id_fk",
           "tableFrom": "api_keys",
           "tableTo": "organization_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -319,9 +295,7 @@
         "api_keys_key_unique": {
           "name": "api_keys_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "key"
-          ]
+          "columns": ["key"]
         }
       },
       "checkConstraints": {}
@@ -646,12 +620,8 @@
           "name": "billing_subscriptions_organization_id_organizations_id_fk",
           "tableFrom": "billing_subscriptions",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -798,12 +768,8 @@
           "name": "cache_warmer_operations_organization_id_organizations_id_fk",
           "tableFrom": "cache_warmer_operations",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -811,12 +777,8 @@
           "name": "cache_warmer_operations_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "cache_warmer_operations",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -824,12 +786,8 @@
           "name": "cache_warmer_operations_created_by_id_users_id_fk",
           "tableFrom": "cache_warmer_operations",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -952,12 +910,8 @@
           "name": "contracts_source_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "contracts",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "source_federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -965,12 +919,8 @@
           "name": "contracts_downstream_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "contracts",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "downstream_federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["downstream_federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -978,12 +928,8 @@
           "name": "contracts_created_by_id_users_id_fk",
           "tableFrom": "contracts",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -991,12 +937,8 @@
           "name": "contracts_updated_by_id_users_id_fk",
           "tableFrom": "contracts",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1006,10 +948,7 @@
         "federated_graph_source_downstream_id": {
           "name": "federated_graph_source_downstream_id",
           "nullsNotDistinct": false,
-          "columns": [
-            "source_federated_graph_id",
-            "downstream_federated_graph_id"
-          ]
+          "columns": ["source_federated_graph_id", "downstream_federated_graph_id"]
         }
       },
       "checkConstraints": {}
@@ -1068,12 +1007,8 @@
           "name": "feature_flags_to_feature_subgraphs_feature_flag_id_feature_flags_id_fk",
           "tableFrom": "feature_flags_to_feature_subgraphs",
           "tableTo": "feature_flags",
-          "columnsFrom": [
-            "feature_flag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["feature_flag_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1081,12 +1016,8 @@
           "name": "feature_flags_to_feature_subgraphs_feature_subgraph_id_subgraphs_id_fk",
           "tableFrom": "feature_flags_to_feature_subgraphs",
           "tableTo": "subgraphs",
-          "columnsFrom": [
-            "feature_subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["feature_subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1094,10 +1025,7 @@
       "compositePrimaryKeys": {
         "feature_flags_to_feature_subgraphs_feature_flag_id_feature_subgraph_id_pk": {
           "name": "feature_flags_to_feature_subgraphs_feature_flag_id_feature_subgraph_id_pk",
-          "columns": [
-            "feature_flag_id",
-            "feature_subgraph_id"
-          ]
+          "columns": ["feature_flag_id", "feature_subgraph_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1217,12 +1145,8 @@
           "name": "feature_flags_organization_id_organizations_id_fk",
           "tableFrom": "feature_flags",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1230,12 +1154,8 @@
           "name": "feature_flags_namespace_id_namespaces_id_fk",
           "tableFrom": "feature_flags",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1243,12 +1163,8 @@
           "name": "feature_flags_created_by_users_id_fk",
           "tableFrom": "feature_flags",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1311,12 +1227,8 @@
           "name": "feature_subgraphs_to_base_subgraphs_feature_subgraph_id_subgraphs_id_fk",
           "tableFrom": "feature_subgraphs_to_base_subgraphs",
           "tableTo": "subgraphs",
-          "columnsFrom": [
-            "feature_subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["feature_subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1324,12 +1236,8 @@
           "name": "feature_subgraphs_to_base_subgraphs_base_subgraph_id_subgraphs_id_fk",
           "tableFrom": "feature_subgraphs_to_base_subgraphs",
           "tableTo": "subgraphs",
-          "columnsFrom": [
-            "base_subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["base_subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1337,10 +1245,7 @@
       "compositePrimaryKeys": {
         "feature_subgraphs_to_base_subgraphs_feature_subgraph_id_base_subgraph_id_pk": {
           "name": "feature_subgraphs_to_base_subgraphs_feature_subgraph_id_base_subgraph_id_pk",
-          "columns": [
-            "feature_subgraph_id",
-            "base_subgraph_id"
-          ]
+          "columns": ["feature_subgraph_id", "base_subgraph_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1432,12 +1337,8 @@
           "name": "federated_graph_clients_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "federated_graph_clients",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1445,12 +1346,8 @@
           "name": "federated_graph_clients_created_by_id_users_id_fk",
           "tableFrom": "federated_graph_clients",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1458,12 +1355,8 @@
           "name": "federated_graph_clients_updated_by_id_users_id_fk",
           "tableFrom": "federated_graph_clients",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1473,10 +1366,7 @@
         "federated_graph_client_name": {
           "name": "federated_graph_client_name",
           "nullsNotDistinct": false,
-          "columns": [
-            "federated_graph_id",
-            "name"
-          ]
+          "columns": ["federated_graph_id", "name"]
         }
       },
       "checkConstraints": {}
@@ -1612,12 +1502,8 @@
           "name": "federated_graph_persisted_operations_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "federated_graph_persisted_operations",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1625,12 +1511,8 @@
           "name": "federated_graph_persisted_operations_client_id_federated_graph_clients_id_fk",
           "tableFrom": "federated_graph_persisted_operations",
           "tableTo": "federated_graph_clients",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["client_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1638,12 +1520,8 @@
           "name": "federated_graph_persisted_operations_created_by_id_users_id_fk",
           "tableFrom": "federated_graph_persisted_operations",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1651,12 +1529,8 @@
           "name": "federated_graph_persisted_operations_updated_by_id_users_id_fk",
           "tableFrom": "federated_graph_persisted_operations",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1666,18 +1540,12 @@
         "federated_graph_persisted_operations_file_path_unique": {
           "name": "federated_graph_persisted_operations_file_path_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "file_path"
-          ]
+          "columns": ["file_path"]
         },
         "federated_graph_operation_id": {
           "name": "federated_graph_operation_id",
           "nullsNotDistinct": false,
-          "columns": [
-            "federated_graph_id",
-            "client_id",
-            "operation_id"
-          ]
+          "columns": ["federated_graph_id", "client_id", "operation_id"]
         }
       },
       "checkConstraints": {}
@@ -1775,12 +1643,8 @@
           "name": "federated_graphs_target_id_targets_id_fk",
           "tableFrom": "federated_graphs",
           "tableTo": "targets",
-          "columnsFrom": [
-            "target_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1788,12 +1652,8 @@
           "name": "federated_graphs_composed_schema_version_id_schema_versions_id_fk",
           "tableFrom": "federated_graphs",
           "tableTo": "schema_versions",
-          "columnsFrom": [
-            "composed_schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["composed_schema_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1898,12 +1758,8 @@
           "name": "federated_graphs_to_feature_flag_schema_versions_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "federated_graphs_to_feature_flag_schema_versions",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1911,12 +1767,8 @@
           "name": "federated_graphs_to_feature_flag_schema_versions_base_composition_schema_version_id_schema_versions_id_fk",
           "tableFrom": "federated_graphs_to_feature_flag_schema_versions",
           "tableTo": "schema_versions",
-          "columnsFrom": [
-            "base_composition_schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["base_composition_schema_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1924,12 +1776,8 @@
           "name": "federated_graphs_to_feature_flag_schema_versions_composed_schema_version_id_schema_versions_id_fk",
           "tableFrom": "federated_graphs_to_feature_flag_schema_versions",
           "tableTo": "schema_versions",
-          "columnsFrom": [
-            "composed_schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["composed_schema_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1937,12 +1785,8 @@
           "name": "federated_graphs_to_feature_flag_schema_versions_feature_flag_id_feature_flags_id_fk",
           "tableFrom": "federated_graphs_to_feature_flag_schema_versions",
           "tableTo": "feature_flags",
-          "columnsFrom": [
-            "feature_flag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["feature_flag_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1950,11 +1794,7 @@
       "compositePrimaryKeys": {
         "federated_graphs_to_feature_flag_schema_versions_federated_graph_id_base_composition_schema_version_id_composed_schema_version_id_pk": {
           "name": "federated_graphs_to_feature_flag_schema_versions_federated_graph_id_base_composition_schema_version_id_composed_schema_version_id_pk",
-          "columns": [
-            "federated_graph_id",
-            "base_composition_schema_version_id",
-            "composed_schema_version_id"
-          ]
+          "columns": ["federated_graph_id", "base_composition_schema_version_id", "composed_schema_version_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2099,12 +1939,8 @@
           "name": "field_grace_period_subgraph_id_subgraphs_id_fk",
           "tableFrom": "field_grace_period",
           "tableTo": "subgraphs",
-          "columnsFrom": [
-            "subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2112,12 +1948,8 @@
           "name": "field_grace_period_organization_id_organizations_id_fk",
           "tableFrom": "field_grace_period",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2125,12 +1957,8 @@
           "name": "field_grace_period_namespace_id_namespaces_id_fk",
           "tableFrom": "field_grace_period",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2323,12 +2151,8 @@
           "name": "graph_api_tokens_organization_id_organizations_id_fk",
           "tableFrom": "graph_api_tokens",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2336,12 +2160,8 @@
           "name": "graph_api_tokens_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "graph_api_tokens",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2349,12 +2169,8 @@
           "name": "graph_api_tokens_created_by_users_id_fk",
           "tableFrom": "graph_api_tokens",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2364,9 +2180,7 @@
         "graph_api_tokens_token_unique": {
           "name": "graph_api_tokens_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "checkConstraints": {}
@@ -2472,12 +2286,8 @@
           "name": "graph_composition_subgraphs_graph_composition_id_graph_compositions_id_fk",
           "tableFrom": "graph_composition_subgraphs",
           "tableTo": "graph_compositions",
-          "columnsFrom": [
-            "graph_composition_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["graph_composition_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2485,12 +2295,8 @@
           "name": "graph_composition_subgraphs_schema_version_id_schema_versions_id_fk",
           "tableFrom": "graph_composition_subgraphs",
           "tableTo": "schema_versions",
-          "columnsFrom": [
-            "schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2624,12 +2430,8 @@
           "name": "graph_compositions_schema_version_id_schema_versions_id_fk",
           "tableFrom": "graph_compositions",
           "tableTo": "schema_versions",
-          "columnsFrom": [
-            "schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2637,12 +2439,8 @@
           "name": "graph_compositions_created_by_id_users_id_fk",
           "tableFrom": "graph_compositions",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2731,12 +2529,8 @@
           "name": "graph_request_keys_organization_id_organizations_id_fk",
           "tableFrom": "graph_request_keys",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2744,12 +2538,8 @@
           "name": "graph_request_keys_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "graph_request_keys",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2759,23 +2549,17 @@
         "graph_request_keys_federated_graph_id_unique": {
           "name": "graph_request_keys_federated_graph_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "federated_graph_id"
-          ]
+          "columns": ["federated_graph_id"]
         },
         "graph_request_keys_privateKey_unique": {
           "name": "graph_request_keys_privateKey_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "privateKey"
-          ]
+          "columns": ["privateKey"]
         },
         "graph_request_keys_publicKey_unique": {
           "name": "graph_request_keys_publicKey_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "publicKey"
-          ]
+          "columns": ["publicKey"]
         }
       },
       "checkConstraints": {}
@@ -2862,12 +2646,8 @@
           "name": "linked_schema_checks_schema_check_id_schema_checks_id_fk",
           "tableFrom": "linked_schema_checks",
           "tableTo": "schema_checks",
-          "columnsFrom": [
-            "schema_check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2875,12 +2655,8 @@
           "name": "linked_schema_checks_linked_schema_check_id_schema_checks_id_fk",
           "tableFrom": "linked_schema_checks",
           "tableTo": "schema_checks",
-          "columnsFrom": [
-            "linked_schema_check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["linked_schema_check_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2978,12 +2754,8 @@
           "name": "linked_subgraphs_source_subgraph_id_subgraphs_id_fk",
           "tableFrom": "linked_subgraphs",
           "tableTo": "subgraphs",
-          "columnsFrom": [
-            "source_subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2991,12 +2763,8 @@
           "name": "linked_subgraphs_target_subgraph_id_subgraphs_id_fk",
           "tableFrom": "linked_subgraphs",
           "tableTo": "subgraphs",
-          "columnsFrom": [
-            "target_subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3004,12 +2772,8 @@
           "name": "linked_subgraphs_created_by_id_users_id_fk",
           "tableFrom": "linked_subgraphs",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3019,9 +2783,7 @@
         "linked_subgraphs_source_subgraph_id_unique": {
           "name": "linked_subgraphs_source_subgraph_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "source_subgraph_id"
-          ]
+          "columns": ["source_subgraph_id"]
         }
       },
       "checkConstraints": {}
@@ -3085,12 +2847,8 @@
           "name": "namespace_cache_warmer_config_namespace_id_namespaces_id_fk",
           "tableFrom": "namespace_cache_warmer_config",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3100,9 +2858,7 @@
         "namespace_cache_warmer_config_namespace_id_unique": {
           "name": "namespace_cache_warmer_config_namespace_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "namespace_id"
-          ]
+          "columns": ["namespace_id"]
         }
       },
       "checkConstraints": {}
@@ -3165,12 +2921,8 @@
           "name": "namespace_config_namespace_id_namespaces_id_fk",
           "tableFrom": "namespace_config",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3180,9 +2932,7 @@
         "unique_namespace": {
           "name": "unique_namespace",
           "nullsNotDistinct": false,
-          "columns": [
-            "namespace_id"
-          ]
+          "columns": ["namespace_id"]
         }
       },
       "checkConstraints": {}
@@ -3260,12 +3010,8 @@
           "name": "namespace_graph_pruning_check_config_namespace_id_namespaces_id_fk",
           "tableFrom": "namespace_graph_pruning_check_config",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3334,12 +3080,8 @@
           "name": "namespace_lint_check_config_namespace_id_namespaces_id_fk",
           "tableFrom": "namespace_lint_check_config",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3393,12 +3135,8 @@
           "name": "namespace_proposal_config_namespace_id_namespaces_id_fk",
           "tableFrom": "namespace_proposal_config",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3408,9 +3146,7 @@
         "npc_namespace_id_idx": {
           "name": "npc_namespace_id_idx",
           "nullsNotDistinct": false,
-          "columns": [
-            "namespace_id"
-          ]
+          "columns": ["namespace_id"]
         }
       },
       "checkConstraints": {}
@@ -3502,12 +3238,8 @@
           "name": "namespace_subgraph_check_extensions_config_namespace_id_namespaces_id_fk",
           "tableFrom": "namespace_subgraph_check_extensions_config",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3517,9 +3249,7 @@
         "namespace_subgraph_check_extensions_config_namespace_id_unique": {
           "name": "namespace_subgraph_check_extensions_config_namespace_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "namespace_id"
-          ]
+          "columns": ["namespace_id"]
         }
       },
       "checkConstraints": {}
@@ -3591,12 +3321,8 @@
           "name": "namespaces_organization_id_organizations_id_fk",
           "tableFrom": "namespaces",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3604,12 +3330,8 @@
           "name": "namespaces_created_by_users_id_fk",
           "tableFrom": "namespaces",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3619,10 +3341,7 @@
         "unique_name": {
           "name": "unique_name",
           "nullsNotDistinct": false,
-          "columns": [
-            "name",
-            "organization_id"
-          ]
+          "columns": ["name", "organization_id"]
         }
       },
       "checkConstraints": {}
@@ -3685,12 +3404,8 @@
           "name": "oidc_providers_organization_id_organizations_id_fk",
           "tableFrom": "oidc_providers",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3700,9 +3415,102 @@
         "oidc_providers_alias_unique": {
           "name": "oidc_providers_alias_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "alias"
-          ]
+          "columns": ["alias"]
+        }
+      },
+      "checkConstraints": {}
+    },
+    "public.onboarding": {
+      "name": "onboarding",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "slack": {
+          "name": "slack",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "email": {
+          "name": "email",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "onboarding_user_id_users_id_fk": {
+          "name": "onboarding_user_id_users_id_fk",
+          "tableFrom": "onboarding",
+          "tableTo": "users",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "onboarding_organization_id_organizations_id_fk": {
+          "name": "onboarding_organization_id_organizations_id_fk",
+          "tableFrom": "onboarding",
+          "tableTo": "organizations",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "onboarding_user_id_organization_id_version_unique": {
+          "name": "onboarding_user_id_organization_id_version_unique",
+          "nullsNotDistinct": false,
+          "columns": ["user_id", "organization_id", "version"]
         }
       },
       "checkConstraints": {}
@@ -3818,12 +3626,8 @@
           "name": "operation_change_overrides_created_by_users_id_fk",
           "tableFrom": "operation_change_overrides",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3918,12 +3722,8 @@
           "name": "operation_ignore_all_overrides_created_by_users_id_fk",
           "tableFrom": "operation_ignore_all_overrides",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3999,12 +3799,8 @@
           "name": "organization_billing_organization_id_organizations_id_fk",
           "tableFrom": "organization_billing",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4093,12 +3889,8 @@
           "name": "organization_features_organization_id_organizations_id_fk",
           "tableFrom": "organization_features",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4166,12 +3958,8 @@
           "name": "organization_group_members_organization_member_id_organization_members_id_fk",
           "tableFrom": "organization_group_members",
           "tableTo": "organization_members",
-          "columnsFrom": [
-            "organization_member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_member_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4179,12 +3967,8 @@
           "name": "organization_group_members_group_id_organization_groups_id_fk",
           "tableFrom": "organization_group_members",
           "tableTo": "organization_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4223,12 +4007,8 @@
           "name": "organization_group_rule_namespaces_rule_id_organization_group_rules_id_fk",
           "tableFrom": "organization_group_rule_namespaces",
           "tableTo": "organization_group_rules",
-          "columnsFrom": [
-            "rule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rule_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4236,12 +4016,8 @@
           "name": "organization_group_rule_namespaces_namespace_id_namespaces_id_fk",
           "tableFrom": "organization_group_rule_namespaces",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4280,12 +4056,8 @@
           "name": "organization_group_rule_targets_rule_id_organization_group_rules_id_fk",
           "tableFrom": "organization_group_rule_targets",
           "tableTo": "organization_group_rules",
-          "columnsFrom": [
-            "rule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rule_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4293,12 +4065,8 @@
           "name": "organization_group_rule_targets_target_id_targets_id_fk",
           "tableFrom": "organization_group_rule_targets",
           "tableTo": "targets",
-          "columnsFrom": [
-            "target_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4338,12 +4106,8 @@
           "name": "organization_group_rules_group_id_organization_groups_id_fk",
           "tableFrom": "organization_group_rules",
           "tableTo": "organization_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4407,12 +4171,8 @@
           "name": "organization_groups_organization_id_organizations_id_fk",
           "tableFrom": "organization_groups",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4422,9 +4182,7 @@
         "organization_groups_kc_group_id_unique": {
           "name": "organization_groups_kc_group_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "kc_group_id"
-          ]
+          "columns": ["kc_group_id"]
         }
       },
       "checkConstraints": {}
@@ -4516,12 +4274,8 @@
           "name": "organization_integrations_organization_id_organizations_id_fk",
           "tableFrom": "organization_integrations",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4591,12 +4345,8 @@
           "name": "organization_invitation_groups_invitation_id_organization_invitations_id_fk",
           "tableFrom": "organization_invitation_groups",
           "tableTo": "organization_invitations",
-          "columnsFrom": [
-            "invitation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invitation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4604,12 +4354,8 @@
           "name": "organization_invitation_groups_group_id_organization_groups_id_fk",
           "tableFrom": "organization_invitation_groups",
           "tableTo": "organization_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4720,12 +4466,8 @@
           "name": "organization_invitations_organization_id_organizations_id_fk",
           "tableFrom": "organization_invitations",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4733,12 +4475,8 @@
           "name": "organization_invitations_user_id_users_id_fk",
           "tableFrom": "organization_invitations",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4746,12 +4484,8 @@
           "name": "organization_invitations_invited_by_users_id_fk",
           "tableFrom": "organization_invitations",
           "tableTo": "users",
-          "columnsFrom": [
-            "invited_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invited_by"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4813,12 +4547,8 @@
           "name": "organization_member_roles_organization_member_id_organization_members_id_fk",
           "tableFrom": "organization_member_roles",
           "tableTo": "organization_members",
-          "columnsFrom": [
-            "organization_member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_member_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4892,12 +4622,8 @@
           "name": "organization_webhook_configs_organization_id_organizations_id_fk",
           "tableFrom": "organization_webhook_configs",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5008,12 +4734,8 @@
           "name": "organizations_user_id_users_id_fk",
           "tableFrom": "organizations",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5023,16 +4745,12 @@
         "organizations_slug_unique": {
           "name": "organizations_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         },
         "organizations_kc_group_id_unique": {
           "name": "organizations_kc_group_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "kc_group_id"
-          ]
+          "columns": ["kc_group_id"]
         }
       },
       "checkConstraints": {}
@@ -5133,12 +4851,8 @@
           "name": "organization_members_user_id_users_id_fk",
           "tableFrom": "organization_members",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5146,12 +4860,8 @@
           "name": "organization_members_organization_id_organizations_id_fk",
           "tableFrom": "organization_members",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5249,12 +4959,8 @@
           "name": "playground_scripts_organization_id_organizations_id_fk",
           "tableFrom": "playground_scripts",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5262,12 +4968,8 @@
           "name": "playground_scripts_created_by_id_users_id_fk",
           "tableFrom": "playground_scripts",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5319,12 +5021,8 @@
           "name": "plugin_image_versions_schema_version_id_schema_versions_id_fk",
           "tableFrom": "plugin_image_versions",
           "tableTo": "schema_versions",
-          "columnsFrom": [
-            "schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5392,12 +5090,8 @@
           "name": "proposal_checks_schema_check_id_schema_checks_id_fk",
           "tableFrom": "proposal_checks",
           "tableTo": "schema_checks",
-          "columnsFrom": [
-            "schema_check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5405,12 +5099,8 @@
           "name": "proposal_checks_proposal_id_proposals_id_fk",
           "tableFrom": "proposal_checks",
           "tableTo": "proposals",
-          "columnsFrom": [
-            "proposal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["proposal_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5507,12 +5197,8 @@
           "name": "proposal_subgraphs_proposal_id_proposals_id_fk",
           "tableFrom": "proposal_subgraphs",
           "tableTo": "proposals",
-          "columnsFrom": [
-            "proposal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["proposal_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5520,12 +5206,8 @@
           "name": "proposal_subgraphs_subgraph_id_subgraphs_id_fk",
           "tableFrom": "proposal_subgraphs",
           "tableTo": "subgraphs",
-          "columnsFrom": [
-            "subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -5533,12 +5215,8 @@
           "name": "proposal_subgraphs_current_schema_version_id_schema_versions_id_fk",
           "tableFrom": "proposal_subgraphs",
           "tableTo": "schema_versions",
-          "columnsFrom": [
-            "current_schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["current_schema_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5548,10 +5226,7 @@
         "proposal_subgraph": {
           "name": "proposal_subgraph",
           "nullsNotDistinct": false,
-          "columns": [
-            "proposal_id",
-            "subgraph_name"
-          ]
+          "columns": ["proposal_id", "subgraph_name"]
         }
       },
       "checkConstraints": {}
@@ -5645,12 +5320,8 @@
           "name": "proposals_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "proposals",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5658,12 +5329,8 @@
           "name": "proposals_created_by_id_users_id_fk",
           "tableFrom": "proposals",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5673,10 +5340,7 @@
         "federated_graph_proposal_name": {
           "name": "federated_graph_proposal_name",
           "nullsNotDistinct": false,
-          "columns": [
-            "federated_graph_id",
-            "name"
-          ]
+          "columns": ["federated_graph_id", "name"]
         }
       },
       "checkConstraints": {}
@@ -5730,103 +5394,14 @@
           "name": "protobuf_schema_versions_schema_version_id_schema_versions_id_fk",
           "tableFrom": "protobuf_schema_versions",
           "tableTo": "schema_versions",
-          "columnsFrom": [
-            "schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "public.router_config_hash": {
-      "name": "router_config_hash",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "federated_graph_id": {
-          "name": "federated_graph_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "feature_flag_id": {
-          "name": "feature_flag_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "hash": {
-          "name": "hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "router_config_hash_federated_graph_id_federated_graphs_id_fk": {
-          "name": "router_config_hash_federated_graph_id_federated_graphs_id_fk",
-          "tableFrom": "router_config_hash",
-          "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "router_config_hash_feature_flag_id_feature_flags_id_fk": {
-          "name": "router_config_hash_feature_flag_id_feature_flags_id_fk",
-          "tableFrom": "router_config_hash",
-          "tableTo": "feature_flags",
-          "columnsFrom": [
-            "feature_flag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "fed_graph_feature_flag_idx": {
-          "name": "fed_graph_feature_flag_idx",
-          "nullsNotDistinct": true,
-          "columns": [
-            "federated_graph_id",
-            "feature_flag_id"
-          ]
-        }
-      },
       "checkConstraints": {}
     },
     "public.schema_check_change_action": {
@@ -5915,12 +5490,8 @@
           "name": "schema_check_change_action_schema_check_id_schema_checks_id_fk",
           "tableFrom": "schema_check_change_action",
           "tableTo": "schema_checks",
-          "columnsFrom": [
-            "schema_check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5928,12 +5499,8 @@
           "name": "schema_check_change_action_schema_check_subgraph_id_schema_check_subgraphs_id_fk",
           "tableFrom": "schema_check_change_action",
           "tableTo": "schema_check_subgraphs",
-          "columnsFrom": [
-            "schema_check_subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6047,12 +5614,8 @@
           "name": "schema_check_change_operation_usage_schema_check_change_action_id_schema_check_change_action_id_fk",
           "tableFrom": "schema_check_change_operation_usage",
           "tableTo": "schema_check_change_action",
-          "columnsFrom": [
-            "schema_check_change_action_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_change_action_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6060,12 +5623,8 @@
           "name": "schema_check_change_operation_usage_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "schema_check_change_operation_usage",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6166,12 +5725,8 @@
           "name": "schema_check_composition_schema_check_id_schema_checks_id_fk",
           "tableFrom": "schema_check_composition",
           "tableTo": "schema_checks",
-          "columnsFrom": [
-            "schema_check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6179,12 +5734,8 @@
           "name": "schema_check_composition_target_id_targets_id_fk",
           "tableFrom": "schema_check_composition",
           "tableTo": "targets",
-          "columnsFrom": [
-            "target_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6282,12 +5833,8 @@
           "name": "schema_check_federated_graph_changes_schema_check_federated_graph_id_schema_check_federated_graphs_id_fk",
           "tableFrom": "schema_check_federated_graph_changes",
           "tableTo": "schema_check_federated_graphs",
-          "columnsFrom": [
-            "schema_check_federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6295,12 +5842,8 @@
           "name": "schema_check_federated_graph_changes_schema_check_change_action_id_schema_check_change_action_id_fk",
           "tableFrom": "schema_check_federated_graph_changes",
           "tableTo": "schema_check_change_action",
-          "columnsFrom": [
-            "schema_check_change_action_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_change_action_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6376,12 +5919,8 @@
           "name": "schema_check_federated_graphs_check_id_schema_checks_id_fk",
           "tableFrom": "schema_check_federated_graphs",
           "tableTo": "schema_checks",
-          "columnsFrom": [
-            "check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["check_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6389,12 +5928,8 @@
           "name": "schema_check_federated_graphs_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "schema_check_federated_graphs",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6509,12 +6044,8 @@
           "name": "schema_check_graph_pruning_action_schema_check_id_schema_checks_id_fk",
           "tableFrom": "schema_check_graph_pruning_action",
           "tableTo": "schema_checks",
-          "columnsFrom": [
-            "schema_check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6522,12 +6053,8 @@
           "name": "schema_check_graph_pruning_action_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "schema_check_graph_pruning_action",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6535,12 +6062,8 @@
           "name": "schema_check_graph_pruning_action_schema_check_subgraph_id_schema_check_subgraphs_id_fk",
           "tableFrom": "schema_check_graph_pruning_action",
           "tableTo": "schema_check_subgraphs",
-          "columnsFrom": [
-            "schema_check_subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6627,12 +6150,8 @@
           "name": "schema_check_lint_action_schema_check_id_schema_checks_id_fk",
           "tableFrom": "schema_check_lint_action",
           "tableTo": "schema_checks",
-          "columnsFrom": [
-            "schema_check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6640,12 +6159,8 @@
           "name": "schema_check_lint_action_schema_check_subgraph_id_schema_check_subgraphs_id_fk",
           "tableFrom": "schema_check_lint_action",
           "tableTo": "schema_check_subgraphs",
-          "columnsFrom": [
-            "schema_check_subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6721,12 +6236,8 @@
           "name": "schema_check_proposal_match_schema_check_id_schema_checks_id_fk",
           "tableFrom": "schema_check_proposal_match",
           "tableTo": "schema_checks",
-          "columnsFrom": [
-            "schema_check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6734,12 +6245,8 @@
           "name": "schema_check_proposal_match_proposal_id_proposals_id_fk",
           "tableFrom": "schema_check_proposal_match",
           "tableTo": "proposals",
-          "columnsFrom": [
-            "proposal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["proposal_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6749,10 +6256,7 @@
         "unique_schema_check_proposal_match": {
           "name": "unique_schema_check_proposal_match",
           "nullsNotDistinct": false,
-          "columns": [
-            "schema_check_id",
-            "proposal_id"
-          ]
+          "columns": ["schema_check_id", "proposal_id"]
         }
       },
       "checkConstraints": {}
@@ -6856,12 +6360,8 @@
           "name": "schema_check_subgraphs_schema_check_id_schema_checks_id_fk",
           "tableFrom": "schema_check_subgraphs",
           "tableTo": "schema_checks",
-          "columnsFrom": [
-            "schema_check_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6869,12 +6369,8 @@
           "name": "schema_check_subgraphs_subgraph_id_subgraphs_id_fk",
           "tableFrom": "schema_check_subgraphs",
           "tableTo": "subgraphs",
-          "columnsFrom": [
-            "subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -6882,12 +6378,8 @@
           "name": "schema_check_subgraphs_namespace_id_namespaces_id_fk",
           "tableFrom": "schema_check_subgraphs",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6950,12 +6442,8 @@
           "name": "schema_check_subgraphs_federated_graphs_schema_check_federated_graph_id_schema_check_federated_graphs_id_fk",
           "tableFrom": "schema_check_subgraphs_federated_graphs",
           "tableTo": "schema_check_federated_graphs",
-          "columnsFrom": [
-            "schema_check_federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6963,12 +6451,8 @@
           "name": "schema_check_subgraphs_federated_graphs_schema_check_subgraph_id_schema_check_subgraphs_id_fk",
           "tableFrom": "schema_check_subgraphs_federated_graphs",
           "tableTo": "schema_check_subgraphs",
-          "columnsFrom": [
-            "schema_check_subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_check_subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7149,12 +6633,8 @@
           "name": "schema_checks_target_id_targets_id_fk",
           "tableFrom": "schema_checks",
           "tableTo": "targets",
-          "columnsFrom": [
-            "target_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -7162,12 +6642,8 @@
           "name": "schema_checks_check_extension_delivery_id_webhook_deliveries_id_fk",
           "tableFrom": "schema_checks",
           "tableTo": "webhook_deliveries",
-          "columnsFrom": [
-            "check_extension_delivery_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["check_extension_delivery_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -7262,12 +6738,8 @@
           "name": "schema_versions_organization_id_organizations_id_fk",
           "tableFrom": "schema_versions",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7342,12 +6814,8 @@
           "name": "schema_version_change_action_schema_version_id_schema_versions_id_fk",
           "tableFrom": "schema_version_change_action",
           "tableTo": "schema_versions",
-          "columnsFrom": [
-            "schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7433,12 +6901,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7448,9 +6912,7 @@
         "sessions_user_id_unique": {
           "name": "sessions_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "checkConstraints": {}
@@ -7571,12 +7033,8 @@
           "name": "slack_installations_organization_id_organizations_id_fk",
           "tableFrom": "slack_installations",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7631,12 +7089,8 @@
           "name": "slack_integration_configs_integration_id_organization_integrations_id_fk",
           "tableFrom": "slack_integration_configs",
           "tableTo": "organization_integrations",
-          "columnsFrom": [
-            "integration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["integration_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7699,12 +7153,8 @@
           "name": "slack_schema_update_event_configs_slack_integration_config_id_slack_integration_configs_id_fk",
           "tableFrom": "slack_schema_update_event_configs",
           "tableTo": "slack_integration_configs",
-          "columnsFrom": [
-            "slack_integration_config_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["slack_integration_config_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -7712,12 +7162,8 @@
           "name": "slack_schema_update_event_configs_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "slack_schema_update_event_configs",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7725,10 +7171,7 @@
       "compositePrimaryKeys": {
         "slack_schema_update_event_configs_slack_integration_config_id_federated_graph_id_pk": {
           "name": "slack_schema_update_event_configs_slack_integration_config_id_federated_graph_id_pk",
-          "columns": [
-            "slack_integration_config_id",
-            "federated_graph_id"
-          ]
+          "columns": ["slack_integration_config_id", "federated_graph_id"]
         }
       },
       "uniqueConstraints": {},
@@ -7823,12 +7266,8 @@
           "name": "subgraph_members_user_id_users_id_fk",
           "tableFrom": "subgraph_members",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -7836,12 +7275,8 @@
           "name": "subgraph_members_subgraph_id_subgraphs_id_fk",
           "tableFrom": "subgraph_members",
           "tableTo": "subgraphs",
-          "columnsFrom": [
-            "subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7961,12 +7396,8 @@
           "name": "subgraphs_schema_version_id_schema_versions_id_fk",
           "tableFrom": "subgraphs",
           "tableTo": "schema_versions",
-          "columnsFrom": [
-            "schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schema_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -7974,12 +7405,8 @@
           "name": "subgraphs_target_id_targets_id_fk",
           "tableFrom": "subgraphs",
           "tableTo": "targets",
-          "columnsFrom": [
-            "target_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8042,12 +7469,8 @@
           "name": "federated_subgraphs_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "federated_subgraphs",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8055,12 +7478,8 @@
           "name": "federated_subgraphs_subgraph_id_subgraphs_id_fk",
           "tableFrom": "federated_subgraphs",
           "tableTo": "subgraphs",
-          "columnsFrom": [
-            "subgraph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["subgraph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8068,10 +7487,7 @@
       "compositePrimaryKeys": {
         "federated_subgraphs_federated_graph_id_subgraph_id_pk": {
           "name": "federated_subgraphs_federated_graph_id_subgraph_id_pk",
-          "columns": [
-            "federated_graph_id",
-            "subgraph_id"
-          ]
+          "columns": ["federated_graph_id", "subgraph_id"]
         }
       },
       "uniqueConstraints": {},
@@ -8116,12 +7532,8 @@
           "name": "target_label_matchers_target_id_targets_id_fk",
           "tableFrom": "target_label_matchers",
           "tableTo": "targets",
-          "columnsFrom": [
-            "target_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8277,12 +7689,8 @@
           "name": "targets_organization_id_organizations_id_fk",
           "tableFrom": "targets",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8290,12 +7698,8 @@
           "name": "targets_created_by_users_id_fk",
           "tableFrom": "targets",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -8303,12 +7707,8 @@
           "name": "targets_namespace_id_namespaces_id_fk",
           "tableFrom": "targets",
           "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["namespace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8361,9 +7761,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "checkConstraints": {}
@@ -8517,12 +7915,8 @@
           "name": "webhook_deliveries_created_by_id_users_id_fk",
           "tableFrom": "webhook_deliveries",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -8530,12 +7924,8 @@
           "name": "webhook_deliveries_organization_id_organizations_id_fk",
           "tableFrom": "webhook_deliveries",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8598,12 +7988,8 @@
           "name": "webhook_graph_schema_update_webhook_id_organization_webhook_configs_id_fk",
           "tableFrom": "webhook_graph_schema_update",
           "tableTo": "organization_webhook_configs",
-          "columnsFrom": [
-            "webhook_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["webhook_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8611,12 +7997,8 @@
           "name": "webhook_graph_schema_update_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "webhook_graph_schema_update",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8624,10 +8006,7 @@
       "compositePrimaryKeys": {
         "webhook_graph_schema_update_webhook_id_federated_graph_id_pk": {
           "name": "webhook_graph_schema_update_webhook_id_federated_graph_id_pk",
-          "columns": [
-            "webhook_id",
-            "federated_graph_id"
-          ]
+          "columns": ["webhook_id", "federated_graph_id"]
         }
       },
       "uniqueConstraints": {},
@@ -8687,12 +8066,8 @@
           "name": "webhook_proposal_state_update_webhook_id_organization_webhook_configs_id_fk",
           "tableFrom": "webhook_proposal_state_update",
           "tableTo": "organization_webhook_configs",
-          "columnsFrom": [
-            "webhook_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["webhook_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8700,12 +8075,8 @@
           "name": "webhook_proposal_state_update_federated_graph_id_federated_graphs_id_fk",
           "tableFrom": "webhook_proposal_state_update",
           "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["federated_graph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8713,10 +8084,7 @@
       "compositePrimaryKeys": {
         "webhook_proposal_state_update_webhook_id_federated_graph_id_pk": {
           "name": "webhook_proposal_state_update_webhook_id_federated_graph_id_pk",
-          "columns": [
-            "webhook_id",
-            "federated_graph_id"
-          ]
+          "columns": ["webhook_id", "federated_graph_id"]
         }
       },
       "uniqueConstraints": {},
@@ -8727,53 +8095,32 @@
     "public.git_installation_type": {
       "name": "git_installation_type",
       "schema": "public",
-      "values": [
-        "PERSONAL",
-        "ORGANIZATION"
-      ]
+      "values": ["PERSONAL", "ORGANIZATION"]
     },
     "public.graph_composition_subgraph_change_type": {
       "name": "graph_composition_subgraph_change_type",
       "schema": "public",
-      "values": [
-        "added",
-        "removed",
-        "updated",
-        "unchanged"
-      ]
+      "values": ["added", "removed", "updated", "unchanged"]
     },
     "public.graph_pruning_rules": {
       "name": "graph_pruning_rules",
       "schema": "public",
-      "values": [
-        "UNUSED_FIELDS",
-        "DEPRECATED_FIELDS",
-        "REQUIRE_DEPRECATION_BEFORE_DELETION"
-      ]
+      "values": ["UNUSED_FIELDS", "DEPRECATED_FIELDS", "REQUIRE_DEPRECATION_BEFORE_DELETION"]
     },
     "public.integration_type": {
       "name": "integration_type",
       "schema": "public",
-      "values": [
-        "slack"
-      ]
+      "values": ["slack"]
     },
     "public.lint_severity": {
       "name": "lint_severity",
       "schema": "public",
-      "values": [
-        "warn",
-        "error"
-      ]
+      "values": ["warn", "error"]
     },
     "public.member_role": {
       "name": "member_role",
       "schema": "public",
-      "values": [
-        "admin",
-        "developer",
-        "viewer"
-      ]
+      "values": ["admin", "developer", "viewer"]
     },
     "public.organization_role": {
       "name": "organization_role",
@@ -8796,38 +8143,22 @@
     "public.playground_script_type": {
       "name": "playground_script_type",
       "schema": "public",
-      "values": [
-        "pre-flight",
-        "pre-operation",
-        "post-operation"
-      ]
+      "values": ["pre-flight", "pre-operation", "post-operation"]
     },
     "public.proposal_match": {
       "name": "proposal_match",
       "schema": "public",
-      "values": [
-        "success",
-        "warn",
-        "error"
-      ]
+      "values": ["success", "warn", "error"]
     },
     "public.proposal_origin": {
       "name": "proposal_origin",
       "schema": "public",
-      "values": [
-        "INTERNAL",
-        "EXTERNAL"
-      ]
+      "values": ["INTERNAL", "EXTERNAL"]
     },
     "public.proposal_state": {
       "name": "proposal_state",
       "schema": "public",
-      "values": [
-        "DRAFT",
-        "APPROVED",
-        "PUBLISHED",
-        "CLOSED"
-      ]
+      "values": ["DRAFT", "APPROVED", "PUBLISHED", "CLOSED"]
     },
     "public.schema_change_type": {
       "name": "schema_change_type",
@@ -8914,61 +8245,32 @@
     "public.subgraph_type": {
       "name": "subgraph_type",
       "schema": "public",
-      "values": [
-        "standard",
-        "grpc_plugin",
-        "grpc_service"
-      ]
+      "values": ["standard", "grpc_plugin", "grpc_service"]
     },
     "public.subscription_protocol": {
       "name": "subscription_protocol",
       "schema": "public",
-      "values": [
-        "ws",
-        "sse",
-        "sse_post"
-      ]
+      "values": ["ws", "sse", "sse_post"]
     },
     "public.status": {
       "name": "status",
       "schema": "public",
-      "values": [
-        "incomplete",
-        "incomplete_expired",
-        "trialing",
-        "active",
-        "past_due",
-        "canceled",
-        "unpaid",
-        "paused"
-      ]
+      "values": ["incomplete", "incomplete_expired", "trialing", "active", "past_due", "canceled", "unpaid", "paused"]
     },
     "public.target_type": {
       "name": "target_type",
       "schema": "public",
-      "values": [
-        "federated",
-        "subgraph"
-      ]
+      "values": ["federated", "subgraph"]
     },
     "public.webhook_delivery_type": {
       "name": "webhook_delivery_type",
       "schema": "public",
-      "values": [
-        "webhook",
-        "slack",
-        "admission",
-        "check-extension"
-      ]
+      "values": ["webhook", "slack", "admission", "check-extension"]
     },
     "public.websocket_subprotocol": {
       "name": "websocket_subprotocol",
       "schema": "public",
-      "values": [
-        "auto",
-        "graphql-ws",
-        "graphql-transport-ws"
-      ]
+      "values": ["auto", "graphql-ws", "graphql-transport-ws"]
     }
   },
   "schemas": {},

@@ -86,21 +86,21 @@ When enabled, changes to the schema will need to go through a proposal process, 
 
 ### Proposal Configuration
 
-The proposal configuration allows you to set severity levels for subgraph checks and publishes, this is to make sure that the schema used for checks/publishes is a part of an approved proposal.
+The proposal configuration allows you to set severity levels for subgraph checks and publishes. This makes sure that the schema used for checks and publishes matches a proposal in the namespace. Proposal matching considers proposals in any state.
 
 #### Check Severity Level
 
 This sets the severity level for subgraph checks during proposal evaluation. Available levels include:
 
-- **Error**: Returns an error if the schema used for the check doesn't match any of the approved proposals.
-- **Warn**: Returns a warning if the schema used for the check doesn't match any of the approved proposals.
+- **Error**: Returns an error if the schema used for the check doesn't match any proposal in the namespace.
+- **Warn**: Returns a warning if the schema used for the check doesn't match any proposal in the namespace.
 
 #### Publish Severity Level
 
 This determines the severity level for subgraph publishes during proposal evaluation. Options include:
 
-- **Error**: Returns an error if the schema used for the publish doesn't match any of the approved proposals.
-- **Warn**: Returns a warning if the schema used for the publish doesn't match any of the approved proposals.
+- **Error**: Returns an error if the schema used for the publish doesn't match any proposal in the namespace.
+- **Warn**: Returns a warning if the schema used for the publish doesn't match any proposal in the namespace.
 
 Configuring these severity levels allows you to enforce different levels of strictness in your proposal workflow.
 

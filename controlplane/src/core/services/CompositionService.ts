@@ -931,6 +931,10 @@ export class CompositionService {
         });
       }
 
+      if (splitConfig) {
+        await this.#updateMapperForFederatedGraph(federatedGraph.id);
+      }
+
       // Handle contracts
       for (const [
         contractId,
@@ -955,11 +959,6 @@ export class CompositionService {
         if (splitConfig) {
           await this.#updateMapperForFederatedGraph(contractDTO.id);
         }
-      }
-
-      // Upload the manifest file when the split config loading is enabled
-      if (splitConfig) {
-        await this.#updateMapperForFederatedGraph(federatedGraph.id);
       }
     }
   }

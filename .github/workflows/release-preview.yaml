@@ -29,8 +29,6 @@ jobs:
           token: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
 
       - uses: ./.github/actions/node
-        with:
-          working-directory: ${{ env.WORKING_DIRECTORY }}
 
       - run: npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
         shell: bash
