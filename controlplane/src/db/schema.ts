@@ -2639,6 +2639,25 @@ export const namespaceSubgraphCheckExtensionConfig = pgTable(
   },
 );
 
+export const routerConfigHash = pgTable(
+  'router_config_hash',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
+    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, { onDelete: 'cascade' }),
+    hash: text('hash').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at'),
+  },
+  (t) => {
+    return {
+      graphFlagIndex: unique('fed_graph_feature_flag_idx').on(t.federatedGraphId, t.featureFlagId).nullsNotDistinct(),
+    };
+  },
+);
+
 export const onboarding = pgTable(
   'onboarding',
   {
