@@ -12,16 +12,28 @@ import (
 )
 
 // WatchOperationsDir starts a ticker that scans dir on every interval, detects
-// when the set of .graphql / .gql files (or their modification times) has changed,
-// and invokes onChange after a settling tick. The settling tick avoids firing the
-// callback in the middle of a multi-file save: the watcher waits until a tick
-// passes with no further changes before treating the directory as "settled".
+// when the set of .graphql / .gql files (or their modification times) has
+// changed, and invokes onChange using a leading-edge debounce: the first tick
+// that observes a change fires onChange immediately, and further fires are
+// suppressed for one interval. If additional changes arrive during the
+// cooldown, a single trailing fire runs once the cooldown expires so the final
+// state always reaches the callback. This gives sub-interval first-notification
+// latency for the common case (single save) while still coalescing bursts
+// produced by editors that touch a file multiple times during save (atomic
+// rename, formatter rewrite, save-on-blur + autosave).
 //
-// The watcher runs until ctx is cancelled. It is non-blocking — start it in a goroutine.
+// The watcher runs until ctx is cancelled. It is non-blocking — start it in a
+// goroutine.
 //
-// Errors from individual scans are logged at debug level; the watcher does not exit
-// on transient I/O errors so that flaky filesystems (network mounts, container
-// volumes) don't take down hot-reload.
+// onChange is invoked synchronously on the watcher goroutine. While it runs,
+// ticker fires are dropped (Go tickers do not queue), so a slow callback
+// throttles detection — keep it fast or run heavy work asynchronously inside
+// the callback itself. The next snapshot after onChange returns picks up any
+// changes that occurred during the call via the trailing-fire path.
+//
+// Errors from individual scans are logged at debug level; the watcher does not
+// exit on transient I/O errors so that flaky filesystems (network mounts,
+// container volumes) don't take down hot-reload.
 func WatchOperationsDir(ctx context.Context, dir string, interval time.Duration, onChange func(), logger *zap.Logger) error {
 	if dir == "" {
 		return errors.New("dir is required")
@@ -50,7 +62,13 @@ func WatchOperationsDir(ctx context.Context, dir string, interval time.Duration,
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
-		pendingReload := false
+		// Cooldown is counted in ticks, not wall-clock time, because ticker
+		// fires straddle a wall-clock cooldown boundary with jitter — a
+		// time-based cooldown of one interval lets every tick fire and
+		// defeats coalescing.
+		cooldownTicks := 0
+		pendingTrailing := false
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -61,13 +79,37 @@ func WatchOperationsDir(ctx context.Context, dir string, interval time.Duration,
 					logger.Debug("scan failed", zap.Error(scanErr))
 					continue
 				}
-				if !fingerprintsEqual(prev, curr) {
+
+				changed := !fingerprintsEqual(prev, curr)
+				if changed {
 					prev = curr
-					pendingReload = true
+				}
+
+				if cooldownTicks > 0 {
+					cooldownTicks--
+					if changed {
+						pendingTrailing = true
+					}
 					continue
 				}
-				if pendingReload {
-					pendingReload = false
+
+				fire := false
+				switch {
+				case changed:
+					fire = true
+					pendingTrailing = false
+				case pendingTrailing:
+					fire = true
+					pendingTrailing = false
+				}
+
+				if fire {
+					// Two-tick cooldown: one tick to drain in-flight changes
+					// (pendingTrailing accumulates), one quiet tick where the
+					// trailing fire can land. A one-tick cooldown lets sustained
+					// change streams fire on every other tick, which defeats
+					// coalescing.
+					cooldownTicks = 2
 					logger.Info("operations directory changed; reloading tools and notifying connected clients")
 					onChange()
 				}
