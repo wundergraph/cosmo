@@ -15,7 +15,7 @@ import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 const isDebugMode = false;
 let dbname = '';
 
-vi.mock('../src/core/clickhouse/index.js', () => {
+vi.mock('../../src/core/clickhouse/index.js', () => {
   const ClickHouseClient = vi.fn();
   ClickHouseClient.prototype.queryPromise = vi.fn();
 
