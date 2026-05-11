@@ -315,6 +315,104 @@ func TestSplitGetRouterConfig_BaseConfigCannotBeSkippedOrIgnored(t *testing.T) {
 	assert.Contains(t, err.Error(), "base config")
 }
 
+// TestSplitSubscribe_SkipMissingFeatureFlag_ExcludedFromChangesAndKnownHashes
+// asserts that when a poll skips a feature flag because its config fetch
+// returns ErrFileNotFound (and SkipMissingFeatureFlags is true), the skipped
+// flag must not appear in the change payload handed to the handler and must
+// not be recorded in knownHashes. Otherwise the graph_server would think the
+// flag changed (or was added) and tear down its old mux even though we never
+// actually got new contents to install in its place; and the next poll would
+// fail to retry the fetch because knownHashes would already record the new
+// mapper hash.
+func TestSplitSubscribe_SkipMissingFeatureFlag_ExcludedFromChangesAndKnownHashes(t *testing.T) {
+	baseCfg := makeRouterConfig("v1")
+	keepOldFF := makeRouterConfig("keep-v1")
+	keepNewFF := makeRouterConfig("keep-v2")
+
+	mock := &mockSplitFetcher{
+		mapperResult: map[string]string{
+			"":             "hash-base",
+			"keep":         "hash-keep-new",     // existed before, hash changed, fetch succeeds
+			"missing-add":  "hash-missing-add",  // new in the mapper, fetch returns ErrFileNotFound
+			"missing-chg":  "hash-missing-chg",  // existed before, hash changed, fetch returns ErrFileNotFound
+		},
+		configResults: map[string]*nodev1.RouterConfig{
+			"":     baseCfg,
+			"keep": keepNewFF,
+		},
+		configErrors: map[string]error{
+			"missing-add": errs.ErrFileNotFound,
+			"missing-chg": errs.ErrFileNotFound,
+		},
+	}
+
+	p := newTestPoller(mock)
+	p.configRules = ConfigRules{SkipMissingFeatureFlags: true}
+	p.knownHashes = map[string]string{
+		"":            "hash-base",
+		"keep":        "hash-keep-old",
+		"missing-chg": "hash-missing-chg-old",
+	}
+	p.currentConfig = &nodev1.RouterConfig{
+		Version:      "v1",
+		EngineConfig: baseCfg.EngineConfig,
+		FeatureFlagConfigs: &nodev1.FeatureFlagRouterExecutionConfigs{
+			ConfigByFeatureFlagName: map[string]*nodev1.FeatureFlagRouterExecutionConfig{
+				"keep":        {Version: keepOldFF.Version, EngineConfig: keepOldFF.EngineConfig},
+				"missing-chg": {Version: "stale-v1", EngineConfig: baseCfg.EngineConfig},
+			},
+		},
+	}
+	p.latestVersion = computeCompositeVersion(p.knownHashes)
+
+	var received *routerconfig.Response
+	pollOnce(p, func(resp *routerconfig.Response) error {
+		received = resp
+		return nil
+	})
+
+	require.NotNil(t, received)
+	require.NotNil(t, received.Changes)
+
+	// The successful flag must appear in ChangedConfigs.
+	assert.Contains(t, received.Changes.ChangedConfigs, "keep",
+		"a successfully-fetched changed flag must appear in ChangedConfigs")
+
+	// Neither skipped flag may appear in the Changes payload — otherwise the
+	// graph_server would tear down a mux it has no replacement for.
+	assert.NotContains(t, received.Changes.AddedConfigs, "missing-add",
+		"a skipped new flag must not appear in AddedConfigs")
+	assert.NotContains(t, received.Changes.ChangedConfigs, "missing-add",
+		"a skipped new flag must not appear in ChangedConfigs")
+	assert.NotContains(t, received.Changes.ChangedConfigs, "missing-chg",
+		"a skipped changed flag must not appear in ChangedConfigs")
+	assert.NotContains(t, received.Changes.AddedConfigs, "missing-chg",
+		"a skipped changed flag must not appear in AddedConfigs")
+
+	// knownHashes must reflect what we actually applied: the kept flag at its
+	// new hash, and no entry for either skipped flag (so the next poll
+	// re-attempts the fetch instead of treating them as up-to-date).
+	assert.Equal(t, "hash-keep-new", p.knownHashes["keep"],
+		"successfully-fetched flag must have its new hash stored")
+	assert.NotContains(t, p.knownHashes, "missing-add",
+		"a skipped new flag must not be recorded in knownHashes")
+	assert.NotContains(t, p.knownHashes, "missing-chg",
+		"a skipped changed flag must not be recorded in knownHashes")
+
+	// The assembled config must contain the updated kept flag and must leave
+	// the previously-existing skipped flag untouched (stale-but-functional is
+	// better than torn-down-with-no-replacement). The new skipped flag must
+	// not be present at all.
+	require.NotNil(t, received.Config.FeatureFlagConfigs)
+	assert.Equal(t, keepNewFF.Version,
+		received.Config.FeatureFlagConfigs.ConfigByFeatureFlagName["keep"].Version)
+	assert.Equal(t, "stale-v1",
+		received.Config.FeatureFlagConfigs.ConfigByFeatureFlagName["missing-chg"].Version,
+		"skipped changed flag must keep its previous engine config")
+	assert.NotContains(t, received.Config.FeatureFlagConfigs.ConfigByFeatureFlagName, "missing-add",
+		"skipped new flag must not be assembled into the config")
+}
+
 // ---- Subscribe / polling tests ----
 
 // pollOnce manually executes one poll iteration using the poller's internal logic.

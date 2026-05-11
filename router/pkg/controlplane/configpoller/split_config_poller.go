@@ -134,7 +134,7 @@ func (p *splitConfigPoller) fetchAndAssembleAll(ctx context.Context, activeGraph
 
 		ffConfig, err := p.fetcher.FetchConfig(ctx, name)
 		if err != nil {
-			if p.configRules.SkipMissingFeatureFlags && errors.Is(err, errs.ErrFileNotFound) {
+			if p.shouldIgnoreMissingFeatureFlag(err) {
 				p.logger.Warn("Feature flag config not found, skipping", zap.String("feature_flag", name))
 				continue
 			}
@@ -194,28 +194,25 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 	p.poller.Subscribe(ctx, func() {
 		fetchStart := time.Now()
 
-		activeGraphs, err := p.fetcher.FetchMapper(ctx)
+		hasIgnoredFeatureFlags := len(p.configRules.IgnoredFeatureFlags) > 0
+
+		mapperGraphs, err := p.fetcher.FetchMapper(ctx)
 		if err != nil {
 			p.logger.Error("Failed to fetch mapper during poll, keeping existing config", zap.Error(err))
 			return
 		}
 
-		if _, ok := activeGraphs[""]; !ok {
+		if hasIgnoredFeatureFlags {
+			for name := range p.configRules.IgnoredFeatureFlags {
+				delete(mapperGraphs, name)
+				p.logger.Info("Feature flag is ignored, skipping", zap.String("feature_flag", name))
+			}
+		}
+
+		if _, ok := mapperGraphs[""]; !ok {
 			p.logger.Warn("Mapper missing base graph entry, keeping existing config")
 			return
 		}
-
-		newVersion := computeCompositeVersion(activeGraphs)
-		if newVersion == p.latestVersion {
-			p.logger.Debug("No changes detected in engine config, keeping existing config")
-			return
-		}
-
-		p.logger.Info("Router execution config has changed, hot reloading server",
-			zap.String("old_version", p.latestVersion),
-			zap.String("new_version", newVersion),
-			zap.String("fetch_time", time.Since(fetchStart).String()),
-		)
 
 		// Determine what changed, was added, or was removed.
 		changes := routerconfig.Changes{
@@ -224,7 +221,7 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			ChangedConfigs: make(map[string]struct{}),
 		}
 
-		for name, hash := range activeGraphs {
+		for name, hash := range mapperGraphs {
 			if oldHash, exists := p.knownHashes[name]; !exists {
 				changes.AddedConfigs[name] = struct{}{}
 			} else if oldHash != hash {
@@ -232,7 +229,7 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			}
 		}
 		for name := range p.knownHashes {
-			if _, exists := activeGraphs[name]; !exists {
+			if _, exists := mapperGraphs[name]; !exists {
 				changes.RemovedConfigs[name] = struct{}{}
 			}
 		}
@@ -248,6 +245,17 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 		for name := range toFetch {
 			fetchedConfig, err := p.fetcher.FetchConfig(ctx, name)
 			if err != nil {
+				if p.shouldIgnoreMissingFeatureFlag(err) {
+					p.logger.Warn("Feature flag config not found, skipping fetch", zap.String("feature_flag", name))
+					// Remove the feature flag from the mapper and changes so that it is not included in the new config.
+					// This prevents the graph server from tearing down its old mux when it thinks the flag changed (or was added).
+					delete(mapperGraphs, name)
+					delete(changes.ChangedConfigs, name)
+					delete(changes.AddedConfigs, name)
+
+					continue
+				}
+
 				p.logger.Error("Failed to fetch config, skipping entire update",
 					zap.String("name", name),
 					zap.Error(err),
@@ -288,6 +296,12 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			}
 		}
 
+		newVersion := computeCompositeVersion(mapperGraphs)
+		if newVersion == p.latestVersion {
+			p.logger.Debug("No changes detected in engine config, keeping existing config")
+			return
+		}
+
 		response := &routerconfig.Response{
 			Config:  patched,
 			Changes: &changes,
@@ -299,6 +313,12 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 			return
 		}
 
+		p.logger.Info("Router execution config has changed, hot reloading server",
+			zap.String("old_version", p.latestVersion),
+			zap.String("new_version", newVersion),
+			zap.String("fetch_time", time.Since(fetchStart).String()),
+		)
+
 		p.logger.Debug("New graph server swapped",
 			zap.String("duration", time.Since(handlerStart).String()),
 			zap.String("config_version", newVersion),
@@ -306,8 +326,12 @@ func (p *splitConfigPoller) Subscribe(ctx context.Context, handler func(response
 
 		// Only update internal state after the handler succeeds,
 		// i.e. the newly created engine config is actually used by the graph server.
-		p.knownHashes = activeGraphs
+		p.knownHashes = mapperGraphs
 		p.currentConfig = patched
 		p.latestVersion = newVersion
 	})
+}
+
+func (p *splitConfigPoller) shouldIgnoreMissingFeatureFlag(err error) bool {
+	return p.configRules.SkipMissingFeatureFlags && errors.Is(err, errs.ErrFileNotFound)
 }
