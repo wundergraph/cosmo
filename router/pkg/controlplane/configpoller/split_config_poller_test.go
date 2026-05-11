@@ -85,6 +85,20 @@ func TestSplitGetRouterConfig_BaseOnly(t *testing.T) {
 	assert.Contains(t, p.latestVersion, "split-")
 }
 
+func TestSplitGetRouterConfig_MissingBaseGraph(t *testing.T) {
+	baseCfg := makeRouterConfig("ff-v1")
+	mock := &mockSplitFetcher{
+		mapperResult:  map[string]string{"ff1": "hash-ff1"},
+		configResults: map[string]*nodev1.RouterConfig{"ff1": baseCfg},
+	}
+
+	p := newTestPoller(mock)
+	resp, err := p.GetRouterConfig(context.Background())
+	require.Error(t, err)
+	require.Nil(t, resp)
+	assert.Contains(t, err.Error(), "mapper missing base graph entry")
+}
+
 func TestSplitGetRouterConfig_WithFeatureFlags(t *testing.T) {
 	baseCfg := makeRouterConfig("v1")
 	ffCfg := makeRouterConfig("ff-v1")
