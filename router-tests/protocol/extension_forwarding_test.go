@@ -25,6 +25,11 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 	t.Run("should forward extensions to the client for simple request", func(t *testing.T) {
 		t.Parallel()
 
+		// Subgraph fetch: a single hit on Employees (only subgraph involved
+		// in `employee(id: 1) { id }`). Because only one subgraph contributes
+		// extensions, the first_write / last_write distinction is irrelevant
+		// here; this test only verifies the allow-list filter (keeping
+		// `myExtension` and `myOtherExtension`, dropping `notAllowedExtension`).
 		testenv.Run(t, &testenv.Config{
 			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
 				*cfg = config.SubgraphExtensionPropagationConfiguration{
@@ -73,6 +78,15 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 	t.Run("should forward extensions to client on multiple subgraph calls", func(t *testing.T) {
 		t.Parallel()
 
+		// Subgraph fetch order for `employee(id: 1) { id notes }`:
+		//   1. Employees — fetches first (it owns the `employee` entity and
+		//      its `id` field).
+		//   2. Products — fetches last to resolve `notes` via @override.
+		// With first_write, `myExtension` is written by Employees first and
+		// Products' value for the same key is ignored — the response keeps
+		// Employees' `"myValue"`. `myOtherExtension` is unique to Employees,
+		// `myOtherExtensionFromProducts` is filtered out by the allow list,
+		// and `notAllowedExtension*` are also filtered out.
 		testenv.Run(t, &testenv.Config{
 			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
 				*cfg = config.SubgraphExtensionPropagationConfiguration{
@@ -141,6 +155,14 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 	t.Run("should propagate latest extension value when using last_write algorithm", func(t *testing.T) {
 		t.Parallel()
 
+		// Subgraph fetch order is the same as the multi-subgraph first_write
+		// test above:
+		//   1. Employees — fetches first.
+		//   2. Products — fetches last to resolve `notes` via @override.
+		// With last_write, the order reverses the winner for any conflicting
+		// key: `myExtension` ends up as Products' `"myValueFromProducts"`
+		// because Products is the last writer. `myOtherExtension` is only set
+		// by Employees, so it flows through regardless of algorithm.
 		testenv.Run(t, &testenv.Config{
 			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
 				*cfg = config.SubgraphExtensionPropagationConfiguration{
@@ -209,6 +231,9 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 	t.Run("should not forward extensions when forwarding is disabled", func(t *testing.T) {
 		t.Parallel()
 
+		// Single subgraph fetch (Employees only). Even though Employees
+		// returns an extension value, propagation is disabled at the config
+		// layer, so the order of calls is irrelevant — nothing propagates.
 		testenv.Run(t, &testenv.Config{
 			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
 				*cfg = config.SubgraphExtensionPropagationConfiguration{
@@ -257,6 +282,15 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 	t.Run("should merge unique extensions from multiple subgraphs in complex query", func(t *testing.T) {
 		t.Parallel()
 
+		// All four subgraphs fire for this query — the query plan visits
+		// Employees (entity + id + details), Family (details.hasChildren),
+		// Hobbies (hobbies), and Products (notes override). The exact call
+		// order is plan-dependent, but it does not matter here because every
+		// subgraph contributes a unique extension root key — there are no
+		// conflicts to resolve, so the first_write / last_write distinction
+		// has no observable effect. The order-sensitive case is covered by
+		// the multi-subgraph first_write / last_write tests above; this test
+		// focuses on the "merge across many subgraphs" axis.
 		injectExtension := func(t *testing.T, raw string) func(http.Handler) http.Handler {
 			return func(handler http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -340,6 +374,11 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 	t.Run("should forward extensions when only a subset of subgraphs return them", func(t *testing.T) {
 		t.Parallel()
 
+		// `employee(id: 1) { id hobbies { __typename } }` fetches from
+		// Employees (first, for the entity + id) and then Hobbies (last, for
+		// the `hobbies` field). Only Hobbies has middleware that injects an
+		// extension; Employees does not. Order is irrelevant because there is
+		// only one writer for the extension key.
 		testenv.Run(t, &testenv.Config{
 			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
 				*cfg = config.SubgraphExtensionPropagationConfiguration{
@@ -388,6 +427,10 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 	t.Run("should not include extensions in response when no allowed field is returned by subgraphs", func(t *testing.T) {
 		t.Parallel()
 
+		// Single subgraph fetch (Employees). Employees returns extension keys
+		// that are not in the allow list, so they are all dropped before the
+		// response is sent. Order is irrelevant because there is only one
+		// writer and no winner to pick.
 		testenv.Run(t, &testenv.Config{
 			ModifySubgraphExtensionPropagation: func(cfg *config.SubgraphExtensionPropagationConfiguration) {
 				*cfg = config.SubgraphExtensionPropagationConfiguration{
@@ -436,6 +479,17 @@ func TestGraphqlExtensionsForwarding(t *testing.T) {
 	t.Run("should isolate extensions across multiple calls with the same query", func(t *testing.T) {
 		t.Parallel()
 
+		// "First" and "last" here refer to *client requests*, not subgraph
+		// fetches within one query plan. A single subgraph (Employees) is
+		// involved per request, and the middleware uses an atomic counter to
+		// hand back a different extension payload to each subsequent call:
+		//   - 1st client request → middleware writes `extensionsByCall[0]`.
+		//   - 2nd client request → middleware writes `extensionsByCall[1]`.
+		//   - 3rd client request → middleware writes `extensionsByCall[2]`.
+		// The test asserts each client response contains *only* the
+		// extensions from that specific call — proving the router resets its
+		// per-request extension state between requests and does not bleed
+		// keys from an earlier request into a later one.
 		extensionsByCall := []string{
 			`{"callExt":"first","onlyFirst":"a"}`,
 			`{"callExt":"second","onlySecond":"b"}`,
