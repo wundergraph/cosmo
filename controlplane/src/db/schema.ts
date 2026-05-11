@@ -2654,6 +2654,33 @@ export const routerConfigHash = pgTable(
   (t) => {
     return {
       graphFlagIndex: unique('fed_graph_feature_flag_idx').on(t.federatedGraphId, t.featureFlagId).nullsNotDistinct(),
+    }
+  },
+);
+
+export const onboarding = pgTable(
+  'onboarding',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    version: integer('version').notNull().default(1),
+    slack: boolean('slack').notNull().default(false),
+    email: boolean('email').notNull().default(false),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+  },
+  (t) => {
+    return {
+      uniqueUserOrgVersion: unique('onboarding_user_id_organization_id_version_unique').on(
+        t.userId,
+        t.organizationId,
+        t.version,
+      ),
     };
   },
 );

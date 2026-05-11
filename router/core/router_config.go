@@ -126,6 +126,7 @@ type Config struct {
 	telemetryAttributes           []config.CustomAttribute
 	tracePropagators              []propagation.TextMapPropagator
 	compositePropagator           propagation.TextMapPropagator
+	spanNameFormatter             SpanNameFormatterFunc
 	// Poller
 	configPoller                 configpoller.ConfigPoller
 	selfRegister                 selfregister.SelfRegister

@@ -4,8 +4,12 @@ export type ArgumentName = string;
 
 export type ContractName = string;
 
+export type Directive = `@${DirectiveName}`;
+
 // {DirectiveName}.{ArgumentName}
 export type DirectiveArgumentCoords = string;
+
+export type DirectiveLocation = string;
 
 export type DirectiveName = string;
 

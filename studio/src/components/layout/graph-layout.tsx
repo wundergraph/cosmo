@@ -5,6 +5,7 @@ import {
   ClipboardIcon,
   CommandLineIcon,
   ExclamationTriangleIcon,
+  NoSymbolIcon,
   ServerStackIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircledIcon, Component2Icon, FileTextIcon, HomeIcon, PlayIcon } from '@radix-ui/react-icons';
@@ -23,6 +24,7 @@ import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiBracketsCurlyBold, PiCubeFocus, PiDevices, PiGitBranch, PiToggleRight } from 'react-icons/pi';
 import { EmptyState } from '../empty-state';
 import { Button } from '../ui/button';
+import { Link } from '../ui/link';
 import { Loader } from '../ui/loader';
 import { PageHeader } from './head';
 import { LayoutProps } from './layout';
@@ -171,6 +173,21 @@ export const GraphLayout = ({ children }: LayoutProps) => {
 
   if (isLoading) {
     render = <Loader fullscreen />;
+  } else if (data?.response?.code === EnumStatusCode.ERR_NOT_FOUND) {
+    render = (
+      <div className="my-auto">
+        <EmptyState
+          icon={<NoSymbolIcon />}
+          title="Not found"
+          description={data?.response?.details || 'Graph not found'}
+          actions={
+            <Button asChild>
+              <Link href={`/${organizationSlug}`}>Go home</Link>
+            </Button>
+          }
+        />
+      </div>
+    );
   } else if (error || data?.response?.code !== EnumStatusCode.OK) {
     render = (
       <div className="my-auto">
