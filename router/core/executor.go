@@ -249,6 +249,10 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	planConfig.ValidateRequiredExternalFields = routerEngineCfg.Execution.ValidateRequiredExternalFields
 	planConfig.RelaxSubgraphOperationFieldSelectionMergingNullability = routerEngineCfg.Execution.RelaxSubgraphOperationFieldSelectionMergingNullability
 
+	if entityCachingConfig != nil && entityCachingConfig.EventsExport.Enabled {
+		planConfig.ForceHashAnalyticsKeys = true
+	}
+
 	// Enable cost computation when cost control is enabled
 	if routerEngineCfg.CostControl != nil && routerEngineCfg.CostControl.Enabled {
 		planConfig.ComputeCosts = true
