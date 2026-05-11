@@ -23,7 +23,7 @@ import {
   type MutableIntermediateTypeNode,
   type MutableTypeNode,
 } from '../../schema-building/ast';
-import { stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
+import { stringToNamedTypeNode, stringToNameNode, isKindAbstract } from '../../ast/utils';
 import {
   allChildDefinitionsAreInaccessibleError,
   allExternalFieldInstancesError,
@@ -2993,7 +2993,7 @@ export class FederationFactory {
         continue;
       }
 
-      if (!isAbstractType(namedTypeData)) {
+      if (!isKindAbstract(namedTypeData.kind)) {
         // Other kinds (scalar/enum/input) should be caught at normalization time.
         // Emit an explicit composition error so the directive cannot be silently dropped here again.
         this.errors.push(
