@@ -390,9 +390,14 @@ export class FederatedGraphRepository {
       });
     }
 
+    const movedFederatedGraph = await fedGraphRepo.byId(data.federatedGraph.id);
+    if (!movedFederatedGraph) {
+      throw new Error('Could not find federated graph after moving');
+    }
+
     return await compositionService.composeAndDeployFederatedGraph({
       actorId: data.updatedBy,
-      federatedGraph: data.federatedGraph,
+      federatedGraph: movedFederatedGraph,
     });
   }
 
