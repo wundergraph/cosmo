@@ -681,6 +681,74 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 	})
 }
 
+func TestCommitReusedMuxes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("flips reused flag and registers muxes under their keys", func(t *testing.T) {
+		t.Parallel()
+
+		baseMux := &graphMux{}
+		ffMux := &graphMux{}
+		require.False(t, baseMux.reused.Load())
+		require.False(t, ffMux.reused.Load())
+
+		s := &graphServer{graphMuxList: map[string]*graphMux{}}
+		s.commitReusedMuxes([]reusedGraphMux{
+			{key: "", mux: baseMux},
+			{key: "experiment-a", mux: ffMux},
+		})
+
+		require.True(t, baseMux.reused.Load(), "base mux must be flagged for reuse after commit")
+		require.True(t, ffMux.reused.Load(), "feature-flag mux must be flagged for reuse after commit")
+		require.Same(t, baseMux, s.graphMuxList[""])
+		require.Same(t, ffMux, s.graphMuxList["experiment-a"])
+	})
+
+	t.Run("is a no-op when the list is empty", func(t *testing.T) {
+		t.Parallel()
+
+		uninvolved := &graphMux{}
+		s := &graphServer{graphMuxList: map[string]*graphMux{}}
+
+		s.commitReusedMuxes(nil)
+		s.commitReusedMuxes([]reusedGraphMux{})
+
+		require.False(t, uninvolved.reused.Load())
+		require.Empty(t, s.graphMuxList)
+	})
+
+	t.Run("leaves pre-existing entries untouched and only mutates the muxes being committed", func(t *testing.T) {
+		t.Parallel()
+
+		// Pre-existing entries belong to the new server (e.g. freshly-built
+		// base/feature-flag muxes that were not reused). commitReusedMuxes must
+		// neither replace them nor touch their reused flag.
+		freshBaseMux := &graphMux{}
+		freshFFMux := &graphMux{}
+		reusedFFMux := &graphMux{}
+
+		s := &graphServer{graphMuxList: map[string]*graphMux{
+			"":           freshBaseMux,
+			"experiment": freshFFMux,
+		}}
+
+		s.commitReusedMuxes([]reusedGraphMux{
+			{key: "rollout", mux: reusedFFMux},
+		})
+
+		// Pre-existing entries are the same objects, with their flag unchanged.
+		require.Same(t, freshBaseMux, s.graphMuxList[""])
+		require.Same(t, freshFFMux, s.graphMuxList["experiment"])
+		require.False(t, freshBaseMux.reused.Load(), "fresh base mux must not be flagged for reuse")
+		require.False(t, freshFFMux.reused.Load(), "fresh feature-flag mux must not be flagged for reuse")
+
+		// The committed mux is added under its key and flagged for reuse.
+		require.Same(t, reusedFFMux, s.graphMuxList["rollout"])
+		require.True(t, reusedFFMux.reused.Load())
+		require.Len(t, s.graphMuxList, 3)
+	})
+}
+
 func toSet[T comparable](slice ...T) map[T]bool {
 	set := make(map[T]bool, len(slice))
 	for _, v := range slice {

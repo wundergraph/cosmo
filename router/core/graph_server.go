@@ -135,6 +135,15 @@ type buildMultiGraphHandlerOptions struct {
 	changes               *routerconfig.Changes
 }
 
+// reusedGraphMux holds a graph mux from the previous server that the new server
+// intends to reuse. The reuse is bookkeeping is deferred (mux.reused flag and
+// s.graphMuxList entry) until newGraphServer succeeds, so a failed construction
+// leaves the previous server's muxes untouched.
+type reusedGraphMux struct {
+	key string
+	mux *graphMux
+}
+
 // newGraphServer creates a new server instance.
 func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig.Response, proxy ProxyFunc) (*graphServer, error) {
 	/* Older versions of composition will not populate a compatibility version.
@@ -306,6 +315,13 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		return nil, err
 	}
 
+	// reusedMuxes accumulates the muxes that the new server intends to inherit from
+	// the previous server. The reuse bookkeeping (gm.reused flag and s.graphMuxList
+	// entries) is committed at the end of this function, after every fallible step
+	// has succeeded. A failed construction therefore leaves the previous server's
+	// state untouched and the partially-built new server is discarded.
+	var reusedMuxes []reusedGraphMux
+
 	currentMuxes := currentGraphMuxes(r)
 	var gm *graphMux
 
@@ -328,10 +344,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	} else {
 		s.logger.Debug("Will reuse old base graph mux for new graph server")
 		gm = mux
-		gm.reused.Store(true)
-		s.graphMuxListLock.Lock()
-		s.graphMuxList[""] = gm
-		s.graphMuxListLock.Unlock()
+		reusedMuxes = append(reusedMuxes, reusedGraphMux{key: "", mux: mux})
 	}
 
 	featureFlagConfigMap := response.Config.FeatureFlagConfigs.GetConfigByFeatureFlagName()
@@ -339,7 +352,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(buildMultiGraphHandlerOptions{
+	multiGraphHandler, ffReusedMuxes, err := s.buildMultiGraphHandler(buildMultiGraphHandlerOptions{
 		baseMux:               gm.mux,
 		featureFlagConfigs:    featureFlagConfigMap,
 		reloadPersistentState: r.reloadPersistentState,
@@ -349,6 +362,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
+	reusedMuxes = append(reusedMuxes, ffReusedMuxes...)
 
 	wrapper, err := gzhttp.NewWrapper(
 		gzhttp.MinSize(int(s.routerTrafficConfig.ResponseCompressionMinSize)),
@@ -442,7 +456,36 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 
 	s.mux = httpRouter
 
+	// commitReusedMuxes MUST be the last call before returning success. If any
+	// step above returns early with an error, the previous server's muxes stay
+	// in their original state (reused=false, not in this server's graphMuxList)
+	// so a subsequent reload that no longer reuses them will still shut them
+	// down correctly.
+	s.commitReusedMuxes(reusedMuxes)
+
 	return s, nil
+}
+
+// commitReusedMuxes finalizes the reuse bookkeeping for muxes inherited from the
+// previous server. For each entry it flips the mux's reused flag to true (so the
+// previous server's Shutdown does not tear it down) and registers it under the
+// new server's graphMuxList (so when this server is itself replaced, the reused
+// mux is found and its flag is reset).
+//
+// It MUST only be called when the new server has been fully constructed; calling
+// it earlier risks leaving the previous server's mux flagged for reuse without
+// the new server actually being put into service, which would cause a subsequent
+// non-reuse reload to skip the mux's shutdown and leak resources.
+func (s *graphServer) commitReusedMuxes(reused []reusedGraphMux) {
+	if len(reused) == 0 {
+		return
+	}
+	s.graphMuxListLock.Lock()
+	defer s.graphMuxListLock.Unlock()
+	for _, rm := range reused {
+		rm.mux.reused.Store(true)
+		s.graphMuxList[rm.key] = rm.mux
+	}
 }
 
 func getRoutingUrlGroupingForCircuitBreakers(
@@ -493,14 +536,19 @@ func getRoutingUrlGroupingForCircuitBreakers(
 	return routingUrlGroupings, nil
 }
 
+// buildMultiGraphHandler assembles the feature-flag routing handler. The returned
+// reusedGraphMux slice lists muxes inherited from the previous server; the caller
+// is responsible for committing the reuse bookkeeping once construction has fully
+// succeeded.
 func (s *graphServer) buildMultiGraphHandler(
 	opts buildMultiGraphHandlerOptions,
-) (http.HandlerFunc, error) {
+) (http.HandlerFunc, []reusedGraphMux, error) {
 	if len(opts.featureFlagConfigs) == 0 {
-		return opts.baseMux.ServeHTTP, nil
+		return opts.baseMux.ServeHTTP, nil, nil
 	}
 
 	featureFlagToMux := make(map[string]*chi.Mux, len(opts.featureFlagConfigs))
+	var reused []reusedGraphMux
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range opts.featureFlagConfigs {
@@ -515,10 +563,7 @@ func (s *graphServer) buildMultiGraphHandler(
 					s.logger.Debug("will reuse feature flag mux for new graph server",
 						zap.String("flag", featureFlagName))
 					featureFlagToMux[featureFlagName] = oldGraphMux.mux
-					s.graphMuxListLock.Lock()
-					s.graphMuxList[featureFlagName] = oldGraphMux
-					s.graphMuxListLock.Unlock()
-					oldGraphMux.reused.Store(true)
+					reused = append(reused, reusedGraphMux{key: featureFlagName, mux: oldGraphMux})
 					continue
 				}
 			}
@@ -535,7 +580,7 @@ func (s *graphServer) buildMultiGraphHandler(
 			ReloadPersistentState: opts.reloadPersistentState,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
+			return nil, nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
 		}
 		featureFlagToMux[featureFlagName] = gm.mux
 	}
@@ -560,7 +605,7 @@ func (s *graphServer) buildMultiGraphHandler(
 		}
 
 		opts.baseMux.ServeHTTP(w, r)
-	}, nil
+	}, reused, nil
 }
 
 // setupEngineStatistics creates the engine statistics for the server.
@@ -2050,11 +2095,14 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	// e.g. planner cache
 	s.graphMuxListLock.Lock()
 	defer s.graphMuxListLock.Unlock()
-	for _, mux := range s.graphMuxList {
+	for name, mux := range s.graphMuxList {
 		if mux.reused.Load() {
 			mux.reused.Store(false) // set to false to avoid the mux from being skipped forever
+			s.logger.Debug("graph mux is being reused by new graph server, skipping shutdown",
+				zap.String("mux", name))
 			continue
 		}
+		s.logger.Debug("shutting down graph mux", zap.String("mux", name))
 		if err := mux.Shutdown(ctx); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
