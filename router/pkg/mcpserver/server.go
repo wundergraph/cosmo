@@ -651,15 +651,18 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 		return fmt.Errorf("server is not started")
 	}
 
-	// Code Mode replaces the regular tool surface. Forward the schema to the
-	// embedded Code Mode server so yoko can index it, and skip the per-op tool
-	// build entirely.
+	// Forward the schema to the embedded Code Mode server so yoko can index it.
+	// Per-op tools (from operationsDir / filesystem watcher) are built below in
+	// addition to the Code Mode tool surface — the two coexist by design so
+	// demos can expose filesystem-loaded operations alongside yoko.
 	if s.codeMode != nil {
 		sdl, err := astprinter.PrintString(schema)
 		if err != nil {
 			return fmt.Errorf("print schema SDL for code mode: %w", err)
 		}
-		return s.codeMode.Reload(schema, sdl)
+		if err := s.codeMode.Reload(schema, sdl); err != nil {
+			return err
+		}
 	}
 
 	s.lastSchema = schema

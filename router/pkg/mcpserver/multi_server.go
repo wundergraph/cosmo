@@ -81,9 +81,8 @@ func (m *MultiServer) Start() error {
 		// Supergraph-bound handlers without an initial Reload yet still benefit —
 		// the watcher is no-op until the first Reload populates a schema, after
 		// which it picks up file changes on the next tick.
-		// Code Mode servers don't have per-op tools, so skip the watcher.
 		watchEnabled, interval := h.WatchSettings()
-		if watchEnabled && h.OperationsDir() != "" && h.codeMode == nil {
+		if watchEnabled && h.OperationsDir() != "" {
 			handler := h // capture loop variable for the callback
 			err := WatchOperationsDir(handler.Context(), handler.OperationsDir(), interval, func() {
 				if err := handler.ReloadOperations(); err != nil {
