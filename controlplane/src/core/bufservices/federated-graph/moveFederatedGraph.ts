@@ -2,13 +2,7 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import {
-  CompositionError,
-  CompositionWarning,
-  DeploymentError,
-  MoveGraphRequest,
-  MoveGraphResponse,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { MoveGraphRequest, MoveGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -114,6 +108,39 @@ export function moveFederatedGraph(
         throw new UnauthorizedError();
       }
 
+      // Does not call `composeAndDeployFederatedGraph` by design
+      await fedGraphRepo.move({
+        targetId: graph.targetId,
+        newNamespaceId: newNamespace.id,
+        updatedBy: authContext.userId,
+        federatedGraph: graph,
+      });
+
+      const movedGraphs = [graph];
+
+      const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
+      for (const contract of contracts) {
+        const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
+        if (!contractGraph) {
+          continue;
+        }
+
+        // Does not call `composeAndDeployFederatedGraph` by design
+        await fedGraphRepo.move({
+          targetId: contractGraph.targetId,
+          newNamespaceId: newNamespace.id,
+          updatedBy: authContext.userId,
+          federatedGraph: contractGraph,
+        });
+
+        movedGraphs.push(contractGraph);
+      }
+
+      const movedFederatedGraph = await fedGraphRepo.byId(graph.id);
+      if (!movedFederatedGraph) {
+        throw new Error('Federated graph not found');
+      }
+
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
@@ -125,54 +152,12 @@ export function moveFederatedGraph(
         req.disableResolvabilityValidation,
       );
 
-      const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.move(
-        {
-          targetId: graph.targetId,
-          newNamespaceId: newNamespace.id,
-          updatedBy: authContext.userId,
-          federatedGraph: graph,
-        },
-        compositionService,
-      );
-
-      const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
-      const allCompositionErrors: PlainMessage<CompositionError>[] = [];
-      const allCompositionWarnings: PlainMessage<CompositionWarning>[] = [];
-
-      allCompositionErrors.push(...compositionErrors);
-      allDeploymentErrors.push(...deploymentErrors);
-      allCompositionWarnings.push(...compositionWarnings);
-
-      const movedGraphs = [graph];
-
-      const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
-      for (const contract of contracts) {
-        const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
-        if (!contractGraph) {
-          continue;
-        }
-
-        const {
-          compositionErrors: contractErrors,
-          deploymentErrors: contractDeploymentErrors,
-          compositionWarnings: contractWarnings,
-        } = await fedGraphRepo.move(
-          {
-            targetId: contractGraph.targetId,
-            newNamespaceId: newNamespace.id,
-            updatedBy: authContext.userId,
-            federatedGraph: contractGraph,
-            skipDeployment: compositionErrors.length > 0,
-          },
-          compositionService,
-        );
-
-        allCompositionErrors.push(...contractErrors);
-        allDeploymentErrors.push(...contractDeploymentErrors);
-        allCompositionWarnings.push(...contractWarnings);
-
-        movedGraphs.push(contractGraph);
-      }
+      // Only call `composeAndDeployFederatedGraph` after all contracts have been moved
+      const { compositionErrors, deploymentErrors, compositionWarnings } =
+        await compositionService.composeAndDeployFederatedGraph({
+          actorId: authContext.userId,
+          federatedGraph: movedFederatedGraph,
+        });
 
       for (const movedGraph of movedGraphs) {
         await auditLogRepo.addAuditLog({
@@ -219,15 +204,15 @@ export function moveFederatedGraph(
       return {
         response: {
           code:
-            allCompositionErrors.length > 0
+            compositionErrors.length > 0
               ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
-              : allDeploymentErrors.length > 0
+              : deploymentErrors.length > 0
                 ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
                 : EnumStatusCode.OK,
         },
-        compositionErrors: allCompositionErrors,
-        deploymentErrors: allDeploymentErrors,
-        compositionWarnings: allCompositionWarnings,
+        compositionErrors,
+        deploymentErrors,
+        compositionWarnings,
       };
     });
   });

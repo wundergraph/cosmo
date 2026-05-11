@@ -42,7 +42,7 @@ import { ClickHouseClient } from '../clickhouse/index.js';
 import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import { ComposeGraphsTaskResultItem } from '../composition/composeGraphs.types.js';
+import { ComposeGraphsTaskResultItem, SerializedContractTagOptions } from '../composition/composeGraphs.types.js';
 import { AdmissionError } from './AdmissionWebhookController.js';
 import { ContractRepository } from './../repositories/ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './../repositories/FeatureFlagRepository.js';
@@ -87,8 +87,6 @@ export class CompositionService {
     }
 
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
-    const contractRepo = new ContractRepository(this.logger, this.db, this.organizationId);
-
     const result: ComposeAndDeployResult = {
       deploymentErrors: [],
       compositionErrors: [],
@@ -101,12 +99,24 @@ export class CompositionService {
       published: true,
     });
 
-    const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
-    const tagOptionsByContractName = contracts.map((contract) => ({
-      contractName: contract.downstreamFederatedGraph.target.name,
-      excludeTags: contract.excludeTags,
-      includeTags: contract.includeTags,
-    }));
+    let tagOptionsByContractName: SerializedContractTagOptions[];
+    if (federatedGraph.contract) {
+      tagOptionsByContractName = [
+        {
+          contractName: federatedGraph.name,
+          excludeTags: federatedGraph.contract.excludeTags,
+          includeTags: federatedGraph.contract.includeTags,
+        },
+      ];
+    } else {
+      const contractRepo = new ContractRepository(this.logger, this.db, this.organizationId);
+      const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
+      tagOptionsByContractName = contracts.map((contract) => ({
+        contractName: contract.downstreamFederatedGraph.target.name,
+        excludeTags: contract.excludeTags,
+        includeTags: contract.includeTags,
+      }));
+    }
 
     const { results } = await composeGraphsInWorker({
       federatedGraph,

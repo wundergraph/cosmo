@@ -330,17 +330,20 @@ export class FederatedGraphRepository {
       .where(and(eq(targets.id, targetId), eq(schema.targets.organizationId, this.organizationId)));
   }
 
-  public async move(
-    data: {
-      targetId: string;
-      newNamespaceId: string;
-      updatedBy: string;
-      federatedGraph: FederatedGraphDTO;
-      skipDeployment?: boolean;
-    },
-    compositionService: CompositionService,
-  ): Promise<ComposeAndDeployResult> {
-    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+  /**
+   * Move does not call `composeAndDeployFederatedGraph` itself.
+   * This is because contracts need to all be moved to the new namespace before `composeAndDeployFederatedGraph`
+   * is called.
+   *
+   * @param data
+   */
+  public async move(data: {
+    targetId: string;
+    newNamespaceId: string;
+    updatedBy: string;
+    federatedGraph: FederatedGraphDTO;
+    skipDeployment?: boolean;
+  }): Promise<void> {
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
 
     await this.db.update(targets).set({ namespaceId: data.newNamespaceId }).where(eq(targets.id, data.targetId));
@@ -368,37 +371,6 @@ export class FederatedGraphRepository {
         .onConflictDoNothing()
         .execute();
     }
-
-    if (data.skipDeployment) {
-      return {
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
-    }
-
-    // Handle Contract Deployment
-    if (data.federatedGraph.contract) {
-      const movedContractGraph = await fedGraphRepo.byId(data.federatedGraph.id);
-      if (!movedContractGraph) {
-        throw new Error('Could not find contract after moving');
-      }
-
-      return await compositionService.composeAndDeployFederatedGraph({
-        actorId: data.updatedBy,
-        federatedGraph: movedContractGraph,
-      });
-    }
-
-    const movedFederatedGraph = await fedGraphRepo.byId(data.federatedGraph.id);
-    if (!movedFederatedGraph) {
-      throw new Error('Could not find federated graph after moving');
-    }
-
-    return await compositionService.composeAndDeployFederatedGraph({
-      actorId: data.updatedBy,
-      federatedGraph: movedFederatedGraph,
-    });
   }
 
   static applyRbacConditionsToQuery(
