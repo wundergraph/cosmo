@@ -2654,7 +2654,7 @@ export const routerConfigHash = pgTable(
   (t) => {
     return {
       graphFlagIndex: unique('fed_graph_feature_flag_idx').on(t.federatedGraphId, t.featureFlagId).nullsNotDistinct(),
-    }
+    };
   },
 );
 
