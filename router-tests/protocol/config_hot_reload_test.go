@@ -203,7 +203,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := conn.WriteJSON(&testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
