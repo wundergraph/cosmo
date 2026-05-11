@@ -107,14 +107,19 @@ export function getProposalsByFederatedGraph(
       offset: req.offset,
     });
 
-    // Get the latest check success for each proposal
+    // Get the latest check success and current rollout flag for each proposal
     const proposalsWithChecks = await Promise.all(
       proposals.map(async (proposal) => {
-        const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
+        const [latestCheck, rolloutFlag] = await Promise.all([
+          proposalRepo.getLatestCheckForProposal(proposal.proposal.id),
+          proposalRepo.getLinkedRolloutFlag(proposal.proposal.id),
+        ]);
         return {
           ...proposal,
           latestCheckSuccess: latestCheck?.isSuccessful || false,
           latestCheckId: latestCheck?.checkId || '',
+          rolloutFeatureFlagId: rolloutFlag?.id,
+          rolloutPercentage: rolloutFlag?.trafficPercentage ?? undefined,
         };
       }),
     );
@@ -143,6 +148,8 @@ export function getProposalsByFederatedGraph(
             latestCheckSuccess: proposal.latestCheckSuccess,
             latestCheckId: proposal.latestCheckId,
             origin: fromProposalOriginEnum(proposal.proposal.origin),
+            rolloutFeatureFlagId: proposal.rolloutFeatureFlagId,
+            rolloutPercentage: proposal.rolloutPercentage,
           }),
       ),
       isProposalsEnabled: true,
