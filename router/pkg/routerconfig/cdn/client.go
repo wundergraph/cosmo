@@ -51,20 +51,8 @@ type Client struct {
 	routerCompatibilityVersion int
 }
 
-type routerConfigNotFoundError struct {
-	federatedGraphId string
-}
-
 type getRouterConfigRequestBody struct {
 	Version string `json:"version"`
-}
-
-func (e *routerConfigNotFoundError) FederatedGraphId() string {
-	return e.federatedGraphId
-}
-
-func (e *routerConfigNotFoundError) Error() string {
-	return fmt.Sprintf("router config of the federated graph %s not found. This is expected if you have not deployed any subgraphs yet", e.federatedGraphId)
 }
 
 // NewClient creates a new CDN client. URL is the URL of the CDN.

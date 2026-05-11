@@ -202,7 +202,6 @@ export class FederatedGraphRepository {
     admissionWebhookSecret?: string;
     admissionWebhookURL?: string;
     readme?: string;
-    unsetAdmissionWebhookURL?: boolean;
     unsetLabelMatchers?: boolean;
   }): Promise<ComposeAndDeployResult | undefined> {
     const routingUrl = normalizeURL(data.routingUrl);
@@ -312,9 +311,15 @@ export class FederatedGraphRepository {
       }
     }
 
+    // since the label matchers have changed, the current DTO is stale
+    const updatedFederatedGraph = await fedGraphRepo.byTargetId(data.targetId);
+    if (!updatedFederatedGraph) {
+      throw new Error(`Federated graph not found`);
+    }
+
     return await compositionService.composeAndDeployFederatedGraph({
       actorId: data.updatedBy,
-      federatedGraph,
+      federatedGraph: updatedFederatedGraph,
     });
   }
 

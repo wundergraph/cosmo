@@ -13,6 +13,7 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | affinity | object | `{}` |  |
 | autoscaling.behavior | object | `{}` |  |
 | autoscaling.enabled | bool | `false` |  |
+| autoscaling.extraMetrics | list | `[]` |  |
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |

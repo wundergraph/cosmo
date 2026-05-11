@@ -149,7 +149,7 @@ export function publishMonograph(
           logger,
           { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
           opts.blobStorage,
-          opts.chClient!,
+          opts.chClient,
           opts.webhookProxyUrl,
           false,
         );
