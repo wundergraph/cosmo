@@ -75,6 +75,7 @@ type PreHandlerOptions struct {
 	EnableInboundRequestDeduplication      bool
 	ForceEnableInboundRequestDeduplication bool
 	HeaderPropagation                      *HeaderPropagation
+	SpanNameFormatter                      SpanNameFormatterFunc
 }
 
 type PreHandler struct {
@@ -114,6 +115,7 @@ type PreHandler struct {
 	hasPreOriginHandlers                   bool
 	enableInboundRequestDeduplication      bool
 	forceEnableInboundRequestDeduplication bool
+	spanNameFormatter                      SpanNameFormatterFunc
 }
 
 type httpOperation struct {
@@ -137,6 +139,10 @@ const (
 )
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
+	spanNameFormatter := opts.SpanNameFormatter
+	if spanNameFormatter == nil {
+		spanNameFormatter = DefaultSpanNameFormatter
+	}
 	return &PreHandler{
 		log:                         opts.Logger,
 		executor:                    opts.Executor,
@@ -177,6 +183,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		enableInboundRequestDeduplication:      opts.EnableInboundRequestDeduplication,
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 		headerPropagation:                      opts.HeaderPropagation,
+		spanNameFormatter:                      spanNameFormatter,
 	}
 }
 
@@ -770,8 +777,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		return unsupportedErr
 	}
 
-	// Set the router span name after we have the operation name
-	httpOperation.routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
+	httpOperation.routerSpan.SetName(h.spanNameFormatter(req))
 
 	if req.Method == http.MethodGet && operationKit.parsedOperation.Type == "mutation" {
 		return &httpGraphqlError{

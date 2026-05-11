@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.169.2](https://github.com/wundergraph/cosmo/compare/studio@0.169.1...studio@0.169.2) (2026-05-11)
+
+### Bug Fixes
+
+* onboarding_started tracking event not fired + default channel ([#2852](https://github.com/wundergraph/cosmo/issues/2852)) ([465a971](https://github.com/wundergraph/cosmo/commit/465a971ebe26183532d133c2e6affd911b93e6e9)) (@comatory)
+
 ## [0.169.1](https://github.com/wundergraph/cosmo/compare/studio@0.169.0...studio@0.169.1) (2026-05-07)
 
 **Note:** Version bump only for package studio
