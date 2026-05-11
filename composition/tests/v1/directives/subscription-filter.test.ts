@@ -24,14 +24,14 @@ import {
   SUBSCRIPTION,
   SUBSCRIPTION_FILTER,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
-  subscriptionFieldConditionInvalidInputFieldErrorMessage,
+  subscriptionFieldConditionInvalidInputFieldError,
   subscriptionFieldConditionInvalidValuesArrayErrorMessage,
-  subscriptionFilterArrayConditionInvalidLengthErrorMessage,
-  subscriptionFilterConditionDepthExceededErrorMessage,
-  subscriptionFilterConditionInvalidInputFieldErrorMessage,
-  subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
-  subscriptionFilterInterfaceImplementationInvalidErrorMessage,
-  subscriptionFilterUnionMemberInvalidErrorMessage,
+  subscriptionFilterArrayConditionInvalidLengthError,
+  subscriptionFilterConditionDepthExceededError,
+  subscriptionFilterConditionInvalidInputFieldError,
+  subscriptionFilterConditionInvalidInputFieldTypeError,
+  subscriptionFilterInterfaceImplementationInvalidError,
+  subscriptionFilterUnionMemberInvalidError,
   undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
 } from '../../../src';
 import {
@@ -208,7 +208,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidSubscriptionFilterDirectiveError(`Subscription.field`, [
-          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+          subscriptionFieldConditionInvalidInputFieldError(
             'condition.AND[0].NOT.OR[0].IN',
             [],
             [],
@@ -250,7 +250,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(2);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
-          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+          subscriptionFieldConditionInvalidInputFieldError(
             'condition.IN',
             ['fieldPath', 'values'],
             [],
@@ -259,7 +259,7 @@ describe('@openfed__subscriptionFilter tests', () => {
           ),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.two', [
-          subscriptionFieldConditionInvalidInputFieldErrorMessage('condition.IN', [], ['fieldPath', 'values'], [], []),
+          subscriptionFieldConditionInvalidInputFieldError('condition.IN', [], ['fieldPath', 'values'], [], []),
         ]),
       ]);
     });
@@ -269,7 +269,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(4);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
-          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+          subscriptionFieldConditionInvalidInputFieldError(
             'condition.IN',
             [],
             [],
@@ -278,7 +278,7 @@ describe('@openfed__subscriptionFilter tests', () => {
           ),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.two', [
-          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+          subscriptionFieldConditionInvalidInputFieldError(
             'condition.IN',
             [],
             [],
@@ -287,7 +287,7 @@ describe('@openfed__subscriptionFilter tests', () => {
           ),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.three', [
-          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+          subscriptionFieldConditionInvalidInputFieldError(
             'condition.IN',
             [],
             [],
@@ -296,7 +296,7 @@ describe('@openfed__subscriptionFilter tests', () => {
           ),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.four', [
-          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+          subscriptionFieldConditionInvalidInputFieldError(
             'condition.IN',
             [],
             [],
@@ -363,19 +363,19 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(5);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
-          subscriptionFilterConditionInvalidInputFieldErrorMessage('condition', 'OUT'),
+          subscriptionFilterConditionInvalidInputFieldError('condition', 'OUT'),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.two', [
-          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage('condition.AND', LIST, OBJECT),
+          subscriptionFilterConditionInvalidInputFieldTypeError('condition.AND', LIST, OBJECT),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.three', [
-          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage('condition.OR', LIST, OBJECT),
+          subscriptionFilterConditionInvalidInputFieldTypeError('condition.OR', LIST, OBJECT),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.four', [
-          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage('condition.IN', OBJECT, LIST),
+          subscriptionFilterConditionInvalidInputFieldTypeError('condition.IN', OBJECT, LIST),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.five', [
-          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage('condition.NOT', OBJECT, LIST),
+          subscriptionFilterConditionInvalidInputFieldTypeError('condition.NOT', OBJECT, LIST),
         ]),
       ]);
     });
@@ -385,7 +385,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
-          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+          subscriptionFieldConditionInvalidInputFieldError(
             'condition.IN',
             [],
             [],
@@ -409,7 +409,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
-          subscriptionFieldConditionInvalidInputFieldErrorMessage(
+          subscriptionFieldConditionInvalidInputFieldError(
             'condition.IN',
             [],
             [],
@@ -432,16 +432,16 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(4);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
-          subscriptionFilterArrayConditionInvalidLengthErrorMessage('condition.AND', 6),
+          subscriptionFilterArrayConditionInvalidLengthError('condition.AND', 6),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.two', [
-          subscriptionFilterArrayConditionInvalidLengthErrorMessage('condition.AND', 0),
+          subscriptionFilterArrayConditionInvalidLengthError('condition.AND', 0),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.three', [
-          subscriptionFilterArrayConditionInvalidLengthErrorMessage('condition.OR', 6),
+          subscriptionFilterArrayConditionInvalidLengthError('condition.OR', 6),
         ]),
         invalidSubscriptionFilterDirectiveError('Subscription.four', [
-          subscriptionFilterArrayConditionInvalidLengthErrorMessage('condition.OR', 0),
+          subscriptionFilterArrayConditionInvalidLengthError('condition.OR', 0),
         ]),
       ]);
     });
@@ -451,7 +451,7 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
-          subscriptionFilterConditionDepthExceededErrorMessage('condition.NOT.NOT.NOT.NOT.NOT.IN'),
+          subscriptionFilterConditionDepthExceededError('condition.NOT.NOT.NOT.NOT.NOT.IN'),
         ]),
       ]);
     });
@@ -511,10 +511,10 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors![0]).toStrictEqual(
         invalidSubscriptionFilterDirectiveError(`Subscription.onEntityEvent`, [
-          subscriptionFilterUnionMemberInvalidErrorMessage(
+          subscriptionFilterUnionMemberInvalidError(
             'EntityEvent',
             'EntityDeleted',
-            subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            subscriptionFieldConditionInvalidInputFieldError(
               'condition.IN',
               [],
               [],
@@ -528,7 +528,7 @@ describe('@openfed__subscriptionFilter tests', () => {
                   'EntityDeleted',
                 ),
               ],
-            ),
+            ).message,
           ),
         ]),
       );
@@ -543,10 +543,10 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors![0]).toStrictEqual(
         invalidSubscriptionFilterDirectiveError(`Subscription.onEntityEvent`, [
-          subscriptionFilterInterfaceImplementationInvalidErrorMessage(
+          subscriptionFilterInterfaceImplementationInvalidError(
             'EntityEvent',
             'EntityDeleted',
-            subscriptionFieldConditionInvalidInputFieldErrorMessage(
+            subscriptionFieldConditionInvalidInputFieldError(
               'condition.IN',
               [],
               [],
@@ -560,7 +560,7 @@ describe('@openfed__subscriptionFilter tests', () => {
                   'EntityDeleted',
                 ),
               ],
-            ),
+            ).message,
           ),
         ]),
       );
