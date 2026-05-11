@@ -8,14 +8,10 @@ import (
 
 const myModuleID = "setWildcardScopeModule"
 
-type SetWildcardScopeModule struct {
-	Enabled bool `mapstructure:"enabled"`
-}
+type SetWildcardScopeModule struct{}
 
 func (m *SetWildcardScopeModule) Middleware(ctx core.RequestContext, next http.Handler) {
-	if m.Enabled {
-		ctx.SetWildcardScope(true)
-	}
+	ctx.SetWildcardScope(true)
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 

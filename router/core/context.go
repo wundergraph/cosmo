@@ -550,8 +550,19 @@ func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 	auth.SetScopes(scopes)
 }
 
+type wildcardScopeKey struct{}
+
+func withWildcardScope(ctx context.Context, wildcard bool) context.Context {
+	return context.WithValue(ctx, wildcardScopeKey{}, wildcard)
+}
+
+func hasWildcardScope(ctx context.Context) bool {
+	v, ok := ctx.Value(wildcardScopeKey{}).(bool)
+	return ok && v
+}
+
 func (c *requestContext) SetWildcardScope(wildcard bool) {
-	c.request = c.request.WithContext(context.WithValue(c.request.Context(), wildcardScopeKey{}, wildcard))
+	c.request = c.request.WithContext(withWildcardScope(c.request.Context(), wildcard))
 }
 
 func (c *requestContext) SetForceSha256Compute() {
