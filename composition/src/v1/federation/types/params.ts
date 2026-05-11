@@ -13,6 +13,8 @@ import {
   type EntityInterfaceFederationData,
   type InputObjectDefinitionData,
   type FederatedDirectivesData,
+  type ObjectDefinitionData,
+  type ParentDefinitionData,
 } from '../../../schema-building/types/types';
 import type { ConstDirectiveNode, InputValueDefinitionNode } from 'graphql';
 import type { InternalSubgraph, Subgraph } from '../../../subgraph/types';
@@ -71,4 +73,11 @@ export type FederationFactoryParams = {
 export type UpsertDirectiveArgumentDataParams = {
   argumentDataByName: Map<ArgumentName, DirectiveArgumentData>;
   incomingData: DirectiveArgumentData;
+};
+
+export type MergeSubscriptionFilterTargetResultParams = {
+  directiveNode: ConstDirectiveNode;
+  abstractTypeData: ParentDefinitionData;
+  targets: ObjectDefinitionData[];
+  directiveSubgraphName: string;
 };

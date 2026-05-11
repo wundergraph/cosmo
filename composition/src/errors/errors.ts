@@ -1287,11 +1287,11 @@ export function invalidSubscriptionFilterDirectiveError(fieldPath: string, error
   );
 }
 
-export function subscriptionFilterNamedTypeErrorMessage(namedTypeName: string): Error {
+export function subscriptionFilterNamedTypeError(namedTypeName: string): Error {
   return new Error(`Unknown type "${namedTypeName}".`);
 }
 
-export function subscriptionFilterUnionMemberInvalidErrorMessage(
+export function subscriptionFilterUnionMemberInvalidError(
   unionTypeName: string,
   memberTypeName: string,
   detail: string,
@@ -1302,7 +1302,7 @@ export function subscriptionFilterUnionMemberInvalidErrorMessage(
   );
 }
 
-export function subscriptionFilterInterfaceImplementationInvalidErrorMessage(
+export function subscriptionFilterInterfaceImplementationInvalidError(
   interfaceTypeName: string,
   implementerTypeName: string,
   detail: string,
@@ -1313,7 +1313,7 @@ export function subscriptionFilterInterfaceImplementationInvalidErrorMessage(
   );
 }
 
-export function subscriptionFilterNoAccessibleConcreteTypesErrorMessage(
+export function subscriptionFilterNoAccessibleConcreteTypesError(
   abstractTypeName: string,
   abstractKind: 'Union' | 'Interface',
 ): Error {
@@ -1322,14 +1322,14 @@ export function subscriptionFilterNoAccessibleConcreteTypesErrorMessage(
   );
 }
 
-export function subscriptionFilterUnsupportedNamedTypeKindErrorMessage(namedTypeName: string, kind: string): Error {
+export function subscriptionFilterUnsupportedNamedTypeKindError(namedTypeName: string, kind: string): Error {
   return new Error(
     `The named type "${namedTypeName}" of kind "${kind}" is not supported by the "@${SUBSCRIPTION_FILTER}" directive.` +
       `Only object, union, and interface return types are supported.`,
   );
 }
 
-export function subscriptionFilterConditionDepthExceededErrorMessage(inputPath: string): Error {
+export function subscriptionFilterConditionDepthExceededError(inputPath: string): Error {
   return new Error(
     `The input path "${inputPath}" exceeds the maximum depth of ${MAX_SUBSCRIPTION_FILTER_DEPTH}` +
       ` for any one filter condition.\n` +
@@ -1341,26 +1341,20 @@ const subscriptionFilterConditionFieldsString =
   ` Each "${SUBSCRIPTION_FILTER_CONDITION}" input object must define exactly one of the following` +
   ` input value fields: "${AND_UPPER}", "${IN_UPPER}", "${NOT_UPPER}", or "${OR_UPPER}".\n`;
 
-export function subscriptionFilterConditionInvalidInputFieldNumberErrorMessage(
-  inputPath: string,
-  fieldNumber: number,
-): Error {
+export function subscriptionFilterConditionInvalidInputFieldNumberError(inputPath: string, fieldNumber: number): Error {
   return new Error(
     subscriptionFilterConditionFieldsString + ` However, input path "${inputPath}" defines ${fieldNumber} fields.`,
   );
 }
 
-export function subscriptionFilterConditionInvalidInputFieldErrorMessage(
-  inputPath: string,
-  invalidFieldName: string,
-): Error {
+export function subscriptionFilterConditionInvalidInputFieldError(inputPath: string, invalidFieldName: string): Error {
   return new Error(
     subscriptionFilterConditionFieldsString +
       ` However, input path "${inputPath}" defines the invalid input value field "${invalidFieldName}".`,
   );
 }
 
-export function subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
+export function subscriptionFilterConditionInvalidInputFieldTypeError(
   inputPath: string,
   expectedTypeString: string,
   actualTypeString: string,
@@ -1391,10 +1385,7 @@ export function subscriptionFilterArrayConditionInvalidItemTypeErrorMessage(
   );
 }
 
-export function subscriptionFilterArrayConditionInvalidLengthErrorMessage(
-  inputPath: string,
-  actualLength: number,
-): Error {
+export function subscriptionFilterArrayConditionInvalidLengthError(inputPath: string, actualLength: number): Error {
   return new Error(
     subscriptionFilterConditionArrayString +
       ` However, the list defined on input path "${inputPath}" has a length of ${actualLength}.`,
@@ -1412,7 +1403,7 @@ export function invalidInputFieldTypeErrorMessage(
   );
 }
 
-export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
+export function subscriptionFieldConditionInvalidInputFieldError(
   inputPath: string,
   missingFieldNames: string[],
   duplicatedFieldNames: string[],

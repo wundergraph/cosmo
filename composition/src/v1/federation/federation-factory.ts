@@ -6,6 +6,7 @@ import {
   type DirectiveDefinitionNode,
   type DocumentNode,
   type GraphQLSchema,
+  isAbstractType,
   Kind,
   type ListTypeNode,
   type NamedTypeNode,
@@ -55,19 +56,19 @@ import {
   orScopesLimitError,
   semanticNonNullInconsistentLevelsError,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
-  subscriptionFieldConditionInvalidInputFieldErrorMessage,
+  subscriptionFieldConditionInvalidInputFieldError,
   subscriptionFieldConditionInvalidValuesArrayErrorMessage,
   subscriptionFilterArrayConditionInvalidItemTypeErrorMessage,
-  subscriptionFilterArrayConditionInvalidLengthErrorMessage,
-  subscriptionFilterConditionDepthExceededErrorMessage,
-  subscriptionFilterConditionInvalidInputFieldErrorMessage,
-  subscriptionFilterConditionInvalidInputFieldNumberErrorMessage,
-  subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
-  subscriptionFilterInterfaceImplementationInvalidErrorMessage,
-  subscriptionFilterNamedTypeErrorMessage,
-  subscriptionFilterNoAccessibleConcreteTypesErrorMessage,
-  subscriptionFilterUnionMemberInvalidErrorMessage,
-  subscriptionFilterUnsupportedNamedTypeKindErrorMessage,
+  subscriptionFilterArrayConditionInvalidLengthError,
+  subscriptionFilterConditionDepthExceededError,
+  subscriptionFilterConditionInvalidInputFieldError,
+  subscriptionFilterConditionInvalidInputFieldNumberError,
+  subscriptionFilterConditionInvalidInputFieldTypeError,
+  subscriptionFilterInterfaceImplementationInvalidError,
+  subscriptionFilterNamedTypeError,
+  subscriptionFilterNoAccessibleConcreteTypesError,
+  subscriptionFilterUnionMemberInvalidError,
+  subscriptionFilterUnsupportedNamedTypeKindError,
   undefinedEntityInterfaceImplementationsError,
   undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage,
   undefinedTypeError,
@@ -76,7 +77,7 @@ import {
   unknownFieldSubgraphNameError,
   unknownNamedTypeError,
 } from '../../errors/errors';
-import { type ExecutionMultiFailure, type ExecutionSuccess } from '../../types/results';
+import { type ExecutionMultiFailure, type ExecutionSuccess, type ExecutionMultiResult } from '../../types/results';
 import {
   type ChildTagData,
   getDescriptionFromString,
@@ -211,6 +212,7 @@ import {
   TAG,
   UNION,
   VALUES,
+  LITERAL_NEW_LINE,
 } from '../../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
 import {
@@ -251,6 +253,7 @@ import {
   type FederateSubgraphsWithContractsV1Params,
   type FederationFactoryParams,
   type FederationParams,
+  type MergeSubscriptionFilterTargetResultParams,
   type UpsertDirectiveArgumentDataParams,
   type ValidateOneOfDirectiveParams,
 } from './types/params';
@@ -2621,10 +2624,10 @@ export class FederationFactory {
     depth: number,
     inputPath: string,
     directiveSubgraphName: string,
-  ): SubscriptionFilterConditionResult {
+  ): ExecutionMultiResult {
     if (depth > MAX_SUBSCRIPTION_FILTER_DEPTH || this.isMaxDepth) {
       this.isMaxDepth = true;
-      return { success: false, errors: [subscriptionFilterConditionDepthExceededErrorMessage(inputPath)] };
+      return { success: false, errors: [subscriptionFilterConditionDepthExceededError(inputPath)] };
     }
     let hasErrors = false;
     const validFieldNames = new Set<string>([FIELD_PATH, VALUES]);
@@ -2723,7 +2726,7 @@ export class FederationFactory {
     return {
       success: false,
       errors: [
-        subscriptionFieldConditionInvalidInputFieldErrorMessage(
+        subscriptionFieldConditionInvalidInputFieldError(
           inputPath,
           [...validFieldNames],
           [...duplicatedFieldNames],
@@ -2741,18 +2744,16 @@ export class FederationFactory {
     depth: number,
     inputPath: string,
     directiveSubgraphName: string,
-  ): SubscriptionFilterConditionResult {
+  ): ExecutionMultiResult {
     if (depth > MAX_SUBSCRIPTION_FILTER_DEPTH || this.isMaxDepth) {
       this.isMaxDepth = true;
-      return { success: false, errors: [subscriptionFilterConditionDepthExceededErrorMessage(inputPath)] };
+      return { success: false, errors: [subscriptionFilterConditionDepthExceededError(inputPath)] };
     }
     depth += 1;
     if (objectValueNode.fields.length !== 1) {
       return {
         success: false,
-        errors: [
-          subscriptionFilterConditionInvalidInputFieldNumberErrorMessage(inputPath, objectValueNode.fields.length),
-        ],
+        errors: [subscriptionFilterConditionInvalidInputFieldNumberError(inputPath, objectValueNode.fields.length)],
       };
     }
     const objectFieldNode = objectValueNode.fields[0];
@@ -2760,7 +2761,7 @@ export class FederationFactory {
     if (!SUBSCRIPTION_FILTER_INPUT_NAMES.has(fieldName)) {
       return {
         success: false,
-        errors: [subscriptionFilterConditionInvalidInputFieldErrorMessage(inputPath, fieldName)],
+        errors: [subscriptionFilterConditionInvalidInputFieldError(inputPath, fieldName)],
       };
     }
     const inputFieldPath = inputPath + `.${fieldName}`;
@@ -2793,7 +2794,7 @@ export class FederationFactory {
             // The field is guaranteed to be an AND or an OR
             return {
               success: false,
-              errors: [subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(inputFieldPath, LIST, OBJECT)],
+              errors: [subscriptionFilterConditionInvalidInputFieldTypeError(inputFieldPath, LIST, OBJECT)],
             };
         }
       }
@@ -2812,18 +2813,18 @@ export class FederationFactory {
             // The field is guaranteed to be an IN or a NOT
             return {
               success: false,
-              errors: [subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(inputFieldPath, OBJECT, LIST)],
+              errors: [subscriptionFilterConditionInvalidInputFieldTypeError(inputFieldPath, OBJECT, LIST)],
             };
         }
         const listLength = objectFieldNode.value.values.length;
         if (listLength < 1 || listLength > 5) {
           return {
             success: false,
-            errors: [subscriptionFilterArrayConditionInvalidLengthErrorMessage(inputFieldPath, listLength)],
+            errors: [subscriptionFilterArrayConditionInvalidLengthError(inputFieldPath, listLength)],
           };
         }
         let isValid = true;
-        const aggregatedErrors: Error[] = [];
+        const aggregatedErrors: Array<Error> = [];
         const invalidIndices: number[] = [];
         for (let i = 0; i < objectFieldNode.value.values.length; i++) {
           const arrayIndexPath = inputFieldPath + `[${i}]`;
@@ -2867,7 +2868,7 @@ export class FederationFactory {
         return {
           success: false,
           errors: [
-            subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
+            subscriptionFilterConditionInvalidInputFieldTypeError(
               inputFieldPath,
               expectedTypeString,
               kindToNodeType(objectFieldNode.value.kind),
@@ -2892,7 +2893,7 @@ export class FederationFactory {
       return {
         success: false,
         errors: [
-          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
+          subscriptionFilterConditionInvalidInputFieldTypeError(
             CONDITION,
             OBJECT,
             kindToNodeType(argumentNode.value.kind),
@@ -2939,12 +2940,12 @@ export class FederationFactory {
     })).subscriptionFilterCondition = result.condition;
   }
 
-  collectSubscriptionFilterConcreteTargets(abstractTypeName: string): ObjectDefinitionData[] {
+  collectSubscriptionFilterConcreteTargets(abstractTypeName: string): Array<ObjectDefinitionData> {
     const concreteNames = this.concreteTypeNamesByAbstractTypeName.get(abstractTypeName);
     if (!concreteNames) {
       return [];
     }
-    const out: ObjectDefinitionData[] = [];
+    const out: Array<ObjectDefinitionData> = [];
     for (const concreteName of concreteNames) {
       const data = this.parentDefinitionDataByTypeName.get(concreteName);
       if (data && data.kind === Kind.OBJECT_TYPE_DEFINITION && !isNodeDataInaccessible(data)) {
@@ -2968,7 +2969,7 @@ export class FederationFactory {
       if (!namedTypeData) {
         this.errors.push(
           invalidSubscriptionFilterDirectiveError(fieldPath, [
-            subscriptionFilterNamedTypeErrorMessage(data.fieldData.namedTypeName),
+            subscriptionFilterNamedTypeError(data.fieldData.namedTypeName),
           ]),
         );
         continue;
@@ -2991,12 +2992,12 @@ export class FederationFactory {
         continue;
       }
 
-      if (namedTypeData.kind !== Kind.UNION_TYPE_DEFINITION && namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+      if (!isAbstractType(namedTypeData)) {
         // Other kinds (scalar/enum/input) should be caught at normalization time.
         // Emit an explicit composition error so the directive cannot be silently dropped here again.
         this.errors.push(
           invalidSubscriptionFilterDirectiveError(fieldPath, [
-            subscriptionFilterUnsupportedNamedTypeKindErrorMessage(namedTypeData.name, namedTypeData.kind),
+            subscriptionFilterUnsupportedNamedTypeKindError(namedTypeData.name, namedTypeData.kind),
           ]),
         );
         continue;
@@ -3008,18 +3009,18 @@ export class FederationFactory {
           namedTypeData.kind === Kind.UNION_TYPE_DEFINITION ? 'Union' : 'Interface';
         this.errors.push(
           invalidSubscriptionFilterDirectiveError(fieldPath, [
-            subscriptionFilterNoAccessibleConcreteTypesErrorMessage(namedTypeData.name, kindLabel),
+            subscriptionFilterNoAccessibleConcreteTypesError(namedTypeData.name, kindLabel),
           ]),
         );
         continue;
       }
 
-      const result = this.mergeSubscriptionFilterTargetResults(
-        data.directive,
-        namedTypeData,
+      const result = this.mergeSubscriptionFilterTargetResults({
+        directiveNode: data.directive,
+        abstractTypeData: namedTypeData,
         targets,
-        data.directiveSubgraphName,
-      );
+        directiveSubgraphName: data.directiveSubgraphName,
+      });
       if (!result.success) {
         this.errors.push(invalidSubscriptionFilterDirectiveError(fieldPath, result.errors));
         continue;
@@ -3033,12 +3034,12 @@ export class FederationFactory {
     }
   }
 
-  mergeSubscriptionFilterTargetResults(
-    directiveNode: ConstDirectiveNode,
-    abstractTypeData: ParentDefinitionData,
-    targets: ObjectDefinitionData[],
-    directiveSubgraphName: string,
-  ): SubscriptionFilterTargetResult {
+  mergeSubscriptionFilterTargetResults({
+    directiveNode,
+    abstractTypeData,
+    targets,
+    directiveSubgraphName,
+  }: MergeSubscriptionFilterTargetResultParams): SubscriptionFilterTargetResult {
     const aggregatedErrors: Error[] = [];
     let firstCondition: SubscriptionCondition | null = null;
     for (const target of targets) {
@@ -3050,15 +3051,15 @@ export class FederationFactory {
         }
         const wrapped =
           abstractTypeData.kind === Kind.UNION_TYPE_DEFINITION
-            ? subscriptionFilterUnionMemberInvalidErrorMessage(
+            ? subscriptionFilterUnionMemberInvalidError(
                 abstractTypeData.name,
                 target.name,
-                result.errors.join('\n'),
+                result.errors.map((error) => error.message).join(LITERAL_NEW_LINE),
               )
-            : subscriptionFilterInterfaceImplementationInvalidErrorMessage(
+            : subscriptionFilterInterfaceImplementationInvalidError(
                 abstractTypeData.name,
                 target.name,
-                result.errors.join('\n'),
+                result.errors.map((error) => error.message).join(LITERAL_NEW_LINE),
               );
         aggregatedErrors.push(wrapped);
         continue;
@@ -3483,8 +3484,6 @@ interface SubscriptionFilterTargetSuccess extends ExecutionSuccess {
 }
 
 type SubscriptionFilterTargetResult = SubscriptionFilterTargetSuccess | ExecutionMultiFailure;
-
-type SubscriptionFilterConditionResult = ExecutionSuccess | ExecutionMultiFailure;
 
 type FederationFactoryResultSuccess = {
   federationFactory: FederationFactory;
