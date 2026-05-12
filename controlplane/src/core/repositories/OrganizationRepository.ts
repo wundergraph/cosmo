@@ -1420,6 +1420,7 @@ export class OrganizationRepository {
       sso: false,
       'subgraph-check-extensions': false,
       support: false,
+      'split-config-loading': false,
     };
 
     for (const feature of features) {

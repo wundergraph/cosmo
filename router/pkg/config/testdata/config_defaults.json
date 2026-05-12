@@ -441,6 +441,7 @@
     "EnableInboundRequestDeduplication": true,
     "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
+    "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,
     "EnableNetPoll": true,
@@ -554,6 +555,10 @@
       "ProviderID": "",
       "ObjectPath": ""
     }
+  },
+  "SplitConfigPoller": {
+    "SkipMissingFeatureFlags": false,
+    "IgnoredFeatureFlags": null
   },
   "PersistedOperationsConfig": {
     "Disabled": false,
