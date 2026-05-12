@@ -396,6 +396,7 @@ export class SubgraphRepository {
         }
       }
 
+      const updatedFeatureFlags: FeatureFlagDTO[] = [];
       if (subgraph.isFeatureSubgraph) {
         // the fed graphs to be composed are to be fetched by using the base subgraph
         const baseSubgraph = await tx
@@ -456,6 +457,18 @@ export class SubgraphRepository {
             updatedFederatedGraphs.push(graph);
           }
         }
+
+        const featureFlags = await featureFlagRepo.getFeatureFlagsBySubgraphLabels({
+          namespaceId: data.namespaceId,
+          labels: subgraph.labels,
+          excludeDisabled: true,
+        });
+
+        for (const featureFlag of featureFlags) {
+          if (featureFlag.featureSubgraphs.every((fsg) => fsg.baseSubgraphId !== subgraph.id)) {
+            updatedFeatureFlagIds.add(featureFlag.id);
+          }
+        }
       }
 
       // update the readme of the subgraph
@@ -467,7 +480,6 @@ export class SubgraphRepository {
         return;
       }
 
-      const updatedFeatureFlags: FeatureFlagDTO[] = [];
       if (updatedFeatureFlagIds.size > 0) {
         const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
         for (const featureFlagId of updatedFeatureFlagIds) {
