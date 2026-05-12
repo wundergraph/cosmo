@@ -1020,6 +1020,8 @@ export class FeatureFlagRepository {
           uniqueLabels.map((l) => joinLabel(l)),
         ),
       );
+    } else {
+      conditions.push(eq(featureFlags.labels, []));
     }
 
     const matchingFeatureFlags = await this.db
