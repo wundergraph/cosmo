@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.316.0](https://github.com/wundergraph/cosmo/compare/router@0.315.0...router@0.316.0) (2026-05-12)
+
+### Features
+
+* **router:** enable unauthenticated request tracing ([#2858](https://github.com/wundergraph/cosmo/issues/2858)) ([85b36c1](https://github.com/wundergraph/cosmo/commit/85b36c139365565a959d8c29bba851f7172ba47e)) (@ysmolski)
+* support user-defined extension forwarding from subgraphs ([#2836](https://github.com/wundergraph/cosmo/issues/2836)) ([3438adf](https://github.com/wundergraph/cosmo/commit/3438adfa89958c964b19bf66c174d52e8eaa59f8)) (@Noroth)
+
 # [0.315.0](https://github.com/wundergraph/cosmo/compare/router@0.314.0...router@0.315.0) (2026-05-11)
 
 ### Features

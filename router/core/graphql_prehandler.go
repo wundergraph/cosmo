@@ -56,6 +56,7 @@ type PreHandlerOptions struct {
 	FileUploadEnabled                      bool
 	TraceExportVariables                   bool
 	DevelopmentMode                        bool
+	ForceUnauthenticatedRequestTracing     bool
 	EnableRequestTracing                   bool
 	AlwaysIncludeQueryPlan                 bool
 	AlwaysSkipLoader                       bool
@@ -88,6 +89,7 @@ type PreHandler struct {
 	operationBlocker                       *OperationBlocker
 	headerPropagation                      *HeaderPropagation
 	developmentMode                        bool
+	forceUnauthenticatedRequestTracing     bool
 	alwaysIncludeQueryPlan                 bool
 	alwaysSkipLoader                       bool
 	queryPlansEnabled                      bool // queryPlansEnabled is a flag to enable query plans output in the extensions
@@ -144,19 +146,20 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		spanNameFormatter = DefaultSpanNameFormatter
 	}
 	return &PreHandler{
-		log:                         opts.Logger,
-		executor:                    opts.Executor,
-		metrics:                     opts.Metrics,
-		operationProcessor:          opts.OperationProcessor,
-		planner:                     opts.Planner,
-		accessController:            opts.AccessController,
-		operationBlocker:            opts.OperationBlocker,
-		routerPublicKey:             opts.RouterPublicKey,
-		developmentMode:             opts.DevelopmentMode,
-		enableRequestTracing:        opts.EnableRequestTracing,
-		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
-		tracerProvider:              opts.TracerProvider,
-		traceExportVariables:        opts.TraceExportVariables,
+		log:                                opts.Logger,
+		executor:                           opts.Executor,
+		metrics:                            opts.Metrics,
+		operationProcessor:                 opts.OperationProcessor,
+		planner:                            opts.Planner,
+		accessController:                   opts.AccessController,
+		operationBlocker:                   opts.OperationBlocker,
+		routerPublicKey:                    opts.RouterPublicKey,
+		developmentMode:                    opts.DevelopmentMode,
+		enableRequestTracing:               opts.EnableRequestTracing,
+		forceUnauthenticatedRequestTracing: opts.ForceUnauthenticatedRequestTracing,
+		flushTelemetryAfterResponse:        opts.FlushTelemetryAfterResponse,
+		tracerProvider:                     opts.TracerProvider,
+		traceExportVariables:               opts.TraceExportVariables,
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
@@ -1310,8 +1313,9 @@ func (h *PreHandler) parseExecutionAndTraceOptions(r *http.Request, clientInfo *
 func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
 	// Determine if we should enable request tracing / query plans at all
 	if h.enableRequestTracing {
-		// In dev mode we always allow to enable tracing / query plans
-		if h.developmentMode {
+		// In dev mode we always allow to enable tracing / query plans.
+		// force_unauthenticated_request_tracing=true allows ART without dev_mode or a controlplane token.
+		if h.developmentMode || h.forceUnauthenticatedRequestTracing {
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 		}
 		// If the client has a valid request token, and we have a public key from the controlplane

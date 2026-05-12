@@ -441,6 +441,7 @@
     "EnableInboundRequestDeduplication": true,
     "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
+    "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,
     "EnableNetPoll": true,
@@ -527,6 +528,11 @@
       "code"
     ],
     "AllowedFields": null
+  },
+  "SubgraphExtensionPropagation": {
+    "Enabled": false,
+    "AllowedExtensionFields": null,
+    "Algorithm": "first_write"
   },
   "StorageProviders": {
     "S3": null,
