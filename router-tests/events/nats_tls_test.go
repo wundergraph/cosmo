@@ -78,7 +78,8 @@ func natsPlainURL(s *natssrv.Server) string {
 func connectToNATS(t *testing.T, serverURL string, extraOpts ...nats.Option) *nats.Conn {
 	t.Helper()
 	opts := []nats.Option{
-		nats.Secure(&tls.Config{InsecureSkipVerify: true}), //nolint:gosec // test helper only
+		// allowing self-signed certificates for the test helper
+		nats.Secure(&tls.Config{InsecureSkipVerify: true}), //nolint:gosec
 		nats.MaxReconnects(3),
 		nats.Timeout(10 * time.Second),
 		nats.ErrorHandler(func(_ *nats.Conn, _ *nats.Subscription, err error) {
@@ -177,7 +178,7 @@ func TestRouterConnectsToNATSWithTLS(t *testing.T) {
 		})
 
 		serverURL := natsPlainURL(srv)
-		natsConn := connectToNATS(t, serverURL)
+		natsHelperConn := connectToNATS(t, serverURL)
 		routerTLS := &config.NatsTLSConfiguration{InsecureSkipCaVerification: true}
 
 		testenv.Run(t, &testenv.Config{
@@ -186,7 +187,7 @@ func TestRouterConnectsToNATSWithTLS(t *testing.T) {
 				cfg.Providers.Nats = tlsNATSEventSourceConfig(serverURL, routerTLS)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			subscribePublishVerify(t, xEnv, natsConn)
+			subscribePublishVerify(t, xEnv, natsHelperConn)
 		})
 	})
 
