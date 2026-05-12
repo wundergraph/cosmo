@@ -34,11 +34,11 @@ var _ configpoller.ConfigPoller = (*ConfigPollerMock)(nil)
 
 type ConfigPollerMock struct {
 	initConfig   *nodev1.RouterConfig
-	updateConfig func(newConfig *nodev1.RouterConfig, oldVersion string) error
+	updateConfig func(newConfig *routerconfig.Response) error
 	ready        chan struct{}
 }
 
-func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *routerconfig.Response) error) {
 	c.updateConfig = handler
 	close(c.ready)
 }
@@ -1583,7 +1583,7 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(3, EventWaitTimeout)
 
 			// Swap config
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			// Wait for all providers to shut down and restart
 			require.Eventually(t, func() bool {

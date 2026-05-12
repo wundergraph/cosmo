@@ -33,6 +33,7 @@ import {
   users,
 } from '../../db/schema.js';
 import {
+  FeatureFlagDTO,
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
@@ -47,6 +48,7 @@ import {
   SubgraphDTO,
   SubgraphListFilterOptions,
   SubgraphMemberDTO,
+  ComposeAndDeployResult,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
@@ -67,6 +69,7 @@ import {
 } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { traced } from '../tracing.js';
+import type { CompositionService } from '../services/CompositionService.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -243,26 +246,20 @@ export class SubgraphRepository {
       readme?: string;
       proto?: ProtoSubgraph;
     },
-    blobStorage: BlobStorage,
-    admissionConfig: {
-      webhookJWTSecret: string;
-      cdnBaseUrl: string;
-    },
-    chClient: ClickHouseClient,
-    compositionOptions?: CompositionOptions,
-    webhookProxyUrl?: string,
-  ): Promise<{
-    compositionErrors: PlainMessage<CompositionError>[];
-    compositionWarnings: PlainMessage<CompositionWarning>[];
-    deploymentErrors: PlainMessage<DeploymentError>[];
-    updatedFederatedGraphs: FederatedGraphDTO[];
-    subgraphChanged: boolean;
-  }> {
+    compositionService: CompositionService,
+  ): Promise<
+    ComposeAndDeployResult & {
+      updatedFederatedGraphs: FederatedGraphDTO[];
+      subgraphChanged: boolean;
+    }
+  > {
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+
     // The collection of federated graphs that will be potentially re-composed
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
+    const updatedFeatureFlagIds = new Set<string>();
     let subgraphChanged = false;
     let labelChanged = false;
 
@@ -274,7 +271,13 @@ export class SubgraphRepository {
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
-        return { compositionErrors, updatedFederatedGraphs, compositionWarnings };
+        return {
+          deploymentErrors: [],
+          compositionErrors: [],
+          compositionWarnings: [],
+          updatedFederatedGraphs,
+          subgraphChanged: false,
+        };
       }
 
       // TODO: avoid downloading the schema use hash instead
@@ -286,6 +289,7 @@ export class SubgraphRepository {
           isV2Graph: data.isV2Graph,
           proto: data.proto,
         });
+
         if (!updatedSubgraph) {
           throw new Error(`The subgraph "${subgraph.name}" was not found.`);
         }
@@ -294,13 +298,7 @@ export class SubgraphRepository {
       if (data.routingUrl !== undefined && data.routingUrl !== subgraph.routingUrl) {
         subgraphChanged = true;
         const url = normalizeURL(data.routingUrl);
-        await tx
-          .update(subgraphs)
-          .set({
-            routingUrl: url,
-          })
-          .where(eq(subgraphs.id, subgraph.id))
-          .execute();
+        await tx.update(subgraphs).set({ routingUrl: url }).where(eq(subgraphs.id, subgraph.id)).execute();
       }
 
       if (data.subscriptionUrl !== undefined && data.subscriptionUrl !== subgraph.subscriptionUrl) {
@@ -308,9 +306,7 @@ export class SubgraphRepository {
         const url = normalizeURL(data.subscriptionUrl);
         await tx
           .update(subgraphs)
-          .set({
-            subscriptionUrl: url || null,
-          })
+          .set({ subscriptionUrl: url || null })
           .where(eq(subgraphs.id, subgraph.id))
           .execute();
       }
@@ -363,8 +359,7 @@ export class SubgraphRepository {
 
           // add them to the updatedFederatedGraphs array without duplicates
           for (const federatedGraph of newFederatedGraphs) {
-            const exists = updatedFederatedGraphs.find((g) => g.name === federatedGraph.name);
-            if (!exists) {
+            if (!updatedFederatedGraphs.some((g) => g.id === federatedGraph.id)) {
               updatedFederatedGraphs.push(federatedGraph);
             }
           }
@@ -419,12 +414,14 @@ export class SubgraphRepository {
             labels: baseSubgraph[0].labels?.map?.((l) => splitLabel(l)) ?? [],
             namespaceId: data.namespaceId,
           });
+
           for (const federatedGraphDTO of federatedGraphDTOs) {
             // Retrieve all the subgraphs that compose the federated graph to retrieve the feature flags
             const subgraphs = await subgraphRepo.listByFederatedGraph({
               federatedGraphTargetId: federatedGraphDTO.targetId,
               published: true,
             });
+
             const enabledFeatureFlags = await featureFlagRepo.getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
               baseSubgraphId: baseSubgraph[0].id,
               namespaceId: data.namespaceId,
@@ -432,11 +429,15 @@ export class SubgraphRepository {
               baseSubgraphNames: subgraphs.map((subgraph) => subgraph.name),
               excludeDisabled: true,
             });
+
             // If an enabled feature flag includes the feature graph that has just been published, push it to the array
             if (enabledFeatureFlags.length > 0) {
-              const exists = updatedFederatedGraphs.find((g) => g.name === federatedGraphDTO.name);
-              if (!exists) {
+              if (!updatedFederatedGraphs.some((g) => g.id === federatedGraphDTO.id)) {
                 updatedFederatedGraphs.push(federatedGraphDTO);
+              }
+
+              for (const featureFlag of enabledFeatureFlags) {
+                updatedFeatureFlagIds.add(featureFlag.id);
               }
             }
           }
@@ -444,15 +445,14 @@ export class SubgraphRepository {
         // Generate a new router config for non-feature graphs upon routing/subscription urls and labels changes
       } else if (subgraphChanged || labelChanged) {
         // find all federated graphs that use this subgraph (with old labels). We need evaluate them again.
-        // When labels change,  graphs which matched with old labels may no longer match with new ones
+        // When labels change, graphs which matched with old labels may no longer match with new ones
         const affectedGraphs = await fedGraphRepo.bySubgraphLabels({
           labels: subgraph.labels,
           namespaceId: data.namespaceId,
         });
 
         for (const graph of affectedGraphs) {
-          const exists = updatedFederatedGraphs.find((g) => g.name === graph.name);
-          if (!exists) {
+          if (!updatedFederatedGraphs.some((g) => g.id === graph.id)) {
             updatedFederatedGraphs.push(graph);
           }
         }
@@ -463,27 +463,37 @@ export class SubgraphRepository {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
 
-      if (updatedFederatedGraphs.length === 0) {
+      if (updatedFederatedGraphs.length === 0 && updatedFeatureFlagIds.size === 0) {
         return;
       }
 
-      const {
-        compositionErrors: cErrors,
-        deploymentErrors: dErrors,
-        compositionWarnings: cWarnings,
-      } = await fedGraphRepo.composeAndDeployGraphs({
-        blobStorage,
-        admissionConfig,
+      const updatedFeatureFlags: FeatureFlagDTO[] = [];
+      if (updatedFeatureFlagIds.size > 0) {
+        const featureFlagRepo = new FeatureFlagRepository(this.logger, tx, this.organizationId);
+        for (const featureFlagId of updatedFeatureFlagIds) {
+          const featureFlag = await featureFlagRepo.getFeatureFlagById({
+            namespaceId: data.namespaceId,
+            featureFlagId,
+          });
+
+          if (!featureFlag) {
+            throw new Error(`Feature flag with ID ${featureFlagId} not found in namespace ${data.namespaceId}`);
+          }
+
+          updatedFeatureFlags.push(featureFlag);
+        }
+      }
+
+      const result = await compositionService.recomposeAndDeployAffected({
         actorId: data.updatedBy,
-        chClient,
-        compositionOptions,
-        federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
-        webhookProxyUrl,
+        affectedFederatedGraphs: updatedFederatedGraphs.filter((graph) => !graph.contract),
+        affectedFeatureFlags: updatedFeatureFlags,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
       });
 
-      compositionErrors.push(...cErrors);
-      deploymentErrors.push(...dErrors);
-      compositionWarnings.push(...cWarnings);
+      deploymentErrors.push(...result.deploymentErrors);
+      compositionErrors.push(...result.compositionErrors);
+      compositionWarnings.push(...result.compositionWarnings);
 
       // Re-fetch the federated graphs to get the updated composedSchemaVersionId
       const refreshedGraphs = await Promise.all(updatedFederatedGraphs.map((g) => fedGraphRepo.byId(g.id)));
@@ -504,7 +514,7 @@ export class SubgraphRepository {
     };
   }
 
-  public move(
+  public async move(
     data: {
       targetId: string;
       subgraphId: string;
@@ -513,80 +523,61 @@ export class SubgraphRepository {
       currentNamespaceId: string;
       newNamespaceId: string;
     },
-    blobStorage: BlobStorage,
-    admissionConfig: {
-      jwtSecret: string;
-      cdnBaseUrl: string;
-    },
-    chClient: ClickHouseClient,
-    compositionOptions?: CompositionOptions,
-    webhookProxyUrl?: string,
-  ): Promise<{
-    compositionErrors: PlainMessage<CompositionError>[];
-    updatedFederatedGraphs: FederatedGraphDTO[];
-    deploymentErrors: PlainMessage<DeploymentError>[];
-    compositionWarnings: PlainMessage<CompositionWarning>[];
-  }> {
-    return this.db.transaction(async (tx) => {
-      const updatedFederatedGraphs: FederatedGraphDTO[] = [];
+    compositionService: CompositionService,
+  ): Promise<ComposeAndDeployResult & { updatedFederatedGraphs: FederatedGraphDTO[] }> {
+    const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
-      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    updatedFederatedGraphs.push(
+      ...(await fedGraphRepo.bySubgraphLabels({ labels: data.subgraphLabels, namespaceId: data.currentNamespaceId })),
+    );
 
-      updatedFederatedGraphs.push(
-        ...(await fedGraphRepo.bySubgraphLabels({ labels: data.subgraphLabels, namespaceId: data.currentNamespaceId })),
-      );
+    await this.db.update(targets).set({ namespaceId: data.newNamespaceId }).where(eq(targets.id, data.targetId));
 
-      await tx.update(targets).set({ namespaceId: data.newNamespaceId }).where(eq(targets.id, data.targetId));
+    // Delete all mappings with this subgraph. We will create new mappings with federated graphs in new namespace
+    await this.db
+      .delete(schema.subgraphsToFederatedGraph)
+      .where(eq(schema.subgraphsToFederatedGraph.subgraphId, data.subgraphId));
 
-      // Delete all mappings with this subgraph. We will create new mappings with federated graphs in new namespace
-      await tx
-        .delete(schema.subgraphsToFederatedGraph)
-        .where(eq(schema.subgraphsToFederatedGraph.subgraphId, data.subgraphId));
-
-      const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
-        labels: data.subgraphLabels,
-        namespaceId: data.newNamespaceId,
-      });
-      updatedFederatedGraphs.push(...newFederatedGraphs);
-
-      // insert new mappings
-      if (newFederatedGraphs.length > 0) {
-        await tx
-          .insert(schema.subgraphsToFederatedGraph)
-          .values(
-            newFederatedGraphs.map((fg) => ({
-              federatedGraphId: fg.id,
-              subgraphId: data.subgraphId,
-            })),
-          )
-          .onConflictDoNothing()
-          .execute();
-      }
-
-      const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.composeAndDeployGraphs({
-        federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
-        blobStorage,
-        admissionConfig: {
-          webhookJWTSecret: admissionConfig.jwtSecret,
-          cdnBaseUrl: admissionConfig.cdnBaseUrl,
-        },
-        actorId: data.updatedBy,
-        chClient,
-        compositionOptions,
-        webhookProxyUrl,
-      });
-
-      // Re-fetch the federated graphs to get the updated composedSchemaVersionId
-      const refreshedGraphs = await Promise.all(updatedFederatedGraphs.map((g) => fedGraphRepo.byId(g.id)));
-      for (let i = 0; i < updatedFederatedGraphs.length; i++) {
-        const refreshedGraph = refreshedGraphs[i];
-        if (refreshedGraph) {
-          updatedFederatedGraphs[i] = refreshedGraph;
-        }
-      }
-
-      return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
+    const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+      labels: data.subgraphLabels,
+      namespaceId: data.newNamespaceId,
     });
+
+    updatedFederatedGraphs.push(...newFederatedGraphs);
+
+    // Insert new mappings
+    if (newFederatedGraphs.length > 0) {
+      await this.db
+        .insert(schema.subgraphsToFederatedGraph)
+        .values(
+          newFederatedGraphs.map((fg) => ({
+            federatedGraphId: fg.id,
+            subgraphId: data.subgraphId,
+          })),
+        )
+        .onConflictDoNothing()
+        .execute();
+    }
+
+    const { deploymentErrors, compositionErrors, compositionWarnings } =
+      await compositionService.recomposeAndDeployAffected({
+        actorId: data.updatedBy,
+        affectedFederatedGraphs: updatedFederatedGraphs,
+        affectedFeatureFlags: [], // Feature subgraphs cannot be moved
+        isFeatureSubgraph: false,
+      });
+
+    // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+    const refreshedGraphs = await Promise.all(updatedFederatedGraphs.map((g) => fedGraphRepo.byId(g.id)));
+    for (let i = 0; i < updatedFederatedGraphs.length; i++) {
+      const refreshedGraph = refreshedGraphs[i];
+      if (refreshedGraph) {
+        updatedFederatedGraphs[i] = refreshedGraph;
+      }
+    }
+
+    return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
   }
 
   public addSchemaVersion(data: {
