@@ -286,6 +286,34 @@ func TestRouterConnectsToNATSWithTLS(t *testing.T) {
 		})
 	})
 
+	t.Run("router fails to start when ca cert does not match server cert", func(t *testing.T) {
+		// Server uses a cert signed by serverCerts CA; router is configured with a
+		// completely different CA (unrelatedCerts), so certificate verification must fail.
+		t.Parallel()
+
+		serverCerts := generateTLSCerts(t)
+		unrelatedCerts := generateTLSCerts(t)
+
+		srv := startNATSServer(t, &natssrv.Options{
+			Host:      "127.0.0.1",
+			Port:      -1,
+			TLS:       true,
+			TLSConfig: createServerTLSConfig(t, serverCerts.ServerCertFile, serverCerts.ServerKeyFile),
+		})
+
+		serverURL := natsPlainURL(srv)
+		routerTLS := &config.NatsTLSConfiguration{CaFile: unrelatedCerts.CACertFile}
+
+		testenv.FailsOnStartup(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
+				cfg.Providers.Nats = tlsNATSEventSourceConfig(serverURL, routerTLS)
+			},
+		}, func(t *testing.T, err error) {
+			require.ErrorContains(t, err, "certificate signed by unknown authority")
+		})
+	})
+
 	t.Run("router connects to server when using tls:// url", func(t *testing.T) {
 		// Router must also perform a TLS connection when nats url is prefixed with "tls://".
 		t.Parallel()
