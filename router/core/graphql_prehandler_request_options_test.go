@@ -77,7 +77,7 @@ func TestPreHandlerInternalParseRequestOptions_ForceUnauthenticatedRequestTracin
 			&ClientInfo{WGRequestToken: signed},
 			zap.NewNop(),
 		)
-		require.ErrorAs(t, err, &jwt.ErrSignatureInvalid)
+		require.ErrorIs(t, err, jwt.ErrTokenSignatureInvalid)
 		require.False(t, executionOptions.IncludeQueryPlanInResponse)
 		require.False(t, traceOptions.Enable)
 	})
