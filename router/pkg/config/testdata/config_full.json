@@ -861,7 +861,7 @@
     "EnableInboundRequestDeduplication": true,
     "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
-    "ForceUnauthenticatedRequestTracing": true,
+    "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
     "EnableNetPoll": true,
