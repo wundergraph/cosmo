@@ -407,4 +407,3 @@ func TestNewTransportRequestOptions(t *testing.T) {
 	assert.Equal(t, defaults.MaxIdleConns, transportCfg.MaxIdleConns)
 	assert.Equal(t, defaults.MaxIdleConnsPerHost, transportCfg.MaxIdleConnsPerHost)
 }
-
