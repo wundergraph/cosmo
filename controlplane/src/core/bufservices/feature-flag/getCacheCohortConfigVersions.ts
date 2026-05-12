@@ -5,7 +5,7 @@ import {
   GetCacheCohortConfigVersionsRequest,
   GetCacheCohortConfigVersionsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { federatedGraphsToFeatureFlagSchemaVersions, graphCompositions } from '../../../db/schema.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -21,9 +21,19 @@ export function getCacheCohortConfigVersions(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
+    // Cohort filter pivots on `graph_compositions.is_feature_flag_composition`,
+    // NOT on `feature_flag_id IS NULL`. The link table's `feature_flag_id` has
+    // `ON DELETE SET NULL`, so a row whose original flag was torn down survives
+    // as NULL and would otherwise leak into the main cohort. The
+    // `is_feature_flag_composition` boolean on the composition record is set at
+    // composition time and never overwritten, which makes it the reliable
+    // partition.
     const featureFlagFilter = req.featureFlagId
-      ? eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, req.featureFlagId)
-      : isNull(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId);
+      ? and(
+          eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, req.featureFlagId),
+          eq(graphCompositions.isFeatureFlagComposition, true),
+        )
+      : eq(graphCompositions.isFeatureFlagComposition, false);
 
     // Composed schema version IDs minted for the
     // (federated_graph_id, feature_flag_id) cohort, ordered by the most
