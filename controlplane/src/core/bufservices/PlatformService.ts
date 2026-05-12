@@ -42,6 +42,7 @@ import { updateContract } from './contract/updateContract.js';
 import { createFeatureFlag } from './feature-flag/createFeatureFlag.js';
 import { deleteFeatureFlag } from './feature-flag/deleteFeatureFlag.js';
 import { enableFeatureFlag } from './feature-flag/enableFeatureFlag.js';
+import { getCacheCohortConfigVersions } from './feature-flag/getCacheCohortConfigVersions.js';
 import { getFeatureFlagByName } from './feature-flag/getFeatureFlagByName.js';
 import { getFeatureFlags } from './feature-flag/getFeatureFlags.js';
 import { getFeatureFlagsByFederatedGraph } from './feature-flag/getFeatureFlagsByFederatedGraph.js';
@@ -761,6 +762,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getFeatureFlagsInLatestCompositionByFederatedGraph: (req, ctx) => {
       return getFeatureFlagsInLatestCompositionByFederatedGraph(opts, req, ctx);
+    },
+
+    getCacheCohortConfigVersions: (req, ctx) => {
+      return getCacheCohortConfigVersions(opts, req, ctx);
     },
 
     getFeatureSubgraphsByFederatedGraph: (req, ctx) => {

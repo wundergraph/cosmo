@@ -3006,6 +3006,19 @@ message GetProposalChecksResponse {
   int32 totalChecksCount = 3;
 }
 
+message GetCacheCohortConfigVersionsRequest {
+  string federated_graph_id = 1;
+  // When unset, the base/main cohort (rows with feature_flag_id IS NULL) is returned.
+  optional string feature_flag_id = 2;
+}
+
+message GetCacheCohortConfigVersionsResponse {
+  Response response = 1;
+  // schemaVersion.id UUIDs that have ever been minted for the given
+  // (federated_graph_id, feature_flag_id) cohort, newest first.
+  repeated string config_versions = 2;
+}
+
 message UpdateProposalRequest {
   message UpdateProposalSubgraphs {
     repeated ProposalSubgraph subgraphs = 1;
@@ -3637,6 +3650,14 @@ service PlatformService {
   rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
   // GetProposalChecks returns checks for a proposal.
   rpc GetProposalChecks(GetProposalChecksRequest) returns (GetProposalChecksResponse) {}
+  // GetCacheCohortConfigVersions returns all RouterConfigVersion (schemaVersion.id)
+  // UUIDs that have ever been minted for the given (federated_graph_id,
+  // feature_flag_id) cohort, newest first. Used by hub to filter
+  // gql_cache_events_raw across the full set of config versions a feature
+  // flag has produced (proposal unapprove→re-approve cycles mint new
+  // schemaVersions). Pass feature_flag_id unset to fetch the base/main
+  // cohort's config versions.
+  rpc GetCacheCohortConfigVersions(GetCacheCohortConfigVersionsRequest) returns (GetCacheCohortConfigVersionsResponse) {}
   // BulkUpdateProposalRolloutPercentages atomically creates or updates rollout
   // percentages across one or more proposals on the same federated graph. For
   // proposals without an existing rollout, the handler creates feature subgraphs
