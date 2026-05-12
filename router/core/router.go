@@ -1473,6 +1473,15 @@ func (r *Router) Start(ctx context.Context) error {
 
 	r.reloadPersistentState.UpdateReloadPersistentState(&r.Config)
 
+	if r.engineExecutionConfiguration.EnableRequestTracing {
+		if r.developmentMode && r.graphApiToken == "" {
+			r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
+		}
+		if r.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing {
+			r.logger.Warn("Advanced Request Tracing (ART) is enabled for unauthenticated requests. This exposes internal subgraph URLs, request and response payloads, propagated headers, and query plans to any client that can reach the router. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
+		}
+	}
+
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
 
@@ -1595,10 +1604,6 @@ func (r *Router) Start(ctx context.Context) error {
 
 	if r.localhostFallbackInsideDocker && docker.Inside() {
 		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
-	}
-
-	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {
-		r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
 	}
 
 	if r.redisClient != nil {

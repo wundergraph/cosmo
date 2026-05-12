@@ -372,6 +372,7 @@ events:
 engine:
   enable_single_flight: true
   enable_request_tracing: true
+  force_unauthenticated_request_tracing: false
   enable_execution_plan_cache_response_header: false
   max_concurrent_resolvers: 32
   enable_net_poll: true
