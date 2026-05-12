@@ -50,6 +50,7 @@ func createServerMTLSConfig(t *testing.T, certFile, keyFile, caFile string) *tls
 
 // startNATSServer starts and returns an embedded, in-process NATS server with the given options.
 // It is automatically shut down when the test completes.
+// https://docs.nats.io/running-a-nats-service/clients#embedding-nats
 func startNATSServer(t *testing.T, opts *natssrv.Options) *natssrv.Server {
 	t.Helper()
 
@@ -256,6 +257,32 @@ func TestRouterConnectsToNATSWithTLS(t *testing.T) {
 				}),
 			)
 			subscribePublishVerify(t, xEnv, natsHelperConn)
+		})
+	})
+
+	t.Run("router fails to start when server requires TLS but no TLS configured", func(t *testing.T) {
+		// Server requires TLS; router has no TLS config — connection must fail at startup.
+		// The routers NATS client will attempt a TLS upgrade (server sends tls_required in INFO)
+		// but the self-signed cert is not in the system CA pool, so the handshake fails.
+		t.Parallel()
+
+		certs := generateTLSCerts(t)
+		srv := startNATSServer(t, &natssrv.Options{
+			Host:        "127.0.0.1",
+			Port:        -1,
+			TLS:         true,
+			TLSConfig:   createServerTLSConfig(t, certs.ServerCertFile, certs.ServerKeyFile),
+			AllowNonTLS: false,
+		})
+		serverURL := natsPlainURL(srv)
+
+		testenv.FailsOnStartup(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
+				cfg.Providers.Nats = tlsNATSEventSourceConfig(serverURL, nil)
+			},
+		}, func(t *testing.T, err error) {
+			require.ErrorContains(t, err, "certificate is not trusted")
 		})
 	})
 
