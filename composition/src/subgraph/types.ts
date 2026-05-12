@@ -11,9 +11,15 @@ import {
   type ConditionalFieldData,
   type EntityInterfaceSubgraphData,
   type ParentDefinitionData,
-  type PersistedDirectiveDefinitionData,
-} from '../schema-building/types';
-import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
+} from '../schema-building/types/types';
+import {
+  type AbstractTypeName,
+  type DirectiveName,
+  type FieldName,
+  type SubgraphName,
+  type TypeName,
+} from '../types/types';
+import { type DirectiveDefinitionData } from '../directive-definition-data/types/types';
 
 // Properties are sorted alphabetically, optionals are last.
 
@@ -34,20 +40,19 @@ export type SubgraphConfig = {
 };
 
 export type InternalSubgraph = {
-  conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
+  conditionalFieldDataByCoords: Map<string, ConditionalFieldData>;
   configurationDataByTypeName: Map<TypeName, ConfigurationData>;
   definitions: DocumentNode;
   directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
-  entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
+  entityInterfaceSubgraphDataByTypeName: Map<AbstractTypeName, EntityInterfaceSubgraphData>;
+  federatedDirectiveDataByName: Map<DirectiveName, DirectiveDefinitionData>;
   isVersionTwo: boolean;
   keyFieldNamesByParentTypeName: Map<TypeName, Set<FieldName>>;
   name: SubgraphName;
   operationTypes: Map<string, OperationTypeNode>;
   overriddenFieldNamesByParentTypeName: Map<TypeName, Set<FieldName>>;
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
-  persistedDirectiveDefinitionDataByDirectiveName: Map<DirectiveName, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;
-  url: string;
   costs?: Costs;
   schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
 };

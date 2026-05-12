@@ -426,18 +426,11 @@ type EngineExecutionConfiguration struct {
 	ForceEnableInboundRequestDeduplication bool `envDefault:"false" env:"ENGINE_FORCE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"force_enable_inbound_request_deduplication"`
 	EnableRequestTracing                   bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
 
-	// EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
+	// Deprecated: EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
 	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 
 	MaxConcurrentResolvers                           int           `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
 	EnableNetPoll                                    bool          `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
-	WebSocketClientPollTimeout                       time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
-	WebSocketClientConnBufferSize                    int           `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
-	WebSocketClientReadTimeout                       time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
-	WebSocketClientWriteTimeout                      time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
-	WebSocketClientPingInterval                      time.Duration `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
-	WebSocketClientPingTimeout                       time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
-	WebSocketClientFrameTimeout                      time.Duration `envDefault:"100ms" env:"ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT" yaml:"websocket_client_frame_timeout,omitempty"`
 	ExecutionPlanCacheSize                           int64         `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	SlowPlanCacheSize                                int64         `envDefault:"300" env:"ENGINE_SLOW_PLAN_CACHE_SIZE" yaml:"slow_plan_cache_size,omitempty"`
 	SlowPlanCacheThreshold                           time.Duration `envDefault:"100ms" env:"ENGINE_SLOW_PLAN_CACHE_THRESHOLD" yaml:"slow_plan_cache_threshold,omitempty"`
@@ -455,6 +448,19 @@ type EngineExecutionConfiguration struct {
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
+
+	// Server-side WebSocket handler options (router accepting client connections)
+	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
+	WebSocketServerWriteTimeout   time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT" yaml:"websocket_server_write_timeout,omitempty"`
+	WebSocketServerPollTimeout    time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT" yaml:"websocket_server_poll_timeout,omitempty"`
+	WebSocketServerConnBufferSize int           `envDefault:"128" env:"ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE" yaml:"websocket_server_conn_buffer_size,omitempty"`
+
+	// Subscription client options (router connecting to subgraphs)
+	WebSocketClientWriteTimeout time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
+	WebSocketClientReadLimit    BytesString   `envDefault:"1MB" env:"ENGINE_WEBSOCKET_CLIENT_READ_LIMIT" yaml:"websocket_client_read_limit,omitempty"`
+	WebSocketClientPingInterval time.Duration `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
+	WebSocketClientPingTimeout  time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
+	WebSocketClientAckTimeout   time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_ACK_TIMEOUT" yaml:"websocket_client_ack_timeout,omitempty"`
 
 	ValidateRequiredExternalFields bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
 
@@ -988,6 +994,19 @@ type ExecutionConfigFile struct {
 	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"EXECUTION_CONFIG_FILE_WATCH_INTERVAL"`
 }
 
+// SplitConfigPollerRules governs the behavior of the split-config polling strategy used to
+// assemble the final router execution config. The split poller fetches the base graph and each
+// feature flag config as separate files from the CDN. These rules apply when individual files
+// are missing or should be excluded entirely.
+type SplitConfigPollerRules struct {
+	// SkipMissingFeatureFlags keeps polling alive when a feature flag listed in the mapper cannot
+	// be fetched. When false (default), a single missing feature flag aborts the poll cycle.
+	SkipMissingFeatureFlags bool `yaml:"skip_missing_feature_flags" envDefault:"false" env:"SKIP_MISSING_FEATURE_FLAGS"`
+	// IgnoredFeatureFlags is the list of feature flag names to skip entirely during polling.
+	// Listed flags are not fetched even when present in the mapper.
+	IgnoredFeatureFlags []string `yaml:"ignored_feature_flags,omitempty" env:"IGNORED_FEATURE_FLAGS"`
+}
+
 type ExecutionConfig struct {
 	File            ExecutionConfigFile            `yaml:"file,omitempty"`
 	Storage         ExecutionConfigStorage         `yaml:"storage,omitempty" envPrefix:"EXECUTION_CONFIG_STORAGE_"`
@@ -1305,6 +1324,7 @@ type Config struct {
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers" envPrefix:"STORAGE_PROVIDER_"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
+	SplitConfigPoller              SplitConfigPollerRules          `yaml:"split_config_poller" envPrefix:"SPLIT_CONFIG_POLLER_"`
 	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
