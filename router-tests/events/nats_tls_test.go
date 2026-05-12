@@ -139,7 +139,12 @@ func TestRouterConnectsToNATSWithTLS(t *testing.T) {
 
 		clientErrCh := make(chan error, 1)
 		go func() { clientErrCh <- client.Run() }()
-		t.Cleanup(func() { _ = client.Close() })
+		t.Cleanup(func() {
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientErrCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			})
+		})
 
 		xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
 		xEnv.WaitForTriggerCount(1, EventWaitTimeout)
@@ -156,10 +161,6 @@ func TestRouterConnectsToNATSWithTLS(t *testing.T) {
 			)
 		})
 
-		require.NoError(t, client.Close())
-		testenv.AwaitChannelWithT(t, EventWaitTimeout, clientErrCh, func(t *testing.T, err error) {
-			require.NoError(t, err)
-		})
 	}
 
 	t.Run("router connects when server requires TLS", func(t *testing.T) {
