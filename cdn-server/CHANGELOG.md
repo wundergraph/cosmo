@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/cdn@0.20.1...cdn@0.21.0) (2026-05-11)
+
+### Features
+
+* split router execution configs ([#2847](https://github.com/wundergraph/cosmo/issues/2847)) ([893ff72](https://github.com/wundergraph/cosmo/commit/893ff721e28d34eb308b74c845773a0186a7467c)) (@Aenimus)
+
 ## [0.20.1](https://github.com/wundergraph/cosmo/compare/cdn@0.20.0...cdn@0.20.1) (2026-05-01)
 
 **Note:** Version bump only for package cdn
