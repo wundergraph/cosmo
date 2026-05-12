@@ -402,6 +402,23 @@
         }
       ]
     },
+    "split_config_poller": {
+      "type": "object",
+      "description": "Behavior overrides for the split-config polling strategy, which assembles the final router execution config by fetching the base graph and each feature flag config as separate files from the CDN. Only applied when the router is enrolled in split-config loading.",
+      "additionalProperties": false,
+      "properties": {
+        "skip_missing_feature_flags": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip feature flags that cannot be fetched instead of aborting the poll cycle. Use this when occasional feature flag fetch failures should not stop the router from picking up changes to other graphs."
+        },
+        "ignored_feature_flags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Feature flag names to skip entirely during config polling. Listed flags are not fetched even when present in the mapper."
+        }
+      }
+    },
     "graphql_metrics": {
       "type": "object",
       "additionalProperties": false,

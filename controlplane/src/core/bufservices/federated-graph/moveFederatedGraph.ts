@@ -2,13 +2,7 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import {
-  CompositionError,
-  CompositionWarning,
-  DeploymentError,
-  MoveGraphRequest,
-  MoveGraphResponse,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { MoveGraphRequest, MoveGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -17,6 +11,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function moveFederatedGraph(
   opts: RouterOptions,
@@ -113,69 +108,56 @@ export function moveFederatedGraph(
         throw new UnauthorizedError();
       }
 
-      const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.move(
-        {
-          targetId: graph.targetId,
-          newNamespaceId: newNamespace.id,
-          updatedBy: authContext.userId,
-          federatedGraph: graph,
-        },
-        opts.blobStorage,
-        {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          jwtSecret: opts.admissionWebhookJWTSecret,
-        },
-        opts.chClient!,
-        undefined,
-        opts.webhookProxyUrl,
-      );
-
-      const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
-      const allCompositionErrors: PlainMessage<CompositionError>[] = [];
-      const allCompositionWarnings: PlainMessage<CompositionWarning>[] = [];
-
-      allCompositionErrors.push(...compositionErrors);
-      allDeploymentErrors.push(...deploymentErrors);
-      allCompositionWarnings.push(...compositionWarnings);
+      // Does not call `composeAndDeployFederatedGraph` by design
+      await fedGraphRepo.move({
+        targetId: graph.targetId,
+        newNamespaceId: newNamespace.id,
+        updatedBy: authContext.userId,
+        federatedGraph: graph,
+      });
 
       const movedGraphs = [graph];
 
       const contracts = await contractRepo.bySourceFederatedGraphId(graph.id);
-
       for (const contract of contracts) {
         const contractGraph = await fedGraphRepo.byId(contract.downstreamFederatedGraphId);
         if (!contractGraph) {
           continue;
         }
 
-        const {
-          compositionErrors: contractErrors,
-          deploymentErrors: contractDeploymentErrors,
-          compositionWarnings: contractWarnings,
-        } = await fedGraphRepo.move(
-          {
-            targetId: contractGraph.targetId,
-            newNamespaceId: newNamespace.id,
-            updatedBy: authContext.userId,
-            federatedGraph: contractGraph,
-            skipDeployment: compositionErrors.length > 0,
-          },
-          opts.blobStorage,
-          {
-            cdnBaseUrl: opts.cdnBaseUrl,
-            jwtSecret: opts.admissionWebhookJWTSecret,
-          },
-          opts.chClient!,
-          undefined,
-          opts.webhookProxyUrl,
-        );
-
-        allCompositionErrors.push(...contractErrors);
-        allDeploymentErrors.push(...contractDeploymentErrors);
-        allCompositionWarnings.push(...contractWarnings);
+        // Does not call `composeAndDeployFederatedGraph` by design
+        await fedGraphRepo.move({
+          targetId: contractGraph.targetId,
+          newNamespaceId: newNamespace.id,
+          updatedBy: authContext.userId,
+          federatedGraph: contractGraph,
+        });
 
         movedGraphs.push(contractGraph);
       }
+
+      const movedFederatedGraph = await fedGraphRepo.byId(graph.id);
+      if (!movedFederatedGraph) {
+        throw new Error('Federated graph not found');
+      }
+
+      const compositionService = new CompositionService(
+        tx,
+        authContext.organizationId,
+        logger,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.blobStorage,
+        opts.chClient,
+        opts.webhookProxyUrl,
+        req.disableResolvabilityValidation,
+      );
+
+      // Only call `composeAndDeployFederatedGraph` after all contracts have been moved
+      const { compositionErrors, deploymentErrors, compositionWarnings } =
+        await compositionService.composeAndDeployFederatedGraph({
+          actorId: authContext.userId,
+          federatedGraph: movedFederatedGraph,
+        });
 
       for (const movedGraph of movedGraphs) {
         await auditLogRepo.addAuditLog({
@@ -219,35 +201,18 @@ export function moveFederatedGraph(
         );
       }
 
-      if (allCompositionErrors.length > 0) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-          },
-          deploymentErrors: [],
-          compositionErrors: allCompositionErrors,
-          compositionWarnings: allCompositionWarnings,
-        };
-      }
-
-      if (allDeploymentErrors.length > 0) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-          },
-          deploymentErrors: allDeploymentErrors,
-          compositionErrors: [],
-          compositionWarnings: allCompositionWarnings,
-        };
-      }
-
       return {
         response: {
-          code: EnumStatusCode.OK,
+          code:
+            compositionErrors.length > 0
+              ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+              : deploymentErrors.length > 0
+                ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+                : EnumStatusCode.OK,
         },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: allCompositionWarnings,
+        compositionErrors,
+        deploymentErrors,
+        compositionWarnings,
       };
     });
   });

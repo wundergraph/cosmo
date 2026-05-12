@@ -1,9 +1,17 @@
-import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  CompositionError,
+  CompositionWarning,
+  DeploymentError,
+  LintSeverity,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
+import { PlainMessage } from '@bufbuild/protobuf';
 import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, ProposalOrigin } from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
+import { ComposeGraphsTaskResultItem } from '../core/composition/composeGraphs.types.js';
 
 export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
+export const SPLIT_CONFIG_LOADING_FEATURE_ID = 'split-config-loading';
 
 export type FeatureIds =
   | 'users'
@@ -28,7 +36,8 @@ export type FeatureIds =
   | 'security'
   | 'sso'
   | 'subgraph-check-extensions'
-  | 'support';
+  | 'support'
+  | 'split-config-loading';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -498,6 +507,7 @@ export type AuthContext = {
 export interface GraphApiKeyJwtPayload extends JWTPayload {
   federated_graph_id: string;
   organization_id: string;
+  features?: string[];
 }
 
 export interface PluginAccess {
@@ -803,4 +813,20 @@ export interface ProposalSubgraphDTO {
   currentSchemaVersionId?: string;
   isNew: boolean;
   labels: Label[];
+}
+
+export interface ComposeAndDeployResult {
+  deploymentErrors: PlainMessage<DeploymentError>[];
+  compositionErrors: PlainMessage<CompositionError>[];
+  compositionWarnings: PlainMessage<CompositionWarning>[];
+}
+
+export interface OrganizationFeatures {
+  ignoreExternalKeys: boolean;
+  splitConfigLoading: boolean;
+}
+
+export interface FederatedGraphAndCompositionResults {
+  federatedGraph: FederatedGraphDTO;
+  results: ComposeGraphsTaskResultItem[];
 }
