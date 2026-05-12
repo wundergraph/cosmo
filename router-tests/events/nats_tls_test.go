@@ -282,7 +282,7 @@ func TestRouterConnectsToNATSWithTLS(t *testing.T) {
 				cfg.Providers.Nats = tlsNATSEventSourceConfig(serverURL, nil)
 			},
 		}, func(t *testing.T, err error) {
-			require.ErrorContains(t, err, "certificate is not trusted")
+			require.ErrorContains(t, err, "tls: failed to verify certificate")
 		})
 	})
 
