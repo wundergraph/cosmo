@@ -322,6 +322,7 @@ type Config struct {
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
+	ModifySubgraphExtensionPropagation func(subgraphExtensionPropagation *config.SubgraphExtensionPropagationConfiguration)
 	ModifyWebsocketConfiguration       func(websocketConfiguration *config.WebSocketConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	DemoMode                           bool
@@ -1412,6 +1413,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
+	if testConfig.ModifySubgraphExtensionPropagation != nil {
+		testConfig.ModifySubgraphExtensionPropagation(&cfg.SubgraphExtensionPropagation)
+	}
+
 	var natsEventSources []config.NatsEventSource
 	var kafkaEventSources []config.KafkaEventSource
 	var redisEventSources []config.RedisEventSource
@@ -1491,6 +1496,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			OmitExtensions:        testConfig.BatchingConfig.OmitExtensions,
 		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
+		core.WithSubgraphExtensionPropagation(cfg.SubgraphExtensionPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
@@ -2441,8 +2447,9 @@ type WebSocketMessage struct {
 }
 
 type GraphQLResponse struct {
-	Data   json.RawMessage `json:"data,omitempty"`
-	Errors []GraphQLError  `json:"errors,omitempty"`
+	Data       json.RawMessage `json:"data,omitempty"`
+	Errors     []GraphQLError  `json:"errors,omitempty"`
+	Extensions json.RawMessage `json:"extensions,omitempty"`
 }
 
 type GraphQLErrorExtensions struct {

@@ -264,6 +264,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithAuthorizationConfig(&config.Authorization),
 		WithWebSocketConfiguration(&config.WebSocket),
 		WithSubgraphErrorPropagation(config.SubgraphErrorPropagation),
+		WithSubgraphExtensionPropagation(config.SubgraphExtensionPropagation),
 		WithLocalhostFallbackInsideDocker(config.LocalhostFallbackInsideDocker),
 		WithCDN(config.CDN),
 		WithEvents(config.Events),
