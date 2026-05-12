@@ -1370,12 +1370,13 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	routerEngineConfig := &RouterEngineConfiguration{
-		Execution:                s.engineExecutionConfiguration,
-		Headers:                  s.headerRules,
-		Events:                   s.eventsConfig,
-		SubgraphErrorPropagation: s.subgraphErrorPropagation,
-		StreamMetricStore:        gm.streamMetricStore,
-		CostControl:              s.securityConfiguration.CostControl,
+		Execution:                    s.engineExecutionConfiguration,
+		Headers:                      s.headerRules,
+		Events:                       s.eventsConfig,
+		SubgraphErrorPropagation:     s.subgraphErrorPropagation,
+		SubgraphExtensionPropagation: s.subgraphExtensionPropagation,
+		StreamMetricStore:            gm.streamMetricStore,
+		CostControl:                  s.securityConfiguration.CostControl,
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately

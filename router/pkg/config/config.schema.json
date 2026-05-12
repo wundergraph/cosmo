@@ -3816,6 +3816,31 @@
         }
       }
     },
+    "subgraph_extension_propagation": {
+      "type": "object",
+      "description": "Configuration for forwarding the response 'extensions' object from subgraphs to the client. Allows controlling which extension fields are propagated and how conflicts between subgraphs are resolved.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable forwarding of subgraph response extensions to the client."
+        },
+        "allowed_extension_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The extension fields that are allowed to be propagated from subgraphs to the client. If left empty, all extension fields will be forwarded."
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["first_write", "last_write"],
+          "default": "first_write",
+          "description": "The conflict resolution algorithm when multiple subgraphs return the same extension field. 'first_write' propagates the first response that wrote the field; 'last_write' propagates the last."
+        }
+      }
+    },
     "apollo_compatibility_flags": {
       "type": "object",
       "description": "To enable full compatibility with Apollo Federation, Apollo Gateway and Apollo Router, you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo.",

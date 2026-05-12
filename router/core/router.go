@@ -2313,6 +2313,12 @@ func WithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfigurati
 	}
 }
 
+func WithSubgraphExtensionPropagation(cfg config.SubgraphExtensionPropagationConfiguration) Option {
+	return func(r *Router) {
+		r.subgraphExtensionPropagation = cfg
+	}
+}
+
 func WithAccessLogs(cfg *AccessLogsConfig) Option {
 	return func(r *Router) {
 		r.accessLogsConfig = cfg

@@ -529,6 +529,11 @@
     ],
     "AllowedFields": null
   },
+  "SubgraphExtensionPropagation": {
+    "Enabled": false,
+    "AllowedExtensionFields": null,
+    "Algorithm": "first_write"
+  },
   "StorageProviders": {
     "S3": null,
     "CDN": null,

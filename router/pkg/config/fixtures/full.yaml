@@ -532,6 +532,13 @@ subgraph_error_propagation:
     - 'field2'
   allow_all_extension_fields: true
 
+subgraph_extension_propagation:
+  enabled: true
+  allowed_extension_fields:
+    - rateLimit
+    - auth
+  algorithm: last_write
+
 execution_config:
   storage:
     provider_id: s3
