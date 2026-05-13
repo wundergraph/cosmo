@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { eq } from 'drizzle-orm';
 import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
 import { Label } from '../../src/types/index.js';
 import { unsuccessfulBaseCompositionError } from '../../src/core/errors/errors.js';
@@ -14,6 +15,9 @@ import {
   createFederatedGraph,
   createNamespace,
   createThenPublishFeatureSubgraph,
+  DEFAULT_ROUTER_URL,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  DEFAULT_SUBGRAPH_URL_THREE,
   DEFAULT_SUBGRAPH_URL_TWO,
   deleteFeatureFlag,
   featureFlagIntegrationTestSetUp,
@@ -23,6 +27,7 @@ import {
   toggleFeatureFlag,
 } from '../test-util.js';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
+import { graphCompositions } from '../../src/db/schema.js';
 
 // Change to true to enable a longer timeout
 const isDebugMode = false;
@@ -1090,107 +1095,111 @@ describe('Feature flag integration tests', () => {
       },
     );
 
-    test('that feature subgraph publish recomposes the feature flag', async (testContext) => {
-      const { client, server, blobStorage } = await SetupTest({
-        dbname,
-        chClient,
-      });
-      testContext.onTestFinished(() => server.close());
+    test(
+      'that feature subgraph publish recomposes the feature flag',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+        });
+        testContext.onTestFinished(() => server.close());
 
-      const labels: Array<Label> = [];
-      const namespace = genID('namespace').toLowerCase();
-      await createNamespace(client, namespace);
-      const baseGraphName = 'baseGraphName';
-      const baseGraphResponse = await featureFlagIntegrationTestSetUp(
-        client,
-        [
-          {
-            name: 'users',
-            hasFeatureSubgraph: false,
-          },
-          {
-            name: 'products',
-            hasFeatureSubgraph: false,
-          },
-        ],
-        baseGraphName,
-        labels,
-        namespace,
-      );
+        const labels: Array<Label> = [];
+        const namespace = genID('namespace').toLowerCase();
+        await createNamespace(client, namespace);
+        const baseGraphName = 'baseGraphName';
+        const baseGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            {
+              name: 'users',
+              hasFeatureSubgraph: false,
+            },
+            {
+              name: 'products',
+              hasFeatureSubgraph: false,
+            },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
 
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/routerconfigs/latest.json`);
-      await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+        expect(blobStorage.keys()).toHaveLength(1);
+        const baseGraphKey = blobStorage.keys()[0];
+        expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/routerconfigs/latest.json`);
+        await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
 
-      // The successful base composition
-      await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+        // The successful base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
 
-      await createThenPublishFeatureSubgraph(
-        client,
-        'users-feature',
-        'users',
-        namespace,
-        fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users-feature.graphql`)).toString(),
-        labels,
-        'https://localhost:4003',
-      );
+        await createThenPublishFeatureSubgraph(
+          client,
+          'users-feature',
+          'users',
+          namespace,
+          fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users-feature.graphql`)).toString(),
+          labels,
+          'https://localhost:4003',
+        );
 
-      const featureFlagName = genID('flag');
-      const createFeatureFlagResponse = await client.createFeatureFlag({
-        name: featureFlagName,
-        featureSubgraphNames: ['users-feature'],
-        labels,
-        namespace,
-        isEnabled: true,
-      });
-      expect(createFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
-      expect(createFeatureFlagResponse.compositionErrors).toHaveLength(2);
+        const featureFlagName = genID('flag');
+        const createFeatureFlagResponse = await client.createFeatureFlag({
+          name: featureFlagName,
+          featureSubgraphNames: ['users-feature'],
+          labels,
+          namespace,
+          isEnabled: true,
+        });
+        expect(createFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+        expect(createFeatureFlagResponse.compositionErrors).toHaveLength(2);
 
-      // There will be a base recomposition and a feature flag composition, but the feature flag composition will fail
-      await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
-      await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+        // There will be a base recomposition and a feature flag composition, but the feature flag composition will fail
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
 
-      await createThenPublishFeatureSubgraph(
-        client,
-        'products-feature',
-        'products',
-        namespace,
-        fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-feature.graphql`)).toString(),
-        labels,
-        'https://localhost:4004',
-      );
+        await createThenPublishFeatureSubgraph(
+          client,
+          'products-feature',
+          'products',
+          namespace,
+          fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-feature.graphql`)).toString(),
+          labels,
+          'https://localhost:4004',
+        );
 
-      /* The "products-feature" feature subgraph is not yet part of the feature flag,
-       * so the number compositions should remain the same.
-       * */
-      await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
-      await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
+        /* The "products-feature" feature subgraph is not yet part of the feature flag,
+         * so the number compositions should remain the same.
+         * */
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
 
-      const updateFeatureFlagResponse = await client.updateFeatureFlag({
-        featureSubgraphNames: ['users-feature', 'products-feature'],
-        name: featureFlagName,
-        namespace,
-      });
-      expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+        const updateFeatureFlagResponse = await client.updateFeatureFlag({
+          featureSubgraphNames: ['users-feature', 'products-feature'],
+          name: featureFlagName,
+          namespace,
+        });
+        expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
 
-      // The base recomposition and the feature flag composition
-      await assertNumberOfCompositions(client, baseGraphName, 5, namespace);
-      await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
+        // The base recomposition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 5, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
 
-      const publishSubgraphResponse = await client.publishFederatedSubgraph({
-        name: 'products-feature',
-        namespace,
-        schema: fs
-          .readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-feature-update.graphql`))
-          .toString(),
-      });
-      expect(publishSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+        const publishSubgraphResponse = await client.publishFederatedSubgraph({
+          name: 'products-feature',
+          namespace,
+          schema: fs
+            .readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-feature-update.graphql`))
+            .toString(),
+        });
+        expect(publishSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
-      // Another base recomposition and a feature flag composition
-      await assertNumberOfCompositions(client, baseGraphName, 7, namespace);
-      await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
-    });
+        // Another base recomposition and a feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 7, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
+      },
+    );
 
     test(
       'that a federated graph with feature flags and feature subgraphs can be moved',
@@ -1457,6 +1466,387 @@ describe('Feature flag integration tests', () => {
         await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyTwo, true);
       },
     );
+
+    test(
+      'that when a subgraph label changes, all affected graphs and feature flags are recomposed',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(1);
+        const key = blobStorage.keys()[0];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(1);
+
+        // The base recomposition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+        // Update the labels of the subgraph
+        let updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          labels: [{ key: 'team', value: 'B' }],
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // The base graph and feature flag should have recomposed
+        await assertNumberOfCompositions(client, baseGraphName, 5, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+        // Update the labels of the subgraph
+        updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          labels: [{ key: 'team', value: 'A' }],
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // The base graph and feature flag should have recomposed
+        await assertNumberOfCompositions(client, baseGraphName, 7, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+      },
+    );
+
+    test(
+      'that setting new labels that do not affect existing label matchers does not produce unnecessary recompositions',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(1);
+        const key = blobStorage.keys()[0];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(1);
+
+        // The base recomposition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+        // Update the labels of the subgraph
+        const updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          labels: [
+            { key: 'team', value: 'B' },
+            { key: 'team', value: 'A' },
+          ],
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // There should not be any new recomposition
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+      },
+    );
+
+    test(
+      'that changing the routing url triggers a recomposition when label matchers do not change',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(1);
+        const key = blobStorage.keys()[0];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(1);
+
+        // The base recomposition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+        // Update the labels of the subgraph
+        const updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          labels: [
+            { key: 'team', value: 'B' },
+            { key: 'team', value: 'A' },
+          ],
+          routingUrl: DEFAULT_SUBGRAPH_URL_THREE,
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // There should be a recomposition for the federated graph and feature flag
+        await assertNumberOfCompositions(client, baseGraphName, 5, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+      },
+    );
+
+    test(
+      'that changing the routing url and the labels of a mutual subgraph trigger composition',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(1);
+        const key = blobStorage.keys()[0];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(1);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+        // Update the labels of the subgraph
+        const updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          labels: [{ key: 'team', value: 'B' }],
+          routingUrl: DEFAULT_SUBGRAPH_URL_THREE,
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // There should be a recomposition for the federated graph and feature flag
+        await assertNumberOfCompositions(client, baseGraphName, 5, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+      },
+    );
+
+    test(
+      'that unsetting empty labels does not trigger composition',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels: Label[] = [];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(1);
+        const key = blobStorage.keys()[0];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(1);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+        // Update the labels of the subgraph
+        const updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          unsetLabels: true,
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // There should be a recomposition for the federated graph and feature flag
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+      },
+    );
+
+    test(
+      'that unsetting non-empty labels triggers composition',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels: Label[] = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(1);
+        const key = blobStorage.keys()[0];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(1);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+
+        // Update the labels of the subgraph
+        const updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          unsetLabels: true,
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // There should be a recomposition for the federated graph and feature flag
+        await assertNumberOfCompositions(client, baseGraphName, 5, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, true);
+      },
+    );
   });
 
   describe('`split-config-loading` flag enabled tests', () => {
@@ -1508,7 +1898,7 @@ describe('Feature flag integration tests', () => {
         const ffKey = blobStorage.keys().at(-1);
         expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
 
-        // The base recomposition and the feature flag composition
+        // The base composition and the feature flag composition
         await assertNumberOfCompositions(client, baseGraphName, 2);
 
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
@@ -1516,12 +1906,12 @@ describe('Feature flag integration tests', () => {
 
         expect(blobStorage.keys()).toHaveLength(2);
 
-        // Another base recomposition to remove the feature flag
+        // The feature flag is removed without further compositions
         await assertNumberOfCompositions(client, baseGraphName, 2);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
         await toggleFeatureFlag(client, featureFlagName, true);
 
-        // Another base recomposition and the feature flag composition
+        // The feature flag is composed again
         await assertNumberOfCompositions(client, baseGraphName, 3);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
 
@@ -1581,19 +1971,19 @@ describe('Feature flag integration tests', () => {
         const ffKey = blobStorage.keys().at(-1);
         expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
 
-        // The base recomposition and the feature flag composition
+        // The base composition and the feature flag composition
         await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
         await toggleFeatureFlag(client, featureFlagName, false, namespace);
 
         expect(blobStorage.keys()).toHaveLength(2);
 
-        // Another base recomposition to remove the feature flag
+        // The feature flag is removed without further compositions
         await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
         await toggleFeatureFlag(client, featureFlagName, true, namespace);
 
-        // Another base recomposition and the feature flag composition
+        // The feature flag is composed again
         await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
 
@@ -1655,7 +2045,7 @@ describe('Feature flag integration tests', () => {
         const ffKey = blobStorage.keys().at(-1);
         expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
 
-        // The feature flag is disabled again and trigger a base recomposition
+        // The feature flag is disabled again but the base is not recomposed
         await toggleFeatureFlag(client, featureFlagName, false, namespace);
         await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, false);
@@ -1907,7 +2297,7 @@ describe('Feature flag integration tests', () => {
     );
 
     test(
-      'that a feature flag can compose when base federated graph fails',
+      'that a feature flag can compose even if the base federated graph fails',
       getDebugTestOptions(isDebugMode),
       async (testContext) => {
         const { client, server, blobStorage } = await SetupTest({
@@ -1985,7 +2375,7 @@ describe('Feature flag integration tests', () => {
     );
 
     test(
-      'that a feature flag that is enabled upon creation can be deleted with contracts (namespace without labels)',
+      'that a feature flag that is enabled upon creation can be deleted despite contracts (namespace without labels)',
       getDebugTestOptions(isDebugMode),
       async (testContext) => {
         const { client, server, blobStorage } = await SetupTest({
@@ -2097,7 +2487,7 @@ describe('Feature flag integration tests', () => {
     );
 
     test(
-      'that publishing a change to a subgraph produces new compositions for the base graph and contracts that also have feature flags',
+      'that publishing a change to a base subgraph produces new compositions for the base graph and contracts (but not for the feature flag itself)',
       getDebugTestOptions(isDebugMode),
       async (testContext) => {
         const { client, server, blobStorage } = await SetupTest({
@@ -2162,7 +2552,7 @@ describe('Feature flag integration tests', () => {
           { name: contractName, key: contractKey },
         ];
 
-        // Both graphs should still be at a single composition with feature flag config
+        // Both graphs should still be at a single composition
         for (const { name, key } of graphNamesAndKeys) {
           await assertNumberOfCompositions(client, name, 1, namespace);
           await assertFeatureFlagExecutionConfig(blobStorage, key, false);
@@ -2187,7 +2577,7 @@ describe('Feature flag integration tests', () => {
           ]),
         );
 
-        // There should be a base recomposition, a feature flag composition, and an embedded feature flag config
+        // There should be a new feature flag composition
         for (const { name, key } of graphNamesAndKeys) {
           await assertNumberOfCompositions(client, name, 2, namespace);
           await assertFeatureFlagExecutionConfig(blobStorage, key, false);
@@ -2200,7 +2590,7 @@ describe('Feature flag integration tests', () => {
         });
         expect(publishResponse.response?.code).toBe(EnumStatusCode.OK);
 
-        // There should be a base recomposition, feature flag composition, and the embedded feature flag config should remain
+        // There should be a base recomposition but no feature flag recomposition (users is overridden)
         for (const { name, key } of graphNamesAndKeys) {
           await assertNumberOfCompositions(client, name, 3, namespace);
           await assertFeatureFlagExecutionConfig(blobStorage, key, false);
@@ -2535,7 +2925,7 @@ describe('Feature flag integration tests', () => {
     );
 
     test(
-      'that feature subgraph publish recomposes the feature flag',
+      'that `feature subgraph publish` recomposes the feature flag',
       getDebugTestOptions(isDebugMode),
       async (testContext) => {
         const { client, server, blobStorage } = await SetupTest({
@@ -2796,7 +3186,7 @@ describe('Feature flag integration tests', () => {
     );
 
     test(
-      'that a feature flag whose labels are updated recompose the correct federated graphs successfully',
+      'that a feature flag whose labels are updated recomposes the feature flag successfully',
       getDebugTestOptions(isDebugMode),
       async (testContext) => {
         const { client, server, blobStorage } = await SetupTest({
@@ -2876,7 +3266,7 @@ describe('Feature flag integration tests', () => {
           ]),
         );
 
-        // The base recomposition of graph one and the feature flag composition
+        // The base composition of graph one and the new feature flag composition
         await assertNumberOfCompositions(client, baseGraphNameOne, 2, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyOne, false);
 
@@ -2891,11 +3281,11 @@ describe('Feature flag integration tests', () => {
         });
         expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
 
-        // The base recomposition of graph one
+        // The base composition of graph one and the feature flag composition (no changes)
         await assertNumberOfCompositions(client, baseGraphNameOne, 2, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyOne, false);
 
-        // The feature flag composition
+        // The base composition of graph two and the new feature flag composition
         await assertNumberOfCompositions(client, baseGraphNameTwo, 2, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyTwo, false);
 
@@ -2912,6 +3302,732 @@ describe('Feature flag integration tests', () => {
             ),
           ]),
         );
+      },
+    );
+
+    test(
+      'that a feature flag is not recomposed if the base subgraph of a feature subgraph is published or updated',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+          enabledFeatures: ['split-config-loading'],
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        await createNamespace(client, namespace);
+
+        const labels = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: false },
+            { name: 'products', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(2);
+        const key = blobStorage.keys()[0];
+        const mapperKey = blobStorage.keys()[1];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/manifest/latest.json`);
+        expect(mapperKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/mapper.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+        const ffKey = blobStorage.keys().at(-1);
+        expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+
+        const updateResp = await client.updateSubgraph({
+          name: 'products',
+          namespace,
+          routingUrl: 'http://example.com',
+        });
+
+        expect(updateResp.response?.code).toBe(EnumStatusCode.OK);
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+
+        const publishResp = await client.publishFederatedSubgraph({
+          name: 'products',
+          namespace,
+          schema: fs
+            .readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-update.graphql`))
+            .toString(),
+        });
+
+        expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // Another base recomposition
+        await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+      },
+    );
+
+    test(
+      'that a feature flag is recomposed if a mutual subgraph is published or updated',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+          enabledFeatures: ['split-config-loading'],
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        await createNamespace(client, namespace);
+
+        const labels = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: false },
+            { name: 'products', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(2);
+        const key = blobStorage.keys()[0];
+        const mapperKey = blobStorage.keys()[1];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/manifest/latest.json`);
+        expect(mapperKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/mapper.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+        const ffKey = blobStorage.keys().at(-1);
+        expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+
+        const updateResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          routingUrl: 'http://example.com',
+        });
+
+        expect(updateResp.response?.code).toBe(EnumStatusCode.OK);
+        await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
+
+        const publishResp = await client.publishFederatedSubgraph({
+          name: 'users',
+          namespace,
+          schema: fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users-update.graphql`)).toString(),
+        });
+
+        expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // Another base recomposition
+        await assertNumberOfCompositions(client, baseGraphName, 6, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+      },
+    );
+
+    // TODO: We need to decide what to do with orphaned feature flags
+    test.todo(
+      'that a feature flag need not share any mutual subgraphs',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+          enabledFeatures: ['split-config-loading'],
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        await createNamespace(client, namespace);
+
+        const labelMatcher = [
+          { key: 'team', value: 'A' },
+          { key: 'team', value: 'C' },
+        ];
+        const labels1 = [{ key: 'team', value: 'A' }];
+        const labels2 = [{ key: 'team', value: 'B' }];
+        const products = genID('products');
+        const users = genID('users');
+        const usersFeature = `${users}-feature`;
+        const baseGraphName = genID('baseFederatedGraphName');
+        const featureFlagName = genID('flag');
+
+        await createAndPublishSubgraph(
+          client,
+          products,
+          namespace,
+          fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-standalone.graphql`)).toString(),
+          labels1,
+          DEFAULT_SUBGRAPH_URL_ONE,
+        );
+
+        await createAndPublishSubgraph(
+          client,
+          users,
+          namespace,
+          fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users.graphql`)).toString(),
+          labels2,
+          DEFAULT_SUBGRAPH_URL_TWO,
+        );
+
+        await createFederatedGraph(
+          client,
+          baseGraphName,
+          namespace,
+          [labelMatcher.map((l) => `${l.key}=${l.value}`).join(',')],
+          DEFAULT_ROUTER_URL,
+        );
+        const federatedGraphResponse = await client.getFederatedGraphByName({
+          name: baseGraphName,
+          namespace,
+        });
+
+        expect(federatedGraphResponse.response?.code).toBe(EnumStatusCode.OK);
+        expect(blobStorage.keys()).toHaveLength(2);
+        const key = blobStorage.keys()[0];
+        const mapperKey = blobStorage.keys()[1];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/manifest/latest.json`);
+        expect(mapperKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/mapper.json`);
+
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+        await createThenPublishFeatureSubgraph(
+          client,
+          usersFeature,
+          users,
+          namespace,
+          fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users-feature.graphql`)).toString(),
+          labels2,
+          DEFAULT_SUBGRAPH_URL_THREE,
+        );
+
+        await createFeatureFlag(client, featureFlagName, labels2, [usersFeature], namespace, true);
+
+        let featureFlagCompositions = await server.db
+          .select({ id: graphCompositions.id })
+          .from(graphCompositions)
+          .where(eq(graphCompositions.isFeatureFlagComposition, true))
+          .execute();
+
+        expect(featureFlagCompositions).toHaveLength(1);
+
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const updateProductsResp = await client.updateSubgraph({
+          name: products,
+          namespace,
+          routingUrl: 'http://example.com',
+        });
+
+        expect(updateProductsResp.response?.code).toBe(EnumStatusCode.OK);
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+
+        featureFlagCompositions = await server.db
+          .select({ id: graphCompositions.id })
+          .from(graphCompositions)
+          .where(eq(graphCompositions.isFeatureFlagComposition, true))
+          .execute();
+
+        expect(featureFlagCompositions).toHaveLength(1);
+
+        const publishProductsResp = await client.publishFederatedSubgraph({
+          name: products,
+          namespace,
+          schema: fs
+            .readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-standalone-update.graphql`))
+            .toString(),
+        });
+
+        expect(publishProductsResp.response?.code).toBe(EnumStatusCode.OK);
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+
+        featureFlagCompositions = await server.db
+          .select({ id: graphCompositions.id })
+          .from(graphCompositions)
+          .where(eq(graphCompositions.isFeatureFlagComposition, true))
+          .execute();
+
+        expect(featureFlagCompositions).toHaveLength(1);
+
+        const updateUsersResp = await client.updateSubgraph({
+          name: users,
+          namespace,
+          routingUrl: 'http://example.com',
+        });
+
+        expect(updateUsersResp.response?.code).toBe(EnumStatusCode.OK);
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+
+        featureFlagCompositions = await server.db
+          .select({ id: graphCompositions.id })
+          .from(graphCompositions)
+          .where(eq(graphCompositions.isFeatureFlagComposition, true))
+          .execute();
+
+        expect(featureFlagCompositions).toHaveLength(2);
+
+        const publishUsersResp = await client.publishFederatedSubgraph({
+          name: users,
+          namespace,
+          schema: fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/users-update.graphql`)).toString(),
+        });
+
+        expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
+        await assertNumberOfCompositions(client, baseGraphName, 3, namespace);
+
+        featureFlagCompositions = await server.db
+          .select({ id: graphCompositions.id })
+          .from(graphCompositions)
+          .where(eq(graphCompositions.isFeatureFlagComposition, true))
+          .execute();
+
+        expect(featureFlagCompositions).toHaveLength(3);
+      },
+    );
+
+    test(
+      'that when a subgraph label changes, all affected graphs and feature flags are recomposed',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+          enabledFeatures: ['split-config-loading'],
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(2);
+        const key = blobStorage.keys()[0];
+        const mapperKey = blobStorage.keys()[1];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/manifest/latest.json`);
+        expect(mapperKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/mapper.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+        const ffKey = blobStorage.keys().at(-1);
+        expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // Update the labels of the subgraph
+        let updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          labels: [{ key: 'team', value: 'B' }],
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // The base graph and feature flag should have recomposed
+        await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // Update the labels of the subgraph
+        updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          labels: [{ key: 'team', value: 'A' }],
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // The base graph and feature flag should have recomposed
+        await assertNumberOfCompositions(client, baseGraphName, 6, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+      },
+    );
+
+    test(
+      'that setting new labels that do not affect existing label matchers does not produce unnecessary recompositions',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+          enabledFeatures: ['split-config-loading'],
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(2);
+        const key = blobStorage.keys()[0];
+        const mapperKey = blobStorage.keys()[1];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/manifest/latest.json`);
+        expect(mapperKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/mapper.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+        const ffKey = blobStorage.keys().at(-1);
+        expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // Update the labels of the subgraph
+        const updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          labels: [
+            { key: 'team', value: 'B' },
+            { key: 'team', value: 'A' },
+          ],
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // There should not be any new recomposition
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+      },
+    );
+
+    test(
+      'that changing the routing url triggers a recomposition when label matchers do not change',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+          enabledFeatures: ['split-config-loading'],
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(2);
+        const key = blobStorage.keys()[0];
+        const mapperKey = blobStorage.keys()[1];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/manifest/latest.json`);
+        expect(mapperKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/mapper.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+        const ffKey = blobStorage.keys().at(-1);
+        expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // Update the labels of the subgraph
+        const updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          labels: [
+            { key: 'team', value: 'B' },
+            { key: 'team', value: 'A' },
+          ],
+          routingUrl: DEFAULT_SUBGRAPH_URL_THREE,
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // There should be a recomposition for the federated graph and feature flag
+        await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+      },
+    );
+
+    test(
+      'that changing the routing url and the labels of a mutual subgraph trigger composition',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+          enabledFeatures: ['split-config-loading'],
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(2);
+        const key = blobStorage.keys()[0];
+        const mapperKey = blobStorage.keys()[1];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/manifest/latest.json`);
+        expect(mapperKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/mapper.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+        const ffKey = blobStorage.keys().at(-1);
+        expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // Update the labels of the subgraph
+        const updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          labels: [{ key: 'team', value: 'B' }],
+          routingUrl: DEFAULT_SUBGRAPH_URL_THREE,
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // There should be a recomposition for the federated graph and feature flag
+        await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+      },
+    );
+
+    test(
+      'that unsetting non-empty labels triggers composition',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+          enabledFeatures: ['split-config-loading'],
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels: Label[] = [{ key: 'team', value: 'A' }];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(2);
+        const key = blobStorage.keys()[0];
+        const mapperKey = blobStorage.keys()[1];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/manifest/latest.json`);
+        expect(mapperKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/mapper.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+        const ffKey = blobStorage.keys().at(-1);
+        expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // Update the labels of the subgraph
+        const updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          unsetLabels: true,
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // There should be a recomposition for the federated graph and feature flag
+        await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+      },
+    );
+
+    test(
+      'that unsetting empty labels does not trigger composition',
+      getDebugTestOptions(isDebugMode),
+      async (testContext) => {
+        const { client, server, blobStorage } = await SetupTest({
+          dbname,
+          chClient,
+          enabledFeatures: ['split-config-loading'],
+        });
+        testContext.onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        const labels: Label[] = [];
+        const baseGraphName = genID('baseFederatedGraphName');
+
+        await createNamespace(client, namespace);
+
+        const federatedGraphResponse = await featureFlagIntegrationTestSetUp(
+          client,
+          [
+            { name: 'users', hasFeatureSubgraph: true },
+            { name: 'products-standalone', hasFeatureSubgraph: true },
+          ],
+          baseGraphName,
+          labels,
+          namespace,
+        );
+
+        expect(blobStorage.keys()).toHaveLength(2);
+        const key = blobStorage.keys()[0];
+        const mapperKey = blobStorage.keys()[1];
+        expect(key).toContain(`${federatedGraphResponse.graph!.id}/manifest/latest.json`);
+        expect(mapperKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/mapper.json`);
+
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // The base composition
+        await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
+
+        const featureFlagName = genID('flag');
+        await createFeatureFlag(client, featureFlagName, labels, ['products-standalone-feature'], namespace, true);
+
+        expect(blobStorage.keys()).toHaveLength(3);
+        const ffKey = blobStorage.keys().at(-1);
+        expect(ffKey).toContain(`${federatedGraphResponse.graph!.id}/manifest/feature-flags/${featureFlagName}.json`);
+
+        // The base composition and the feature flag composition
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
+
+        // Update the labels of the subgraph
+        const updateSubgraphResp = await client.updateSubgraph({
+          name: 'users',
+          namespace,
+          unsetLabels: true,
+        });
+
+        expect(updateSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        // There should be a recomposition for the federated graph and feature flag
+        await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
+        await assertFeatureFlagExecutionConfig(blobStorage, key, false);
       },
     );
   });

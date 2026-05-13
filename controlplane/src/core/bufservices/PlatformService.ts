@@ -49,6 +49,7 @@ import { getFeatureFlagsInLatestCompositionByFederatedGraph } from './feature-fl
 import { getFeatureSubgraphs } from './feature-flag/getFeatureSubgraphs.js';
 import { getFeatureSubgraphsByFederatedGraph } from './feature-flag/getFeatureSubgraphsByFederatedGraph.js';
 import { getFeatureSubgraphsByFeatureFlag } from './feature-flag/getFeatureSubgraphsByFeatureFlag.js';
+import { recomposeFeatureFlag } from './feature-flag/recomposeFeatureFlag.js';
 import { updateFeatureFlag } from './feature-flag/updateFeatureFlag.js';
 import { checkFederatedGraph } from './federated-graph/checkFederatedGraph.js';
 import { createFederatedGraph } from './federated-graph/createFederatedGraph.js';
@@ -923,6 +924,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     recomposeGraph: (req, ctx) => {
       return recomposeGraph(opts, req, ctx);
+    },
+
+    recomposeFeatureFlag: (req, ctx) => {
+      return recomposeFeatureFlag(opts, req, ctx);
     },
 
     getOnboarding: (req, ctx) => {

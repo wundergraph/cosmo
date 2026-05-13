@@ -577,6 +577,9 @@ const (
 	// PlatformServiceRecomposeGraphProcedure is the fully-qualified name of the PlatformService's
 	// RecomposeGraph RPC.
 	PlatformServiceRecomposeGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/RecomposeGraph"
+	// PlatformServiceRecomposeFeatureFlagProcedure is the fully-qualified name of the PlatformService's
+	// RecomposeFeatureFlag RPC.
+	PlatformServiceRecomposeFeatureFlagProcedure = "/wg.cosmo.platform.v1.PlatformService/RecomposeFeatureFlag"
 	// PlatformServiceGetOnboardingProcedure is the fully-qualified name of the PlatformService's
 	// GetOnboarding RPC.
 	PlatformServiceGetOnboardingProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOnboarding"
@@ -772,6 +775,7 @@ var (
 	platformServiceUnlinkSubgraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
 	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
 	platformServiceRecomposeGraphMethodDescriptor                                     = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
+	platformServiceRecomposeFeatureFlagMethodDescriptor                               = platformServiceServiceDescriptor.Methods().ByName("RecomposeFeatureFlag")
 	platformServiceGetOnboardingMethodDescriptor                                      = platformServiceServiceDescriptor.Methods().ByName("GetOnboarding")
 	platformServiceCreateOnboardingMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("CreateOnboarding")
 	platformServiceFinishOnboardingMethodDescriptor                                   = platformServiceServiceDescriptor.Methods().ByName("FinishOnboarding")
@@ -1121,6 +1125,8 @@ type PlatformServiceClient interface {
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
 	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
+	// RecomposeFeatureFlag triggers a recomposition of the feature flag using its current subgraphs
+	RecomposeFeatureFlag(context.Context, *connect.Request[v1.RecomposeFeatureFlagRequest]) (*connect.Response[v1.RecomposeFeatureFlagResponse], error)
 	// Onboarding
 	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
 	CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error)
@@ -2230,6 +2236,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		recomposeFeatureFlag: connect.NewClient[v1.RecomposeFeatureFlagRequest, v1.RecomposeFeatureFlagResponse](
+			httpClient,
+			baseURL+PlatformServiceRecomposeFeatureFlagProcedure,
+			connect.WithSchema(platformServiceRecomposeFeatureFlagMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getOnboarding: connect.NewClient[v1.GetOnboardingRequest, v1.GetOnboardingResponse](
 			httpClient,
 			baseURL+PlatformServiceGetOnboardingProcedure,
@@ -2434,6 +2446,7 @@ type platformServiceClient struct {
 	unlinkSubgraph                                     *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
 	verifyAPIKeyGraphAccess                            *connect.Client[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse]
 	recomposeGraph                                     *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
+	recomposeFeatureFlag                               *connect.Client[v1.RecomposeFeatureFlagRequest, v1.RecomposeFeatureFlagResponse]
 	getOnboarding                                      *connect.Client[v1.GetOnboardingRequest, v1.GetOnboardingResponse]
 	createOnboarding                                   *connect.Client[v1.CreateOnboardingRequest, v1.CreateOnboardingResponse]
 	finishOnboarding                                   *connect.Client[v1.FinishOnboardingRequest, v1.FinishOnboardingResponse]
@@ -3383,6 +3396,11 @@ func (c *platformServiceClient) RecomposeGraph(ctx context.Context, req *connect
 	return c.recomposeGraph.CallUnary(ctx, req)
 }
 
+// RecomposeFeatureFlag calls wg.cosmo.platform.v1.PlatformService.RecomposeFeatureFlag.
+func (c *platformServiceClient) RecomposeFeatureFlag(ctx context.Context, req *connect.Request[v1.RecomposeFeatureFlagRequest]) (*connect.Response[v1.RecomposeFeatureFlagResponse], error) {
+	return c.recomposeFeatureFlag.CallUnary(ctx, req)
+}
+
 // GetOnboarding calls wg.cosmo.platform.v1.PlatformService.GetOnboarding.
 func (c *platformServiceClient) GetOnboarding(ctx context.Context, req *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error) {
 	return c.getOnboarding.CallUnary(ctx, req)
@@ -3742,6 +3760,8 @@ type PlatformServiceHandler interface {
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
 	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
+	// RecomposeFeatureFlag triggers a recomposition of the feature flag using its current subgraphs
+	RecomposeFeatureFlag(context.Context, *connect.Request[v1.RecomposeFeatureFlagRequest]) (*connect.Response[v1.RecomposeFeatureFlagResponse], error)
 	// Onboarding
 	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
 	CreateOnboarding(context.Context, *connect.Request[v1.CreateOnboardingRequest]) (*connect.Response[v1.CreateOnboardingResponse], error)
@@ -4847,6 +4867,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceRecomposeFeatureFlagHandler := connect.NewUnaryHandler(
+		PlatformServiceRecomposeFeatureFlagProcedure,
+		svc.RecomposeFeatureFlag,
+		connect.WithSchema(platformServiceRecomposeFeatureFlagMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetOnboardingHandler := connect.NewUnaryHandler(
 		PlatformServiceGetOnboardingProcedure,
 		svc.GetOnboarding,
@@ -5229,6 +5255,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceVerifyAPIKeyGraphAccessHandler.ServeHTTP(w, r)
 		case PlatformServiceRecomposeGraphProcedure:
 			platformServiceRecomposeGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceRecomposeFeatureFlagProcedure:
+			platformServiceRecomposeFeatureFlagHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOnboardingProcedure:
 			platformServiceGetOnboardingHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateOnboardingProcedure:
@@ -5966,6 +5994,10 @@ func (UnimplementedPlatformServiceHandler) VerifyAPIKeyGraphAccess(context.Conte
 
 func (UnimplementedPlatformServiceHandler) RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RecomposeGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) RecomposeFeatureFlag(context.Context, *connect.Request[v1.RecomposeFeatureFlagRequest]) (*connect.Response[v1.RecomposeFeatureFlagResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RecomposeFeatureFlag is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error) {

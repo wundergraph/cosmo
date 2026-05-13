@@ -2088,7 +2088,11 @@ rate_limit:
         code: "RATE_LIMIT_EXCEEDED"
 ```
 
-## Subgraph Error Propagation
+## Subgraph Data Propagation
+
+Controls what subgraphs can propagate back to the client. Errors and the response `extensions` object are governed by separate but related policies.
+
+### Subgraph Error Propagation
 
 The configuration for the subgraph error propagation. Errors can be exposed to the client in a "wrapped" form to hide Subgraph internals, or it's possible to "pass-through" Subgraph errors directly to the client.
 
@@ -2106,7 +2110,7 @@ The configuration for the subgraph error propagation. Errors can be exposed to t
 | SUBGRAPH_ERROR_PROPAGATION_ALLOWED_EXTENSION_FIELDS   | allowed_extension_fields   | <Icon icon="square" /> | The allowed extension fields. The allowed extension fields are used to specify which fields of the Subgraph errors are allowed to be propagated to the client.                                                                                   | ["code"]                 |
 | SUBGRAPH_ERROR_PROPAGATION_ALLOW_ALL_EXTENSION_FIELDS | allow_all_extension_fields | <Icon icon="square" /> | Allow all extension fields from Subgraph errors to be propagated to the client. If the value is true (default: false), all extension fields from Subgraph errors will be propagated, overriding the allowed_extension_fields configuration.      | false                    |
 
-### Example YAML configuration:
+#### Example YAML configuration:
 
 ```yaml
 version: "1"
@@ -2125,7 +2129,32 @@ subgraph_error_propagation:
     - "code"
 ```
 
-See [Subgraph Error Propagation](/router/subgraph-error-propagation) for more detailed information.
+See [Subgraph Error Propagation](/router/subgraph-data-propagation/subgraph-error-propagation) for more detailed information.
+
+### Subgraph Extension Propagation
+
+The router forwards subgraph response `extensions` to the client. An allow list restricts which extension fields are propagated, and an algorithm selects a winner when multiple subgraphs return the same field.
+
+| Environment Variable                                     | YAML                          | Required               | Description                                                                                                                                                                | Default Value |
+|----------------------------------------------------------|-------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| SUBGRAPH_EXTENSION_PROPAGATION_ENABLED                   | enabled                       | <Icon icon="square" /> | Enable forwarding of subgraph response extensions to the client.                                                                                                           | false         |
+| SUBGRAPH_EXTENSION_PROPAGATION_ALLOWED_EXTENSION_FIELDS  | allowed_extension_fields      | <Icon icon="square" /> | Extension fields that are allowed to be propagated from subgraphs to the client. Any field not in this list is dropped. If empty, all extension fields are forwarded.      | []            |
+| SUBGRAPH_EXTENSION_PROPAGATION_ALGORITHM                 | algorithm                     | <Icon icon="square" /> | Conflict resolution when multiple subgraphs return the same extension field. `first_write` keeps the value from the first subgraph that wrote it; `last_write` keeps the last. | first_write   |
+
+#### Example YAML configuration:
+
+```yaml
+version: "1"
+
+subgraph_extension_propagation:
+  enabled: true
+  allowed_extension_fields:
+    - rateLimit
+    - auth
+  algorithm: last_write
+```
+
+See [Subgraph Extension Propagation](/router/subgraph-data-propagation/subgraph-extension-propagation) for more detailed information.
 
 ## Security
 
