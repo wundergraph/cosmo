@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { createOIDCProvider } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -16,6 +16,7 @@ import { docsBaseURL } from '@/lib/constants';
 import { OIDCForm, OIDCProviderInput } from './oidc-form';
 import { useMutation } from '@connectrpc/connect-query';
 import { useToast } from '@/components/ui/use-toast';
+import { UseFormSetError } from 'react-hook-form';
 
 export interface ConnectOIDCProviderDialogProps {
   isProviderConnected: boolean;
@@ -31,9 +32,10 @@ export function ConnectOIDCProviderDialog({
   const isAdmin = useIsAdmin();
   const [open, setOpen] = useState(false);
   const [isPending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { mutate } = useMutation(createOIDCProvider);
+  const setErrorRef = useRef<UseFormSetError<OIDCProviderInput>>(null);
 
   const onOpenChangeCallback = (open: boolean) => {
     if (isPending && !open) {
@@ -42,7 +44,6 @@ export function ConnectOIDCProviderDialog({
 
     setPending(false);
     setOpen(open);
-    setError(null);
   };
 
   const handleSubmit = (data: OIDCProviderInput) => {
@@ -52,27 +53,28 @@ export function ConnectOIDCProviderDialog({
 
     setPending(true);
     mutate(data, {
-      onSuccess(data) {
-        if (data.response?.code === EnumStatusCode.OK) {
+      onSettled(data) {
+        if (data?.response?.code === EnumStatusCode.OK) {
           refetch().finally(() => {
             setOpen(false);
             toast({
               description: 'OIDC provider connected successfully.',
               duration: 4000,
             });
-
+            ``;
             onProviderConnected();
           });
         } else {
           setPending(false);
-          setError(
-            data.response?.details || 'Could not connect the OIDC provider to the organization. Please try again.',
-          );
+          const setError = setErrorRef.current;
+          if (setError) {
+            setError('discoveryEndpoint', {
+              message:
+                data?.response?.details ?? 'Could not connect the OIDC provider to the organization. Please try again.',
+              type: 'value',
+            });
+          }
         }
-      },
-      onError() {
-        setPending(false);
-        setError('Could not connect the OIDC provider to the organization. Please try again.');
       },
     });
   };
@@ -109,9 +111,12 @@ export function ConnectOIDCProviderDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {error && <div className="mt-2 rounded bg-destructive p-2 text-destructive-foreground">{error}</div>}
-
-        <OIDCForm isPending={isPending} handleSubmit={handleSubmit} onCancel={() => setOpen(false)} />
+        <OIDCForm
+          isPending={isPending}
+          handleSubmit={handleSubmit}
+          onCancel={() => setOpen(false)}
+          setError={setErrorRef}
+        />
       </DialogContent>
     </Dialog>
   );

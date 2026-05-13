@@ -4,6 +4,8 @@ import { Form, FormField, FormLabel, FormMessage, FormItem, FormControl } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { absoluteUrlValidator } from '@/lib/zod';
+import { type Ref, useImperativeHandle } from 'react';
+import type { UseFormSetError } from 'react-hook-form';
 
 const OIDCProviderInputSchema = z.object({
   name: z.string().min(1),
@@ -18,13 +20,22 @@ export interface OIDCFormProps {
   isPending: boolean;
   handleSubmit(data: OIDCProviderInput): void;
   onCancel(): void;
+  setError: Ref<UseFormSetError<OIDCProviderInput>>;
 }
 
-export function OIDCForm({ isPending, handleSubmit, onCancel }: OIDCFormProps) {
+export function OIDCForm({ isPending, handleSubmit, onCancel, setError }: OIDCFormProps) {
   const form = useZodForm<OIDCProviderInput>({
     schema: OIDCProviderInputSchema,
     mode: 'onChange',
+    defaultValues: {
+      name: '',
+      discoveryEndpoint: '',
+      clientID: '',
+      clientSecret: '',
+    },
   });
+
+  useImperativeHandle(setError, () => form.setError, [form.setError]);
 
   return (
     <Form {...form}>

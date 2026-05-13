@@ -39,13 +39,7 @@ export function OIDCCard({ className, providerData, refetchOIDCProvider }: OIDCC
             </Link>
           </CardDescription>
         </div>
-        {!oidc ? (
-          <Button className="md:ml-auto" type="submit" variant="default" asChild>
-            <Link href={calURL} target="_blank" rel="noreferrer">
-              Contact us
-            </Link>
-          </Button>
-        ) : (
+        {oidc ? (
           <div className="ml-auto flex gap-x-3">
             <OIDCInfoDialog
               open={wasProviderJustConnected}
@@ -71,6 +65,12 @@ export function OIDCCard({ className, providerData, refetchOIDCProvider }: OIDCC
             />
             <DisconnectOIDCProviderDialog isProviderConnected={!!providerData?.name} refetch={refetchOIDCProvider} />
           </div>
+        ) : (
+          <Button className="md:ml-auto" type="submit" variant="default" asChild>
+            <Link href={calURL} target="_blank" rel="noreferrer">
+              Contact us
+            </Link>
+          </Button>
         )}
       </CardHeader>
       {providerData?.name && (

@@ -15,7 +15,7 @@ export const absoluteUrlValidator = z
 
     try {
       const url = new URL(val); // Ensure that the value is a valid absolute URL
-      if (url.hostname === 'localhost') {
+      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
         if (url.protocol !== 'http:' && url.protocol !== 'https:') {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,

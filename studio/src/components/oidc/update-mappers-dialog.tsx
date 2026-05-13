@@ -95,8 +95,8 @@ export function UpdateMappersDialog({
     mutate(
       { mappers },
       {
-        onSuccess(data) {
-          if (data.response?.code === EnumStatusCode.OK) {
+        onSettled(data) {
+          if (data?.response?.code === EnumStatusCode.OK) {
             toast({
               description: 'Group mappers updated successfully.',
               duration: 4000,
@@ -109,17 +109,10 @@ export function UpdateMappersDialog({
           } else {
             setPending(false);
             toast({
-              description: data.response?.details ?? 'Could not update the group mappers. Please try again.',
+              description: data?.response?.details ?? 'Could not update the group mappers. Please try again.',
               duration: 4000,
             });
           }
-        },
-        onError() {
-          setPending(false);
-          toast({
-            description: 'Could not update the group mappers. Please try again.',
-            duration: 4000,
-          });
         },
       },
     );

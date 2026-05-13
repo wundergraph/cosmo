@@ -48,8 +48,8 @@ export function DisconnectOIDCProviderDialog({ isProviderConnected, refetch }: D
     mutate(
       {},
       {
-        onSuccess(data) {
-          if (data.response?.code === EnumStatusCode.OK) {
+        onSettled(data) {
+          if (data?.response?.code === EnumStatusCode.OK) {
             refetch().finally(() => {
               setOpen(false);
 
@@ -61,17 +61,10 @@ export function DisconnectOIDCProviderDialog({ isProviderConnected, refetch }: D
           } else {
             setPending(false);
             toast({
-              description: data.response?.details || 'Could not disconnect the OIDC provider. Please try again.',
+              description: data?.response?.details ?? 'Could not disconnect the OIDC provider. Please try again.',
               duration: 4000,
             });
           }
-        },
-        onError() {
-          setPending(false);
-          toast({
-            description: 'Could not disconnect the OIDC provider. Please try again.',
-            duration: 4000,
-          });
         },
       },
     );
