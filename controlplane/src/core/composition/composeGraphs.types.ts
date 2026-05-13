@@ -61,6 +61,7 @@ export interface ComposeGraphsTaskInput {
     isFeatureFlagComposition: boolean;
     featureFlagName: string;
     featureFlagId: string;
+    trafficPercentage?: number | null;
   }[];
   tagOptionsByContractName: SerializedContractTagOptions[];
   compositionOptions?: CompositionOptions;
@@ -71,6 +72,9 @@ export interface ComposeGraphsTaskResultItem {
   isFeatureFlagComposition: boolean;
   featureFlagName: string;
   featureFlagId: string;
+  // Carried through from the input so the caller can write traffic_percentage
+  // into the FeatureFlagRouterExecutionConfig proto without an extra DB lookup.
+  trafficPercentage?: number | null;
   base: SerializedComposedGraphArtifact;
   contracts: SerializedContractCompositionArtifact[];
 }

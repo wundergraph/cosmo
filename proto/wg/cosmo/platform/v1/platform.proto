@@ -2864,6 +2864,11 @@ message Proposal {
   bool latestCheckSuccess = 9;
   string latestCheckId = 10;
   ProposalOrigin origin = 11;
+  // Set when a proposal has been deployed as a rollout. Points back to the
+  // feature flag created by BulkUpdateProposalRolloutPercentages.
+  optional string rolloutFeatureFlagId = 13;
+  // Current traffic % of the linked rollout (mirrors feature_flags.traffic_percentage).
+  optional uint32 rolloutPercentage = 14;
 }
 
 message ProposalSubgraph {
@@ -2877,6 +2882,44 @@ message ProposalSubgraph {
 enum ProposalOrigin {
    INTERNAL = 0;
    EXTERNAL = 1;
+}
+
+// Atomic create-or-update of rollout percentages across one or more proposals
+// on the same federated graph. For proposals without a linked rollout flag,
+// the handler creates feature subgraphs + a feature flag and links them
+// (deploy semantics). For proposals already rolled out, only the percentage
+// is updated.
+//
+// Why bulk: the router falls all unpinned traffic back to base when cumulative
+// traffic_percentage > 100 (router/core/feature_flag_rollout.go), so adjusting
+// one branch in isolation can silently break sibling rollouts. Doing all
+// changes in one call gives atomic budget enforcement and collapses N
+// composeAndDeployGraphs invocations into a single composition + CDN push
+// (one router config reload, not N).
+message BulkUpdateProposalRolloutPercentagesRequest {
+  message Item {
+    string proposalId = 1;
+    uint32 percentage = 2;
+  }
+  repeated Item items = 1;
+}
+
+message BulkUpdateProposalRolloutPercentagesItemResult {
+  string proposalId = 1;
+  uint32 percentage = 2;
+}
+
+message BulkUpdateProposalRolloutPercentagesResponse {
+  Response response = 1;
+  repeated BulkUpdateProposalRolloutPercentagesItemResult items = 2;
+}
+
+message TeardownProposalRolloutRequest {
+  string proposalId = 1;
+}
+
+message TeardownProposalRolloutResponse {
+  Response response = 1;
 }
 
 enum ProposalNamingConvention {
@@ -3594,6 +3637,16 @@ service PlatformService {
   rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
   // GetProposalChecks returns checks for a proposal.
   rpc GetProposalChecks(GetProposalChecksRequest) returns (GetProposalChecksResponse) {}
+  // BulkUpdateProposalRolloutPercentages atomically creates or updates rollout
+  // percentages across one or more proposals on the same federated graph. For
+  // proposals without an existing rollout, the handler creates feature subgraphs
+  // and a feature flag linked to the proposal (deploy semantics). For proposals
+  // already rolled out, only the percentage is updated. Single transaction +
+  // single composeAndDeployGraphs; sibling rollouts not in the batch keep their
+  // stored percentages.
+  rpc BulkUpdateProposalRolloutPercentages(BulkUpdateProposalRolloutPercentagesRequest) returns (BulkUpdateProposalRolloutPercentagesResponse) {}
+  // TeardownProposalRollout deletes the linked feature flag and feature subgraphs.
+  rpc TeardownProposalRollout(TeardownProposalRolloutRequest) returns (TeardownProposalRolloutResponse) {}
   // GetOperations returns the operations of a federated graph.
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
   // GetClientsFromAnalytics returns all the clients of the federated graph from the analytics

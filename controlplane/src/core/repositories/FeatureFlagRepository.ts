@@ -6,6 +6,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
 import { parse } from 'graphql';
 import { alias } from 'drizzle-orm/pg-core';
+import { rewriteOverrideTargets } from '../composition/rewriteOverrideTargets.js';
 import * as schema from '../../db/schema.js';
 import {
   featureFlagToFeatureSubgraphs,
@@ -40,6 +41,9 @@ export interface FeatureFlagWithFeatureSubgraphs {
   id: string;
   name: string;
   featureSubgraphs: FeatureSubgraphDTO[];
+  // null → preview-only flag (header/cookie-pinned).
+  // 0..100 → rollout flag, traffic_percentage written into router config proto.
+  trafficPercentage: number | null;
 }
 
 export interface SubgraphsToCompose {
@@ -48,6 +52,9 @@ export interface SubgraphsToCompose {
   isFeatureFlagComposition: boolean;
   featureFlagName: string;
   featureFlagId: string;
+  // Carried through composition so routerConfigToFeatureFlagExecutionConfig
+  // can populate the FeatureFlagRouterExecutionConfig.traffic_percentage proto field.
+  trafficPercentage?: number | null;
 }
 
 export interface FeatureFlagListFilterOptions {
@@ -854,6 +861,7 @@ export class FeatureFlagRepository {
         name: featureFlags.name,
         labels: featureFlags.labels,
         isEnabled: featureFlags.isEnabled,
+        trafficPercentage: featureFlags.trafficPercentage,
       })
       .from(featureFlags)
       .innerJoin(featureFlagToFeatureSubgraphs, eq(featureFlags.id, featureFlagToFeatureSubgraphs.featureFlagId))
@@ -1054,6 +1062,7 @@ export class FeatureFlagRepository {
         id: featureFlag.id,
         name: featureFlag.name,
         featureSubgraphs: filteredFeatureSubgraphs,
+        trafficPercentage: featureFlag.trafficPercentage,
       });
     }
     return featureFlagWithEnabledFeatureGraphs;
@@ -1081,12 +1090,35 @@ export class FeatureFlagRepository {
         });
         subgraphDTOs.push(featureGraph);
       }
+
+      // Follow the base->feature subgraph swap into other subgraphs'
+      // @override(from:) targets. Without this, a sibling subgraph that
+      // says @override(from: "<baseName>") gets orphaned by the swap and
+      // the FF composition fails with a @shareable collision - silently
+      // producing a router config with no featureFlagConfigs entry, so
+      // the router falls back to baseMux and the rollout no-ops.
+      // Worker re-parses each DTO from `schemaSDL` (composeGraphs.worker.ts
+      // toCompositionSubgraphs), so writing the rewrite back to schemaSDL
+      // is what counts; the parallel `compositionSubgraphs.definitions`
+      // AST is dead in this code path. .map() produces new DTO objects so
+      // the base composition entry pushed earlier with the original
+      // subgraph references stays untouched.
+      const overrideReplacements = new Map<string, string>();
+      for (const fg of flag.featureSubgraphs) {
+        overrideReplacements.set(fg.baseSubgraphName, fg.name);
+      }
+      subgraphDTOs = subgraphDTOs.map((dto) => {
+        const rewritten = rewriteOverrideTargets(dto.schemaSDL, overrideReplacements);
+        return rewritten === dto.schemaSDL ? dto : { ...dto, schemaSDL: rewritten };
+      });
+
       subgraphsToCompose.push({
         compositionSubgraphs,
         isFeatureFlagComposition: true,
         featureFlagName: flag.name,
         featureFlagId: flag.id,
         subgraphs: subgraphDTOs,
+        trafficPercentage: flag.trafficPercentage,
       });
     }
     return subgraphsToCompose;

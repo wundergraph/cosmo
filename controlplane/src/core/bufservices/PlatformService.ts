@@ -167,6 +167,8 @@ import { getProposal } from './proposal/getProposal.js';
 import { enableProposalsForNamespace } from './proposal/enableProposalsForNamespace.js';
 import { getNamespaceProposalConfig } from './proposal/getNamespaceProposalConfig.js';
 import { configureNamespaceProposalConfig } from './proposal/configureNamespaceProposalConfig.js';
+import { bulkUpdateProposalRolloutPercentages } from './proposal/bulkUpdateProposalRolloutPercentages.js';
+import { teardownProposalRollout } from './proposal/teardownProposalRollout.js';
 import { getOperations } from './analytics/getOperations.js';
 import { getOperationClients } from './analytics/getOperationClients.js';
 import { getOperationDeprecatedFields } from './analytics/getOperationDeprecatedFields.js';
@@ -867,6 +869,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getProposal: (req, ctx) => {
       return getProposal(opts, req, ctx);
+    },
+
+    bulkUpdateProposalRolloutPercentages: (req, ctx) => {
+      return bulkUpdateProposalRolloutPercentages(opts, req, ctx);
+    },
+
+    teardownProposalRollout: (req, ctx) => {
+      return teardownProposalRollout(opts, req, ctx);
     },
 
     enableProposalsForNamespace: (req, ctx) => {

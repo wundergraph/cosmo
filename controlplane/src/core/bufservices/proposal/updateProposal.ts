@@ -9,6 +9,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { ProposalOrigin, ProposalState } from '../../../db/models.js';
+import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
@@ -27,6 +28,7 @@ import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficIn
 import { Composer } from '../../composition/composer.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { hubUserAgent } from '../../constants.js';
+import { teardownProposalRolloutSideEffects } from './teardownProposalRolloutSideEffects.js';
 
 export function updateProposal(
   opts: RouterOptions,
@@ -188,6 +190,27 @@ export function updateProposal(
         state: stateValue,
         proposalSubgraphs: [],
       });
+
+      // Auto-teardown: when a proposal transitions to PUBLISHED, any rollout
+      // deployed against it has fulfilled its purpose (the change is now
+      // mainlined). Delete the linked feature flag so the rollout slice stops
+      // accumulating and the per-proposal feature subgraphs don't linger as
+      // zombies. Idempotent: a no-op if no rollout was deployed. Shares the
+      // helper with TeardownProposalRollout RPC so audit + recompose stay in
+      // lockstep across both call sites.
+      if (stateValue === 'PUBLISHED') {
+        const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+        await teardownProposalRolloutSideEffects({
+          opts,
+          authContext,
+          proposalId: proposal.proposal.id,
+          federatedGraph,
+          proposalRepo,
+          fedGraphRepo: federatedGraphRepo,
+          featureFlagRepo,
+          auditLogRepo,
+        });
+      }
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,

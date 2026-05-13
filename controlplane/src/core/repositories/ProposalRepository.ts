@@ -853,4 +853,63 @@ export class ProposalRepository {
 
     return proposalMatches;
   }
+
+  // Returns the feature flag (id, name, current trafficPercentage) created for
+  // this proposal via BulkUpdateProposalRolloutPercentages, or undefined if
+  // none exists. Used by the rollout RPCs and by the auto-teardown hook on
+  // PUBLISHED.
+  public async getLinkedRolloutFlag(
+    proposalId: string,
+  ): Promise<{ id: string; name: string; trafficPercentage: number | null } | undefined> {
+    // Defense-in-depth: scope by organizationId even though all callers
+    // pre-validate via ById/ByName. Cheap and prevents a future careless
+    // caller from leaking a sibling org's flag.
+    const rows = await this.db
+      .select({
+        id: schema.featureFlags.id,
+        name: schema.featureFlags.name,
+        trafficPercentage: schema.featureFlags.trafficPercentage,
+      })
+      .from(schema.featureFlags)
+      .where(
+        and(
+          eq(schema.featureFlags.proposalId, proposalId),
+          eq(schema.featureFlags.organizationId, this.organizationId),
+        ),
+      )
+      .limit(1);
+    return rows[0];
+  }
+
+  // Persists the link from a proposal to the feature flag created by
+  // BulkUpdateProposalRolloutPercentages on the first-deploy path. Idempotent:
+  // a re-deploy from the same proposal overwrites the flag's percentage rather
+  // than creating a new flag.
+  public async setLinkedRolloutFlag({
+    featureFlagId,
+    proposalId,
+    trafficPercentage,
+  }: {
+    featureFlagId: string;
+    proposalId: string;
+    trafficPercentage: number;
+  }) {
+    await this.db
+      .update(schema.featureFlags)
+      .set({ proposalId, trafficPercentage, updatedAt: new Date() })
+      .where(eq(schema.featureFlags.id, featureFlagId));
+  }
+
+  public async updateRolloutPercentage({
+    featureFlagId,
+    trafficPercentage,
+  }: {
+    featureFlagId: string;
+    trafficPercentage: number;
+  }) {
+    await this.db
+      .update(schema.featureFlags)
+      .set({ trafficPercentage, updatedAt: new Date() })
+      .where(eq(schema.featureFlags.id, featureFlagId));
+  }
 }

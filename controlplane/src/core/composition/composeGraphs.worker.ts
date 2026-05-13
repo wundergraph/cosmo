@@ -242,6 +242,7 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
         isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
         featureFlagName: subgraphsToCompose.featureFlagName,
         featureFlagId: subgraphsToCompose.featureFlagId,
+        trafficPercentage: subgraphsToCompose.trafficPercentage,
         base,
         contracts,
       };

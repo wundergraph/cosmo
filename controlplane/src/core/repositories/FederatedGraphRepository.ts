@@ -1578,6 +1578,7 @@ export class FederatedGraphRepository {
             isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
             featureFlagName: subgraphsToCompose.featureFlagName,
             featureFlagId: subgraphsToCompose.featureFlagId,
+            trafficPercentage: subgraphsToCompose.trafficPercentage,
           })),
           tagOptionsByContractName,
           compositionOptions,
@@ -1667,7 +1668,7 @@ export class FederatedGraphRepository {
             }
             baseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName.set(
               compositionResult.featureFlagName,
-              routerConfigToFeatureFlagExecutionConfig(routerExecutionConfig),
+              routerConfigToFeatureFlagExecutionConfig(routerExecutionConfig, compositionResult.trafficPercentage),
             );
             // Otherwise, this is the base composition, so store the schema version id
           } else {
@@ -1772,7 +1773,10 @@ export class FederatedGraphRepository {
             }
             existingContractBaseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName.set(
               compositionResult.featureFlagName,
-              routerConfigToFeatureFlagExecutionConfig(contractRouterExecutionConfig),
+              routerConfigToFeatureFlagExecutionConfig(
+                contractRouterExecutionConfig,
+                compositionResult.trafficPercentage,
+              ),
             );
           }
         }

@@ -22539,6 +22539,21 @@ export class Proposal extends Message<Proposal> {
    */
   origin = ProposalOrigin.INTERNAL;
 
+  /**
+   * Set when a proposal has been deployed as a rollout. Points back to the
+   * feature flag created by BulkUpdateProposalRolloutPercentages.
+   *
+   * @generated from field: optional string rolloutFeatureFlagId = 13;
+   */
+  rolloutFeatureFlagId?: string;
+
+  /**
+   * Current traffic % of the linked rollout (mirrors feature_flags.traffic_percentage).
+   *
+   * @generated from field: optional uint32 rolloutPercentage = 14;
+   */
+  rolloutPercentage?: number;
+
   constructor(data?: PartialMessage<Proposal>) {
     super();
     proto3.util.initPartial(data, this);
@@ -22558,6 +22573,8 @@ export class Proposal extends Message<Proposal> {
     { no: 9, name: "latestCheckSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 10, name: "latestCheckId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 11, name: "origin", kind: "enum", T: proto3.getEnumType(ProposalOrigin) },
+    { no: 13, name: "rolloutFeatureFlagId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 14, name: "rolloutPercentage", kind: "scalar", T: 13 /* ScalarType.UINT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Proposal {
@@ -22635,6 +22652,259 @@ export class ProposalSubgraph extends Message<ProposalSubgraph> {
 
   static equals(a: ProposalSubgraph | PlainMessage<ProposalSubgraph> | undefined, b: ProposalSubgraph | PlainMessage<ProposalSubgraph> | undefined): boolean {
     return proto3.util.equals(ProposalSubgraph, a, b);
+  }
+}
+
+/**
+ * Atomic create-or-update of rollout percentages across one or more proposals
+ * on the same federated graph. For proposals without a linked rollout flag,
+ * the handler creates feature subgraphs + a feature flag and links them
+ * (deploy semantics). For proposals already rolled out, only the percentage
+ * is updated.
+ *
+ * Why bulk: the router falls all unpinned traffic back to base when cumulative
+ * traffic_percentage > 100 (router/core/feature_flag_rollout.go), so adjusting
+ * one branch in isolation can silently break sibling rollouts. Doing all
+ * changes in one call gives atomic budget enforcement and collapses N
+ * composeAndDeployGraphs invocations into a single composition + CDN push
+ * (one router config reload, not N).
+ *
+ * @generated from message wg.cosmo.platform.v1.BulkUpdateProposalRolloutPercentagesRequest
+ */
+export class BulkUpdateProposalRolloutPercentagesRequest extends Message<BulkUpdateProposalRolloutPercentagesRequest> {
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.BulkUpdateProposalRolloutPercentagesRequest.Item items = 1;
+   */
+  items: BulkUpdateProposalRolloutPercentagesRequest_Item[] = [];
+
+  constructor(data?: PartialMessage<BulkUpdateProposalRolloutPercentagesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.BulkUpdateProposalRolloutPercentagesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "items", kind: "message", T: BulkUpdateProposalRolloutPercentagesRequest_Item, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkUpdateProposalRolloutPercentagesRequest {
+    return new BulkUpdateProposalRolloutPercentagesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BulkUpdateProposalRolloutPercentagesRequest {
+    return new BulkUpdateProposalRolloutPercentagesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BulkUpdateProposalRolloutPercentagesRequest {
+    return new BulkUpdateProposalRolloutPercentagesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BulkUpdateProposalRolloutPercentagesRequest | PlainMessage<BulkUpdateProposalRolloutPercentagesRequest> | undefined, b: BulkUpdateProposalRolloutPercentagesRequest | PlainMessage<BulkUpdateProposalRolloutPercentagesRequest> | undefined): boolean {
+    return proto3.util.equals(BulkUpdateProposalRolloutPercentagesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.BulkUpdateProposalRolloutPercentagesRequest.Item
+ */
+export class BulkUpdateProposalRolloutPercentagesRequest_Item extends Message<BulkUpdateProposalRolloutPercentagesRequest_Item> {
+  /**
+   * @generated from field: string proposalId = 1;
+   */
+  proposalId = "";
+
+  /**
+   * @generated from field: uint32 percentage = 2;
+   */
+  percentage = 0;
+
+  constructor(data?: PartialMessage<BulkUpdateProposalRolloutPercentagesRequest_Item>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.BulkUpdateProposalRolloutPercentagesRequest.Item";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "percentage", kind: "scalar", T: 13 /* ScalarType.UINT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkUpdateProposalRolloutPercentagesRequest_Item {
+    return new BulkUpdateProposalRolloutPercentagesRequest_Item().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BulkUpdateProposalRolloutPercentagesRequest_Item {
+    return new BulkUpdateProposalRolloutPercentagesRequest_Item().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BulkUpdateProposalRolloutPercentagesRequest_Item {
+    return new BulkUpdateProposalRolloutPercentagesRequest_Item().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BulkUpdateProposalRolloutPercentagesRequest_Item | PlainMessage<BulkUpdateProposalRolloutPercentagesRequest_Item> | undefined, b: BulkUpdateProposalRolloutPercentagesRequest_Item | PlainMessage<BulkUpdateProposalRolloutPercentagesRequest_Item> | undefined): boolean {
+    return proto3.util.equals(BulkUpdateProposalRolloutPercentagesRequest_Item, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.BulkUpdateProposalRolloutPercentagesItemResult
+ */
+export class BulkUpdateProposalRolloutPercentagesItemResult extends Message<BulkUpdateProposalRolloutPercentagesItemResult> {
+  /**
+   * @generated from field: string proposalId = 1;
+   */
+  proposalId = "";
+
+  /**
+   * @generated from field: uint32 percentage = 2;
+   */
+  percentage = 0;
+
+  constructor(data?: PartialMessage<BulkUpdateProposalRolloutPercentagesItemResult>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.BulkUpdateProposalRolloutPercentagesItemResult";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "percentage", kind: "scalar", T: 13 /* ScalarType.UINT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkUpdateProposalRolloutPercentagesItemResult {
+    return new BulkUpdateProposalRolloutPercentagesItemResult().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BulkUpdateProposalRolloutPercentagesItemResult {
+    return new BulkUpdateProposalRolloutPercentagesItemResult().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BulkUpdateProposalRolloutPercentagesItemResult {
+    return new BulkUpdateProposalRolloutPercentagesItemResult().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BulkUpdateProposalRolloutPercentagesItemResult | PlainMessage<BulkUpdateProposalRolloutPercentagesItemResult> | undefined, b: BulkUpdateProposalRolloutPercentagesItemResult | PlainMessage<BulkUpdateProposalRolloutPercentagesItemResult> | undefined): boolean {
+    return proto3.util.equals(BulkUpdateProposalRolloutPercentagesItemResult, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.BulkUpdateProposalRolloutPercentagesResponse
+ */
+export class BulkUpdateProposalRolloutPercentagesResponse extends Message<BulkUpdateProposalRolloutPercentagesResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.BulkUpdateProposalRolloutPercentagesItemResult items = 2;
+   */
+  items: BulkUpdateProposalRolloutPercentagesItemResult[] = [];
+
+  constructor(data?: PartialMessage<BulkUpdateProposalRolloutPercentagesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.BulkUpdateProposalRolloutPercentagesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "items", kind: "message", T: BulkUpdateProposalRolloutPercentagesItemResult, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BulkUpdateProposalRolloutPercentagesResponse {
+    return new BulkUpdateProposalRolloutPercentagesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BulkUpdateProposalRolloutPercentagesResponse {
+    return new BulkUpdateProposalRolloutPercentagesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BulkUpdateProposalRolloutPercentagesResponse {
+    return new BulkUpdateProposalRolloutPercentagesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BulkUpdateProposalRolloutPercentagesResponse | PlainMessage<BulkUpdateProposalRolloutPercentagesResponse> | undefined, b: BulkUpdateProposalRolloutPercentagesResponse | PlainMessage<BulkUpdateProposalRolloutPercentagesResponse> | undefined): boolean {
+    return proto3.util.equals(BulkUpdateProposalRolloutPercentagesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.TeardownProposalRolloutRequest
+ */
+export class TeardownProposalRolloutRequest extends Message<TeardownProposalRolloutRequest> {
+  /**
+   * @generated from field: string proposalId = 1;
+   */
+  proposalId = "";
+
+  constructor(data?: PartialMessage<TeardownProposalRolloutRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.TeardownProposalRolloutRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TeardownProposalRolloutRequest {
+    return new TeardownProposalRolloutRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TeardownProposalRolloutRequest {
+    return new TeardownProposalRolloutRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TeardownProposalRolloutRequest {
+    return new TeardownProposalRolloutRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TeardownProposalRolloutRequest | PlainMessage<TeardownProposalRolloutRequest> | undefined, b: TeardownProposalRolloutRequest | PlainMessage<TeardownProposalRolloutRequest> | undefined): boolean {
+    return proto3.util.equals(TeardownProposalRolloutRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.TeardownProposalRolloutResponse
+ */
+export class TeardownProposalRolloutResponse extends Message<TeardownProposalRolloutResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<TeardownProposalRolloutResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.TeardownProposalRolloutResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TeardownProposalRolloutResponse {
+    return new TeardownProposalRolloutResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TeardownProposalRolloutResponse {
+    return new TeardownProposalRolloutResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TeardownProposalRolloutResponse {
+    return new TeardownProposalRolloutResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TeardownProposalRolloutResponse | PlainMessage<TeardownProposalRolloutResponse> | undefined, b: TeardownProposalRolloutResponse | PlainMessage<TeardownProposalRolloutResponse> | undefined): boolean {
+    return proto3.util.equals(TeardownProposalRolloutResponse, a, b);
   }
 }
 

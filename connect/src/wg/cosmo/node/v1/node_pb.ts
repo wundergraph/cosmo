@@ -348,6 +348,20 @@ export class FeatureFlagRouterExecutionConfig extends Message<FeatureFlagRouterE
    */
   subgraphs: Subgraph[] = [];
 
+  /**
+   * Optional traffic percentage in [0, 100] for percentage-based rollouts.
+   * When set, the flag is reachable only via the rollout selector and
+   * header/cookie pins targeting it are ignored.
+   *
+   * The `optional` is load-bearing: explicit `0` means a paused rollout (no
+   * traffic, but still part of the cumulative budget), which is distinct from
+   * unset (preview-only flag, header/cookie-pinned). Do not drop `optional` —
+   * proto3 presence is the only way to tell the two apart.
+   *
+   * @generated from field: optional uint32 traffic_percentage = 4;
+   */
+  trafficPercentage?: number;
+
   constructor(data?: PartialMessage<FeatureFlagRouterExecutionConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -359,6 +373,7 @@ export class FeatureFlagRouterExecutionConfig extends Message<FeatureFlagRouterE
     { no: 1, name: "engine_config", kind: "message", T: EngineConfiguration },
     { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
+    { no: 4, name: "traffic_percentage", kind: "scalar", T: 13 /* ScalarType.UINT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FeatureFlagRouterExecutionConfig {

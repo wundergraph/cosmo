@@ -1,6 +1,8 @@
 import { relations, sql } from 'drizzle-orm';
 import {
+  AnyPgColumn,
   boolean,
+  check,
   integer,
   bigint,
   pgEnum,
@@ -326,6 +328,17 @@ export const featureFlags = pgTable(
       }),
     labels: text('labels').array(),
     isEnabled: boolean('is_enabled').default(false).notNull(),
+    // Percentage of unpinned traffic to route to this flag's variant.
+    // null → preview-only flag (header/cookie-pinned).
+    // 0..100 → rollout flag, header pins ignored.
+    trafficPercentage: integer('traffic_percentage'),
+    // When the flag was created from a proposal's "Deploy as rollout" action,
+    // this links back so the UI can navigate proposal ↔ rollout, and so the
+    // proposal state-transition handler can auto-teardown on PUBLISHED.
+    // ON DELETE CASCADE: deleting a proposal also deletes its rollout flag, so
+    // we never leave an orphaned flag routing traffic against a vanished
+    // proposal. Forward reference to the `proposals` table defined later.
+    proposalId: uuid('proposal_id').references((): AnyPgColumn => proposals.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     createdBy: uuid('created_by').references(() => users.id, {
@@ -337,6 +350,18 @@ export const featureFlags = pgTable(
       organizationIdIndex: index('ff_organization_id_idx').on(t.organizationId),
       namespaceIdIndex: index('ff_namespace_id_idx').on(t.namespaceId),
       createdByIndex: index('ff_created_by_idx').on(t.createdBy),
+      proposalIdIndex: index('ff_proposal_id_idx').on(t.proposalId),
+      // At most one rollout flag per proposal — keeps getLinkedRolloutFlag's
+      // LIMIT 1 deterministic and prevents race-introduced duplicates.
+      proposalIdUnique: uniqueIndex('ff_proposal_id_uniq_idx')
+        .on(t.proposalId)
+        .where(sql`${t.proposalId} IS NOT NULL`),
+      // Mirror the DB CHECK from migration 0137: percentage is null
+      // (preview-only flag) or in [0, 100] (rollout flag).
+      trafficPercentageRange: check(
+        'feature_flags_traffic_percentage_range_chk',
+        sql`${t.trafficPercentage} IS NULL OR (${t.trafficPercentage} BETWEEN 0 AND 100)`,
+      ),
     };
   },
 );

@@ -444,11 +444,28 @@ export const SetupKeycloak = async ({
     }
   }
 
-  return addKeycloakUser({
-    keycloakClient,
-    userTestData,
-    realmName,
-  });
+  // Keycloak's admin API occasionally returns "Realm not found" immediately
+  // after a successful realm.create (or 409) under parallel test load —
+  // a brief realm-cache race in keycloak. Retry a few times with backoff
+  // before giving up so true failures still surface.
+  let lastError: any;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await addKeycloakUser({
+        keycloakClient,
+        userTestData,
+        realmName,
+      });
+    } catch (e: any) {
+      lastError = e;
+      if (typeof e?.message === 'string' && e.message.includes('Realm not found')) {
+        await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastError;
 };
 
 export async function createOrganizationGroup(
