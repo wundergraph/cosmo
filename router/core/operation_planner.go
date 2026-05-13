@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jensneuse/abstractlogger"
 	"golang.org/x/sync/singleflight"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
@@ -95,9 +96,13 @@ func (p *OperationPlanner) planOperation(content string, name string, includeQue
 	}
 	post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
 	post.Process(preparedPlan)
-	bytecodePlan, err := compiler.Compile(preparedPlan)
-	if err != nil {
-		return nil, err
+	var bytecodePlan *planbytecode.Program
+	if compiledPlan, err := compiler.Compile(preparedPlan); err != nil {
+		if p.executor.PlanConfig.Logger != nil {
+			p.executor.PlanConfig.Logger.Warn("Failed to compile bytecode execution plan; falling back to standard resolver path", abstractlogger.Error(err))
+		}
+	} else if compiledPlan != nil {
+		bytecodePlan = compiledPlan
 	}
 
 	return &planWithMetaData{
