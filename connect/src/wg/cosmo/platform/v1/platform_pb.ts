@@ -25298,6 +25298,122 @@ export class RecomposeGraphResponse extends Message<RecomposeGraphResponse> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.RecomposeFeatureFlagRequest
+ */
+export class RecomposeFeatureFlagRequest extends Message<RecomposeFeatureFlagRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: optional int32 limit = 3;
+   */
+  limit?: number;
+
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 5;
+   */
+  disableResolvabilityValidation?: boolean;
+
+  constructor(data?: PartialMessage<RecomposeFeatureFlagRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RecomposeFeatureFlagRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 5, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RecomposeFeatureFlagRequest {
+    return new RecomposeFeatureFlagRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RecomposeFeatureFlagRequest {
+    return new RecomposeFeatureFlagRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RecomposeFeatureFlagRequest {
+    return new RecomposeFeatureFlagRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RecomposeFeatureFlagRequest | PlainMessage<RecomposeFeatureFlagRequest> | undefined, b: RecomposeFeatureFlagRequest | PlainMessage<RecomposeFeatureFlagRequest> | undefined): boolean {
+    return proto3.util.equals(RecomposeFeatureFlagRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RecomposeFeatureFlagResponse
+ */
+export class RecomposeFeatureFlagResponse extends Message<RecomposeFeatureFlagResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.SubgraphPublishStats errorCounts = 5;
+   */
+  errorCounts?: SubgraphPublishStats;
+
+  constructor(data?: PartialMessage<RecomposeFeatureFlagResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RecomposeFeatureFlagResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 5, name: "errorCounts", kind: "message", T: SubgraphPublishStats, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RecomposeFeatureFlagResponse {
+    return new RecomposeFeatureFlagResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RecomposeFeatureFlagResponse {
+    return new RecomposeFeatureFlagResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RecomposeFeatureFlagResponse {
+    return new RecomposeFeatureFlagResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RecomposeFeatureFlagResponse | PlainMessage<RecomposeFeatureFlagResponse> | undefined, b: RecomposeFeatureFlagResponse | PlainMessage<RecomposeFeatureFlagResponse> | undefined): boolean {
+    return proto3.util.equals(RecomposeFeatureFlagResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetOnboardingRequest
  */
 export class GetOnboardingRequest extends Message<GetOnboardingRequest> {
