@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.169.4](https://github.com/wundergraph/cosmo/compare/studio@0.169.3...studio@0.169.4) (2026-05-13)
+
+### Bug Fixes
+
+* using browser translation causes crash in onboarding ([#2862](https://github.com/wundergraph/cosmo/issues/2862)) ([fe85a3b](https://github.com/wundergraph/cosmo/commit/fe85a3b79f930f5614af94f92e0efeddcb37e46f)) (@comatory)
+
 ## [0.169.3](https://github.com/wundergraph/cosmo/compare/studio@0.169.2...studio@0.169.3) (2026-05-12)
 
 **Note:** Version bump only for package studio
