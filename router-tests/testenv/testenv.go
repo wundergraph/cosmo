@@ -31,6 +31,7 @@ import (
 
 	"github.com/cloudflare/backoff"
 	mcpclient "github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -321,6 +322,7 @@ type Config struct {
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
+	ModifySubgraphExtensionPropagation func(subgraphExtensionPropagation *config.SubgraphExtensionPropagationConfiguration)
 	ModifyWebsocketConfiguration       func(websocketConfiguration *config.WebSocketConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	DemoMode                           bool
@@ -365,6 +367,7 @@ type Config struct {
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
 	MCPOperationsPath                  string
+	MCPAuthToken                       string // Optional Bearer token for MCP authentication
 	EnableRedis                        bool
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
@@ -432,8 +435,10 @@ type MCPConfig struct {
 	Port    int
 }
 
-var redisHost = "redis://localhost:6379"
-var redisClusterHost = "redis://localhost:7001"
+var (
+	redisHost        = "redis://localhost:6379"
+	redisClusterHost = "redis://localhost:7001"
+)
 
 // CreateTestSupervisorEnv is currently tailored specifically for /lifecycle/supervisor_test.go, refer to that test
 // for usage example. CreateTestSupervisorEnv is not a drop-in replacement for CreateTestEnv!
@@ -688,6 +693,9 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.MCP.Enabled {
 		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
+		if cfg.MCP.OAuth.Enabled && cfg.MCP.Server.BaseURL == "" {
+			cfg.MCP.Server.BaseURL = fmt.Sprintf("http://%s", cfg.MCP.Server.ListenAddr)
+		}
 	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
@@ -851,7 +859,17 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
 		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
-		client, err := mcpclient.NewStreamableHttpClient(mcpAddr)
+
+		// Add authentication headers if token is provided
+		var clientOpts []transport.StreamableHTTPCOption
+		if cfg.MCPAuthToken != "" {
+			headers := map[string]string{
+				"Authorization": fmt.Sprintf("Bearer %s", cfg.MCPAuthToken),
+			}
+			clientOpts = append(clientOpts, transport.WithHTTPHeaders(headers))
+		}
+
+		client, err := mcpclient.NewStreamableHttpClient(mcpAddr, clientOpts...)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
@@ -1118,6 +1136,9 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.MCP.Enabled {
 		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
+		if cfg.MCP.OAuth.Enabled && cfg.MCP.Server.BaseURL == "" {
+			cfg.MCP.Server.BaseURL = fmt.Sprintf("http://%s", cfg.MCP.Server.ListenAddr)
+		}
 	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
@@ -1279,7 +1300,17 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
 		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
-		client, err := mcpclient.NewStreamableHttpClient(mcpAddr)
+
+		// Add authentication headers if token is provided
+		var clientOpts []transport.StreamableHTTPCOption
+		if cfg.MCPAuthToken != "" {
+			headers := map[string]string{
+				"Authorization": fmt.Sprintf("Bearer %s", cfg.MCPAuthToken),
+			}
+			clientOpts = append(clientOpts, transport.WithHTTPHeaders(headers))
+		}
+
+		client, err := mcpclient.NewStreamableHttpClient(mcpAddr, clientOpts...)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
@@ -1355,9 +1386,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			PrintQueryPlans:            false,
 			EnableCacheResponseHeaders: true,
 		},
-		WebSocketClientPollTimeout:    300 * time.Millisecond,
-		WebSocketClientConnBufferSize: 1,
-		WebSocketClientReadTimeout:    1 * time.Second,
+		WebSocketServerPollTimeout:    300 * time.Millisecond,
+		WebSocketServerConnBufferSize: 1,
+		WebSocketServerReadTimeout:    1 * time.Second,
+		WebSocketServerWriteTimeout:   2 * time.Second,
 		WebSocketClientWriteTimeout:   2 * time.Second,
 		// Avoid get in conflict with any test that doesn't expect to handle pings
 		WebSocketClientPingInterval:    30 * time.Second,
@@ -1379,6 +1411,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	if testConfig.ModifySubgraphErrorPropagation != nil {
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
+	}
+
+	if testConfig.ModifySubgraphExtensionPropagation != nil {
+		testConfig.ModifySubgraphExtensionPropagation(&cfg.SubgraphExtensionPropagation)
 	}
 
 	var natsEventSources []config.NatsEventSource
@@ -1460,6 +1496,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			OmitExtensions:        testConfig.BatchingConfig.OmitExtensions,
 		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
+		core.WithSubgraphExtensionPropagation(cfg.SubgraphExtensionPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
@@ -1776,23 +1813,33 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
-			require.NoError(t, err)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(requestLog)
-			require.NoError(t, err)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			return
 		}
+
 		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
-		if authorization == "" {
-			require.NotEmpty(t, authorization, "missing authorization header")
+		token, ok := strings.CutPrefix(authorization, "Bearer ")
+		if !ok {
+			http.Error(w, "missing or malformed Bearer token", http.StatusUnauthorized)
+			return
 		}
-		token := authorization[len("Bearer "):]
 		parsedClaims := make(jwt.MapClaims)
 		jwtParser := new(jwt.Parser)
-		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		require.NoError(t, err)
+		if _, _, err := jwtParser.ParseUnverified(token, parsedClaims); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
 		cdnFileServer.ServeHTTP(w, r)
 	})
 	cdnServer = httptest.NewServer(handler)
@@ -1812,10 +1859,10 @@ func grpcURL(endpoint string) string {
 	return "dns:///" + endpoint
 }
 
-func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v any) (err error) {
 	_, payload, err := conn.ReadMessage()
 	if err != nil {
-		return err
+		return fmt.Errorf("read message: %w", err)
 	}
 	if err := json.Unmarshal(payload, &v); err != nil {
 		t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
@@ -2400,8 +2447,9 @@ type WebSocketMessage struct {
 }
 
 type GraphQLResponse struct {
-	Data   json.RawMessage `json:"data,omitempty"`
-	Errors []GraphQLError  `json:"errors,omitempty"`
+	Data       json.RawMessage `json:"data,omitempty"`
+	Errors     []GraphQLError  `json:"errors,omitempty"`
+	Extensions json.RawMessage `json:"extensions,omitempty"`
 }
 
 type GraphQLErrorExtensions struct {
@@ -2977,6 +3025,8 @@ func ReadSSEField(t testing.TB, reader *bufio.Reader) string {
 }
 
 func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	t.Helper()
+
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
 	attempts := 0

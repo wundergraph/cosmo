@@ -7,6 +7,7 @@ import pkg from 'stream-json';
 
 import { Observable, Subscriber } from 'rxjs';
 
+import { traced } from '../../tracing.js';
 import { ClickHouseCompressionMethod, ClickHouseDataFormat } from './enums/index.js';
 
 import { ClickHouseClientOptions } from './interfaces/index.js';
@@ -16,6 +17,7 @@ const { Parser } = pkg;
  * ClickHouse Client
  * Most of the code is taken from https://github.com/depyronick/clickhouse-client
  */
+@traced
 export class ClickHouseClient {
   /**
    * ClickHouse Endpoint without path and query

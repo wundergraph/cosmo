@@ -1,6 +1,8 @@
 package trace
 
 import (
+	gocontext "context"
+	"errors"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -10,6 +12,8 @@ import (
 	otrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type TransportOption func(svr *transport)
@@ -67,7 +71,13 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 
 	// In case of a roundtrip error the span status is set to error by the otelhttp.RoundTrip function.
-	// Also, status code >= 500 is considered an error
+	// Also, status code >= 500 is considered an error.
+	// Client disconnections (context.Canceled) are not server-side errors. Pre-set the span
+	// status to Ok so that otelhttp cannot override it with Error (per OTel spec, Ok is final).
+	if err != nil && errors.Is(err, gocontext.Canceled) {
+		span := trace.SpanFromContext(r.Context())
+		span.SetStatus(codes.Ok, "client disconnected")
+	}
 
 	return res, err
 }

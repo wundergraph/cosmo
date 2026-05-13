@@ -8,6 +8,7 @@ import info from '../../package.json' with { type: 'json' };
 const paths = envPaths('cosmo', { suffix: '' });
 export const configDir = paths.config;
 export const dataDir = paths.data;
+export const cacheDir = paths.cache;
 export const configFile = join(configDir, 'config.yaml');
 
 export const getLoginDetails = (): { accessToken: string; organizationSlug: string } | null => {
@@ -35,6 +36,19 @@ export const config = {
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
   pluginRegistryURL: process.env.PLUGIN_REGISTRY_URL || 'cosmo-registry.wundergraph.com',
+  demoLabelMatcher: 'graph=demo' as const,
+  demoGraphName: 'demo' as const,
+  demoNamespace: 'default' as const,
+  demoOnboardingRepositoryName: 'wundergraph/cosmo-onboarding' as const,
+  demoOnboardingRepositoryBranch: 'main' as const,
+  dockerBuilderName: 'cosmo-builder' as const,
+  defaultTelemetryEndpoint: process.env.DEFAULT_TELEMETRY_ENDPOINT,
+  graphqlMetricsCollectorEndpoint: process.env.GRAPHQL_METRICS_COLLECTOR_ENDPOINT,
+  demoRouterPort: 3002 as const,
+  demoPluginNames: ['products', 'reviews'] as const,
+  demoRouterTokenName: 'demo-router-token' as const,
+  demoRouterImage: 'ghcr.io/wundergraph/cosmo/router:latest' as const,
+  demoRouterContainerName: 'cosmo-demo-router' as const,
 };
 
 export const getBaseHeaders = (): HeadersInit => {

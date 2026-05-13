@@ -9,9 +9,11 @@ import { OrganizationGroupRepository } from '../repositories/OrganizationGroupRe
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import { OrganizationInvitationDTO, UserDTO } from '../../types/index.js';
+import { traced } from '../tracing.js';
 import Keycloak from './Keycloak.js';
 import Mailer from './Mailer.js';
 
+@traced
 export class UserInviteService {
   private readonly db: PostgresJsDatabase<typeof schema>;
   private readonly logger: FastifyBaseLogger;

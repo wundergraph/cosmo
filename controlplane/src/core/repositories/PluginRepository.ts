@@ -3,7 +3,9 @@ import { FastifyBaseLogger } from 'fastify';
 import { and, eq, count } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { subgraphs, targets } from '../../db/schema.js';
+import { traced } from '../tracing.js';
 
+@traced
 export class PluginRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,

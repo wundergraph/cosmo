@@ -4,6 +4,41 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.143.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.142.1...@wundergraph/cosmo-connect@0.143.0) (2026-05-12)
+
+### Features
+
+* add feature flag recomposition support ([#2853](https://github.com/wundergraph/cosmo/issues/2853)) ([3f125a2](https://github.com/wundergraph/cosmo/commit/3f125a2effce36a1a2040f219bc1aa5a872aab93)) (@wilsonrivera)
+
+## [0.142.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.142.0...@wundergraph/cosmo-connect@0.142.1) (2026-05-01)
+
+**Note:** Version bump only for package @wundergraph/cosmo-connect
+
+# [0.142.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.141.0...@wundergraph/cosmo-connect@0.142.0) (2026-04-30)
+
+### Features
+
+* onboarding wizard ([#2790](https://github.com/wundergraph/cosmo/issues/2790)) ([3227519](https://github.com/wundergraph/cosmo/commit/3227519b3cc7b2dbc163856967bfe36cebf81887)) (@comatory)
+
+# [0.141.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.140.0...@wundergraph/cosmo-connect@0.141.0) (2026-04-29)
+
+### Features
+
+* centralize TS dependency management via catalogs ([#2782](https://github.com/wundergraph/cosmo/issues/2782)) ([a6a6956](https://github.com/wundergraph/cosmo/commit/a6a69565727f01a942a16e6d560d0fedabcb531e)) (@comatory)
+* **router:** support costs on arguments of directives ([#2781](https://github.com/wundergraph/cosmo/issues/2781)) ([b70a55b](https://github.com/wundergraph/cosmo/commit/b70a55b85b3f50468e3d1218d6746d51cc1b4733)) (@ysmolski)
+
+# [0.140.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.139.0...@wundergraph/cosmo-connect@0.140.0) (2026-04-16)
+
+### Features
+
+* add new endpoints for fetching feature flags and feature subgraphs by federated graph ([#2729](https://github.com/wundergraph/cosmo/issues/2729)) ([74f44a1](https://github.com/wundergraph/cosmo/commit/74f44a1614ef0976231b143b52203c5a9dd2034e)) (@JivusAyrus)
+
+# [0.139.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.138.0...@wundergraph/cosmo-connect@0.139.0) (2026-04-15)
+
+### Features
+
+* use email as main tracking field ([#2700](https://github.com/wundergraph/cosmo/issues/2700)) ([23fc31d](https://github.com/wundergraph/cosmo/commit/23fc31dd11c94fb242e6cec7b820b806a88d4cb6)) (@alepane21)
+
 # [0.138.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.137.0...@wundergraph/cosmo-connect@0.138.0) (2026-03-27)
 
 ### Features

@@ -3,16 +3,15 @@ import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { MoveGraphRequest, MoveGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { PublicError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function moveSubgraph(
   opts: RouterOptions,
@@ -27,7 +26,6 @@ export function moveSubgraph(
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
       authContext.organizationId,
@@ -86,11 +84,6 @@ export function moveSubgraph(
       authContext,
     });
 
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-    });
-
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const auditLogRepo = new AuditLogRepository(tx);
@@ -110,7 +103,18 @@ export function moveSubgraph(
           throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.newNamespace}`);
         }
 
-        const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
+        const compositionService = new CompositionService(
+          tx,
+          authContext.organizationId,
+          logger,
+          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+          opts.blobStorage,
+          opts.chClient,
+          opts.webhookProxyUrl,
+          req.disableResolvabilityValidation,
+        );
+
+        const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
           await subgraphRepo.move(
             {
               currentNamespaceId: subgraph.namespaceId,
@@ -120,17 +124,7 @@ export function moveSubgraph(
               targetId: subgraph.targetId,
               updatedBy: authContext.userId,
             },
-            opts.blobStorage,
-            {
-              cdnBaseUrl: opts.cdnBaseUrl,
-              jwtSecret: opts.admissionWebhookJWTSecret,
-            },
-            opts.chClient!,
-            {
-              disableResolvabilityValidation: req.disableResolvabilityValidation,
-              ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-            },
-            opts.webhookProxyUrl,
+            compositionService,
           );
 
         await auditLogRepo.addAuditLog({

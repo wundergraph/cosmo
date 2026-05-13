@@ -12,6 +12,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 )
 
 func TestPlanFallbackCache(t *testing.T) {
@@ -169,7 +170,7 @@ func TestPlanFallbackCache(t *testing.T) {
 			// Trigger config reload — new Ristretto cache is created (size 1).
 			<-pm.ready
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			// After reload, slow queries should still be available via fallback cache.
 			waitForPlanCacheHits(t, xEnv, slowQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
@@ -230,7 +231,7 @@ func TestPlanFallbackCache(t *testing.T) {
 			// Trigger config reload — main plan cache is reset.
 			<-pm.ready
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			// Wait for reload to complete by checking a slow query (which will be
 			// served from the fallback cache, confirming the new server is active).
@@ -293,7 +294,7 @@ func TestPlanFallbackCache(t *testing.T) {
 
 			// First reload
 			pm.initConfig.Version = "v2"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			waitForPlanCacheHits(t, xEnv, slowQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
 				assert.Equal(ct, "v2", res.Response.Header.Get("X-Router-Config-Version"))
@@ -301,7 +302,7 @@ func TestPlanFallbackCache(t *testing.T) {
 
 			// Second reload
 			pm.initConfig.Version = "v3"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "v2"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			waitForPlanCacheHits(t, xEnv, slowQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
 				assert.Equal(ct, "v3", res.Response.Header.Get("X-Router-Config-Version"))

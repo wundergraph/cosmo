@@ -1,5 +1,6 @@
 import { JWTPayload } from 'jose';
 import { verifyJwt } from '../crypto/jwt.js';
+import { traced } from '../tracing.js';
 
 export type GraphKeyAuthContext = {
   organizationId: string;
@@ -11,6 +12,7 @@ export interface GraphApiJwtPayload extends JWTPayload {
   federated_graph_id: string;
 }
 
+@traced
 export default class GraphApiTokenAuthenticator {
   constructor(private jwtSecret: string) {}
 

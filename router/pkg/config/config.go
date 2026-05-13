@@ -424,20 +424,17 @@ type EngineExecutionConfiguration struct {
 	EnableInboundRequestDeduplication bool `envDefault:"true" env:"ENGINE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"enable_inbound_request_deduplication"`
 	// ForceEnableInboundRequestDeduplication forces enable inbound request deduplication, even when PreOriginHandlers are configured
 	ForceEnableInboundRequestDeduplication bool `envDefault:"false" env:"ENGINE_FORCE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"force_enable_inbound_request_deduplication"`
-	EnableRequestTracing                   bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
 
-	// EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
+	EnableRequestTracing bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+	// ForceUnauthenticatedRequestTracing always enables request tracing for unauthenticated requests,
+	// even when Development Mode is not enabled. USE WITH CAUTION.
+	ForceUnauthenticatedRequestTracing bool `envDefault:"false" env:"ENGINE_FORCE_UNAUTHENTICATED_REQUEST_TRACING" yaml:"force_unauthenticated_request_tracing"`
+
+	// Deprecated: EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
 	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 
 	MaxConcurrentResolvers                           int           `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
 	EnableNetPoll                                    bool          `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
-	WebSocketClientPollTimeout                       time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
-	WebSocketClientConnBufferSize                    int           `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
-	WebSocketClientReadTimeout                       time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
-	WebSocketClientWriteTimeout                      time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
-	WebSocketClientPingInterval                      time.Duration `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
-	WebSocketClientPingTimeout                       time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
-	WebSocketClientFrameTimeout                      time.Duration `envDefault:"100ms" env:"ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT" yaml:"websocket_client_frame_timeout,omitempty"`
 	ExecutionPlanCacheSize                           int64         `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	SlowPlanCacheSize                                int64         `envDefault:"300" env:"ENGINE_SLOW_PLAN_CACHE_SIZE" yaml:"slow_plan_cache_size,omitempty"`
 	SlowPlanCacheThreshold                           time.Duration `envDefault:"100ms" env:"ENGINE_SLOW_PLAN_CACHE_THRESHOLD" yaml:"slow_plan_cache_threshold,omitempty"`
@@ -455,6 +452,19 @@ type EngineExecutionConfiguration struct {
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
+
+	// Server-side WebSocket handler options (router accepting client connections)
+	WebSocketServerReadTimeout    time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_SERVER_READ_TIMEOUT" yaml:"websocket_server_read_timeout,omitempty"`
+	WebSocketServerWriteTimeout   time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_SERVER_WRITE_TIMEOUT" yaml:"websocket_server_write_timeout,omitempty"`
+	WebSocketServerPollTimeout    time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_SERVER_POLL_TIMEOUT" yaml:"websocket_server_poll_timeout,omitempty"`
+	WebSocketServerConnBufferSize int           `envDefault:"128" env:"ENGINE_WEBSOCKET_SERVER_CONN_BUFFER_SIZE" yaml:"websocket_server_conn_buffer_size,omitempty"`
+
+	// Subscription client options (router connecting to subgraphs)
+	WebSocketClientWriteTimeout time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
+	WebSocketClientReadLimit    BytesString   `envDefault:"1MB" env:"ENGINE_WEBSOCKET_CLIENT_READ_LIMIT" yaml:"websocket_client_read_limit,omitempty"`
+	WebSocketClientPingInterval time.Duration `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
+	WebSocketClientPingTimeout  time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
+	WebSocketClientAckTimeout   time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_ACK_TIMEOUT" yaml:"websocket_client_ack_timeout,omitempty"`
 
 	ValidateRequiredExternalFields bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
 
@@ -496,7 +506,21 @@ type ComplexityCalculationCache struct {
 	CacheSize int64 `yaml:"size,omitempty" envDefault:"1024" env:"SECURITY_COMPLEXITY_CACHE_SIZE"`
 }
 
+// ComplexityLimitsMode defines how complexity limits behave.
+type ComplexityLimitsMode string
+
+const (
+	ComplexityLimitsModeUnset   ComplexityLimitsMode = ""
+	ComplexityLimitsModeMeasure ComplexityLimitsMode = "measure"
+	ComplexityLimitsModeEnforce ComplexityLimitsMode = "enforce"
+)
+
 type ComplexityLimits struct {
+	// Mode controls complexity limits behavior:
+	// - "measure": calculates complexity without rejecting operations (for monitoring)
+	// - "enforce": calculates complexity and rejects operations exceeding limits
+	Mode ComplexityLimitsMode `yaml:"mode,omitempty"`
+
 	Depth            *ComplexityLimit `yaml:"depth"`
 	TotalFields      *ComplexityLimit `yaml:"total_fields"`
 	RootFields       *ComplexityLimit `yaml:"root_fields"`
@@ -594,6 +618,7 @@ type HeaderSource struct {
 
 type JWTAuthenticationConfiguration struct {
 	JWKS              []JWKSConfiguration `yaml:"jwks"`
+	ScopeClaim        string              `yaml:"scope_claim" envDefault:"scope"`
 	HeaderName        string              `yaml:"header_name" envDefault:"Authorization"`
 	HeaderValuePrefix string              `yaml:"header_value_prefix" envDefault:"Bearer"`
 	HeaderSources     []HeaderSource      `yaml:"header_sources"`
@@ -669,11 +694,19 @@ type NatsAuthentication struct {
 	NatsTokenBasedAuthentication `yaml:"token,inline"`
 }
 
+type NatsTLSConfiguration struct {
+	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification,omitempty"`
+	CaFile                     string `yaml:"ca_file,omitempty"`
+	CertFile                   string `yaml:"cert_file,omitempty"`
+	KeyFile                    string `yaml:"key_file,omitempty"`
+}
+
 type NatsEventSource struct {
-	ID                               string              `yaml:"id,omitempty"`
-	URL                              string              `yaml:"url,omitempty"`
-	Authentication                   *NatsAuthentication `yaml:"authentication,omitempty"`
-	DeleteDurableConsumersOnShutdown bool                `yaml:"experiment_delete_durable_consumers_on_shutdown"`
+	ID                               string                `yaml:"id,omitempty"`
+	URL                              string                `yaml:"url,omitempty"`
+	Authentication                   *NatsAuthentication   `yaml:"authentication,omitempty"`
+	TLS                              *NatsTLSConfiguration `yaml:"tls,omitempty"`
+	DeleteDurableConsumersOnShutdown bool                  `yaml:"experiment_delete_durable_consumers_on_shutdown"`
 }
 
 func (n NatsEventSource) GetID() string {
@@ -901,11 +934,26 @@ type SubgraphErrorPropagationConfiguration struct {
 	AllowedFields           []string                     `yaml:"allowed_fields" env:"ALLOWED_FIELDS"`
 }
 
+type SubgraphExtensionPropagationAlgorithm string
+
+const (
+	// SubgraphExtensionPropagationAlgorithmFirstWrite propagates the first extension root field from a subgraph to the client
+	SubgraphExtensionPropagationAlgorithmFirstWrite SubgraphExtensionPropagationAlgorithm = "first_write"
+	// SubgraphExtensionPropagationAlgorithmLastWrite propagates the last extension root field from a subgraph to the client
+	SubgraphExtensionPropagationAlgorithmLastWrite SubgraphExtensionPropagationAlgorithm = "last_write"
+)
+
+type SubgraphExtensionPropagationConfiguration struct {
+	Enabled                bool                                  `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	AllowedExtensionFields []string                              `yaml:"allowed_extension_fields" env:"ALLOWED_EXTENSION_FIELDS"`
+	Algorithm              SubgraphExtensionPropagationAlgorithm `yaml:"algorithm,omitempty" envDefault:"first_write" env:"ALGORITHM"`
+}
+
 type StorageProviders struct {
-	S3         []S3StorageProvider         `yaml:"s3,omitempty"`
-	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty"`
-	Redis      []RedisStorageProvider      `yaml:"redis,omitempty"`
-	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty"`
+	S3         []S3StorageProvider         `yaml:"s3,omitempty" envPrefix:"S3_"`
+	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty" envPrefix:"CDN_"`
+	Redis      []RedisStorageProvider      `yaml:"redis,omitempty" envPrefix:"REDIS_"`
+	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty" envPrefix:"FS_"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -919,29 +967,29 @@ type AutomaticPersistedQueriesStorageConfig struct {
 }
 
 type S3StorageProvider struct {
-	ID        string `yaml:"id,omitempty"`
-	Endpoint  string `yaml:"endpoint,omitempty"`
-	AccessKey string `yaml:"access_key,omitempty"`
-	SecretKey string `yaml:"secret_key,omitempty"`
-	Bucket    string `yaml:"bucket,omitempty"`
-	Region    string `yaml:"region,omitempty"`
-	Secure    bool   `yaml:"secure,omitempty"`
+	ID        string `yaml:"id,omitempty" env:"ID"`
+	Endpoint  string `yaml:"endpoint,omitempty" env:"ENDPOINT"`
+	AccessKey string `yaml:"access_key,omitempty" env:"ACCESS_KEY"`
+	SecretKey string `yaml:"secret_key,omitempty" env:"SECRET_KEY"`
+	Bucket    string `yaml:"bucket,omitempty" env:"BUCKET"`
+	Region    string `yaml:"region,omitempty" env:"REGION"`
+	Secure    bool   `yaml:"secure,omitempty" env:"SECURE"`
 }
 
 type CDNStorageProvider struct {
-	ID  string `yaml:"id,omitempty"`
-	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
+	ID  string `yaml:"id,omitempty" env:"ID"`
+	URL string `yaml:"url,omitempty" env:"URL" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
 
 type FileSystemStorageProvider struct {
-	ID   string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_FS_ID"`
-	Path string `yaml:"path,omitempty" env:"STORAGE_PROVIDER_FS_PATH"`
+	ID   string `yaml:"id,omitempty" env:"ID"`
+	Path string `yaml:"path,omitempty" env:"PATH"`
 }
 
 type RedisStorageProvider struct {
-	ID             string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
-	URLs           []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`
-	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"STORAGE_PROVIDER_REDIS_CLUSTER_ENABLED"`
+	ID             string   `yaml:"id,omitempty" env:"ID"`
+	URLs           []string `yaml:"urls,omitempty" env:"URLS"`
+	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" env:"CLUSTER_ENABLED" envDefault:"false"`
 }
 
 type PersistedOperationsCDNProvider struct {
@@ -963,6 +1011,19 @@ type ExecutionConfigFile struct {
 	Path          string        `yaml:"path,omitempty" env:"EXECUTION_CONFIG_FILE_PATH"`
 	Watch         bool          `yaml:"watch,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_FILE_WATCH"`
 	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"EXECUTION_CONFIG_FILE_WATCH_INTERVAL"`
+}
+
+// SplitConfigPollerRules governs the behavior of the split-config polling strategy used to
+// assemble the final router execution config. The split poller fetches the base graph and each
+// feature flag config as separate files from the CDN. These rules apply when individual files
+// are missing or should be excluded entirely.
+type SplitConfigPollerRules struct {
+	// SkipMissingFeatureFlags keeps polling alive when a feature flag listed in the mapper cannot
+	// be fetched. When false (default), a single missing feature flag aborts the poll cycle.
+	SkipMissingFeatureFlags bool `yaml:"skip_missing_feature_flags" envDefault:"false" env:"SKIP_MISSING_FEATURE_FLAGS"`
+	// IgnoredFeatureFlags is the list of feature flag names to skip entirely during polling.
+	// Listed flags are not fetched even when present in the mapper.
+	IgnoredFeatureFlags []string `yaml:"ignored_feature_flags,omitempty" env:"IGNORED_FEATURE_FLAGS"`
 }
 
 type ExecutionConfig struct {
@@ -1124,7 +1185,50 @@ type MCPConfiguration struct {
 	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
-	OmitToolNamePrefix bool `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	OmitToolNamePrefix bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	OAuth              MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
+	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
+	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
+	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
+}
+
+type MCPOAuthConfiguration struct {
+	Enabled                bool                `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	JWKS                   []JWKSConfiguration `yaml:"jwks"`
+	AuthorizationServerURL string              `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
+	// Scopes configures which OAuth scopes are required for different MCP operations.
+	Scopes MCPOAuthScopesConfiguration `yaml:"scopes,omitempty" envPrefix:"SCOPES_"`
+	// ScopeChallengeIncludeTokenScopes controls whether the server includes the token's existing scopes
+	// in the scope parameter of 403 insufficient_scope responses.
+	// When false (default), only the scopes required for the operation are returned (RFC 6750 strict).
+	// When true, the token's existing scopes are unioned with the required scopes.
+	// This is a workaround for MCP client SDKs that replace rather than accumulate scopes.
+	ScopeChallengeIncludeTokenScopes bool `yaml:"scope_challenge_include_token_scopes" envDefault:"false" env:"SCOPE_CHALLENGE_INCLUDE_TOKEN_SCOPES"`
+	// MaxScopeCombinations sets the upper limit on the number of OR-group combinations
+	// produced when computing the Cartesian product of @requiresScopes across fields.
+	// Increase for complex RBAC configurations.
+	MaxScopeCombinations int `yaml:"max_scope_combinations" envDefault:"2048" env:"MAX_SCOPE_COMBINATIONS"`
+}
+
+// MCPOAuthScopesConfiguration defines which scopes are required for different MCP operations.
+// All configured scopes are automatically unioned into scopes_supported for OAuth metadata discovery.
+type MCPOAuthScopesConfiguration struct {
+	// Initialize specifies scopes required for ALL HTTP requests (checked before JSON-RPC parsing).
+	// This is the baseline scope needed to establish an MCP connection.
+	Initialize []string `yaml:"initialize,omitempty" env:"INITIALIZE"`
+	// ToolsList specifies scopes required for the tools/list MCP method.
+	ToolsList []string `yaml:"tools_list,omitempty" env:"TOOLS_LIST"`
+	// ToolsCall specifies scopes required for the tools/call MCP method (any tool).
+	ToolsCall []string `yaml:"tools_call,omitempty" env:"TOOLS_CALL"`
+	// ExecuteGraphQL specifies scopes required to call the execute_graphql built-in tool.
+	// Additive to tools_call scopes. Only relevant when enable_arbitrary_operations is true.
+	ExecuteGraphQL []string `yaml:"execute_graphql,omitempty" env:"EXECUTE_GRAPHQL"`
+	// GetOperationInfo specifies scopes required to call the get_operation_info built-in tool.
+	// Additive to tools_call scopes.
+	GetOperationInfo []string `yaml:"get_operation_info,omitempty" env:"GET_OPERATION_INFO"`
+	// GetSchema specifies scopes required to call the get_schema built-in tool.
+	// Additive to tools_call scopes. Only relevant when expose_schema is true.
+	GetSchema []string `yaml:"get_schema,omitempty" env:"GET_SCHEMA"`
 }
 
 type MCPSessionConfig struct {
@@ -1237,8 +1341,11 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
 
-	StorageProviders               StorageProviders                `yaml:"storage_providers"`
+	SubgraphExtensionPropagation SubgraphExtensionPropagationConfiguration `yaml:"subgraph_extension_propagation" envPrefix:"SUBGRAPH_EXTENSION_PROPAGATION_"`
+
+	StorageProviders               StorageProviders                `yaml:"storage_providers" envPrefix:"STORAGE_PROVIDER_"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
+	SplitConfigPoller              SplitConfigPollerRules          `yaml:"split_config_poller" envPrefix:"SPLIT_CONFIG_POLLER_"`
 	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`

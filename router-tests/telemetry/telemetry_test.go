@@ -7894,7 +7894,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, "Engine - Fetch", sn[8].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[8].SpanKind())
 			require.Equal(t, codes.Error, sn[8].Status().Code)
-			require.Lenf(t, sn[8].Attributes(), 14, "expected 14 attributes, got %d", len(sn[8].Attributes()))
+			require.Lenf(t, sn[8].Attributes(), 15, "expected 15 attributes, got %d", len(sn[8].Attributes()))
 			require.Contains(t, sn[8].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph 'products' at Path: 'employees'.")
 
 			events := sn[8].Events()
@@ -7966,7 +7966,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, "Engine - Fetch", sn[8].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[8].SpanKind())
 
-			require.Lenf(t, sn[8].Attributes(), 14, "expected 14 attributes, got %d", len(sn[6].Attributes()))
+			require.Lenf(t, sn[8].Attributes(), 15, "expected 15 attributes, got %d", len(sn[8].Attributes()))
 
 			given = attribute.NewSet(sn[8].Attributes()...)
 			want = attribute.NewSet([]attribute.KeyValue{
@@ -7984,6 +7984,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				otel.WgOperationType.String("query"),
 				otel.WgOperationProtocol.String("http"),
 				otel.WgOperationHash.String("13939103824696605913"),
+				otel.WgRequestError.Bool(true),
 			}...)
 
 			require.True(t, given.Equals(&want))

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -159,5 +160,48 @@ func TestTransport(t *testing.T) {
 		for _, key := range []attribute.Key{"url.path", "client.address", "network.local.address", "network.local.port"} {
 			assert.False(t, sa.HasValue(key), "dropped key %q should not be present", key)
 		}
+	})
+
+	t.Run("context canceled does not set span status to error", func(t *testing.T) {
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		// Slow server that takes longer than the client will wait
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(2 * time.Second)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer ts.Close()
+
+		// Use WithCancel to simulate a client disconnect (produces context.Canceled)
+		ctx, cancel := context.WithCancel(context.Background())
+
+		r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/test", nil)
+		require.NoError(t, err)
+
+		tr := NewTransport(http.DefaultTransport, []otelhttp.Option{
+			otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))),
+			otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+		})
+
+		// Cancel the context after a short delay to simulate client disconnect
+		time.AfterFunc(50*time.Millisecond, cancel)
+
+		c := http.Client{Transport: tr}
+		_, err = c.Do(r)
+		require.Error(t, err)
+
+		sn := exporter.GetSpans().Snapshots()
+		require.Len(t, sn, 1)
+
+		span := sn[0]
+
+		require.Equal(t, "HTTP GET", span.Name())
+
+		// The span should NOT be marked as Error for client disconnections.
+		// Our transport pre-sets Ok to prevent otelhttp from overriding with Error.
+		require.NotEqual(t, codes.Error, span.Status().Code,
+			"context.Canceled should not produce an Error span status")
+		require.Equal(t, codes.Ok, span.Status().Code,
+			"context.Canceled should produce an Ok span status (prevents otelhttp override)")
 	})
 }

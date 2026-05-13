@@ -4,10 +4,12 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { apiKeyPermissions, apiKeyResources, apiKeys, users } from '../../db/schema.js';
 import { APIKeyDTO } from '../../types/index.js';
+import { traced } from '../tracing.js';
 
 /**
  * Repository for organization related operations.
  */
+@traced
 export class ApiKeyRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 

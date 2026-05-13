@@ -1,10 +1,10 @@
-import { mkdirSync } from 'node:fs';
 import { Command } from 'commander';
 import { CreateClient } from '../core/client/client.js';
-import { config, configDir } from '../core/config.js';
+import { config } from '../core/config.js';
 import { checkForUpdates } from '../utils.js';
 import { capture } from '../core/telemetry.js';
 import AuthCommands from './auth/index.js';
+import DemoCommands from './demo/index.js';
 import MonographCommands from './graph/monograph/index.js';
 import FederatedGraphCommands from './graph/federated-graph/index.js';
 import NamespaceCommands from './namespace/index.js';
@@ -65,6 +65,11 @@ program.addCommand(
   }),
 );
 program.addCommand(
+  DemoCommands({
+    client,
+  }),
+);
+program.addCommand(
   OperationCommands({
     client,
   }),
@@ -116,7 +121,6 @@ program.addCommand(
 );
 
 program.hook('preAction', async () => {
-  mkdirSync(configDir, { recursive: true });
   await checkForUpdates();
 });
 

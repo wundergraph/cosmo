@@ -1,4 +1,15 @@
-import { BREAK, type ConstDirectiveNode, type DocumentNode, Kind, OperationTypeNode, print, visit } from 'graphql';
+import {
+  BREAK,
+  type ConstArgumentNode,
+  type ConstDirectiveNode,
+  type ConstObjectValueNode,
+  type ConstValueNode,
+  type DocumentNode,
+  Kind,
+  OperationTypeNode,
+  print,
+  visit,
+} from 'graphql';
 import { isKindAbstract, lexicographicallySortDocumentNode } from '../../ast/utils';
 import { type NormalizationFactory } from './normalization-factory';
 import {
@@ -8,21 +19,29 @@ import {
   inlineFragmentInFieldSetErrorMessage,
   invalidDirectiveError,
   invalidEventSubjectsArgumentErrorMessage,
+  invalidFieldLinkDirectiveImportObjectError,
+  invalidLinkDirectiveImportObjectError,
+  invalidLinkDirectiveUrlError,
   invalidSelectionSetDefinitionErrorMessage,
   invalidSelectionSetErrorMessage,
+  invalidSubValueLinkDirectiveImportError,
+  invalidVersionLinkDirectiveUrlError,
+  noFeatureNameLinkDirectiveUrlError,
+  noLinkDirectiveUrlError,
+  noNameFieldLinkDirectiveImportObjectError,
+  nonIterableLinkDirectiveImportError,
+  noPathLinkDirectiveUrlError,
+  noVersionLinkDirectiveUrlError,
   undefinedEventSubjectsArgumentErrorMessage,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
+  unknownFieldLinkDirectiveImportObjectError,
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
 } from '../../errors/errors';
 import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../constants/constants';
 import { type RequiredFieldConfiguration } from '../../router-configuration/types';
-import {
-  type CompositeOutputData,
-  type DirectiveDefinitionData,
-  type InputValueData,
-} from '../../schema-building/types';
+import { type CompositeOutputData, type InputValueData } from '../../schema-building/types/types';
 import { getTypeNodeNamedTypeName } from '../../schema-building/ast';
 import {
   AUTHENTICATED_DEFINITION_DATA,
@@ -52,13 +71,14 @@ import {
   REQUIRE_FETCH_REASONS_DEFINITION_DATA,
   REQUIRES_DEFINITION_DATA,
   REQUIRES_SCOPES_DEFINITION_DATA,
-  SEMANTIC_NON_NULL_DATA,
+  SEMANTIC_NON_NULL_DEFINITION_DATA,
   SHAREABLE_DEFINITION_DATA,
   SPECIFIED_BY_DEFINITION_DATA,
   SUBSCRIPTION_FILTER_DEFINITION_DATA,
   TAG_DEFINITION_DATA,
-} from './directive-definition-data';
+} from '../../directive-definition-data/directive-definition-data';
 import {
+  AS,
   AUTHENTICATED,
   COMPOSE_DIRECTIVE,
   CONFIGURE_CHILD_DESCRIPTIONS,
@@ -76,12 +96,15 @@ import {
   EXTENDS,
   EXTERNAL,
   FIELDS,
+  IMPORT,
   INACCESSIBLE,
   INTERFACE_OBJECT,
   KEY,
   LINK,
   LIST_SIZE,
+  LITERAL_AT,
   LITERAL_PERIOD,
+  NAME,
   ONE_OF,
   OVERRIDE,
   PROVIDES,
@@ -96,9 +119,21 @@ import {
   SUBSCRIPTION_FILTER,
   TAG,
   TYPENAME,
+  URL_LOWER,
 } from '../../utils/string-constants';
 import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
-import { type FieldSetData, type KeyFieldSetData } from './types';
+import { type FieldSetData, type KeyFieldSetData, type LinkImportData } from './types/types';
+import { type DirectiveName } from '../../types/types';
+import {
+  type ExtractImportUrlSegmentsResult,
+  type ExtractLinkArgsResult,
+  type ExtractLinkImportObjectResult,
+  type ExtractLinkImportsResult,
+} from './types/results';
+import { IMPORT_VERSION_REGEX } from '../constants/strings';
+import { type UpsertFederatedDirectiveDataParams } from '../../directive-definition-data/types/params';
+import { type DirectiveDefinitionData } from '../../directive-definition-data/types/types';
+import { copyDirectiveDefinitionData } from '../../directive-definition-data/utils';
 
 export function newFieldSetData(): FieldSetData {
   return {
@@ -459,10 +494,344 @@ export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefin
     [REQUIRE_FETCH_REASONS, REQUIRE_FETCH_REASONS_DEFINITION_DATA],
     [REQUIRES, REQUIRES_DEFINITION_DATA],
     [REQUIRES_SCOPES, REQUIRES_SCOPES_DEFINITION_DATA],
-    [SEMANTIC_NON_NULL, SEMANTIC_NON_NULL_DATA],
+    [SEMANTIC_NON_NULL, SEMANTIC_NON_NULL_DEFINITION_DATA],
     [SHAREABLE, SHAREABLE_DEFINITION_DATA],
     [SPECIFIED_BY, SPECIFIED_BY_DEFINITION_DATA],
     [SUBSCRIPTION_FILTER, SUBSCRIPTION_FILTER_DEFINITION_DATA],
     [TAG, TAG_DEFINITION_DATA],
   ]);
+}
+
+export const FEDERATED_DIRECTIVE_DATAS: ReadonlyArray<DirectiveDefinitionData> = [
+  AUTHENTICATED_DEFINITION_DATA,
+  DEPRECATED_DEFINITION_DATA,
+  INACCESSIBLE_DEFINITION_DATA,
+  ONE_OF_DEFINITION_DATA,
+  REQUIRES_SCOPES_DEFINITION_DATA,
+  SEMANTIC_NON_NULL_DEFINITION_DATA,
+  TAG_DEFINITION_DATA,
+];
+
+export function upsertFederatedDirectiveData({
+  executableDirectiveDatasByName,
+  existingDataByName,
+  incomingDataByName,
+}: UpsertFederatedDirectiveDataParams): void {
+  for (const [directiveName, directiveData] of incomingDataByName) {
+    const existingData = existingDataByName.get(directiveName);
+    const copiedData = copyDirectiveDefinitionData(directiveData);
+    if (!existingData) {
+      if (!directiveData.isComposed) {
+        getValueOrDefault(executableDirectiveDatasByName, directiveName, () => []).push(copiedData);
+        continue;
+      }
+      existingDataByName.set(directiveName, copiedData);
+      executableDirectiveDatasByName.delete(directiveName);
+      continue;
+    }
+
+    // If a directive is not composed in a subgraph, it is effectively ignored.
+    if (!directiveData.isComposed) {
+      continue;
+    }
+
+    /* If at least one subgraph includes the directive name in a `@composeDirective` directive, the definition of
+     * the custom directive should be propagated in the federated graph.
+     * The directive itself must be referenced in at least once in one of those subgraphs to propagate also the usages
+     * of the custom directive to the federated graph (in addition to the definition).
+     *
+     * Moreover, only the highest version of the directive is propagated; this means a directive definition description
+     *  could be set in one one subgraph and removed in another subgraph with a imported higher version.
+     */
+    if (existingData.minorVersion < directiveData.minorVersion) {
+      existingDataByName.set(directiveName, copyDirectiveDefinitionData(directiveData));
+    }
+  }
+}
+
+// This function aims to mirror Apollo functionality
+function extractLinkUrlSegments(argNode: ConstArgumentNode): ExtractImportUrlSegmentsResult {
+  if (argNode.value.kind !== Kind.STRING) {
+    return {
+      error: invalidLinkDirectiveUrlError(''),
+      success: false,
+    };
+  }
+
+  const urlString = argNode.value.value;
+  const url = URL.parse(urlString);
+
+  if (!url) {
+    return {
+      error: invalidLinkDirectiveUrlError(urlString),
+      success: false,
+    };
+  }
+
+  const segments = url.pathname.split('/');
+  const versionString = segments.at(-1);
+  if (segments.length < 3 && !versionString) {
+    return {
+      error: noPathLinkDirectiveUrlError(urlString),
+      success: false,
+    };
+  }
+
+  if (!versionString) {
+    return {
+      error: noVersionLinkDirectiveUrlError(urlString),
+      success: false,
+    };
+  }
+
+  if (!IMPORT_VERSION_REGEX.test(versionString)) {
+    return {
+      error: invalidVersionLinkDirectiveUrlError({ url: urlString, versionString }),
+      success: false,
+    };
+  }
+
+  if (segments.length < 3) {
+    return {
+      error: noFeatureNameLinkDirectiveUrlError(urlString),
+      success: false,
+    };
+  }
+
+  try {
+    const versionSegments = versionString.substring(1).split(LITERAL_PERIOD);
+    if (versionSegments.length !== 2) {
+      return {
+        error: invalidVersionLinkDirectiveUrlError({ url: urlString, versionString }),
+        success: false,
+      };
+    }
+    const majorVersion = parseInt(versionSegments[0]);
+    const minorVersion = parseInt(versionSegments[1]);
+
+    const featureName = segments.at(-2);
+    if (!featureName) {
+      return {
+        error: noFeatureNameLinkDirectiveUrlError(urlString),
+        success: false,
+      };
+    }
+
+    return {
+      coreUrl: urlString.substring(0, urlString.length - versionString.length),
+      success: true,
+      majorVersion,
+      minorVersion,
+    };
+  } catch {
+    // Should never happen
+    return {
+      error: invalidVersionLinkDirectiveUrlError({ url: urlString, versionString: versionString }),
+      success: false,
+    };
+  }
+}
+
+function extractLinkImportObject(value: ConstObjectValueNode): ExtractLinkImportObjectResult {
+  const data: LinkImportData = {
+    name: '',
+    coreUrl: '',
+    majorVersion: -1,
+    minorVersion: -1,
+  };
+  const errors: Array<Error> = [];
+  const valueString = print(value);
+  for (const field of value.fields) {
+    const fieldName = field.name.value;
+    switch (fieldName) {
+      case AS: {
+        if (field.value.kind !== Kind.STRING) {
+          errors.push(invalidFieldLinkDirectiveImportObjectError({ fieldName, value: valueString }));
+          break;
+        }
+        data.rename = field.value.value;
+        break;
+      }
+      case NAME: {
+        if (field.value.kind !== Kind.STRING) {
+          errors.push(invalidFieldLinkDirectiveImportObjectError({ fieldName, value: valueString }));
+          break;
+        }
+        data.name = field.value.value;
+        break;
+      }
+      default: {
+        errors.push(unknownFieldLinkDirectiveImportObjectError({ fieldName, value: valueString }));
+        break;
+      }
+    }
+  }
+
+  if (!data.name) {
+    errors.push(noNameFieldLinkDirectiveImportObjectError(valueString));
+  } else if (data.rename) {
+    const nameIsDirective = data.name.startsWith(LITERAL_AT);
+    const renamedIsDirective = data.rename.startsWith(LITERAL_AT);
+    if (nameIsDirective !== renamedIsDirective) {
+      errors.push(
+        invalidLinkDirectiveImportObjectError({
+          name: data.name,
+          rename: data.rename,
+        }),
+      );
+    }
+  }
+
+  if (errors.length > 0) {
+    return {
+      errors,
+      success: false,
+    };
+  }
+
+  return {
+    import: data,
+    success: true,
+  };
+}
+
+function extractLinkImports(values: ReadonlyArray<ConstValueNode>): ExtractLinkImportsResult {
+  const imports: Array<LinkImportData> = [];
+  const errors: Array<Error> = [];
+  for (let i = 0; i < values.length; i++) {
+    const value = values[i];
+    switch (value.kind) {
+      case Kind.STRING: {
+        imports.push({
+          name: value.value,
+          coreUrl: '',
+          majorVersion: -1,
+          minorVersion: -1,
+        });
+        break;
+      }
+      case Kind.OBJECT: {
+        const objectResult = extractLinkImportObject(value);
+        if (!objectResult.success) {
+          errors.push(...objectResult.errors);
+          break;
+        }
+        imports.push(objectResult.import);
+        break;
+      }
+      default: {
+        errors.push(invalidSubValueLinkDirectiveImportError(i));
+        break;
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return {
+      errors,
+      success: false,
+    };
+  }
+
+  return {
+    imports,
+    success: true,
+  };
+}
+
+export function extractLinkArgs(
+  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>,
+): ExtractLinkArgsResult {
+  const errors: Array<Error> = [];
+  const importDataByDirectiveName = new Map<DirectiveName, LinkImportData>();
+  const linkDirectives = directivesByName.get(LINK);
+  if (!linkDirectives) {
+    return {
+      success: true,
+      importDataByDirectiveName,
+    };
+  }
+
+  for (const directive of linkDirectives) {
+    if (!directive.arguments) {
+      continue;
+    }
+
+    let imports: Array<LinkImportData> = [];
+    let majorVersion = -1;
+    let minorVersion = -1;
+    let coreUrl = '';
+    for (const arg of directive.arguments) {
+      const argName = arg.name.value;
+      switch (argName) {
+        case URL_LOWER: {
+          const urlResult = extractLinkUrlSegments(arg);
+          if (!urlResult.success) {
+            return {
+              errors: [urlResult.error],
+              success: false,
+            };
+          }
+          coreUrl = urlResult.coreUrl;
+          majorVersion = urlResult.majorVersion;
+          minorVersion = urlResult.minorVersion;
+          break;
+        }
+        case IMPORT: {
+          switch (arg.value.kind) {
+            case Kind.STRING: {
+              imports.push({
+                name: arg.value.value,
+                coreUrl: '',
+                majorVersion: -1,
+                minorVersion: -1,
+              });
+              break;
+            }
+            case Kind.LIST: {
+              const importsResult = extractLinkImports(arg.value.values);
+              if (!importsResult.success) {
+                return importsResult;
+              }
+              imports = importsResult.imports;
+              break;
+            }
+            default: {
+              return {
+                errors: [nonIterableLinkDirectiveImportError(arg.value.kind)],
+                success: false,
+              };
+            }
+          }
+          break;
+        }
+      }
+    }
+    // Should be caught in earlier validation
+    if (!coreUrl) {
+      return {
+        errors: [noLinkDirectiveUrlError],
+        success: false,
+      };
+    }
+
+    for (const value of imports) {
+      value.coreUrl = coreUrl;
+      value.majorVersion = majorVersion;
+      value.minorVersion = minorVersion;
+      importDataByDirectiveName.set(value.rename ?? value.name, value);
+    }
+  }
+
+  if (errors.length > 0) {
+    return {
+      errors,
+      success: false,
+    };
+  }
+
+  return {
+    importDataByDirectiveName,
+    success: true,
+  };
 }
