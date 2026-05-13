@@ -79,14 +79,14 @@ export type MergeSubscriptionFilterTargetResultParams = {
   directiveNode: ConstDirectiveNode;
   abstractTypeData: ParentDefinitionData;
   targets: Array<ObjectDefinitionData>;
-  directiveSubgraphName: string;
+  directiveSubgraphName: SubgraphName;
 };
 
 export type ValidateSubscriptionFilterAndGenerateConfigurationParams = {
   directiveNode: ConstDirectiveNode;
   objectData: ObjectDefinitionData;
   fieldPath: string;
-  fieldName: string;
-  parentTypeName: string;
-  directiveSubgraphName: string;
+  fieldName: FieldName;
+  parentTypeName: TypeName;
+  directiveSubgraphName: SubgraphName;
 };
