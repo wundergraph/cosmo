@@ -279,7 +279,14 @@
               "router/compliance-and-data-management",
               "router/query-batching",
               "router/feature-flags",
-              "router/subgraph-error-propagation",
+              {
+                "group": "Subgraph data propagation",
+                "icon": "share-from-square",
+                "pages": [
+                  "router/subgraph-data-propagation/subgraph-error-propagation",
+                  "router/subgraph-data-propagation/subgraph-extension-propagation"
+                ]
+              },
               "router/relaxed-field-selection-merging-nullability",
               "router/file-upload",
               "router/access-logs",
@@ -788,6 +795,10 @@
     {
       "source": "/router/proxy-capabilities/response-header-operations",
       "destination": "/router/proxy-capabilities/subgraph-response-header-operations"
+    },
+    {
+      "source": "/router/subgraph-error-propagation",
+      "destination": "/router/subgraph-data-propagation/subgraph-error-propagation"
     }
   ]
 }

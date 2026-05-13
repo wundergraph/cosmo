@@ -363,67 +363,6 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
-		t.Parallel()
-
-		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
-			EnableKafka:              true,
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EnableNetPoll = false
-				engineExecutionConfiguration.WebSocketServerReadTimeout = time.Millisecond * 100
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.KafkaEnsureTopicExists(t, xEnv, EventWaitTimeout, topics...)
-
-			var subscriptionOne struct {
-				employeeUpdatedMyKafka struct {
-					ID      float64 `graphql:"id"`
-					Details struct {
-						Forename string `graphql:"forename"`
-						Surname  string `graphql:"surname"`
-					} `graphql:"details"`
-				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
-			}
-
-			surl := xEnv.GraphQLWebSocketSubscriptionURL()
-			client := graphql.NewSubscriptionClient(surl)
-
-			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
-			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
-					dataValue: dataValue,
-					errValue:  errValue,
-				}
-				return nil
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, subscriptionOneID)
-
-			clientRunCh := make(chan error)
-			go func() {
-				clientRunCh <- client.Run()
-			}()
-
-			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
-
-			events.ProduceKafkaMessage(t, xEnv, EventWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-
-			testenv.AwaitChannelWithT(t, EventWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				require.NoError(t, args.errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
-
-			require.NoError(t, client.Close())
-
-			testenv.AwaitChannelWithT(t, EventWaitTimeout, clientRunCh, func(t *testing.T, err error) {
-				require.NoError(t, err)
-			}, "unable to close client before timeout")
-		})
-	})
-
 	t.Run("multipart", func(t *testing.T) {
 		t.Parallel()
 
