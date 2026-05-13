@@ -375,7 +375,7 @@ export class SubgraphRepository {
           const newFeatureFlags = await featureFlagRepo.getFeatureFlagsBySubgraphLabels({
             namespaceId: data.namespaceId,
             labels: newLabels,
-            excludeDisabled: false,
+            excludeDisabled: true,
           });
 
           // add them to the updatedFederatedGraphs array without duplicates
