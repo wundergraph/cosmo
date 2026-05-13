@@ -4196,12 +4196,12 @@
     },
     "feature_flag_rollouts": {
       "type": "object",
-      "description": "Toggles percentage-based traffic rollouts for feature flags. When enabled, every flag whose execution config has traffic_percentage set becomes a rollout flag (header/cookie pins ignored). Per-request bucket is uniformly random. Off by default — opt-in to avoid changing routing semantics on upgrade.",
+      "description": "Toggles percentage-based traffic rollouts for feature flags. When enabled, every flag whose execution config has traffic_percentage set becomes a rollout flag (header/cookie pins ignored). Per-request bucket is uniformly random. On by default — set enabled: false to restore header/cookie-pinned feature flag selection.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Enable percentage-based feature flag rollouts."
         }
       }

@@ -1302,7 +1302,7 @@ type IntrospectionConfiguration struct {
 // FeatureFlagRollouts toggles percentage-based traffic rollouts for feature
 // flags shipped in the execution config.
 type FeatureFlagRollouts struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"ENABLED"`
 }
 
 type Config struct {
