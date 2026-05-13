@@ -243,7 +243,15 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
+		var (
+			info *resolve.GraphQLResolveInfo
+			err  error
+		)
+		if bytecodePlan := reqCtx.operation.preparedPlan.bytecodePlan; bytecodePlan.FastPathReady() {
+			info, err = h.executor.Resolver.ArenaResolveGraphQLResponseBytecode(resolveCtx, p.Response, bytecodePlan, hpw)
+		} else {
+			info, err = h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
+		}
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)

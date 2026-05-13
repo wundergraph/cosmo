@@ -13,12 +13,15 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/planbytecode"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/planbytecode/compiler"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type planWithMetaData struct {
 	preparedPlan                      plan.Plan
+	bytecodePlan                      *planbytecode.Program
 	operationDocument, schemaDocument *ast.Document
 	typeFieldUsageInfo                []*graphqlschemausage.TypeFieldUsageInfo
 	argumentUsageInfo                 []*graphqlmetricsv1.ArgumentUsageInfo
@@ -92,9 +95,14 @@ func (p *OperationPlanner) planOperation(content string, name string, includeQue
 	}
 	post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
 	post.Process(preparedPlan)
+	bytecodePlan, err := compiler.Compile(preparedPlan)
+	if err != nil {
+		return nil, err
+	}
 
 	return &planWithMetaData{
 		preparedPlan:      preparedPlan,
+		bytecodePlan:      bytecodePlan,
 		operationDocument: &doc,
 		schemaDocument:    p.executor.RouterSchema,
 	}, nil
