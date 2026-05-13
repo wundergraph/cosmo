@@ -239,9 +239,15 @@ func TestNatsEvents(t *testing.T) {
 				},
 				EnableNats: true,
 				TLSConfig: &core.TlsConfig{
-					Enabled:  true,
-					CertFile: "../testdata/tls/cert.pem",
-					KeyFile:  "../testdata/tls/key.pem",
+					Server: core.ServerTLSConfig{
+						HTTP: core.HTTPServerTLSConfig{
+							Settings: core.HTTPServerTLSConfigSettings{
+								Enabled:  true,
+								CertFile: "../testdata/tls/cert.pem",
+								KeyFile:  "../testdata/tls/key.pem",
+							},
+						},
+					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)

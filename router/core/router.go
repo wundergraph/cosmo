@@ -153,30 +153,32 @@ type (
 
 	// ServerTLSConfig holds all serverside TLS information of the router.
 	ServerTLSConfig struct {
-		HTTP ServerHttpTLSConfig
+		HTTP HTTPServerTLSConfig
 	}
 
-	// ServerHttpTLSConfig holds all clientside TLS information of the router.
-	ServerHttpTLSConfig struct {
+	// HTTPServerTLSConfig holds all clientside TLS information of the router.
+	HTTPServerTLSConfig struct {
 		// Settings holds all settings a user specified for serverside TLS connections.
-		Settings ServerTLSConfigSettings
+		Settings HTTPServerTLSConfigSettings
 		// Config is the "compiled" TLS configuration from Settings.
 		Config *tls.Config
 	}
 
-	// ServerTLSConfigSettings holds all settings a user specified for serverside TLS connections.
-	ServerTLSConfigSettings struct {
+	// HTTPServerTLSConfigSettings holds all settings a user specified for serverside TLS connections.
+	HTTPServerTLSConfigSettings struct {
 		Enabled    bool
 		CertFile   string
 		KeyFile    string
-		ClientAuth *TlsClientAuthConfig
+		ClientAuth *HTTPServerMTLSConfigSettings
 	}
 
-	TlsClientAuthConfig struct {
+	// HTTPServerMTLSConfigSettings holds the client-auth/mTLS settings for serverside TLS connections.
+	HTTPServerMTLSConfigSettings struct {
 		Required bool
 		CertFile string
 	}
 
+	// ClientTLSConfig holds all clientside TLS information of the router.
 	ClientTLSConfig struct {
 		Subgraphs ClientSubgraphTLSConfig
 	}

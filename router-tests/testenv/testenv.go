@@ -717,12 +717,12 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	})
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
+	if cfg.TLSConfig != nil && cfg.TLSConfig.Server.HTTP.Settings.Enabled {
 
-		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.HTTP.Settings.CertFile, cfg.TLSConfig.Server.HTTP.Settings.KeyFile)
 		require.NoError(t, err)
 
-		caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
+		caCert, err := os.ReadFile(cfg.TLSConfig.Server.HTTP.Settings.CertFile)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -1148,12 +1148,12 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		return nil, err
 	}
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
+	if cfg.TLSConfig != nil && cfg.TLSConfig.Server.HTTP.Settings.Enabled {
 
-		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.HTTP.Settings.CertFile, cfg.TLSConfig.Server.HTTP.Settings.KeyFile)
 		require.NoError(t, err)
 
-		caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
+		caCert, err := os.ReadFile(cfg.TLSConfig.Server.HTTP.Settings.CertFile)
 		if err != nil {
 			log.Fatal(err)
 		}

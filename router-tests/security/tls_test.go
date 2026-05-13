@@ -28,9 +28,15 @@ func TestTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+						},
+					},
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			require.Contains(t, xEnv.RouterURL, "https://")
@@ -52,9 +58,15 @@ func TestTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+						},
+					},
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -72,9 +84,15 @@ func TestTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+						},
+					},
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodGet, "/", http.Header{
@@ -96,9 +114,15 @@ func TestTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+						},
+					},
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -113,9 +137,15 @@ func TestTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+						},
+					},
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.RouterURL, strings.NewReader(`query { employees { id } }`))
@@ -154,9 +184,15 @@ func TestTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+						},
+					},
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.RouterURL, strings.NewReader(`query { employees { id } }`))
@@ -175,9 +211,15 @@ func TestTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+						},
+					},
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.RouterURL, strings.NewReader(`query { employees { id } }`))
@@ -204,12 +246,18 @@ func TestMTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
-				ClientAuth: &core.TlsClientAuthConfig{
-					Required: true,
-					CertFile: "../testdata/tls/cert.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+							ClientAuth: &core.HTTPServerMTLSConfigSettings{
+								Required: true,
+								CertFile: "../testdata/tls/cert.pem",
+							},
+						},
+					},
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -232,12 +280,18 @@ func TestMTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
-				ClientAuth: &core.TlsClientAuthConfig{
-					Required: true,
-					CertFile: "../testdata/tls/cert.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+							ClientAuth: &core.HTTPServerMTLSConfigSettings{
+								Required: true,
+								CertFile: "../testdata/tls/cert.pem",
+							},
+						},
+					},
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -253,11 +307,17 @@ func TestMTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
-				ClientAuth: &core.TlsClientAuthConfig{
-					Required: false, // Default
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+							ClientAuth: &core.HTTPServerMTLSConfigSettings{
+								Required: false, // Default
+							},
+						},
+					},
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -273,12 +333,18 @@ func TestMTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
-				ClientAuth: &core.TlsClientAuthConfig{
-					Required: false,
-					CertFile: "../testdata/tls/cert.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+							ClientAuth: &core.HTTPServerMTLSConfigSettings{
+								Required: false,
+								CertFile: "../testdata/tls/cert.pem",
+							},
+						},
+					},
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -338,12 +404,18 @@ func TestMTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
-				ClientAuth: &core.TlsClientAuthConfig{
-					Required: true,
-					CertFile: "../testdata/tls/cert.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+							ClientAuth: &core.HTTPServerMTLSConfigSettings{
+								Required: true,
+								CertFile: "../testdata/tls/cert.pem",
+							},
+						},
+					},
 				},
 			},
 			LogObservation: testenv.LogObservationConfig{
@@ -383,12 +455,18 @@ func TestMTLS(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			TLSConfig: &core.TlsConfig{
-				Enabled:  true,
-				CertFile: "../testdata/tls/cert.pem",
-				KeyFile:  "../testdata/tls/key.pem",
-				ClientAuth: &core.TlsClientAuthConfig{
-					Required: false,
-					CertFile: "../testdata/tls/cert.pem",
+				Server: core.ServerTLSConfig{
+					HTTP: core.HTTPServerTLSConfig{
+						Settings: core.HTTPServerTLSConfigSettings{
+							Enabled:  true,
+							CertFile: "../testdata/tls/cert.pem",
+							KeyFile:  "../testdata/tls/key.pem",
+							ClientAuth: &core.HTTPServerMTLSConfigSettings{
+								Required: false,
+								CertFile: "../testdata/tls/cert.pem",
+							},
+						},
+					},
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {

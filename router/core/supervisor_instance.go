@@ -246,12 +246,12 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		}),
 		WithTLSConfig(&TlsConfig{
 			Server: ServerTLSConfig{
-				HTTP: ServerHttpTLSConfig{
-					Settings: ServerTLSConfigSettings{
+				HTTP: HTTPServerTLSConfig{
+					Settings: HTTPServerTLSConfigSettings{
 						Enabled:  config.TLS.Server.Enabled,
 						CertFile: config.TLS.Server.CertFile,
 						KeyFile:  config.TLS.Server.KeyFile,
-						ClientAuth: &TlsClientAuthConfig{
+						ClientAuth: &HTTPServerMTLSConfigSettings{
 							CertFile: config.TLS.Server.ClientAuth.CertFile,
 							Required: config.TLS.Server.ClientAuth.Required,
 						},
