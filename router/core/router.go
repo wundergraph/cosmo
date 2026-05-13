@@ -151,11 +151,12 @@ type (
 		Client ClientTLSConfig
 	}
 
-	// ServerTLSConfig holds all TLS information of the router server.
+	// ServerTLSConfig holds all serverside TLS information of the router.
 	ServerTLSConfig struct {
 		HTTP ServerHttpTLSConfig
 	}
 
+	// ServerHttpTLSConfig holds all clientside TLS information of the router.
 	ServerHttpTLSConfig struct {
 		// Settings holds all settings a user specified for serverside TLS connections.
 		Settings ServerTLSConfigSettings
