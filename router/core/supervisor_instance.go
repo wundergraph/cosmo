@@ -245,12 +245,16 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 			MaxAge:           config.CORS.MaxAge,
 		}),
 		WithTLSConfig(&TlsConfig{
-			Enabled:  config.TLS.Server.Enabled,
-			CertFile: config.TLS.Server.CertFile,
-			KeyFile:  config.TLS.Server.KeyFile,
-			ClientAuth: &TlsClientAuthConfig{
-				CertFile: config.TLS.Server.ClientAuth.CertFile,
-				Required: config.TLS.Server.ClientAuth.Required,
+			Server: ServerTLSConfig{
+				Settings: ServerTLSConfigSettings{
+					Enabled:  config.TLS.Server.Enabled,
+					CertFile: config.TLS.Server.CertFile,
+					KeyFile:  config.TLS.Server.KeyFile,
+					ClientAuth: &TlsClientAuthConfig{
+						CertFile: config.TLS.Server.ClientAuth.CertFile,
+						Required: config.TLS.Server.ClientAuth.Required,
+					},
+				},
 			},
 		}),
 		WithDevelopmentMode(config.DevelopmentMode),
