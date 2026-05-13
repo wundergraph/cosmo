@@ -2996,7 +2996,7 @@ export class FederationFactory {
       }
 
       if (!isKindAbstract(namedTypeData.kind)) {
-        /* Other kinds (scalar/enum/input) should be caught at normalization time.
+        /* Other kinds (Enum/Input/Scalar) should be caught at normalization time.
          * Emit an explicit composition error so the directive cannot be silently dropped here again.
          */
         this.errors.push(
@@ -3048,9 +3048,7 @@ export class FederationFactory {
     for (const target of targets) {
       const result = this.validateSubscriptionFilterForTarget(directiveNode, target, directiveSubgraphName);
       if (result.success) {
-        if (firstCondition === null) {
-          firstCondition = result.condition;
-        }
+        firstCondition ??= result.condition;
         continue;
       }
       if (result.errors.length === 0) {
@@ -3072,7 +3070,7 @@ export class FederationFactory {
       aggregatedErrors.push(wrapped);
       continue;
     }
-    if (firstCondition === null || aggregatedErrors.length > 0) {
+    if (firstCondition === null) {
       return { errors: aggregatedErrors, success: false };
     }
     return { condition: firstCondition, success: true };
