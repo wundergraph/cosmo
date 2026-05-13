@@ -147,6 +147,8 @@ type (
 	TlsConfig struct {
 		// Server holds all serverside TLS configuration.
 		Server ServerTLSConfig
+		// Client holds all clientside TLS configuration.
+		Client ClientTLSConfig
 	}
 
 	// ServerTLSConfig holds all TLS information of the router server.
@@ -170,7 +172,11 @@ type (
 		CertFile string
 	}
 
-	OutboundSubgraphsTlsConfig struct {
+	ClientTLSConfig struct {
+		Subgraphs ClientSubgraphTLSConfig
+	}
+
+	ClientSubgraphTLSConfig struct {
 		HTTP config.ClientTLSConfiguration
 	}
 
@@ -2373,7 +2379,10 @@ func WithTLSConfig(cfg *TlsConfig) Option {
 
 func WithSubgraphTLSConfiguration(cfg config.ClientTLSConfiguration) Option {
 	return func(r *Router) {
-		r.subgraphTLSConfiguration = cfg
+		if r.tls == nil {
+			r.tls = &TlsConfig{}
+		}
+		r.tls.Client.Subgraphs.HTTP = cfg
 	}
 }
 

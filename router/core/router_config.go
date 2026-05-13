@@ -120,7 +120,6 @@ type Config struct {
 	// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 	localhostFallbackInsideDocker bool
 	tls                           *TlsConfig
-	subgraphTLSConfiguration      config.ClientTLSConfiguration
 	telemetryAttributes           []config.CustomAttribute
 	tracePropagators              []propagation.TextMapPropagator
 	compositePropagator           propagation.TextMapPropagator
