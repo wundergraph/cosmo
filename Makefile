@@ -129,9 +129,12 @@ start-studio:
 start-router:
 	(cd router && make dev)
 
+start-graphqlmetrics:
+	(cd graphqlmetrics && make dev)
+
 DC_FLAGS=
 dc-dev:
-	docker compose --file docker-compose.yml --profile dev up --remove-orphans --detach $(DC_FLAGS)
+	docker compose --file docker-compose.yml --profile dev up --remove-orphans --detach --scale graphqlmetrics=0 $(DC_FLAGS)
 
 dc-stack:
 	docker compose --file docker-compose.cosmo.yml up --remove-orphans --detach
