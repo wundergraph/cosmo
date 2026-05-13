@@ -787,7 +787,6 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
-		tlsConfig:          r.tlsConfig,
 		tlsServerConfig:    r.tlsServerConfig,
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
@@ -1453,7 +1452,6 @@ func (r *Router) Start(ctx context.Context) error {
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
-		tlsConfig:          r.tlsConfig,
 		tlsServerConfig:    r.tlsServerConfig,
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
