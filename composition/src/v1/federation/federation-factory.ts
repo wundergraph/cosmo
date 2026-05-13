@@ -3070,7 +3070,7 @@ export class FederationFactory {
       aggregatedErrors.push(wrapped);
       continue;
     }
-    if (firstCondition === null) {
+    if (firstCondition === null || aggregatedErrors.length > 0) {
       return { errors: aggregatedErrors, success: false };
     }
     return { condition: firstCondition, success: true };
