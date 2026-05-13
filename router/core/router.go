@@ -153,6 +153,10 @@ type (
 
 	// ServerTLSConfig holds all TLS information of the router server.
 	ServerTLSConfig struct {
+		HTTP ServerHttpTLSConfig
+	}
+
+	ServerHttpTLSConfig struct {
 		// Settings holds all settings a user specified for serverside TLS connections.
 		Settings ServerTLSConfigSettings
 		// Config is the "compiled" TLS configuration from Settings.
@@ -384,7 +388,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultCorsHeaders...))
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
 
-	if r.tls != nil && r.tls.Server.Settings.Enabled {
+	if r.tls != nil && r.tls.Server.HTTP.Settings.Enabled {
 		r.baseURL = fmt.Sprintf("https://%s", r.listenAddr)
 	} else {
 		r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
@@ -397,7 +401,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	r.graphqlEndpointURL = graphqlEndpointURL
 
 	if r.tls != nil {
-		r.tls.Server.Config, err = r.serverTLSConfig()
+		r.tls.Server.HTTP.Config, err = r.serverHTTPTLSConfig()
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct tls config: %w", err)
 		}
@@ -588,27 +592,27 @@ func NewRouter(opts ...Option) (*Router, error) {
 	return r, nil
 }
 
-// serverTLSConfig creates a new serverside tls.Config from r.tls.Server.Settings.
+// serverHTTPTLSConfig creates a new serverside tls.Config from r.tls.Server.Settings.
 // If serverside TLS is not configured it returns nil.
 // If settings are invalid or a config can't be created it returns an error.
-func (r *Router) serverTLSConfig() (*tls.Config, error) {
-	if r.tls == nil || !r.tls.Server.Settings.Enabled {
+func (r *Router) serverHTTPTLSConfig() (*tls.Config, error) {
+	if r.tls == nil || !r.tls.Server.HTTP.Settings.Enabled {
 		return nil, nil
 	}
 
-	if r.tls.Server.Settings.CertFile == "" {
+	if r.tls.Server.HTTP.Settings.CertFile == "" {
 		return nil, errors.New("tls cert file not provided")
 	}
 
-	if r.tls.Server.Settings.KeyFile == "" {
+	if r.tls.Server.HTTP.Settings.KeyFile == "" {
 		return nil, errors.New("tls key file not provided")
 	}
 
 	var caCertPool *x509.CertPool
 	clientAuthMode := tls.NoClientCert
 
-	if r.tls.Server.Settings.ClientAuth != nil && r.tls.Server.Settings.ClientAuth.CertFile != "" {
-		caCert, err := os.ReadFile(r.tls.Server.Settings.ClientAuth.CertFile)
+	if r.tls.Server.HTTP.Settings.ClientAuth != nil && r.tls.Server.HTTP.Settings.ClientAuth.CertFile != "" {
+		caCert, err := os.ReadFile(r.tls.Server.HTTP.Settings.ClientAuth.CertFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read cert file: %w", err)
 		}
@@ -620,7 +624,7 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 		}
 		caCertPool = caPool
 
-		if r.tls.Server.Settings.ClientAuth.Required {
+		if r.tls.Server.HTTP.Settings.ClientAuth.Required {
 			clientAuthMode = tls.RequireAndVerifyClientCert
 		} else {
 			clientAuthMode = tls.VerifyClientCertIfGiven
@@ -630,7 +634,7 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 	}
 
 	// Load the server cert and private key
-	cer, err := tls.LoadX509KeyPair(r.tls.Server.Settings.CertFile, r.tls.Server.Settings.KeyFile)
+	cer, err := tls.LoadX509KeyPair(r.tls.Server.HTTP.Settings.CertFile, r.tls.Server.HTTP.Settings.KeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
 	}
@@ -823,7 +827,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 
 	var tlsConfig *tls.Config
 	if r.tls != nil {
-		tlsConfig = r.tls.Server.Config
+		tlsConfig = r.tls.Server.HTTP.Config
 	}
 
 	var err error
@@ -1493,7 +1497,7 @@ func (r *Router) Start(ctx context.Context) error {
 
 	var tlsConfig *tls.Config
 	if r.tls != nil {
-		tlsConfig = r.tls.Server.Config
+		tlsConfig = r.tls.Server.HTTP.Config
 	}
 
 	var err error
