@@ -1277,13 +1277,13 @@ export function invalidSubscriptionFilterLocationError(path: string): Error {
   );
 }
 
-export function invalidSubscriptionFilterDirectiveError(fieldPath: string, errorMessages: Error[]): Error {
+export function invalidSubscriptionFilterDirectiveError(fieldPath: string, errors: Error[]): Error {
   return new Error(
     `The "@${SUBSCRIPTION_FILTER}" directive defined on path "${fieldPath}" is invalid for the` +
       ` following reason` +
-      (errorMessages.length > 1 ? 's' : '') +
+      (errors.length > 1 ? 's' : '') +
       `:\n` +
-      errorMessages.join(`\n`),
+      errors.join(`\n`),
   );
 }
 
@@ -1315,7 +1315,7 @@ export function subscriptionFilterInterfaceImplementationInvalidError(
 
 export function subscriptionFilterNoAccessibleConcreteTypesError(
   abstractTypeName: string,
-  abstractKind: 'Union' | 'Interface',
+  abstractKind: string,
 ): Error {
   return new Error(
     `The ${abstractKind} "${abstractTypeName}" has no accessible concrete types against which the "@openfed__subscriptionFilter" condition can be validated.`,

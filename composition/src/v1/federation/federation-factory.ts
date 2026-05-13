@@ -77,7 +77,7 @@ import {
   unknownFieldSubgraphNameError,
   unknownNamedTypeError,
 } from '../../errors/errors';
-import { type ExecutionMultiFailure, type ExecutionSuccess, type ExecutionMultiResult } from '../../types/results';
+import { type ExecutionMultiResult } from '../../types/results';
 import {
   type ChildTagData,
   getDescriptionFromString,
@@ -186,6 +186,7 @@ import {
   type FederationResultWithContracts,
   type MutualParentDefinitionData,
 } from '../../federation/types/types';
+import { type SubscriptionFilterTargetResult } from '../../federation/types/results';
 import {
   AND_UPPER,
   AUTHORIZATION_DIRECTIVES,
@@ -2834,9 +2835,10 @@ export class FederationFactory {
             invalidIndices.push(i);
             continue;
           }
-          // Preserve original short-circuit behaviour (`isValid &&= ...`): once any earlier
-          // item failed, do not recurse into subsequent items so error output stays focused
-          // on the first failing branch.
+          /* Preserve original short-circuit behaviour (`isValid &&= ...`): once any earlier
+           * item failed, do not recurse into subsequent items so error output stays focused
+           * on the first failing branch.
+           */
           if (!isValid) {
             continue;
           }
@@ -2914,7 +2916,7 @@ export class FederationFactory {
       directiveSubgraphName,
     );
     if (!result.success) {
-      return { success: false, errors: result.errors };
+      return result;
     }
     return { success: true, condition };
   }
@@ -2994,8 +2996,9 @@ export class FederationFactory {
       }
 
       if (!isKindAbstract(namedTypeData.kind)) {
-        // Other kinds (scalar/enum/input) should be caught at normalization time.
-        // Emit an explicit composition error so the directive cannot be silently dropped here again.
+        /* Other kinds (scalar/enum/input) should be caught at normalization time.
+         * Emit an explicit composition error so the directive cannot be silently dropped here again.
+         */
         this.errors.push(
           invalidSubscriptionFilterDirectiveError(fieldPath, [
             subscriptionFilterUnsupportedNamedTypeKindError(namedTypeData.name, namedTypeData.kind),
@@ -3006,8 +3009,7 @@ export class FederationFactory {
 
       const targets = this.collectSubscriptionFilterConcreteTargets(namedTypeData.name);
       if (targets.length === 0) {
-        const kindLabel: 'Union' | 'Interface' =
-          namedTypeData.kind === Kind.UNION_TYPE_DEFINITION ? 'Union' : 'Interface';
+        const kindLabel = kindToNodeType(namedTypeData.kind);
         this.errors.push(
           invalidSubscriptionFilterDirectiveError(fieldPath, [
             subscriptionFilterNoAccessibleConcreteTypesError(namedTypeData.name, kindLabel),
@@ -3041,33 +3043,34 @@ export class FederationFactory {
     targets,
     directiveSubgraphName,
   }: MergeSubscriptionFilterTargetResultParams): SubscriptionFilterTargetResult {
-    const aggregatedErrors: Error[] = [];
+    const aggregatedErrors: Array<Error> = [];
     let firstCondition: SubscriptionCondition | null = null;
     for (const target of targets) {
       const result = this.validateSubscriptionFilterForTarget(directiveNode, target, directiveSubgraphName);
-      if (!result.success) {
-        if (result.errors.length === 0) {
-          // The directive is malformed — that error is reported elsewhere; skip silently.
-          continue;
+      if (result.success) {
+        if (firstCondition === null) {
+          firstCondition = result.condition;
         }
-        const wrapped =
-          abstractTypeData.kind === Kind.UNION_TYPE_DEFINITION
-            ? subscriptionFilterUnionMemberInvalidError(
-                abstractTypeData.name,
-                target.name,
-                result.errors.map((error) => error.message).join(LITERAL_NEW_LINE),
-              )
-            : subscriptionFilterInterfaceImplementationInvalidError(
-                abstractTypeData.name,
-                target.name,
-                result.errors.map((error) => error.message).join(LITERAL_NEW_LINE),
-              );
-        aggregatedErrors.push(wrapped);
         continue;
       }
-      if (firstCondition === null) {
-        firstCondition = result.condition;
+      if (result.errors.length === 0) {
+        // The directive is malformed — that error is reported elsewhere; skip silently.
+        continue;
       }
+      const wrapped =
+        abstractTypeData.kind === Kind.UNION_TYPE_DEFINITION
+          ? subscriptionFilterUnionMemberInvalidError(
+              abstractTypeData.name,
+              target.name,
+              result.errors.map((error) => error.message).join(LITERAL_NEW_LINE),
+            )
+          : subscriptionFilterInterfaceImplementationInvalidError(
+              abstractTypeData.name,
+              target.name,
+              result.errors.map((error) => error.message).join(LITERAL_NEW_LINE),
+            );
+      aggregatedErrors.push(wrapped);
+      continue;
     }
     if (firstCondition === null || aggregatedErrors.length > 0) {
       return { errors: aggregatedErrors, success: false };
@@ -3479,12 +3482,6 @@ export class FederationFactory {
     return this.buildFederationResult();
   }
 }
-
-interface SubscriptionFilterTargetSuccess extends ExecutionSuccess {
-  condition: SubscriptionCondition;
-}
-
-type SubscriptionFilterTargetResult = SubscriptionFilterTargetSuccess | ExecutionMultiFailure;
 
 type FederationFactoryResultSuccess = {
   federationFactory: FederationFactory;

@@ -78,7 +78,7 @@ export type UpsertDirectiveArgumentDataParams = {
 export type MergeSubscriptionFilterTargetResultParams = {
   directiveNode: ConstDirectiveNode;
   abstractTypeData: ParentDefinitionData;
-  targets: ObjectDefinitionData[];
+  targets: Array<ObjectDefinitionData>;
   directiveSubgraphName: string;
 };
 
