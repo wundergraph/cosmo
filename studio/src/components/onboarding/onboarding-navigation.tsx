@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon, UpdateIcon } from '@radix-ui/react-icons';
 import { cn } from '@/lib/utils';
 import { Link } from '../ui/link';
 import { Button } from '../ui/button';
@@ -58,14 +58,16 @@ export const OnboardingNavigation = ({
             </Link>
           </Button>
         ) : (
-          <Button
-            className="group"
-            onClick={forward.onClick}
-            isLoading={forward.isLoading}
-            disabled={forward.isLoading || forward.disabled}
-          >
-            {forwardLabel}
-            <ArrowRightIcon className="ml-2 transition-transform group-hover:translate-x-1" />
+          <Button className="group relative" onClick={forward.onClick} disabled={forward.isLoading || forward.disabled}>
+            {forward.isLoading && (
+              <span className="absolute inset-0 flex items-center justify-center">
+                <UpdateIcon className="animate-spin" />
+              </span>
+            )}
+            <span className={cn('inline-flex items-center justify-center', forward.isLoading && 'opacity-0')}>
+              {forwardLabel}
+              <ArrowRightIcon className="ml-2 transition-transform group-hover:translate-x-1" />
+            </span>
           </Button>
         )}
       </div>
