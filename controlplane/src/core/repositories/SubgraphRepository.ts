@@ -260,7 +260,17 @@ export class SubgraphRepository {
 
     // The collection of federated graphs that will be potentially re-composed
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
-    const updatedFederatedGraphsById = new Map<string, FederatedGraphDTO>();
+    /**
+     * If only the labels of the subgraph are changed, federated graphs that match both the new and the old labels
+     * need not be recomposed.
+     * This map allows the tracking of those graphs to prevent unnecessary recompositions.
+     */
+    const affectedFederatedGraphById = new Map<string, FederatedGraphDTO>();
+    /**
+     * If only the labels of the subgraph are changed, feature flags that match both the new and the old labels
+     * need not be recomposed.
+     * This set allows the tracking of those flags to prevent unnecessary recompositions.
+     */
     const affectedFeatureFlagIds = new Set<string>();
     let subgraphChanged = false;
     let labelChanged = false;
@@ -372,20 +382,20 @@ export class SubgraphRepository {
             namespaceId: data.namespaceId,
           });
 
+          // Add federated graphs (not contracts) that match the _new_ labels to `updatedFederatedGraphsById`
+          for (const federatedGraph of newFederatedGraphs) {
+            if (!federatedGraph.contract) {
+              affectedFederatedGraphById.set(federatedGraph.id, federatedGraph);
+            }
+          }
+
           const newFeatureFlags = await featureFlagRepo.getFeatureFlagsBySubgraphLabels({
             namespaceId: data.namespaceId,
             labels: newLabels,
             excludeDisabled: true,
           });
 
-          // add them to the updatedFederatedGraphs array without duplicates
-          for (const federatedGraph of newFederatedGraphs) {
-            if (!federatedGraph.contract) {
-              updatedFederatedGraphsById.set(federatedGraph.id, federatedGraph);
-            }
-          }
-
-          // add the feature flags to the updatedFeatureFlagIds set without duplicates
+          // Add feature flags that match the _new_ labels to `updatedFederatedGraphsById`
           for (const featureFlag of newFeatureFlags) {
             if (featureFlag.featureSubgraphs.every((fsg) => fsg.baseSubgraphId !== subgraph.id)) {
               affectedFeatureFlagIds.add(featureFlag.id);
@@ -424,7 +434,7 @@ export class SubgraphRepository {
         }
       }
 
-      // If the labels haven't changed and the subgraph hasn't changed, there should be nothing to do
+      // If the labels haven't changed and the subgraph hasn't changed, there should be nothing further to do
       if (!subgraphChanged && !labelChanged) {
         return {
           deploymentErrors: [],
@@ -471,7 +481,7 @@ export class SubgraphRepository {
 
             // If an enabled feature flag includes the feature graph that has just been published, push it to the array
             if (enabledFeatureFlags.length > 0 && !splitConfigFeature?.enabled) {
-              updatedFederatedGraphsById.set(federatedGraphDTO.id, federatedGraphDTO);
+              affectedFederatedGraphById.set(federatedGraphDTO.id, federatedGraphDTO);
             }
 
             for (const featureFlag of enabledFeatureFlags) {
@@ -481,8 +491,9 @@ export class SubgraphRepository {
         }
         // Generate a new router config for non-feature graphs upon routing/subscription urls and labels changes
       } else {
-        // find all federated graphs that use this subgraph (with old labels). We need to evaluate them again.
-        // When labels change, graphs which matched with old labels may no longer match with new ones
+        /** Find all federated graphs that use the subgraph's old labels; we need to recompose them.
+         * When labels change, graphs that matched with old labels may no longer match with new ones.
+         */
         const affectedGraphs = await fedGraphRepo.bySubgraphLabels({
           labels: subgraph.labels,
           namespaceId: data.namespaceId,
@@ -494,10 +505,13 @@ export class SubgraphRepository {
           }
 
           // If the subgraph has changed, always trigger composition
-          if (updatedFederatedGraphsById.has(graph.id) && !subgraphChanged) {
-            updatedFederatedGraphsById.delete(graph.id);
+          if (affectedFederatedGraphById.has(graph.id) && !subgraphChanged) {
+            /** If the federated graph matches the old labels AND the new labels,
+             * delete the entry because it need not be recomposed.
+             */
+            affectedFederatedGraphById.delete(graph.id);
           } else {
-            updatedFederatedGraphsById.set(graph.id, graph);
+            affectedFederatedGraphById.set(graph.id, graph);
           }
         }
 
@@ -509,7 +523,11 @@ export class SubgraphRepository {
 
         for (const featureFlag of featureFlags) {
           if (featureFlag.featureSubgraphs.every((fsg) => fsg.baseSubgraphId !== subgraph.id)) {
+            // Always trigger composition if a relevant subgraph has changed.
             if (affectedFeatureFlagIds.has(featureFlag.id) && !subgraphChanged) {
+              /** If the feature flag matches the old labels AND the new labels, delete the entry because it
+               * need not be recomposed.
+               */
               affectedFeatureFlagIds.delete(featureFlag.id);
             } else {
               affectedFeatureFlagIds.add(featureFlag.id);
@@ -535,7 +553,7 @@ export class SubgraphRepository {
         }
       }
 
-      if (updatedFederatedGraphsById.size === 0 && affectedFeatureFlags.length === 0) {
+      if (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
         return {
           deploymentErrors: [],
           compositionErrors: [],
@@ -545,10 +563,10 @@ export class SubgraphRepository {
         };
       }
 
-      updatedFederatedGraphs.push(...updatedFederatedGraphsById.values());
+      updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
       const result = await compositionService.recomposeAndDeployAffected({
         actorId: data.updatedBy,
-        affectedFederatedGraphs: [...updatedFederatedGraphsById.values()],
+        affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
         affectedFeatureFlags,
         isFeatureSubgraph: subgraph.isFeatureSubgraph,
       });
@@ -558,7 +576,7 @@ export class SubgraphRepository {
       compositionWarnings.push(...result.compositionWarnings);
 
       // Re-fetch the federated graphs to get the updated composedSchemaVersionId
-      const refreshedGraphs = await Promise.all(updatedFederatedGraphsById.keys().map((id) => fedGraphRepo.byId(id)));
+      const refreshedGraphs = await Promise.all(affectedFederatedGraphById.keys().map((id) => fedGraphRepo.byId(id)));
       for (let i = 0; i < updatedFederatedGraphs.length; i++) {
         const refreshedGraph = refreshedGraphs[i];
         if (refreshedGraph) {
