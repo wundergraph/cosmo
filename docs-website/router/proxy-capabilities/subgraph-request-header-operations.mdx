@@ -96,6 +96,44 @@ At least one of `subgraphs` or `matching` must be specified, and at least one of
 
 A group with both `subgraphs` and `matching` matches a subgraph if it appears in either (the union — list-match OR regex-match). The group's rules apply at most once per subgraph regardless of how many parts of the selector match.
 
+### Conflict resolution
+
+When more than one rule targets the same header name for the same subgraph, the router applies rules in a strict deterministic order and the **last writer wins**. There is no warning, no error, and no validator that detects overlapping rules.
+
+The full ordering across layers:
+
+1. `headers.all` rules (in declared order).
+2. `headers.groups` entries whose selector matches the subgraph, in **config order**. Within each group, rules apply in declared order.
+3. `headers.subgraphs.<name>` rules (in declared order).
+
+Concretely, **within the groups layer, group order in the YAML is the tiebreaker** — entries are merged first-to-last, and a later group's rule overrides an earlier group's rule for the same header name. The `headers.subgraphs.<name>` layer always runs last and overrides every group rule for that exact subgraph.
+
+There is one subtle asymmetry between operations: an `op: propagate` rule with no client-supplied value and no `default:` is a no-op and does **not** clear an earlier value. An `op: set` rule, and an `op: propagate` rule with a `default:` set, always write a value.
+
+```yaml
+# Example: two groups targeting X-Foo on the same subgraph
+headers:
+  groups:
+    - id: first
+      subgraphs: [products]
+      request:
+        - op: set
+          name: X-Foo
+          value: from-first
+    - id: second                # second group runs after first
+      subgraphs: [products]
+      request:
+        - op: set
+          name: X-Foo
+          value: from-second    # → wins; X-Foo == "from-second"
+  subgraphs:
+    products:
+      request:
+        - op: set
+          name: X-Foo
+          value: from-exact     # → wins overall; exact runs last
+```
+
 ### Supported header rules
 
 Currently, we support the following header rules:

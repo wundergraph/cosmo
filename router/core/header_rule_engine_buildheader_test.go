@@ -893,3 +893,281 @@ func TestSubgraphRules_GroupsIncluded(t *testing.T) {
 	require.Len(t, gotOther, 1)
 	assert.Equal(t, "X-All", gotOther[0].Named)
 }
+
+// TestBuildRequestHeaderForSubgraph_GroupsPrecedence pins down how conflicts
+// between rules from different groups (or between groups and other layers)
+// are resolved. There is no warning, no error, and no conflict detection: the
+// router applies rules in a strict deterministic order and the last writer
+// for a given header name wins. These tests lock that contract in place so
+// future refactors don't accidentally change observable behavior.
+func TestBuildRequestHeaderForSubgraph_GroupsPrecedence(t *testing.T) {
+	t.Run("two groups set same header — config order wins (last writer)", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Groups: []*config.SubgraphHeaderGroup{
+				{
+					ID:        "first",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Foo", Value: "from-first"},
+					},
+				},
+				{
+					ID:        "second",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Foo", Value: "from-second"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("products", newGroupTestRequestContext(t, nil))
+		require.NotNil(t, hdr)
+		assert.Equal(t, "from-second", hdr.Get("X-Foo"),
+			"second group in config order must win when two groups set the same header")
+	})
+
+	t.Run("set overwrites earlier propagate value (client sent header)", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Groups: []*config.SubgraphHeaderGroup{
+				{
+					ID:        "propagator",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "propagate", Named: "X-Foo"},
+					},
+				},
+				{
+					ID:        "setter",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Foo", Value: "from-set"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+		ctx := newGroupTestRequestContext(t, http.Header{"X-Foo": []string{"client-value"}})
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("products", ctx)
+		require.NotNil(t, hdr)
+		assert.Equal(t, "from-set", hdr.Get("X-Foo"),
+			"a later op:set must overwrite an earlier propagated value")
+	})
+
+	t.Run("propagate (with client value) overwrites earlier set value", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Groups: []*config.SubgraphHeaderGroup{
+				{
+					ID:        "setter",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Foo", Value: "from-set"},
+					},
+				},
+				{
+					ID:        "propagator",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "propagate", Named: "X-Foo"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+		ctx := newGroupTestRequestContext(t, http.Header{"X-Foo": []string{"client-value"}})
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("products", ctx)
+		require.NotNil(t, hdr)
+		assert.Equal(t, "client-value", hdr.Get("X-Foo"),
+			"a later op:propagate must overwrite an earlier set value when the client sent the header")
+	})
+
+	t.Run("propagate without default is a no-op when client header missing", func(t *testing.T) {
+		// This is a subtle but important asymmetry between op:set and op:propagate.
+		// A propagate rule that finds no client value (and has no default) leaves
+		// the existing value in place rather than clearing it.
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Groups: []*config.SubgraphHeaderGroup{
+				{
+					ID:        "setter",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Foo", Value: "from-set"},
+					},
+				},
+				{
+					ID:        "propagator",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "propagate", Named: "X-Foo"}, // no default
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+		// Note: no X-Foo on the client request.
+		ctx := newGroupTestRequestContext(t, nil)
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("products", ctx)
+		require.NotNil(t, hdr)
+		assert.Equal(t, "from-set", hdr.Get("X-Foo"),
+			"op:propagate with no client value and no default must not clobber an earlier set value")
+	})
+
+	t.Run("propagate with default overwrites earlier set value when client header missing", func(t *testing.T) {
+		// A `default:` makes propagate behave like set when the client didn't send
+		// the header. This rounds out the matrix vs the test above.
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Groups: []*config.SubgraphHeaderGroup{
+				{
+					ID:        "setter",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Foo", Value: "from-set"},
+					},
+				},
+				{
+					ID:        "propagator-with-default",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "propagate", Named: "X-Foo", Default: "from-default"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+		ctx := newGroupTestRequestContext(t, nil)
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("products", ctx)
+		require.NotNil(t, hdr)
+		assert.Equal(t, "from-default", hdr.Get("X-Foo"),
+			"op:propagate with a default must overwrite an earlier set value when the client header is missing")
+	})
+
+	t.Run("rule order within a single group: last writer wins", func(t *testing.T) {
+		// Confirms that conflict resolution applies inside a group's rule list
+		// the same way it does between groups.
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Groups: []*config.SubgraphHeaderGroup{
+				{
+					ID:        "intra-group",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Foo", Value: "first"},
+						{Operation: "set", Name: "X-Foo", Value: "second"},
+						{Operation: "set", Name: "X-Foo", Value: "third"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("products", newGroupTestRequestContext(t, nil))
+		require.NotNil(t, hdr)
+		assert.Equal(t, "third", hdr.Get("X-Foo"),
+			"the last rule in a group's request list must win for the same header name")
+	})
+
+	t.Run("exact subgraph rule overrides every matching group", func(t *testing.T) {
+		// All three layers target X-Foo. exact must win regardless of how many
+		// groups matched first.
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: "set", Name: "X-Foo", Value: "from-all"},
+				},
+			},
+			Groups: []*config.SubgraphHeaderGroup{
+				{
+					ID:        "g1",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Foo", Value: "from-g1"},
+					},
+				},
+				{
+					ID:       "g2",
+					Matching: "^products$",
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Foo", Value: "from-g2"},
+					},
+				},
+			},
+			Subgraphs: map[string]*config.GlobalHeaderRule{
+				"products": {
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Foo", Value: "from-exact"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("products", newGroupTestRequestContext(t, nil))
+		require.NotNil(t, hdr)
+		assert.Equal(t, "from-exact", hdr.Get("X-Foo"),
+			"exact subgraph rules must override any group rule")
+	})
+
+	t.Run("different header names from different groups all coexist", func(t *testing.T) {
+		// Conflict resolution is per-header-name. Rules touching different
+		// headers all apply, regardless of group order.
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Groups: []*config.SubgraphHeaderGroup{
+				{
+					ID:        "g1",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-A", Value: "a"},
+					},
+				},
+				{
+					ID:        "g2",
+					Subgraphs: []string{"products"},
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-B", Value: "b"},
+					},
+				},
+				{
+					ID:       "g3",
+					Matching: "^products$",
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-C", Value: "c"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+		hdr, _ := ht.BuildRequestHeaderForSubgraph("products", newGroupTestRequestContext(t, nil))
+		require.NotNil(t, hdr)
+		assert.Equal(t, "a", hdr.Get("X-A"))
+		assert.Equal(t, "b", hdr.Get("X-B"))
+		assert.Equal(t, "c", hdr.Get("X-C"))
+	})
+
+	t.Run("config order matters: swap groups and the winner changes", func(t *testing.T) {
+		// Same two groups, opposite config order, opposite winner. This is the
+		// "yes, group order is the tiebreaker" assertion in pure form.
+		buildAndAssert := func(t *testing.T, groupOrder []*config.SubgraphHeaderGroup, expected string) {
+			t.Helper()
+			ht, err := NewHeaderPropagation(&config.HeaderRules{Groups: groupOrder})
+			require.NoError(t, err)
+			hdr, _ := ht.BuildRequestHeaderForSubgraph("products", newGroupTestRequestContext(t, nil))
+			require.NotNil(t, hdr)
+			assert.Equal(t, expected, hdr.Get("X-Foo"))
+		}
+
+		alpha := &config.SubgraphHeaderGroup{
+			ID:        "alpha",
+			Subgraphs: []string{"products"},
+			Request: []*config.RequestHeaderRule{
+				{Operation: "set", Name: "X-Foo", Value: "alpha"},
+			},
+		}
+		beta := &config.SubgraphHeaderGroup{
+			ID:        "beta",
+			Subgraphs: []string{"products"},
+			Request: []*config.RequestHeaderRule{
+				{Operation: "set", Name: "X-Foo", Value: "beta"},
+			},
+		}
+
+		buildAndAssert(t, []*config.SubgraphHeaderGroup{alpha, beta}, "beta")
+		buildAndAssert(t, []*config.SubgraphHeaderGroup{beta, alpha}, "alpha")
+	})
+}
