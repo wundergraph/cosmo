@@ -65,6 +65,12 @@ type Subscription {
     filteredEmployeeUpdatedMyRedis(ids: [ID!]!): Employee!
         @edfs__redisSubscribe(channels: ["employeeUpdatedMyRedis"], providerId: "my-redis")
         @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["{{ args.ids }}"] } })
+    filteredEmployeeEventUnionMyKafka(tag: String!): EmployeeEvent!
+        @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "tag", values: ["{{ args.tag }}"] } })
+    filteredEmployeeChangeInterfaceMyKafka(tag: String!): EmployeeChange!
+        @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "tag", values: ["{{ args.tag }}"] } })
 }
 
 input KafkaInput {
@@ -73,6 +79,33 @@ input KafkaInput {
 
 type Employee @key(fields: "id", resolvable: false) {
   id: Int! @external
+}
+
+type EmployeeUpdated @key(fields: "id tag", resolvable: false) {
+    id: Int! @external
+    tag: String! @external
+}
+
+type EmployeeDeleted @key(fields: "id tag", resolvable: false) {
+    id: Int! @external
+    tag: String! @external
+}
+
+union EmployeeEvent = EmployeeUpdated | EmployeeDeleted
+
+interface EmployeeChange {
+    id: Int!
+    tag: String!
+}
+
+type EmployeeChanged implements EmployeeChange @key(fields: "id tag", resolvable: false) {
+    id: Int! @external
+    tag: String! @external
+}
+
+type EmployeeRemoved implements EmployeeChange @key(fields: "id tag", resolvable: false) {
+    id: Int! @external
+    tag: String! @external
 }
 
 type edfs__PublishResult {

@@ -1277,25 +1277,63 @@ export function invalidSubscriptionFilterLocationError(path: string): Error {
   );
 }
 
-export function invalidSubscriptionFilterDirectiveError(fieldPath: string, errorMessages: string[]): Error {
+export function invalidSubscriptionFilterDirectiveError(fieldPath: string, errors: Error[]): Error {
   return new Error(
     `The "@${SUBSCRIPTION_FILTER}" directive defined on path "${fieldPath}" is invalid for the` +
       ` following reason` +
-      (errorMessages.length > 1 ? 's' : '') +
+      (errors.length > 1 ? 's' : '') +
       `:\n` +
-      errorMessages.join(`\n`),
+      errors.join(`\n`),
   );
 }
 
-export function subscriptionFilterNamedTypeErrorMessage(namedTypeName: string): string {
-  return ` Unknown type "${namedTypeName}".`;
+export function subscriptionFilterNamedTypeError(namedTypeName: string): Error {
+  return new Error(`Unknown type "${namedTypeName}".`);
 }
 
-export function subscriptionFilterConditionDepthExceededErrorMessage(inputPath: string): string {
-  return (
-    ` The input path "${inputPath}" exceeds the maximum depth of ${MAX_SUBSCRIPTION_FILTER_DEPTH}` +
-    ` for any one filter condition.\n` +
-    ` If you require a larger maximum depth, please contact support.`
+export function subscriptionFilterUnionMemberInvalidError(
+  unionTypeName: string,
+  memberTypeName: string,
+  detail: string,
+): Error {
+  return new Error(
+    `The "@openfed__subscriptionFilter" condition is invalid for union member "${memberTypeName}" of union "${unionTypeName}":\n` +
+      detail,
+  );
+}
+
+export function subscriptionFilterInterfaceImplementationInvalidError(
+  interfaceTypeName: string,
+  implementerTypeName: string,
+  detail: string,
+): Error {
+  return new Error(
+    `The "@openfed__subscriptionFilter" condition is invalid for concrete type "${implementerTypeName}" implementing interface "${interfaceTypeName}":\n` +
+      detail,
+  );
+}
+
+export function subscriptionFilterNoAccessibleConcreteTypesError(
+  abstractTypeName: string,
+  abstractKind: string,
+): Error {
+  return new Error(
+    `The ${abstractKind} "${abstractTypeName}" has no accessible concrete types against which the "@openfed__subscriptionFilter" condition can be validated.`,
+  );
+}
+
+export function subscriptionFilterUnsupportedNamedTypeKindError(namedTypeName: string, kind: string): Error {
+  return new Error(
+    `The named type "${namedTypeName}" of kind "${kind}" is not supported by the "@${SUBSCRIPTION_FILTER}" directive.` +
+      `Only object, union, and interface return types are supported.`,
+  );
+}
+
+export function subscriptionFilterConditionDepthExceededError(inputPath: string): Error {
+  return new Error(
+    `The input path "${inputPath}" exceeds the maximum depth of ${MAX_SUBSCRIPTION_FILTER_DEPTH}` +
+      ` for any one filter condition.\n` +
+      ` If you require a larger maximum depth, please contact support.`,
   );
 }
 
@@ -1303,31 +1341,27 @@ const subscriptionFilterConditionFieldsString =
   ` Each "${SUBSCRIPTION_FILTER_CONDITION}" input object must define exactly one of the following` +
   ` input value fields: "${AND_UPPER}", "${IN_UPPER}", "${NOT_UPPER}", or "${OR_UPPER}".\n`;
 
-export function subscriptionFilterConditionInvalidInputFieldNumberErrorMessage(
-  inputPath: string,
-  fieldNumber: number,
-): string {
-  return subscriptionFilterConditionFieldsString + ` However, input path "${inputPath}" defines ${fieldNumber} fields.`;
-}
-
-export function subscriptionFilterConditionInvalidInputFieldErrorMessage(
-  inputPath: string,
-  invalidFieldName: string,
-): string {
-  return (
-    subscriptionFilterConditionFieldsString +
-    ` However, input path "${inputPath}" defines the invalid input value field "${invalidFieldName}".`
+export function subscriptionFilterConditionInvalidInputFieldNumberError(inputPath: string, fieldNumber: number): Error {
+  return new Error(
+    subscriptionFilterConditionFieldsString + ` However, input path "${inputPath}" defines ${fieldNumber} fields.`,
   );
 }
 
-export function subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
+export function subscriptionFilterConditionInvalidInputFieldError(inputPath: string, invalidFieldName: string): Error {
+  return new Error(
+    subscriptionFilterConditionFieldsString +
+      ` However, input path "${inputPath}" defines the invalid input value field "${invalidFieldName}".`,
+  );
+}
+
+export function subscriptionFilterConditionInvalidInputFieldTypeError(
   inputPath: string,
   expectedTypeString: string,
   actualTypeString: string,
-): string {
-  return (
+): Error {
+  return new Error(
     ` Expected the value of input path "${inputPath}" to be type "${expectedTypeString}"` +
-    ` but received type "${actualTypeString}"`
+      ` but received type "${actualTypeString}"`,
   );
 }
 
@@ -1338,26 +1372,23 @@ const subscriptionFilterConditionArrayString =
 export function subscriptionFilterArrayConditionInvalidItemTypeErrorMessage(
   inputPath: string,
   invalidIndices: number[],
-): string {
+): Error {
   const isPlural = invalidIndices.length > 1;
-  return (
+  return new Error(
     subscriptionFilterConditionArrayString +
-    ` However, the following ` +
-    (isPlural ? `indices` : 'index') +
-    ` defined on input path "${inputPath}" ` +
-    (isPlural ? `are` : `is`) +
-    ` not type "object": ` +
-    invalidIndices.join(`, `)
+      ` However, the following ` +
+      (isPlural ? `indices` : 'index') +
+      ` defined on input path "${inputPath}" ` +
+      (isPlural ? `are` : `is`) +
+      ` not type "object": ` +
+      invalidIndices.join(`, `),
   );
 }
 
-export function subscriptionFilterArrayConditionInvalidLengthErrorMessage(
-  inputPath: string,
-  actualLength: number,
-): string {
-  return (
+export function subscriptionFilterArrayConditionInvalidLengthError(inputPath: string, actualLength: number): Error {
+  return new Error(
     subscriptionFilterConditionArrayString +
-    ` However, the list defined on input path "${inputPath}" has a length of ${actualLength}.`
+      ` However, the list defined on input path "${inputPath}" has a length of ${actualLength}.`,
   );
 }
 
@@ -1372,13 +1403,13 @@ export function invalidInputFieldTypeErrorMessage(
   );
 }
 
-export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
+export function subscriptionFieldConditionInvalidInputFieldError(
   inputPath: string,
   missingFieldNames: string[],
   duplicatedFieldNames: string[],
   invalidFieldNames: string[],
   fieldErrorMessages: string[],
-): string {
+): Error {
   let message =
     ` Each "${SUBSCRIPTION_FIELD_CONDITION}" input object must only define the following two` +
     ` input value fields: "${FIELD_PATH}" and "${VALUES}".\n However, input path "${inputPath}" is invalid because:`;
@@ -1409,7 +1440,7 @@ export function subscriptionFieldConditionInvalidInputFieldErrorMessage(
   if (fieldErrorMessages.length > 0) {
     message += `\n ` + fieldErrorMessages.join(`\n `);
   }
-  return message;
+  return new Error(message);
 }
 
 const subscriptionFieldConditionValuesString =
