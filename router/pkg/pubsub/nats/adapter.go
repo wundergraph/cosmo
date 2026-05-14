@@ -486,6 +486,10 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		store = metric.NewNoopStreamMetricStore()
 	}
 
+	if subscriptionBufferSize <= 0 {
+		subscriptionBufferSize = 1024
+	}
+
 	ctx, cancelFunc := context.WithCancel(ctx)
 
 	return &ProviderAdapter{
