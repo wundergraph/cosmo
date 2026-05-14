@@ -707,6 +707,7 @@ type NatsEventSource struct {
 	Authentication                   *NatsAuthentication   `yaml:"authentication,omitempty"`
 	TLS                              *NatsTLSConfiguration `yaml:"tls,omitempty"`
 	DeleteDurableConsumersOnShutdown bool                  `yaml:"experiment_delete_durable_consumers_on_shutdown"`
+	SubscriptionBufferSize           int                   `yaml:"subscription_buffer_size,omitempty" envDefault:"1024"`
 }
 
 func (n NatsEventSource) GetID() string {
