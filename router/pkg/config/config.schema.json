@@ -2975,6 +2975,12 @@
                     "type": "boolean",
                     "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down normally. Defaults to false. NOTE: This option is experimental and may change in future versions.",
                     "default": false
+                  },
+                  "subscription_buffer_size": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 1024,
+                    "description": "Per-subscription channel buffer size (number of *nats.Msg). Increase to mitigate NATS slow-consumer drops on bursty subjects. 0 or omitted falls back to 1024."
                   }
                 }
               }
