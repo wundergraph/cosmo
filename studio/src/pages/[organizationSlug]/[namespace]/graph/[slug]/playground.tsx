@@ -81,6 +81,37 @@ import { TbDevicesCheck } from 'react-icons/tb';
 import { useDebounce } from 'use-debounce';
 import { z } from 'zod';
 
+class CosmoGraphiqlStorage implements Storage {
+  constructor({
+    organizationSlug,
+    namespaceSlug,
+    slug,
+    storage,
+  }: {
+    organizationSlug: string;
+    namespaceSlug: string;
+    slug: string;
+    storage: Storage;
+  }) {
+    this.storagePrefix = `cosmo-playground:${organizationSlug}:${namespaceSlug}:${slug}`;
+    this.storage = storage;
+  }
+
+  private storagePrefix: string;
+  private storage: Storage;
+
+  public setItem = (key: string, value: string) => this.storage.setItem(this.compositeKey(key), value);
+  public getItem = (key: string) => this.storage.getItem(this.compositeKey(key));
+  public removeItem = (key: string) => this.storage.removeItem(this.compositeKey(key));
+  public clear = () => this.storage.clear();
+  public get length() {
+    return this.storage.length;
+  }
+  public key = (index: number) => this.storage.key(index);
+
+  private compositeKey = (key: string) => `${this.storagePrefix}:${key}`;
+}
+
 const validateHeaders = (headers: Record<string, string>) => {
   for (const headersKey in headers) {
     if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
@@ -780,6 +811,19 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
   const [tempHeaders, setTempHeaders] = useState<any>();
 
+  const organizationSlug = router.query.organizationSlug as string;
+
+  const graphiqlStorage = useMemo(
+    () =>
+      new CosmoGraphiqlStorage({
+        storage: localStorage,
+        organizationSlug,
+        namespaceSlug: graphContext?.graph?.namespace ?? 'unknown',
+        slug: graphContext?.graph?.name ?? 'unknown',
+      }),
+    [graphContext?.graph, organizationSlug],
+  );
+
   useEffect(() => {
     if (!storedHeaders || tempHeaders) {
       return;
@@ -1152,6 +1196,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
             ]}
             // null stops introspection and undefined forces introspection if schema is null
             schema={isLoading ? null : (schema ?? undefined)}
+            storage={graphiqlStorage}
             onTabChange={setTabsState}
           />
           {isMounted && <PlaygroundPortal />}
