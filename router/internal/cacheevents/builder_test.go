@@ -53,7 +53,8 @@ func TestBuildEvents_AllEventTypes(t *testing.T) {
 		},
 		FieldHashes: []resolve.EntityFieldHash{
 			// Safe: KeyHash is set (engine ran with HashAnalyticsKeys=true) — emit a FIELD_HASH event.
-			{EntityType: "User", FieldName: "email", FieldHash: 0xfeed, KeyHash: 0xdead, Source: resolve.FieldSourceL2},
+			// DataSource ("accounts") and FieldPath (["address"]) must be propagated onto the proto event.
+			{EntityType: "User", FieldName: "street", FieldPath: []string{"address"}, FieldHash: 0xfeed, KeyHash: 0xdead, Source: resolve.FieldSourceL2, DataSource: "accounts"},
 			// PII guard: KeyHash is zero (HashAnalyticsKeys=false on this entity) — must NOT emit.
 			{EntityType: "User", FieldName: "phone", FieldHash: 0xbeef, KeyRaw: piiKey, Source: resolve.FieldSourceSubgraph},
 		},
@@ -139,18 +140,19 @@ func TestBuildEvents_AllEventTypes(t *testing.T) {
 		}
 	}
 
-	// FIELD_HASH must carry the engine-provided FieldName + FieldHash and the
-	// dropped (KeyHash=0) entry must NOT have produced an event.
+	// FIELD_HASH must carry the engine-provided FieldName + FieldHash, the
+	// resolving subgraph's name on SubgraphId (from EntityFieldHash.DataSource),
+	// the schema-name FieldPath chain, and the dropped (KeyHash=0) entry
+	// must NOT have produced an event.
 	for _, ev := range events {
 		if ev.EventType != cacheeventsv1.EventType_FIELD_HASH {
 			continue
 		}
-		require.Equal(t, "email", ev.FieldName)
+		require.Equal(t, "street", ev.FieldName)
 		require.Equal(t, uint64(0xfeed), ev.FieldHash)
 		require.Equal(t, uint64(0xdead), ev.KeyHash)
-		// SubgraphId on FIELD_HASH is sourced from EntityFieldHash.DataSource on
-		// the new engine; the pinned engine has no DataSource on that struct, so
-		// the field is left empty until the engine bump lands.
+		require.Equal(t, "accounts", ev.SubgraphId, "SubgraphId must propagate from EntityFieldHash.DataSource")
+		require.Equal(t, []string{"address"}, ev.FieldPath, "FieldPath must propagate from EntityFieldHash.FieldPath")
 		require.NotEqual(t, "phone", ev.FieldName, "FIELD_HASH event with KeyHash=0 must be dropped")
 	}
 

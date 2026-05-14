@@ -162,12 +162,24 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 		if ev.KeyHash == 0 {
 			continue
 		}
-		// EntityFieldHash has no DataSource or FieldPath in the pinned engine.
-		// Once those fields land upstream, populate them here.
-		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_FIELD_HASH, ev.EntityType, "", false, &cacheeventsv1.CacheEvent{
+		// DataSource is the subgraph name that owns the enclosing entity in
+		// the response walk. Stamped per-entity-scope by the resolver
+		// (resolvable.go) using EntityDataSource() with a plan-time
+		// SourceName fallback, so each subgraph that participates in
+		// federating an entity produces its own field_hash events with its
+		// own subgraph name. Empty when not resolvable — written verbatim
+		// so downstream telemetry can distinguish "unknown" from any
+		// specific subgraph.
+		//
+		// FieldPath is the schema-name chain from the enclosing entity down
+		// to (but not including) the leaf, e.g. ['address'] for
+		// User.address.street. Empty for direct entity scalars. Written
+		// through the writer's nil-normalizing fieldPathColumn helper.
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_FIELD_HASH, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
 			KeyHash:     ev.KeyHash,
 			FieldName:   ev.FieldName,
 			FieldHash:   ev.FieldHash,
+			FieldPath:   ev.FieldPath,
 			FetchSource: fetchSourceFromGoTools(ev.Source),
 		}))
 	}
