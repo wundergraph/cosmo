@@ -370,6 +370,88 @@
         ]
       }
     },
+    "Groups": [
+      {
+        "ID": "list-only-group",
+        "Subgraphs": [
+          "subgraph-a",
+          "subgraph-b"
+        ],
+        "Matching": "",
+        "NegateMatch": false,
+        "Request": [
+          {
+            "Operation": "propagate",
+            "Matching": "",
+            "NegateMatch": false,
+            "Named": "X-Group-List",
+            "Rename": "",
+            "Default": "",
+            "Name": "",
+            "Value": "",
+            "Expression": "",
+            "ValueFrom": null
+          }
+        ],
+        "Response": null
+      },
+      {
+        "ID": "regex-only-group",
+        "Subgraphs": null,
+        "Matching": "^.+-feature-.+$",
+        "NegateMatch": false,
+        "Request": [
+          {
+            "Operation": "propagate",
+            "Matching": "",
+            "NegateMatch": false,
+            "Named": "X-Group-Regex",
+            "Rename": "",
+            "Default": "",
+            "Name": "",
+            "Value": "",
+            "Expression": "",
+            "ValueFrom": null
+          }
+        ],
+        "Response": [
+          {
+            "Operation": "propagate",
+            "Matching": "",
+            "NegateMatch": false,
+            "Named": "X-Group-Trace",
+            "Rename": "",
+            "Default": "",
+            "Algorithm": "last_write",
+            "Name": "",
+            "Value": ""
+          }
+        ]
+      },
+      {
+        "ID": "hybrid-group",
+        "Subgraphs": [
+          "products"
+        ],
+        "Matching": "^products-feature-.+$",
+        "NegateMatch": false,
+        "Request": [
+          {
+            "Operation": "propagate",
+            "Matching": "",
+            "NegateMatch": false,
+            "Named": "X-Products-Auth",
+            "Rename": "",
+            "Default": "",
+            "Name": "",
+            "Value": "",
+            "Expression": "",
+            "ValueFrom": null
+          }
+        ],
+        "Response": null
+      }
+    ],
     "CookieWhitelist": [
       "cookie1",
       "cookie2"

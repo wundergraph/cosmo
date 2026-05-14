@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"net/http"
 	"sync"
 	"testing"
@@ -383,4 +384,91 @@ func TestNewHeaderPropagation(t *testing.T) {
 		assert.False(t, hp.HasRequestRules())
 		assert.False(t, hp.HasResponseRules())
 	})
+}
+
+// TestApplyResponseHeaderRules_Groups verifies that subgraph header groups
+// also drive response-side propagation. A subgraph matched by a group's
+// selector (list, regex, or hybrid) must have its response headers
+// propagated to the client, while an unrelated subgraph is unaffected.
+func TestApplyResponseHeaderRules_Groups(t *testing.T) {
+	t.Parallel()
+
+	hp, err := NewHeaderPropagation(&config.HeaderRules{
+		Groups: []*config.SubgraphHeaderGroup{
+			{
+				ID:        "list-only",
+				Subgraphs: []string{"orders"},
+				Response: []*config.ResponseHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "X-Order-Trace",
+						Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+					},
+				},
+			},
+			{
+				ID:       "regex-only",
+				Matching: "^.+-feature-.+$",
+				Response: []*config.ResponseHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "X-Feature-Trace",
+						Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	cases := []struct {
+		name       string
+		subgraph   string
+		respHdr    string
+		respValue  string
+		expectKey  string
+		expectVal  string // empty means: header must NOT be set
+	}{
+		{
+			name:      "list match propagates to client",
+			subgraph:  "orders",
+			respHdr:   "X-Order-Trace",
+			respValue: "abc-123",
+			expectKey: "X-Order-Trace",
+			expectVal: "abc-123",
+		},
+		{
+			name:      "regex match propagates to client",
+			subgraph:  "products-feature-pr-7",
+			respHdr:   "X-Feature-Trace",
+			respValue: "feat-xyz",
+			expectKey: "X-Feature-Trace",
+			expectVal: "feat-xyz",
+		},
+		{
+			name:      "non-matching subgraph does not propagate",
+			subgraph:  "inventory",
+			respHdr:   "X-Order-Trace",
+			respValue: "should-not-propagate",
+			expectKey: "X-Order-Trace",
+			expectVal: "",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			prop := &responseHeaderPropagation{
+				header: make(http.Header),
+				m:      &sync.Mutex{},
+			}
+			ctx := context.WithValue(context.Background(), responseHeaderPropagationKey{}, prop)
+			subResp := http.Header{}
+			subResp.Set(tc.respHdr, tc.respValue)
+
+			hp.ApplyResponseHeaderRules(ctx, subResp, tc.subgraph, 200, nil)
+			assert.Equal(t, tc.expectVal, prop.header.Get(tc.expectKey))
+		})
+	}
 }

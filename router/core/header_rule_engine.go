@@ -155,6 +155,21 @@ type HeaderPropagation struct {
 	// Precomputed request rule presence for fast-path checks
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
+	// groupRegex holds the compiled regex for each group's `matching` selector.
+	// The slice is index-aligned with rules.Groups; entries for groups that have
+	// no `matching` selector are nil. Compiled once at startup.
+	groupRegex []*regexp.Regexp
+	// subgraphToGroupIdx maps an explicit `subgraphs:` entry to the indices of the
+	// groups that list it. Lets us look up group membership in O(1) at request
+	// time instead of scanning every group's list.
+	subgraphToGroupIdx map[string][]int
+	// hasAnyGroupRequestRules is true when at least one group defines request
+	// rules. Used as a fast-path so subgraphs with no `all`/exact rules can still
+	// skip group evaluation entirely when no groups are configured.
+	hasAnyGroupRequestRules bool
+	// hasAnyGroupRegex is true when at least one group has a `matching` selector,
+	// so we know whether the group matching loop needs to evaluate regexes at all.
+	hasAnyGroupRegex bool
 }
 
 func initHeaderRules(rules *config.HeaderRules) {
@@ -177,6 +192,14 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 		regex:                       map[string]*regexp.Regexp{},
 		compiledRules:               map[string]*vm.Program{},
 		compiledRouterResponseRules: map[string]*vm.Program{},
+	}
+
+	// Validate groups, compile their selector regexes, and build the
+	// subgraph-name -> group-index inverse index. Doing this up-front means
+	// per-request group evaluation is an O(1) map lookup plus an O(g) regex
+	// scan over only those groups that actually use `matching`.
+	if err := hf.indexGroups(); err != nil {
+		return nil, err
 	}
 
 	rhrs, rhrrs, rrs := hf.getAllRules()
@@ -204,6 +227,69 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 	}
 
 	return &hf, nil
+}
+
+// indexGroups validates each subgraph header group and populates the lookup
+// structures used during request handling. Validation rules:
+//   - `id` is required and must be unique across groups
+//   - at least one of `subgraphs` / `matching` must be set (a group with no
+//     selector would never apply, which is almost always a misconfiguration)
+//   - at least one of `request` / `response` must be set (an empty group has
+//     no effect)
+//   - `matching`, when present, must compile as a Go regular expression
+//
+// Validation runs at router init so misconfiguration fails startup rather than
+// silently producing wrong header sets at request time.
+func (h *HeaderPropagation) indexGroups() error {
+	if len(h.rules.Groups) == 0 {
+		return nil
+	}
+
+	h.groupRegex = make([]*regexp.Regexp, len(h.rules.Groups))
+	h.subgraphToGroupIdx = make(map[string][]int)
+	seenID := make(map[string]struct{}, len(h.rules.Groups))
+
+	for i, g := range h.rules.Groups {
+		if g == nil {
+			return fmt.Errorf("headers.groups[%d] is nil", i)
+		}
+		if g.ID == "" {
+			return fmt.Errorf("headers.groups[%d] is missing required field 'id'", i)
+		}
+		if _, dup := seenID[g.ID]; dup {
+			return fmt.Errorf("duplicate headers.groups id %q", g.ID)
+		}
+		seenID[g.ID] = struct{}{}
+
+		if len(g.Subgraphs) == 0 && g.Matching == "" {
+			return fmt.Errorf("headers.groups[%q] must specify at least one of 'subgraphs' or 'matching'", g.ID)
+		}
+		if len(g.Request) == 0 && len(g.Response) == 0 {
+			return fmt.Errorf("headers.groups[%q] must specify at least one of 'request' or 'response' rules", g.ID)
+		}
+
+		if g.Matching != "" {
+			re, err := regexp.Compile(g.Matching)
+			if err != nil {
+				return fmt.Errorf("invalid regex %q in headers.groups[%q]: %w", g.Matching, g.ID, err)
+			}
+			h.groupRegex[i] = re
+			h.hasAnyGroupRegex = true
+		}
+
+		for _, name := range g.Subgraphs {
+			if name == "" {
+				return fmt.Errorf("headers.groups[%q] contains an empty subgraph name", g.ID)
+			}
+			h.subgraphToGroupIdx[name] = append(h.subgraphToGroupIdx[name], i)
+		}
+
+		if len(g.Request) > 0 {
+			h.hasAnyGroupRequestRules = true
+		}
+	}
+
+	return nil
 }
 
 func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config.CacheControlPolicy) *config.HeaderRules {
@@ -246,10 +332,22 @@ func (h *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*confi
 	for _, subgraph := range h.rules.Subgraphs {
 		rhrs = append(rhrs, subgraph.Request...)
 	}
+	for _, group := range h.rules.Groups {
+		if group == nil {
+			continue
+		}
+		rhrs = append(rhrs, group.Request...)
+	}
 
 	rhrrs := h.rules.All.Response
 	for _, subgraph := range h.rules.Subgraphs {
 		rhrrs = append(rhrrs, subgraph.Response...)
+	}
+	for _, group := range h.rules.Groups {
+		if group == nil {
+			continue
+		}
+		rhrrs = append(rhrrs, group.Response...)
 	}
 
 	return rhrs, rhrrs, h.rules.Router.Response
@@ -355,6 +453,18 @@ func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, c
 		h.applyRequestRuleToHeader(ctx, outHeader, rule)
 	}
 
+	// Apply group rules. Groups are evaluated in config order, applying any group
+	// whose selector (explicit list or regex) matches the subgraph. Groups run
+	// after `all` and before exact-name rules so an explicit per-subgraph rule
+	// can still override a group rule (e.g. via op: set).
+	if subgraphName != "" {
+		h.forEachMatchingGroup(subgraphName, func(g *config.SubgraphHeaderGroup) {
+			for _, rule := range g.Request {
+				h.applyRequestRuleToHeader(ctx, outHeader, rule)
+			}
+		})
+	}
+
 	// Apply subgraph-specific rules
 	if subgraphName != "" {
 		if subRules, ok := h.rules.Subgraphs[subgraphName]; ok {
@@ -368,8 +478,68 @@ func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, c
 	return outHeader, headerHash
 }
 
+// forEachMatchingGroup invokes fn for every group whose selector matches the
+// given subgraph name, in config order. A group matches if either its explicit
+// `Subgraphs` list contains the name OR its `Matching` regex matches the name
+// (the regex result is inverted when NegateMatch is true). The two halves of
+// the selector are OR-combined; explicit list membership is always positive
+// regardless of NegateMatch.
+//
+// The function deduplicates groups: a group that lists the subgraph and also
+// matches via its regex still fires only once.
+func (h *HeaderPropagation) forEachMatchingGroup(subgraphName string, fn func(*config.SubgraphHeaderGroup)) {
+	if h == nil || len(h.rules.Groups) == 0 {
+		return
+	}
+
+	// Track already-applied group indices to avoid double-applying when both
+	// list and regex match. Most configs will have small group counts, so a
+	// fixed-size bitset on the stack via a slice of bools is fine here.
+	applied := make([]bool, len(h.rules.Groups))
+
+	// First, apply groups that include the subgraph in their explicit list. The
+	// inverse index lets us do this in O(1) per match instead of scanning every
+	// group.
+	if idxs, ok := h.subgraphToGroupIdx[subgraphName]; ok {
+		for _, i := range idxs {
+			if applied[i] {
+				continue
+			}
+			applied[i] = true
+		}
+	}
+
+	// Then walk groups in config order and apply: list-matched groups (already
+	// flagged above) and regex-matched groups (evaluated lazily here). This walk
+	// preserves config order so users can reason about precedence between
+	// multiple matching groups.
+	for i, g := range h.rules.Groups {
+		if g == nil {
+			continue
+		}
+		if !applied[i] {
+			// Try regex match if the group has one configured.
+			if h.hasAnyGroupRegex && h.groupRegex[i] != nil {
+				matched := h.groupRegex[i].MatchString(subgraphName)
+				if g.NegateMatch {
+					matched = !matched
+				}
+				if !matched {
+					continue
+				}
+				applied[i] = true
+			} else {
+				continue
+			}
+		}
+		fn(g)
+	}
+}
+
 // hasRequestRulesForSubgraph returns true if there are request header rules
-// that would apply to the given subgraph. The result is computed at creation time.
+// that would apply to the given subgraph. The result is computed at creation
+// time for `all` and exact-name rules, and computed on demand for groups
+// because group selectors depend on the runtime subgraph name.
 func (h *HeaderPropagation) hasRequestRulesForSubgraph(subgraphName string) bool {
 	if h == nil || h.rules == nil {
 		return false
@@ -382,7 +552,35 @@ func (h *HeaderPropagation) hasRequestRulesForSubgraph(subgraphName string) bool
 		// No subgraph specified and no global rules
 		return false
 	}
-	return h.subgraphHasRequestRules != nil && h.subgraphHasRequestRules[subgraphName]
+	if h.subgraphHasRequestRules != nil && h.subgraphHasRequestRules[subgraphName] {
+		return true
+	}
+	if h.hasAnyGroupRequestRules {
+		// Walk only as far as needed to find a match. The forEachMatchingGroup
+		// helper is overkill here because we only need a yes/no answer.
+		if idxs, ok := h.subgraphToGroupIdx[subgraphName]; ok {
+			for _, i := range idxs {
+				if g := h.rules.Groups[i]; g != nil && len(g.Request) > 0 {
+					return true
+				}
+			}
+		}
+		if h.hasAnyGroupRegex {
+			for i, g := range h.rules.Groups {
+				if g == nil || len(g.Request) == 0 || h.groupRegex[i] == nil {
+					continue
+				}
+				matched := h.groupRegex[i].MatchString(subgraphName)
+				if g.NegateMatch {
+					matched = !matched
+				}
+				if matched {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // hashHeaderStable computes a deterministic 64-bit hash over the provided header map.
@@ -436,6 +634,17 @@ func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, header
 
 	for _, rule := range h.rules.All.Response {
 		h.applyResponseRule(propagation, resp, rule)
+	}
+
+	// Apply group response rules in config order, after `all` and before exact
+	// subgraph rules so an explicit per-subgraph rule can still override a
+	// group rule.
+	if subgraphName != "" {
+		h.forEachMatchingGroup(subgraphName, func(g *config.SubgraphHeaderGroup) {
+			for _, rule := range g.Response {
+				h.applyResponseRule(propagation, resp, rule)
+			}
+		})
 	}
 
 	if subgraphName != "" {
@@ -866,7 +1075,14 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 	return &result, cacheControlHeader
 }
 
-// SubgraphRules returns the list of header rules for the subgraph with the given name
+// SubgraphRules returns the list of header rules for the subgraph with the given name.
+// Rules are returned in evaluation order: `all` first, then any matching groups (in
+// config order, list-or-regex match), then exact-name rules. Groups whose `matching`
+// regex fails to compile here are skipped silently — startup-time validation in
+// NewHeaderPropagation is the source of truth for failing the router on bad
+// configuration. The engine's pre-origin layer uses this helper to compute the static
+// set of "potentially propagated" header names; missing group rules here would
+// cause the engine to drop those names from its single-flight key.
 func SubgraphRules(rules *config.HeaderRules, subgraphName string) []*config.RequestHeaderRule {
 	if rules == nil {
 		return nil
@@ -874,6 +1090,45 @@ func SubgraphRules(rules *config.HeaderRules, subgraphName string) []*config.Req
 	var subgraphRules []*config.RequestHeaderRule
 	if rules.All != nil {
 		subgraphRules = append(subgraphRules, rules.All.Request...)
+	}
+	if subgraphName != "" && len(rules.Groups) > 0 {
+		applied := make([]bool, len(rules.Groups))
+		// First mark groups whose explicit `subgraphs` list contains the name.
+		for i, g := range rules.Groups {
+			if g == nil {
+				continue
+			}
+			for _, s := range g.Subgraphs {
+				if s == subgraphName {
+					applied[i] = true
+					break
+				}
+			}
+		}
+		// Then walk in config order, filling in regex matches and emitting rules.
+		for i, g := range rules.Groups {
+			if g == nil || len(g.Request) == 0 {
+				continue
+			}
+			if !applied[i] {
+				if g.Matching == "" {
+					continue
+				}
+				re, err := regexp.Compile(g.Matching)
+				if err != nil {
+					continue
+				}
+				matched := re.MatchString(subgraphName)
+				if g.NegateMatch {
+					matched = !matched
+				}
+				if !matched {
+					continue
+				}
+				applied[i] = true
+			}
+			subgraphRules = append(subgraphRules, g.Request...)
+		}
 	}
 	if rules.Subgraphs != nil {
 		if subgraphSpecificRules, ok := rules.Subgraphs[subgraphName]; ok {

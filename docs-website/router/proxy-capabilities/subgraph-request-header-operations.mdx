@@ -53,6 +53,14 @@ headers:
         - op: "propagate"
           named: "Subgraph-Secret"
           default: "some-secret"
+
+  groups: # Apply rules to a cohort of subgraphs (list, regex, or both)
+    - id: "products-cohort"
+      subgraphs: [products]
+      matching: "^products-feature-.+$"
+      request:
+        - op: "propagate"
+          named: "X-Products-Auth"
 ```
 
 ### What does the snippet do?
@@ -60,6 +68,33 @@ headers:
 With `all` we address all subgraph requests. Next, we can define several rules on the client's request. The operation `propagate` forwards all matching client request headers to the subgraphs. The operation `set` sets a new header which is forward to the subgraphs.
 
 The `subgraphs` section allows to propagate headers for specific subgraphs. The name must match with the subgraph name in the Studio.
+
+The `groups` section applies a bundle of rules to every subgraph that matches the group's selector. A group can list subgraphs explicitly (`subgraphs:`), match by regex (`matching:`), or both. This is useful for applying the same rules to a base subgraph and its feature variants without duplicating the same block under every entry.
+
+### Rule evaluation order
+
+For each subgraph the router builds a header set in this order:
+
+1. `headers.all` rules.
+2. `headers.groups` entries whose selector matches the subgraph (in config order).
+3. `headers.subgraphs.<name>` rules for the exact subgraph name.
+
+Exact-name rules apply last, so a `headers.subgraphs.products` rule can still override a broader group rule when both target the same header.
+
+### Subgraph header groups
+
+Each entry under `groups` accepts:
+
+* `id` — A unique identifier for the group. Required. Used in router error messages.
+* `subgraphs` — Explicit list of subgraph names this group applies to. Names are case-sensitive identifiers.
+* `matching` — A Go regular expression evaluated against the subgraph name.
+* `negate_match` — If `true`, the regex result is inverted. Subgraphs in the explicit `subgraphs` list are still included positively; `negate_match` only affects the regex.
+* `request` — Request rules to apply when the group matches.
+* `response` — Response rules to apply when the group matches.
+
+At least one of `subgraphs` or `matching` must be specified, and at least one of `request` or `response` must be specified. Invalid configurations fail router startup.
+
+A group with both `subgraphs` and `matching` matches a subgraph if it appears in either (the union — list-match OR regex-match). The group's rules apply at most once per subgraph regardless of how many parts of the selector match.
 
 ### Supported header rules
 

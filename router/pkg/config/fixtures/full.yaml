@@ -291,6 +291,30 @@ headers:
         - op: 'set'
           name: 'X-Subgraph-Key'
           value: 'some-subgraph-secret'
+  groups:
+    - id: list-only-group
+      subgraphs:
+        - subgraph-a
+        - subgraph-b
+      request:
+        - op: 'propagate'
+          named: 'X-Group-List'
+    - id: regex-only-group
+      matching: '^.+-feature-.+$'
+      request:
+        - op: 'propagate'
+          named: 'X-Group-Regex'
+      response:
+        - op: 'propagate'
+          algorithm: 'last_write'
+          named: 'X-Group-Trace'
+    - id: hybrid-group
+      subgraphs:
+        - products
+      matching: '^products-feature-.+$'
+      request:
+        - op: 'propagate'
+          named: 'X-Products-Auth'
   cookie_whitelist:
     - 'cookie1'
     - 'cookie2'

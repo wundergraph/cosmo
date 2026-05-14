@@ -64,6 +64,15 @@ headers:
         named: "X-User-Id"
         default: "456"             # Set the value when the header was not set
         algorithm: "last_write"
+
+  groups: # Apply rules to a cohort of subgraphs (list, regex, or both)
+    - id: "products-cohort"
+      subgraphs: [products]
+      matching: "^products-feature-.+$"
+      response:
+        - op: "propagate"
+          named: "X-Products-Trace"
+          algorithm: "last_write"
 ```
 
 ### What does the snippet do?
@@ -71,6 +80,8 @@ headers:
 With `all` we address all subgraph requests. Next, we can define several rules on the client's request. The operation `propagate` forwards all matching client request headers to the subgraphs. The operation `set` sets a new header which is forward to the subgraphs.
 
 The `subgraphs` section allows to propagate headers for specific subgraphs. The name must match with the subgraph name in the Studio.
+
+The `groups` section applies a bundle of rules to every subgraph that matches the group's selector. A group can list subgraphs explicitly (`subgraphs:`), match by regex (`matching:`), or both. Groups apply after `all` and before exact `subgraphs` rules, so an exact subgraph rule can still override a group rule. See [Subgraph Request Headers Operations](/router/proxy-capabilities/subgraph-request-header-operations#subgraph-header-groups) for the full set of group fields and validation rules.
 
 ### Supported header rules
 
