@@ -638,14 +638,22 @@ export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGr
         icon={<BookmarkIcon />}
         title="Dive right back in"
         description="Want to finish the onboarding and create your first federated graph?"
-        actions={<Link href={`/onboarding/${currentStep}`}>Continue</Link>}
+        actions={
+          <Button asChild>
+            <Link href={`/onboarding/${currentStep}`}>Continue</Link>
+          </Button>
+        }
       />
     ) : (
       <EmptyState
         icon={<BoltIcon />}
         title="Need help?"
         description="Take a quick 5-minute tour to help you set up your first federated graph"
-        actions={<Link href={`/onboarding/1`}>Start here</Link>}
+        actions={
+          <Button asChild>
+            <Link href={`/onboarding/1`}>Start here</Link>
+          </Button>
+        }
       />
     );
   }
