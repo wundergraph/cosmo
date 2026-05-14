@@ -46,7 +46,7 @@ import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
-import { createGraphiQLFetcher } from '@graphiql/toolkit';
+import { createGraphiQLFetcher, createLocalStorage, type Storage as GraphiQLStorage } from '@graphiql/toolkit';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 import { Component2Icon, ExclamationTriangleIcon, MobileIcon } from '@radix-ui/react-icons';
 import { TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
@@ -81,31 +81,19 @@ import { TbDevicesCheck } from 'react-icons/tb';
 import { useDebounce } from 'use-debounce';
 import { z } from 'zod';
 
-class CosmoGraphiqlStorage implements Storage {
-  constructor({
-    organizationSlug,
-    namespaceSlug,
-    slug,
-    storage,
-  }: {
-    organizationSlug: string;
-    namespaceSlug: string;
-    slug: string;
-    storage: Storage;
-  }) {
-    this.storagePrefix = `cosmo-playground:${organizationSlug}:${namespaceSlug}:${slug}`;
-    this.storage = storage;
+class CosmoGraphiqlStorage implements GraphiQLStorage {
+  constructor(graphId: string) {
+    this.storage = createLocalStorage({ namespace: `cosmo-playground:${graphId}` });
   }
 
-  private storagePrefix: string;
-  private storage: Storage;
+  private storage: GraphiQLStorage;
 
-  public setItem = (key: string, value: string) => this.storage.setItem(this.compositeKey(key), value);
+  public setItem = (key: string, value: string) => this.storage.setItem(key, value);
   public getItem = (key: string) => {
     // GraphiQL matches restored tabs by query, variables, and headers. When it restores headers from a
     // separate empty key, it adds a duplicate tab instead of selecting the matching persisted tab.
     if (key === 'graphiql:headers') {
-      const tabState = this.storage.getItem(this.compositeKey('graphiql:tabState'));
+      const tabState = this.storage.getItem('graphiql:tabState');
 
       if (tabState) {
         try {
@@ -121,16 +109,13 @@ class CosmoGraphiqlStorage implements Storage {
       }
     }
 
-    return this.storage.getItem(this.compositeKey(key));
+    return this.storage.getItem(key);
   };
-  public removeItem = (key: string) => this.storage.removeItem(this.compositeKey(key));
+  public removeItem = (key: string) => this.storage.removeItem(key);
   public clear = () => this.storage.clear();
   public get length() {
     return this.storage.length;
   }
-  public key = (index: number) => this.storage.key(index);
-
-  private compositeKey = (key: string) => `${this.storagePrefix}:${key}`;
 }
 
 const validateHeaders = (headers: Record<string, string>) => {
@@ -832,21 +817,9 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
   const [tempHeaders, setTempHeaders] = useState<any>();
 
-  const organizationSlug = router.query.organizationSlug as string;
-  const graphNamespace = graphContext?.graph?.namespace ?? 'unknown';
-  const graphName = graphContext?.graph?.name ?? 'unknown';
-  const playgroundStorageKey = `${organizationSlug}:${graphNamespace}:${graphName}`;
+  const graphId = graphContext?.graph?.id ?? 'unknown';
 
-  const graphiqlStorage = useMemo(
-    () =>
-      new CosmoGraphiqlStorage({
-        storage: localStorage,
-        organizationSlug,
-        namespaceSlug: graphNamespace,
-        slug: graphName,
-      }),
-    [graphName, graphNamespace, organizationSlug],
-  );
+  const graphiqlStorage = useMemo(() => new CosmoGraphiqlStorage(graphId), [graphId]);
 
   useEffect(() => {
     if (!storedHeaders || tempHeaders) {
@@ -1204,7 +1177,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
       >
         <div className="hidden h-full flex-1 pl-2.5 md:flex">
           <GraphiQL
-            key={playgroundStorageKey}
+            key={graphId}
             shouldPersistHeaders
             showPersistHeadersSettings={false}
             fetcher={fetcher}
