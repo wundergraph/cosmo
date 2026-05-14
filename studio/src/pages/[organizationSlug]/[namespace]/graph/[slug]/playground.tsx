@@ -101,7 +101,28 @@ class CosmoGraphiqlStorage implements Storage {
   private storage: Storage;
 
   public setItem = (key: string, value: string) => this.storage.setItem(this.compositeKey(key), value);
-  public getItem = (key: string) => this.storage.getItem(this.compositeKey(key));
+  public getItem = (key: string) => {
+    // GraphiQL matches restored tabs by query, variables, and headers. When it restores headers from a
+    // separate empty key, it adds a duplicate tab instead of selecting the matching persisted tab.
+    if (key === 'graphiql:headers') {
+      const tabState = this.storage.getItem(this.compositeKey('graphiql:tabState'));
+
+      if (tabState) {
+        try {
+          const parsed = JSON.parse(tabState);
+          const activeTab = parsed?.tabs?.[parsed.activeTabIndex];
+
+          if (activeTab?.headers) {
+            return activeTab.headers;
+          }
+        } catch {
+          // Fall back to stored headers.
+        }
+      }
+    }
+
+    return this.storage.getItem(this.compositeKey(key));
+  };
   public removeItem = (key: string) => this.storage.removeItem(this.compositeKey(key));
   public clear = () => this.storage.clear();
   public get length() {
@@ -812,16 +833,19 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [tempHeaders, setTempHeaders] = useState<any>();
 
   const organizationSlug = router.query.organizationSlug as string;
+  const graphNamespace = graphContext?.graph?.namespace ?? 'unknown';
+  const graphName = graphContext?.graph?.name ?? 'unknown';
+  const playgroundStorageKey = `${organizationSlug}:${graphNamespace}:${graphName}`;
 
   const graphiqlStorage = useMemo(
     () =>
       new CosmoGraphiqlStorage({
         storage: localStorage,
         organizationSlug,
-        namespaceSlug: graphContext?.graph?.namespace ?? 'unknown',
-        slug: graphContext?.graph?.name ?? 'unknown',
+        namespaceSlug: graphNamespace,
+        slug: graphName,
       }),
-    [graphContext?.graph, organizationSlug],
+    [graphName, graphNamespace, organizationSlug],
   );
 
   useEffect(() => {
@@ -1180,11 +1204,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
       >
         <div className="hidden h-full flex-1 pl-2.5 md:flex">
           <GraphiQL
+            key={playgroundStorageKey}
             shouldPersistHeaders
             showPersistHeadersSettings={false}
             fetcher={fetcher}
-            query={query}
-            variables={updatedVariables}
+            query={operation ? query : undefined}
+            variables={variables ? updatedVariables : undefined}
             onEditQuery={setQuery}
             headers={headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? undefined : headers}
             defaultHeaders={PLAYGROUND_DEFAULT_HEADERS_TEMPLATE}
