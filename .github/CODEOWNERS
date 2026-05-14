@@ -19,7 +19,7 @@
 /infrastructure/    @wundergraph/Platform
 /keycloak/          @wundergraph/Cosmo
 /otelcollector/     @wundergraph/Platform
-/playground/        @wundergraph/Router
+/playground/        @wundergraph/Cosmo
 /protographic/      @wundergraph/Router
 # Same owner for router and tests to avoid requesting too many reviewers
 /router/            @wundergraph/Router
