@@ -9,6 +9,7 @@ on:
     paths-ignore:
       - 'docs*/**'
       - '*.md'
+      - '.github/CODEOWNERS'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
