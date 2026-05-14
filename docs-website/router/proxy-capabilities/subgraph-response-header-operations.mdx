@@ -64,6 +64,13 @@ headers:
         named: "X-User-Id"
         default: "456"             # Set the value when the header was not set
         algorithm: "last_write"
+
+  subgraph_patterns: # Apply rules to every subgraph whose name matches the regex
+    - matching: "^products(-feature-.+)?$"
+      response:
+        - op: "propagate"
+          named: "X-Products-Trace"
+          algorithm: "last_write"
 ```
 
 ### What does the snippet do?
@@ -71,6 +78,8 @@ headers:
 With `all` we address all subgraph requests. Next, we can define several rules on the client's request. The operation `propagate` forwards all matching client request headers to the subgraphs. The operation `set` sets a new header which is forward to the subgraphs.
 
 The `subgraphs` section allows to propagate headers for specific subgraphs. The name must match with the subgraph name in the Studio.
+
+The `subgraph_patterns` section applies rules to every subgraph whose name matches the regular expression in `matching`. This is useful for targeting a base subgraph and its feature subgraphs without duplicating the same block under every variant. Patterns are evaluated after `all` and before exact `subgraphs` rules, so an exact subgraph rule can still override a pattern rule.
 
 ### Supported header rules
 

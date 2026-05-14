@@ -443,3 +443,235 @@ func TestSubgraphHeadersBuilder_ConcurrentAccessSameSubgraph(t *testing.T) {
 		}
 	}
 }
+
+// TestBuildRequestHeaderForSubgraph_PatternRules exercises the subgraph_patterns
+// selector. Patterns let users target a base subgraph and its feature subgraphs
+// (e.g. PR-preview deployments named like "products-feature-pr-123") without
+// duplicating the same per-subgraph block for every variant.
+func TestBuildRequestHeaderForSubgraph_PatternRules(t *testing.T) {
+	t.Run("regex selector matches base and feature subgraphs", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			SubgraphPatterns: []*config.SubgraphPatternHeaderRule{
+				{
+					Matching: "^products(-feature-.+)?$",
+					Request: []*config.RequestHeaderRule{
+						{Operation: "propagate", Named: "X-Products-Auth"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		clientReq := httptest.NewRequest("POST", "http://localhost", nil)
+		clientReq.Header.Set("X-Products-Auth", "secret")
+
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   httptest.NewRecorder(),
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		base, _ := ht.BuildRequestHeaderForSubgraph("products", ctx)
+		require.NotNil(t, base)
+		assert.Equal(t, "secret", base.Get("X-Products-Auth"))
+
+		feat, _ := ht.BuildRequestHeaderForSubgraph("products-feature-pr-123", ctx)
+		require.NotNil(t, feat)
+		assert.Equal(t, "secret", feat.Get("X-Products-Auth"))
+
+		// Unrelated subgraph should not pick up the rule.
+		other, otherHash := ht.BuildRequestHeaderForSubgraph("inventory", ctx)
+		assert.Nil(t, other)
+		assert.Equal(t, uint64(0), otherHash)
+	})
+
+	t.Run("pattern with negate_match applies to non-matching names", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			SubgraphPatterns: []*config.SubgraphPatternHeaderRule{
+				{
+					Matching:    "^internal-.+$",
+					NegateMatch: true,
+					Request: []*config.RequestHeaderRule{
+						{Operation: "propagate", Named: "X-Public"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		clientReq := httptest.NewRequest("POST", "http://localhost", nil)
+		clientReq.Header.Set("X-Public", "yes")
+
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   httptest.NewRecorder(),
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		external, _ := ht.BuildRequestHeaderForSubgraph("products", ctx)
+		require.NotNil(t, external)
+		assert.Equal(t, "yes", external.Get("X-Public"))
+
+		internal, hash := ht.BuildRequestHeaderForSubgraph("internal-billing", ctx)
+		assert.Nil(t, internal)
+		assert.Equal(t, uint64(0), hash)
+	})
+
+	t.Run("invalid pattern regex fails NewHeaderPropagation", func(t *testing.T) {
+		_, err := NewHeaderPropagation(&config.HeaderRules{
+			SubgraphPatterns: []*config.SubgraphPatternHeaderRule{
+				{Matching: "[invalid"},
+			},
+		})
+		require.Error(t, err)
+	})
+
+	t.Run("missing matching value fails NewHeaderPropagation", func(t *testing.T) {
+		_, err := NewHeaderPropagation(&config.HeaderRules{
+			SubgraphPatterns: []*config.SubgraphPatternHeaderRule{
+				{
+					Request: []*config.RequestHeaderRule{
+						{Operation: "propagate", Named: "X-A"},
+					},
+				},
+			},
+		})
+		require.Error(t, err)
+	})
+
+	t.Run("rule order: all -> patterns -> exact", func(t *testing.T) {
+		// Each layer sets the same header to a different value. The exact rule must
+		// win because exact subgraph rules are applied last and `set` overwrites.
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{Operation: "set", Name: "X-Layer", Value: "all"},
+				},
+			},
+			SubgraphPatterns: []*config.SubgraphPatternHeaderRule{
+				{
+					Matching: "^products.*$",
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Layer", Value: "pattern"},
+					},
+				},
+			},
+			Subgraphs: map[string]*config.GlobalHeaderRule{
+				"products": {
+					Request: []*config.RequestHeaderRule{
+						{Operation: "set", Name: "X-Layer", Value: "exact"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		clientReq := httptest.NewRequest("POST", "http://localhost", nil)
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   httptest.NewRecorder(),
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		// Exact match: all three layers run; exact wins.
+		exact, _ := ht.BuildRequestHeaderForSubgraph("products", ctx)
+		require.NotNil(t, exact)
+		assert.Equal(t, "exact", exact.Get("X-Layer"))
+
+		// Feature subgraph matches the pattern but has no exact entry; pattern wins.
+		feat, _ := ht.BuildRequestHeaderForSubgraph("products-feature-pr-123", ctx)
+		require.NotNil(t, feat)
+		assert.Equal(t, "pattern", feat.Get("X-Layer"))
+
+		// Unrelated subgraph: only `all` runs.
+		other, _ := ht.BuildRequestHeaderForSubgraph("inventory", ctx)
+		require.NotNil(t, other)
+		assert.Equal(t, "all", other.Get("X-Layer"))
+	})
+
+	t.Run("pattern alone causes hasRequestRulesForSubgraph to be true for matched names", func(t *testing.T) {
+		// Without `all` rules and without exact entries, a pattern match alone
+		// must be enough for the builder to produce a header set.
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			SubgraphPatterns: []*config.SubgraphPatternHeaderRule{
+				{
+					Matching: "^matches-me-.+$",
+					Request: []*config.RequestHeaderRule{
+						{Operation: "propagate", Named: "X-Pattern"},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		clientReq := httptest.NewRequest("POST", "http://localhost", nil)
+		clientReq.Header.Set("X-Pattern", "v")
+
+		ctx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   httptest.NewRecorder(),
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		}
+
+		matched, hashMatched := ht.BuildRequestHeaderForSubgraph("matches-me-1", ctx)
+		require.NotNil(t, matched)
+		require.NotZero(t, hashMatched)
+		assert.Equal(t, "v", matched.Get("X-Pattern"))
+
+		unmatched, hashUnmatched := ht.BuildRequestHeaderForSubgraph("nope", ctx)
+		assert.Nil(t, unmatched)
+		assert.Equal(t, uint64(0), hashUnmatched)
+	})
+}
+
+// TestSubgraphRules_PatternsIncluded confirms the helper used by the engine
+// to compute the static set of "potentially propagated" header names also
+// surfaces rules contributed by subgraph_patterns. Without this, the engine's
+// single-flight key would not include pattern-propagated headers.
+func TestSubgraphRules_PatternsIncluded(t *testing.T) {
+	rules := &config.HeaderRules{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
+				{Operation: "propagate", Named: "X-All"},
+			},
+		},
+		SubgraphPatterns: []*config.SubgraphPatternHeaderRule{
+			{
+				Matching: "^products(-feature-.+)?$",
+				Request: []*config.RequestHeaderRule{
+					{Operation: "propagate", Named: "X-Pattern"},
+				},
+			},
+		},
+		Subgraphs: map[string]*config.GlobalHeaderRule{
+			"products": {
+				Request: []*config.RequestHeaderRule{
+					{Operation: "propagate", Named: "X-Exact"},
+				},
+			},
+		},
+	}
+
+	got := SubgraphRules(rules, "products")
+	require.Len(t, got, 3)
+	assert.Equal(t, "X-All", got[0].Named)
+	assert.Equal(t, "X-Pattern", got[1].Named)
+	assert.Equal(t, "X-Exact", got[2].Named)
+
+	gotFeature := SubgraphRules(rules, "products-feature-pr-123")
+	require.Len(t, gotFeature, 2)
+	assert.Equal(t, "X-All", gotFeature[0].Named)
+	assert.Equal(t, "X-Pattern", gotFeature[1].Named)
+
+	gotOther := SubgraphRules(rules, "inventory")
+	require.Len(t, gotOther, 1)
+	assert.Equal(t, "X-All", gotOther[0].Named)
+}

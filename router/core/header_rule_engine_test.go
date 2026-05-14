@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"net/http"
 	"sync"
 	"testing"
@@ -383,4 +384,51 @@ func TestNewHeaderPropagation(t *testing.T) {
 		assert.False(t, hp.HasRequestRules())
 		assert.False(t, hp.HasResponseRules())
 	})
+}
+
+// TestApplyResponseHeaderRules_PatternRules verifies that subgraph_patterns
+// also drive response-side header propagation. A feature subgraph whose name
+// matches the configured selector must have its response headers propagated
+// to the client just as the matching base subgraph would.
+func TestApplyResponseHeaderRules_PatternRules(t *testing.T) {
+	t.Parallel()
+
+	hp, err := NewHeaderPropagation(&config.HeaderRules{
+		SubgraphPatterns: []*config.SubgraphPatternHeaderRule{
+			{
+				Matching: "^products(-feature-.+)?$",
+				Response: []*config.ResponseHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "X-Products-Trace",
+						Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	prop := &responseHeaderPropagation{
+		header: make(http.Header),
+		m:      &sync.Mutex{},
+	}
+	ctx := context.WithValue(context.Background(), responseHeaderPropagationKey{}, prop)
+
+	subgraphResp := http.Header{}
+	subgraphResp.Set("X-Products-Trace", "abc-123")
+
+	hp.ApplyResponseHeaderRules(ctx, subgraphResp, "products-feature-pr-7", 200, nil)
+	assert.Equal(t, "abc-123", prop.header.Get("X-Products-Trace"))
+
+	// Ensure unrelated subgraphs are not affected.
+	prop2 := &responseHeaderPropagation{
+		header: make(http.Header),
+		m:      &sync.Mutex{},
+	}
+	ctx2 := context.WithValue(context.Background(), responseHeaderPropagationKey{}, prop2)
+	otherResp := http.Header{}
+	otherResp.Set("X-Products-Trace", "should-not-propagate")
+	hp.ApplyResponseHeaderRules(ctx2, otherResp, "inventory", 200, nil)
+	assert.Equal(t, "", prop2.header.Get("X-Products-Trace"))
 }

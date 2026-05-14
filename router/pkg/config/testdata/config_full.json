@@ -370,6 +370,7 @@
         ]
       }
     },
+    "SubgraphPatterns": null,
     "CookieWhitelist": [
       "cookie1",
       "cookie2"
