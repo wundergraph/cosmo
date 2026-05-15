@@ -5,7 +5,7 @@ ARG TARGETARCH
 WORKDIR /app
 
 # Ensure we have pnpm available to us
-RUN npm install --global pnpm@9
+RUN npm install --global pnpm@11.1.2
 
 # Files required by pnpm install.
 COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
