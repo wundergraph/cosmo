@@ -8,9 +8,10 @@ import {
 } from '@/components/playground/types';
 import { useToast } from '@/components/ui/use-toast';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { PLAYGROUND_STATE_QUERY_PARAM } from '@/lib/constants';
 import { extractStateFromUrl } from '@/lib/playground-url-state-decoding';
 import { useRouter } from 'next/router';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 
 type ScriptData = {
   id?: string;
@@ -59,10 +60,17 @@ export const useHydratePlaygroundStateFromUrl = (
   const [, setPostOpSelected] = useLocalStorage<ScriptData | null>('playground:post-operation:selected', null);
 
   const [pendingHydrationState, setPendingHydrationState] = useState<PlaygroundUrlState | null>(null);
+  const hasProcessedUrlState = useRef(false);
 
   // On mount: extract and clear URL state
   useEffect(() => {
-    const { playgroundUrlState, ...query } = router.query;
+    if (!router.isReady || hasProcessedUrlState.current) {
+      return;
+    }
+
+    hasProcessedUrlState.current = true;
+
+    const { [PLAYGROUND_STATE_QUERY_PARAM]: playgroundUrlState, ...query } = router.query;
     try {
       if (playgroundUrlState && typeof playgroundUrlState === 'string') {
         const state = extractStateFromUrl();
@@ -87,13 +95,16 @@ export const useHydratePlaygroundStateFromUrl = (
       });
       setIsHydrated(true);
     } finally {
+      if (!playgroundUrlState) {
+        return;
+      }
+
       // Clear the URL param immediately
       router.replace({ pathname: router.pathname, query }, undefined, {
         shallow: true,
       });
     }
-    // eslint-disable-next-line
-  }, []);
+  }, [router, setIsHydrated, toast]);
 
   const setOperationScripts = (
     preOperation: PreOperationUrlState,

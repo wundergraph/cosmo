@@ -854,6 +854,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
 
   const [isHydrated, setIsHydrated] = useState(false);
+  const shouldPassEditorStateProps = !!operation || !isHydrated;
   useHydratePlaygroundStateFromUrl(
     tabsState,
     setQuery,
@@ -1181,8 +1182,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
             shouldPersistHeaders
             showPersistHeadersSettings={false}
             fetcher={fetcher}
-            query={operation ? query : undefined}
-            variables={variables ? updatedVariables : undefined}
+            query={shouldPassEditorStateProps ? query : undefined}
+            variables={shouldPassEditorStateProps || variables ? updatedVariables : undefined}
             onEditQuery={setQuery}
             headers={headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? undefined : headers}
             defaultHeaders={PLAYGROUND_DEFAULT_HEADERS_TEMPLATE}
