@@ -381,6 +381,8 @@ services:
     image: registry:2
     ports:
       - '127.0.0.1:5050:5000'
+    volumes:
+      - plugin-registry:/var/lib/registry
     networks:
       - primary
     profiles:
@@ -431,3 +433,4 @@ volumes:
   redis-cluster-node-1:
   redis-cluster-node-2:
   redis-cluster-node-3:
+  plugin-registry:
