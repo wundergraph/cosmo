@@ -1,5 +1,6 @@
 import { OrganizationRole } from '../../db/models.js';
 import { OrganizationGroupDTO } from '../../types/index.js';
+import { traced } from '../tracing.js';
 
 interface RuleData {
   namespaces: string[];
@@ -21,6 +22,7 @@ interface Target {
   creatorUserId?: string;
 }
 
+@traced
 export class RBACEvaluator {
   readonly isApiKey: boolean;
   /**

@@ -130,11 +130,13 @@ func (m *spyRouterMetrics) MetricStore() metric.Store {
 
 type spyMetricStore struct {
 	metric.NoopMetrics
-	requestErrorCalled bool
+	requestErrorCalled    bool
+	requestErrorSliceAttr []attribute.KeyValue
 }
 
-func (m *spyMetricStore) MeasureRequestError(_ context.Context, _ []attribute.KeyValue, _ otelmetric.AddOption) {
+func (m *spyMetricStore) MeasureRequestError(_ context.Context, sliceAttr []attribute.KeyValue, _ otelmetric.AddOption) {
 	m.requestErrorCalled = true
+	m.requestErrorSliceAttr = append(m.requestErrorSliceAttr, sliceAttr...)
 }
 
 func newTestRequestContext(t *testing.T) *requestContext {

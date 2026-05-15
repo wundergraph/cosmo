@@ -1,3 +1,4 @@
+import { traced } from '../tracing.js';
 import type { BlobObject, BlobStorage } from './index.js';
 
 /**
@@ -6,6 +7,7 @@ import type { BlobObject, BlobStorage } from './index.js';
  * - Writes and deletes go to both stores concurrently; both must succeed.
  * - Reads try the primary first, falling back to the secondary on failure.
  */
+@traced
 export class DualBlobStorage implements BlobStorage {
   constructor(
     private primary: BlobStorage,

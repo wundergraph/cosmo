@@ -38,6 +38,7 @@ export function whoAmI(
         code: EnumStatusCode.OK,
       },
       organizationId: organization.id,
+      userEmail: authContext.userDisplayName,
       organizationName: organization.name,
       organizationSlug: organization.slug,
     };

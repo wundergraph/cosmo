@@ -6,6 +6,7 @@ import {
 import { DateRange } from '../../../types/index.js';
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import { flipDateRangeValuesIfNeeded } from '../../util.js';
+import { traced } from '../../tracing.js';
 import {
   BaseFilters,
   buildAnalyticsViewFilters,
@@ -53,6 +54,7 @@ interface LatencySeries {
   p99?: number;
 }
 
+@traced
 export class MetricsRepository {
   constructor(private client: ClickHouseClient) {}
 

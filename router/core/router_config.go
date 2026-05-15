@@ -126,6 +126,7 @@ type Config struct {
 	telemetryAttributes           []config.CustomAttribute
 	tracePropagators              []propagation.TextMapPropagator
 	compositePropagator           propagation.TextMapPropagator
+	spanNameFormatter             SpanNameFormatterFunc
 	// Poller
 	configPoller                 configpoller.ConfigPoller
 	selfRegister                 selfregister.SelfRegister
@@ -141,6 +142,7 @@ type Config struct {
 	rateLimit                     *config.RateLimitConfiguration
 	webSocketConfiguration        *config.WebSocketConfiguration
 	subgraphErrorPropagation      config.SubgraphErrorPropagationConfiguration
+	subgraphExtensionPropagation  config.SubgraphExtensionPropagationConfiguration
 	clientHeader                  config.ClientHeader
 	cacheWarmup                   *config.CacheWarmupConfiguration
 	planningDurationOverride      func(content string) time.Duration
@@ -272,6 +274,7 @@ func (c *Config) Usage() map[string]any {
 
 	usage["engine_execution_configuration_enable_single_flight"] = c.engineExecutionConfiguration.EnableSingleFlight
 	usage["engine_execution_configuration_enable_request_tracing"] = c.engineExecutionConfiguration.EnableRequestTracing
+	usage["engine_execution_configuration_force_unauthenticated_request_tracing"] = c.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing
 	usage["engine_execution_configuration_enable_net_poll"] = c.engineExecutionConfiguration.EnableNetPoll
 	usage["engine_execution_configuration_execution_plan_cache_size"] = c.engineExecutionConfiguration.ExecutionPlanCacheSize
 	usage["engine_execution_configuration_minify_subgraph_operations"] = c.engineExecutionConfiguration.MinifySubgraphOperations

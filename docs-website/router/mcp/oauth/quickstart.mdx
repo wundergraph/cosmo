@@ -1,0 +1,137 @@
+---
+title: 'OAuth Quickstart'
+description: 'Add OAuth 2.1 authorization to your MCP server in minutes. Step-by-step setup with JWKS configuration and verification.'
+icon: 'rocket'
+---
+
+This tutorial walks you through adding OAuth 2.1 authorization to an existing MCP server. By the end, your MCP server will require valid JWT tokens for all requests.
+
+## Prerequisites
+
+- A working MCP server (see [MCP Quickstart](/router/mcp/quickstart))
+- An OAuth 2.0 / OpenID Connect provider (Keycloak, Auth0, Okta, or similar) with a JWKS endpoint
+
+## Step 1: Configure OAuth
+
+Add the `oauth` section to your existing MCP configuration in `config.yaml`:
+
+```yaml
+mcp:
+  enabled: true
+  server:
+    listen_addr: '0.0.0.0:5025'
+    base_url: 'https://mcp.example.com' # Required when OAuth is enabled
+  oauth:
+    enabled: true
+    authorization_server_url: 'https://auth.example.com'
+    jwks:
+      - url: 'https://auth.example.com/.well-known/jwks.json'
+        refresh_interval: '1m'
+  storage:
+    provider_id: 'mcp'
+
+storage_providers:
+  file_system:
+    - id: 'mcp'
+      path: 'operations'
+```
+
+<Info>
+  `server.base_url` is required when OAuth is enabled. It is used for the RFC 9728 metadata endpoint and
+  `resource_metadata` in `WWW-Authenticate` headers. Set this to your externally-reachable URL.
+</Info>
+
+## Step 2: Add Scope Requirements
+
+Define which scopes are required at each level:
+
+```yaml
+oauth:
+  enabled: true
+  authorization_server_url: 'https://auth.example.com'
+  scopes:
+    initialize:
+      - 'mcp:connect' # Required for all MCP requests
+    tools_list:
+      - 'mcp:tools:read' # Required to list available tools
+    tools_call:
+      - 'mcp:tools:execute' # Required to execute any tool
+  jwks:
+    - url: 'https://auth.example.com/.well-known/jwks.json'
+      refresh_interval: '1m'
+```
+
+See [Scope Enforcement](/router/mcp/oauth/scopes) for a full explanation of how scopes work at each level.
+
+## Step 3: Restart and Verify
+
+Restart your router. You should see the MCP server start with OAuth enabled in the logs.
+
+### Verify the metadata endpoint
+
+The RFC 9728 metadata endpoint should be publicly accessible:
+
+```bash
+curl https://mcp.example.com/.well-known/oauth-protected-resource/mcp
+```
+
+You should see a response like:
+
+```json
+{
+  "resource": "https://mcp.example.com",
+  "authorization_servers": ["https://auth.example.com"],
+  "bearer_methods_supported": ["header"],
+  "scopes_supported": ["mcp:connect", "mcp:tools:read", "mcp:tools:execute"]
+}
+```
+
+### Verify token enforcement
+
+A request without a token should return `401 Unauthorized`:
+
+```bash
+curl -i https://mcp.example.com/mcp
+```
+
+```
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer realm="mcp", scope="mcp:connect", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp"
+```
+
+## Step 4: Connect an MCP Client
+
+Your MCP client needs to obtain a token from your authorization server and include it in requests. How this works depends on the client.
+
+<Info>
+  Well-behaved MCP clients will read `scopes_supported` from the metadata endpoint and request all supported scopes
+  during the initial authorization. This avoids step-up challenges entirely when the authorization server grants all
+  requested scopes.
+</Info>
+
+## Development Setup with Symmetric Secrets
+
+For local development, you can use a symmetric secret instead of a remote JWKS endpoint:
+
+```yaml
+oauth:
+  enabled: true
+  authorization_server_url: 'https://auth.example.com'
+  jwks:
+    - secret: 'your-shared-secret'
+      symmetric_algorithm: 'HS256'
+      header_key_id: 'my-key-id'
+```
+
+This lets you generate test tokens locally without running an identity provider.
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Scope Enforcement" icon="layer-group" href="/router/mcp/oauth/scopes">
+    Understand how scopes are enforced at multiple levels and how to use `@requiresScopes` for per-tool authorization.
+  </Card>
+  <Card title="Configuration Reference" icon="sliders-up" href="/router/mcp/oauth/configuration">
+    Full reference for all OAuth options, JWKS settings, environment variables, and error responses.
+  </Card>
+</CardGroup>

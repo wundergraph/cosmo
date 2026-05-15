@@ -52,6 +52,12 @@ WunderGraph Cosmo Controlplane
 | configuration.redisTlsKey | string | `""` |  |
 | configuration.s3AccessKeyId | string | `""` | s3 access key id, can be used instead of [username]:[password] in the url |
 | configuration.s3Endpoint | string | `""` | The endpoint of the S3 bucket. |
+| configuration.s3FailoverAccessKeyId | string | `""` | S3 failover access key id, can be used instead of [username]:[password] in the url |
+| configuration.s3FailoverEndpoint | string | `""` | The endpoint of the S3 failover bucket. |
+| configuration.s3FailoverForcePathStyle | string | `""` | Forces usage of path style urls for the failover S3. Default is true. |
+| configuration.s3FailoverRegion | string | `""` | The region where the S3 failover bucket is located. |
+| configuration.s3FailoverSecretAccessKey | string | `""` | S3 failover secret access key, can be used instead of [username]:[password] in the url |
+| configuration.s3FailoverStorageUrl | string | `""` | The url of S3-compatible storage for backup/failover purposes. If not defined, failover is not used. |
 | configuration.s3ForcePathStyle | string | `"true"` | Forces usage of path style urls for S3. Default is true. |
 | configuration.s3Region | string | `"auto"` | The region where the S3 bucket is located. |
 | configuration.s3SecretAccessKey | string | `""` | s3 secret access key, can be used instead of [username]:[password] in the url |

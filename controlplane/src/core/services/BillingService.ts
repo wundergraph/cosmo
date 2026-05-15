@@ -6,10 +6,12 @@ import { toISODateTime } from '../webhooks/utils.js';
 import { NewBillingSubscription } from '../../db/models.js';
 import { BillingRepository } from '../repositories/BillingRepository.js';
 import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
+import { traced } from '../tracing.js';
 
 /**
  * BillingService for billing related operations.
  */
+@traced
 export class BillingService {
   public stripe: Stripe;
 
@@ -25,7 +27,7 @@ export class BillingService {
     });
   }
 
-  private upsertStripeCustomerId = async ({ id, organizationSlug }: { id: string; organizationSlug: string }) => {
+  private async upsertStripeCustomerId({ id, organizationSlug }: { id: string; organizationSlug: string }) {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.organizationId, id),
       columns: {
@@ -61,7 +63,7 @@ export class BillingService {
       });
 
     return customer.id;
-  };
+  }
 
   public async completeCheckoutSession(subscriptionId: string, organizationId: string) {
     const billing = await this.db.query.billingSubscriptions.findFirst({
@@ -396,7 +398,7 @@ export class BillingService {
     }
   }
 
-  cancelSubscription = async (organizationId: string, subscriptionId: string, comment: string) => {
+  async cancelSubscription(organizationId: string, subscriptionId: string, comment: string) {
     await this.stripe.subscriptions.cancel(subscriptionId, {
       cancellation_details: {
         comment,
@@ -404,5 +406,5 @@ export class BillingService {
     });
 
     await this.db.delete(organizationBilling).where(eq(organizationBilling.organizationId, organizationId));
-  };
+  }
 }

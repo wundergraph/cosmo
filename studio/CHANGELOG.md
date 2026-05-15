@@ -4,6 +4,87 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.169.5](https://github.com/wundergraph/cosmo/compare/studio@0.169.4...studio@0.169.5) (2026-05-14)
+
+### Bug Fixes
+
+* **studio:** button style CTAs in onboarding empty state ([#2864](https://github.com/wundergraph/cosmo/issues/2864)) ([d8f5793](https://github.com/wundergraph/cosmo/commit/d8f57930307e628ad29cc583e0478b1c78e4296c)) (@comatory)
+* **studio:** remove wgc install suggestion in onboarding step 2 ([#2865](https://github.com/wundergraph/cosmo/issues/2865)) ([11c68f8](https://github.com/wundergraph/cosmo/commit/11c68f82a64563cedec4254c962c60fb61ee5a4d)) (@comatory)
+
+## [0.169.4](https://github.com/wundergraph/cosmo/compare/studio@0.169.3...studio@0.169.4) (2026-05-13)
+
+### Bug Fixes
+
+* using browser translation causes crash in onboarding ([#2862](https://github.com/wundergraph/cosmo/issues/2862)) ([fe85a3b](https://github.com/wundergraph/cosmo/commit/fe85a3b79f930f5614af94f92e0efeddcb37e46f)) (@comatory)
+
+## [0.169.3](https://github.com/wundergraph/cosmo/compare/studio@0.169.2...studio@0.169.3) (2026-05-12)
+
+**Note:** Version bump only for package studio
+
+## [0.169.2](https://github.com/wundergraph/cosmo/compare/studio@0.169.1...studio@0.169.2) (2026-05-11)
+
+### Bug Fixes
+
+* onboarding_started tracking event not fired + default channel ([#2852](https://github.com/wundergraph/cosmo/issues/2852)) ([465a971](https://github.com/wundergraph/cosmo/commit/465a971ebe26183532d133c2e6affd911b93e6e9)) (@comatory)
+
+## [0.169.1](https://github.com/wundergraph/cosmo/compare/studio@0.169.0...studio@0.169.1) (2026-05-07)
+
+**Note:** Version bump only for package studio
+
+# [0.169.0](https://github.com/wundergraph/cosmo/compare/studio@0.168.2...studio@0.169.0) (2026-05-05)
+
+### Bug Fixes
+
+* feature flag for onboarding not working ([#2819](https://github.com/wundergraph/cosmo/issues/2819)) ([805af8d](https://github.com/wundergraph/cosmo/commit/805af8dedb41ffa0a20946397955f0674ea73505)) (@comatory)
+* feature flags not being reloaded ([#2820](https://github.com/wundergraph/cosmo/issues/2820)) ([d55e80d](https://github.com/wundergraph/cosmo/commit/d55e80d220eeee06e3c247937708bd1dd41ce7ba)) (@comatory)
+* provide easy way to recover UI when graph is not found ([#2817](https://github.com/wundergraph/cosmo/issues/2817)) ([abfd628](https://github.com/wundergraph/cosmo/commit/abfd628a31214356c5598d3971dd045dc3aa8279)) (@comatory)
+
+### Features
+
+* display document titles during onboarding ([#2813](https://github.com/wundergraph/cosmo/issues/2813)) ([b6b1f9d](https://github.com/wundergraph/cosmo/commit/b6b1f9d662e29c2680226d90df5e025715882c89)) (@comatory)
+
+## [0.168.2](https://github.com/wundergraph/cosmo/compare/studio@0.168.1...studio@0.168.2) (2026-05-01)
+
+**Note:** Version bump only for package studio
+
+## [0.168.1](https://github.com/wundergraph/cosmo/compare/studio@0.168.0...studio@0.168.1) (2026-05-01)
+
+**Note:** Version bump only for package studio
+
+# [0.168.0](https://github.com/wundergraph/cosmo/compare/studio@0.167.0...studio@0.168.0) (2026-04-30)
+
+### Bug Fixes
+
+* drop NodeJS 20 support ([#2805](https://github.com/wundergraph/cosmo/issues/2805)) ([7a61b3c](https://github.com/wundergraph/cosmo/commit/7a61b3c1be86566847d2baa39d7b30cd2c0e6d32)) (@comatory)
+
+### Features
+
+* onboarding wizard ([#2790](https://github.com/wundergraph/cosmo/issues/2790)) ([3227519](https://github.com/wundergraph/cosmo/commit/3227519b3cc7b2dbc163856967bfe36cebf81887)) (@comatory)
+
+# [0.167.0](https://github.com/wundergraph/cosmo/compare/studio@0.166.1...studio@0.167.0) (2026-04-29)
+
+### Features
+
+* centralize TS dependency management via catalogs ([#2782](https://github.com/wundergraph/cosmo/issues/2782)) ([a6a6956](https://github.com/wundergraph/cosmo/commit/a6a69565727f01a942a16e6d560d0fedabcb531e)) (@comatory)
+
+## [0.166.1](https://github.com/wundergraph/cosmo/compare/studio@0.166.0...studio@0.166.1) (2026-04-27)
+
+### Bug Fixes
+
+* remediate several vulnerabilities ([#2787](https://github.com/wundergraph/cosmo/issues/2787)) ([fdd035b](https://github.com/wundergraph/cosmo/commit/fdd035b8bfd491a45e00e2b60e9c28b695b64f48)) (@pepol)
+
+# [0.166.0](https://github.com/wundergraph/cosmo/compare/studio@0.165.0...studio@0.166.0) (2026-04-24)
+
+### Features
+
+* update `lodash` and `lodash-es` ([#2780](https://github.com/wundergraph/cosmo/issues/2780)) ([bbf1e38](https://github.com/wundergraph/cosmo/commit/bbf1e38b3a346363fe742801f2982dbafb267454)) (@wilsonrivera)
+
+# [0.165.0](https://github.com/wundergraph/cosmo/compare/studio@0.164.0...studio@0.165.0) (2026-04-16)
+
+### Features
+
+* add new endpoints for fetching feature flags and feature subgraphs by federated graph ([#2729](https://github.com/wundergraph/cosmo/issues/2729)) ([74f44a1](https://github.com/wundergraph/cosmo/commit/74f44a1614ef0976231b143b52203c5a9dd2034e)) (@JivusAyrus)
+
 # [0.164.0](https://github.com/wundergraph/cosmo/compare/studio@0.163.3...studio@0.164.0) (2026-04-15)
 
 ### Features

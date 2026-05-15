@@ -4,6 +4,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { traced } from '../tracing.js';
 import { RBACEvaluator } from './RBACEvaluator.js';
 
 export type ApiKeyAuthContext = {
@@ -17,6 +18,7 @@ export type ApiKeyAuthContext = {
   rbac: RBACEvaluator;
 };
 
+@traced
 export default class ApiKeyAuthenticator {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,

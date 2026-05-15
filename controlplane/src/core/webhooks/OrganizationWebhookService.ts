@@ -29,6 +29,7 @@ import { SubgraphCheckExtensionsRepository } from '../repositories/SubgraphCheck
 import { BlobStorage } from '../blobstorage/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
+import { traced } from '../tracing.js';
 import { makeWebhookRequest } from './utils.js';
 
 const subgraphCheckExtensionSchema = z.object({
@@ -121,6 +122,7 @@ type Config = {
   type: 'webhook' | 'slack';
 };
 
+@traced
 export class OrganizationWebhookService {
   private readonly logger: pino.Logger;
   private readonly defaultBillingPlanId?: string;
@@ -590,8 +592,7 @@ export class OrganizationWebhookService {
       await this.sendEvent(eventData, configs, actorId);
     } catch (e: any) {
       const logger = this.logger.child({ eventName: OrganizationEventName[eventData.eventName] });
-      logger.child({ message: e.message });
-      logger.error(`Could not send webhook event`);
+      logger.error(e, 'Could not send webhook event');
     }
   }
 
