@@ -20,6 +20,18 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+var testdataCertsServerTLSConfig = core.TlsConfig{
+	Server: core.ServerTLSConfig{
+		HTTP: core.HTTPServerTLSConfig{
+			Settings: core.HTTPServerTLSConfigSettings{
+				Enabled:  true,
+				CertFile: "../testdata/tls/cert.pem",
+				KeyFile:  "../testdata/tls/key.pem",
+			},
+		},
+	},
+}
+
 func TestTLS(t *testing.T) {
 	t.Parallel()
 
@@ -27,17 +39,7 @@ func TestTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &core.TlsConfig{
-				Server: core.ServerTLSConfig{
-					HTTP: core.HTTPServerTLSConfig{
-						Settings: core.HTTPServerTLSConfigSettings{
-							Enabled:  true,
-							CertFile: "../testdata/tls/cert.pem",
-							KeyFile:  "../testdata/tls/key.pem",
-						},
-					},
-				},
-			},
+			TLSConfig: &testdataCertsServerTLSConfig,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			require.Contains(t, xEnv.RouterURL, "https://")
 		})
@@ -57,17 +59,7 @@ func TestTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &core.TlsConfig{
-				Server: core.ServerTLSConfig{
-					HTTP: core.HTTPServerTLSConfig{
-						Settings: core.HTTPServerTLSConfigSettings{
-							Enabled:  true,
-							CertFile: "../testdata/tls/cert.pem",
-							KeyFile:  "../testdata/tls/key.pem",
-						},
-					},
-				},
-			},
+			TLSConfig: &testdataCertsServerTLSConfig,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -83,17 +75,7 @@ func TestTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &core.TlsConfig{
-				Server: core.ServerTLSConfig{
-					HTTP: core.HTTPServerTLSConfig{
-						Settings: core.HTTPServerTLSConfigSettings{
-							Enabled:  true,
-							CertFile: "../testdata/tls/cert.pem",
-							KeyFile:  "../testdata/tls/key.pem",
-						},
-					},
-				},
-			},
+			TLSConfig: &testdataCertsServerTLSConfig,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodGet, "/", http.Header{
 				"Accept": []string{"text/html"},
@@ -113,17 +95,7 @@ func TestTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &core.TlsConfig{
-				Server: core.ServerTLSConfig{
-					HTTP: core.HTTPServerTLSConfig{
-						Settings: core.HTTPServerTLSConfigSettings{
-							Enabled:  true,
-							CertFile: "../testdata/tls/cert.pem",
-							KeyFile:  "../testdata/tls/key.pem",
-						},
-					},
-				},
-			},
+			TLSConfig: &testdataCertsServerTLSConfig,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -136,17 +108,7 @@ func TestTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &core.TlsConfig{
-				Server: core.ServerTLSConfig{
-					HTTP: core.HTTPServerTLSConfig{
-						Settings: core.HTTPServerTLSConfigSettings{
-							Enabled:  true,
-							CertFile: "../testdata/tls/cert.pem",
-							KeyFile:  "../testdata/tls/key.pem",
-						},
-					},
-				},
-			},
+			TLSConfig: &testdataCertsServerTLSConfig,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.RouterURL, strings.NewReader(`query { employees { id } }`))
 			require.NoError(t, err)
@@ -183,17 +145,7 @@ func TestTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &core.TlsConfig{
-				Server: core.ServerTLSConfig{
-					HTTP: core.HTTPServerTLSConfig{
-						Settings: core.HTTPServerTLSConfigSettings{
-							Enabled:  true,
-							CertFile: "../testdata/tls/cert.pem",
-							KeyFile:  "../testdata/tls/key.pem",
-						},
-					},
-				},
-			},
+			TLSConfig: &testdataCertsServerTLSConfig,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.RouterURL, strings.NewReader(`query { employees { id } }`))
 			require.NoError(t, err)
@@ -210,17 +162,7 @@ func TestTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &core.TlsConfig{
-				Server: core.ServerTLSConfig{
-					HTTP: core.HTTPServerTLSConfig{
-						Settings: core.HTTPServerTLSConfigSettings{
-							Enabled:  true,
-							CertFile: "../testdata/tls/cert.pem",
-							KeyFile:  "../testdata/tls/key.pem",
-						},
-					},
-				},
-			},
+			TLSConfig: &testdataCertsServerTLSConfig,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.RouterURL, strings.NewReader(`query { employees { id } }`))
 			require.NoError(t, err)

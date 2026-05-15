@@ -23,6 +23,27 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
+var (
+	clientTLSAllInsecureSkipVerify = core.ClientTLSConfig{
+		Subgraphs: core.ClientSubgraphTLSConfig{HTTP: config.ClientTLSConfiguration{
+			All: config.TLSClientCertConfiguration{
+				InsecureSkipCaVerification: true,
+			},
+		}},
+	}
+	clientTLSEmployeesInsecureSkipVerifyWithTestdataCert = core.ClientTLSConfig{
+		Subgraphs: core.ClientSubgraphTLSConfig{HTTP: config.ClientTLSConfiguration{
+			Subgraphs: map[string]config.TLSClientCertConfiguration{
+				"employees": {
+					InsecureSkipCaVerification: true,
+					CertFile:                   "../testdata/tls/cert.pem",
+					KeyFile:                    "../testdata/tls/key.pem",
+				},
+			},
+		}},
+	}
+)
+
 func TestSubgraphMTLS(t *testing.T) {
 	t.Parallel()
 
@@ -600,13 +621,7 @@ func TestSubgraphMTLS(t *testing.T) {
 							},
 						},
 					})),
-					core.WithClientTLSConfig(core.ClientTLSConfig{
-						Subgraphs: core.ClientSubgraphTLSConfig{config.ClientTLSConfiguration{
-							All: config.TLSClientCertConfiguration{
-								InsecureSkipCaVerification: true,
-							},
-						}},
-					}),
+					core.WithClientTLSConfig(clientTLSAllInsecureSkipVerify),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -633,17 +648,7 @@ func TestSubgraphMTLS(t *testing.T) {
 							},
 						},
 					})),
-					core.WithClientTLSConfig(core.ClientTLSConfig{
-						Subgraphs: core.ClientSubgraphTLSConfig{config.ClientTLSConfiguration{
-							Subgraphs: map[string]config.TLSClientCertConfiguration{
-								"employees": {
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert.pem",
-									KeyFile:                    "../testdata/tls/key.pem",
-								},
-							},
-						}},
-					}),
+					core.WithClientTLSConfig(clientTLSEmployeesInsecureSkipVerifyWithTestdataCert),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
