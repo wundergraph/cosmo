@@ -36,6 +36,7 @@ export const config = {
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
   pluginRegistryURL: process.env.PLUGIN_REGISTRY_URL || 'cosmo-registry.wundergraph.com',
+  pluginRegistryInsecure: process.env.PLUGIN_REGISTRY_INSECURE === 'true',
   demoLabelMatcher: 'graph=demo' as const,
   demoGraphName: 'demo' as const,
   demoNamespace: 'default' as const,
