@@ -854,7 +854,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
 
   const [isHydrated, setIsHydrated] = useState(false);
-  const shouldPassEditorStateProps = !!operation || !isHydrated;
+  const shouldPassEditorStateProps = !!operation;
   useHydratePlaygroundStateFromUrl(
     tabsState,
     setQuery,
