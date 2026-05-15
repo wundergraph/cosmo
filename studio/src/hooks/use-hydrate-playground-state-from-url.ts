@@ -45,6 +45,7 @@ export const useHydratePlaygroundStateFromUrl = (
   const router = useRouter();
   const { isReady, pathname, query: routerQuery, replace } = router;
   const { toast } = useToast();
+  const toastRef = useRef<typeof toast>(toast);
 
   // `setIsHydrated` is used to avoid race conditions.
   // First hydration should be done from the URL, and
@@ -101,14 +102,16 @@ export const useHydratePlaygroundStateFromUrl = (
       if (process.env.NODE_ENV === 'development') {
         console.error('[Playground] Error extracting state from URL:', (err as Error)?.message);
       }
-      toast({
+      // We avoid effect run by storing toast in ref. There's low chance of hitting the error and at that
+      // point it wouldn't matter that much anyway.
+      toastRef.current({
         title: 'Unable to Load Shared Playground State',
         description: 'The shared URL may be incorrect. Please double-check and try again.',
         variant: 'destructive',
       });
       setIsHydrated(true);
     }
-  }, [isReady, pathname, replace, routerQuery, setIsHydrated, toast]);
+  }, [isReady, pathname, replace, routerQuery, setIsHydrated]);
 
   const setOperationScripts = (
     preOperation: PreOperationUrlState,
