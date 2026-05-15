@@ -723,14 +723,10 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		require.NoError(t, err)
 
 		caCert, err := os.ReadFile(cfg.TLSConfig.Server.HTTP.Settings.CertFile)
-		if err != nil {
-			log.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
-			t.Fatalf("could not append ca cert to pool")
-		}
+		require.True(t, caCertPool.AppendCertsFromPEM(caCert), "could not append ca cert to pool")
 
 		// Retain the default transport settings
 		httpClient := cleanhttp.DefaultPooledClient()
