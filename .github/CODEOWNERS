@@ -6,10 +6,10 @@
 
 /admission-server/ @JivusAyrus @StarpTech @thisisnithin @wilsonrivera @Aenimus
 /cdn-server/ @JivusAyrus @StarpTech @thisisnithin @wilsonrivera @Aenimus
-/cli/ @endigma @JivusAyrus @StarpTech @jensneuse @wilsonrivera @Aenimus
+/cli/ @endigma @JivusAyrus @StarpTech @jensneuse @wilsonrivera @Aenimus @thisisnithin
 /composition/ @Aenimus @JivusAyrus @StarpTech @thisisnithin @wilsonrivera
-/connect/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera
-/connect-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera
+/connect/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera @thisisnithin
+/connect-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera @thisisnithin
 /controlplane/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin @Aenimus
 /graphqlmetrics/ @Noroth @pepol @StarpTech
 /helm/ @Noroth @pepol @StarpTech
