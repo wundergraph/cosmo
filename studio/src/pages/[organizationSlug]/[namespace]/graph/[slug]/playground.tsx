@@ -100,7 +100,7 @@ class CosmoGraphiqlStorage implements GraphiQLStorage {
           const parsed = JSON.parse(tabState);
           const activeTab = parsed?.tabs?.[parsed.activeTabIndex];
 
-          if (activeTab?.headers) {
+          if (activeTab && 'headers' in activeTab) {
             return activeTab.headers;
           }
         } catch {
