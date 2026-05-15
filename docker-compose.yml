@@ -380,7 +380,7 @@ services:
   plugin-registry:
     image: registry:2
     ports:
-      - '5050:5000'
+      - '127.0.0.1:5050:5000'
     networks:
       - primary
     profiles:
