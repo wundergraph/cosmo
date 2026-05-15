@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.118.1](https://github.com/wundergraph/cosmo/compare/wgc@0.118.0...wgc@0.118.1) (2026-05-14)
+
+### Bug Fixes
+
+* exit with code 1 on proposal match failure during subgraph publish ([#2855](https://github.com/wundergraph/cosmo/issues/2855)) ([f5b67a5](https://github.com/wundergraph/cosmo/commit/f5b67a58eb700b5aef32fe6e8f929feffbf6edfe)) (@JivusAyrus)
+
+# [0.118.0](https://github.com/wundergraph/cosmo/compare/wgc@0.117.3...wgc@0.118.0) (2026-05-12)
+
+### Features
+
+* add feature flag recomposition support ([#2853](https://github.com/wundergraph/cosmo/issues/2853)) ([3f125a2](https://github.com/wundergraph/cosmo/commit/3f125a2effce36a1a2040f219bc1aa5a872aab93)) (@wilsonrivera)
+
 ## [0.117.3](https://github.com/wundergraph/cosmo/compare/wgc@0.117.2...wgc@0.117.3) (2026-05-07)
 
 **Note:** Version bump only for package wgc

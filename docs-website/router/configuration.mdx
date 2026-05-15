@@ -1282,6 +1282,31 @@ You can configure a fallback storage for fetching the execution config in the ev
 | EXECUTION_CONFIG_FALLBACK_STORAGE_PROVIDER_ID | execution_config.fallback_storage.provider_id | <Icon icon="square" />                        | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                |               |
 | EXECUTION_CONFIG_FALLBACK_STORAGE_OBJECT_PATH | execution_config.fallback_storage.object_path | <Icon icon="square" />                        | The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket.                                                                     |               |
 
+## Split Config Poller
+
+The split-config polling strategy assembles the final router execution config by fetching the base graph and each feature flag config as separate files from the CDN. These rules govern its behavior when individual feature flag files are missing or should be excluded entirely. They are only applied when the router is enrolled in split-config loading; with a custom storage provider the router falls back to the regular polling strategy and these rules have no effect.
+
+The base graph is always required. Skip and ignore rules apply to feature flags only. A missing or unfetchable base graph always aborts the poll cycle, regardless of these rules.
+
+### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+split_config_poller:
+  skip_missing_feature_flags: true
+  ignored_feature_flags:
+    - "experimental-checkout"
+    - "ab-test-foo"
+```
+
+### Split config poller options
+
+| Environment Variable                              | YAML                                                | Required               | Description                                                                                                                                                                                          | Default Value |
+| ------------------------------------------------- | --------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| SPLIT_CONFIG_POLLER_SKIP_MISSING_FEATURE_FLAGS    | split_config_poller.skip_missing_feature_flags      | <Icon icon="square" /> | Keep polling alive when a feature flag listed in the mapper cannot be fetched (responds with `file not found`). When false, a single missing feature flag aborts the poll cycle.                     | false         |
+| SPLIT_CONFIG_POLLER_IGNORED_FEATURE_FLAGS         | split_config_poller.ignored_feature_flags           | <Icon icon="square" /> | Feature flag names to skip entirely during polling. Listed flags are not fetched even when present in the mapper, and are absent from the assembled execution config.                                | []            |
+
 ## Traffic Shaping
 
 Configure rules for traffic shaping like maximum request body size, timeouts, retry behavior, etc. For more info, check this section in the docs: [Traffic shaping](/router/traffic-shaping)
@@ -2063,7 +2088,11 @@ rate_limit:
         code: "RATE_LIMIT_EXCEEDED"
 ```
 
-## Subgraph Error Propagation
+## Subgraph Data Propagation
+
+Controls what subgraphs can propagate back to the client. Errors and the response `extensions` object are governed by separate but related policies.
+
+### Subgraph Error Propagation
 
 The configuration for the subgraph error propagation. Errors can be exposed to the client in a "wrapped" form to hide Subgraph internals, or it's possible to "pass-through" Subgraph errors directly to the client.
 
@@ -2081,7 +2110,7 @@ The configuration for the subgraph error propagation. Errors can be exposed to t
 | SUBGRAPH_ERROR_PROPAGATION_ALLOWED_EXTENSION_FIELDS   | allowed_extension_fields   | <Icon icon="square" /> | The allowed extension fields. The allowed extension fields are used to specify which fields of the Subgraph errors are allowed to be propagated to the client.                                                                                   | ["code"]                 |
 | SUBGRAPH_ERROR_PROPAGATION_ALLOW_ALL_EXTENSION_FIELDS | allow_all_extension_fields | <Icon icon="square" /> | Allow all extension fields from Subgraph errors to be propagated to the client. If the value is true (default: false), all extension fields from Subgraph errors will be propagated, overriding the allowed_extension_fields configuration.      | false                    |
 
-### Example YAML configuration:
+#### Example YAML configuration:
 
 ```yaml
 version: "1"
@@ -2100,7 +2129,32 @@ subgraph_error_propagation:
     - "code"
 ```
 
-See [Subgraph Error Propagation](/router/subgraph-error-propagation) for more detailed information.
+See [Subgraph Error Propagation](/router/subgraph-data-propagation/subgraph-error-propagation) for more detailed information.
+
+### Subgraph Extension Propagation
+
+The router forwards subgraph response `extensions` to the client. An allow list restricts which extension fields are propagated, and an algorithm selects a winner when multiple subgraphs return the same field.
+
+| Environment Variable                                     | YAML                          | Required               | Description                                                                                                                                                                | Default Value |
+|----------------------------------------------------------|-------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| SUBGRAPH_EXTENSION_PROPAGATION_ENABLED                   | enabled                       | <Icon icon="square" /> | Enable forwarding of subgraph response extensions to the client.                                                                                                           | false         |
+| SUBGRAPH_EXTENSION_PROPAGATION_ALLOWED_EXTENSION_FIELDS  | allowed_extension_fields      | <Icon icon="square" /> | Extension fields that are allowed to be propagated from subgraphs to the client. Any field not in this list is dropped. If empty, all extension fields are forwarded.      | []            |
+| SUBGRAPH_EXTENSION_PROPAGATION_ALGORITHM                 | algorithm                     | <Icon icon="square" /> | Conflict resolution when multiple subgraphs return the same extension field. `first_write` keeps the value from the first subgraph that wrote it; `last_write` keeps the last. | first_write   |
+
+#### Example YAML configuration:
+
+```yaml
+version: "1"
+
+subgraph_extension_propagation:
+  enabled: true
+  allowed_extension_fields:
+    - rateLimit
+    - auth
+  algorithm: last_write
+```
+
+See [Subgraph Extension Propagation](/router/subgraph-data-propagation/subgraph-extension-propagation) for more detailed information.
 
 ## Security
 

@@ -172,10 +172,11 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		}))
 	} else {
 		options = append(options, WithConfigPollerConfig(&RouterConfigPollerConfig{
-			GraphSignKey:    cfg.Graph.SignKey,
-			PollInterval:    cfg.PollInterval,
-			PollJitter:      cfg.PollJitter,
-			ExecutionConfig: cfg.ExecutionConfig,
+			GraphSignKey:      cfg.Graph.SignKey,
+			PollInterval:      cfg.PollInterval,
+			PollJitter:        cfg.PollJitter,
+			ExecutionConfig:   cfg.ExecutionConfig,
+			SplitConfigPoller: cfg.SplitConfigPoller,
 		}))
 	}
 
@@ -263,6 +264,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithAuthorizationConfig(&config.Authorization),
 		WithWebSocketConfiguration(&config.WebSocket),
 		WithSubgraphErrorPropagation(config.SubgraphErrorPropagation),
+		WithSubgraphExtensionPropagation(config.SubgraphExtensionPropagation),
 		WithLocalhostFallbackInsideDocker(config.LocalhostFallbackInsideDocker),
 		WithCDN(config.CDN),
 		WithEvents(config.Events),
