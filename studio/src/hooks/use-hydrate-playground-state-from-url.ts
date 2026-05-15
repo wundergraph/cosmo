@@ -43,6 +43,7 @@ export const useHydratePlaygroundStateFromUrl = (
   isGraphiqlRendered: boolean,
 ) => {
   const router = useRouter();
+  const { isReady, pathname, query: routerQuery, replace } = router;
   const { toast } = useToast();
 
   // `setIsHydrated` is used to avoid race conditions.
@@ -60,30 +61,42 @@ export const useHydratePlaygroundStateFromUrl = (
   const [, setPostOpSelected] = useLocalStorage<ScriptData | null>('playground:post-operation:selected', null);
 
   const [pendingHydrationState, setPendingHydrationState] = useState<PlaygroundUrlState | null>(null);
-  const hasProcessedUrlState = useRef(false);
+  // The playground page can be reused for multiple shared links, so only skip the exact URL state already processed.
+  const processedUrlStateKey = useRef<string | null>(null);
 
   // On mount: extract and clear URL state
   useEffect(() => {
-    if (!router.isReady || hasProcessedUrlState.current) {
+    if (!isReady) {
       return;
     }
 
-    hasProcessedUrlState.current = true;
+    const { [PLAYGROUND_STATE_QUERY_PARAM]: playgroundUrlState, ...query } = routerQuery;
 
-    const { [PLAYGROUND_STATE_QUERY_PARAM]: playgroundUrlState, ...query } = router.query;
+    if (!playgroundUrlState || typeof playgroundUrlState !== 'string') {
+      setIsHydrated(true);
+      return;
+    }
+
+    const urlStateKey = `${pathname}:${playgroundUrlState}`;
+    if (processedUrlStateKey.current === urlStateKey) {
+      return;
+    }
+
+    processedUrlStateKey.current = urlStateKey;
+
     try {
-      if (playgroundUrlState && typeof playgroundUrlState === 'string') {
-        const state = extractStateFromUrl();
-        if (!state) {
-          setIsHydrated(true);
-          return;
-        }
-
-        setPendingHydrationState(state);
-      } else {
+      const state = extractStateFromUrl();
+      if (!state) {
         setIsHydrated(true);
         return;
       }
+
+      setPendingHydrationState(state);
+
+      // Clear the URL param immediately
+      replace({ pathname, query }, undefined, {
+        shallow: true,
+      });
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
         console.error('[Playground] Error extracting state from URL:', (err as Error)?.message);
@@ -94,17 +107,8 @@ export const useHydratePlaygroundStateFromUrl = (
         variant: 'destructive',
       });
       setIsHydrated(true);
-    } finally {
-      if (!playgroundUrlState) {
-        return;
-      }
-
-      // Clear the URL param immediately
-      router.replace({ pathname: router.pathname, query }, undefined, {
-        shallow: true,
-      });
     }
-  }, [router, setIsHydrated, toast]);
+  }, [isReady, pathname, replace, routerQuery, setIsHydrated, toast]);
 
   const setOperationScripts = (
     preOperation: PreOperationUrlState,
