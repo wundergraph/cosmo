@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.316.2](https://github.com/wundergraph/cosmo/compare/router@0.316.1...router@0.316.2) (2026-05-14)
+
+### Bug Fixes
+
+* **composition:** apply subscription filters on union and interface return types ([#2797](https://github.com/wundergraph/cosmo/issues/2797)) ([4c91d4f](https://github.com/wundergraph/cosmo/commit/4c91d4fd7420b19b2e9aa0dd382ba7e1c95b85a3)) (@jensneuse)
+
 ## [0.316.1](https://github.com/wundergraph/cosmo/compare/router@0.316.0...router@0.316.1) (2026-05-13)
 
 **Note:** Version bump only for package router
