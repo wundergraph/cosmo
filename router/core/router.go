@@ -2378,18 +2378,21 @@ func WithAccessLogs(cfg *AccessLogsConfig) Option {
 	}
 }
 
-func WithTLSConfig(cfg *TlsConfig) Option {
-	return func(r *Router) {
-		r.tls = cfg
-	}
-}
-
-func WithSubgraphTLSConfiguration(cfg config.ClientTLSConfiguration) Option {
+func WithServerTLSConfig(cfg ServerTLSConfig) Option {
 	return func(r *Router) {
 		if r.tls == nil {
 			r.tls = &TlsConfig{}
 		}
-		r.tls.Client.Subgraphs.HTTP = cfg
+		r.tls.Server = cfg
+	}
+}
+
+func WithClientTLSConfig(cfg ClientTLSConfig) Option {
+	return func(r *Router) {
+		if r.tls == nil {
+			r.tls = &TlsConfig{}
+		}
+		r.tls.Client = cfg
 	}
 }
 

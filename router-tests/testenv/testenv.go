@@ -1497,7 +1497,6 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithSubgraphExtensionPropagation(cfg.SubgraphExtensionPropagation),
-		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
 		core.WithIntrospection(true, config.IntrospectionConfiguration{
@@ -1505,6 +1504,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}),
 		core.WithQueryPlans(true),
 		core.WithEvents(eventsConfiguration),
+	}
+
+	if testConfig.TLSConfig != nil {
+		routerOpts = append(routerOpts,
+			core.WithServerTLSConfig(testConfig.TLSConfig.Server),
+			core.WithClientTLSConfig(testConfig.TLSConfig.Client))
 	}
 
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
