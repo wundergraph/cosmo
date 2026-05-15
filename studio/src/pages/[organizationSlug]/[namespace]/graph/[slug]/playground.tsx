@@ -46,7 +46,7 @@ import { parseSchema } from '@/lib/schema-helpers';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
-import { createGraphiQLFetcher } from '@graphiql/toolkit';
+import { createGraphiQLFetcher, createLocalStorage, type Storage as GraphiQLStorage } from '@graphiql/toolkit';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 import { Component2Icon, ExclamationTriangleIcon, MobileIcon } from '@radix-ui/react-icons';
 import { TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
@@ -80,6 +80,43 @@ import { PiBracketsCurly, PiDevices, PiGraphLight } from 'react-icons/pi';
 import { TbDevicesCheck } from 'react-icons/tb';
 import { useDebounce } from 'use-debounce';
 import { z } from 'zod';
+
+class CosmoGraphiqlStorage implements GraphiQLStorage {
+  constructor(graphId: string) {
+    this.storage = createLocalStorage({ namespace: `cosmo-playground:${graphId}` });
+  }
+
+  private storage: GraphiQLStorage;
+
+  public setItem = (key: string, value: string) => this.storage.setItem(key, value);
+  public getItem = (key: string) => {
+    // GraphiQL matches restored tabs by query, variables, and headers. When it restores headers from a
+    // separate empty key, it adds a duplicate tab instead of selecting the matching persisted tab.
+    if (key === 'graphiql:headers') {
+      const tabState = this.storage.getItem('graphiql:tabState');
+
+      if (tabState) {
+        try {
+          const parsed = JSON.parse(tabState);
+          const activeTab = parsed?.tabs?.[parsed.activeTabIndex];
+
+          if (activeTab && 'headers' in activeTab) {
+            return activeTab.headers;
+          }
+        } catch {
+          // Fall back to stored headers.
+        }
+      }
+    }
+
+    return this.storage.getItem(key);
+  };
+  public removeItem = (key: string) => this.storage.removeItem(key);
+  public clear = () => this.storage.clear();
+  public get length() {
+    return this.storage.length;
+  }
+}
 
 const validateHeaders = (headers: Record<string, string>) => {
   for (const headersKey in headers) {
@@ -780,6 +817,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
   const [tempHeaders, setTempHeaders] = useState<any>();
 
+  const graphId = graphContext?.graph?.id ?? 'unknown';
+
+  const graphiqlStorage = useMemo(() => new CosmoGraphiqlStorage(graphId), [graphId]);
+
   useEffect(() => {
     if (!storedHeaders || tempHeaders) {
       return;
@@ -813,6 +854,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
 
   const [isHydrated, setIsHydrated] = useState(false);
+  const shouldPassEditorStateProps = !!operation;
   useHydratePlaygroundStateFromUrl(
     tabsState,
     setQuery,
@@ -1136,11 +1178,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
       >
         <div className="hidden h-full flex-1 pl-2.5 md:flex">
           <GraphiQL
+            key={graphId}
             shouldPersistHeaders
             showPersistHeadersSettings={false}
             fetcher={fetcher}
-            query={query}
-            variables={updatedVariables}
+            query={shouldPassEditorStateProps ? query : undefined}
+            variables={shouldPassEditorStateProps || variables ? updatedVariables : undefined}
             onEditQuery={setQuery}
             headers={headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? undefined : headers}
             defaultHeaders={PLAYGROUND_DEFAULT_HEADERS_TEMPLATE}
@@ -1152,6 +1195,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
             ]}
             // null stops introspection and undefined forces introspection if schema is null
             schema={isLoading ? null : (schema ?? undefined)}
+            storage={graphiqlStorage}
             onTabChange={setTabsState}
           />
           {isMounted && <PlaygroundPortal />}
