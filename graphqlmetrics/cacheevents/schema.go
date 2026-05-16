@@ -33,6 +33,8 @@ func EventTypeString(t cacheeventsv1.EventType) string {
 		return "field_hash"
 	case cacheeventsv1.EventType_ENTITY_TYPE_INFO:
 		return "entity_type_info"
+	case cacheeventsv1.EventType_FIELD_SELECTION:
+		return "field_selection"
 	default:
 		return ""
 	}

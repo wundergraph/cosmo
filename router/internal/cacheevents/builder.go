@@ -35,7 +35,8 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 		len(snapshot.FetchTimings) + len(snapshot.ErrorEvents) +
 		len(snapshot.ShadowComparisons) + len(snapshot.MutationEvents) +
 		len(snapshot.HeaderImpactEvents) + len(snapshot.CacheOpErrors) +
-		len(snapshot.FieldHashes) + len(snapshot.EntityTypes)
+		len(snapshot.FieldHashes) + len(snapshot.FieldSelections) +
+		len(snapshot.EntityTypes)
 	if total == 0 {
 		return nil
 	}
@@ -181,6 +182,26 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 			FieldHash:   ev.FieldHash,
 			FieldPath:   ev.FieldPath,
 			FetchSource: fetchSourceFromGoTools(ev.Source),
+		}))
+	}
+	for i := range snapshot.FieldSelections {
+		ev := &snapshot.FieldSelections[i]
+		// Same PII guard as field_hash — drop when the engine produced no
+		// hashed key. The accessor row's signal is its existence, but without
+		// an entity identity it can't be correlated to anything downstream.
+		if ev.KeyHash == 0 {
+			continue
+		}
+		// FieldHash stays zero — the accessor has no scalar value. The row's
+		// existence is the signal. ChildTypeName carries the accessor's
+		// unwrapped return type so consumers can correlate to the schema
+		// without re-walking FieldPath against the supergraph SDL.
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_FIELD_SELECTION, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
+			KeyHash:       ev.KeyHash,
+			FieldName:     ev.FieldName,
+			FieldPath:     ev.FieldPath,
+			ChildTypeName: ev.ChildTypeName,
+			FetchSource:   fetchSourceFromGoTools(ev.Source),
 		}))
 	}
 	for i := range snapshot.EntityTypes {

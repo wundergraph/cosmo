@@ -31,6 +31,7 @@ enum EventType {
   CACHE_OP_ERROR = 10;
   FIELD_HASH = 11;
   ENTITY_TYPE_INFO = 12;
+  FIELD_SELECTION = 13;
 }
 
 enum CacheOpKind {
@@ -141,6 +142,18 @@ message CacheEvent {
   reserved 92;
   reserved "parent_type_name";
   repeated string field_path = 93;
+  // FIELD_SELECTION only — emitted when the response walker enters an
+  // Object/Array accessor inside an entity scope. The accessor itself has
+  // no scalar value, so field_hash stays zero; the row's existence is the
+  // signal that the operator selected the accessor. child_type_name is the
+  // accessor's named return type (unwrapped of NonNull/List). For interface
+  // or union accessors it carries the abstract type name — concrete
+  // __typename info lives on the leaf field_hash rows under it.
+  // Field 95 is reserved for a future concrete_type_name column if we ever
+  // want to emit per-concrete-resolution accessor rows.
+  string child_type_name = 94;
+  reserved 95;
+  reserved "concrete_type_name";
 
   // ENTITY_TYPE_INFO only.
   uint32 entity_count = 100;
