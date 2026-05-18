@@ -17,6 +17,7 @@ export * from './errors/types/types';
 export * from './federation/federation';
 export * from './federation/types/params';
 export * from './federation/types/types';
+export * from './federation/types/results';
 export * from './normalization/normalization';
 export * from './normalization/params';
 export * from './normalization/types';

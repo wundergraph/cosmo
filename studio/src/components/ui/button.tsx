@@ -53,13 +53,28 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <Comp
-        className={cn(isDisabled ? 'cursor-not-allowed' : '', buttonVariants({ variant, size, className }))}
+        className={cn(
+          isDisabled ? 'cursor-not-allowed' : '',
+          buttonVariants({ variant, size, className }),
+          !asChild && isLoading && 'relative',
+        )}
         ref={ref}
         {...props}
         type={type}
         disabled={isDisabled}
       >
-        {isLoading ? <Loader /> : children}
+        {asChild ? (
+          children
+        ) : (
+          <>
+            {isLoading && (
+              <span className="absolute inset-0 flex items-center justify-center">
+                <Loader />
+              </span>
+            )}
+            <span className={cn('inline-flex items-center justify-center', isLoading && 'invisible')}>{children}</span>
+          </>
+        )}
       </Comp>
     );
   },

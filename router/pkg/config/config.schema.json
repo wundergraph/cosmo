@@ -2538,11 +2538,7 @@
                     "default": ["sig"],
                     "items": {
                       "type": "string",
-                      "enum": [
-                        "sig",
-                        "enc",
-                        ""
-                      ]
+                      "enum": ["sig", "enc", ""]
                     }
                   },
                   "algorithms": {
@@ -3967,6 +3963,11 @@
               "type": "string",
               "default": "cosmo-registry.wundergraph.com",
               "description": "The URL of the plugin registry."
+            },
+            "insecure": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, the plugin registry is accessed over plaintext HTTP without authentication. Intended for local development against an unauthenticated registry; never enable in production."
             }
           }
         }
