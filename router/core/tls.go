@@ -49,7 +49,7 @@ func buildSubgraphTLSConfigs(logger *zap.Logger, cfg *config.ClientTLSConfigurat
 	hasAll := (cfg.All.CertFile != "" && cfg.All.KeyFile != "") || cfg.All.CaFile != "" || cfg.All.InsecureSkipCaVerification
 
 	// If no global TLS config is provided and there are no subgraph specific TLS configs
-	if !cfg.Configured() {
+	if !cfg.Enabled() {
 		return nil, nil, nil
 	}
 

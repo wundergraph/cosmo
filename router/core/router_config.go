@@ -258,7 +258,7 @@ func (c *Config) Usage() map[string]any {
 	usage["access_logs"] = c.accessLogsConfig != nil
 	usage["localhost_fallback_inside_docker"] = c.localhostFallbackInsideDocker
 	usage["tls_server"] = c.tls.settings.Server.Enabled
-	usage["tls_client"] = c.tls.settings.Client.Configured()
+	usage["tls_client"] = c.tls.settings.Client.Enabled()
 	usage["self_register"] = c.selfRegister != nil
 	usage["registration_info"] = c.registrationInfo != nil
 

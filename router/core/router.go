@@ -2339,15 +2339,6 @@ func WithTLSConfig(cfg config.TLSConfiguration) Option {
 	}
 }
 
-// func WithDownstreamTLSConfig(cfg routertlscfg.DownstreamConfig) Option {
-// 	return func(r *Router) {
-// 		if r.tls == nil {
-// 			r.tls = &routertlscfg.Config{}
-// 		}
-// 		r.tls.Downstream = cfg
-// 	}
-// }
-
 func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	return func(r *Router) {
 		r.telemetryAttributes = attributes
