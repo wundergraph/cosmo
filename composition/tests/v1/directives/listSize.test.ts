@@ -420,6 +420,28 @@ describe('@listSize directive tests', () => {
       });
     });
 
+    test('that @listSize with one defaulted slicingArguments populates listSizes correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithSlicingArgumentsOneDefaulted, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.listSizes.get('Query.users')).toEqual({
+        typeName: 'Query',
+        fieldName: 'users',
+        requireOneSlicingArgument: true,
+        sizedFields: [],
+        slicingArguments: ['first', 'last'],
+      });
+    });
+
+    test('that @listSize with two defaulted slicingArguments populates listSizes correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithSlicingArgumentsBothDefaulted, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.listSizes.get('Query.users')).toEqual({
+        typeName: 'Query',
+        fieldName: 'users',
+        requireOneSlicingArgument: true,
+        sizedFields: [],
+        slicingArguments: ['first', 'last'],
+      });
+    });
+
     test('that @listSize with sizedFields populates listSizes correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithSizedFields, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.listSizes.get('Query.usersConnection')).toEqual({
@@ -678,6 +700,16 @@ describe('@listSize directive tests', () => {
     test('that @listSize with a non-null Int leaf in a nested path is accepted', () => {
       const { costs } = normalizeSubgraphSuccess(
         subgraphWithNestedSlicingArgNonNullLeaf,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const ls = costs.listSizes.get('Query.search');
+      expect(ls).toBeDefined();
+      expect(ls!.slicingArguments).toEqual(['input.first']);
+    });
+
+    test('that @listSize with a non-null Int leaf default in a nested path is accepted', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithNestedSlicingArgLeafDefault,
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       const ls = costs.listSizes.get('Query.search');
@@ -963,7 +995,6 @@ const subgraphWithAssumedSize: Subgraph = {
     type Query {
       users: [User!]! @listSize(assumedSize: 100)
     }
-
     type User {
       id: ID!
     }
@@ -977,7 +1008,32 @@ const subgraphWithSlicingArguments: Subgraph = {
     type Query {
       users(first: Int, last: Int): [User!]! @listSize(slicingArguments: ["first", "last"])
     }
+    type User {
+      id: ID!
+    }
+  `),
+};
 
+const subgraphWithSlicingArgumentsOneDefaulted: Subgraph = {
+  name: 'subgraph-listsize-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: Int = 20, last: Int): [User!]! @listSize(slicingArguments: ["first", "last"])
+    }
+    type User {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphWithSlicingArgumentsBothDefaulted: Subgraph = {
+  name: 'subgraph-listsize-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: Int = 20, last: Int = 30): [User!]! @listSize(slicingArguments: ["first", "last"])
+    }
     type User {
       id: ID!
     }
@@ -991,16 +1047,13 @@ const subgraphWithSizedFields: Subgraph = {
     type Query {
       usersConnection(first: Int): Connection! @listSize(slicingArguments: ["first"], sizedFields: ["edges", "nodes"])
     }
-
     type Connection {
       edges: [Edge!]!
       nodes: [User!]!
     }
-
     type Edge {
       node: User!
     }
-
     type User {
       id: ID!
     }
@@ -1618,6 +1671,19 @@ const subgraphWithNestedSlicingArgLeafDefaultPlusAssumedSize: Subgraph = {
     type Query {
       search(input: PaginationInput!): [Book]
         @listSize(assumedSize: 50, slicingArguments: ["input.first"], requireOneSlicingArgument: false)
+    }
+    input PaginationInput { first: Int = 10 }
+    type Book { id: ID! }
+  `),
+};
+
+const subgraphWithNestedSlicingArgLeafDefault: Subgraph = {
+  name: 'subgraph-listsize-nested-leaf-default-assumed',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: PaginationInput!): [Book]
+        @listSize(slicingArguments: ["input.first"], requireOneSlicingArgument: true)
     }
     input PaginationInput { first: Int = 10 }
     type Book { id: ID! }
