@@ -163,11 +163,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	}
 
 	// Build subgraph client TLS configs (mTLS for outbound subgraph connections)
-	var subgraphTLSConfiguration config.ClientTLSConfiguration
-	if r.tls != nil {
-		subgraphTLSConfiguration = r.tls.Client.Subgraphs.HTTP
-	}
-	defaultClientTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(r.logger, &subgraphTLSConfiguration)
+	defaultClientTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(r.logger, &r.tls.settings.Client)
 	if err != nil {
 		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
 	}

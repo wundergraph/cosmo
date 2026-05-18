@@ -143,48 +143,13 @@ type (
 		Method  IPAnonymizationMethod
 	}
 
-	// TlsConfig holds all TLS configuration of the Router.
 	TlsConfig struct {
-		// Server holds all serverside TLS configuration.
-		Server ServerTLSConfig
-		// Client holds all clientside TLS configuration.
-		Client ClientTLSConfig
-	}
+		settings config.TLSConfiguration
 
-	// ServerTLSConfig holds all serverside TLS information of the router.
-	ServerTLSConfig struct {
-		HTTP HTTPServerTLSConfig
-	}
-
-	// HTTPServerTLSConfig holds all clientside TLS information of the router.
-	HTTPServerTLSConfig struct {
-		// Settings holds all settings a user specified for serverside TLS connections.
-		Settings HTTPServerTLSConfigSettings
-		// config is the "compiled" TLS configuration from Settings.
-		config *tls.Config
-	}
-
-	// HTTPServerTLSConfigSettings holds all settings a user specified for serverside TLS connections.
-	HTTPServerTLSConfigSettings struct {
-		Enabled    bool
-		CertFile   string
-		KeyFile    string
-		ClientAuth *HTTPServerMTLSConfigSettings
-	}
-
-	// HTTPServerMTLSConfigSettings holds the client-auth/mTLS settings for serverside TLS connections.
-	HTTPServerMTLSConfigSettings struct {
-		Required bool
-		CertFile string
-	}
-
-	// ClientTLSConfig holds all clientside TLS information of the router.
-	ClientTLSConfig struct {
-		Subgraphs ClientSubgraphTLSConfig
-	}
-
-	ClientSubgraphTLSConfig struct {
-		HTTP config.ClientTLSConfiguration
+		// compiled resembles a tls.Config created out of the "settings" field.
+		// Due to the current architecture this needs to live here in order to be
+		// passable to certain objects.
+		compiled *tls.Config
 	}
 
 	RouterConfigPollerConfig struct {
@@ -391,8 +356,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultCorsHeaders...))
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
 
-	if r.tls != nil && r.tls.Server.HTTP.Settings.Enabled {
+	if r.tls.settings.Server.Enabled {
 		r.baseURL = fmt.Sprintf("https://%s", r.listenAddr)
+		r.tls.compiled, err = r.serverTLSConfig()
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct tls config: %w", err)
+		}
 	} else {
 		r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
 	}
@@ -402,13 +371,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		return nil, fmt.Errorf("failed to construct graphql endpoint url: %w", err)
 	}
 	r.graphqlEndpointURL = graphqlEndpointURL
-
-	if r.tls != nil {
-		r.tls.Server.HTTP.config, err = r.serverHTTPTLSConfig()
-		if err != nil {
-			return nil, fmt.Errorf("failed to construct tls config: %w", err)
-		}
-	}
 
 	if r.traceConfig.Enabled {
 		if len(r.traceConfig.Propagators) > 0 {
@@ -595,27 +557,30 @@ func NewRouter(opts ...Option) (*Router, error) {
 	return r, nil
 }
 
-// serverHTTPTLSConfig creates a new serverside tls.Config from r.tls.Server.Settings.
-// If serverside TLS is not configured it returns nil.
+// serverTLSConfig creates a new tls.Config from r.tls.Server.Settings.
+// It's meant to be used as the routers http server tls configuration.
+// If TLS is not configured it returns nil.
 // If settings are invalid or a config can't be created it returns an error.
-func (r *Router) serverHTTPTLSConfig() (*tls.Config, error) {
-	if r.tls == nil || !r.tls.Server.HTTP.Settings.Enabled {
+func (r *Router) serverTLSConfig() (*tls.Config, error) {
+	serverTLS := r.tls.settings.Server
+
+	if !serverTLS.Enabled {
 		return nil, nil
 	}
 
-	if r.tls.Server.HTTP.Settings.CertFile == "" {
+	if serverTLS.CertFile == "" {
 		return nil, errors.New("tls cert file not provided")
 	}
 
-	if r.tls.Server.HTTP.Settings.KeyFile == "" {
+	if serverTLS.KeyFile == "" {
 		return nil, errors.New("tls key file not provided")
 	}
 
 	var caCertPool *x509.CertPool
 	clientAuthMode := tls.NoClientCert
 
-	if r.tls.Server.HTTP.Settings.ClientAuth != nil && r.tls.Server.HTTP.Settings.ClientAuth.CertFile != "" {
-		caCert, err := os.ReadFile(r.tls.Server.HTTP.Settings.ClientAuth.CertFile)
+	if serverTLS.ClientAuth.CertFile != "" {
+		caCert, err := os.ReadFile(serverTLS.ClientAuth.CertFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read cert file: %w", err)
 		}
@@ -627,7 +592,7 @@ func (r *Router) serverHTTPTLSConfig() (*tls.Config, error) {
 		}
 		caCertPool = caPool
 
-		if r.tls.Server.HTTP.Settings.ClientAuth.Required {
+		if serverTLS.ClientAuth.Required {
 			clientAuthMode = tls.RequireAndVerifyClientCert
 		} else {
 			clientAuthMode = tls.VerifyClientCertIfGiven
@@ -637,7 +602,7 @@ func (r *Router) serverHTTPTLSConfig() (*tls.Config, error) {
 	}
 
 	// Load the server cert and private key
-	cer, err := tls.LoadX509KeyPair(r.tls.Server.HTTP.Settings.CertFile, r.tls.Server.HTTP.Settings.KeyFile)
+	cer, err := tls.LoadX509KeyPair(serverTLS.CertFile, serverTLS.KeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
 	}
@@ -828,16 +793,11 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
-	var tlsConfig *tls.Config
-	if r.tls != nil {
-		tlsConfig = r.tls.Server.HTTP.config
-	}
-
 	var err error
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
-		tlsServerConfig:    tlsConfig,
+		tlsServerConfig:    r.tls.compiled,
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
@@ -1498,16 +1458,11 @@ func (r *Router) Start(ctx context.Context) error {
 
 	r.trackRouterConfigUsage()
 
-	var tlsConfig *tls.Config
-	if r.tls != nil {
-		tlsConfig = r.tls.Server.HTTP.config
-	}
-
 	var err error
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
-		tlsServerConfig:    tlsConfig,
+		tlsServerConfig:    r.tls.compiled,
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
@@ -2378,23 +2333,20 @@ func WithAccessLogs(cfg *AccessLogsConfig) Option {
 	}
 }
 
-func WithServerTLSConfig(cfg ServerTLSConfig) Option {
+func WithTLSConfig(cfg config.TLSConfiguration) Option {
 	return func(r *Router) {
-		if r.tls == nil {
-			r.tls = &TlsConfig{}
-		}
-		r.tls.Server = cfg
+		r.tls.settings = cfg
 	}
 }
 
-func WithClientTLSConfig(cfg ClientTLSConfig) Option {
-	return func(r *Router) {
-		if r.tls == nil {
-			r.tls = &TlsConfig{}
-		}
-		r.tls.Client = cfg
-	}
-}
+// func WithDownstreamTLSConfig(cfg routertlscfg.DownstreamConfig) Option {
+// 	return func(r *Router) {
+// 		if r.tls == nil {
+// 			r.tls = &routertlscfg.Config{}
+// 		}
+// 		r.tls.Downstream = cfg
+// 	}
+// }
 
 func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	return func(r *Router) {

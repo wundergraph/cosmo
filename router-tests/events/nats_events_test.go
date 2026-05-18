@@ -238,15 +238,11 @@ func TestNatsEvents(t *testing.T) {
 					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
 				EnableNats: true,
-				TLSConfig: &core.TlsConfig{
-					Server: core.ServerTLSConfig{
-						HTTP: core.HTTPServerTLSConfig{
-							Settings: core.HTTPServerTLSConfigSettings{
-								Enabled:  true,
-								CertFile: "../testdata/tls/cert.pem",
-								KeyFile:  "../testdata/tls/key.pem",
-							},
-						},
+				TLSConfig: &config.TLSConfiguration{
+					Server: config.TLSServerConfiguration{
+						Enabled:  true,
+						CertFile: "../testdata/tls/cert.pem",
+						KeyFile:  "../testdata/tls/key.pem",
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {

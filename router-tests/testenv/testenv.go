@@ -328,7 +328,7 @@ type Config struct {
 	KafkaSeeds                         []string
 	DisableWebSockets                  bool
 	DisableParentBasedSampler          bool
-	TLSConfig                          *core.TlsConfig
+	TLSConfig                          *config.TLSConfiguration
 	TraceExporter                      trace.SpanExporter
 	TracingSanitizeUTF8                *config.SanitizeUTF8Config
 	IPAnonymization                    *core.IPAnonymizationConfig
@@ -716,12 +716,12 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	})
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Server.HTTP.Settings.Enabled {
+	if cfg.TLSConfig != nil && cfg.TLSConfig.Server.Enabled {
 
-		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.HTTP.Settings.CertFile, cfg.TLSConfig.Server.HTTP.Settings.KeyFile)
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.CertFile, cfg.TLSConfig.Server.KeyFile)
 		require.NoError(t, err)
 
-		caCert, err := os.ReadFile(cfg.TLSConfig.Server.HTTP.Settings.CertFile)
+		caCert, err := os.ReadFile(cfg.TLSConfig.Server.CertFile)
 		require.NoError(t, err)
 
 		caCertPool := x509.NewCertPool()
@@ -1143,12 +1143,12 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		return nil, err
 	}
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Server.HTTP.Settings.Enabled {
+	if cfg.TLSConfig != nil && cfg.TLSConfig.Server.Enabled {
 
-		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.HTTP.Settings.CertFile, cfg.TLSConfig.Server.HTTP.Settings.KeyFile)
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.CertFile, cfg.TLSConfig.Server.KeyFile)
 		require.NoError(t, err)
 
-		caCert, err := os.ReadFile(cfg.TLSConfig.Server.HTTP.Settings.CertFile)
+		caCert, err := os.ReadFile(cfg.TLSConfig.Server.CertFile)
 		require.NoError(t, err)
 
 		caCertPool := x509.NewCertPool()
@@ -1498,9 +1498,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.TLSConfig != nil {
-		routerOpts = append(routerOpts,
-			core.WithServerTLSConfig(testConfig.TLSConfig.Server),
-			core.WithClientTLSConfig(testConfig.TLSConfig.Client))
+		routerOpts = append(routerOpts, core.WithTLSConfig(*testConfig.TLSConfig))
 	}
 
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
