@@ -20,8 +20,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func newTestdataCertsServerTLSConfig() *config.TLSConfiguration {
-	return &config.TLSConfiguration{
+func newTestdataCertsServerTLSConfig() config.TLSConfiguration {
+	return config.TLSConfiguration{
 		Server: config.TLSServerConfiguration{
 			Enabled:  true,
 			CertFile: "../testdata/tls/cert.pem",
@@ -43,11 +43,11 @@ func TestTLS(t *testing.T) {
 		})
 	})
 
-	t.Run("Ensure router URL is not https when nil TLSConfig is passed", func(t *testing.T) {
+	t.Run("Ensure router URL is not https when no TLSConfig is passed", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: nil,
+			TLSConfig: config.TLSConfiguration{}, // empty on purpose
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			require.Contains(t, xEnv.RouterURL, "http://")
 		})
@@ -185,7 +185,7 @@ func TestMTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &config.TLSConfiguration{
+			TLSConfig: config.TLSConfiguration{
 				Server: config.TLSServerConfiguration{
 					Enabled:  true,
 					CertFile: "../testdata/tls/cert.pem",
@@ -215,7 +215,7 @@ func TestMTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &config.TLSConfiguration{
+			TLSConfig: config.TLSConfiguration{
 				Server: config.TLSServerConfiguration{
 					Enabled:  true,
 					CertFile: "../testdata/tls/cert.pem",
@@ -238,7 +238,7 @@ func TestMTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &config.TLSConfiguration{
+			TLSConfig: config.TLSConfiguration{
 				Server: config.TLSServerConfiguration{
 					Enabled:  true,
 					CertFile: "../testdata/tls/cert.pem",
@@ -260,7 +260,7 @@ func TestMTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &config.TLSConfiguration{
+			TLSConfig: config.TLSConfiguration{
 				Server: config.TLSServerConfiguration{
 					Enabled:  true,
 					CertFile: "../testdata/tls/cert.pem",
@@ -327,7 +327,7 @@ func TestMTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &config.TLSConfiguration{
+			TLSConfig: config.TLSConfiguration{
 				Server: config.TLSServerConfiguration{
 					Enabled:  true,
 					CertFile: "../testdata/tls/cert.pem",
@@ -374,7 +374,7 @@ func TestMTLS(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			TLSConfig: &config.TLSConfiguration{
+			TLSConfig: config.TLSConfiguration{
 				Server: config.TLSServerConfiguration{
 					Enabled:  true,
 					CertFile: "../testdata/tls/cert.pem",

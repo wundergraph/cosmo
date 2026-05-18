@@ -328,7 +328,7 @@ type Config struct {
 	KafkaSeeds                         []string
 	DisableWebSockets                  bool
 	DisableParentBasedSampler          bool
-	TLSConfig                          *config.TLSConfiguration
+	TLSConfig                          config.TLSConfiguration
 	TraceExporter                      trace.SpanExporter
 	TracingSanitizeUTF8                *config.SanitizeUTF8Config
 	IPAnonymization                    *core.IPAnonymizationConfig
@@ -716,8 +716,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	})
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Server.Enabled {
-
+	if cfg.TLSConfig.Server.Enabled {
 		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.CertFile, cfg.TLSConfig.Server.KeyFile)
 		require.NoError(t, err)
 
@@ -1143,8 +1142,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		return nil, err
 	}
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Server.Enabled {
-
+	if cfg.TLSConfig.Server.Enabled {
 		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.CertFile, cfg.TLSConfig.Server.KeyFile)
 		require.NoError(t, err)
 
@@ -1488,6 +1486,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithSubgraphExtensionPropagation(cfg.SubgraphExtensionPropagation),
+		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
 		core.WithIntrospection(true, config.IntrospectionConfiguration{
@@ -1495,10 +1494,6 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}),
 		core.WithQueryPlans(true),
 		core.WithEvents(eventsConfiguration),
-	}
-
-	if testConfig.TLSConfig != nil {
-		routerOpts = append(routerOpts, core.WithTLSConfig(*testConfig.TLSConfig))
 	}
 
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)

@@ -238,7 +238,7 @@ func TestNatsEvents(t *testing.T) {
 					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
 				EnableNats: true,
-				TLSConfig: &config.TLSConfiguration{
+				TLSConfig: config.TLSConfiguration{
 					Server: config.TLSServerConfiguration{
 						Enabled:  true,
 						CertFile: "../testdata/tls/cert.pem",
@@ -289,7 +289,7 @@ func TestNatsEvents(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
-				TLSConfig:                nil, // Force Http/1
+				TLSConfig:                config.TLSConfiguration{}, // empty to force HTTP/1
 				RouterOptions: []core.Option{
 					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
