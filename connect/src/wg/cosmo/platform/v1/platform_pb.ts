@@ -18092,6 +18092,11 @@ export class PreviewDeleteClientResponse extends Message<PreviewDeleteClientResp
    */
   persistedOperationsCount = 0;
 
+  /**
+   * @generated from field: bool hasTraffic = 4;
+   */
+  hasTraffic = false;
+
   constructor(data?: PartialMessage<PreviewDeleteClientResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -18103,6 +18108,7 @@ export class PreviewDeleteClientResponse extends Message<PreviewDeleteClientResp
     { no: 1, name: 'response', kind: 'message', T: Response },
     { no: 2, name: 'client', kind: 'message', T: ClientInfo },
     { no: 3, name: 'persistedOperationsCount', kind: 'scalar', T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: 'hasTraffic', kind: 'scalar', T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PreviewDeleteClientResponse {

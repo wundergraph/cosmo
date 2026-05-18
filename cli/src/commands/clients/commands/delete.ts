@@ -22,6 +22,16 @@ const createJsonErrorOutput = (code: EnumStatusCode, details?: string) => ({
   details,
 });
 
+const createDeleteWarning = (clientName: string, persistedOperationsCount: number, hasTraffic: boolean) => {
+  const message = `Client '${clientName}' has ${persistedOperationsCount} persisted operation(s).`;
+
+  if (!hasTraffic) {
+    return message;
+  }
+
+  return `${message} One or more operations have traffic.`;
+};
+
 const fetchPreviewDeleteClient = async (
   client: BaseCommandOptions['client'],
   {
@@ -119,7 +129,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('-j, --json', 'Prints to the console in json format instead of text');
   command.option(
     '-f, --force',
-    'Deletes the client without confirmation. Required with --json if operations would be deleted.',
+    'Deletes the client without confirmation. Required with --json if operations would be deleted or have traffic.',
   );
   command.argument('<graph-name>', 'The name of the federated graph or monograph.');
   command.argument('<client-name>', 'The name of the registered GraphQL client.');
@@ -158,12 +168,11 @@ export default (opts: BaseCommandOptions) => {
       program.error(pc.red('Could not delete client.'));
     }
 
-    if (previewResp.persistedOperationsCount > 0 && !options.force) {
+    if ((previewResp.persistedOperationsCount > 0 || previewResp.hasTraffic) && !options.force) {
+      const warning = createDeleteWarning(clientName, previewResp.persistedOperationsCount, previewResp.hasTraffic);
+
       if (options.json) {
-        const output = createJsonErrorOutput(
-          EnumStatusCode.ERR,
-          `Client '${clientName}' has ${previewResp.persistedOperationsCount} persisted operation(s). Use --force to delete it.`,
-        );
+        const output = createJsonErrorOutput(EnumStatusCode.ERR, `${warning} Use --force to delete it.`);
         console.log(JSON.stringify(output));
         process.exitCode = 1;
         return;
@@ -172,9 +181,7 @@ export default (opts: BaseCommandOptions) => {
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',
         type: 'confirm',
-        message:
-          `Client '${clientName}' has ${previewResp.persistedOperationsCount} persisted operation(s). ` +
-          `Deleting it will also delete those operations. Continue?`,
+        message: `${warning} Deleting it will also delete those operations. Continue?`,
       });
 
       if (!deletionConfirmed.confirmDeletion) {

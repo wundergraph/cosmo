@@ -177,6 +177,30 @@ describe('stdout', () => {
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Deleted 2 related persisted operation(s).'));
   });
 
+  test('prompts before deleting client with traffic', async () => {
+    let deleteCalled = false;
+    promptMock.mockResolvedValue({ confirmDeletion: true });
+
+    await runDelete({
+      previewResponse: {
+        ...successPreview,
+        persistedOperationsCount: 0,
+        hasTraffic: true,
+      },
+      deleteResponse: successDelete,
+      onDeleteClient: () => {
+        deleteCalled = true;
+      },
+    });
+
+    expect(promptMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('One or more operations have traffic.'),
+      }),
+    );
+    expect(deleteCalled).toBe(true);
+  });
+
   test('stops when deletion is not confirmed', async () => {
     let deleteCalled = false;
     promptMock.mockResolvedValue({ confirmDeletion: false });
@@ -305,6 +329,36 @@ describe('json output', () => {
       code: EnumStatusCode.ERR,
       message: 'Could not delete client.',
       details: "Client 'web' has 1 persisted operation(s). Use --force to delete it.",
+    });
+    expect(deleteCalled).toBe(false);
+    expect(promptMock).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    expect(stderrSpy).not.toHaveBeenCalled();
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  test('prints json error instead of prompting when traffic exists without force', async () => {
+    let deleteCalled = false;
+
+    await runDelete({
+      previewResponse: {
+        ...successPreview,
+        persistedOperationsCount: 1,
+        hasTraffic: true,
+      },
+      deleteResponse: successDelete,
+      args: ['--json'],
+      onDeleteClient: () => {
+        deleteCalled = true;
+      },
+    });
+
+    expect(getJsonOutput(logSpy)).toEqual({
+      status: 'error',
+      code: EnumStatusCode.ERR,
+      message: 'Could not delete client.',
+      details:
+        "Client 'web' has 1 persisted operation(s). One or more operations have traffic. Use --force to delete it.",
     });
     expect(deleteCalled).toBe(false);
     expect(promptMock).not.toHaveBeenCalled();

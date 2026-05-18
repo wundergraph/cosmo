@@ -2161,6 +2161,7 @@ message PreviewDeleteClientResponse {
   Response response = 1;
   ClientInfo client = 2;
   int32 persistedOperationsCount = 3;
+  bool hasTraffic = 4;
 }
 
 message DeleteClientRequest {

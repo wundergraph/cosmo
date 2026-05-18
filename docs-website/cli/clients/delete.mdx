@@ -14,7 +14,7 @@ npx wgc clients delete <graph-name> <client-name>
 
 The `npx wgc clients delete` command deletes a registered GraphQL client from a federated graph or monograph.
 
-If the client has persisted operations, the command asks for confirmation. Confirming deletes the client and its related persisted operations.
+If the client has persisted operations or persisted operation traffic, the command asks for confirmation. Confirming deletes the client and its related persisted operations.
 
 Use `--force` to skip confirmation. Use `--json` to print structured JSON output.
 
@@ -30,7 +30,7 @@ Use `--force` to skip confirmation. Use `--json` to print structured JSON output
 
 - `-j, --json` : Prints structured JSON instead of text.
 
-- `-f, --force` : Deletes the client without confirmation. Required with `--json` if persisted operations would be deleted.
+- `-f, --force` : Deletes the client without confirmation. Required with `--json` if persisted operations would be deleted or have traffic.
 
 ## Examples
 

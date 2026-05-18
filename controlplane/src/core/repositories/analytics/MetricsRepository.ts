@@ -1377,4 +1377,42 @@ export class MetricsRepository {
       totalRequests,
     };
   }
+
+  public async hasPersistedOperationTrafficForClient({
+    clientName,
+    organizationId,
+    graphId,
+    start,
+    end,
+  }: {
+    clientName: string;
+    organizationId: string;
+    graphId: string;
+    start: number;
+    end: number;
+  }) {
+    const query = `
+    WITH
+      toDateTime({start:UInt32}) AS startDate,
+      toDateTime({end:UInt32}) AS endDate
+    SELECT sum(TotalRequests) as TotalRequests
+    FROM ${this.client.database}.operation_request_metrics_5_30
+    WHERE Timestamp >= startDate AND Timestamp <= endDate
+      AND OrganizationID = {organizationId:String}
+      AND FederatedGraphID = {graphId:String}
+      AND ClientName = {clientName:String}
+      AND notEmpty(OperationPersistedID)`;
+
+    const results = await this.client.queryPromise<{
+      TotalRequests: number;
+    }>(query, {
+      clientName,
+      organizationId,
+      graphId,
+      start,
+      end,
+    });
+
+    return Number(results[0]?.TotalRequests || 0) > 0;
+  }
 }

@@ -380,6 +380,38 @@ describe('Persisted operations', (ctx) => {
         code: EnumStatusCode.OK,
       });
       expect(previewResp.persistedOperationsCount).toEqual(2);
+      expect(previewResp.hasTraffic).toBe(false);
+    });
+
+    test('Should preview deleting a client with persisted operation traffic', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [{ id: genID('hello'), contents: `query { hello }` }],
+      });
+
+      (chClient.queryPromise as Mock).mockResolvedValueOnce([{ TotalRequests: 1 }]);
+
+      const previewResp = await client.previewDeleteClient({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+      });
+
+      expect(previewResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(previewResp.persistedOperationsCount).toEqual(1);
+      expect(previewResp.hasTraffic).toBe(true);
+      expect(chClient.queryPromise).toHaveBeenCalledWith(
+        expect.stringContaining('AND ClientName = {clientName:String}'),
+        expect.objectContaining({ clientName: 'curl' }),
+      );
     });
 
     test('Should not preview deleting a missing client', async (testContext) => {
