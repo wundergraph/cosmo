@@ -40,6 +40,7 @@ export function previewDeleteClient(
         },
         persistedOperationsCount: 0,
         hasTraffic: false,
+        organizationSlug: authContext.organizationSlug,
       };
     }
 
@@ -58,6 +59,7 @@ export function previewDeleteClient(
         },
         persistedOperationsCount: 0,
         hasTraffic: false,
+        organizationSlug: authContext.organizationSlug,
       };
     }
 
@@ -69,6 +71,7 @@ export function previewDeleteClient(
         client: preview,
         persistedOperationsCount: preview.persistedOperationsCount,
         hasTraffic: false,
+        organizationSlug: authContext.organizationSlug,
       };
     }
 
@@ -99,6 +102,7 @@ export function previewDeleteClient(
       client: preview,
       persistedOperationsCount: preview.persistedOperationsCount,
       hasTraffic,
+      organizationSlug: authContext.organizationSlug,
     };
   });
 }

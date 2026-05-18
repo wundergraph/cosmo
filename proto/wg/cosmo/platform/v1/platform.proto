@@ -2165,6 +2165,7 @@ message PreviewDeleteClientResponse {
   ClientInfo client = 2;
   int32 persistedOperationsCount = 3;
   bool hasTraffic = 4;
+  string organizationSlug = 5;
 }
 
 message DeleteClientRequest {

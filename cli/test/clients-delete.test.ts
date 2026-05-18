@@ -301,7 +301,8 @@ describe('json output', () => {
       args: ['--json'],
     });
 
-    expect(getJsonOutput(logSpy)).toEqual({
+    const output = getJsonOutput(logSpy);
+    expect(output).toEqual({
       status: 'success',
       client: {
         ...successPreview.client,
@@ -310,6 +311,7 @@ describe('json output', () => {
       },
       deletedOperationsCount: 1,
     });
+    expect(output).not.toHaveProperty('url');
     expect(promptMock).not.toHaveBeenCalled();
   });
 
@@ -332,7 +334,10 @@ describe('json output', () => {
       status: 'error',
       code: EnumStatusCode.ERR,
       message: 'Could not delete client.',
-      details: "Client 'web' has 1 persisted operation(s). Use --force to delete it.",
+      details: "Client 'web' has 1 persisted operation(s).",
+      url: 'https://cosmo.wundergraph.com/default/graph/mygraph/operations?clientNames=web',
+      hasTraffic: false,
+      operationsCount: 1,
     });
     expect(deleteCalled).toBe(false);
     expect(promptMock).not.toHaveBeenCalled();
@@ -357,18 +362,53 @@ describe('json output', () => {
       },
     });
 
+    const studioUrl = 'https://cosmo.wundergraph.com/default/graph/mygraph/operations?clientNames=web';
     expect(getJsonOutput(logSpy)).toEqual({
       status: 'error',
       code: EnumStatusCode.ERR,
       message: 'Could not delete client.',
-      details:
-        "Client 'web' has 1 persisted operation(s). One or more operations have traffic. Use --force to delete it.",
+      details: `Client 'web' has 1 persisted operation(s). One or more operations have traffic. See details:\n${studioUrl}\n`,
+      url: studioUrl,
+      hasTraffic: true,
+      operationsCount: 1,
     });
     expect(deleteCalled).toBe(false);
     expect(promptMock).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
     expect(stderrSpy).not.toHaveBeenCalled();
     expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  test('encodes special characters in clientName for studio URL', async () => {
+    await runDelete({
+      previewResponse: {
+        ...successPreview,
+        client: { ...successPreview.client, name: 'weird name&with#chars' },
+        persistedOperationsCount: 1,
+      },
+      deleteResponse: successDelete,
+      args: ['--json'],
+    });
+
+    expect(getJsonOutput(logSpy).url).toBe(
+      'https://cosmo.wundergraph.com/default/graph/mygraph/operations?clientNames=weird+name%26with%23chars',
+    );
+  });
+
+  test('uses organizationSlug from preview response in URL', async () => {
+    await runDelete({
+      previewResponse: {
+        ...successPreview,
+        persistedOperationsCount: 1,
+        organizationSlug: 'acme',
+      },
+      deleteResponse: successDelete,
+      args: ['--json'],
+    });
+
+    expect(getJsonOutput(logSpy).url).toBe(
+      'https://cosmo.wundergraph.com/acme/default/graph/mygraph/operations?clientNames=web',
+    );
   });
 
   test('prints preview rpc error as json', async () => {

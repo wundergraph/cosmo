@@ -6,7 +6,7 @@ import type {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
 import inquirer from 'inquirer';
 import pc from 'picocolors';
-import { getBaseHeaders } from '../../../core/config.js';
+import { config, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 const createJsonSuccessOutput = (
@@ -24,21 +24,46 @@ const createJsonSuccessOutput = (
   deletedOperationsCount,
 });
 
-const createJsonErrorOutput = (code: EnumStatusCode, details?: string) => ({
+const createJsonErrorOutput = ({
+  code,
+  details,
+  url,
+  hasTraffic,
+  operationsCount,
+}: {
+  code: EnumStatusCode;
+  details?: string;
+  url?: string;
+  hasTraffic?: boolean;
+  operationsCount?: number;
+}) => ({
   status: 'error' as const,
   code,
   message: 'Could not delete client.',
   details,
+  url,
+  hasTraffic,
+  operationsCount,
 });
 
-const createDeleteWarning = (clientName: string, persistedOperationsCount: number, hasTraffic: boolean) => {
-  const message = `Client '${clientName}' has ${persistedOperationsCount} persisted operation(s).`;
+const createDeleteWarning = ({
+  clientName,
+  operationsCount,
+  hasTraffic,
+  url,
+}: {
+  clientName: string;
+  operationsCount: number;
+  hasTraffic: boolean;
+  url: string;
+}) => {
+  const message = `Client '${clientName}' has ${operationsCount} persisted operation(s).`;
 
-  if (!hasTraffic) {
-    return message;
+  if (hasTraffic) {
+    return `${message} One or more operations have traffic. See details:\n${url}\n`;
   }
 
-  return `${message} One or more operations have traffic.`;
+  return message;
 };
 
 const fetchPreviewDeleteClient = async (
@@ -152,7 +177,14 @@ export default (opts: BaseCommandOptions) => {
 
     if (previewResponseMetadata.status === 'error') {
       if (options.json) {
-        console.log(JSON.stringify(createJsonErrorOutput(EnumStatusCode.ERR, previewResponseMetadata.error.message)));
+        console.log(
+          JSON.stringify(
+            createJsonErrorOutput({
+              code: EnumStatusCode.ERR,
+              details: previewResponseMetadata.error.message,
+            }),
+          ),
+        );
         process.exitCode = 1;
         return;
       }
@@ -164,10 +196,10 @@ export default (opts: BaseCommandOptions) => {
 
     if (previewResp.response?.code !== EnumStatusCode.OK) {
       if (options.json) {
-        const output = createJsonErrorOutput(
-          previewResp.response?.code ?? EnumStatusCode.ERR,
-          previewResp.response?.details,
-        );
+        const output = createJsonErrorOutput({
+          code: previewResp.response?.code ?? EnumStatusCode.ERR,
+          details: previewResp.response?.details,
+        });
         console.log(JSON.stringify(output));
         process.exitCode = 1;
         return;
@@ -178,10 +210,27 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if ((previewResp.persistedOperationsCount > 0 || previewResp.hasTraffic) && !options.force) {
-      const warning = createDeleteWarning(clientName, previewResp.persistedOperationsCount, previewResp.hasTraffic);
+      const studioUrlObj = new URL(
+        `${previewResp.organizationSlug}/${options.namespace}/graph/${graphName}/operations`,
+        config.webURL,
+      );
+      studioUrlObj.searchParams.set('clientNames', previewResp.client?.name ?? '');
+      const studioUrl = studioUrlObj.toString();
+      const warning = createDeleteWarning({
+        clientName,
+        operationsCount: previewResp.persistedOperationsCount,
+        hasTraffic: previewResp.hasTraffic,
+        url: studioUrl,
+      });
 
       if (options.json) {
-        const output = createJsonErrorOutput(EnumStatusCode.ERR, `${warning} Use --force to delete it.`);
+        const output = createJsonErrorOutput({
+          code: EnumStatusCode.ERR,
+          details: warning,
+          url: studioUrl,
+          hasTraffic: previewResp.hasTraffic,
+          operationsCount: previewResp.persistedOperationsCount,
+        });
         console.log(JSON.stringify(output));
         process.exitCode = 1;
         return;
@@ -208,7 +257,12 @@ export default (opts: BaseCommandOptions) => {
     if (deleteClientResponseMetadata.status === 'error') {
       if (options.json) {
         console.log(
-          JSON.stringify(createJsonErrorOutput(EnumStatusCode.ERR, deleteClientResponseMetadata.error.message)),
+          JSON.stringify(
+            createJsonErrorOutput({
+              code: EnumStatusCode.ERR,
+              details: deleteClientResponseMetadata.error.message,
+            }),
+          ),
         );
         process.exitCode = 1;
         return;
@@ -220,7 +274,10 @@ export default (opts: BaseCommandOptions) => {
 
     if (resp.response?.code !== EnumStatusCode.OK) {
       if (options.json) {
-        const output = createJsonErrorOutput(resp.response?.code ?? EnumStatusCode.ERR, resp.response?.details);
+        const output = createJsonErrorOutput({
+          code: resp.response?.code ?? EnumStatusCode.ERR,
+          details: resp.response?.details,
+        });
         console.log(JSON.stringify(output));
         process.exitCode = 1;
         return;

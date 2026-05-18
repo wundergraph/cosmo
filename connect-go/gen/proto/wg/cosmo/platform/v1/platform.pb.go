@@ -19308,6 +19308,7 @@ type PreviewDeleteClientResponse struct {
 	Client                   *ClientInfo            `protobuf:"bytes,2,opt,name=client,proto3" json:"client,omitempty"`
 	PersistedOperationsCount int32                  `protobuf:"varint,3,opt,name=persistedOperationsCount,proto3" json:"persistedOperationsCount,omitempty"`
 	HasTraffic               bool                   `protobuf:"varint,4,opt,name=hasTraffic,proto3" json:"hasTraffic,omitempty"`
+	OrganizationSlug         string                 `protobuf:"bytes,5,opt,name=organizationSlug,proto3" json:"organizationSlug,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -19368,6 +19369,13 @@ func (x *PreviewDeleteClientResponse) GetHasTraffic() bool {
 		return x.HasTraffic
 	}
 	return false
+}
+
+func (x *PreviewDeleteClientResponse) GetOrganizationSlug() string {
+	if x != nil {
+		return x.OrganizationSlug
+	}
+	return ""
 }
 
 type DeleteClientRequest struct {
@@ -33912,14 +33920,15 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1e\n" +
 	"\n" +
 	"clientName\x18\x03 \x01(\tR\n" +
-	"clientName\"\xef\x01\n" +
+	"clientName\"\x9b\x02\n" +
 	"\x1bPreviewDeleteClientResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x128\n" +
 	"\x06client\x18\x02 \x01(\v2 .wg.cosmo.platform.v1.ClientInfoR\x06client\x12:\n" +
 	"\x18persistedOperationsCount\x18\x03 \x01(\x05R\x18persistedOperationsCount\x12\x1e\n" +
 	"\n" +
 	"hasTraffic\x18\x04 \x01(\bR\n" +
-	"hasTraffic\"w\n" +
+	"hasTraffic\x12*\n" +
+	"\x10organizationSlug\x18\x05 \x01(\tR\x10organizationSlug\"w\n" +
 	"\x13DeleteClientRequest\x12\"\n" +
 	"\ffedGraphName\x18\x01 \x01(\tR\ffedGraphName\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1e\n" +
