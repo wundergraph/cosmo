@@ -223,7 +223,8 @@ func TestOperationCost(t *testing.T) {
 
 				// 50 * (employees(1) + id(0) + 1 * (role(1) + 3 * departments(1) + 5 * title(1)))
 				require.Equal(t, "500", res.Response.Header.Get(core.CostEstimatedHeader))
-				require.Equal(t, "280", res.Response.Header.Get(core.CostActualHeader))
+				// 10 * (employees(1) + id(0) + 1 * (role(1) + 1.2 * departments(1) + 1.4 * title(1)))
+				require.Equal(t, "40", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
