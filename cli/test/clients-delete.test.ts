@@ -303,7 +303,11 @@ describe('json output', () => {
 
     expect(getJsonOutput(logSpy)).toEqual({
       status: 'success',
-      client: successPreview.client,
+      client: {
+        ...successPreview.client,
+        persistedOperationsCount: 0,
+        hasTraffic: false,
+      },
       deletedOperationsCount: 1,
     });
     expect(promptMock).not.toHaveBeenCalled();

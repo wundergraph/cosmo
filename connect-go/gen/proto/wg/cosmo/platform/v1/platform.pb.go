@@ -19031,15 +19031,17 @@ func (x *GetRoutersResponse) GetRouters() []*Router {
 }
 
 type ClientInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,3,opt,name=createdAt,proto3" json:"createdAt,omitempty"`
-	LastUpdatedAt string                 `protobuf:"bytes,4,opt,name=lastUpdatedAt,proto3" json:"lastUpdatedAt,omitempty"`
-	CreatedBy     string                 `protobuf:"bytes,5,opt,name=createdBy,proto3" json:"createdBy,omitempty"`
-	LastUpdatedBy string                 `protobuf:"bytes,6,opt,name=lastUpdatedBy,proto3" json:"lastUpdatedBy,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Name                     string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Id                       string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	CreatedAt                string                 `protobuf:"bytes,3,opt,name=createdAt,proto3" json:"createdAt,omitempty"`
+	LastUpdatedAt            string                 `protobuf:"bytes,4,opt,name=lastUpdatedAt,proto3" json:"lastUpdatedAt,omitempty"`
+	CreatedBy                string                 `protobuf:"bytes,5,opt,name=createdBy,proto3" json:"createdBy,omitempty"`
+	LastUpdatedBy            string                 `protobuf:"bytes,6,opt,name=lastUpdatedBy,proto3" json:"lastUpdatedBy,omitempty"`
+	PersistedOperationsCount *int32                 `protobuf:"varint,7,opt,name=persistedOperationsCount,proto3,oneof" json:"persistedOperationsCount,omitempty"`
+	HasTraffic               *bool                  `protobuf:"varint,8,opt,name=hasTraffic,proto3,oneof" json:"hasTraffic,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *ClientInfo) Reset() {
@@ -19114,12 +19116,27 @@ func (x *ClientInfo) GetLastUpdatedBy() string {
 	return ""
 }
 
+func (x *ClientInfo) GetPersistedOperationsCount() int32 {
+	if x != nil && x.PersistedOperationsCount != nil {
+		return *x.PersistedOperationsCount
+	}
+	return 0
+}
+
+func (x *ClientInfo) GetHasTraffic() bool {
+	if x != nil && x.HasTraffic != nil {
+		return *x.HasTraffic
+	}
+	return false
+}
+
 type GetClientsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FedGraphName  string                 `protobuf:"bytes,1,opt,name=fedGraphName,proto3" json:"fedGraphName,omitempty"`
-	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	FedGraphName   string                 `protobuf:"bytes,1,opt,name=fedGraphName,proto3" json:"fedGraphName,omitempty"`
+	Namespace      string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	IncludeTraffic bool                   `protobuf:"varint,3,opt,name=includeTraffic,proto3" json:"includeTraffic,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GetClientsRequest) Reset() {
@@ -19164,6 +19181,13 @@ func (x *GetClientsRequest) GetNamespace() string {
 		return x.Namespace
 	}
 	return ""
+}
+
+func (x *GetClientsRequest) GetIncludeTraffic() bool {
+	if x != nil {
+		return x.IncludeTraffic
+	}
+	return false
 }
 
 type GetClientsResponse struct {
@@ -19283,6 +19307,7 @@ type PreviewDeleteClientResponse struct {
 	Response                 *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
 	Client                   *ClientInfo            `protobuf:"bytes,2,opt,name=client,proto3" json:"client,omitempty"`
 	PersistedOperationsCount int32                  `protobuf:"varint,3,opt,name=persistedOperationsCount,proto3" json:"persistedOperationsCount,omitempty"`
+	HasTraffic               bool                   `protobuf:"varint,4,opt,name=hasTraffic,proto3" json:"hasTraffic,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -19336,6 +19361,13 @@ func (x *PreviewDeleteClientResponse) GetPersistedOperationsCount() int32 {
 		return x.PersistedOperationsCount
 	}
 	return 0
+}
+
+func (x *PreviewDeleteClientResponse) GetHasTraffic() bool {
+	if x != nil {
+		return x.HasTraffic
+	}
+	return false
 }
 
 type DeleteClientRequest struct {
@@ -33853,7 +33885,7 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\"\x88\x01\n" +
 	"\x12GetRoutersResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x126\n" +
-	"\arouters\x18\x02 \x03(\v2\x1c.wg.cosmo.platform.v1.RouterR\arouters\"\xb8\x01\n" +
+	"\arouters\x18\x02 \x03(\v2\x1c.wg.cosmo.platform.v1.RouterR\arouters\"\xca\x02\n" +
 	"\n" +
 	"ClientInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x0e\n" +
@@ -33861,10 +33893,17 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\tcreatedAt\x18\x03 \x01(\tR\tcreatedAt\x12$\n" +
 	"\rlastUpdatedAt\x18\x04 \x01(\tR\rlastUpdatedAt\x12\x1c\n" +
 	"\tcreatedBy\x18\x05 \x01(\tR\tcreatedBy\x12$\n" +
-	"\rlastUpdatedBy\x18\x06 \x01(\tR\rlastUpdatedBy\"U\n" +
+	"\rlastUpdatedBy\x18\x06 \x01(\tR\rlastUpdatedBy\x12?\n" +
+	"\x18persistedOperationsCount\x18\a \x01(\x05H\x00R\x18persistedOperationsCount\x88\x01\x01\x12#\n" +
+	"\n" +
+	"hasTraffic\x18\b \x01(\bH\x01R\n" +
+	"hasTraffic\x88\x01\x01B\x1b\n" +
+	"\x19_persistedOperationsCountB\r\n" +
+	"\v_hasTraffic\"}\n" +
 	"\x11GetClientsRequest\x12\"\n" +
 	"\ffedGraphName\x18\x01 \x01(\tR\ffedGraphName\x12\x1c\n" +
-	"\tnamespace\x18\x02 \x01(\tR\tnamespace\"\x8c\x01\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12&\n" +
+	"\x0eincludeTraffic\x18\x03 \x01(\bR\x0eincludeTraffic\"\x8c\x01\n" +
 	"\x12GetClientsResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12:\n" +
 	"\aclients\x18\x02 \x03(\v2 .wg.cosmo.platform.v1.ClientInfoR\aclients\"~\n" +
@@ -33873,11 +33912,14 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1e\n" +
 	"\n" +
 	"clientName\x18\x03 \x01(\tR\n" +
-	"clientName\"\xcf\x01\n" +
+	"clientName\"\xef\x01\n" +
 	"\x1bPreviewDeleteClientResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x128\n" +
 	"\x06client\x18\x02 \x01(\v2 .wg.cosmo.platform.v1.ClientInfoR\x06client\x12:\n" +
-	"\x18persistedOperationsCount\x18\x03 \x01(\x05R\x18persistedOperationsCount\"w\n" +
+	"\x18persistedOperationsCount\x18\x03 \x01(\x05R\x18persistedOperationsCount\x12\x1e\n" +
+	"\n" +
+	"hasTraffic\x18\x04 \x01(\bR\n" +
+	"hasTraffic\"w\n" +
 	"\x13DeleteClientRequest\x12\"\n" +
 	"\ffedGraphName\x18\x01 \x01(\tR\ffedGraphName\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1e\n" +
@@ -36559,6 +36601,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[252].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[260].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[265].OneofWrappers = []any{}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[283].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[290].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[303].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[318].OneofWrappers = []any{}

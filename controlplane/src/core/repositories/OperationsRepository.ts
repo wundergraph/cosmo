@@ -11,6 +11,7 @@ import type { BlobStorage } from '../blobstorage/index.js';
 import { createManifestBlobStoragePath } from '../bufservices/persisted-operation/utils.js';
 import {
   ClientDTO,
+  ClientDTOWithOperationMetadata,
   PersistedOperationDTO,
   PersistedOperationWithClientDTO,
   SchemaChangeType,
@@ -299,6 +300,20 @@ export class OperationsRepository {
     return clients;
   }
 
+  public async getRegisteredClientsWithMetadata(): Promise<ClientDTOWithOperationMetadata[]> {
+    const clients = await this.getRegisteredClients();
+    const clientsWithMetadata: ClientDTOWithOperationMetadata[] = [];
+
+    for (const client of clients) {
+      clientsWithMetadata.push({
+        ...client,
+        persistedOperationsCount: await this.getClientPersistedOperationCount(client.id),
+      });
+    }
+
+    return clientsWithMetadata;
+  }
+
   public async getRegisteredClientByName(clientName: string): Promise<ClientDTO | undefined> {
     const client = await this.db.query.federatedGraphClients.findFirst({
       where: and(
@@ -325,32 +340,16 @@ export class OperationsRepository {
     };
   }
 
-  public async previewDeleteClient(clientName: string): Promise<
-    | {
-        client: ClientDTO;
-        persistedOperationsCount: number;
-      }
-    | undefined
-  > {
+  public async previewDeleteClient(clientName: string): Promise<ClientDTOWithOperationMetadata | undefined> {
     const client = await this.getRegisteredClientByName(clientName);
 
     if (!client) {
       return undefined;
     }
 
-    const result = await this.db
-      .select({ count: count() })
-      .from(federatedGraphPersistedOperations)
-      .where(
-        and(
-          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
-          eq(federatedGraphPersistedOperations.clientId, client.id),
-        ),
-      );
-
     return {
-      client,
-      persistedOperationsCount: result[0]?.count ?? 0,
+      ...client,
+      persistedOperationsCount: await this.getClientPersistedOperationCount(client.id),
     };
   }
 
@@ -750,6 +749,20 @@ export class OperationsRepository {
     logger.debug({ revision, operationCount: allOperations.length, path }, 'PQL manifest generated and uploaded');
 
     return { revision, operationCount: allOperations.length };
+  }
+
+  private async getClientPersistedOperationCount(clientId: string) {
+    const result = await this.db
+      .select({ count: count() })
+      .from(federatedGraphPersistedOperations)
+      .where(
+        and(
+          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+          eq(federatedGraphPersistedOperations.clientId, clientId),
+        ),
+      );
+
+    return Number(result[0]?.count ?? 0);
   }
 
   private static createPersistedOperationDTO({

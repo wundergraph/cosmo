@@ -81,15 +81,21 @@ describe('stdout', () => {
           lastUpdatedAt: '2026-04-24T10:00:00.000Z',
           createdBy: 'a@b.com',
           lastUpdatedBy: 'c@d.com',
+          persistedOperationsCount: 2,
+          hasTraffic: true,
         },
       ],
     });
 
     expect(logSpy).toHaveBeenCalledTimes(1);
     expect(String(logSpy.mock.calls[0][0])).toContain('NAME');
+    expect(String(logSpy.mock.calls[0][0])).toContain('OPERATION_COUNT');
+    expect(String(logSpy.mock.calls[0][0])).toContain('HAS_TRAFFIC');
     expect(String(logSpy.mock.calls[0][0])).toContain('CREATED_AT');
     expect(String(logSpy.mock.calls[0][0])).toContain('LAST_PUSH');
     expect(String(logSpy.mock.calls[0][0])).toContain('web');
+    expect(String(logSpy.mock.calls[0][0])).toContain('2');
+    expect(String(logSpy.mock.calls[0][0])).toContain('✔');
     expect(String(logSpy.mock.calls[0][0])).toContain('2026-04-23T10:00:00.000Z');
     expect(String(logSpy.mock.calls[0][0])).toContain('2026-04-24T10:00:00.000Z');
     expect(String(logSpy.mock.calls[0][0])).not.toContain('client-id');
@@ -110,6 +116,23 @@ describe('stdout', () => {
     );
 
     expect(requestNamespace).toBe('default');
+  });
+
+  test('requests traffic data', async () => {
+    let includeTraffic = false;
+
+    await runList(
+      {
+        response: { code: EnumStatusCode.OK },
+        clients: [],
+      },
+      [],
+      (req) => {
+        includeTraffic = req.includeTraffic;
+      },
+    );
+
+    expect(includeTraffic).toBe(true);
   });
 
   test('prints empty message', async () => {
@@ -164,6 +187,8 @@ describe('json output', () => {
             lastUpdatedAt: '',
             createdBy: 'a@b.com',
             lastUpdatedBy: '',
+            persistedOperationsCount: 3,
+            hasTraffic: false,
           },
         ],
       },
@@ -180,6 +205,8 @@ describe('json output', () => {
           lastUpdatedAt: '',
           createdBy: 'a@b.com',
           lastUpdatedBy: '',
+          persistedOperationsCount: 3,
+          hasTraffic: false,
         },
       ],
     });

@@ -2139,11 +2139,14 @@ message ClientInfo{
   string lastUpdatedAt = 4;
   string createdBy = 5;
   string lastUpdatedBy = 6;
+  optional int32 persistedOperationsCount = 7;
+  optional bool hasTraffic = 8;
 }
 
 message GetClientsRequest {
   string fedGraphName = 1;
   string namespace = 2;
+  bool includeTraffic = 3;
 }
 
 message GetClientsResponse {

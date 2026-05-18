@@ -17893,6 +17893,16 @@ export class ClientInfo extends Message<ClientInfo> {
    */
   lastUpdatedBy = '';
 
+  /**
+   * @generated from field: optional int32 persistedOperationsCount = 7;
+   */
+  persistedOperationsCount?: number;
+
+  /**
+   * @generated from field: optional bool hasTraffic = 8;
+   */
+  hasTraffic?: boolean;
+
   constructor(data?: PartialMessage<ClientInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17907,6 +17917,8 @@ export class ClientInfo extends Message<ClientInfo> {
     { no: 4, name: 'lastUpdatedAt', kind: 'scalar', T: 9 /* ScalarType.STRING */ },
     { no: 5, name: 'createdBy', kind: 'scalar', T: 9 /* ScalarType.STRING */ },
     { no: 6, name: 'lastUpdatedBy', kind: 'scalar', T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: 'persistedOperationsCount', kind: 'scalar', T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 8, name: 'hasTraffic', kind: 'scalar', T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ClientInfo {
@@ -17943,6 +17955,11 @@ export class GetClientsRequest extends Message<GetClientsRequest> {
    */
   namespace = '';
 
+  /**
+   * @generated from field: bool includeTraffic = 3;
+   */
+  includeTraffic = false;
+
   constructor(data?: PartialMessage<GetClientsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17953,6 +17970,7 @@ export class GetClientsRequest extends Message<GetClientsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: 'fedGraphName', kind: 'scalar', T: 9 /* ScalarType.STRING */ },
     { no: 2, name: 'namespace', kind: 'scalar', T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: 'includeTraffic', kind: 'scalar', T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetClientsRequest {

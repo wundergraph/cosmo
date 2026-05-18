@@ -9,9 +9,18 @@ import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
-const createJsonSuccessOutput = (client: Awaited<DeleteClientResponse['client']>, deletedOperationsCount: number) => ({
+const createJsonSuccessOutput = (
+  client: Awaited<DeleteClientResponse['client']>,
+  deletedOperationsCount: number,
+  persistedOperationsCount?: number,
+  hasTraffic?: boolean,
+) => ({
   status: 'success' as const,
-  client,
+  client: {
+    ...client,
+    persistedOperationsCount: persistedOperationsCount ?? 0,
+    hasTraffic: hasTraffic ?? false,
+  },
   deletedOperationsCount,
 });
 
@@ -222,7 +231,12 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.json) {
-      const output = createJsonSuccessOutput(resp.client, resp.deletedOperationsCount);
+      const output = createJsonSuccessOutput(
+        resp.client,
+        resp.deletedOperationsCount,
+        previewResp.persistedOperationsCount,
+        previewResp.hasTraffic,
+      );
       console.log(JSON.stringify(output));
       return;
     }

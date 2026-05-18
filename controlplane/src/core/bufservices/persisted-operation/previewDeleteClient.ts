@@ -66,7 +66,7 @@ export function previewDeleteClient(
         response: {
           code: EnumStatusCode.OK,
         },
-        client: preview.client,
+        client: preview,
         persistedOperationsCount: preview.persistedOperationsCount,
         hasTraffic: false,
       };
@@ -96,7 +96,7 @@ export function previewDeleteClient(
       response: {
         code: EnumStatusCode.OK,
       },
-      client: preview.client,
+      client: preview,
       persistedOperationsCount: preview.persistedOperationsCount,
       hasTraffic,
     };

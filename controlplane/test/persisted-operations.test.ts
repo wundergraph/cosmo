@@ -414,6 +414,41 @@ describe('Persisted operations', (ctx) => {
       );
     });
 
+    test('Should list clients with operation counts and traffic', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [
+          { id: genID('hello'), contents: `query { hello }` },
+          { id: genID('typename'), contents: `query { __typename }` },
+        ],
+      });
+
+      (chClient.queryPromise as Mock).mockResolvedValueOnce([{ ClientName: 'curl' }]);
+
+      const clientsResp = await client.getClients({
+        fedGraphName,
+        namespace: 'default',
+        includeTraffic: true,
+      });
+
+      expect(clientsResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(clientsResp.clients).toEqual([
+        expect.objectContaining({
+          name: 'curl',
+          persistedOperationsCount: 2,
+          hasTraffic: true,
+        }),
+      ]);
+    });
+
     test('Should not preview deleting a missing client', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());

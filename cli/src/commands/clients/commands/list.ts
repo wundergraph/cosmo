@@ -2,6 +2,7 @@ import { Command, program } from 'commander';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import type { GetClientsResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
 import Table from 'cli-table3';
+import logSymbols from 'log-symbols';
 import pc from 'picocolors';
 
 import { getBaseHeaders } from '../../../core/config.js';
@@ -43,6 +44,7 @@ const fetchClients = async (
       {
         fedGraphName,
         namespace,
+        includeTraffic: true,
       },
       {
         headers: getBaseHeaders(),
@@ -118,13 +120,25 @@ export default (opts: BaseCommandOptions) => {
     }
 
     const clientsTable = new Table({
-      head: [pc.bold(pc.white('NAME')), pc.bold(pc.white('CREATED_AT')), pc.bold(pc.white('LAST_PUSH'))],
+      head: [
+        pc.bold(pc.white('NAME')),
+        pc.bold(pc.white('OPERATION_COUNT')),
+        pc.bold(pc.white('HAS_TRAFFIC')),
+        pc.bold(pc.white('CREATED_AT')),
+        pc.bold(pc.white('LAST_PUSH')),
+      ],
       wordWrap: true,
       wrapOnWordBoundary: false,
     });
 
     for (const client of resp.clients) {
-      clientsTable.push([client.name, client.createdAt, client.lastUpdatedAt || 'Never']);
+      clientsTable.push([
+        client.name,
+        client.persistedOperationsCount,
+        client.hasTraffic ? logSymbols.success : logSymbols.error,
+        client.createdAt,
+        client.lastUpdatedAt || 'Never',
+      ]);
     }
 
     console.log(clientsTable.toString());
