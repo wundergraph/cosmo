@@ -9,15 +9,10 @@ import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
-const createJsonSuccessOutput = (
-  client: Awaited<DeleteClientResponse['client']>,
-  deletedOperationsCount: number,
-  deletedOperations: Awaited<DeleteClientResponse['deletedOperations']>,
-) => ({
+const createJsonSuccessOutput = (client: Awaited<DeleteClientResponse['client']>, deletedOperationsCount: number) => ({
   status: 'success' as const,
   client,
   deletedOperationsCount,
-  deletedOperations,
 });
 
 const createJsonErrorOutput = (code: EnumStatusCode, details?: string) => ({
@@ -220,7 +215,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.json) {
-      const output = createJsonSuccessOutput(resp.client, resp.deletedOperationsCount, resp.deletedOperations);
+      const output = createJsonSuccessOutput(resp.client, resp.deletedOperationsCount);
       console.log(JSON.stringify(output));
       return;
     }

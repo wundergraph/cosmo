@@ -673,24 +673,6 @@ describe('Persisted operations', (ctx) => {
         lastUpdatedBy: '',
       });
       expect(deleteResp.deletedOperationsCount).toEqual(2);
-      expect(
-        deleteResp.deletedOperations.map((op) => ({
-          id: op.id,
-          operationId: op.operationId,
-          operationNames: op.operationNames,
-        })),
-      ).toStrictEqual([
-        {
-          id: expect.any(String),
-          operationId: helloOperationId,
-          operationNames: [],
-        },
-        {
-          id: expect.any(String),
-          operationId: typenameOperationId,
-          operationNames: [],
-        },
-      ]);
     });
 
     test('Should delete client side effects from storage, manifest and client list', async (testContext) => {

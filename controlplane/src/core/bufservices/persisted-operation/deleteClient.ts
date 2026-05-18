@@ -35,7 +35,6 @@ export function deleteClient(
           details: `Federated graph '${req.fedGraphName}' does not exist`,
         },
         deletedOperationsCount: 0,
-        deletedOperations: [],
       };
     }
 
@@ -53,7 +52,6 @@ export function deleteClient(
           details: `Client '${req.clientName}' does not exist`,
         },
         deletedOperationsCount: 0,
-        deletedOperations: [],
       };
     }
 
@@ -93,7 +91,6 @@ export function deleteClient(
             details: `Failed to delete client ${req.clientName}`,
           },
           deletedOperationsCount: 0,
-          deletedOperations: [],
         };
       }
     }
@@ -107,7 +104,6 @@ export function deleteClient(
           details: `Client '${req.clientName}' does not exist`,
         },
         deletedOperationsCount: 0,
-        deletedOperations: [],
       };
     }
 
@@ -131,7 +127,6 @@ export function deleteClient(
       },
       client: deletedClient.client,
       deletedOperationsCount: deletedClient.deletedOperationsCount,
-      deletedOperations: deletedClient.deletedOperations,
     };
   });
 }

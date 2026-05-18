@@ -98,7 +98,6 @@ const successDelete = {
   response: { code: EnumStatusCode.OK },
   client: successPreview.client,
   deletedOperationsCount: 0,
-  deletedOperations: [],
 };
 
 describe('stdout', () => {
@@ -239,7 +238,6 @@ describe('stdout', () => {
         deleteResponse: {
           response: { code: EnumStatusCode.ERR, details: 'boom' },
           deletedOperationsCount: 0,
-          deletedOperations: [],
         },
       }),
     ).rejects.toThrow();
@@ -275,7 +273,6 @@ describe('json output', () => {
       deleteResponse: {
         ...successDelete,
         deletedOperationsCount: 1,
-        deletedOperations: [{ id: 'op-id', operationId: 'GetUser', operationNames: ['GetUser'] }],
       },
       args: ['--json'],
     });
@@ -284,7 +281,6 @@ describe('json output', () => {
       status: 'success',
       client: successPreview.client,
       deletedOperationsCount: 1,
-      deletedOperations: [{ id: 'op-id', operationId: 'GetUser', operationNames: ['GetUser'] }],
     });
     expect(promptMock).not.toHaveBeenCalled();
   });

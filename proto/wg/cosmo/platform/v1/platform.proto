@@ -2179,7 +2179,6 @@ message DeleteClientResponse {
   Response response = 1;
   ClientInfo client = 2;
   int32 deletedOperationsCount = 3;
-  repeated Operation deletedOperations = 4;
 }
 
 message GetFieldUsageRequest {

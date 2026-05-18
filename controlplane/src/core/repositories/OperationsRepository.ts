@@ -43,12 +43,6 @@ type IgnoreAllOverride = {
   hash: string;
 };
 
-type DeletedClientOperationDTO = {
-  id: string;
-  operationId: string;
-  operationNames: string[];
-};
-
 @traced
 export class OperationsRepository {
   constructor(
@@ -364,7 +358,6 @@ export class OperationsRepository {
     | {
         client: ClientDTO;
         deletedOperationsCount: number;
-        deletedOperations: DeletedClientOperationDTO[];
       }
     | undefined
   > {
@@ -404,9 +397,7 @@ export class OperationsRepository {
 
       const deletedOperations = await tx
         .select({
-          id: federatedGraphPersistedOperations.id,
-          operationId: federatedGraphPersistedOperations.operationId,
-          operationNames: federatedGraphPersistedOperations.operationNames,
+          count: count(),
         })
         .from(federatedGraphPersistedOperations)
         .where(
@@ -440,12 +431,7 @@ export class OperationsRepository {
           createdBy: client.createdBy?.email ?? '',
           lastUpdatedBy: client.updatedBy?.email ?? '',
         },
-        deletedOperationsCount: deletedOperations.length,
-        deletedOperations: deletedOperations.map((operation) => ({
-          id: operation.id,
-          operationId: operation.operationId,
-          operationNames: operation.operationNames ?? [],
-        })),
+        deletedOperationsCount: deletedOperations?.[0]?.count || 0,
       };
     });
   }
