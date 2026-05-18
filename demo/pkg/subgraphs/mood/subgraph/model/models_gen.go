@@ -16,6 +16,9 @@ type Employee struct {
 
 func (Employee) IsEntity() {}
 
+type Mutation struct {
+}
+
 type Query struct {
 }
 
