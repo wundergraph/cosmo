@@ -53,6 +53,7 @@ import {
   GraphApiKeyDTO,
   Label,
   RouterRequestKeysDTO,
+  ComposeAndDeployResult,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import {
@@ -75,6 +76,7 @@ import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
+import type { CompositionService } from '../services/CompositionService.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
@@ -187,160 +189,137 @@ export class FederatedGraphRepository {
     });
   }
 
-  public update(data: {
-    admissionConfig: {
-      jwtSecret: string;
-      cdnBaseUrl: string;
-    };
-    blobStorage: BlobStorage;
+  public async update({
+    compositionService,
+    ...data
+  }: {
+    compositionService: CompositionService;
     labelMatchers: string[];
     namespaceId: string;
     routingUrl: string;
     targetId: string;
     updatedBy: string;
-    chClient: ClickHouseClient;
     admissionWebhookSecret?: string;
     admissionWebhookURL?: string;
-    compositionOptions?: CompositionOptions;
     readme?: string;
-    unsetAdmissionWebhookURL?: boolean;
     unsetLabelMatchers?: boolean;
-    webhookProxyUrl?: string;
-  }): Promise<
-    | {
-        compositionErrors: PlainMessage<CompositionError>[];
-        deploymentErrors: PlainMessage<DeploymentError>[];
-        compositionWarnings: PlainMessage<CompositionWarning>[];
-      }
-    | undefined
-  > {
+  }): Promise<ComposeAndDeployResult | undefined> {
     const routingUrl = normalizeURL(data.routingUrl);
-    return this.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
-      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
-      const targetRepo = new TargetRepository(tx, this.organizationId);
-      const contractRepo = new ContractRepository(this.logger, tx, this.organizationId);
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+    const targetRepo = new TargetRepository(this.db, this.organizationId);
+    const contractRepo = new ContractRepository(this.logger, this.db, this.organizationId);
 
-      const federatedGraph = await fedGraphRepo.byTargetId(data.targetId);
-      if (!federatedGraph) {
-        throw new Error(`Federated graph not found`);
-      }
+    const federatedGraph = await fedGraphRepo.byTargetId(data.targetId);
+    if (!federatedGraph) {
+      throw new Error(`Federated graph not found`);
+    }
 
-      // Update routing URL when changed. (Is required)
-      if (routingUrl && federatedGraph.routingUrl !== routingUrl) {
-        await tx.update(federatedGraphs).set({ routingUrl }).where(eq(federatedGraphs.id, federatedGraph.id)).execute();
-      }
+    // Update routing URL when changed. (Is required)
+    if (routingUrl && federatedGraph.routingUrl !== routingUrl) {
+      await this.db
+        .update(federatedGraphs)
+        .set({ routingUrl })
+        .where(eq(federatedGraphs.id, federatedGraph.id))
+        .execute();
+    }
 
-      // Update admission webhook URL when changed. (Is optional)
-      if (data.admissionWebhookURL !== undefined && federatedGraph.admissionWebhookURL !== data.admissionWebhookURL) {
-        const admissionWebhookURL = data.admissionWebhookURL ? normalizeURL(data.admissionWebhookURL) : '';
+    // Update admission webhook URL when changed. (Is optional)
+    if (data.admissionWebhookURL !== undefined && federatedGraph.admissionWebhookURL !== data.admissionWebhookURL) {
+      const admissionWebhookURL = data.admissionWebhookURL ? normalizeURL(data.admissionWebhookURL) : '';
 
-        await tx
-          .update(federatedGraphs)
-          .set({ admissionWebhookURL: admissionWebhookURL || null })
-          .where(eq(federatedGraphs.id, federatedGraph.id))
+      await this.db
+        .update(federatedGraphs)
+        .set({ admissionWebhookURL: admissionWebhookURL || null })
+        .where(eq(federatedGraphs.id, federatedGraph.id))
+        .execute();
+    }
+
+    if (data.admissionWebhookSecret !== undefined) {
+      await this.db
+        .update(federatedGraphs)
+        .set({ admissionWebhookSecret: data.admissionWebhookSecret || null })
+        .where(eq(federatedGraphs.id, federatedGraph.id))
+        .execute();
+    }
+
+    // Update the readme of the fed graph. (Is optional)
+    if (data.readme !== undefined) {
+      await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
+    }
+
+    const haveLabelMatchersChanged = checkIfLabelMatchersChanged({
+      isContract: !!federatedGraph.contract,
+      currentLabelMatchers: federatedGraph.labelMatchers,
+      newLabelMatchers: data.labelMatchers,
+      unsetLabelMatchers: data.unsetLabelMatchers,
+    });
+
+    // Update label matchers (Is optional)
+    if (!haveLabelMatchersChanged) {
+      return undefined;
+    }
+
+    const labelMatchers = data.unsetLabelMatchers ? [] : normalizeLabelMatchers(data.labelMatchers);
+    const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
+    const subgraphs = await subgraphRepo.byGraphLabelMatchers({
+      labelMatchers,
+      namespaceId: data.namespaceId,
+    });
+
+    const graphAndContracts = [federatedGraph, ...contracts.map((c) => c.downstreamFederatedGraph)];
+    for (const graph of graphAndContracts) {
+      await this.db.delete(schema.targetLabelMatchers).where(eq(schema.targetLabelMatchers.targetId, graph.targetId));
+
+      if (labelMatchers.length > 0) {
+        await this.db
+          .insert(schema.targetLabelMatchers)
+          .values(
+            labelMatchers.map((labelMatcher) => ({
+              targetId: graph.targetId,
+              labelMatcher: labelMatcher.split(','),
+            })),
+          )
           .execute();
       }
 
-      if (data.admissionWebhookSecret !== undefined) {
-        await tx
-          .update(federatedGraphs)
-          .set({ admissionWebhookSecret: data.admissionWebhookSecret || null })
-          .where(eq(federatedGraphs.id, federatedGraph.id))
+      let deleteCondition: SQL<unknown> | undefined = eq(schema.subgraphsToFederatedGraph.federatedGraphId, graph.id);
+
+      // we do this conditionally because notInArray cannot take empty value
+      if (subgraphs.length > 0) {
+        deleteCondition = and(
+          deleteCondition,
+          notInArray(
+            schema.subgraphsToFederatedGraph.subgraphId,
+            subgraphs.map((subgraph) => subgraph.id),
+          ),
+        );
+      }
+
+      await this.db.delete(schema.subgraphsToFederatedGraph).where(deleteCondition);
+      if (subgraphs.length > 0) {
+        await this.db
+          .insert(schema.subgraphsToFederatedGraph)
+          .values(
+            subgraphs.map((sg) => ({
+              subgraphId: sg.id,
+              federatedGraphId: graph.id,
+            })),
+          )
+          .onConflictDoNothing()
           .execute();
       }
+    }
 
-      // Update the readme of the fed graph. (Is optional)
-      if (data.readme !== undefined) {
-        await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
-      }
+    // since the label matchers have changed, the current DTO is stale
+    const updatedFederatedGraph = await fedGraphRepo.byTargetId(data.targetId);
+    if (!updatedFederatedGraph) {
+      throw new Error(`Federated graph not found`);
+    }
 
-      const haveLabelMatchersChanged = checkIfLabelMatchersChanged({
-        isContract: !!federatedGraph.contract,
-        currentLabelMatchers: federatedGraph.labelMatchers,
-        newLabelMatchers: data.labelMatchers,
-        unsetLabelMatchers: data.unsetLabelMatchers,
-      });
-
-      // Update label matchers (Is optional)
-      if (haveLabelMatchersChanged) {
-        const labelMatchers = data.unsetLabelMatchers ? [] : normalizeLabelMatchers(data.labelMatchers);
-
-        const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
-
-        const subgraphs = await subgraphRepo.byGraphLabelMatchers({
-          labelMatchers,
-          namespaceId: data.namespaceId,
-        });
-
-        const graphAndContracts = [federatedGraph, ...contracts.map((c) => c.downstreamFederatedGraph)];
-
-        for (const graph of graphAndContracts) {
-          await tx.delete(schema.targetLabelMatchers).where(eq(schema.targetLabelMatchers.targetId, graph.targetId));
-
-          if (labelMatchers.length > 0) {
-            await tx
-              .insert(schema.targetLabelMatchers)
-              .values(
-                labelMatchers.map((labelMatcher) => ({
-                  targetId: graph.targetId,
-                  labelMatcher: labelMatcher.split(','),
-                })),
-              )
-              .execute();
-          }
-
-          let deleteCondition: SQL<unknown> | undefined = eq(
-            schema.subgraphsToFederatedGraph.federatedGraphId,
-            graph.id,
-          );
-
-          // we do this conditionally because notInArray cannot take empty value
-          if (subgraphs.length > 0) {
-            deleteCondition = and(
-              deleteCondition,
-              notInArray(
-                schema.subgraphsToFederatedGraph.subgraphId,
-                subgraphs.map((subgraph) => subgraph.id),
-              ),
-            );
-          }
-
-          await tx.delete(schema.subgraphsToFederatedGraph).where(deleteCondition);
-
-          if (subgraphs.length > 0) {
-            await tx
-              .insert(schema.subgraphsToFederatedGraph)
-              .values(
-                subgraphs.map((sg) => ({
-                  subgraphId: sg.id,
-                  federatedGraphId: graph.id,
-                })),
-              )
-              .onConflictDoNothing()
-              .execute();
-          }
-        }
-
-        const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.composeAndDeployGraphs({
-          federatedGraphs: [federatedGraph],
-          blobStorage: data.blobStorage,
-          admissionConfig: {
-            webhookJWTSecret: data.admissionConfig.jwtSecret,
-            cdnBaseUrl: data.admissionConfig.cdnBaseUrl,
-          },
-          actorId: data.updatedBy,
-          chClient: data.chClient,
-          compositionOptions: data.compositionOptions,
-          webhookProxyUrl: data.webhookProxyUrl,
-        });
-
-        return {
-          compositionErrors,
-          deploymentErrors,
-          compositionWarnings,
-        };
-      }
+    return await compositionService.composeAndDeployFederatedGraph({
+      actorId: data.updatedBy,
+      federatedGraph: updatedFederatedGraph,
     });
   }
 
@@ -351,111 +330,47 @@ export class FederatedGraphRepository {
       .where(and(eq(targets.id, targetId), eq(schema.targets.organizationId, this.organizationId)));
   }
 
-  public move(
-    data: {
-      targetId: string;
-      newNamespaceId: string;
-      updatedBy: string;
-      federatedGraph: FederatedGraphDTO;
-      skipDeployment?: boolean;
-    },
-    blobStorage: BlobStorage,
-    admissionConfig: {
-      jwtSecret: string;
-      cdnBaseUrl: string;
-    },
-    chClient: ClickHouseClient,
-    compositionOptions?: CompositionOptions,
-    webhookProxyUrl?: string,
-  ): Promise<{
-    compositionErrors: PlainMessage<CompositionError>[];
-    deploymentErrors: PlainMessage<DeploymentError>[];
-    compositionWarnings: PlainMessage<CompositionWarning>[];
-  }> {
-    return this.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
-      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
+  /**
+   * Move does not call `composeAndDeployFederatedGraph` itself.
+   * This is because contracts need to all be moved to the new namespace before `composeAndDeployFederatedGraph`
+   * is called.
+   *
+   * @param data
+   */
+  public async move(data: {
+    targetId: string;
+    newNamespaceId: string;
+    updatedBy: string;
+    federatedGraph: FederatedGraphDTO;
+    skipDeployment?: boolean;
+  }): Promise<void> {
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
 
-      await tx.update(targets).set({ namespaceId: data.newNamespaceId }).where(eq(targets.id, data.targetId));
+    await this.db.update(targets).set({ namespaceId: data.newNamespaceId }).where(eq(targets.id, data.targetId));
 
-      // Delete all mappings because we will deal with new subgraphs in new namespace
-      await tx
-        .delete(schema.subgraphsToFederatedGraph)
-        .where(eq(schema.subgraphsToFederatedGraph.federatedGraphId, data.federatedGraph.id));
+    // Delete all mappings because we will deal with new subgraphs in new namespace
+    await this.db
+      .delete(schema.subgraphsToFederatedGraph)
+      .where(eq(schema.subgraphsToFederatedGraph.federatedGraphId, data.federatedGraph.id));
 
-      const newNamespaceSubgraphs = await subgraphRepo.byGraphLabelMatchers({
-        labelMatchers: data.federatedGraph.labelMatchers,
-        namespaceId: data.newNamespaceId,
-      });
-
-      // insert new mappings
-      if (newNamespaceSubgraphs.length > 0) {
-        await tx
-          .insert(schema.subgraphsToFederatedGraph)
-          .values(
-            newNamespaceSubgraphs.map((sg) => ({
-              subgraphId: sg.id,
-              federatedGraphId: data.federatedGraph.id,
-            })),
-          )
-          .onConflictDoNothing()
-          .execute();
-      }
-
-      if (data.skipDeployment) {
-        return {
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-        };
-      }
-
-      // Handle Contract Deployment
-      if (data.federatedGraph.contract) {
-        const movedContractGraph = await fedGraphRepo.byId(data.federatedGraph.id);
-        if (!movedContractGraph) {
-          throw new Error('Could not find contract after moving');
-        }
-
-        const composition = await this.composeAndDeployGraphs({
-          actorId: data.updatedBy,
-          admissionConfig: {
-            cdnBaseUrl: admissionConfig.cdnBaseUrl,
-            webhookJWTSecret: admissionConfig.jwtSecret,
-          },
-          blobStorage,
-          chClient,
-          compositionOptions,
-          federatedGraphs: [movedContractGraph],
-          webhookProxyUrl,
-        });
-
-        return {
-          compositionErrors: composition.compositionErrors,
-          deploymentErrors: composition.deploymentErrors,
-          compositionWarnings: composition.compositionWarnings,
-        };
-      }
-
-      const composition = await fedGraphRepo.composeAndDeployGraphs({
-        federatedGraphs: [data.federatedGraph],
-        actorId: data.updatedBy,
-        blobStorage,
-        admissionConfig: {
-          cdnBaseUrl: admissionConfig.cdnBaseUrl,
-          webhookJWTSecret: admissionConfig.jwtSecret,
-        },
-        chClient,
-        compositionOptions,
-        webhookProxyUrl,
-      });
-
-      return {
-        compositionErrors: composition.compositionErrors,
-        deploymentErrors: composition.deploymentErrors,
-        compositionWarnings: composition.compositionWarnings,
-      };
+    const newNamespaceSubgraphs = await subgraphRepo.byGraphLabelMatchers({
+      labelMatchers: data.federatedGraph.labelMatchers,
+      namespaceId: data.newNamespaceId,
     });
+
+    // insert new mappings
+    if (newNamespaceSubgraphs.length > 0) {
+      await this.db
+        .insert(schema.subgraphsToFederatedGraph)
+        .values(
+          newNamespaceSubgraphs.map((sg) => ({
+            subgraphId: sg.id,
+            federatedGraphId: data.federatedGraph.id,
+          })),
+        )
+        .onConflictDoNothing()
+        .execute();
+    }
   }
 
   static applyRbacConditionsToQuery(

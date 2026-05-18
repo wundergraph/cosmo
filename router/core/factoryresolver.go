@@ -240,12 +240,13 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 }
 
 type RouterEngineConfiguration struct {
-	Execution                config.EngineExecutionConfiguration
-	Headers                  *config.HeaderRules
-	Events                   config.EventsConfiguration
-	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-	StreamMetricStore        rmetric.StreamMetricStore
-	CostControl              *config.CostControl
+	Execution                    config.EngineExecutionConfiguration
+	Headers                      *config.HeaderRules
+	Events                       config.EventsConfiguration
+	SubgraphErrorPropagation     config.SubgraphErrorPropagationConfiguration
+	SubgraphExtensionPropagation config.SubgraphExtensionPropagationConfiguration
+	StreamMetricStore            rmetric.StreamMetricStore
+	CostControl                  *config.CostControl
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {

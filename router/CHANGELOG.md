@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.316.2](https://github.com/wundergraph/cosmo/compare/router@0.316.1...router@0.316.2) (2026-05-14)
+
+### Bug Fixes
+
+* **composition:** apply subscription filters on union and interface return types ([#2797](https://github.com/wundergraph/cosmo/issues/2797)) ([4c91d4f](https://github.com/wundergraph/cosmo/commit/4c91d4fd7420b19b2e9aa0dd382ba7e1c95b85a3)) (@jensneuse)
+
+## [0.316.1](https://github.com/wundergraph/cosmo/compare/router@0.316.0...router@0.316.1) (2026-05-13)
+
+**Note:** Version bump only for package router
+
+# [0.316.0](https://github.com/wundergraph/cosmo/compare/router@0.315.0...router@0.316.0) (2026-05-12)
+
+### Features
+
+* **router:** enable unauthenticated request tracing ([#2858](https://github.com/wundergraph/cosmo/issues/2858)) ([85b36c1](https://github.com/wundergraph/cosmo/commit/85b36c139365565a959d8c29bba851f7172ba47e)) (@ysmolski)
+* support user-defined extension forwarding from subgraphs ([#2836](https://github.com/wundergraph/cosmo/issues/2836)) ([3438adf](https://github.com/wundergraph/cosmo/commit/3438adfa89958c964b19bf66c174d52e8eaa59f8)) (@Noroth)
+
+# [0.315.0](https://github.com/wundergraph/cosmo/compare/router@0.314.0...router@0.315.0) (2026-05-11)
+
+### Features
+
+* split router execution configs ([#2847](https://github.com/wundergraph/cosmo/issues/2847)) ([893ff72](https://github.com/wundergraph/cosmo/commit/893ff721e28d34eb308b74c845773a0186a7467c)) (@Aenimus)
+
 # [0.314.0](https://github.com/wundergraph/cosmo/compare/router@0.313.2...router@0.314.0) (2026-05-11)
 
 ### Features

@@ -8,10 +8,8 @@ import {
   UpdateSubgraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
@@ -26,6 +24,7 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function updateSubgraph(
   opts: RouterOptions,
@@ -39,7 +38,6 @@ export function updateSubgraph(
     logger = enrichLogger(ctx, logger, authContext);
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
@@ -189,39 +187,38 @@ export function updateSubgraph(
       throw new UnauthorizedError();
     }
 
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-    });
+    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
+      await opts.db.transaction((tx) => {
+        const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+        const compositionService = new CompositionService(
+          tx,
+          authContext.organizationId,
+          logger,
+          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+          opts.blobStorage,
+          opts.chClient,
+          opts.webhookProxyUrl,
+          req.disableResolvabilityValidation,
+        );
 
-    const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
-      await subgraphRepo.update(
-        {
-          targetId: subgraph.targetId,
-          labels: req.labels,
-          unsetLabels: req.unsetLabels ?? false,
-          subscriptionUrl: req.subscriptionUrl,
-          routingUrl: req.routingUrl,
-          subscriptionProtocol:
-            req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
-          websocketSubprotocol:
-            req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
-          updatedBy: authContext.userId,
-          readme: req.readme,
-          namespaceId: subgraph.namespaceId,
-        },
-        opts.blobStorage,
-        {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-        },
-        opts.chClient!,
-        {
-          disableResolvabilityValidation: req.disableResolvabilityValidation,
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-        },
-        opts.webhookProxyUrl,
-      );
+        return subgraphRepo.update(
+          {
+            targetId: subgraph.targetId,
+            labels: req.labels,
+            unsetLabels: req.unsetLabels ?? false,
+            subscriptionUrl: req.subscriptionUrl,
+            routingUrl: req.routingUrl,
+            subscriptionProtocol:
+              req.subscriptionProtocol === undefined ? undefined : formatSubscriptionProtocol(req.subscriptionProtocol),
+            websocketSubprotocol:
+              req.websocketSubprotocol === undefined ? undefined : formatWebsocketSubprotocol(req.websocketSubprotocol),
+            updatedBy: authContext.userId,
+            readme: req.readme,
+            namespaceId: subgraph.namespaceId,
+          },
+          compositionService,
+        );
+      });
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
