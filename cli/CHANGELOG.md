@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.120.0](https://github.com/wundergraph/cosmo/compare/wgc@0.118.1...wgc@0.120.0) (2026-05-18)
+
+### Features
+
+* local cosmo cloud registry ([#2778](https://github.com/wundergraph/cosmo/issues/2778)) ([3dc95e7](https://github.com/wundergraph/cosmo/commit/3dc95e7a539e1326ad526698d4c7d39ff12b6df8)) (@)
+
 # [0.119.0](https://github.com/wundergraph/cosmo/compare/wgc@0.118.1...wgc@0.119.0) (2026-05-18)
 
 ### Features
