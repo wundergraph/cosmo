@@ -160,8 +160,8 @@ type (
 	HTTPServerTLSConfig struct {
 		// Settings holds all settings a user specified for serverside TLS connections.
 		Settings HTTPServerTLSConfigSettings
-		// Config is the "compiled" TLS configuration from Settings.
-		Config *tls.Config
+		// config is the "compiled" TLS configuration from Settings.
+		config *tls.Config
 	}
 
 	// HTTPServerTLSConfigSettings holds all settings a user specified for serverside TLS connections.
@@ -404,7 +404,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	r.graphqlEndpointURL = graphqlEndpointURL
 
 	if r.tls != nil {
-		r.tls.Server.HTTP.Config, err = r.serverHTTPTLSConfig()
+		r.tls.Server.HTTP.config, err = r.serverHTTPTLSConfig()
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct tls config: %w", err)
 		}
@@ -830,7 +830,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 
 	var tlsConfig *tls.Config
 	if r.tls != nil {
-		tlsConfig = r.tls.Server.HTTP.Config
+		tlsConfig = r.tls.Server.HTTP.config
 	}
 
 	var err error
@@ -1500,7 +1500,7 @@ func (r *Router) Start(ctx context.Context) error {
 
 	var tlsConfig *tls.Config
 	if r.tls != nil {
-		tlsConfig = r.tls.Server.HTTP.Config
+		tlsConfig = r.tls.Server.HTTP.config
 	}
 
 	var err error

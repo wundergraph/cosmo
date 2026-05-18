@@ -257,7 +257,7 @@ func (c *Config) Usage() map[string]any {
 	usage["development_mode"] = c.developmentMode
 	usage["access_logs"] = c.accessLogsConfig != nil
 	usage["localhost_fallback_inside_docker"] = c.localhostFallbackInsideDocker
-	usage["tls_server"] = c.tls != nil && c.tls.Server.HTTP.Config != nil
+	usage["tls_server"] = c.tls != nil && c.tls.Server.HTTP.config != nil
 	usage["tls_client"] = c.tls != nil && (c.tls.Client.Subgraphs.HTTP.All.CertFile != "" ||
 		c.tls.Client.Subgraphs.HTTP.All.KeyFile != "" ||
 		c.tls.Client.Subgraphs.HTTP.All.CaFile != "" ||
