@@ -119,10 +119,11 @@ func TestAppendCacheEventRow_CacheOpKindOverridesFreeformString(t *testing.T) {
 	// Order from the source: [Timestamp, OrgID, FedGraphID, RouterConfigVersion,
 	//   EventType, OperationHash, OperationName, OperationType, ClientName,
 	//   ClientVersion, TraceID, IsShadow, EntityType, SubgraphID, KeyHash,
+	//   FieldName, FieldHash, FieldPath, EntityCount, EntityUniqueKeys,
 	//   Verdict, ByteSize, CacheAgeMs, TTLMs, WriteReason, Source, FetchSource,
 	//   DurationMs, TTFBMs, ItemCount, IsEntityFetch, HttpStatusCode,
 	//   ResponseBytes, ErrorMessage, ErrorCode, CacheOp, ...]
-	const cacheOpIdx = 30
+	const cacheOpIdx = 35
 
 	t.Run("typed enum wins over the legacy string", func(t *testing.T) {
 		batch := &fakeBatch{}
@@ -175,7 +176,7 @@ func TestAppendCacheEventRow_OrgAndGraphIDsArePropagated(t *testing.T) {
 func TestAppendCacheEventRow_FieldPath_ServializesAsArrayColumn(t *testing.T) {
 	t.Parallel()
 
-	const fieldPathIdx = 41
+	const fieldPathIdx = 17
 
 	t.Run("nil FieldPath becomes empty array, never nil", func(t *testing.T) {
 		batch := &fakeBatch{}

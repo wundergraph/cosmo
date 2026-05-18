@@ -168,6 +168,7 @@ func appendCacheEventRow(
 		ev.BaseKeyHash,                    // BaseKeyHash
 		ev.HeaderHash,                     // HeaderHash
 		ev.ResponseHash,                   // ResponseHash
+		ev.ChildTypeName,                  // ChildTypeName (FIELD_SELECTION only; empty for every other event)
 	)
 }
 

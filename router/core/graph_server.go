@@ -141,6 +141,7 @@ type buildMultiGraphHandlerOptions struct {
 	baseMux               *chi.Mux
 	featureFlagConfigs    map[string]*nodev1.FeatureFlagRouterExecutionConfig
 	reloadPersistentState *ReloadPersistentState
+	rolloutSelector       *rolloutSelector
 }
 
 // newGraphServer creates a new server instance.
@@ -349,10 +350,20 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
+	rolloutSel, err := newRolloutSelector(
+		&r.featureFlagRollouts,
+		featureFlagConfigMap,
+		s.logger,
+	)
+	if err != nil {
+		s.logger.Error("feature_flag_rollouts: invalid config; rollouts disabled", zap.Error(err))
+	}
+
 	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, buildMultiGraphHandlerOptions{
 		baseMux:               gm.mux,
 		featureFlagConfigs:    featureFlagConfigMap,
 		reloadPersistentState: r.reloadPersistentState,
+		rolloutSelector:       rolloutSel,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
@@ -525,9 +536,13 @@ func (s *graphServer) buildMultiGraphHandler(
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract the feature flag and run the corresponding mux
-		// 1. From the request header
-		// 2. From the cookie
+		// Flag selection precedence:
+		// 1. X-Feature-Flag header (preview flags only)
+		// 2. feature_flag cookie (preview flags only)
+		// 3. Rollout selector (rollout flags, by traffic %)
+		//
+		// Header/cookie pins targeting a *rollout* flag are ignored —
+		// rollout flags must not be steerable by clients.
 
 		ff := strings.TrimSpace(r.Header.Get(featureFlagHeader))
 		if ff == "" {
@@ -537,7 +552,25 @@ func (s *graphServer) buildMultiGraphHandler(
 			}
 		}
 
+		if ff != "" && opts.rolloutSelector != nil && opts.rolloutSelector.isRolloutFlag(ff) {
+			ff = ""
+		}
+
+		if ff == "" && opts.rolloutSelector != nil {
+			if picked, _, ok := opts.rolloutSelector.pick(w, r); ok {
+				ff = picked
+			}
+		}
+
 		if mux, ok := featureFlagToMux[ff]; ok {
+			// Always echo the active flag. A previous attempt suppressed it
+			// for random rollout picks on the theory that the header lets a
+			// client grind onto the variant — but the variant must have an
+			// observably different response shape (otherwise the rollout has
+			// no purpose), so a grinder already has a side-channel. Stripping
+			// just hides debug signal from honest clients, breaks downstream
+			// caches keyed on the flag, and complicates integration tests
+			// that need to know which variant served the request.
 			w.Header().Set(featureFlagHeader, ff)
 			mux.ServeHTTP(w, r)
 			return

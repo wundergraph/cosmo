@@ -270,6 +270,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithRateLimitConfig(&config.RateLimit),
 		WithClientHeader(config.ClientHeader),
 		WithCacheWarmupConfig(&config.CacheWarmup),
+		WithFeatureFlagRollouts(config.FeatureFlagRollouts),
 		WithMCP(config.MCP),
 		WithConnectRPC(config.ConnectRPC),
 		WithPlugins(config.Plugins),

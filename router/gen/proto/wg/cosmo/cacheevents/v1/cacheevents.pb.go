@@ -37,6 +37,7 @@ const (
 	EventType_CACHE_OP_ERROR         EventType = 10
 	EventType_FIELD_HASH             EventType = 11
 	EventType_ENTITY_TYPE_INFO       EventType = 12
+	EventType_FIELD_SELECTION        EventType = 13
 )
 
 // Enum value maps for EventType.
@@ -55,6 +56,7 @@ var (
 		10: "CACHE_OP_ERROR",
 		11: "FIELD_HASH",
 		12: "ENTITY_TYPE_INFO",
+		13: "FIELD_SELECTION",
 	}
 	EventType_value = map[string]int32{
 		"EVENT_TYPE_UNSPECIFIED": 0,
@@ -70,6 +72,7 @@ var (
 		"CACHE_OP_ERROR":         10,
 		"FIELD_HASH":             11,
 		"ENTITY_TYPE_INFO":       12,
+		"FIELD_SELECTION":        13,
 	}
 )
 
@@ -407,6 +410,16 @@ type CacheEvent struct {
 	FieldName string   `protobuf:"bytes,90,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
 	FieldHash uint64   `protobuf:"fixed64,91,opt,name=field_hash,json=fieldHash,proto3" json:"field_hash,omitempty"`
 	FieldPath []string `protobuf:"bytes,93,rep,name=field_path,json=fieldPath,proto3" json:"field_path,omitempty"`
+	// FIELD_SELECTION only — emitted when the response walker enters an
+	// Object/Array accessor inside an entity scope. The accessor itself has
+	// no scalar value, so field_hash stays zero; the row's existence is the
+	// signal that the operator selected the accessor. child_type_name is the
+	// accessor's named return type (unwrapped of NonNull/List). For interface
+	// or union accessors it carries the abstract type name — concrete
+	// __typename info lives on the leaf field_hash rows under it.
+	// Field 95 is reserved for a future concrete_type_name column if we ever
+	// want to emit per-concrete-resolution accessor rows.
+	ChildTypeName string `protobuf:"bytes,94,opt,name=child_type_name,json=childTypeName,proto3" json:"child_type_name,omitempty"`
 	// ENTITY_TYPE_INFO only.
 	EntityCount      uint32 `protobuf:"varint,100,opt,name=entity_count,json=entityCount,proto3" json:"entity_count,omitempty"`
 	EntityUniqueKeys uint32 `protobuf:"varint,101,opt,name=entity_unique_keys,json=entityUniqueKeys,proto3" json:"entity_unique_keys,omitempty"`
@@ -762,6 +775,13 @@ func (x *CacheEvent) GetFieldPath() []string {
 	return nil
 }
 
+func (x *CacheEvent) GetChildTypeName() string {
+	if x != nil {
+		return x.ChildTypeName
+	}
+	return ""
+}
+
 func (x *CacheEvent) GetEntityCount() uint32 {
 	if x != nil {
 		return x.EntityCount
@@ -790,7 +810,7 @@ const file_wg_cosmo_cacheevents_v1_cacheevents_proto_rawDesc = "" +
 	")wg/cosmo/cacheevents/v1/cacheevents.proto\x12\x17wg.cosmo.cacheevents.v1\"^\n" +
 	"\x1fPublishEntityCacheEventsRequest\x12;\n" +
 	"\x06events\x18\x01 \x03(\v2#.wg.cosmo.cacheevents.v1.CacheEventR\x06events\"\"\n" +
-	" PublishEntityCacheEventsResponse\"\xb2\x0e\n" +
+	" PublishEntityCacheEventsResponse\"\xf4\x0e\n" +
 	"\n" +
 	"CacheEvent\x12.\n" +
 	"\x13timestamp_unix_nano\x18\x01 \x01(\x06R\x11timestampUnixNano\x12A\n" +
@@ -854,10 +874,11 @@ const file_wg_cosmo_cacheevents_v1_cacheevents_proto_rawDesc = "" +
 	"\n" +
 	"field_hash\x18[ \x01(\x06R\tfieldHash\x12\x1d\n" +
 	"\n" +
-	"field_path\x18] \x03(\tR\tfieldPath\x12!\n" +
+	"field_path\x18] \x03(\tR\tfieldPath\x12&\n" +
+	"\x0fchild_type_name\x18^ \x01(\tR\rchildTypeName\x12!\n" +
 	"\fentity_count\x18d \x01(\rR\ventityCount\x12,\n" +
 	"\x12entity_unique_keys\x18e \x01(\rR\x10entityUniqueKeys\x12H\n" +
-	"\rcache_op_kind\x18n \x01(\x0e2$.wg.cosmo.cacheevents.v1.CacheOpKindR\vcacheOpKindJ\x04\b\\\x10]R\x10parent_type_name*\xf5\x01\n" +
+	"\rcache_op_kind\x18n \x01(\x0e2$.wg.cosmo.cacheevents.v1.CacheOpKindR\vcacheOpKindJ\x04\b\\\x10]J\x04\b_\x10`R\x10parent_type_nameR\x12concrete_type_name*\x8a\x02\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\v\n" +
 	"\aL1_READ\x10\x01\x12\v\n" +
@@ -873,7 +894,8 @@ const file_wg_cosmo_cacheevents_v1_cacheevents_proto_rawDesc = "" +
 	"\x12\x0e\n" +
 	"\n" +
 	"FIELD_HASH\x10\v\x12\x14\n" +
-	"\x10ENTITY_TYPE_INFO\x10\f*\\\n" +
+	"\x10ENTITY_TYPE_INFO\x10\f\x12\x13\n" +
+	"\x0fFIELD_SELECTION\x10\r*\\\n" +
 	"\vCacheOpKind\x12\x1d\n" +
 	"\x19CACHE_OP_KIND_UNSPECIFIED\x10\x00\x12\a\n" +
 	"\x03GET\x10\x01\x12\a\n" +

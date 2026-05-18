@@ -2614,6 +2614,14 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	}
 }
 
+// WithFeatureFlagRollouts configures percentage-based traffic rollouts for
+// feature flags shipped in the execution config. See FeatureFlagRollouts.
+func WithFeatureFlagRollouts(cfg config.FeatureFlagRollouts) Option {
+	return func(r *Router) {
+		r.featureFlagRollouts = cfg
+	}
+}
+
 // WithPlanningDurationOverride sets a function that overrides the measured planning duration.
 // Used in tests to simulate slow queries that exceed the expensive query threshold.
 func WithPlanningDurationOverride(fn func(content string) time.Duration) Option {

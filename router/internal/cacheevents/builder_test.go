@@ -53,9 +53,20 @@ func TestBuildEvents_AllEventTypes(t *testing.T) {
 		},
 		FieldHashes: []resolve.EntityFieldHash{
 			// Safe: KeyHash is set (engine ran with HashAnalyticsKeys=true) — emit a FIELD_HASH event.
-			{EntityType: "User", FieldName: "email", FieldHash: 0xfeed, KeyHash: 0xdead, Source: resolve.FieldSourceL2},
+			// DataSource ("accounts") and FieldPath (["address"]) must be propagated onto the proto event.
+			{EntityType: "User", FieldName: "street", FieldPath: []string{"address"}, FieldHash: 0xfeed, KeyHash: 0xdead, Source: resolve.FieldSourceL2, DataSource: "accounts"},
 			// PII guard: KeyHash is zero (HashAnalyticsKeys=false on this entity) — must NOT emit.
 			{EntityType: "User", FieldName: "phone", FieldHash: 0xbeef, KeyRaw: piiKey, Source: resolve.FieldSourceSubgraph},
+		},
+		FieldSelections: []resolve.EntityFieldSelection{
+			// Safe: KeyHash set — emit a FIELD_SELECTION event. ChildTypeName
+			// carries the accessor's unwrapped return type so downstream readers
+			// don't have to walk FieldPath against the supergraph schema.
+			{EntityType: "User", FieldName: "address", ChildTypeName: "Address", FieldPath: nil, KeyHash: 0xdead, Source: resolve.FieldSourceSubgraph, DataSource: "accounts"},
+			// PII guard mirror — KeyHash=0 means the engine couldn't hash the
+			// key, so we drop the selection event rather than risk leakage via
+			// any future column.
+			{EntityType: "User", FieldName: "profile", ChildTypeName: "Profile", KeyRaw: piiKey, Source: resolve.FieldSourceSubgraph},
 		},
 		EntityTypes: []resolve.EntityTypeInfo{
 			{TypeName: "User", Count: 5, UniqueKeys: 3},
@@ -73,8 +84,8 @@ func TestBuildEvents_AllEventTypes(t *testing.T) {
 	}
 
 	events := BuildEvents(snap, meta)
-	// 10 base event types + 1 FIELD_HASH (the second has KeyHash=0 and is dropped) + 1 ENTITY_TYPE_INFO = 12.
-	require.Len(t, events, 12)
+	// 10 base event types + 1 FIELD_HASH (the second has KeyHash=0 and is dropped) + 1 FIELD_SELECTION (same drop semantics) + 1 ENTITY_TYPE_INFO = 13.
+	require.Len(t, events, 13)
 
 	// Verify each event type was emitted exactly once.
 	seen := map[cacheeventsv1.EventType]int{}
@@ -93,6 +104,7 @@ func TestBuildEvents_AllEventTypes(t *testing.T) {
 		cacheeventsv1.EventType_HEADER_IMPACT,
 		cacheeventsv1.EventType_CACHE_OP_ERROR,
 		cacheeventsv1.EventType_FIELD_HASH,
+		cacheeventsv1.EventType_FIELD_SELECTION,
 		cacheeventsv1.EventType_ENTITY_TYPE_INFO,
 	} {
 		require.Equalf(t, 1, seen[et], "missing event type %s", et)
@@ -127,7 +139,8 @@ func TestBuildEvents_AllEventTypes(t *testing.T) {
 			cacheeventsv1.EventType_L2_WRITE,
 			cacheeventsv1.EventType_SHADOW_COMPARISON,
 			cacheeventsv1.EventType_MUTATION,
-			cacheeventsv1.EventType_FIELD_HASH:
+			cacheeventsv1.EventType_FIELD_HASH,
+			cacheeventsv1.EventType_FIELD_SELECTION:
 			require.NotZerof(t, ev.KeyHash, "KeyHash must be set for %s", ev.EventType)
 		case cacheeventsv1.EventType_HEADER_IMPACT:
 			require.NotZero(t, ev.BaseKeyHash, "BaseKeyHash must be set for HEADER_IMPACT")
@@ -139,19 +152,36 @@ func TestBuildEvents_AllEventTypes(t *testing.T) {
 		}
 	}
 
-	// FIELD_HASH must carry the engine-provided FieldName + FieldHash and the
-	// dropped (KeyHash=0) entry must NOT have produced an event.
+	// FIELD_HASH must carry the engine-provided FieldName + FieldHash, the
+	// resolving subgraph's name on SubgraphId (from EntityFieldHash.DataSource),
+	// the schema-name FieldPath chain, and the dropped (KeyHash=0) entry
+	// must NOT have produced an event.
 	for _, ev := range events {
 		if ev.EventType != cacheeventsv1.EventType_FIELD_HASH {
 			continue
 		}
-		require.Equal(t, "email", ev.FieldName)
+		require.Equal(t, "street", ev.FieldName)
 		require.Equal(t, uint64(0xfeed), ev.FieldHash)
 		require.Equal(t, uint64(0xdead), ev.KeyHash)
-		// SubgraphId on FIELD_HASH is sourced from EntityFieldHash.DataSource on
-		// the new engine; the pinned engine has no DataSource on that struct, so
-		// the field is left empty until the engine bump lands.
+		require.Equal(t, "accounts", ev.SubgraphId, "SubgraphId must propagate from EntityFieldHash.DataSource")
+		require.Equal(t, []string{"address"}, ev.FieldPath, "FieldPath must propagate from EntityFieldHash.FieldPath")
 		require.NotEqual(t, "phone", ev.FieldName, "FIELD_HASH event with KeyHash=0 must be dropped")
+	}
+
+	// FIELD_SELECTION must carry the accessor name + ChildTypeName + zero
+	// FieldHash (accessor has no scalar value), and the dropped (KeyHash=0)
+	// entry must NOT have produced an event.
+	for _, ev := range events {
+		if ev.EventType != cacheeventsv1.EventType_FIELD_SELECTION {
+			continue
+		}
+		require.Equal(t, "address", ev.FieldName)
+		require.Equal(t, "Address", ev.ChildTypeName, "ChildTypeName must propagate from EntityFieldSelection.ChildTypeName")
+		require.Equal(t, uint64(0), ev.FieldHash, "FIELD_SELECTION rows have no value to hash")
+		require.Equal(t, uint64(0xdead), ev.KeyHash)
+		require.Equal(t, "accounts", ev.SubgraphId, "SubgraphId must propagate from EntityFieldSelection.DataSource")
+		require.Nil(t, ev.FieldPath, "nil FieldPath stays nil for direct entity accessors")
+		require.NotEqual(t, "profile", ev.FieldName, "FIELD_SELECTION event with KeyHash=0 must be dropped")
 	}
 
 	// ENTITY_TYPE_INFO must carry counts.
@@ -406,6 +436,26 @@ func TestBuildEvents_FieldHash_DropsWhenKeyHashIsZero(t *testing.T) {
 	require.Equal(t, "email", events[0].FieldName)
 	require.Equal(t, uint64(0xfeed), events[0].FieldHash)
 	require.Equal(t, uint64(0xdead), events[0].KeyHash)
+}
+
+func TestBuildEvents_FieldSelection_DropsWhenKeyHashIsZero(t *testing.T) {
+	t.Parallel()
+
+	snap := &resolve.CacheAnalyticsSnapshot{
+		FieldSelections: []resolve.EntityFieldSelection{
+			{EntityType: "User", FieldName: "address", ChildTypeName: "Address", KeyHash: 0xdead, Source: resolve.FieldSourceSubgraph, DataSource: "accounts"},
+			// PII guard: KeyRaw set but KeyHash=0 — drop.
+			{EntityType: "User", FieldName: "profile", ChildTypeName: "Profile", KeyHash: 0, KeyRaw: `{"id":"1"}`, Source: resolve.FieldSourceSubgraph},
+			{EntityType: "User", FieldName: "settings", ChildTypeName: "Settings", KeyHash: 0, Source: resolve.FieldSourceSubgraph},
+		},
+	}
+	events := BuildEvents(snap, OperationMeta{})
+	require.Len(t, events, 1, "only the entry with non-zero KeyHash must produce a FIELD_SELECTION event")
+	require.Equal(t, cacheeventsv1.EventType_FIELD_SELECTION, events[0].EventType)
+	require.Equal(t, "address", events[0].FieldName)
+	require.Equal(t, "Address", events[0].ChildTypeName)
+	require.Equal(t, uint64(0xdead), events[0].KeyHash)
+	require.Equal(t, uint64(0), events[0].FieldHash, "FIELD_SELECTION has no scalar value to hash")
 }
 
 func TestBuildEvents_EntityTypeInfo_NoKeyOrSubgraph(t *testing.T) {

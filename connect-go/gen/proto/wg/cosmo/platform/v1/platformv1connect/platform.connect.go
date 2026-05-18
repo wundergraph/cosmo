@@ -547,6 +547,9 @@ const (
 	// PlatformServiceGetProposalChecksProcedure is the fully-qualified name of the PlatformService's
 	// GetProposalChecks RPC.
 	PlatformServiceGetProposalChecksProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalChecks"
+	// PlatformServiceGetCacheCohortConfigVersionsProcedure is the fully-qualified name of the
+	// PlatformService's GetCacheCohortConfigVersions RPC.
+	PlatformServiceGetCacheCohortConfigVersionsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetCacheCohortConfigVersions"
 	// PlatformServiceBulkUpdateProposalRolloutPercentagesProcedure is the fully-qualified name of the
 	// PlatformService's BulkUpdateProposalRolloutPercentages RPC.
 	PlatformServiceBulkUpdateProposalRolloutPercentagesProcedure = "/wg.cosmo.platform.v1.PlatformService/BulkUpdateProposalRolloutPercentages"
@@ -756,6 +759,7 @@ var (
 	platformServiceGetNamespaceProposalConfigMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceProposalConfig")
 	platformServiceGetProposalsByFederatedGraphMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
 	platformServiceGetProposalChecksMethodDescriptor                                  = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
+	platformServiceGetCacheCohortConfigVersionsMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetCacheCohortConfigVersions")
 	platformServiceBulkUpdateProposalRolloutPercentagesMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("BulkUpdateProposalRolloutPercentages")
 	platformServiceTeardownProposalRolloutMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("TeardownProposalRollout")
 	platformServiceGetOperationsMethodDescriptor                                      = platformServiceServiceDescriptor.Methods().ByName("GetOperations")
@@ -1093,6 +1097,14 @@ type PlatformServiceClient interface {
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
 	// GetProposalChecks returns checks for a proposal.
 	GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error)
+	// GetCacheCohortConfigVersions returns all RouterConfigVersion (schemaVersion.id)
+	// UUIDs that have ever been minted for the given (federated_graph_id,
+	// feature_flag_id) cohort, newest first. Used by hub to filter
+	// gql_cache_events_raw across the full set of config versions a feature
+	// flag has produced (proposal unapprove→re-approve cycles mint new
+	// schemaVersions). Pass feature_flag_id unset to fetch the base/main
+	// cohort's config versions.
+	GetCacheCohortConfigVersions(context.Context, *connect.Request[v1.GetCacheCohortConfigVersionsRequest]) (*connect.Response[v1.GetCacheCohortConfigVersionsResponse], error)
 	// BulkUpdateProposalRolloutPercentages atomically creates or updates rollout
 	// percentages across one or more proposals on the same federated graph. For
 	// proposals without an existing rollout, the handler creates feature subgraphs
@@ -2166,6 +2178,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetProposalChecksMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getCacheCohortConfigVersions: connect.NewClient[v1.GetCacheCohortConfigVersionsRequest, v1.GetCacheCohortConfigVersionsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetCacheCohortConfigVersionsProcedure,
+			connect.WithSchema(platformServiceGetCacheCohortConfigVersionsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		bulkUpdateProposalRolloutPercentages: connect.NewClient[v1.BulkUpdateProposalRolloutPercentagesRequest, v1.BulkUpdateProposalRolloutPercentagesResponse](
 			httpClient,
 			baseURL+PlatformServiceBulkUpdateProposalRolloutPercentagesProcedure,
@@ -2408,6 +2426,7 @@ type platformServiceClient struct {
 	getNamespaceProposalConfig                         *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
 	getProposalsByFederatedGraph                       *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
 	getProposalChecks                                  *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
+	getCacheCohortConfigVersions                       *connect.Client[v1.GetCacheCohortConfigVersionsRequest, v1.GetCacheCohortConfigVersionsResponse]
 	bulkUpdateProposalRolloutPercentages               *connect.Client[v1.BulkUpdateProposalRolloutPercentagesRequest, v1.BulkUpdateProposalRolloutPercentagesResponse]
 	teardownProposalRollout                            *connect.Client[v1.TeardownProposalRolloutRequest, v1.TeardownProposalRolloutResponse]
 	getOperations                                      *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
@@ -3314,6 +3333,12 @@ func (c *platformServiceClient) GetProposalChecks(ctx context.Context, req *conn
 	return c.getProposalChecks.CallUnary(ctx, req)
 }
 
+// GetCacheCohortConfigVersions calls
+// wg.cosmo.platform.v1.PlatformService.GetCacheCohortConfigVersions.
+func (c *platformServiceClient) GetCacheCohortConfigVersions(ctx context.Context, req *connect.Request[v1.GetCacheCohortConfigVersionsRequest]) (*connect.Response[v1.GetCacheCohortConfigVersionsResponse], error) {
+	return c.getCacheCohortConfigVersions.CallUnary(ctx, req)
+}
+
 // BulkUpdateProposalRolloutPercentages calls
 // wg.cosmo.platform.v1.PlatformService.BulkUpdateProposalRolloutPercentages.
 func (c *platformServiceClient) BulkUpdateProposalRolloutPercentages(ctx context.Context, req *connect.Request[v1.BulkUpdateProposalRolloutPercentagesRequest]) (*connect.Response[v1.BulkUpdateProposalRolloutPercentagesResponse], error) {
@@ -3695,6 +3720,14 @@ type PlatformServiceHandler interface {
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
 	// GetProposalChecks returns checks for a proposal.
 	GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error)
+	// GetCacheCohortConfigVersions returns all RouterConfigVersion (schemaVersion.id)
+	// UUIDs that have ever been minted for the given (federated_graph_id,
+	// feature_flag_id) cohort, newest first. Used by hub to filter
+	// gql_cache_events_raw across the full set of config versions a feature
+	// flag has produced (proposal unapprove→re-approve cycles mint new
+	// schemaVersions). Pass feature_flag_id unset to fetch the base/main
+	// cohort's config versions.
+	GetCacheCohortConfigVersions(context.Context, *connect.Request[v1.GetCacheCohortConfigVersionsRequest]) (*connect.Response[v1.GetCacheCohortConfigVersionsResponse], error)
 	// BulkUpdateProposalRolloutPercentages atomically creates or updates rollout
 	// percentages across one or more proposals on the same federated graph. For
 	// proposals without an existing rollout, the handler creates feature subgraphs
@@ -4764,6 +4797,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetProposalChecksMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetCacheCohortConfigVersionsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetCacheCohortConfigVersionsProcedure,
+		svc.GetCacheCohortConfigVersions,
+		connect.WithSchema(platformServiceGetCacheCohortConfigVersionsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceBulkUpdateProposalRolloutPercentagesHandler := connect.NewUnaryHandler(
 		PlatformServiceBulkUpdateProposalRolloutPercentagesProcedure,
 		svc.BulkUpdateProposalRolloutPercentages,
@@ -5174,6 +5213,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetProposalsByFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceGetProposalChecksProcedure:
 			platformServiceGetProposalChecksHandler.ServeHTTP(w, r)
+		case PlatformServiceGetCacheCohortConfigVersionsProcedure:
+			platformServiceGetCacheCohortConfigVersionsHandler.ServeHTTP(w, r)
 		case PlatformServiceBulkUpdateProposalRolloutPercentagesProcedure:
 			platformServiceBulkUpdateProposalRolloutPercentagesHandler.ServeHTTP(w, r)
 		case PlatformServiceTeardownProposalRolloutProcedure:
@@ -5887,6 +5928,10 @@ func (UnimplementedPlatformServiceHandler) GetProposalsByFederatedGraph(context.
 
 func (UnimplementedPlatformServiceHandler) GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposalChecks is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetCacheCohortConfigVersions(context.Context, *connect.Request[v1.GetCacheCohortConfigVersionsRequest]) (*connect.Response[v1.GetCacheCohortConfigVersionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetCacheCohortConfigVersions is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) BulkUpdateProposalRolloutPercentages(context.Context, *connect.Request[v1.BulkUpdateProposalRolloutPercentagesRequest]) (*connect.Response[v1.BulkUpdateProposalRolloutPercentagesResponse], error) {

@@ -35,7 +35,8 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 		len(snapshot.FetchTimings) + len(snapshot.ErrorEvents) +
 		len(snapshot.ShadowComparisons) + len(snapshot.MutationEvents) +
 		len(snapshot.HeaderImpactEvents) + len(snapshot.CacheOpErrors) +
-		len(snapshot.FieldHashes) + len(snapshot.EntityTypes)
+		len(snapshot.FieldHashes) + len(snapshot.FieldSelections) +
+		len(snapshot.EntityTypes)
 	if total == 0 {
 		return nil
 	}
@@ -162,13 +163,45 @@ func BuildEvents(snapshot *resolve.CacheAnalyticsSnapshot, meta OperationMeta) [
 		if ev.KeyHash == 0 {
 			continue
 		}
-		// EntityFieldHash has no DataSource or FieldPath in the pinned engine.
-		// Once those fields land upstream, populate them here.
-		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_FIELD_HASH, ev.EntityType, "", false, &cacheeventsv1.CacheEvent{
+		// DataSource is the subgraph name that owns the enclosing entity in
+		// the response walk. Stamped per-entity-scope by the resolver
+		// (resolvable.go) using EntityDataSource() with a plan-time
+		// SourceName fallback, so each subgraph that participates in
+		// federating an entity produces its own field_hash events with its
+		// own subgraph name. Empty when not resolvable — written verbatim
+		// so downstream telemetry can distinguish "unknown" from any
+		// specific subgraph.
+		//
+		// FieldPath is the schema-name chain from the enclosing entity down
+		// to (but not including) the leaf, e.g. ['address'] for
+		// User.address.street. Empty for direct entity scalars. Written
+		// through the writer's nil-normalizing fieldPathColumn helper.
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_FIELD_HASH, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
 			KeyHash:     ev.KeyHash,
 			FieldName:   ev.FieldName,
 			FieldHash:   ev.FieldHash,
+			FieldPath:   ev.FieldPath,
 			FetchSource: fetchSourceFromGoTools(ev.Source),
+		}))
+	}
+	for i := range snapshot.FieldSelections {
+		ev := &snapshot.FieldSelections[i]
+		// Same PII guard as field_hash — drop when the engine produced no
+		// hashed key. The accessor row's signal is its existence, but without
+		// an entity identity it can't be correlated to anything downstream.
+		if ev.KeyHash == 0 {
+			continue
+		}
+		// FieldHash stays zero — the accessor has no scalar value. The row's
+		// existence is the signal. ChildTypeName carries the accessor's
+		// unwrapped return type so consumers can correlate to the schema
+		// without re-walking FieldPath against the supergraph SDL.
+		out = append(out, fillCommon(meta, now, cacheeventsv1.EventType_FIELD_SELECTION, ev.EntityType, ev.DataSource, false, &cacheeventsv1.CacheEvent{
+			KeyHash:       ev.KeyHash,
+			FieldName:     ev.FieldName,
+			FieldPath:     ev.FieldPath,
+			ChildTypeName: ev.ChildTypeName,
+			FetchSource:   fetchSourceFromGoTools(ev.Source),
 		}))
 	}
 	for i := range snapshot.EntityTypes {

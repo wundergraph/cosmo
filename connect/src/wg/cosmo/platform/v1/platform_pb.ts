@@ -23492,6 +23492,97 @@ export class GetProposalChecksResponse extends Message<GetProposalChecksResponse
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetCacheCohortConfigVersionsRequest
+ */
+export class GetCacheCohortConfigVersionsRequest extends Message<GetCacheCohortConfigVersionsRequest> {
+  /**
+   * @generated from field: string federated_graph_id = 1;
+   */
+  federatedGraphId = "";
+
+  /**
+   * When unset, the base/main cohort (rows with feature_flag_id IS NULL) is returned.
+   *
+   * @generated from field: optional string feature_flag_id = 2;
+   */
+  featureFlagId?: string;
+
+  constructor(data?: PartialMessage<GetCacheCohortConfigVersionsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCacheCohortConfigVersionsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federated_graph_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "feature_flag_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCacheCohortConfigVersionsRequest {
+    return new GetCacheCohortConfigVersionsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCacheCohortConfigVersionsRequest {
+    return new GetCacheCohortConfigVersionsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCacheCohortConfigVersionsRequest {
+    return new GetCacheCohortConfigVersionsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCacheCohortConfigVersionsRequest | PlainMessage<GetCacheCohortConfigVersionsRequest> | undefined, b: GetCacheCohortConfigVersionsRequest | PlainMessage<GetCacheCohortConfigVersionsRequest> | undefined): boolean {
+    return proto3.util.equals(GetCacheCohortConfigVersionsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCacheCohortConfigVersionsResponse
+ */
+export class GetCacheCohortConfigVersionsResponse extends Message<GetCacheCohortConfigVersionsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * schemaVersion.id UUIDs that have ever been minted for the given
+   * (federated_graph_id, feature_flag_id) cohort, newest first.
+   *
+   * @generated from field: repeated string config_versions = 2;
+   */
+  configVersions: string[] = [];
+
+  constructor(data?: PartialMessage<GetCacheCohortConfigVersionsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCacheCohortConfigVersionsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "config_versions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCacheCohortConfigVersionsResponse {
+    return new GetCacheCohortConfigVersionsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCacheCohortConfigVersionsResponse {
+    return new GetCacheCohortConfigVersionsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCacheCohortConfigVersionsResponse {
+    return new GetCacheCohortConfigVersionsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCacheCohortConfigVersionsResponse | PlainMessage<GetCacheCohortConfigVersionsResponse> | undefined, b: GetCacheCohortConfigVersionsResponse | PlainMessage<GetCacheCohortConfigVersionsResponse> | undefined): boolean {
+    return proto3.util.equals(GetCacheCohortConfigVersionsResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.UpdateProposalRequest
  */
 export class UpdateProposalRequest extends Message<UpdateProposalRequest> {

@@ -117,3 +117,99 @@ func TestCacheEventsExport_DeliversBatchesWithBearerAuth(t *testing.T) {
 			"request[%d]: expected non-empty token in Authorization header", i)
 	}
 }
+
+// TestCacheEventsExport_EmitsAccessorRows is the end-to-end guarantee that
+// when events export is enabled, the router produces FIELD_SELECTION events
+// for nested Object/Array accessors alongside the existing FIELD_HASH leaf
+// events. Emission rides on EventsExport.Enabled — there is no separate
+// sub-flag; downstream consumers either read both event types or filter to
+// just field_hash via the EventType column.
+//
+// The query exercises Warehouse.location (an Object accessor) so the walker
+// enters the nested accessor inside an entity scope, which is the
+// precondition for emission.
+func TestCacheEventsExport_EmitsAccessorRows(t *testing.T) {
+	t.Parallel()
+
+	handler := &capturingCacheEventsHandler{}
+	mux := http.NewServeMux()
+	path, h := cacheeventsv1connect.NewCacheEventsServiceHandler(handler)
+	mux.Handle(path, h)
+	fakeServer := httptest.NewServer(mux)
+	t.Cleanup(fakeServer.Close)
+
+	servers, _ := startSubgraphServers(t)
+	configJSON := buildConfigJSON(servers)
+	cache := newMemoryCache(t)
+
+	testenv.Run(t, &testenv.Config{
+		RouterConfigJSONTemplate: configJSON,
+		RouterOptions: []core.Option{
+			core.WithEntityCaching(config.EntityCachingConfiguration{
+				Enabled: true,
+				L1: config.EntityCachingL1Configuration{
+					Enabled: true,
+				},
+				L2: config.EntityCachingL2Configuration{
+					Enabled: false,
+				},
+				EventsExport: config.EntityCacheEventsExportConfig{
+					Enabled:   true,
+					Endpoint:  fakeServer.URL,
+					BatchSize: 1,
+					QueueSize: 64,
+					Interval:  100 * time.Millisecond,
+				},
+			}),
+			core.WithEntityCacheInstances(map[string]resolve.LoaderCache{
+				"default": cache,
+			}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		// warehouse selects Warehouse.location (Object accessor) →
+		// triggers FIELD_SELECTION emission inside the entity scope.
+		req := testenv.GraphQLRequest{
+			Query: `{ warehouse(locationId: "w1") { location { id } name capacity } }`,
+		}
+		xEnv.MakeGraphQLRequestOK(req)
+
+		// Wait for at least one FIELD_SELECTION event before asserting —
+		// the periodic exporter may not have flushed yet immediately after
+		// the request returns.
+		require.Eventually(t, func() bool {
+			_, events := handler.snapshot()
+			for _, ev := range events {
+				if ev.EventType == cacheeventsv1.EventType_FIELD_SELECTION {
+					return true
+				}
+			}
+			return false
+		}, 10*time.Second, 50*time.Millisecond, "expected at least one FIELD_SELECTION event")
+	})
+
+	_, events := handler.snapshot()
+
+	var selections []*cacheeventsv1.CacheEvent
+	for _, ev := range events {
+		if ev.EventType == cacheeventsv1.EventType_FIELD_SELECTION {
+			selections = append(selections, ev)
+		}
+	}
+	require.NotEmpty(t, selections, "FIELD_SELECTION must emit when the query selects an accessor inside an entity scope")
+
+	// One of the emitted selection rows must correspond to
+	// Warehouse.location with ChildTypeName=Location, a non-zero KeyHash
+	// (PII guard passed), and zero FieldHash (accessors carry no scalar
+	// value).
+	var found bool
+	for _, ev := range selections {
+		if ev.EntityType == "Warehouse" && ev.FieldName == "location" {
+			require.Equal(t, "Location", ev.ChildTypeName, "ChildTypeName must be the accessor's unwrapped return type")
+			require.NotZero(t, ev.KeyHash, "FIELD_SELECTION rows must carry a hashed entity key (PII guard)")
+			require.Zero(t, ev.FieldHash, "FIELD_SELECTION rows must not carry a value hash")
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "expected a FIELD_SELECTION for Warehouse.location among %d emitted selection rows", len(selections))
+}

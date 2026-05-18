@@ -652,6 +652,7 @@ func (h *GraphQLHandler) cachingOptions(reqCtx *requestContext) resolve.CachingO
 		EnableL1Cache:         enableL1,
 		EnableL2Cache:         enableL2,
 		EnableCacheAnalytics:  len(h.entityCaching.Metrics) > 0 || h.entityCaching.EventsExporter != nil,
+		EmitFieldSelections:   h.entityCaching.EventsExporter != nil,
 		GlobalCacheKeyPrefix:  globalKeyPrefix,
 		L2CacheKeyInterceptor: h.buildL2CacheKeyInterceptor(reqCtx),
 	}

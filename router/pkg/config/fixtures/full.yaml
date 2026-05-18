@@ -548,3 +548,6 @@ apollo_compatibility_flags:
     enabled: true
   use_graphql_validation_failed_status:
     enabled: true
+
+feature_flag_rollouts:
+  enabled: true
