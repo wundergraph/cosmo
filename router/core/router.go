@@ -146,10 +146,10 @@ type (
 	TlsConfig struct {
 		settings config.TLSConfiguration
 
-		// compiled resembles a tls.Config created out of the "settings" field.
-		// Due to the current architecture this needs to live here in order to be
-		// passable to certain objects.
-		compiled *tls.Config
+		// compiledServerConfig resembles a tls.Config created out of the "settings" field.
+		// It's used for the routers http server.
+		// It's created once during bootstrap and reused during server swap.
+		compiledServerConfig *tls.Config
 	}
 
 	RouterConfigPollerConfig struct {
@@ -358,7 +358,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.tls.settings.Server.Enabled {
 		r.baseURL = fmt.Sprintf("https://%s", r.listenAddr)
-		r.tls.compiled, err = r.serverTLSConfig()
+		r.tls.compiledServerConfig, err = r.serverTLSConfig()
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct tls config: %w", err)
 		}
@@ -797,7 +797,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
-		tlsServerConfig:    r.tls.compiled,
+		tlsServerConfig:    r.tls.compiledServerConfig,
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
@@ -1462,7 +1462,7 @@ func (r *Router) Start(ctx context.Context) error {
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
-		tlsServerConfig:    r.tls.compiled,
+		tlsServerConfig:    r.tls.compiledServerConfig,
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
