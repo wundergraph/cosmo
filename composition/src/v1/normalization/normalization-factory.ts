@@ -2741,7 +2741,7 @@ export class NormalizationFactory {
         /**
          * When assumedSize is set together with slicingArguments, the slicing argument must not have
          * a default leaf value in any element of the slicingArgument's chain.
-         * That should be checked for all slicing Arguments.
+         * That will be checked for all slicing Arguments.
          * For example, if the query is defined like this:
          *    search(a: SearchInput): [Book]
          *        @listSize(assumedSize: 50, slicingArguments: ["a.b.c"], requireOneSlicingArgument: false)

@@ -421,7 +421,10 @@ describe('@listSize directive tests', () => {
     });
 
     test('that @listSize with one defaulted slicingArguments populates listSizes correctly', () => {
-      const { costs } = normalizeSubgraphSuccess(subgraphWithSlicingArgumentsOneDefaulted, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithSlicingArgumentsOneDefaulted,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
       expect(costs.listSizes.get('Query.users')).toEqual({
         typeName: 'Query',
         fieldName: 'users',
@@ -432,7 +435,10 @@ describe('@listSize directive tests', () => {
     });
 
     test('that @listSize with two defaulted slicingArguments populates listSizes correctly', () => {
-      const { costs } = normalizeSubgraphSuccess(subgraphWithSlicingArgumentsBothDefaulted, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithSlicingArgumentsBothDefaulted,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
       expect(costs.listSizes.get('Query.users')).toEqual({
         typeName: 'Query',
         fieldName: 'users',

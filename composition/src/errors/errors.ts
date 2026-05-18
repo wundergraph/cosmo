@@ -1812,18 +1812,18 @@ export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOf
 
 export function listSizeInvalidSlicingArgumentErrorMessage(
   directiveCoords: DirectiveArgumentCoords,
-  argumentName: ArgumentName,
+  path: ArgumentName,
 ): string {
-  return ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" does not reference a defined argument on this field.`;
+  return ` The "slicingArguments" value "${path}" on "${directiveCoords}" does not reference a defined argument on this field.`;
 }
 
 export function listSizeSlicingArgumentNotIntErrorMessage(
   directiveCoords: DirectiveArgumentCoords,
-  argumentName: ArgumentName,
+  path: ArgumentName,
   actualType: TypeName,
 ): string {
   return (
-    ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" references an argument of type` +
+    ` The "slicingArguments" value "${path}" on "${directiveCoords}" references an argument of type` +
     ` "${actualType}", but slicing arguments must be of type "Int" or "Int!".`
   );
 }
