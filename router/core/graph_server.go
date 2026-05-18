@@ -1931,6 +1931,7 @@ func (s *graphServer) setupConnector(
 				Logger:             s.logger,
 				ImageRef:           ref,
 				RegistryToken:      s.graphApiToken,
+				RegistryInsecure:   s.plugins.Registry.Insecure,
 				StartupConfig:      startupConfig,
 				Tracer:             tracer,
 				GetTraceAttributes: getTraceAttributes,
