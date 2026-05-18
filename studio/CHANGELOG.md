@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.169.6](https://github.com/wundergraph/cosmo/compare/studio@0.169.5...studio@0.169.6) (2026-05-18)
+
+### Bug Fixes
+
+* **studio:** scope playground storage by graph ([#2871](https://github.com/wundergraph/cosmo/issues/2871)) ([0183ee3](https://github.com/wundergraph/cosmo/commit/0183ee38558a3368854971dc667809b7214e1fa2)) (@comatory)
+
 ## [0.169.5](https://github.com/wundergraph/cosmo/compare/studio@0.169.4...studio@0.169.5) (2026-05-14)
 
 ### Bug Fixes
