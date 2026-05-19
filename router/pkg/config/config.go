@@ -917,7 +917,7 @@ func (c *HTTPClientTLSConfiguration) GetSubgraphs() map[string]TLSClientCertConf
 	return c.Subgraphs
 }
 
-// Enabled returns true if anything in c has been configured.©
+// Enabled returns true if anything in c has been configured.
 func (c *HTTPClientTLSConfiguration) Enabled() bool {
 	allConfigured := c.All.InsecureSkipCaVerification ||
 		c.All.CaFile != "" ||
@@ -942,7 +942,7 @@ func (c *GRPCClientTLSConfiguration) GetSubgraphs() map[string]TLSClientCertConf
 	return c.Subgraphs
 }
 
-// Enabled returns true if anything in c has been configured.©
+// Enabled returns true if anything in c has been configured.
 func (c *GRPCClientTLSConfiguration) Enabled() bool {
 	allConfigured := c.All.InsecureSkipCaVerification ||
 		c.All.CaFile != "" ||
