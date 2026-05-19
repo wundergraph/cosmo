@@ -23,16 +23,22 @@ export default fp<ChPluginOptions>(function ClickHousePlugin(fastify, opts, done
     },
   });
 
-  fastify.decorate('chHealthcheck', () => {
-    connection.addEventListener('ping', (event) => {
-      if (event.detail.error) {
-        fastify.log.error(new Error(`ClickHouse connection healthcheck failed. Attempt: ${event.detail.attempt}`));
-        fastify.log.error(event.detail.error);
-        return;
-      }
+  const listenerController = new AbortController();
 
-      fastify.log.debug('ClickHouse connection healthcheck succeeded');
-    });
+  fastify.decorate('chHealthcheck', () => {
+    connection.addEventListener(
+      'ping',
+      (event) => {
+        if (event.detail.error) {
+          fastify.log.error(new Error(`ClickHouse connection healthcheck failed. Attempt: ${event.detail.attempt}`));
+          fastify.log.error(event.detail.error);
+          return;
+        }
+
+        fastify.log.debug('ClickHouse connection healthcheck succeeded');
+      },
+      { signal: listenerController.signal },
+    );
 
     return connection.ping();
   });
@@ -40,6 +46,12 @@ export default fp<ChPluginOptions>(function ClickHousePlugin(fastify, opts, done
   fastify.chHealthcheck();
 
   fastify.decorate<ClickHouseClient>('ch', connection);
+
+  fastify.addHook('onClose', () => {
+    fastify.log.debug('Closing ClickHouse connection ...');
+    listenerController.abort();
+    connection.close();
+  });
 
   done();
 });

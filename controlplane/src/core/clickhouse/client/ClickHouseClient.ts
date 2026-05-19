@@ -37,6 +37,14 @@ export class ClickHouseClient {
    */
   private emitter = new EventTarget();
   /**
+   * Timer for healthcheck pings
+   */
+  private pingTimer?: ReturnType<typeof setInterval>;
+  /**
+   * Controller for pings
+   */
+  private pingAbortController?: AbortController;
+  /**
    * ClickHouse Service
    */
   constructor(private options?: ClickHouseClientOptions) {
@@ -370,9 +378,17 @@ export class ClickHouseClient {
   public ping(interval = 15_000, timeout?: number) {
     let attempt = 0;
 
-    setInterval(async () => {
+    this.pingTimer = setInterval(async () => {
+      this.pingAbortController?.abort();
+      const controller = new AbortController();
+      this.pingAbortController = controller;
+
       try {
-        const ok = await this.pingRequest(timeout);
+        const ok = await this.pingRequest(timeout, controller.signal);
+
+        if (controller.signal.aborted) {
+          return;
+        }
 
         if (!ok) {
           attempt++;
@@ -390,6 +406,10 @@ export class ClickHouseClient {
         attempt = 0;
         this.emitter.dispatchEvent(new CustomEvent('ping', { detail: {} }));
       } catch (caught) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
         attempt++;
         const error = caught instanceof Error ? caught : new Error(String(caught));
         this.emitter.dispatchEvent(
@@ -405,15 +425,28 @@ export class ClickHouseClient {
   }
 
   /**
+   * Stops the ping interval and cancels any in-flight ping request.
+   */
+  public close() {
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = undefined;
+    }
+    this.pingAbortController?.abort();
+    this.pingAbortController = undefined;
+  }
+
+  /**
    * Pings the clickhouse server
    *
    * @param timeout timeout in milliseconds, defaults to 30000.
    */
-  private pingRequest(timeout = 30_000) {
+  private pingRequest(timeout = 30_000, signal?: AbortSignal) {
     return new Promise<boolean>((resolve, reject) => {
       axios
         .get(`${this.endpoint}/ping`, {
           timeout,
+          signal,
           httpAgent: this.options?.httpConfig?.httpAgent,
           httpsAgent: this.options?.httpConfig?.httpsAgent,
         })
@@ -433,8 +466,9 @@ export class ClickHouseClient {
   public addEventListener<K extends keyof ClickHouseClientEventMap>(
     type: K,
     listener: (event: ClickHouseClientEventMap[K]) => void,
+    options?: AddEventListenerOptions,
   ): void {
-    this.emitter.addEventListener(type, listener as EventListener);
+    this.emitter.addEventListener(type, listener as EventListener, options);
   }
 
   public removeEventListener<K extends keyof ClickHouseClientEventMap>(
