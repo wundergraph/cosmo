@@ -1,0 +1,1 @@
+Use the yoko MCP server. Call code_mode_search_tools with prompts that fetch the first employee and an employee by id. Then show me the TS that came back.

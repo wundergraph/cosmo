@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "yoko": {
+      "command": "/ABSOLUTE/PATH/TO/cosmo/demo/code-mode/mcp-stdio-proxy/mcp-stdio-proxy",
+      "args": ["--upstream", "http://127.0.0.1:5027/mcp"]
+    }
+  }
+}

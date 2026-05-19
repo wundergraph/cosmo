@@ -1,0 +1,129 @@
+# MCP (Model Context Protocol) multi-graph demo
+# yaml-language-server: $schema=./pkg/config/config.schema.json
+#
+# Quick start:
+#   go run ./cmd/router -config mcp.config.yaml
+#
+# Each server entry mounts its own MCP at the given path and runs Code Mode
+# (yoko search + JS sandbox) bound to that tenant's schema. Yoko at :3400 is
+# shared — it keys schemas by content SHA so each tenant indexes its own SDL.
+
+execution_config:
+  file:
+    path: '../router-tests/testenv/testdata/config.json'
+    watch: true
+    watch_interval: 20s
+
+mcp:
+  enabled: true
+  graph_name: 'my-graph'
+  omit_tool_name_prefix: true
+  router_url: 'http://localhost:3002/graphql'
+
+  servers:
+    - name: 'anilist'
+      path: /anilist
+      omit_tool_name_prefix: true
+      session:
+        stateless: false
+      storage:
+        provider_id: anilist
+        watch: true
+        watch_interval: 1s
+      upstream:
+        url: 'https://graphql.anilist.co'
+      code_mode:
+        enabled: false
+        require_mutation_approval: false
+        execute_timeout: 180s
+        sandbox:
+          timeout: 180s
+        query_generation:
+          enabled: true
+          endpoint: http://127.0.0.1:3400
+          timeout: 180s
+        named_ops:
+          enabled: true
+
+    - name: 'countries'
+      path: /countries
+      omit_tool_name_prefix: true
+      session:
+        stateless: false
+      storage:
+        provider_id: countries
+        watch: true
+        watch_interval: 1s
+      upstream:
+        url: 'https://countries.trevorblades.com'
+      code_mode:
+        enabled: true
+        require_mutation_approval: false
+        execute_timeout: 180s
+        sandbox:
+          timeout: 180s
+        query_generation:
+          enabled: true
+          endpoint: http://127.0.0.1:3400
+          timeout: 180s
+        named_ops:
+          enabled: true
+
+    - name: 'rickandmorty'
+      path: /rickandmorty
+      omit_tool_name_prefix: true
+      session:
+        stateless: false
+      storage:
+        provider_id: rickandmorty
+        watch: true
+        watch_interval: 1s
+      upstream:
+        url: 'https://rickandmortyapi.com/graphql'
+      code_mode:
+        enabled: true
+        require_mutation_approval: false
+        execute_timeout: 180s
+        sandbox:
+          timeout: 180s
+        query_generation:
+          enabled: true
+          endpoint: http://127.0.0.1:3400
+          timeout: 180s
+        named_ops:
+          enabled: true
+
+    - name: 'swapi'
+      path: /swapi
+      omit_tool_name_prefix: true
+      session:
+        stateless: false
+      storage:
+        provider_id: swapi
+        watch: true
+        watch_interval: 1s
+      upstream:
+        url: 'https://swapi-graphql.netlify.app/graphql'
+      code_mode:
+        enabled: true
+        require_mutation_approval: false
+        execute_timeout: 180s
+        sandbox:
+          timeout: 180s
+        query_generation:
+          enabled: true
+          endpoint: http://127.0.0.1:3400
+          timeout: 180s
+        named_ops:
+          enabled: true
+
+storage_providers:
+  file_system:
+    - id: rickandmorty
+      path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/rickandmorty
+    - id: countries
+      path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/countries
+    - id: anilist
+      path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/anilist
+    - id: swapi
+      path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/swapi

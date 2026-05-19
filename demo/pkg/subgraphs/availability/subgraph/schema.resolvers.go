@@ -7,6 +7,7 @@ package subgraph
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability/subgraph/model"
@@ -14,28 +15,31 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 )
 
+// publishAvailabilityEvent emits an Employee-updated event for subscription
+// consumers. Failures (missing adapter, broker down) are logged but never
+// fail the mutation — local storage has already been updated.
+func (r *mutationResolver) publishAvailabilityEvent(ctx context.Context, providerID, subject, payload string) {
+	adapter := r.NatsPubSubByProviderID[providerID]
+	if adapter == nil {
+		log.Printf("availability: nats provider %q unavailable, skipping publish to %s", providerID, subject)
+		return
+	}
+	err := adapter.Publish(ctx, &nats.PublishAndRequestEventConfiguration{
+		Subject: subject,
+	}, []datasource.StreamEvent{&nats.MutableEvent{Data: []byte(payload)}})
+	if err != nil {
+		log.Printf("availability: nats publish failed via %q to %s: %v", providerID, subject, err)
+	}
+}
+
 // UpdateAvailability is the resolver for the updateAvailability field.
 func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID int, isAvailable bool) (*model.Employee, error) {
 	storage.Set(employeeID, isAvailable)
-	conf := &nats.PublishAndRequestEventConfiguration{
-		Subject: r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID)),
-	}
-	evt := &nats.MutableEvent{Data: []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID))}
+	payload := fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)
 
-	err := r.NatsPubSubByProviderID["default"].Publish(ctx, conf, []datasource.StreamEvent{evt})
-	if err != nil {
-		return nil, err
-	}
+	r.publishAvailabilityEvent(ctx, "default", r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID)), payload)
+	r.publishAvailabilityEvent(ctx, "my-nats", r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID)), payload)
 
-	conf2 := &nats.PublishAndRequestEventConfiguration{
-		Subject: r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID)),
-	}
-	evt2 := &nats.MutableEvent{Data: []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID))}
-	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, conf2, []datasource.StreamEvent{evt2})
-
-	if err != nil {
-		return nil, err
-	}
 	return &model.Employee{ID: employeeID, IsAvailable: &isAvailable}, nil
 }
 
