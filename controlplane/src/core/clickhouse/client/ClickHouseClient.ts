@@ -1,5 +1,5 @@
 import { IncomingMessage } from 'node:http';
-import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosRequestConfig, isAxiosError } from 'axios';
 import Pick from 'stream-json/filters/Pick.js';
 import StreamArray from 'stream-json/streamers/StreamArray.js';
 
@@ -41,9 +41,22 @@ export class ClickHouseClient {
   private pingStopController?: AbortController;
   private pingFailedAttempts = 0;
 
-  /** True until the healthcheck loop observes consecutive ping failures. */
+  /**
+   * Advisory hint reflecting the healthcheck loop's view: true until consecutive ping failures are observed.
+   * Intended for metrics, logs, and retry decisions only — do NOT use it to decide whether a specific request
+   * failure is a transport/unavailability error; inspect the caught AxiosError shape for that.
+   */
   public get isAvailable(): boolean {
     return this.pingFailedAttempts === 0;
+  }
+
+  /**
+   * Returns true when an axios error indicates the request never received an HTTP response —
+   * i.e. ECONNREFUSED, ENOTFOUND, ETIMEDOUT, ECONNABORTED, network drop, etc.
+   * Anything with an `error.response` is a server-side error (HTTP/SQL) and must be propagated unchanged.
+   */
+  private static isTransportFailure(error: unknown): error is AxiosError {
+    return isAxiosError(error) && !error.response;
   }
 
   /**
@@ -224,7 +237,7 @@ export class ClickHouseClient {
         })
         .catch((reason: AxiosError) => {
           this._handlePromiseError<T>(reason);
-          if (!this.isAvailable) {
+          if (ClickHouseClient.isTransportFailure(reason)) {
             return reject(new ClickHouseUnavailableError(reason));
           }
           return reject(reason);
@@ -362,7 +375,7 @@ export class ClickHouseClient {
     return new Promise<void>((resolve, reject) => {
       this.insert<T>(table, data).subscribe({
         error: (error) => {
-          if (!this.isAvailable) {
+          if (ClickHouseClient.isTransportFailure(error)) {
             return reject(new ClickHouseUnavailableError(error));
           }
           return reject(error);
