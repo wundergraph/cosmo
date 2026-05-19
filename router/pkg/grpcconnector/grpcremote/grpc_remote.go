@@ -67,7 +67,8 @@ func (g *RemoteGRPCProvider) GetClient() grpc.ClientConnInterface {
 }
 
 // Start initializes the gRPC client connection if it hasn't been created yet.
-// It creates a new gRPC connection using TLS when a TLSConfig is provided, otherwise uses an insecure connection.
+// It creates a new gRPC connection using TLS when a TLSConfig is provided,
+// otherwise uses an insecure connection.
 func (g *RemoteGRPCProvider) Start(ctx context.Context) error {
 	if g.cc == nil {
 		var transportCreds grpc.DialOption
