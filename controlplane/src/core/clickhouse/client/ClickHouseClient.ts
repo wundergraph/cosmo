@@ -13,6 +13,10 @@ import { ClickHouseCompressionMethod, ClickHouseDataFormat } from './enums/index
 import { ClickHouseClientOptions } from './interfaces/index.js';
 const { Parser } = pkg;
 
+type ClickHouseClientEventMap = {
+  ping: CustomEvent<{ error: Error; attempt: number } | Record<string, never>>;
+};
+
 /**
  * ClickHouse Client
  * Most of the code is taken from https://github.com/depyronick/clickhouse-client
@@ -28,6 +32,10 @@ export class ClickHouseClient {
    * ClickHouse Database
    */
   public database = '';
+  /**
+   * Event emitter
+   */
+  private emitter = new EventTarget();
   /**
    * ClickHouse Service
    */
@@ -355,11 +363,53 @@ export class ClickHouseClient {
   }
 
   /**
+   * Starts pinging  the clickhouse server in an interval
+   *
+   * @param interval interval in milliseconds, defaults to 15000.
+   */
+  public ping(interval = 15_000, timeout?: number) {
+    let attempt = 0;
+
+    setInterval(async () => {
+      try {
+        const ok = await this.pingRequest(timeout);
+
+        if (!ok) {
+          attempt++;
+          this.emitter.dispatchEvent(
+            new CustomEvent('ping', {
+              detail: {
+                error: new Error('Failed to ping ClickHouse server'),
+                attempt,
+              },
+            }),
+          );
+          return;
+        }
+
+        attempt = 0;
+        this.emitter.dispatchEvent(new CustomEvent('ping', { detail: {} }));
+      } catch (caught) {
+        attempt++;
+        const error = caught instanceof Error ? caught : new Error(String(caught));
+        this.emitter.dispatchEvent(
+          new CustomEvent('ping', {
+            detail: {
+              error,
+              attempt,
+            },
+          }),
+        );
+      }
+    }, interval);
+  }
+
+  /**
    * Pings the clickhouse server
    *
    * @param timeout timeout in milliseconds, defaults to 30000.
    */
-  public ping(timeout = 30_000) {
+  private pingRequest(timeout = 30_000) {
     return new Promise<boolean>((resolve, reject) => {
       axios
         .get(`${this.endpoint}/ping`, {
@@ -378,5 +428,19 @@ export class ClickHouseClient {
           return reject(reason);
         });
     });
+  }
+
+  public addEventListener<K extends keyof ClickHouseClientEventMap>(
+    type: K,
+    listener: (event: ClickHouseClientEventMap[K]) => void,
+  ): void {
+    this.emitter.addEventListener(type, listener as EventListener);
+  }
+
+  public removeEventListener<K extends keyof ClickHouseClientEventMap>(
+    type: K,
+    listener: (event: ClickHouseClientEventMap[K]) => void,
+  ): void {
+    this.emitter.removeEventListener(type, listener as EventListener);
   }
 }

@@ -5,7 +5,7 @@ import { ClickHouseClient } from '../clickhouse/index.js';
 declare module 'fastify' {
   interface FastifyInstance {
     ch?: ClickHouseClient;
-    chHealthcheck(): Promise<void>;
+    chHealthcheck(): void;
   }
 }
 
@@ -14,7 +14,7 @@ export interface ChPluginOptions {
   logger: BaseLogger;
 }
 
-export default fp<ChPluginOptions>(async function ClickHousePlugin(fastify, opts) {
+export default fp<ChPluginOptions>(function ClickHousePlugin(fastify, opts, done) {
   const connection = new ClickHouseClient({
     dsn: opts.dsn,
     logger: opts.logger,
@@ -23,18 +23,23 @@ export default fp<ChPluginOptions>(async function ClickHousePlugin(fastify, opts
     },
   });
 
-  fastify.decorate('chHealthcheck', async () => {
-    try {
-      await connection.ping();
+  fastify.decorate('chHealthcheck', () => {
+    connection.addEventListener('ping', (event) => {
+      if (event.detail.error) {
+        fastify.log.error(new Error(`ClickHouse connection healthcheck failed. Attempt: ${event.detail.attempt}`));
+        fastify.log.error(event.detail.error);
+        return;
+      }
 
       fastify.log.debug('ClickHouse connection healthcheck succeeded');
-    } catch (error) {
-      fastify.log.error(error);
-      throw new Error('ClickHouse connection healthcheck failed');
-    }
+    });
+
+    return connection.ping();
   });
 
-  await fastify.chHealthcheck();
+  fastify.chHealthcheck();
 
   fastify.decorate<ClickHouseClient>('ch', connection);
+
+  done();
 });
