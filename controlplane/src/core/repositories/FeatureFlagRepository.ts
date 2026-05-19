@@ -997,6 +997,69 @@ export class FeatureFlagRepository {
     return featureGraphsByFlag;
   }
 
+  public async getFeatureFlagsBySubgraphLabels({
+    namespaceId,
+    labels,
+    excludeDisabled,
+  }: {
+    namespaceId: string;
+    labels: Label[];
+    excludeDisabled: boolean;
+  }) {
+    const uniqueLabels = normalizeLabels(labels);
+
+    const conditions: SQL<unknown>[] = [];
+    if (excludeDisabled) {
+      conditions.push(eq(featureFlags.isEnabled, true));
+    }
+
+    if (uniqueLabels.length > 0) {
+      conditions.push(
+        arrayOverlaps(
+          featureFlags.labels,
+          uniqueLabels.map((l) => joinLabel(l)),
+        ),
+      );
+    } else {
+      conditions.push(eq(featureFlags.labels, []));
+    }
+
+    const matchingFeatureFlags = await this.db
+      .select({
+        id: featureFlags.id,
+        name: featureFlags.name,
+      })
+      .from(featureFlags)
+      .where(
+        and(
+          eq(featureFlags.namespaceId, namespaceId),
+          eq(featureFlags.organizationId, this.organizationId),
+          ...conditions,
+        ),
+      )
+      .execute();
+
+    if (matchingFeatureFlags.length === 0) {
+      return [];
+    }
+
+    const result: FeatureFlagWithFeatureSubgraphs[] = [];
+    for (const featureFlag of matchingFeatureFlags) {
+      const featureSubgraphsByFlag = await this.getFeatureSubgraphsByFeatureFlagId({
+        featureFlagId: featureFlag.id,
+        namespaceId,
+      });
+
+      result.push({
+        id: featureFlag.id,
+        name: featureFlag.name,
+        featureSubgraphs: featureSubgraphsByFlag.filter((fsg) => fsg.schemaVersionId !== ''),
+      });
+    }
+
+    return result;
+  }
+
   // evaluates all the feature flags which have fgs whose base subgraph id and fed graph label matchers are passed as input and returns the feature flags that should be composed
   public async getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
     baseSubgraphId,

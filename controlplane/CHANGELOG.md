@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.224.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.1...controlplane@0.224.2) (2026-05-18)
+
+**Note:** Version bump only for package controlplane
+
+## [0.224.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.0...controlplane@0.224.1) (2026-05-14)
+
+**Note:** Version bump only for package controlplane
+
+# [0.224.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.223.0...controlplane@0.224.0) (2026-05-13)
+
+### Features
+
+* fix recomposition bugs and optimise recompositions ([#2860](https://github.com/wundergraph/cosmo/issues/2860)) ([e49a03b](https://github.com/wundergraph/cosmo/commit/e49a03ba5ea9bd62191276662f622615ab7eaaff)) (@wilsonrivera)
+
+# [0.223.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.222.0...controlplane@0.223.0) (2026-05-12)
+
+### Features
+
+* add feature flag recomposition support ([#2853](https://github.com/wundergraph/cosmo/issues/2853)) ([3f125a2](https://github.com/wundergraph/cosmo/commit/3f125a2effce36a1a2040f219bc1aa5a872aab93)) (@wilsonrivera)
+
 # [0.222.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.221.3...controlplane@0.222.0) (2026-05-11)
 
 ### Features

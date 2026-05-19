@@ -462,6 +462,7 @@ export async function runRouterContainer({
     ['CDN_URL', config.cdnURL],
     ['REGISTRY_URL', config.pluginRegistryURL],
     ['PLUGINS_REGISTRY_URL', config.pluginRegistryURL],
+    ['PLUGINS_REGISTRY_INSECURE', config.pluginRegistryInsecure ? 'true' : undefined],
     ['CONTROLPLANE_URL', config.baseURL],
     ['DEFAULT_TELEMETRY_ENDPOINT', config.defaultTelemetryEndpoint],
     ['GRAPHQL_METRICS_COLLECTOR_ENDPOINT', config.graphqlMetricsCollectorEndpoint],

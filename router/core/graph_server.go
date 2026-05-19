@@ -1370,12 +1370,13 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	routerEngineConfig := &RouterEngineConfiguration{
-		Execution:                s.engineExecutionConfiguration,
-		Headers:                  s.headerRules,
-		Events:                   s.eventsConfig,
-		SubgraphErrorPropagation: s.subgraphErrorPropagation,
-		StreamMetricStore:        gm.streamMetricStore,
-		CostControl:              s.securityConfiguration.CostControl,
+		Execution:                    s.engineExecutionConfiguration,
+		Headers:                      s.headerRules,
+		Events:                       s.eventsConfig,
+		SubgraphErrorPropagation:     s.subgraphErrorPropagation,
+		SubgraphExtensionPropagation: s.subgraphExtensionPropagation,
+		StreamMetricStore:            gm.streamMetricStore,
+		CostControl:                  s.securityConfiguration.CostControl,
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
@@ -1749,6 +1750,7 @@ func (s *graphServer) buildGraphMux(
 		OperationBlocker:                       operationBlocker,
 		RouterPublicKey:                        s.publicKey,
 		EnableRequestTracing:                   s.engineExecutionConfiguration.EnableRequestTracing,
+		ForceUnauthenticatedRequestTracing:     s.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing,
 		DevelopmentMode:                        s.developmentMode,
 		TracerProvider:                         s.tracerProvider,
 		FlushTelemetryAfterResponse:            s.awsLambda,
@@ -1925,6 +1927,7 @@ func (s *graphServer) setupConnector(
 				Logger:             s.logger,
 				ImageRef:           ref,
 				RegistryToken:      s.graphApiToken,
+				RegistryInsecure:   s.plugins.Registry.Insecure,
 				StartupConfig:      startupConfig,
 				Tracer:             tracer,
 				GetTraceAttributes: getTraceAttributes,

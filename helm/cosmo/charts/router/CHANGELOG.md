@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.16.0...helm-cosmo-router@0.17.0) (2026-05-12)
+
+
+### Features
+
+* **helm:** add HPA extra metrics ([#2846](https://github.com/wundergraph/cosmo/issues/2846)) ([f68adaa](https://github.com/wundergraph/cosmo/commit/f68adaa7308662247180b531ea0ccc73954cd006))
+
 ## [0.16.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.15.1...helm-cosmo-router@0.16.0) (2026-04-28)
 
 

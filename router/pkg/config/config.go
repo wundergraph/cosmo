@@ -424,7 +424,11 @@ type EngineExecutionConfiguration struct {
 	EnableInboundRequestDeduplication bool `envDefault:"true" env:"ENGINE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"enable_inbound_request_deduplication"`
 	// ForceEnableInboundRequestDeduplication forces enable inbound request deduplication, even when PreOriginHandlers are configured
 	ForceEnableInboundRequestDeduplication bool `envDefault:"false" env:"ENGINE_FORCE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"force_enable_inbound_request_deduplication"`
-	EnableRequestTracing                   bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+
+	EnableRequestTracing bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+	// ForceUnauthenticatedRequestTracing always enables request tracing for unauthenticated requests,
+	// even when Development Mode is not enabled. USE WITH CAUTION.
+	ForceUnauthenticatedRequestTracing bool `envDefault:"false" env:"ENGINE_FORCE_UNAUTHENTICATED_REQUEST_TRACING" yaml:"force_unauthenticated_request_tracing"`
 
 	// Deprecated: EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
 	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
@@ -930,6 +934,21 @@ type SubgraphErrorPropagationConfiguration struct {
 	AllowedFields           []string                     `yaml:"allowed_fields" env:"ALLOWED_FIELDS"`
 }
 
+type SubgraphExtensionPropagationAlgorithm string
+
+const (
+	// SubgraphExtensionPropagationAlgorithmFirstWrite propagates the first extension root field from a subgraph to the client
+	SubgraphExtensionPropagationAlgorithmFirstWrite SubgraphExtensionPropagationAlgorithm = "first_write"
+	// SubgraphExtensionPropagationAlgorithmLastWrite propagates the last extension root field from a subgraph to the client
+	SubgraphExtensionPropagationAlgorithmLastWrite SubgraphExtensionPropagationAlgorithm = "last_write"
+)
+
+type SubgraphExtensionPropagationConfiguration struct {
+	Enabled                bool                                  `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	AllowedExtensionFields []string                              `yaml:"allowed_extension_fields" env:"ALLOWED_EXTENSION_FIELDS"`
+	Algorithm              SubgraphExtensionPropagationAlgorithm `yaml:"algorithm,omitempty" envDefault:"first_write" env:"ALGORITHM"`
+}
+
 type StorageProviders struct {
 	S3         []S3StorageProvider         `yaml:"s3,omitempty" envPrefix:"S3_"`
 	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty" envPrefix:"CDN_"`
@@ -1248,7 +1267,8 @@ type PluginsConfiguration struct {
 }
 
 type PluginRegistryConfiguration struct {
-	URL string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
+	URL      string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
+	Insecure bool   `yaml:"insecure" env:"INSECURE" envDefault:"false"`
 }
 
 type IntrospectionConfiguration struct {
@@ -1321,6 +1341,8 @@ type Config struct {
 	WebSocket WebSocketConfiguration `yaml:"websocket,omitempty"`
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
+
+	SubgraphExtensionPropagation SubgraphExtensionPropagationConfiguration `yaml:"subgraph_extension_propagation" envPrefix:"SUBGRAPH_EXTENSION_PROPAGATION_"`
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers" envPrefix:"STORAGE_PROVIDER_"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
