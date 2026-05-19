@@ -1,7 +1,6 @@
 package core
 
 import (
-	"crypto/tls"
 	"net/http"
 	"time"
 
@@ -120,13 +119,11 @@ type Config struct {
 	accessLogsConfig                *AccessLogsConfig
 	// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 	localhostFallbackInsideDocker bool
-	tlsServerConfig               *tls.Config
-	tlsConfig                     *TlsConfig
-	subgraphTLSConfiguration      config.ClientTLSConfiguration
-	subgraphGRPCTLSConfiguration  config.GRPCClientTLSConfiguration
+	tls                           TlsConfig
 	telemetryAttributes           []config.CustomAttribute
 	tracePropagators              []propagation.TextMapPropagator
 	compositePropagator           propagation.TextMapPropagator
+	spanNameFormatter             SpanNameFormatterFunc
 	// Poller
 	configPoller                 configpoller.ConfigPoller
 	selfRegister                 selfregister.SelfRegister
@@ -142,6 +139,7 @@ type Config struct {
 	rateLimit                     *config.RateLimitConfiguration
 	webSocketConfiguration        *config.WebSocketConfiguration
 	subgraphErrorPropagation      config.SubgraphErrorPropagationConfiguration
+	subgraphExtensionPropagation  config.SubgraphExtensionPropagationConfiguration
 	clientHeader                  config.ClientHeader
 	cacheWarmup                   *config.CacheWarmupConfiguration
 	planningDurationOverride      func(content string) time.Duration
@@ -259,8 +257,8 @@ func (c *Config) Usage() map[string]any {
 	usage["development_mode"] = c.developmentMode
 	usage["access_logs"] = c.accessLogsConfig != nil
 	usage["localhost_fallback_inside_docker"] = c.localhostFallbackInsideDocker
-	usage["tls_server"] = c.tlsServerConfig != nil
-	usage["tls_client"] = c.tlsConfig != nil
+	usage["tls_server"] = c.tls.settings.Server.Enabled
+	usage["tls_client"] = c.tls.settings.Client.Enabled()
 	usage["self_register"] = c.selfRegister != nil
 	usage["registration_info"] = c.registrationInfo != nil
 
@@ -273,6 +271,7 @@ func (c *Config) Usage() map[string]any {
 
 	usage["engine_execution_configuration_enable_single_flight"] = c.engineExecutionConfiguration.EnableSingleFlight
 	usage["engine_execution_configuration_enable_request_tracing"] = c.engineExecutionConfiguration.EnableRequestTracing
+	usage["engine_execution_configuration_force_unauthenticated_request_tracing"] = c.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing
 	usage["engine_execution_configuration_enable_net_poll"] = c.engineExecutionConfiguration.EnableNetPoll
 	usage["engine_execution_configuration_execution_plan_cache_size"] = c.engineExecutionConfiguration.ExecutionPlanCacheSize
 	usage["engine_execution_configuration_minify_subgraph_operations"] = c.engineExecutionConfiguration.MinifySubgraphOperations

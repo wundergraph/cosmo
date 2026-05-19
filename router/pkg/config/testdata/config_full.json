@@ -706,6 +706,7 @@
           "ID": "default",
           "URL": "nats://localhost:4222",
           "Authentication": null,
+          "TLS": null,
           "DeleteDurableConsumersOnShutdown": false
         },
         {
@@ -718,6 +719,7 @@
             },
             "Token": null
           },
+          "TLS": null,
           "DeleteDurableConsumersOnShutdown": false
         }
       ],
@@ -875,16 +877,10 @@
     "EnableInboundRequestDeduplication": true,
     "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
+    "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
     "EnableNetPoll": true,
-    "WebSocketClientPollTimeout": 1000000000,
-    "WebSocketClientConnBufferSize": 128,
-    "WebSocketClientReadTimeout": 5000000000,
-    "WebSocketClientWriteTimeout": 10000000000,
-    "WebSocketClientPingInterval": 10000000000,
-    "WebSocketClientPingTimeout": 30000000000,
-    "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
     "SlowPlanCacheSize": 300,
     "SlowPlanCacheThreshold": 100000000,
@@ -902,6 +898,15 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
+    "WebSocketServerReadTimeout": 5000000000,
+    "WebSocketServerWriteTimeout": 10000000000,
+    "WebSocketServerPollTimeout": 1000000000,
+    "WebSocketServerConnBufferSize": 128,
+    "WebSocketClientWriteTimeout": 10000000000,
+    "WebSocketClientReadLimit": 1000000,
+    "WebSocketClientPingInterval": 10000000000,
+    "WebSocketClientPingTimeout": 30000000000,
+    "WebSocketClientAckTimeout": 30000000000,
     "ValidateRequiredExternalFields": false,
     "RelaxSubgraphOperationFieldSelectionMergingNullability": false
   },
@@ -961,6 +966,14 @@
     ],
     "AllowedFields": null
   },
+  "SubgraphExtensionPropagation": {
+    "Enabled": true,
+    "AllowedExtensionFields": [
+      "rateLimit",
+      "auth"
+    ],
+    "Algorithm": "last_write"
+  },
   "StorageProviders": {
     "S3": [
       {
@@ -1006,6 +1019,13 @@
       "ProviderID": "",
       "ObjectPath": ""
     }
+  },
+  "SplitConfigPoller": {
+    "SkipMissingFeatureFlags": true,
+    "IgnoredFeatureFlags": [
+      "experimental-checkout",
+      "ab-test-foo"
+    ]
   },
   "PersistedOperationsConfig": {
     "Disabled": false,
@@ -1087,7 +1107,8 @@
     "Enabled": true,
     "Path": "some/path/to/plugins",
     "Registry": {
-      "URL": "cosmo-registry.wundergraph.com"
+      "URL": "cosmo-registry.wundergraph.com",
+      "Insecure": false
     }
   },
   "WatchConfig": {

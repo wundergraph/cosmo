@@ -7,14 +7,15 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest/observer"
 	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -26,7 +27,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	t.Run("returns config with insecure_skip_ca_verification only", func(t *testing.T) {
 		t.Parallel()
 
-		tlsCfg, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
+		tlsCfg, err := buildTLSClientConfig(config.TLSClientCertConfiguration{
 			InsecureSkipCaVerification: true,
 		})
 
@@ -42,7 +43,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 		certPath, keyPath := generateTestCert(t, "client")
 
-		tlsCfg, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
+		tlsCfg, err := buildTLSClientConfig(config.TLSClientCertConfiguration{
 			CertFile: certPath,
 			KeyFile:  keyPath,
 		})
@@ -57,7 +58,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 		certPath, _ := generateTestCert(t, "ca")
 
-		tlsCfg, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
+		tlsCfg, err := buildTLSClientConfig(config.TLSClientCertConfiguration{
 			CaFile: certPath,
 		})
 		require.NoError(t, err)
@@ -68,7 +69,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	t.Run("errors on invalid cert path", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
+		_, err := buildTLSClientConfig(config.TLSClientCertConfiguration{
 			CertFile: "/nonexistent/cert.pem",
 			KeyFile:  "/nonexistent/key.pem",
 		})
@@ -79,7 +80,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	t.Run("errors on invalid CA path", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
+		_, err := buildTLSClientConfig(config.TLSClientCertConfiguration{
 			CaFile: "/nonexistent/ca.pem",
 		})
 		require.Error(t, err)
@@ -89,7 +90,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	t.Run("returns nil when no TLS configured", func(t *testing.T) {
 		t.Parallel()
 
-		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(zap.NewNop(), config.TLSClientCertConfiguration{}, nil)
+		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{})
 		require.NoError(t, err)
 		require.Nil(t, defaultTLS)
 		require.Nil(t, perSubgraphTLS)
@@ -107,7 +108,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			CaFile:   caPath,
 		}
 
-		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(zap.NewNop(), all, nil)
+		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{All: all})
 		require.NoError(t, err)
 		require.NotNil(t, defaultTLS)
 		require.Len(t, defaultTLS.Certificates, 1)
@@ -127,7 +128,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(zap.NewNop(), config.TLSClientCertConfiguration{}, subgraphs)
+		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{Subgraphs: subgraphs})
 		require.NoError(t, err)
 		require.Nil(t, defaultTLS)
 		require.Contains(t, perSubgraphTLS, "products")
@@ -151,7 +152,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(zap.NewNop(), all, subgraphs)
+		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{All: all, Subgraphs: subgraphs})
 		require.NoError(t, err)
 		require.NotNil(t, defaultTLS)
 		require.Contains(t, perSubgraphTLS, "products")
@@ -165,7 +166,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			KeyFile:  "/nonexistent/key.pem",
 		}
 
-		_, _, err := buildSubgraphTLSConfigs(zap.NewNop(), all, nil)
+		_, _, err := buildSubgraphTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{All: all})
 		require.Error(t, err)
 		require.EqualError(t, err, "failed to build global subgraph TLS config: failed to load client TLS cert and key: open /nonexistent/cert.pem: no such file or directory")
 	})
@@ -180,7 +181,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		_, _, err := buildSubgraphTLSConfigs(zap.NewNop(), config.TLSClientCertConfiguration{}, subgraphs)
+		_, _, err := buildSubgraphTLSConfigs(zap.NewNop(), &config.HTTPClientTLSConfiguration{Subgraphs: subgraphs})
 		require.Error(t, err)
 		require.EqualError(t, err, `failed to build TLS config for subgraph "products": failed to load client TLS cert and key: open /nonexistent/cert.pem: no such file or directory`)
 	})
@@ -195,7 +196,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			InsecureSkipCaVerification: true,
 		}
 
-		defaultTLS, _, err := buildSubgraphTLSConfigs(logger, all, nil)
+		defaultTLS, _, err := buildSubgraphTLSConfigs(logger, &config.HTTPClientTLSConfiguration{All: all})
 		require.NoError(t, err)
 		require.NotNil(t, defaultTLS)
 		require.True(t, defaultTLS.InsecureSkipVerify)
@@ -216,7 +217,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			},
 		}
 
-		_, perSubgraphTLS, err := buildSubgraphTLSConfigs(logger, config.TLSClientCertConfiguration{}, subgraphs)
+		_, perSubgraphTLS, err := buildSubgraphTLSConfigs(logger, &config.HTTPClientTLSConfiguration{Subgraphs: subgraphs})
 		require.NoError(t, err)
 		require.Contains(t, perSubgraphTLS, "products")
 		require.True(t, perSubgraphTLS["products"].InsecureSkipVerify)

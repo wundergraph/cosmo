@@ -151,5 +151,4 @@ func TestIntrospection(t *testing.T) {
 			g.Assert(t, "feature-graph-schema", body.Bytes())
 		})
 	})
-
 }

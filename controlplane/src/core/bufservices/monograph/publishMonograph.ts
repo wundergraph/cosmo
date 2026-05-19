@@ -15,6 +15,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function publishMonograph(
   opts: RouterOptions,
@@ -139,26 +140,33 @@ export function publishMonograph(
       authContext,
     });
 
-    const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
-      await subgraphRepo.update(
-        {
-          targetId: subgraphs[0].targetId,
-          labels: [],
-          unsetLabels: false,
-          schemaSDL: subgraphSchemaSDL,
-          updatedBy: authContext.userId,
-          namespaceId: namespace.id,
-          isV2Graph,
-        },
-        opts.blobStorage,
-        {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-        },
-        opts.chClient!,
-        undefined,
-        opts.webhookProxyUrl,
-      );
+    const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
+      await opts.db.transaction((tx) => {
+        const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+        const compositionService = new CompositionService(
+          tx,
+          authContext.organizationId,
+          logger,
+          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+          opts.blobStorage,
+          opts.chClient,
+          opts.webhookProxyUrl,
+          false,
+        );
+
+        return subgraphRepo.update(
+          {
+            targetId: subgraphs[0].targetId,
+            labels: [],
+            unsetLabels: false,
+            schemaSDL: subgraphSchemaSDL,
+            updatedBy: authContext.userId,
+            namespaceId: namespace.id,
+            isV2Graph,
+          },
+          compositionService,
+        );
+      });
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(

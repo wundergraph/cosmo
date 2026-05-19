@@ -52,6 +52,7 @@ declare module 'hono' {
   interface ContextVariableMap {
     authenticatedOrganizationId: string;
     authenticatedFederatedGraphId: string;
+    authenticatedFeatures: string[];
   }
 }
 
@@ -102,6 +103,19 @@ const jwtMiddleware = (secret: string | ((c: Context) => string)) => {
       c.set('authenticatedFederatedGraphId', federatedGraphId as string);
     }
 
+    const features = result.payload.features;
+    c.set('authenticatedFeatures', Array.isArray(features) ? (features as string[]) : []);
+
+    await next();
+  };
+};
+
+const requireFeature = (feature: string) => {
+  return async (c: Context, next: Next) => {
+    const features = c.get('authenticatedFeatures');
+    if (!features || !features.includes(feature)) {
+      return c.text('Forbidden - Missing required feature', 403);
+    }
     await next();
   };
 };
@@ -353,6 +367,59 @@ const subgraphChecks = (storage: BlobStorage) => {
   };
 };
 
+const manifestBlob = (storage: BlobStorage, keyBuilder: (orgId: string, graphId: string, c: Context) => string) => {
+  return async (c: Context) => {
+    const organizationId = c.get('authenticatedOrganizationId');
+    const federatedGraphId = c.get('authenticatedFederatedGraphId');
+
+    if (organizationId !== c.req.param('organization_id') || federatedGraphId !== c.req.param('federated_graph_id')) {
+      return c.text('Bad Request', 400);
+    }
+
+    const key = keyBuilder(organizationId, federatedGraphId, c);
+
+    const body = await c.req.json();
+
+    let isModified = true;
+
+    if (body?.version) {
+      try {
+        isModified = await storage.headObject({ context: c, key, version: body.version });
+      } catch (e: any) {
+        if (e instanceof BlobNotFoundError) {
+          return c.notFound();
+        }
+        throw e;
+      }
+    }
+
+    if (!isModified) {
+      return c.body(null, 304);
+    }
+
+    let blobObject: BlobObject;
+
+    try {
+      blobObject = await storage.getObject({ context: c, key, cacheControl: 'no-cache' });
+
+      if (blobObject.metadata && blobObject.metadata['signature-sha256']) {
+        c.header(signatureSha256Header, blobObject.metadata['signature-sha256']);
+      }
+    } catch (e: any) {
+      if (e instanceof BlobNotFoundError) {
+        return c.notFound();
+      }
+      throw e;
+    }
+
+    c.header('Content-Type', 'application/json; charset=UTF-8');
+
+    return stream(c, async (stream) => {
+      await stream.pipe(blobObject.stream);
+    });
+  };
+};
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 export const cdn = <E extends Env, S extends Schema = {}, BasePath extends string = '/'>(
   hono: Hono<E, S, BasePath>,
@@ -391,4 +458,35 @@ export const cdn = <E extends Env, S extends Schema = {}, BasePath extends strin
   hono
     .use(subgraphChecksPath, jwtMiddleware(opts.authJwtSecret))
     .get(subgraphChecksPath, subgraphChecks(opts.blobStorage));
+
+  const manifestMapperPath = '/:organization_id/:federated_graph_id/manifest/mapper.json';
+  hono
+    .use(manifestMapperPath, jwtMiddleware(opts.authJwtSecret))
+    .use(manifestMapperPath, requireFeature('split-config-loading'))
+    .post(
+      manifestMapperPath,
+      manifestBlob(opts.blobStorage, (orgId, graphId) => `${orgId}/${graphId}/manifest/mapper.json`),
+    );
+
+  const manifestLatestPath = '/:organization_id/:federated_graph_id/manifest/latest.json';
+  hono
+    .use(manifestLatestPath, jwtMiddleware(opts.authJwtSecret))
+    .use(manifestLatestPath, requireFeature('split-config-loading'))
+    .post(
+      manifestLatestPath,
+      manifestBlob(opts.blobStorage, (orgId, graphId) => `${orgId}/${graphId}/manifest/latest.json`),
+    );
+
+  const manifestFeatureFlagPath =
+    '/:organization_id/:federated_graph_id/manifest/feature-flags/:feature_flag_name{.+\\.json$}';
+  hono
+    .use(manifestFeatureFlagPath, jwtMiddleware(opts.authJwtSecret))
+    .use(manifestFeatureFlagPath, requireFeature('split-config-loading'))
+    .post(
+      manifestFeatureFlagPath,
+      manifestBlob(
+        opts.blobStorage,
+        (orgId, graphId, c) => `${orgId}/${graphId}/manifest/feature-flags/${c.req.param('feature_flag_name')}`,
+      ),
+    );
 };
