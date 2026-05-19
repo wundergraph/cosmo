@@ -21,7 +21,6 @@
 /otelcollector/     @wundergraph/Platform
 /playground/        @wundergraph/Cosmo
 /protographic/      @wundergraph/Router
-# Same owner for router and tests to avoid requesting too many reviewers
 /router/            @wundergraph/Router
 /router-tests/      @wundergraph/Router
 /router-plugin/     @wundergraph/Router
