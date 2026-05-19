@@ -371,7 +371,7 @@ export class ClickHouseClient {
    * @param maxInterval maximum delay after consecutive failures (ms), defaults to 3 minutes.
    * @param timeout per-request timeout (ms).
    */
-  public async ping(baseInterval = 5_000, maxInterval = 3 * 60_000, timeout?: number) {
+  public async ping(baseInterval = 5000, maxInterval = 3 * 60_000, timeout?: number) {
     this.pingStopController = new AbortController();
 
     try {
@@ -397,6 +397,7 @@ export class ClickHouseClient {
             );
           },
           jitter: true,
+          leading: true,
         },
       );
     } catch (err) {

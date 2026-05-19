@@ -219,6 +219,58 @@ describe('pollWithBackoff', () => {
     await polling;
   });
 
+  test('runs the first poll immediately when leading is true', async () => {
+    const controller = new AbortController();
+    const task = vi.fn().mockResolvedValue(undefined);
+    const onSuccess = vi.fn();
+
+    const polling = pollWithBackoff(task, {
+      baseInterval: 1000,
+      maxInterval: 60_000,
+      signal: controller.signal,
+      onSuccess,
+      onFailure: () => {},
+      leading: true,
+    });
+
+    // Yield one microtask for the leading task to run.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(task).toHaveBeenCalledTimes(1);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+
+    // Subsequent ticks follow the normal sleep-then-task order.
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(task).toHaveBeenCalledTimes(2);
+
+    controller.abort();
+    await polling;
+  });
+
+  test('waits for the first interval when leading is false or omitted', async () => {
+    const controller = new AbortController();
+    const task = vi.fn().mockResolvedValue(undefined);
+
+    const polling = pollWithBackoff(task, {
+      baseInterval: 1000,
+      maxInterval: 60_000,
+      signal: controller.signal,
+      onSuccess: () => {},
+      onFailure: () => {},
+    });
+
+    // No leading run — task should not have been called yet.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(task).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(task).toHaveBeenCalledTimes(1);
+
+    controller.abort();
+    await polling;
+  });
+
   test('returns immediately if signal is already aborted', async () => {
     const controller = new AbortController();
     controller.abort();
