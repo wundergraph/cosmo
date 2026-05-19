@@ -8,6 +8,7 @@ import pkg from 'stream-json';
 import { Observable, Subscriber } from 'rxjs';
 
 import { traced } from '../../tracing.js';
+import { ClickHouseUnavailableError } from '../../errors/errors.js';
 import { pollWithBackoff } from '../../util/poll-with-backoff.js';
 import { ClickHouseCompressionMethod, ClickHouseDataFormat } from './enums/index.js';
 
@@ -38,6 +39,13 @@ export class ClickHouseClient {
    */
   private emitter = new EventTarget();
   private pingStopController?: AbortController;
+  private pingFailedAttempts = 0;
+
+  /** True until the healthcheck loop observes consecutive ping failures. */
+  public get isAvailable(): boolean {
+    return this.pingFailedAttempts === 0;
+  }
+
   /**
    * ClickHouse Service
    */
@@ -215,7 +223,11 @@ export class ClickHouseClient {
           }
         })
         .catch((reason: AxiosError) => {
-          return reject(this._handlePromiseError<T>(reason));
+          this._handlePromiseError<T>(reason);
+          if (!this.isAvailable) {
+            return reject(new ClickHouseUnavailableError(reason));
+          }
+          return reject(reason);
         });
     });
   }
@@ -350,6 +362,9 @@ export class ClickHouseClient {
     return new Promise<void>((resolve, reject) => {
       this.insert<T>(table, data).subscribe({
         error: (error) => {
+          if (!this.isAvailable) {
+            return reject(new ClickHouseUnavailableError(error));
+          }
           return reject(error);
         },
         next: (row) => {
@@ -387,9 +402,11 @@ export class ClickHouseClient {
           maxInterval,
           signal: this.pingStopController.signal,
           onSuccess: () => {
+            this.pingFailedAttempts = 0;
             this.emitter.dispatchEvent(new CustomEvent('ping', { detail: {} }));
           },
           onFailure: (error, attempt) => {
+            this.pingFailedAttempts = attempt;
             this.emitter.dispatchEvent(
               new CustomEvent('ping', {
                 detail: { error, attempt },

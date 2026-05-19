@@ -38,6 +38,23 @@ export function isAuthorizationError(e: Error): e is AuthorizationError {
   return e instanceof AuthorizationError || e instanceof UnauthorizedError;
 }
 
+/**
+ * Thrown when a ClickHouse query fails and the client's healthcheck indicates the server is currently unreachable.
+ * Caller-facing signal for "this is an availability issue, not a query bug" — surfaced as Code.Unavailable / HTTP 503.
+ * The message intentionally avoids naming ClickHouse so we don't leak implementation details to API consumers.
+ */
+export class ClickHouseUnavailableError extends Error {
+  constructor(cause?: unknown) {
+    super('Analytical service is currently unavailable', cause instanceof Error ? { cause } : undefined);
+    this.name = 'ClickHouseUnavailableError';
+    Object.setPrototypeOf(this, ClickHouseUnavailableError.prototype);
+  }
+}
+
+export function isClickHouseUnavailableError(e: unknown): e is ClickHouseUnavailableError {
+  return e instanceof ClickHouseUnavailableError;
+}
+
 export function unsuccessfulBaseCompositionError(federatedGraphName: string, namespace = 'default'): CompositionError {
   return new CompositionError({
     message:
