@@ -223,7 +223,8 @@ func TestOperationCost(t *testing.T) {
 
 				// 50 * (employees(1) + id(0) + 1 * (role(1) + 3 * departments(1) + 5 * title(1)))
 				require.Equal(t, "500", res.Response.Header.Get(core.CostEstimatedHeader))
-				require.Equal(t, "280", res.Response.Header.Get(core.CostActualHeader))
+				// 10 * (employees(1) + id(0) + 1 * (role(1) + 1.2 * departments(1) + 1.4 * title(1)))
+				require.Equal(t, "40", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
@@ -406,6 +407,52 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "3", res.Response.Header.Get(core.CostEstimatedHeader))
 
 				require.Equal(t, "3", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("dot-path slicingArgument resolves nested input literal", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 100,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ searchThings(input: {pagination: {first: 7}}) { a } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors":`)
+
+				// input.pagination.first=7 overrides EstimatedListSize(100) as the list multiplier.
+				require.Equal(t, "7", res.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "7", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("dot-path slicingArgument missing nested int triggers requireOneSlicingArgument", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled: true,
+						Mode:    config.CostControlModeMeasure,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ searchThings(input: {pagination: {}}) { a } }`,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"errors"`)
+				require.Contains(t, res.Body, `requires exactly one slicing argument, but none was provided`)
+				require.NotContains(t, res.Body, `"data":`)
 			})
 		})
 	})
