@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.225.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.2...controlplane@0.225.0) (2026-05-19)
+
+### Features
+
+* add PostHog name properties to identify call ([#2857](https://github.com/wundergraph/cosmo/issues/2857)) ([662d279](https://github.com/wundergraph/cosmo/commit/662d279530eb270beef8e0e2ed2a218124ae9430)) (@GrueneKatze)
+
+## [0.224.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.1...controlplane@0.224.2) (2026-05-18)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.224.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.0...controlplane@0.224.1) (2026-05-14)
 
 **Note:** Version bump only for package controlplane

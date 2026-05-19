@@ -891,6 +891,7 @@ type TLSServerConfiguration struct {
 	CertFile string `yaml:"cert_file,omitempty" env:"TLS_SERVER_CERT_FILE"`
 	KeyFile  string `yaml:"key_file,omitempty" env:"TLS_SERVER_KEY_FILE"`
 
+	// ClientAuth configures the router to accept or require mTLS from clients.
 	ClientAuth TLSClientAuthConfiguration `yaml:"client_auth,omitempty"`
 }
 
@@ -906,6 +907,16 @@ type ClientTLSConfiguration struct {
 	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
 	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
 	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
+// Enabled returns true if anything in s has been configured.©
+func (s ClientTLSConfiguration) Enabled() bool {
+	allConfigured := s.All.InsecureSkipCaVerification ||
+		s.All.CaFile != "" ||
+		s.All.KeyFile != "" ||
+		s.All.CertFile != ""
+
+	return allConfigured || len(s.Subgraphs) > 0
 }
 
 type TLSConfiguration struct {
