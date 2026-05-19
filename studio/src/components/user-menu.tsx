@@ -26,6 +26,8 @@ const localStorageKeysToRemove = [
   'playground:script:tabState',
 ];
 
+const localStorageKeysPrefixesToRemove = ['cosmo-playground:'];
+
 function removeLocalStorageItems() {
   if (typeof window === 'undefined') {
     return;
@@ -33,6 +35,14 @@ function removeLocalStorageItems() {
 
   for (const key of localStorageKeysToRemove) {
     window.localStorage.removeItem(key);
+  }
+
+  for (const key of localStorageKeysPrefixesToRemove) {
+    for (const storageKey of Object.keys(window.localStorage)) {
+      if (storageKey.startsWith(key)) {
+        window.localStorage.removeItem(storageKey);
+      }
+    }
   }
 }
 
