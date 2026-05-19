@@ -244,15 +244,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 			AllowHeaders:     config.CORS.AllowHeaders,
 			MaxAge:           config.CORS.MaxAge,
 		}),
-		WithTLSConfig(&TlsConfig{
-			Enabled:  config.TLS.Server.Enabled,
-			CertFile: config.TLS.Server.CertFile,
-			KeyFile:  config.TLS.Server.KeyFile,
-			ClientAuth: &TlsClientAuthConfig{
-				CertFile: config.TLS.Server.ClientAuth.CertFile,
-				Required: config.TLS.Server.ClientAuth.Required,
-			},
-		}),
+		WithTLSConfig(config.TLS),
 		WithDevelopmentMode(config.DevelopmentMode),
 		WithTracing(TraceConfigFromTelemetry(&config.Telemetry)),
 		WithMetrics(MetricConfigFromTelemetry(&config.Telemetry)),
@@ -277,7 +269,6 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithDemoMode(config.DemoMode),
 		WithStreamsHandlerConfiguration(config.Events.Handlers),
 		WithReloadPersistentState(reloadPersistentState),
-		WithSubgraphTLSConfiguration(config.TLS.Client),
 	}
 
 	return options
