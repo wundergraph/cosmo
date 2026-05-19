@@ -909,9 +909,9 @@ type ClientTLSConfiguration struct {
 	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
 }
 
-// Enabled returns true if anything in s has been configured.
+// Enabled returns true if anything in s has been configured.©
 func (s ClientTLSConfiguration) Enabled() bool {
-	allConfigured := s.All.InsecureSkipCaVerification == true ||
+	allConfigured := s.All.InsecureSkipCaVerification ||
 		s.All.CaFile != "" ||
 		s.All.KeyFile != "" ||
 		s.All.CertFile != ""
