@@ -5,7 +5,7 @@ import { ClickHouseClient } from '../clickhouse/index.js';
 declare module 'fastify' {
   interface FastifyInstance {
     ch?: ClickHouseClient;
-    chHealthcheck(): void;
+    chHealthcheck(): Promise<void>;
   }
 }
 
@@ -25,7 +25,7 @@ export default fp<ChPluginOptions>(function ClickHousePlugin(fastify, opts, done
 
   const listenerController = new AbortController();
 
-  fastify.decorate('chHealthcheck', () => {
+  fastify.decorate('chHealthcheck', async () => {
     connection.addEventListener(
       'ping',
       (event) => {
@@ -40,7 +40,7 @@ export default fp<ChPluginOptions>(function ClickHousePlugin(fastify, opts, done
       { signal: listenerController.signal },
     );
 
-    return connection.ping();
+    await connection.ping();
   });
 
   fastify.chHealthcheck();

@@ -8,6 +8,7 @@ import pkg from 'stream-json';
 import { Observable, Subscriber } from 'rxjs';
 
 import { traced } from '../../tracing.js';
+import { pollWithBackoff } from '../../util/poll-with-backoff.js';
 import { ClickHouseCompressionMethod, ClickHouseDataFormat } from './enums/index.js';
 
 import { ClickHouseClientOptions } from './interfaces/index.js';
@@ -36,14 +37,7 @@ export class ClickHouseClient {
    * Event emitter
    */
   private emitter = new EventTarget();
-  /**
-   * Timer for healthcheck pings
-   */
-  private pingTimer?: ReturnType<typeof setInterval>;
-  /**
-   * Controller for pings
-   */
-  private pingAbortController?: AbortController;
+  private pingStopController?: AbortController;
   /**
    * ClickHouse Service
    */
@@ -371,69 +365,51 @@ export class ClickHouseClient {
   }
 
   /**
-   * Starts pinging  the clickhouse server in an interval
+   * Starts pinging the clickhouse server with exponential backoff between attempts.
    *
-   * @param interval interval in milliseconds, defaults to 15000.
+   * @param baseInterval base delay between pings when healthy (ms), defaults to 5000.
+   * @param maxInterval maximum delay after consecutive failures (ms), defaults to 3 minutes.
+   * @param timeout per-request timeout (ms).
    */
-  public ping(interval = 15_000, timeout?: number) {
-    let attempt = 0;
+  public async ping(baseInterval = 5_000, maxInterval = 3 * 60_000, timeout?: number) {
+    this.pingStopController = new AbortController();
 
-    this.pingTimer = setInterval(async () => {
-      this.pingAbortController?.abort();
-      const controller = new AbortController();
-      this.pingAbortController = controller;
-
-      try {
-        const ok = await this.pingRequest(timeout, controller.signal);
-
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        if (!ok) {
-          attempt++;
-          this.emitter.dispatchEvent(
-            new CustomEvent('ping', {
-              detail: {
-                error: new Error('Failed to ping ClickHouse server'),
-                attempt,
-              },
-            }),
-          );
-          return;
-        }
-
-        attempt = 0;
-        this.emitter.dispatchEvent(new CustomEvent('ping', { detail: {} }));
-      } catch (caught) {
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        attempt++;
-        const error = caught instanceof Error ? caught : new Error(String(caught));
-        this.emitter.dispatchEvent(
-          new CustomEvent('ping', {
-            detail: {
-              error,
-              attempt,
-            },
-          }),
-        );
-      }
-    }, interval);
+    try {
+      await pollWithBackoff(
+        async (signal) => {
+          const ok = await this.pingRequest(timeout, signal);
+          if (!ok) {
+            throw new Error('Failed to ping ClickHouse server');
+          }
+        },
+        {
+          baseInterval,
+          maxInterval,
+          signal: this.pingStopController.signal,
+          onSuccess: () => {
+            this.emitter.dispatchEvent(new CustomEvent('ping', { detail: {} }));
+          },
+          onFailure: (error, attempt) => {
+            this.emitter.dispatchEvent(
+              new CustomEvent('ping', {
+                detail: { error, attempt },
+              }),
+            );
+          },
+          jitter: true,
+        },
+      );
+    } catch (err) {
+      this.options?.logger?.error(err);
+    }
   }
 
   /**
-   * Stops the ping interval and cancels any in-flight ping request.
+   * Stops the ping loop and cancels any in-flight ping request.
    */
   public close() {
-    if (this.pingTimer) {
-      clearInterval(this.pingTimer);
-      this.pingTimer = undefined;
-    }
-    this.pingAbortController?.abort();
-    this.pingAbortController = undefined;
+    this.pingStopController?.abort();
+    this.pingStopController = undefined;
   }
 
   /**
