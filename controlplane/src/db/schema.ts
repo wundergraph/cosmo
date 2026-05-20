@@ -2006,10 +2006,7 @@ export const namespaceSsoProviders = pgTable(
       uniquePasswordPerNamespace: uniqueIndex('nssp_unique_password')
         .on(t.namespaceId)
         .where(sql`${t.isPasswordLogin} = true`),
-      xorCheck: check(
-        'nssp_xor_check',
-        sql`(${t.ssoProviderId} IS NOT NULL) <> ${t.isPasswordLogin}`,
-      ),
+      xorCheck: check('nssp_xor_check', sql`(${t.ssoProviderId} IS NOT NULL) <> ${t.isPasswordLogin}`),
     };
   },
 );

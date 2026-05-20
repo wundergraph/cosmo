@@ -40,10 +40,7 @@ export function listOIDCProviders(
         alias: p.alias,
         endpoint: p.endpoint,
         loginUrl: `${opts.webBaseUrl}/login?sso=${p.alias}`,
-        signInRedirectUrl: mergeUrls(
-          opts.keycloakApiUrl,
-          `realms/${opts.keycloakRealm}/broker/${p.alias}/endpoint`,
-        ),
+        signInRedirectUrl: mergeUrls(opts.keycloakApiUrl, `realms/${opts.keycloakRealm}/broker/${p.alias}/endpoint`),
         signOutRedirectUrl: mergeUrls(
           opts.keycloakApiUrl,
           `realms/${opts.keycloakRealm}/broker/${p.alias}/endpoint/logout_response`,

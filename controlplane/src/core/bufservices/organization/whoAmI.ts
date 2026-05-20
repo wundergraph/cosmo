@@ -42,49 +42,49 @@ export function whoAmI(
     const lm = authContext.loginMethod;
     let loginMethod: PlainMessage<LoginMethod>;
     switch (lm?.type) {
-    case 'sso': {
-      const oidcRepo = new OidcRepository(opts.db);
-      const provider = await oidcRepo.getOidcProviderById({
-        id: lm.ssoProviderId,
-        organizationId: authContext.organizationId,
-      });
-      loginMethod = {
-        type: LoginMethodType.SSO,
-        ssoProviderId: lm.ssoProviderId,
-        ssoProviderName: provider?.name ?? '',
-        ssoAlias: lm.alias,
-      };
-    
-    break;
-    }
-    case 'password': {
-      loginMethod = {
-        type: LoginMethodType.PASSWORD,
-        ssoProviderId: '',
-        ssoProviderName: '',
-        ssoAlias: '',
-      };
-    
-    break;
-    }
-    case 'api-key': {
-      loginMethod = {
-        type: LoginMethodType.API_KEY,
-        ssoProviderId: '',
-        ssoProviderName: '',
-        ssoAlias: '',
-      };
-    
-    break;
-    }
-    default: {
-      loginMethod = {
-        type: LoginMethodType.UNSPECIFIED,
-        ssoProviderId: '',
-        ssoProviderName: '',
-        ssoAlias: '',
-      };
-    }
+      case 'sso': {
+        const oidcRepo = new OidcRepository(opts.db);
+        const provider = await oidcRepo.getOidcProviderById({
+          id: lm.ssoProviderId,
+          organizationId: authContext.organizationId,
+        });
+        loginMethod = {
+          type: LoginMethodType.SSO,
+          ssoProviderId: lm.ssoProviderId,
+          ssoProviderName: provider?.name ?? '',
+          ssoAlias: lm.alias,
+        };
+
+        break;
+      }
+      case 'password': {
+        loginMethod = {
+          type: LoginMethodType.PASSWORD,
+          ssoProviderId: '',
+          ssoProviderName: '',
+          ssoAlias: '',
+        };
+
+        break;
+      }
+      case 'api-key': {
+        loginMethod = {
+          type: LoginMethodType.API_KEY,
+          ssoProviderId: '',
+          ssoProviderName: '',
+          ssoAlias: '',
+        };
+
+        break;
+      }
+      default: {
+        loginMethod = {
+          type: LoginMethodType.UNSPECIFIED,
+          ssoProviderId: '',
+          ssoProviderName: '',
+          ssoAlias: '',
+        };
+      }
     }
 
     return {

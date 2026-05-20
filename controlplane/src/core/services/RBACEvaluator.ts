@@ -150,7 +150,8 @@ export class RBACEvaluator {
   hasFederatedGraphReadAccess(graph: Target) {
     const baseAllowed =
       this.isOrganizationViewer ||
-      (this.isOrganizationAdminOrDeveloper || this.checkTargetAccess(graph, ['graph-admin'])) ||
+      this.isOrganizationAdminOrDeveloper ||
+      this.checkTargetAccess(graph, ['graph-admin']) ||
       this.checkTargetAccess(graph, ['graph-viewer']);
     return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
@@ -183,8 +184,8 @@ export class RBACEvaluator {
 
   hasSubGraphCheckAccess(graph: Target) {
     const baseAllowed =
-      (this.isOrganizationAdminOrDeveloper ||
-        this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher'])) ||
+      this.isOrganizationAdminOrDeveloper ||
+      this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher']) ||
       this.checkTargetAccess(graph, ['subgraph-checker']);
     return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
@@ -192,9 +193,9 @@ export class RBACEvaluator {
   hasSubGraphReadAccess(graph: Target) {
     const baseAllowed =
       this.isOrganizationViewer ||
-      ((this.isOrganizationAdminOrDeveloper ||
-        this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher'])) ||
-        this.checkTargetAccess(graph, ['subgraph-checker'])) ||
+      this.isOrganizationAdminOrDeveloper ||
+      this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher']) ||
+      this.checkTargetAccess(graph, ['subgraph-checker']) ||
       this.checkTargetAccess(graph, ['subgraph-viewer']);
     return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }

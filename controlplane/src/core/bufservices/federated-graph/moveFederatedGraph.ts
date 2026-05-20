@@ -104,10 +104,7 @@ export function moveFederatedGraph(
         };
       }
 
-      if (
-        !authContext.rbac.canDeleteFederatedGraph(graph) ||
-        !authContext.rbac.canCreateFederatedGraph(newNamespace)
-      ) {
+      if (!authContext.rbac.canDeleteFederatedGraph(graph) || !authContext.rbac.canCreateFederatedGraph(newNamespace)) {
         throw new UnauthorizedError();
       }
 
