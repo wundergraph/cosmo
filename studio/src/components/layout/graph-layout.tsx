@@ -20,6 +20,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useRouter } from 'next/router';
 import { Fragment, createContext, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { MdOutlineFeaturedPlayList } from 'react-icons/md';
 import { PiBracketsCurlyBold, PiCubeFocus, PiDevices, PiGitBranch, PiToggleRight } from 'react-icons/pi';
 import { EmptyState } from '../empty-state';
@@ -41,36 +42,24 @@ export interface GraphContextProps {
   graphRequestToken: string;
 }
 
+interface GraphLayoutWrapperWithSidebarProps {
+  children: ReactNode;
+  isLoading: boolean;
+  organizationSlug?: string;
+  namespace: string;
+  slug: string;
+}
+
+interface GraphLayoutSidebarNavigationProps {
+  organizationSlug?: string;
+  namespace: string;
+  slug: string;
+}
+
 export const GraphContext = createContext<GraphContextProps | undefined>(undefined);
 
-export const GraphLayout = ({ children }: LayoutProps) => {
-  const router = useRouter();
-  const {
-    namespace: { name: namespace },
-  } = useWorkspace();
-  const organizationSlug = useCurrentOrganization()?.slug;
-  const slug = router.query.slug as string;
-
+const GraphLayoutSidebarNavigation = ({ organizationSlug, namespace, slug }: GraphLayoutSidebarNavigationProps) => {
   const proposalsFeature = useFeature('proposals');
-
-  const { data, isLoading, error, refetch } = useQuery(getFederatedGraphByName, {
-    name: slug,
-    namespace,
-  });
-
-  const { data: graphsData } = useQuery(getFederatedGraphs);
-
-  const graphContextData = useMemo(() => {
-    if (!data || !graphsData) {
-      return undefined;
-    }
-    return {
-      graph: data.graph,
-      subgraphs: data.subgraphs,
-      graphRequestToken: data.graphRequestToken,
-      graphs: graphsData.graphs,
-    };
-  }, [data, graphsData]);
 
   const links: NavLink[] = useMemo(() => {
     const basePath = `/${organizationSlug}/${namespace}/graph/${slug}`;
@@ -169,12 +158,57 @@ export const GraphLayout = ({ children }: LayoutProps) => {
     return graphLinks;
   }, [organizationSlug, namespace, slug, proposalsFeature]);
 
-  let render: React.ReactNode;
+  return <SideNav links={links} />;
+};
 
-  if (isLoading) {
-    render = <Loader fullscreen />;
-  } else if (data?.response?.code === EnumStatusCode.ERR_NOT_FOUND) {
-    render = (
+const GraphLayoutWrapperWithSidebar = ({
+  children,
+  isLoading,
+  organizationSlug,
+  namespace,
+  slug,
+}: GraphLayoutWrapperWithSidebarProps) => {
+  return (
+    <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
+      <div className="flex min-h-screen w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x">
+        <GraphLayoutSidebarNavigation organizationSlug={organizationSlug} namespace={namespace} slug={slug} />
+        <main className="flex-1">{isLoading ? <Loader fullscreen /> : children}</main>
+      </div>
+    </div>
+  );
+};
+
+export const GraphLayout = ({ children }: LayoutProps) => {
+  const router = useRouter();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
+  const slug = router.query.slug as string;
+
+  const { data, isLoading, error, refetch } = useQuery(getFederatedGraphByName, {
+    name: slug,
+    namespace,
+  });
+
+  const { data: graphsData } = useQuery(getFederatedGraphs);
+
+  const graphContextData = useMemo(() => {
+    if (!data || !graphsData) {
+      return undefined;
+    }
+    return {
+      graph: data.graph,
+      subgraphs: data.subgraphs,
+      graphRequestToken: data.graphRequestToken,
+      graphs: graphsData.graphs,
+    };
+  }, [data, graphsData]);
+
+  let content: React.ReactNode;
+
+  if (data?.response?.code === EnumStatusCode.ERR_NOT_FOUND) {
+    content = (
       <div className="my-auto">
         <EmptyState
           icon={<NoSymbolIcon />}
@@ -188,8 +222,11 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         />
       </div>
     );
-  } else if (error || data?.response?.code !== EnumStatusCode.OK) {
-    render = (
+  } else if (
+    error ||
+    (data?.response?.code !== EnumStatusCode.OK && data?.response?.code !== EnumStatusCode.WARN_PARTIAL_DATA)
+  ) {
+    content = (
       <div className="my-auto">
         <EmptyState
           icon={<ExclamationTriangleIcon />}
@@ -200,16 +237,18 @@ export const GraphLayout = ({ children }: LayoutProps) => {
       </div>
     );
   } else {
-    render = <GraphContext.Provider value={graphContextData}>{children}</GraphContext.Provider>;
+    content = <GraphContext.Provider value={graphContextData}>{children}</GraphContext.Provider>;
   }
 
   return (
-    <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      <div className="flex min-h-screen w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x">
-        <SideNav links={links} />
-        <main className="flex-1">{render}</main>
-      </div>
-    </div>
+    <GraphLayoutWrapperWithSidebar
+      organizationSlug={organizationSlug}
+      slug={slug}
+      namespace={namespace}
+      isLoading={isLoading}
+    >
+      {content}
+    </GraphLayoutWrapperWithSidebar>
   );
 };
 

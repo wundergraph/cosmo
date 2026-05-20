@@ -15,6 +15,7 @@ import {
   TimeFilters,
 } from '../../../types/index.js';
 import { traced } from '../../tracing.js';
+import { ClickHouseUnavailableError } from 'src/core/errors/errors.js';
 
 @traced
 export class AnalyticsDashboardViewRepository {
@@ -65,7 +66,7 @@ export class AnalyticsDashboardViewRepository {
     federatedGraphId: string,
     organizationId: string,
     filter: TimeFilters,
-  ): Promise<PlainMessage<RequestSeriesItem>[]> {
+  ): Promise<{ series: PlainMessage<RequestSeriesItem>[]; ok: boolean }> {
     if (filter?.dateRange && filter.dateRange.start > filter.dateRange.end) {
       const tmp = filter.dateRange.start;
       filter.dateRange.start = filter.dateRange.end;
@@ -105,17 +106,26 @@ export class AnalyticsDashboardViewRepository {
       organizationId,
     };
 
-    const seriesRes = await this.client.queryPromise(query, params);
+    const { data: seriesRes, ok } = await this.client.queryPromiseWithDefault<{
+      timestamp: string;
+      totalRequests: number;
+      erroredRequests: number;
+    }>(query, {
+      params,
+    });
 
     if (Array.isArray(seriesRes)) {
-      return seriesRes.map((p) => ({
-        timestamp: p.timestamp,
-        totalRequests: Number(p.totalRequests),
-        erroredRequests: Number(p.erroredRequests),
-      }));
+      return {
+        ok,
+        series: seriesRes.map((p) => ({
+          timestamp: p.timestamp,
+          totalRequests: Number(p.totalRequests),
+          erroredRequests: Number(p.erroredRequests),
+        })),
+      };
     }
 
-    return [];
+    return { ok, series: [] };
   }
 
   private async getMostRequestedOperations(
