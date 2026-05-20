@@ -256,7 +256,7 @@ func (t TransportFactory) RoundTripper(baseTransport http.RoundTripper) http.Rou
 			return t.spanNameFormatter(r)
 		}),
 		otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
-		otelhttp.WithTracerProvider(t.tracerProvider),
+		otelhttp.WithTracerProvider(&trace.FilteringTracerProvider{TracerProvider: t.tracerProvider}),
 	}
 
 	if t.tracePropagators != nil {

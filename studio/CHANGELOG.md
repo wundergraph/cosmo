@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.170.0](https://github.com/wundergraph/cosmo/compare/studio@0.169.6...studio@0.170.0) (2026-05-19)
+
+### Features
+
+* add PostHog name properties to identify call ([#2857](https://github.com/wundergraph/cosmo/issues/2857)) ([662d279](https://github.com/wundergraph/cosmo/commit/662d279530eb270beef8e0e2ed2a218124ae9430)) (@GrueneKatze)
+
 ## [0.169.6](https://github.com/wundergraph/cosmo/compare/studio@0.169.5...studio@0.169.6) (2026-05-18)
 
 ### Bug Fixes

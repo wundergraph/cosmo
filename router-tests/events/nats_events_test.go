@@ -238,10 +238,12 @@ func TestNatsEvents(t *testing.T) {
 					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
 				EnableNats: true,
-				TLSConfig: &core.TlsConfig{
-					Enabled:  true,
-					CertFile: "../testdata/tls/cert.pem",
-					KeyFile:  "../testdata/tls/key.pem",
+				TLSConfig: config.TLSConfiguration{
+					Server: config.TLSServerConfiguration{
+						Enabled:  true,
+						CertFile: "../testdata/tls/cert.pem",
+						KeyFile:  "../testdata/tls/key.pem",
+					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
@@ -287,7 +289,7 @@ func TestNatsEvents(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
-				TLSConfig:                nil, // Force Http/1
+				TLSConfig:                config.TLSConfiguration{}, // empty to force HTTP/1
 				RouterOptions: []core.Option{
 					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
