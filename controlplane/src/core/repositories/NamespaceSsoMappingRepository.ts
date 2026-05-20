@@ -57,9 +57,7 @@ export class NamespaceSsoMappingRepository {
         continue;
       }
       const matches =
-        input.loginMethod.type === 'sso'
-          ? row.ssoProviderId === input.loginMethod.ssoProviderId
-          : row.isPasswordLogin;
+        input.loginMethod.type === 'sso' ? row.ssoProviderId === input.loginMethod.ssoProviderId : row.isPasswordLogin;
       if (matches) {
         allowed.add(row.namespaceId);
       }
@@ -67,7 +65,7 @@ export class NamespaceSsoMappingRepository {
     return allowed;
   }
 
-  async getMapping(input: { namespaceId: string }) {
+  getMapping(input: { namespaceId: string }) {
     return this.db
       .select({
         id: namespaceSsoProviders.id,
@@ -85,16 +83,9 @@ export class NamespaceSsoMappingRepository {
    * Empty SSO list + allowPasswordLogin=false → namespace becomes default-open (all rows deleted).
    * Performs delete + inserts inside a transaction.
    */
-  async setMapping(input: {
-    namespaceId: string;
-    ssoProviderIds: string[];
-    allowPasswordLogin: boolean;
-  }) {
+  async setMapping(input: { namespaceId: string; ssoProviderIds: string[]; allowPasswordLogin: boolean }) {
     await this.db.transaction(async (tx) => {
-      await tx
-        .delete(namespaceSsoProviders)
-        .where(eq(namespaceSsoProviders.namespaceId, input.namespaceId))
-        .execute();
+      await tx.delete(namespaceSsoProviders).where(eq(namespaceSsoProviders.namespaceId, input.namespaceId)).execute();
 
       const rows: Array<{ namespaceId: string; ssoProviderId: string | null; isPasswordLogin: boolean }> = [];
       for (const ssoProviderId of input.ssoProviderIds) {

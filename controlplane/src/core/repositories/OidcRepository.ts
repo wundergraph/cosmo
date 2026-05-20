@@ -29,7 +29,7 @@ export class OidcRepository {
       .execute();
   }
 
-  public async listOidcProvidersByOrganizationId(input: { organizationId: string }) {
+  public listOidcProvidersByOrganizationId(input: { organizationId: string }) {
     return this.db
       .select(baseProviderColumns)
       .from(oidcProviders)
