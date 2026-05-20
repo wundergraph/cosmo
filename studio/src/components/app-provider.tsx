@@ -17,12 +17,20 @@ export const SessionClientContext = createContext<QueryClient>(sessionQueryClien
 
 const publicPaths = ['/login', '/signup'];
 
+export interface LoginMethod {
+  type: 'sso' | 'password';
+  ssoProviderId?: string;
+  ssoProviderName?: string;
+  ssoAlias?: string;
+}
+
 export interface User {
   id: string;
   email: string;
   currentOrganization: Organization;
   organizations: Organization[];
   invitations: InvitedOrgs[];
+  loginMethod?: LoginMethod;
 }
 
 export interface InvitedOrgs {
@@ -76,6 +84,7 @@ export interface Session {
   email: string;
   organizations: Organization[];
   invitations: InvitedOrgs[];
+  loginMethod?: LoginMethod;
 }
 
 export class UnauthorizedError extends Error {
@@ -159,6 +168,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         },
         organizations: data.organizations,
         invitations: data.invitations,
+        loginMethod: data.loginMethod,
       });
 
       if (process.env.NEXT_PUBLIC_SENTRY_ENABLED) {

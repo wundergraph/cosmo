@@ -9,6 +9,7 @@ import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '
 import * as schema from '../../db/schema.js';
 import { sessions } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
@@ -89,6 +90,20 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         userId: userSession.userId,
       });
 
+      const oidcRepo = new OidcRepository(opts.db);
+
+      let loginMethod:
+        | { type: 'sso'; ssoProviderId: string; ssoProviderName: string; ssoAlias: string }
+        | { type: 'password' };
+      if (userSession.idpAlias) {
+        const provider = await oidcRepo.getOidcProviderByAliasUnscoped({ alias: userSession.idpAlias });
+        loginMethod = provider
+          ? { type: 'sso', ssoProviderId: provider.id, ssoProviderName: provider.name, ssoAlias: userSession.idpAlias }
+          : { type: 'password' };
+      } else {
+        loginMethod = { type: 'password' };
+      }
+
       return {
         id: userSession.userId,
         email: userInfoData.email,
@@ -102,6 +117,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           })),
         invitations,
         expiresAt: userSession.expiresAt,
+        loginMethod,
       };
     } catch (err: any) {
       if (err instanceof AuthenticationError) {

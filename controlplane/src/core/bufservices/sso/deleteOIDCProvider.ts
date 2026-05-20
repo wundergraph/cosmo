@@ -43,12 +43,24 @@ export function deleteOIDCProvider(
       };
     }
 
-    const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+    if (!req.id) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_BAD_REQUEST,
+          details: 'Provider id is required',
+        },
+      };
+    }
+
+    const provider = await oidcRepo.getOidcProviderById({
+      id: req.id,
+      organizationId: authContext.organizationId,
+    });
     if (!provider) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Organization ${authContext.organizationSlug} doesn't have an oidc identity provider `,
+          details: 'OIDC provider not found',
         },
       };
     }
@@ -61,7 +73,7 @@ export function deleteOIDCProvider(
       alias: provider.alias,
     });
 
-    await oidcRepo.deleteOidcProvider({ organizationId: authContext.organizationId });
+    await oidcRepo.deleteOidcProviderById({ id: provider.id, organizationId: authContext.organizationId });
 
     return {
       response: {

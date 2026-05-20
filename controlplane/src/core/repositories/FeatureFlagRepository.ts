@@ -175,8 +175,8 @@ export class FeatureFlagRepository {
       .execute();
   }
 
-  public async getFeatureFlags({ namespaceId, limit, offset, query }: FeatureFlagListFilterOptions) {
-    const conditions: SQL<unknown>[] = [eq(featureFlags.organizationId, this.organizationId)];
+  public async getFeatureFlags({ namespaceId, limit, offset, query, rbac }: FeatureFlagListFilterOptions) {
+    const conditions: (SQL<unknown> | undefined)[] = [eq(featureFlags.organizationId, this.organizationId)];
 
     if (query) {
       conditions.push(like(featureFlags.name, `%${query}%`));
@@ -184,6 +184,19 @@ export class FeatureFlagRepository {
 
     if (namespaceId) {
       conditions.push(eq(featureFlags.namespaceId, namespaceId));
+    }
+
+    // IdP gate: empty set → no rows; non-empty → restrict to listed namespaces.
+    if (rbac?.idpAllowedNamespaceIds !== undefined) {
+      const allowed = [...rbac.idpAllowedNamespaceIds];
+      if (allowed.length === 0) {
+        return [];
+      }
+      conditions.push(inArray(featureFlags.namespaceId, allowed));
+    }
+
+    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+      return [];
     }
 
     const dbQuery = this.db
@@ -221,10 +234,23 @@ export class FeatureFlagRepository {
     }));
   }
 
-  public async getFeatureFlagsCount({ namespaceId }: { namespaceId?: string }) {
-    const conditions: SQL<unknown>[] = [eq(featureFlags.organizationId, this.organizationId)];
+  public async getFeatureFlagsCount({ namespaceId, rbac }: { namespaceId?: string; rbac?: RBACEvaluator }) {
+    const conditions: (SQL<unknown> | undefined)[] = [eq(featureFlags.organizationId, this.organizationId)];
     if (namespaceId) {
       conditions.push(eq(featureFlags.namespaceId, namespaceId));
+    }
+
+    // IdP gate: empty set → 0; non-empty → restrict to listed namespaces.
+    if (rbac?.idpAllowedNamespaceIds !== undefined) {
+      const allowed = [...rbac.idpAllowedNamespaceIds];
+      if (allowed.length === 0) {
+        return 0;
+      }
+      conditions.push(inArray(featureFlags.namespaceId, allowed));
+    }
+
+    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+      return 0;
     }
 
     const featureFlagsCount = await this.db
@@ -318,6 +344,15 @@ export class FeatureFlagRepository {
       conditions.push(isValidUuid(query) ? eq(subgraphs.id, query) : like(schema.targets.name, `%${query}%`));
     }
 
+    // IdP gate: empty set → no rows; non-empty → restrict to listed namespaces.
+    if (rbac?.idpAllowedNamespaceIds !== undefined) {
+      const allowed = [...rbac.idpAllowedNamespaceIds];
+      if (allowed.length === 0) {
+        return [];
+      }
+      conditions.push(inArray(targets.namespaceId, allowed));
+    }
+
     if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
       return [];
     }
@@ -382,6 +417,15 @@ export class FeatureFlagRepository {
 
     if (query) {
       conditions.push(like(targets.name, `%${query}%`));
+    }
+
+    // IdP gate: empty set → 0; non-empty → restrict to listed namespaces.
+    if (rbac?.idpAllowedNamespaceIds !== undefined) {
+      const allowed = [...rbac.idpAllowedNamespaceIds];
+      if (allowed.length === 0) {
+        return 0;
+      }
+      conditions.push(inArray(targets.namespaceId, allowed));
     }
 
     if (!this.applyRbacConditionsToQuery(rbac, conditions)) {

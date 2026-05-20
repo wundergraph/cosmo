@@ -21,12 +21,30 @@ export function getOIDCProvider(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
+    if (!req.id) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_BAD_REQUEST,
+          details: 'Provider id is required',
+        },
+        name: '',
+        endpoint: '',
+        loginURL: '',
+        signInRedirectURL: '',
+        signOutRedirectURL: '',
+        mappers: [],
+      };
+    }
+
     const oidcRepo = new OidcRepository(opts.db);
     const oidcProvider = new OidcProvider();
 
     await opts.keycloakClient.authenticateClient();
 
-    const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+    const provider = await oidcRepo.getOidcProviderById({
+      id: req.id,
+      organizationId: authContext.organizationId,
+    });
     if (!provider) {
       return {
         response: {

@@ -38,12 +38,24 @@ export function updateIDPMappers(
       };
     }
 
+    if (!req.id) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_BAD_REQUEST,
+          details: 'Provider id is required',
+        },
+      };
+    }
+
     const oidcProvider = new OidcProvider();
     const oidcRepo = new OidcRepository(opts.db);
 
     await opts.keycloakClient.authenticateClient();
 
-    const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+    const provider = await oidcRepo.getOidcProviderById({
+      id: req.id,
+      organizationId: authContext.organizationId,
+    });
     if (!provider) {
       return {
         response: {

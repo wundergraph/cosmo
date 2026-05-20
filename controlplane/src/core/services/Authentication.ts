@@ -2,8 +2,11 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { lru } from 'tiny-lru';
 import { FastifyBaseLogger } from 'fastify';
 import { AuthContext, UserInfoEndpointResponse } from '../../types/index.js';
+import type { LoginMethod } from '../../types/index.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
+import { NamespaceSsoMappingRepository } from '../repositories/NamespaceSsoMappingRepository.js';
 import { traced } from '../tracing.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
@@ -30,6 +33,8 @@ export class Authentication implements Authenticator {
     private accessTokenAuth: AccessTokenAuthenticator,
     private graphKeyAuth: GraphApiTokenAuthenticator,
     private orgRepo: OrganizationRepository,
+    private oidcRepo: OidcRepository,
+    private namespaceSsoMappingRepo: NamespaceSsoMappingRepository,
     private logger: FastifyBaseLogger,
   ) {}
 
@@ -67,7 +72,9 @@ export class Authentication implements Authenticator {
         throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Organization not found');
       }
 
-      const cacheKey = `${user.userId}:${organization.id}`;
+      // Cache key now includes sessionId so that re-login via a different IdP
+      // within the cache TTL invalidates cleanly.
+      const cacheKey = `${user.userId}:${organization.id}:${user.sessionId}`;
       const cachedUserContext = this.#cache.get(cacheKey);
 
       if (cachedUserContext) {
@@ -90,12 +97,36 @@ export class Authentication implements Authenticator {
       }
 
       const organizationDeactivated = !!organization.deactivation;
+
+      // Resolve loginMethod from the idp_alias stored on the session. A session
+      // whose IdP no longer belongs to this org (deleted SSO app) falls back to
+      // password login so default-open namespaces stay reachable.
+      let loginMethod: LoginMethod;
+      if (user.idpAlias) {
+        const provider = await this.oidcRepo.getOidcProviderByAlias({
+          alias: user.idpAlias,
+          organizationId: organization.id,
+        });
+        loginMethod = provider
+          ? { type: 'sso', ssoProviderId: provider.id, alias: user.idpAlias }
+          : { type: 'password' };
+      } else {
+        loginMethod = { type: 'password' };
+      }
+
+      const idpAllowedNamespaceIds = await this.namespaceSsoMappingRepo.allowedNamespaceIds({
+        organizationId: organization.id,
+        loginMethod,
+      });
+
       const rbac = new RBACEvaluator(
         await this.orgRepo.getOrganizationMemberGroups({
           organizationID: organization.id,
           userID: user.userId,
         }),
         user.userId,
+        /* isApiKey */ false,
+        idpAllowedNamespaceIds,
       );
 
       const userContext: AuthContext = {
@@ -106,6 +137,8 @@ export class Authentication implements Authenticator {
         organizationDeactivated,
         rbac,
         userDisplayName: user.userDisplayName,
+        loginMethod,
+        idpAllowedNamespaceIds,
       };
 
       this.#cache.set(cacheKey, userContext);

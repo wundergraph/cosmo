@@ -741,6 +741,15 @@ export class SubgraphRepository {
    * @private
    */
   static applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+    // Apply the IdP gate regardless of RBAC level. Empty allowed-set → no rows.
+    if (rbac?.idpAllowedNamespaceIds !== undefined) {
+      const allowed = [...rbac.idpAllowedNamespaceIds];
+      if (allowed.length === 0) {
+        return false;
+      }
+      conditions.push(inArray(schema.targets.namespaceId, allowed));
+    }
+
     if (!rbac || rbac.isOrganizationViewer) {
       return true;
     }

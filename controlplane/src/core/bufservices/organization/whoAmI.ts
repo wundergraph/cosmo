@@ -1,14 +1,20 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { WhoAmIRequest, WhoAmIResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  LoginMethod,
+  LoginMethod_Type,
+  WhoAmIRequest,
+  WhoAmIResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function whoAmI(
   opts: RouterOptions,
-  req: WhoAmIRequest,
+  _req: WhoAmIRequest,
   ctx: HandlerContext,
 ): Promise<PlainMessage<WhoAmIResponse>> {
   let logger = getLogger(ctx, opts.logger);
@@ -33,6 +39,43 @@ export function whoAmI(
       };
     }
 
+    const lm = authContext.loginMethod;
+    let loginMethod: PlainMessage<LoginMethod>;
+    if (lm?.type === 'sso') {
+      const oidcRepo = new OidcRepository(opts.db);
+      const provider = await oidcRepo.getOidcProviderById({
+        id: lm.ssoProviderId,
+        organizationId: authContext.organizationId,
+      });
+      loginMethod = {
+        type: LoginMethod_Type.LOGIN_METHOD_TYPE_SSO,
+        ssoProviderId: lm.ssoProviderId,
+        ssoProviderName: provider?.name ?? '',
+        ssoAlias: lm.alias,
+      };
+    } else if (lm?.type === 'password') {
+      loginMethod = {
+        type: LoginMethod_Type.LOGIN_METHOD_TYPE_PASSWORD,
+        ssoProviderId: '',
+        ssoProviderName: '',
+        ssoAlias: '',
+      };
+    } else if (lm?.type === 'api-key') {
+      loginMethod = {
+        type: LoginMethod_Type.LOGIN_METHOD_TYPE_API_KEY,
+        ssoProviderId: '',
+        ssoProviderName: '',
+        ssoAlias: '',
+      };
+    } else {
+      loginMethod = {
+        type: LoginMethod_Type.LOGIN_METHOD_TYPE_UNSPECIFIED,
+        ssoProviderId: '',
+        ssoProviderName: '',
+        ssoAlias: '',
+      };
+    }
+
     return {
       response: {
         code: EnumStatusCode.OK,
@@ -41,6 +84,7 @@ export function whoAmI(
       userEmail: authContext.userDisplayName,
       organizationName: organization.name,
       organizationSlug: organization.slug,
+      loginMethod,
     };
   });
 }

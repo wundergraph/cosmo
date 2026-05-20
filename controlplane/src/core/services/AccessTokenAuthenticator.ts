@@ -2,7 +2,10 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import AuthUtils from '../auth-utils.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
+import { NamespaceSsoMappingRepository } from '../repositories/NamespaceSsoMappingRepository.js';
 import { traced } from '../tracing.js';
+import type { LoginMethod } from '../../types/index.js';
 import { RBACEvaluator } from './RBACEvaluator.js';
 
 export type AccessTokenAuthContext = {
@@ -13,6 +16,8 @@ export type AccessTokenAuthContext = {
   organizationSlug: string;
   organizationDeactivated: boolean;
   rbac: RBACEvaluator;
+  loginMethod: LoginMethod;
+  idpAllowedNamespaceIds?: Set<string>;
 };
 
 @traced
@@ -20,6 +25,8 @@ export default class AccessTokenAuthenticator {
   constructor(
     private orgRepo: OrganizationRepository,
     private authUtils: AuthUtils,
+    private oidcRepo: OidcRepository,
+    private namespaceSsoMappingRepo: NamespaceSsoMappingRepository,
   ) {}
 
   /**
@@ -49,12 +56,37 @@ export default class AccessTokenAuthenticator {
     }
 
     const organizationDeactivated = !!organization.deactivation;
+
+    // The access token is minted from the user's interactive login, so it
+    // carries the same login method (and therefore the same IdP gate) as a web
+    // session. Resolve it from the `identity_provider` claim on the userinfo
+    // response (absent → password login).
+    let loginMethod: LoginMethod;
+    if (userInfoData.identity_provider) {
+      const provider = await this.oidcRepo.getOidcProviderByAlias({
+        alias: userInfoData.identity_provider,
+        organizationId: organization.id,
+      });
+      loginMethod = provider
+        ? { type: 'sso', ssoProviderId: provider.id, alias: userInfoData.identity_provider }
+        : { type: 'password' };
+    } else {
+      loginMethod = { type: 'password' };
+    }
+
+    const idpAllowedNamespaceIds = await this.namespaceSsoMappingRepo.allowedNamespaceIds({
+      organizationId: organization.id,
+      loginMethod,
+    });
+
     const rbac = new RBACEvaluator(
       await this.orgRepo.getOrganizationMemberGroups({
         userID: userInfoData.sub,
         organizationID: organization.id,
       }),
       userInfoData.sub,
+      /* isApiKey */ false,
+      idpAllowedNamespaceIds,
     );
 
     return {
@@ -65,6 +97,8 @@ export default class AccessTokenAuthenticator {
       userDisplayName: userInfoData.email,
       organizationDeactivated,
       rbac,
+      loginMethod,
+      idpAllowedNamespaceIds,
     };
   }
 

@@ -89,8 +89,8 @@ class DeleteOrganizationWorker implements IWorker {
 
       await this.input.keycloakClient.authenticateClient();
 
-      const provider = await oidcRepo.getOidcProvider({ organizationId: job.data.organizationId });
-      if (provider) {
+      const providers = await oidcRepo.listOidcProvidersByOrganizationId({ organizationId: job.data.organizationId });
+      for (const provider of providers) {
         await oidcProvider.deleteOidcProvider({
           kcClient: this.input.keycloakClient,
           kcRealm: this.input.keycloakRealm,

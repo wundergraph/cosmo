@@ -80,7 +80,9 @@ export const UserMenu = () => {
 
   if (!user) return null;
 
+  const loginMethod = user.loginMethod;
   const hasInvitations = user.invitations.length > 0;
+  const ssoLabel = loginMethod?.type === 'sso' ? loginMethod.ssoProviderName || loginMethod.ssoAlias || '' : '';
 
   return (
     <DropdownMenu>
@@ -100,8 +102,18 @@ export const UserMenu = () => {
           ) : null}
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[180px]">
-        <p className="cursor-text truncate px-2 py-1.5 text-sm font-semibold">{user.email}</p>
+      <DropdownMenuContent align="end" className="w-[200px]">
+        <div className="px-2 py-1.5">
+          <p className="cursor-text truncate text-sm font-semibold">{user.email}</p>
+          {loginMethod?.type === 'sso' && (
+            <p className="truncate text-xs text-muted-foreground" title={ssoLabel}>
+              Logged in via {ssoLabel}
+            </p>
+          )}
+          {loginMethod?.type === 'password' && (
+            <p className="text-xs text-muted-foreground">Logged in via password</p>
+          )}
+        </div>
         <Link href="/account/invitations">
           <DropdownMenuItem>
             Invitations

@@ -491,6 +491,9 @@ export type UserInfoEndpointResponse = {
   family_name: string;
   email: string;
   groups: string[];
+  // Set by the realm-level `identity_provider` protocol mapper when the user
+  // federated through a broker IdP. Absent for direct username/password logins.
+  identity_provider?: string;
 };
 
 export type AuthContext = {
@@ -502,6 +505,13 @@ export type AuthContext = {
   rbac: RBACEvaluator;
   userDisplayName: string;
   apiKeyName?: string;
+  loginMethod?: LoginMethod;
+  /**
+   * The set of namespace IDs the current login method is allowed to access in
+   * the auth'd organization. `undefined` means the IdP gate does not apply
+   * (e.g. org has no mapping rows configured, or login is via API key).
+   */
+  idpAllowedNamespaceIds?: Set<string>;
 };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {
@@ -598,6 +608,7 @@ export interface UpdatedPersistedOperation {
 export interface GraphCompositionDTO {
   id: string;
   schemaVersionId: string;
+  targetId?: string;
   createdAt: string;
   createdBy?: string;
   compositionErrors?: string;
@@ -830,3 +841,8 @@ export interface FederatedGraphAndCompositionResults {
   federatedGraph: FederatedGraphDTO;
   results: ComposeGraphsTaskResultItem[];
 }
+
+export type LoginMethod =
+  | { type: 'sso'; ssoProviderId: string; alias: string }
+  | { type: 'password' }
+  | { type: 'api-key' };
