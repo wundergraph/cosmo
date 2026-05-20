@@ -301,6 +301,38 @@ proto3.util.setEnumType(ExpiresAt, "wg.cosmo.platform.v1.ExpiresAt", [
 ]);
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.LoginMethodType
+ */
+export enum LoginMethodType {
+  /**
+   * @generated from enum value: LOGIN_METHOD_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: LOGIN_METHOD_TYPE_SSO = 1;
+   */
+  SSO = 1,
+
+  /**
+   * @generated from enum value: LOGIN_METHOD_TYPE_PASSWORD = 2;
+   */
+  PASSWORD = 2,
+
+  /**
+   * @generated from enum value: LOGIN_METHOD_TYPE_API_KEY = 3;
+   */
+  API_KEY = 3,
+}
+// Retrieve enum metadata with: proto3.getEnumType(LoginMethodType)
+proto3.util.setEnumType(LoginMethodType, "wg.cosmo.platform.v1.LoginMethodType", [
+  { no: 0, name: "LOGIN_METHOD_TYPE_UNSPECIFIED" },
+  { no: 1, name: "LOGIN_METHOD_TYPE_SSO" },
+  { no: 2, name: "LOGIN_METHOD_TYPE_PASSWORD" },
+  { no: 3, name: "LOGIN_METHOD_TYPE_API_KEY" },
+]);
+
+/**
  * @generated from enum wg.cosmo.platform.v1.PublishedOperationStatus
  */
 export enum PublishedOperationStatus {
@@ -9435,9 +9467,9 @@ export class WhoAmIResponse extends Message<WhoAmIResponse> {
  */
 export class LoginMethod extends Message<LoginMethod> {
   /**
-   * @generated from field: wg.cosmo.platform.v1.LoginMethod.Type type = 1;
+   * @generated from field: wg.cosmo.platform.v1.LoginMethodType type = 1;
    */
-  type = LoginMethod_Type.LOGIN_METHOD_TYPE_UNSPECIFIED;
+  type = LoginMethodType.UNSPECIFIED;
 
   /**
    * Only populated when type = LOGIN_METHOD_TYPE_SSO.
@@ -9464,7 +9496,7 @@ export class LoginMethod extends Message<LoginMethod> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.LoginMethod";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "type", kind: "enum", T: proto3.getEnumType(LoginMethod_Type) },
+    { no: 1, name: "type", kind: "enum", T: proto3.getEnumType(LoginMethodType) },
     { no: 2, name: "sso_provider_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "sso_provider_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "sso_alias", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -9486,38 +9518,6 @@ export class LoginMethod extends Message<LoginMethod> {
     return proto3.util.equals(LoginMethod, a, b);
   }
 }
-
-/**
- * @generated from enum wg.cosmo.platform.v1.LoginMethod.Type
- */
-export enum LoginMethod_Type {
-  /**
-   * @generated from enum value: LOGIN_METHOD_TYPE_UNSPECIFIED = 0;
-   */
-  LOGIN_METHOD_TYPE_UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: LOGIN_METHOD_TYPE_SSO = 1;
-   */
-  LOGIN_METHOD_TYPE_SSO = 1,
-
-  /**
-   * @generated from enum value: LOGIN_METHOD_TYPE_PASSWORD = 2;
-   */
-  LOGIN_METHOD_TYPE_PASSWORD = 2,
-
-  /**
-   * @generated from enum value: LOGIN_METHOD_TYPE_API_KEY = 3;
-   */
-  LOGIN_METHOD_TYPE_API_KEY = 3,
-}
-// Retrieve enum metadata with: proto3.getEnumType(LoginMethod_Type)
-proto3.util.setEnumType(LoginMethod_Type, "wg.cosmo.platform.v1.LoginMethod.Type", [
-  { no: 0, name: "LOGIN_METHOD_TYPE_UNSPECIFIED" },
-  { no: 1, name: "LOGIN_METHOD_TYPE_SSO" },
-  { no: 2, name: "LOGIN_METHOD_TYPE_PASSWORD" },
-  { no: 3, name: "LOGIN_METHOD_TYPE_API_KEY" },
-]);
 
 /**
  * @generated from message wg.cosmo.platform.v1.RouterToken

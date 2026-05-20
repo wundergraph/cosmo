@@ -3,7 +3,7 @@ import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   LoginMethod,
-  LoginMethod_Type,
+  LoginMethodType,
   WhoAmIRequest,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -49,7 +49,7 @@ export function whoAmI(
         organizationId: authContext.organizationId,
       });
       loginMethod = {
-        type: LoginMethod_Type.LOGIN_METHOD_TYPE_SSO,
+        type: LoginMethodType.SSO,
         ssoProviderId: lm.ssoProviderId,
         ssoProviderName: provider?.name ?? '',
         ssoAlias: lm.alias,
@@ -59,7 +59,7 @@ export function whoAmI(
     }
     case 'password': {
       loginMethod = {
-        type: LoginMethod_Type.LOGIN_METHOD_TYPE_PASSWORD,
+        type: LoginMethodType.PASSWORD,
         ssoProviderId: '',
         ssoProviderName: '',
         ssoAlias: '',
@@ -69,7 +69,7 @@ export function whoAmI(
     }
     case 'api-key': {
       loginMethod = {
-        type: LoginMethod_Type.LOGIN_METHOD_TYPE_API_KEY,
+        type: LoginMethodType.API_KEY,
         ssoProviderId: '',
         ssoProviderName: '',
         ssoAlias: '',
@@ -79,7 +79,7 @@ export function whoAmI(
     }
     default: {
       loginMethod = {
-        type: LoginMethod_Type.LOGIN_METHOD_TYPE_UNSPECIFIED,
+        type: LoginMethodType.UNSPECIFIED,
         ssoProviderId: '',
         ssoProviderName: '',
         ssoAlias: '',

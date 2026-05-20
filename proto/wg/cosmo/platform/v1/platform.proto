@@ -1250,14 +1250,15 @@ message WhoAmIResponse {
   LoginMethod login_method = 6;
 }
 
+enum LoginMethodType {
+  LOGIN_METHOD_TYPE_UNSPECIFIED = 0;
+  LOGIN_METHOD_TYPE_SSO = 1;
+  LOGIN_METHOD_TYPE_PASSWORD = 2;
+  LOGIN_METHOD_TYPE_API_KEY = 3;
+}
+
 message LoginMethod {
-  enum Type {
-    LOGIN_METHOD_TYPE_UNSPECIFIED = 0;
-    LOGIN_METHOD_TYPE_SSO = 1;
-    LOGIN_METHOD_TYPE_PASSWORD = 2;
-    LOGIN_METHOD_TYPE_API_KEY = 3;
-  }
-  Type type = 1;
+  LoginMethodType type = 1;
   // Only populated when type = LOGIN_METHOD_TYPE_SSO.
   string sso_provider_id = 2;
   string sso_provider_name = 3;

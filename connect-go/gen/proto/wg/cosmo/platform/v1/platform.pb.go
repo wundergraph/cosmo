@@ -422,6 +422,58 @@ func (ExpiresAt) EnumDescriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{6}
 }
 
+type LoginMethodType int32
+
+const (
+	LoginMethodType_LOGIN_METHOD_TYPE_UNSPECIFIED LoginMethodType = 0
+	LoginMethodType_LOGIN_METHOD_TYPE_SSO         LoginMethodType = 1
+	LoginMethodType_LOGIN_METHOD_TYPE_PASSWORD    LoginMethodType = 2
+	LoginMethodType_LOGIN_METHOD_TYPE_API_KEY     LoginMethodType = 3
+)
+
+// Enum value maps for LoginMethodType.
+var (
+	LoginMethodType_name = map[int32]string{
+		0: "LOGIN_METHOD_TYPE_UNSPECIFIED",
+		1: "LOGIN_METHOD_TYPE_SSO",
+		2: "LOGIN_METHOD_TYPE_PASSWORD",
+		3: "LOGIN_METHOD_TYPE_API_KEY",
+	}
+	LoginMethodType_value = map[string]int32{
+		"LOGIN_METHOD_TYPE_UNSPECIFIED": 0,
+		"LOGIN_METHOD_TYPE_SSO":         1,
+		"LOGIN_METHOD_TYPE_PASSWORD":    2,
+		"LOGIN_METHOD_TYPE_API_KEY":     3,
+	}
+)
+
+func (x LoginMethodType) Enum() *LoginMethodType {
+	p := new(LoginMethodType)
+	*p = x
+	return p
+}
+
+func (x LoginMethodType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (LoginMethodType) Descriptor() protoreflect.EnumDescriptor {
+	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[7].Descriptor()
+}
+
+func (LoginMethodType) Type() protoreflect.EnumType {
+	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[7]
+}
+
+func (x LoginMethodType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use LoginMethodType.Descriptor instead.
+func (LoginMethodType) EnumDescriptor() ([]byte, []int) {
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{7}
+}
+
 type PublishedOperationStatus int32
 
 const (
@@ -455,11 +507,11 @@ func (x PublishedOperationStatus) String() string {
 }
 
 func (PublishedOperationStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[7].Descriptor()
+	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[8].Descriptor()
 }
 
 func (PublishedOperationStatus) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[7]
+	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[8]
 }
 
 func (x PublishedOperationStatus) Number() protoreflect.EnumNumber {
@@ -468,7 +520,7 @@ func (x PublishedOperationStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use PublishedOperationStatus.Descriptor instead.
 func (PublishedOperationStatus) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{7}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{8}
 }
 
 type IntegrationType int32
@@ -498,11 +550,11 @@ func (x IntegrationType) String() string {
 }
 
 func (IntegrationType) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[8].Descriptor()
+	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[9].Descriptor()
 }
 
 func (IntegrationType) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[8]
+	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[9]
 }
 
 func (x IntegrationType) Number() protoreflect.EnumNumber {
@@ -511,7 +563,7 @@ func (x IntegrationType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use IntegrationType.Descriptor instead.
 func (IntegrationType) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{8}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{9}
 }
 
 type Feature int32
@@ -547,11 +599,11 @@ func (x Feature) String() string {
 }
 
 func (Feature) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[9].Descriptor()
+	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[10].Descriptor()
 }
 
 func (Feature) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[9]
+	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[10]
 }
 
 func (x Feature) Number() protoreflect.EnumNumber {
@@ -560,7 +612,7 @@ func (x Feature) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Feature.Descriptor instead.
 func (Feature) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{9}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{10}
 }
 
 type ProposalOrigin int32
@@ -593,11 +645,11 @@ func (x ProposalOrigin) String() string {
 }
 
 func (ProposalOrigin) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[10].Descriptor()
+	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[11].Descriptor()
 }
 
 func (ProposalOrigin) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[10]
+	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[11]
 }
 
 func (x ProposalOrigin) Number() protoreflect.EnumNumber {
@@ -606,7 +658,7 @@ func (x ProposalOrigin) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ProposalOrigin.Descriptor instead.
 func (ProposalOrigin) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{10}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{11}
 }
 
 type ProposalNamingConvention int32
@@ -639,11 +691,11 @@ func (x ProposalNamingConvention) String() string {
 }
 
 func (ProposalNamingConvention) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[11].Descriptor()
+	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[12].Descriptor()
 }
 
 func (ProposalNamingConvention) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[11]
+	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[12]
 }
 
 func (x ProposalNamingConvention) Number() protoreflect.EnumNumber {
@@ -652,7 +704,7 @@ func (x ProposalNamingConvention) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ProposalNamingConvention.Descriptor instead.
 func (ProposalNamingConvention) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{11}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{12}
 }
 
 type OperationsFetchBasedOn int32
@@ -688,11 +740,11 @@ func (x OperationsFetchBasedOn) String() string {
 }
 
 func (OperationsFetchBasedOn) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[12].Descriptor()
+	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[13].Descriptor()
 }
 
 func (OperationsFetchBasedOn) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[12]
+	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[13]
 }
 
 func (x OperationsFetchBasedOn) Number() protoreflect.EnumNumber {
@@ -701,7 +753,7 @@ func (x OperationsFetchBasedOn) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use OperationsFetchBasedOn.Descriptor instead.
 func (OperationsFetchBasedOn) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{12}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{13}
 }
 
 type SortDirection int32
@@ -734,11 +786,11 @@ func (x SortDirection) String() string {
 }
 
 func (SortDirection) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[13].Descriptor()
+	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[14].Descriptor()
 }
 
 func (SortDirection) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[13]
+	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[14]
 }
 
 func (x SortDirection) Number() protoreflect.EnumNumber {
@@ -747,59 +799,7 @@ func (x SortDirection) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SortDirection.Descriptor instead.
 func (SortDirection) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{13}
-}
-
-type LoginMethod_Type int32
-
-const (
-	LoginMethod_LOGIN_METHOD_TYPE_UNSPECIFIED LoginMethod_Type = 0
-	LoginMethod_LOGIN_METHOD_TYPE_SSO         LoginMethod_Type = 1
-	LoginMethod_LOGIN_METHOD_TYPE_PASSWORD    LoginMethod_Type = 2
-	LoginMethod_LOGIN_METHOD_TYPE_API_KEY     LoginMethod_Type = 3
-)
-
-// Enum value maps for LoginMethod_Type.
-var (
-	LoginMethod_Type_name = map[int32]string{
-		0: "LOGIN_METHOD_TYPE_UNSPECIFIED",
-		1: "LOGIN_METHOD_TYPE_SSO",
-		2: "LOGIN_METHOD_TYPE_PASSWORD",
-		3: "LOGIN_METHOD_TYPE_API_KEY",
-	}
-	LoginMethod_Type_value = map[string]int32{
-		"LOGIN_METHOD_TYPE_UNSPECIFIED": 0,
-		"LOGIN_METHOD_TYPE_SSO":         1,
-		"LOGIN_METHOD_TYPE_PASSWORD":    2,
-		"LOGIN_METHOD_TYPE_API_KEY":     3,
-	}
-)
-
-func (x LoginMethod_Type) Enum() *LoginMethod_Type {
-	p := new(LoginMethod_Type)
-	*p = x
-	return p
-}
-
-func (x LoginMethod_Type) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (LoginMethod_Type) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_platform_v1_platform_proto_enumTypes[14].Descriptor()
-}
-
-func (LoginMethod_Type) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_platform_v1_platform_proto_enumTypes[14]
-}
-
-func (x LoginMethod_Type) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use LoginMethod_Type.Descriptor instead.
-func (LoginMethod_Type) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{145, 0}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{14}
 }
 
 type GetOperationsResponse_OperationType int32
@@ -11010,7 +11010,7 @@ func (x *WhoAmIResponse) GetLoginMethod() *LoginMethod {
 
 type LoginMethod struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Type  LoginMethod_Type       `protobuf:"varint,1,opt,name=type,proto3,enum=wg.cosmo.platform.v1.LoginMethod_Type" json:"type,omitempty"`
+	Type  LoginMethodType        `protobuf:"varint,1,opt,name=type,proto3,enum=wg.cosmo.platform.v1.LoginMethodType" json:"type,omitempty"`
 	// Only populated when type = LOGIN_METHOD_TYPE_SSO.
 	SsoProviderId   string `protobuf:"bytes,2,opt,name=sso_provider_id,json=ssoProviderId,proto3" json:"sso_provider_id,omitempty"`
 	SsoProviderName string `protobuf:"bytes,3,opt,name=sso_provider_name,json=ssoProviderName,proto3" json:"sso_provider_name,omitempty"`
@@ -11049,11 +11049,11 @@ func (*LoginMethod) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{145}
 }
 
-func (x *LoginMethod) GetType() LoginMethod_Type {
+func (x *LoginMethod) GetType() LoginMethodType {
 	if x != nil {
 		return x.Type
 	}
-	return LoginMethod_LOGIN_METHOD_TYPE_UNSPECIFIED
+	return LoginMethodType_LOGIN_METHOD_TYPE_UNSPECIFIED
 }
 
 func (x *LoginMethod) GetSsoProviderId() string {
@@ -33477,17 +33477,12 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x0eorganizationId\x18\x05 \x01(\tR\x0eorganizationId\x12D\n" +
 	"\flogin_method\x18\x06 \x01(\v2!.wg.cosmo.platform.v1.LoginMethodR\vloginMethodB\f\n" +
 	"\n" +
-	"_userEmail\"\xc0\x02\n" +
-	"\vLoginMethod\x12:\n" +
-	"\x04type\x18\x01 \x01(\x0e2&.wg.cosmo.platform.v1.LoginMethod.TypeR\x04type\x12&\n" +
+	"_userEmail\"\xb9\x01\n" +
+	"\vLoginMethod\x129\n" +
+	"\x04type\x18\x01 \x01(\x0e2%.wg.cosmo.platform.v1.LoginMethodTypeR\x04type\x12&\n" +
 	"\x0fsso_provider_id\x18\x02 \x01(\tR\rssoProviderId\x12*\n" +
 	"\x11sso_provider_name\x18\x03 \x01(\tR\x0fssoProviderName\x12\x1b\n" +
-	"\tsso_alias\x18\x04 \x01(\tR\bssoAlias\"\x83\x01\n" +
-	"\x04Type\x12!\n" +
-	"\x1dLOGIN_METHOD_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
-	"\x15LOGIN_METHOD_TYPE_SSO\x10\x01\x12\x1e\n" +
-	"\x1aLOGIN_METHOD_TYPE_PASSWORD\x10\x02\x12\x1d\n" +
-	"\x19LOGIN_METHOD_TYPE_API_KEY\x10\x03\"s\n" +
+	"\tsso_alias\x18\x04 \x01(\tR\bssoAlias\"s\n" +
 	"\vRouterToken\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +
@@ -35166,7 +35161,12 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\vTHIRTY_DAYS\x10\x01\x12\x0e\n" +
 	"\n" +
 	"SIX_MONTHS\x10\x02\x12\f\n" +
-	"\bONE_YEAR\x10\x03*E\n" +
+	"\bONE_YEAR\x10\x03*\x8e\x01\n" +
+	"\x0fLoginMethodType\x12!\n" +
+	"\x1dLOGIN_METHOD_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15LOGIN_METHOD_TYPE_SSO\x10\x01\x12\x1e\n" +
+	"\x1aLOGIN_METHOD_TYPE_PASSWORD\x10\x02\x12\x1d\n" +
+	"\x19LOGIN_METHOD_TYPE_API_KEY\x10\x03*E\n" +
 	"\x18PublishedOperationStatus\x12\x0e\n" +
 	"\n" +
 	"UP_TO_DATE\x10\x00\x12\v\n" +
@@ -35411,14 +35411,14 @@ var file_wg_cosmo_platform_v1_platform_proto_goTypes = []any{
 	(Unit)(0),                                                          // 4: wg.cosmo.platform.v1.Unit
 	(AnalyticsViewFilterOperator)(0),                                   // 5: wg.cosmo.platform.v1.AnalyticsViewFilterOperator
 	(ExpiresAt)(0),                                                     // 6: wg.cosmo.platform.v1.ExpiresAt
-	(PublishedOperationStatus)(0),                                      // 7: wg.cosmo.platform.v1.PublishedOperationStatus
-	(IntegrationType)(0),                                               // 8: wg.cosmo.platform.v1.IntegrationType
-	(Feature)(0),                                                       // 9: wg.cosmo.platform.v1.Feature
-	(ProposalOrigin)(0),                                                // 10: wg.cosmo.platform.v1.ProposalOrigin
-	(ProposalNamingConvention)(0),                                      // 11: wg.cosmo.platform.v1.ProposalNamingConvention
-	(OperationsFetchBasedOn)(0),                                        // 12: wg.cosmo.platform.v1.OperationsFetchBasedOn
-	(SortDirection)(0),                                                 // 13: wg.cosmo.platform.v1.SortDirection
-	(LoginMethod_Type)(0),                                              // 14: wg.cosmo.platform.v1.LoginMethod.Type
+	(LoginMethodType)(0),                                               // 7: wg.cosmo.platform.v1.LoginMethodType
+	(PublishedOperationStatus)(0),                                      // 8: wg.cosmo.platform.v1.PublishedOperationStatus
+	(IntegrationType)(0),                                               // 9: wg.cosmo.platform.v1.IntegrationType
+	(Feature)(0),                                                       // 10: wg.cosmo.platform.v1.Feature
+	(ProposalOrigin)(0),                                                // 11: wg.cosmo.platform.v1.ProposalOrigin
+	(ProposalNamingConvention)(0),                                      // 12: wg.cosmo.platform.v1.ProposalNamingConvention
+	(OperationsFetchBasedOn)(0),                                        // 13: wg.cosmo.platform.v1.OperationsFetchBasedOn
+	(SortDirection)(0),                                                 // 14: wg.cosmo.platform.v1.SortDirection
 	(GetOperationsResponse_OperationType)(0),                           // 15: wg.cosmo.platform.v1.GetOperationsResponse.OperationType
 	(*Label)(nil),                                                      // 16: wg.cosmo.platform.v1.Label
 	(*Response)(nil),                                                   // 17: wg.cosmo.platform.v1.Response
@@ -36099,13 +36099,13 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	156, // 174: wg.cosmo.platform.v1.GetTraceResponse.spans:type_name -> wg.cosmo.platform.v1.Span
 	17,  // 175: wg.cosmo.platform.v1.WhoAmIResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	161, // 176: wg.cosmo.platform.v1.WhoAmIResponse.login_method:type_name -> wg.cosmo.platform.v1.LoginMethod
-	14,  // 177: wg.cosmo.platform.v1.LoginMethod.type:type_name -> wg.cosmo.platform.v1.LoginMethod.Type
+	7,   // 177: wg.cosmo.platform.v1.LoginMethod.type:type_name -> wg.cosmo.platform.v1.LoginMethodType
 	17,  // 178: wg.cosmo.platform.v1.GenerateRouterTokenResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	17,  // 179: wg.cosmo.platform.v1.GetRouterTokensResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	162, // 180: wg.cosmo.platform.v1.GetRouterTokensResponse.tokens:type_name -> wg.cosmo.platform.v1.RouterToken
 	17,  // 181: wg.cosmo.platform.v1.DeleteRouterTokenResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	169, // 182: wg.cosmo.platform.v1.PublishPersistedOperationsRequest.operations:type_name -> wg.cosmo.platform.v1.PersistedOperation
-	7,   // 183: wg.cosmo.platform.v1.PublishedOperation.status:type_name -> wg.cosmo.platform.v1.PublishedOperationStatus
+	8,   // 183: wg.cosmo.platform.v1.PublishedOperation.status:type_name -> wg.cosmo.platform.v1.PublishedOperationStatus
 	17,  // 184: wg.cosmo.platform.v1.PublishPersistedOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	171, // 185: wg.cosmo.platform.v1.PublishPersistedOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.PublishedOperation
 	17,  // 186: wg.cosmo.platform.v1.DeletePersistedOperationResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -36125,7 +36125,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	17,  // 200: wg.cosmo.platform.v1.DeleteOrganizationWebhookConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	515, // 201: wg.cosmo.platform.v1.CreateIntegrationRequest.eventsMeta:type_name -> wg.cosmo.notifications.EventMeta
 	17,  // 202: wg.cosmo.platform.v1.CreateIntegrationResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	8,   // 203: wg.cosmo.platform.v1.IntegrationConfig.type:type_name -> wg.cosmo.platform.v1.IntegrationType
+	9,   // 203: wg.cosmo.platform.v1.IntegrationConfig.type:type_name -> wg.cosmo.platform.v1.IntegrationType
 	193, // 204: wg.cosmo.platform.v1.IntegrationConfig.slackIntegrationConfig:type_name -> wg.cosmo.platform.v1.SlackIntegrationConfig
 	194, // 205: wg.cosmo.platform.v1.Integration.integrationConfig:type_name -> wg.cosmo.platform.v1.IntegrationConfig
 	515, // 206: wg.cosmo.platform.v1.Integration.eventsMeta:type_name -> wg.cosmo.notifications.EventMeta
@@ -36218,7 +36218,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	500, // 293: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.namespaces:type_name -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Namespace
 	501, // 294: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.federatedGraphs:type_name -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.FederatedGraph
 	502, // 295: wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.subgraphs:type_name -> wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.SubGraph
-	9,   // 296: wg.cosmo.platform.v1.UpdateFeatureSettingsRequest.featureId:type_name -> wg.cosmo.platform.v1.Feature
+	10,  // 296: wg.cosmo.platform.v1.UpdateFeatureSettingsRequest.featureId:type_name -> wg.cosmo.platform.v1.Feature
 	17,  // 297: wg.cosmo.platform.v1.UpdateFeatureSettingsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	17,  // 298: wg.cosmo.platform.v1.GetSubgraphMembersResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	296, // 299: wg.cosmo.platform.v1.GetSubgraphMembersResponse.members:type_name -> wg.cosmo.platform.v1.SubgraphMember
@@ -36346,11 +36346,11 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	40,  // 421: wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse.compositionWarnings:type_name -> wg.cosmo.platform.v1.CompositionWarning
 	17,  // 422: wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	426, // 423: wg.cosmo.platform.v1.Proposal.subgraphs:type_name -> wg.cosmo.platform.v1.ProposalSubgraph
-	10,  // 424: wg.cosmo.platform.v1.Proposal.origin:type_name -> wg.cosmo.platform.v1.ProposalOrigin
+	11,  // 424: wg.cosmo.platform.v1.Proposal.origin:type_name -> wg.cosmo.platform.v1.ProposalOrigin
 	16,  // 425: wg.cosmo.platform.v1.ProposalSubgraph.labels:type_name -> wg.cosmo.platform.v1.Label
 	426, // 426: wg.cosmo.platform.v1.CreateProposalRequest.subgraphs:type_name -> wg.cosmo.platform.v1.ProposalSubgraph
-	11,  // 427: wg.cosmo.platform.v1.CreateProposalRequest.namingConvention:type_name -> wg.cosmo.platform.v1.ProposalNamingConvention
-	10,  // 428: wg.cosmo.platform.v1.CreateProposalRequest.origin:type_name -> wg.cosmo.platform.v1.ProposalOrigin
+	12,  // 427: wg.cosmo.platform.v1.CreateProposalRequest.namingConvention:type_name -> wg.cosmo.platform.v1.ProposalNamingConvention
+	11,  // 428: wg.cosmo.platform.v1.CreateProposalRequest.origin:type_name -> wg.cosmo.platform.v1.ProposalOrigin
 	17,  // 429: wg.cosmo.platform.v1.CreateProposalResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	37,  // 430: wg.cosmo.platform.v1.CreateProposalResponse.breakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
 	37,  // 431: wg.cosmo.platform.v1.CreateProposalResponse.nonBreakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
@@ -36391,9 +36391,9 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	17,  // 466: wg.cosmo.platform.v1.GetNamespaceSSOMappingResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	444, // 467: wg.cosmo.platform.v1.GetNamespaceSSOMappingResponse.mapping:type_name -> wg.cosmo.platform.v1.NamespaceSSOMapping
 	17,  // 468: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	12,  // 469: wg.cosmo.platform.v1.GetOperationsRequest.fetchBasedOn:type_name -> wg.cosmo.platform.v1.OperationsFetchBasedOn
+	13,  // 469: wg.cosmo.platform.v1.GetOperationsRequest.fetchBasedOn:type_name -> wg.cosmo.platform.v1.OperationsFetchBasedOn
 	101, // 470: wg.cosmo.platform.v1.GetOperationsRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
-	13,  // 471: wg.cosmo.platform.v1.GetOperationsRequest.sortDirection:type_name -> wg.cosmo.platform.v1.SortDirection
+	14,  // 471: wg.cosmo.platform.v1.GetOperationsRequest.sortDirection:type_name -> wg.cosmo.platform.v1.SortDirection
 	17,  // 472: wg.cosmo.platform.v1.GetOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	507, // 473: wg.cosmo.platform.v1.GetOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.GetOperationsResponse.Operation
 	17,  // 474: wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.response:type_name -> wg.cosmo.platform.v1.Response
