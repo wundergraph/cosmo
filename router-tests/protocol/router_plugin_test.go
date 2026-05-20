@@ -1,13 +1,19 @@
 package integration
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -612,4 +618,340 @@ func TestRouterPluginRequests(t *testing.T) {
 				})
 			}
 		})
+
+}
+
+func TestRouterPluginWithHeaderForwarding(t *testing.T) {
+	t.Run("Should send http headers as gRPC metadata to subgraphs", func(t *testing.T) {
+		t.Parallel()
+
+		// captureInterceptor records the outgoing metadata of subgraph RPCs only.
+		// hashicorp/go-plugin issues lifecycle RPCs under /plugin.*; ignoring them
+		// keeps the capture aligned with the test request and avoids a data race
+		// between the GraphQL call and the plugin's shutdown RPC.
+		captureInterceptor := func(captured *metadata.MD) grpc.UnaryClientInterceptor {
+			return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+				if strings.HasPrefix(method, "/service.") {
+					md, _ := metadata.FromOutgoingContext(ctx)
+					*captured = md.Copy()
+				}
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}
+
+		t.Run("header arrives as metadata with correct value", func(t *testing.T) {
+			// Assert that headers included in propagation rules are part
+			// of gRPC metadata.
+			t.Parallel()
+
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+				Plugins: testenv.PluginConfig{
+					Enabled: true,
+					Path:    "../../router/plugins",
+				},
+				RouterOptions: []core.Option{
+					core.WithGRPCPluginDialOptions(grpc.WithUnaryInterceptor(captureInterceptor(&captured))),
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Tenant-Id",
+								},
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Region-Name",
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"X-Tenant-Id":   []string{"acme"},
+						"X-Region-Name": []string{"frankfurt"},
+					},
+				})
+
+				require.Equal(t, []string{"acme"}, captured.Get("x-tenant-id"))
+				require.Equal(t, []string{"frankfurt"}, captured.Get("x-region-name"))
+			})
+		})
+
+		t.Run("header not in propagation rules is absent from metadata", func(t *testing.T) {
+			// Assert that headers not included in propagation rules are not part
+			// of gRPC metadata.
+			t.Parallel()
+
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+				Plugins: testenv.PluginConfig{
+					Enabled: true,
+					Path:    "../../router/plugins",
+				},
+				RouterOptions: []core.Option{
+					core.WithGRPCPluginDialOptions(grpc.WithUnaryInterceptor(captureInterceptor(&captured))),
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Allowed",
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"X-Allowed":     []string{"yes"},
+						"X-Not-Allowed": []string{"secret"},
+					},
+				})
+
+				require.Equal(t, []string{"yes"}, captured.Get("x-allowed"))
+				require.Empty(t, captured.Get("x-not-allowed"))
+			})
+		})
+
+		t.Run("header with multiple values arrives as multiple metadata values", func(t *testing.T) {
+			// HTTP headers can be set with multiple values. They should appear with all values
+			// on the gRPC metadata as well.
+			t.Parallel()
+
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+				Plugins: testenv.PluginConfig{
+					Enabled: true,
+					Path:    "../../router/plugins",
+				},
+				RouterOptions: []core.Option{
+					core.WithGRPCPluginDialOptions(grpc.WithUnaryInterceptor(captureInterceptor(&captured))),
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Role",
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"X-Role": []string{"admin", "editor"},
+					},
+				})
+
+				require.Equal(t, []string{"admin", "editor"}, captured.Get("x-role"))
+			})
+		})
+
+		t.Run("unsafe headers are absent from metadata", func(t *testing.T) {
+			// The router avoids passing certain headers to datasources,
+			// see router/core/header_rule_engine.go.
+			// This test ensures grpc datasources are covered by this as well.
+			t.Parallel()
+
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+				Plugins: testenv.PluginConfig{
+					Enabled: true,
+					Path:    "../../router/plugins",
+				},
+				RouterOptions: []core.Option{
+					core.WithGRPCPluginDialOptions(grpc.WithUnaryInterceptor(captureInterceptor(&captured))),
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Matching:  ".*", // mark all headers as forwardable
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						// safe header — must arrive
+						"X-Custom": []string{"value"},
+
+						// handled by HTTP stack, never in r.Header
+						"Host": []string{"evil.example.com"},
+
+						// hop-by-hop / connection headers
+						"Alt-Svc":             []string{"h3=\":443\""},
+						"Connection":          []string{"keep-alive"},
+						"Keep-Alive":          []string{"timeout=5"},
+						"Proxy-Authenticate":  []string{"Basic"},
+						"Proxy-Authorization": []string{"Basic dXNlcjpwYXNz"},
+						"Proxy-Connection":    []string{"keep-alive"},
+						"Te":                  []string{"trailers"},
+						"Trailer":             []string{"Expires"},
+						"Transfer-Encoding":   []string{"chunked"},
+						"Upgrade":             []string{"websocket"},
+
+						// content negotiation
+						"Accept":           []string{"application/json"},
+						"Accept-Charset":   []string{"utf-8"},
+						"Accept-Encoding":  []string{"gzip, deflate"},
+						"Content-Encoding": []string{"gzip"},
+						"Content-Length":   []string{"42"},
+						"Content-Type":     []string{"application/json"},
+
+						// WebSocket upgrade
+						"Sec-Websocket-Extensions": []string{"permessage-deflate"},
+						"Sec-Websocket-Key":        []string{"dGhlIHNhbXBsZSBub25jZQ=="},
+						"Sec-Websocket-Protocol":   []string{"chat"},
+						"Sec-Websocket-Version":    []string{"13"},
+					},
+				})
+
+				// We only assert what the router writes to outgoing metadata before
+				// the gRPC transport runs. content-type, user-agent and HTTP/2
+				// pseudo-headers (:authority, :method, :path, :scheme) are added
+				// later by the transport when framing HTTP/2 and are not visible
+				// to a client interceptor; verifying them would require a server
+				// interceptor inside the plugin binary.
+
+				// custom header should arrive
+				require.Equal(t, []string{"value"}, captured.Get("x-custom"))
+
+				// host is handled by the HTTP stack and never forwarded
+				require.Empty(t, captured.Get("host"))
+
+				// hop-by-hop / connection headers
+				require.Empty(t, captured.Get("alt-svc"))
+				require.Empty(t, captured.Get("connection"))
+				require.Empty(t, captured.Get("keep-alive"))
+				require.Empty(t, captured.Get("proxy-authenticate"))
+				require.Empty(t, captured.Get("proxy-authorization"))
+				require.Empty(t, captured.Get("proxy-connection"))
+				require.Empty(t, captured.Get("te"))
+				require.Empty(t, captured.Get("trailer"))
+				require.Empty(t, captured.Get("transfer-encoding"))
+				require.Empty(t, captured.Get("upgrade"))
+
+				// content negotiation
+				require.Empty(t, captured.Get("accept"))
+				require.Empty(t, captured.Get("accept-charset"))
+				require.Empty(t, captured.Get("accept-encoding"))
+				require.Empty(t, captured.Get("content-encoding"))
+				require.Empty(t, captured.Get("content-length"))
+
+				// WebSocket upgrade
+				require.Empty(t, captured.Get("sec-websocket-extensions"))
+				require.Empty(t, captured.Get("sec-websocket-key"))
+				require.Empty(t, captured.Get("sec-websocket-protocol"))
+				require.Empty(t, captured.Get("sec-websocket-version"))
+			})
+		})
+
+		t.Run("grpc-reserved headers never reach the subgraph", func(t *testing.T) {
+			// Headers prefixed with "grpc-" are reserved by the gRPC protocol spec.
+			// Even when wildcard propagation is configured, they must never appear
+			// on the subgraph.
+			t.Parallel()
+
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+				Plugins: testenv.PluginConfig{
+					Enabled: true,
+					Path:    "../../router/plugins",
+				},
+				RouterOptions: []core.Option{
+					core.WithGRPCPluginDialOptions(grpc.WithUnaryInterceptor(captureInterceptor(&captured))),
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Matching:  ".*",
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"Grpc-ReservedHeader": []string{"should be ignored"},
+					},
+				})
+
+				require.Empty(t, captured.Get("grpc-reservedheader"))
+			})
+		})
+
+		t.Run("safe headers are present in metadata", func(t *testing.T) {
+			// Ensure that http standard headers, which are safe and useful for subgraphs,
+			// are included in the metadata unmodified.
+			t.Parallel()
+
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+				Plugins: testenv.PluginConfig{
+					Enabled: true,
+					Path:    "../../router/plugins",
+				},
+				RouterOptions: []core.Option{
+					core.WithGRPCPluginDialOptions(grpc.WithUnaryInterceptor(captureInterceptor(&captured))),
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								// Propagate each header explicitly so the test is
+								// independent of any default propagation behaviour.
+								{Operation: config.HeaderRuleOperationPropagate, Named: "Authorization"},
+								{Operation: config.HeaderRuleOperationPropagate, Named: "Cookie"},
+								{Operation: config.HeaderRuleOperationPropagate, Named: "Traceparent"},
+								{Operation: config.HeaderRuleOperationPropagate, Named: "Tracestate"},
+								{Operation: config.HeaderRuleOperationPropagate, Named: "Accept-Language"},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"Authorization":   []string{"Bearer eyJhbGciOiJSUzI1NiJ9"},
+						"Cookie":          []string{"session=abc123; theme=dark"},
+						"Traceparent":     []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"},
+						"Tracestate":      []string{"rojo=00f067aa0ba902b7"},
+						"Accept-Language": []string{"de-DE,de;q=0.9,en;q=0.8"},
+					},
+				})
+
+				require.Equal(t, []string{"Bearer eyJhbGciOiJSUzI1NiJ9"}, captured.Get("authorization"))
+				require.Equal(t, []string{"session=abc123; theme=dark"}, captured.Get("cookie"))
+				require.Equal(t, []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"}, captured.Get("traceparent"))
+				require.Equal(t, []string{"rojo=00f067aa0ba902b7"}, captured.Get("tracestate"))
+				require.Equal(t, []string{"de-DE,de;q=0.9,en;q=0.8"}, captured.Get("accept-language"))
+			})
+		})
+	})
 }

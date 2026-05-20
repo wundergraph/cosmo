@@ -25,6 +25,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 type subscriptionHooks struct {
@@ -148,6 +149,7 @@ type Config struct {
 	mcp                           config.MCPConfiguration
 	connectRPC                    config.ConnectRPCConfiguration
 	plugins                       config.PluginsConfiguration
+	grpcPluginDialOptions         []grpc.DialOption
 	tracingAttributes             []config.CustomAttribute
 	subscriptionHooks             subscriptionHooks
 }

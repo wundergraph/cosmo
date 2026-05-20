@@ -25,6 +25,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -2437,6 +2438,14 @@ func WithMCP(cfg config.MCPConfiguration) Option {
 func WithPlugins(cfg config.PluginsConfiguration) Option {
 	return func(r *Router) {
 		r.plugins = cfg
+	}
+}
+
+// WithGRPCPluginDialOptions appends gRPC dial options used when the router
+// connects to gRPC plugin subgraphs. This function is primarily used for testing purposes.
+func WithGRPCPluginDialOptions(opts ...grpc.DialOption) Option {
+	return func(r *Router) {
+		r.grpcPluginDialOptions = append(r.grpcPluginDialOptions, opts...)
 	}
 }
 
