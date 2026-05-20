@@ -41,7 +41,8 @@ export function whoAmI(
 
     const lm = authContext.loginMethod;
     let loginMethod: PlainMessage<LoginMethod>;
-    if (lm?.type === 'sso') {
+    switch (lm?.type) {
+    case 'sso': {
       const oidcRepo = new OidcRepository(opts.db);
       const provider = await oidcRepo.getOidcProviderById({
         id: lm.ssoProviderId,
@@ -53,27 +54,37 @@ export function whoAmI(
         ssoProviderName: provider?.name ?? '',
         ssoAlias: lm.alias,
       };
-    } else if (lm?.type === 'password') {
+    
+    break;
+    }
+    case 'password': {
       loginMethod = {
         type: LoginMethod_Type.LOGIN_METHOD_TYPE_PASSWORD,
         ssoProviderId: '',
         ssoProviderName: '',
         ssoAlias: '',
       };
-    } else if (lm?.type === 'api-key') {
+    
+    break;
+    }
+    case 'api-key': {
       loginMethod = {
         type: LoginMethod_Type.LOGIN_METHOD_TYPE_API_KEY,
         ssoProviderId: '',
         ssoProviderName: '',
         ssoAlias: '',
       };
-    } else {
+    
+    break;
+    }
+    default: {
       loginMethod = {
         type: LoginMethod_Type.LOGIN_METHOD_TYPE_UNSPECIFIED,
         ssoProviderId: '',
         ssoProviderName: '',
         ssoAlias: '',
       };
+    }
     }
 
     return {

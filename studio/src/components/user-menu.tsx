@@ -110,9 +110,7 @@ export const UserMenu = () => {
               Logged in via {ssoLabel}
             </p>
           )}
-          {loginMethod?.type === 'password' && (
-            <p className="text-xs text-muted-foreground">Logged in via password</p>
-          )}
+          {loginMethod?.type === 'password' && <p className="text-xs text-muted-foreground">Logged in via password</p>}
         </div>
         <Link href="/account/invitations">
           <DropdownMenuItem>

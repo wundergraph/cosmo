@@ -51,11 +51,7 @@ import {
   updateOrganizationDetails,
   getOrganizationGroups,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import {
-  Feature,
-  OIDCProvider,
-  OrganizationGroup,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { Feature, OIDCProvider, OrganizationGroup } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Dispatch, SetStateAction, useContext, useEffect, useState } from 'react';
@@ -654,12 +650,7 @@ const ConnectOIDCProviderDialog = ({
                       availableGroups={orgMemberGroups?.groups ?? []}
                       updateMappers={updateMappers}
                     />
-                    <Button
-                      disabled={!saveSchema.safeParse(mappers).success}
-                      variant="default"
-                      size="lg"
-                      type="submit"
-                    >
+                    <Button disabled={!saveSchema.safeParse(mappers).success} variant="default" size="lg" type="submit">
                       Save
                     </Button>
                   </>
@@ -689,13 +680,7 @@ const ConnectOIDCProviderDialog = ({
   );
 };
 
-const OIDCProviderCard = ({
-  provider,
-  refetch,
-}: {
-  provider: OIDCProvider;
-  refetch: () => void;
-}) => {
+const OIDCProviderCard = ({ provider, refetch }: { provider: OIDCProvider; refetch: () => void }) => {
   const [alertOpen, setAlertOpen] = useState(false);
   const isAdmin = useIsAdmin();
   const { mutate: deleteOidcProvider, isPending: isDeleting } = useMutation(deleteOIDCProvider);
@@ -731,9 +716,7 @@ const OIDCProviderCard = ({
                     <p>
                       All members who are connected to this SSO will be logged out and downgraded to the viewer role.
                     </p>
-                    <p>
-                      Any namespaces restricted to this SSO app will become open to all login methods.
-                    </p>
+                    <p>Any namespaces restricted to this SSO app will become open to all login methods.</p>
                     <p>Reconnecting will result in a new login url.</p>
                     <p>This action cannot be undone.</p>
                   </div>
@@ -818,8 +801,8 @@ const OpenIDConnectProviders = () => {
               <Badge variant="outline">Enterprise feature</Badge>
             </CardTitle>
             <CardDescription>
-              Connect one or more OIDC providers so users can sign in to this organization via SSO. Each SSO app can
-              be mapped to specific namespaces to restrict access.{' '}
+              Connect one or more OIDC providers so users can sign in to this organization via SSO. Each SSO app can be
+              mapped to specific namespaces to restrict access.{' '}
               <Link
                 href={docsBaseURL + '/studio/sso'}
                 className="text-sm text-primary"
@@ -837,12 +820,7 @@ const OpenIDConnectProviders = () => {
               </Link>
             </Button>
           ) : (
-            <Button
-              className="md:ml-auto"
-              type="button"
-              variant="default"
-              onClick={() => setDialogOpen(true)}
-            >
+            <Button className="md:ml-auto" type="button" variant="default" onClick={() => setDialogOpen(true)}>
               Connect OIDC provider
             </Button>
           )}

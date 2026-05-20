@@ -223,8 +223,8 @@ function NamespaceSSODetail({
 
         {isDefaultOpen && (
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            This namespace is open to everyone with permission (default-open). Any login method (password or SSO) can
-            be used to access it.
+            This namespace is open to everyone with permission (default-open). Any login method (password or SSO) can be
+            used to access it.
           </div>
         )}
 
@@ -434,15 +434,11 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
                         onClick={() => requestSelect(ns.id)}
                         className={cn(
                           'flex w-full items-center justify-between gap-x-2 px-4 py-2 text-left text-sm transition-colors',
-                          active
-                            ? 'bg-primary/15 font-medium text-primary'
-                            : 'text-foreground hover:bg-muted',
+                          active ? 'bg-primary/15 font-medium text-primary' : 'text-foreground hover:bg-muted',
                         )}
                       >
                         <span className="truncate">{ns.name}</span>
-                        {active && isDirty && (
-                          <span className="text-xs text-muted-foreground">unsaved</span>
-                        )}
+                        {active && isDirty && <span className="text-xs text-muted-foreground">unsaved</span>}
                       </button>
                     </li>
                   );
