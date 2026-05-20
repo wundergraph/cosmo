@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.225.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.225.0...controlplane@0.225.1) (2026-05-20)
+
+### Bug Fixes
+
+* continuous healthcheck for ClickHouse + HTTP status code for unavailability ([#2875](https://github.com/wundergraph/cosmo/issues/2875)) ([be9d015](https://github.com/wundergraph/cosmo/commit/be9d015228db043b3925b08c4a85065acc26a18b)) (@comatory)
+
 # [0.225.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.2...controlplane@0.225.0) (2026-05-19)
 
 ### Features

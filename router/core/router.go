@@ -389,7 +389,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 				r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
 				r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
 					Endpoint: endpoint,
-					Exporter: otelconfig.ExporterOLTPHTTP,
+					Exporter: otelconfig.ExporterOTLPHTTP,
 					HTTPPath: "/v1/traces",
 					Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 				})
@@ -404,7 +404,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &rmetric.OpenTelemetryExporter{
 				Endpoint: endpoint,
-				Exporter: otelconfig.ExporterOLTPHTTP,
+				Exporter: otelconfig.ExporterOTLPHTTP,
 				HTTPPath: "/v1/metrics",
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})

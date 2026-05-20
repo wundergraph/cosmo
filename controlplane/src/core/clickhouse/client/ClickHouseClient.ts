@@ -1,5 +1,5 @@
 import { IncomingMessage } from 'node:http';
-import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosRequestConfig, isAxiosError } from 'axios';
 import Pick from 'stream-json/filters/Pick.js';
 import StreamArray from 'stream-json/streamers/StreamArray.js';
 
@@ -8,10 +8,16 @@ import pkg from 'stream-json';
 import { Observable, Subscriber } from 'rxjs';
 
 import { traced } from '../../tracing.js';
+import { ClickHouseUnavailableError } from '../../errors/errors.js';
+import { pollWithBackoff } from '../../util/poll-with-backoff.js';
 import { ClickHouseCompressionMethod, ClickHouseDataFormat } from './enums/index.js';
 
 import { ClickHouseClientOptions } from './interfaces/index.js';
 const { Parser } = pkg;
+
+type ClickHouseClientEventMap = {
+  ping: CustomEvent<{ error: Error; attempt: number } | Record<string, never>>;
+};
 
 /**
  * ClickHouse Client
@@ -28,6 +34,31 @@ export class ClickHouseClient {
    * ClickHouse Database
    */
   public database = '';
+  /**
+   * Event emitter
+   */
+  private emitter = new EventTarget();
+  private pingStopController?: AbortController;
+  private pingFailedAttempts = 0;
+
+  /**
+   * Advisory hint reflecting the healthcheck loop's view: true until consecutive ping failures are observed.
+   * Intended for metrics, logs, and retry decisions only — do NOT use it to decide whether a specific request
+   * failure is a transport/unavailability error; inspect the caught AxiosError shape for that.
+   */
+  public get isAvailable(): boolean {
+    return this.pingFailedAttempts === 0;
+  }
+
+  /**
+   * Returns true when an axios error indicates the request never received an HTTP response —
+   * i.e. ECONNREFUSED, ENOTFOUND, ETIMEDOUT, ECONNABORTED, network drop, etc.
+   * Anything with an `error.response` is a server-side error (HTTP/SQL) and must be propagated unchanged.
+   */
+  private static isTransportFailure(error: unknown): error is AxiosError {
+    return isAxiosError(error) && !error.response;
+  }
+
   /**
    * ClickHouse Service
    */
@@ -205,7 +236,11 @@ export class ClickHouseClient {
           }
         })
         .catch((reason: AxiosError) => {
-          return reject(this._handlePromiseError<T>(reason));
+          this._handlePromiseError<T>(reason);
+          if (ClickHouseClient.isTransportFailure(reason)) {
+            return reject(new ClickHouseUnavailableError(reason));
+          }
+          return reject(reason);
         });
     });
   }
@@ -340,6 +375,9 @@ export class ClickHouseClient {
     return new Promise<void>((resolve, reject) => {
       this.insert<T>(table, data).subscribe({
         error: (error) => {
+          if (ClickHouseClient.isTransportFailure(error)) {
+            return reject(new ClickHouseUnavailableError(error));
+          }
           return reject(error);
         },
         next: (row) => {
@@ -355,15 +393,67 @@ export class ClickHouseClient {
   }
 
   /**
+   * Starts pinging the clickhouse server with exponential backoff between attempts.
+   *
+   * @param baseInterval base delay between pings when healthy (ms), defaults to 5000.
+   * @param maxInterval maximum delay after consecutive failures (ms), defaults to 3 minutes.
+   * @param timeout per-request timeout (ms).
+   */
+  public async ping(baseInterval = 5000, maxInterval = 3 * 60_000, timeout?: number) {
+    this.pingStopController = new AbortController();
+
+    try {
+      await pollWithBackoff(
+        async (signal) => {
+          const ok = await this.pingRequest(timeout, signal);
+          if (!ok) {
+            throw new Error('Failed to ping ClickHouse server');
+          }
+        },
+        {
+          baseInterval,
+          maxInterval,
+          signal: this.pingStopController.signal,
+          onSuccess: () => {
+            this.pingFailedAttempts = 0;
+            this.emitter.dispatchEvent(new CustomEvent('ping', { detail: {} }));
+          },
+          onFailure: (error, attempt) => {
+            this.pingFailedAttempts = attempt;
+            this.emitter.dispatchEvent(
+              new CustomEvent('ping', {
+                detail: { error, attempt },
+              }),
+            );
+          },
+          jitter: true,
+          leading: true,
+        },
+      );
+    } catch (err) {
+      this.options?.logger?.error(err);
+    }
+  }
+
+  /**
+   * Stops the ping loop and cancels any in-flight ping request.
+   */
+  public close() {
+    this.pingStopController?.abort();
+    this.pingStopController = undefined;
+  }
+
+  /**
    * Pings the clickhouse server
    *
    * @param timeout timeout in milliseconds, defaults to 30000.
    */
-  public ping(timeout = 30_000) {
+  private pingRequest(timeout = 30_000, signal?: AbortSignal) {
     return new Promise<boolean>((resolve, reject) => {
       axios
         .get(`${this.endpoint}/ping`, {
           timeout,
+          signal,
           httpAgent: this.options?.httpConfig?.httpAgent,
           httpsAgent: this.options?.httpConfig?.httpsAgent,
         })
@@ -378,5 +468,20 @@ export class ClickHouseClient {
           return reject(reason);
         });
     });
+  }
+
+  public addEventListener<K extends keyof ClickHouseClientEventMap>(
+    type: K,
+    listener: (event: ClickHouseClientEventMap[K]) => void,
+    options?: AddEventListenerOptions,
+  ): void {
+    this.emitter.addEventListener(type, listener as EventListener, options);
+  }
+
+  public removeEventListener<K extends keyof ClickHouseClientEventMap>(
+    type: K,
+    listener: (event: ClickHouseClientEventMap[K]) => void,
+  ): void {
+    this.emitter.removeEventListener(type, listener as EventListener);
   }
 }

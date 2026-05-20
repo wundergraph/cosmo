@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.318.0](https://github.com/wundergraph/cosmo/compare/router@0.317.0...router@0.318.0) (2026-05-20)
+
+### Features
+
+* upgrade otel dependencies with backward compatible semconv attributes ([#2714](https://github.com/wundergraph/cosmo/issues/2714)) ([3d90c6c](https://github.com/wundergraph/cosmo/commit/3d90c6c4a2fb2d3f0f0544e6cf7437671e838b6d)) (@Noroth)
+
 # [0.317.0](https://github.com/wundergraph/cosmo/compare/router@0.316.2...router@0.317.0) (2026-05-18)
 
 ### Bug Fixes
