@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/variables"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
@@ -655,6 +656,10 @@ type operationContext struct {
 
 func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
+}
+
+func (c *operationContext) VariableSet() variables.Set {
+	return variables.NewSet(c.variables, c.remapVariables)
 }
 
 func (o *operationContext) Files() []*httpclient.FileUpload {
