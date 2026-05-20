@@ -107,6 +107,9 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       return {
         id: userSession.userId,
         email: userInfoData.email,
+        firstName: userInfoData.given_name,
+        lastName: userInfoData.family_name,
+        fullName: userInfoData.name,
         organizations: orgs
           .filter((o) => !o.deletion || o.rbac.isOrganizationAdmin)
           .map(({ rbac, ...org }) => ({

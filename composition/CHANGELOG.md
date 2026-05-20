@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.59.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.4...@wundergraph/composition@0.59.0) (2026-05-18)
+
+### Features
+
+* support dot-path in slicingArguments ([#2801](https://github.com/wundergraph/cosmo/issues/2801)) ([aec1738](https://github.com/wundergraph/cosmo/commit/aec1738c071e028893239b6c4f9bf492cf175f36)) (@ysmolski)
+
 ## [0.58.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.3...@wundergraph/composition@0.58.4) (2026-05-14)
 
 ### Bug Fixes

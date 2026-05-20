@@ -82,6 +82,9 @@ export interface Organization {
 export interface Session {
   id: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
   organizations: Organization[];
   invitations: InvitedOrgs[];
   loginMethod?: LoginMethod;
@@ -186,6 +189,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       identify({
         id: data.id,
         email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        fullName: data.fullName,
         organizationId: organization.id,
         organizationName: organization.name,
         organizationSlug: organization.slug,

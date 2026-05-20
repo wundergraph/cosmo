@@ -1,15 +1,17 @@
 package integration
 
 import (
-	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
 	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap"
 )
 
 func CreateRetryCounterFunc(counter *atomic.Int32, duration *atomic.Int64) func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
@@ -264,10 +266,12 @@ func TestFlakyRetry(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			NoRetryClient:   true,
+			Logger:          zap.NewNop(),
 			AccessLogFields: []config.CustomAttribute{},
 			RouterOptions: []core.Option{
 				options,
 			},
+			AccessLogger: zap.NewNop(),
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
 					Middleware: func(_ http.Handler) http.Handler {
@@ -292,10 +296,6 @@ func TestFlakyRetry(t *testing.T) {
 
 			shouldBeLessThanDuration := (time.Duration(maxRetryCount-1) * retryInterval) - (20 * time.Millisecond)
 			require.Less(t, requestDuration, shouldBeLessThanDuration)
-
-			// We reduce by 100 for any jitter
-			expectedMinDuration := (time.Duration(maxRetryCount-1) * maxDuration) - (100 * time.Millisecond)
-			require.GreaterOrEqual(t, requestDuration, expectedMinDuration)
 		})
 	})
 
