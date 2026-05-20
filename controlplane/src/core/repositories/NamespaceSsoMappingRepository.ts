@@ -44,7 +44,7 @@ export class NamespaceSsoMappingRepository {
 
     // If no row in the org has any mapping, the gate is default-open everywhere.
     const isUnmapped = (r: (typeof rows)[number]) => r.ssoProviderId === null && !r.isPasswordLogin;
-    if (rows.every(isUnmapped)) {
+    if (rows.every((r) => isUnmapped(r))) {
       return undefined;
     }
 
