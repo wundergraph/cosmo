@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/variables"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
+
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/expr"
@@ -658,8 +658,8 @@ func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
 }
 
-func (c *operationContext) VariableSet() variables.Set {
-	return variables.NewSet(c.variables, c.remapVariables)
+func (c *operationContext) VariablesView() resolve.VariablesView {
+	return resolve.NewVariablesView(c.variables, c.remapVariables)
 }
 
 func (o *operationContext) Files() []*httpclient.FileUpload {

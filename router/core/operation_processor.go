@@ -1420,7 +1420,7 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 		if costCalc := opCtx.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
 			// Validate that variables/arguments are correct for the requirements in listSize
 			var sliceReport operationreport.Report
-			vs := opCtx.VariableSet()
+			vs := opCtx.VariablesView()
 			costCalc.ValidateSliceArguments(vs, &sliceReport)
 			if sliceReport.HasErrors() {
 				return &reportError{report: &sliceReport}
