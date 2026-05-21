@@ -5,8 +5,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"os"
+
+	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
@@ -48,7 +49,7 @@ func buildSubgraphTLSConfigs(logger *zap.Logger, cfg *config.ClientTLSConfigurat
 	hasAll := (cfg.All.CertFile != "" && cfg.All.KeyFile != "") || cfg.All.CaFile != "" || cfg.All.InsecureSkipCaVerification
 
 	// If no global TLS config is provided and there are no subgraph specific TLS configs
-	if !hasAll && len(cfg.Subgraphs) == 0 {
+	if !cfg.Enabled() {
 		return nil, nil, nil
 	}
 

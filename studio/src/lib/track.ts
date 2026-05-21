@@ -29,6 +29,9 @@ const setupReo = (email: string) => {
 const setupPosthog = ({
   email,
   id,
+  firstName,
+  lastName,
+  fullName,
   organizationId,
   organizationName,
   organizationSlug,
@@ -36,6 +39,9 @@ const setupPosthog = ({
 }: {
   id: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
   organizationId: string;
   organizationName: string;
   organizationSlug: string;
@@ -60,9 +66,15 @@ const setupPosthog = ({
       plan: plan,
     });
   } else {
-    posthog.identify(email, {
-      id,
-    });
+    const personProperties: Record<string, string> = { id, email };
+    const trimmedFirst = firstName?.trim();
+    const trimmedLast = lastName?.trim();
+    if (trimmedFirst) personProperties.first_name = trimmedFirst;
+    if (trimmedLast) personProperties.last_name = trimmedLast;
+    const computedFull = [trimmedFirst, trimmedLast].filter(Boolean).join(' ');
+    const resolvedFull = fullName?.trim() || computedFull;
+    if (resolvedFull) personProperties.name = resolvedFull;
+    posthog.identify(email, personProperties);
     posthog.group('cosmo_organization', organizationId, {
       id: organizationId,
       slug: organizationSlug,
@@ -76,6 +88,9 @@ const setupPosthog = ({
 const identify = ({
   email,
   id,
+  firstName,
+  lastName,
+  fullName,
   organizationId,
   organizationName,
   organizationSlug,
@@ -83,6 +98,9 @@ const identify = ({
 }: {
   id: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
   organizationId: string;
   organizationName: string;
   organizationSlug: string;
@@ -96,6 +114,9 @@ const identify = ({
     setupPosthog({
       email,
       id,
+      firstName,
+      lastName,
+      fullName,
       organizationId,
       organizationName,
       organizationSlug,
