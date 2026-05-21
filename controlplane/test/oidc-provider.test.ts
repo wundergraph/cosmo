@@ -59,7 +59,7 @@ describe('OIDC provider', (ctx) => {
       name: 'staging',
       clientID: 'staging-client',
       clientSecrect: 'shh',
-      discoveryEndpoint: 'https://staging.example.com/.well-known/openid-configuration',
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       mappers: [],
     });
     expect(first.response?.code).toBe(EnumStatusCode.OK);
@@ -68,7 +68,7 @@ describe('OIDC provider', (ctx) => {
       name: 'production',
       clientID: 'prod-client',
       clientSecrect: 'shh',
-      discoveryEndpoint: 'https://prod.example.com/.well-known/openid-configuration',
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       mappers: [],
     });
     expect(second.response?.code).toBe(EnumStatusCode.OK);
@@ -167,7 +167,7 @@ describe('OIDC provider', (ctx) => {
       name: 'a',
       clientID: 'a',
       clientSecrect: 's',
-      discoveryEndpoint: 'https://a.example/.well-known/openid-configuration',
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       mappers: [],
     });
     expect(a.response?.code).toBe(EnumStatusCode.OK);
@@ -176,7 +176,7 @@ describe('OIDC provider', (ctx) => {
       name: 'b',
       clientID: 'b',
       clientSecrect: 's',
-      discoveryEndpoint: 'https://b.example/.well-known/openid-configuration',
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       mappers: [],
     });
     expect(b.response?.code).toBe(EnumStatusCode.OK);
@@ -508,7 +508,7 @@ describe('OIDC provider', (ctx) => {
       name: 'a',
       clientID: 'a',
       clientSecrect: 'secret',
-      discoveryEndpoint: 'https://a.example.com/.well-known/openid-configuration',
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       mappers: [],
     });
     expect(first.response?.code).toBe(EnumStatusCode.OK);
@@ -517,7 +517,7 @@ describe('OIDC provider', (ctx) => {
       name: 'b',
       clientID: 'b',
       clientSecrect: 'secret',
-      discoveryEndpoint: 'https://b.example.com/.well-known/openid-configuration',
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       mappers: [],
     });
     expect(second.response?.code).toBe(EnumStatusCode.OK);
