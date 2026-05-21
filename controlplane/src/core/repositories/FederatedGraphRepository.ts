@@ -71,7 +71,7 @@ import {
 } from '../composition/composeGraphs.pool.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
-import { checkIfLabelMatchersChanged, normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import { applyIdpNamespaceGate, checkIfLabelMatchersChanged, normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
@@ -378,12 +378,8 @@ export class FederatedGraphRepository {
     conditions: (SQL<unknown> | undefined)[],
   ): boolean {
     // Apply the IdP gate regardless of RBAC level. Empty allowed-set → no rows.
-    if (rbac?.idpAllowedNamespaceIds !== undefined) {
-      const allowed = [...rbac.idpAllowedNamespaceIds];
-      if (allowed.length === 0) {
-        return false;
-      }
-      conditions.push(inArray(schema.targets.namespaceId, allowed));
+    if (!applyIdpNamespaceGate(rbac, schema.targets.namespaceId, conditions)) {
+      return false;
     }
 
     if (!rbac || rbac.isOrganizationViewer) {

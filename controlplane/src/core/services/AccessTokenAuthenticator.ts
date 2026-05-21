@@ -6,7 +6,8 @@ import { OidcRepository } from '../repositories/OidcRepository.js';
 import { NamespaceSsoMappingRepository } from '../repositories/NamespaceSsoMappingRepository.js';
 import { traced } from '../tracing.js';
 import type { LoginMethod } from '../../types/index.js';
-import { RBACEvaluator } from './RBACEvaluator.js';
+import { buildAuthState } from '../util.js';
+import type { RBACEvaluator } from './RBACEvaluator.js';
 
 export type AccessTokenAuthContext = {
   auth: 'access_token';
@@ -59,34 +60,11 @@ export default class AccessTokenAuthenticator {
 
     // The access token is minted from the user's interactive login, so it
     // carries the same login method (and therefore the same IdP gate) as a web
-    // session. Resolve it from the `identity_provider` claim on the userinfo
+    // session, derived from the `identity_provider` claim on the userinfo
     // response (absent → password login).
-    let loginMethod: LoginMethod;
-    if (userInfoData.identity_provider) {
-      const provider = await this.oidcRepo.getOidcProviderByAlias({
-        alias: userInfoData.identity_provider,
-        organizationId: organization.id,
-      });
-      loginMethod = provider
-        ? { type: 'sso', ssoProviderId: provider.id, alias: userInfoData.identity_provider }
-        : { type: 'password' };
-    } else {
-      loginMethod = { type: 'password' };
-    }
-
-    const idpAllowedNamespaceIds = await this.namespaceSsoMappingRepo.allowedNamespaceIds({
-      organizationId: organization.id,
-      loginMethod,
-    });
-
-    const rbac = new RBACEvaluator(
-      await this.orgRepo.getOrganizationMemberGroups({
-        userID: userInfoData.sub,
-        organizationID: organization.id,
-      }),
-      userInfoData.sub,
-      /* isApiKey */ false,
-      idpAllowedNamespaceIds,
+    const { loginMethod, rbac, idpAllowedNamespaceIds } = await buildAuthState(
+      { oidcRepo: this.oidcRepo, orgRepo: this.orgRepo, namespaceSsoMappingRepo: this.namespaceSsoMappingRepo },
+      { organizationId: organization.id, userId: userInfoData.sub, idpAlias: userInfoData.identity_provider },
     );
 
     return {

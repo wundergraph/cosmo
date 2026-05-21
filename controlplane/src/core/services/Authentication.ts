@@ -2,7 +2,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { lru } from 'tiny-lru';
 import { FastifyBaseLogger } from 'fastify';
 import { AuthContext, UserInfoEndpointResponse } from '../../types/index.js';
-import type { LoginMethod } from '../../types/index.js';
+import { buildAuthState } from '../util.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
@@ -12,7 +12,6 @@ import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
 import WebSessionAuthenticator from './WebSessionAuthenticator.js';
-import { RBACEvaluator } from './RBACEvaluator.js';
 
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
@@ -98,35 +97,10 @@ export class Authentication implements Authenticator {
 
       const organizationDeactivated = !!organization.deactivation;
 
-      // Resolve loginMethod from the idp_alias stored on the session. A session
-      // whose IdP no longer belongs to this org (deleted SSO app) falls back to
-      // password login so default-open namespaces stay reachable.
-      let loginMethod: LoginMethod;
-      if (user.idpAlias) {
-        const provider = await this.oidcRepo.getOidcProviderByAlias({
-          alias: user.idpAlias,
-          organizationId: organization.id,
-        });
-        loginMethod = provider
-          ? { type: 'sso', ssoProviderId: provider.id, alias: user.idpAlias }
-          : { type: 'password' };
-      } else {
-        loginMethod = { type: 'password' };
-      }
-
-      const idpAllowedNamespaceIds = await this.namespaceSsoMappingRepo.allowedNamespaceIds({
-        organizationId: organization.id,
-        loginMethod,
-      });
-
-      const rbac = new RBACEvaluator(
-        await this.orgRepo.getOrganizationMemberGroups({
-          organizationID: organization.id,
-          userID: user.userId,
-        }),
-        user.userId,
-        /* isApiKey */ false,
-        idpAllowedNamespaceIds,
+      // Resolve the login method, IdP gate and RBAC from the session's idp_alias.
+      const { loginMethod, rbac, idpAllowedNamespaceIds } = await buildAuthState(
+        { oidcRepo: this.oidcRepo, orgRepo: this.orgRepo, namespaceSsoMappingRepo: this.namespaceSsoMappingRepo },
+        { organizationId: organization.id, userId: user.userId, idpAlias: user.idpAlias },
       );
 
       const userContext: AuthContext = {

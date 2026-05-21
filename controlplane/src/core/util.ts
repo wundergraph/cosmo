@@ -11,6 +11,8 @@ import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { AxiosError } from 'axios';
 import { isNetworkError, isRetryableError } from 'axios-retry';
 import { formatISO, subHours } from 'date-fns';
+import { inArray, SQL } from 'drizzle-orm';
+import { PgColumn } from 'drizzle-orm/pg-core';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
@@ -18,7 +20,15 @@ import DOMPurify from 'isomorphic-dompurify';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
 import { ProposalOrigin, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
-import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
+import {
+  AuthContext,
+  DateRange,
+  FederatedGraphDTO,
+  Label,
+  LoginMethod,
+  ResponseMessage,
+  S3StorageOptions,
+} from '../types/index.js';
 import { paginationDefaults } from './constants.js';
 import {
   isAuthenticationError,
@@ -27,6 +37,10 @@ import {
   isPublicError,
 } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
+import { RBACEvaluator } from './services/RBACEvaluator.js';
+import type { OidcRepository } from './repositories/OidcRepository.js';
+import type { OrganizationRepository } from './repositories/OrganizationRepository.js';
+import type { NamespaceSsoMappingRepository } from './repositories/NamespaceSsoMappingRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
@@ -909,4 +923,85 @@ export function isValidGrpcNamingScheme(url: string): boolean {
       return false;
     }
   }
+}
+
+/**
+ * Applies the IdP namespace gate to a list-query's WHERE conditions.
+ *
+ * - Gate inactive (`idpAllowedNamespaceIds === undefined`) → pushes nothing,
+ *   returns `true`.
+ * - Gate active but empty (login method is locked out of every namespace) →
+ *   returns `false`; the caller must short-circuit with its own "no rows" value
+ *   (`[]`, `0`, `false`, …) instead of running the query.
+ * - Gate active with a set → pushes `namespaceColumn IN (...)`, returns `true`.
+ *
+ * `namespaceColumn` is the namespace-id column of the query's FROM table, which
+ * differs per caller (e.g. `targets.namespaceId`, `namespaces.id`,
+ * `featureFlags.namespaceId`).
+ */
+export function applyIdpNamespaceGate(
+  rbac: RBACEvaluator | undefined,
+  namespaceColumn: PgColumn,
+  conditions: (SQL<unknown> | undefined)[],
+): boolean {
+  if (rbac?.idpAllowedNamespaceIds === undefined) {
+    return true;
+  }
+
+  const allowed = [...rbac.idpAllowedNamespaceIds];
+  if (allowed.length === 0) {
+    return false;
+  }
+
+  conditions.push(inArray(namespaceColumn, allowed));
+  return true;
+}
+
+/**
+ * Derives the full auth state for an interactive (web-session or access-token)
+ * login from the session's IdP alias:
+ *  1. Resolves the login method — a custom OIDC app when the alias matches an
+ *     org provider, otherwise password (no IdP, or an alias whose provider no
+ *     longer belongs to the org, so default-open namespaces stay reachable).
+ *  2. Applies the IdP namespace gate for that login method.
+ *  3. Builds the RBAC evaluator from the org's member groups plus the gate.
+ *
+ * Returns the login method, the evaluator and the allowed-namespace set (the
+ * auth context stores them separately). Shared by both authenticators.
+ */
+export async function buildAuthState(
+  deps: {
+    oidcRepo: OidcRepository;
+    orgRepo: OrganizationRepository;
+    namespaceSsoMappingRepo: NamespaceSsoMappingRepository;
+  },
+  input: { organizationId: string; userId: string; idpAlias: string | null | undefined },
+): Promise<{ loginMethod: LoginMethod; rbac: RBACEvaluator; idpAllowedNamespaceIds: Set<string> | undefined }> {
+  let loginMethod: LoginMethod = { type: 'password' };
+  if (input.idpAlias) {
+    const provider = await deps.oidcRepo.getOidcProviderByAlias({
+      alias: input.idpAlias,
+      organizationId: input.organizationId,
+    });
+    if (provider) {
+      loginMethod = { type: 'sso', ssoProviderId: provider.id, alias: input.idpAlias };
+    }
+  }
+
+  const idpAllowedNamespaceIds = await deps.namespaceSsoMappingRepo.allowedNamespaceIds({
+    organizationId: input.organizationId,
+    loginMethod,
+  });
+
+  const rbac = new RBACEvaluator(
+    await deps.orgRepo.getOrganizationMemberGroups({
+      organizationID: input.organizationId,
+      userID: input.userId,
+    }),
+    input.userId,
+    /* isApiKey */ false,
+    idpAllowedNamespaceIds,
+  );
+
+  return { loginMethod, rbac, idpAllowedNamespaceIds };
 }

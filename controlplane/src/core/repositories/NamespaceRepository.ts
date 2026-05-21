@@ -4,6 +4,7 @@ import * as schema from '../../db/schema.js';
 import { NamespaceDTO } from '../../types/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
+import { applyIdpNamespaceGate } from '../util.js';
 
 export const DefaultNamespace = 'default';
 
@@ -127,12 +128,8 @@ export class NamespaceRepository {
     conditions: (SQL<unknown> | undefined)[],
   ): Promise<boolean> {
     // Apply the IdP gate regardless of RBAC level (org viewer/admin still gated by login method).
-    if (rbac?.idpAllowedNamespaceIds !== undefined) {
-      const allowed = [...rbac.idpAllowedNamespaceIds];
-      if (allowed.length === 0) {
-        return false;
-      }
-      conditions.push(inArray(schema.namespaces.id, allowed));
+    if (!applyIdpNamespaceGate(rbac, schema.namespaces.id, conditions)) {
+      return false;
     }
 
     if (!rbac || rbac.isOrganizationViewer) {

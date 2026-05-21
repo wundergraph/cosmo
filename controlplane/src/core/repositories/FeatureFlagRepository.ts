@@ -29,7 +29,7 @@ import {
   ProtoSubgraph,
   SubgraphDTO,
 } from '../../types/index.js';
-import { normalizeLabels } from '../util.js';
+import { applyIdpNamespaceGate, normalizeLabels } from '../util.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -187,12 +187,8 @@ export class FeatureFlagRepository {
     }
 
     // IdP gate: empty set → no rows; non-empty → restrict to listed namespaces.
-    if (rbac?.idpAllowedNamespaceIds !== undefined) {
-      const allowed = [...rbac.idpAllowedNamespaceIds];
-      if (allowed.length === 0) {
-        return [];
-      }
-      conditions.push(inArray(featureFlags.namespaceId, allowed));
+    if (!applyIdpNamespaceGate(rbac, featureFlags.namespaceId, conditions)) {
+      return [];
     }
 
     if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
@@ -241,12 +237,8 @@ export class FeatureFlagRepository {
     }
 
     // IdP gate: empty set → 0; non-empty → restrict to listed namespaces.
-    if (rbac?.idpAllowedNamespaceIds !== undefined) {
-      const allowed = [...rbac.idpAllowedNamespaceIds];
-      if (allowed.length === 0) {
-        return 0;
-      }
-      conditions.push(inArray(featureFlags.namespaceId, allowed));
+    if (!applyIdpNamespaceGate(rbac, featureFlags.namespaceId, conditions)) {
+      return 0;
     }
 
     if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
@@ -345,12 +337,8 @@ export class FeatureFlagRepository {
     }
 
     // IdP gate: empty set → no rows; non-empty → restrict to listed namespaces.
-    if (rbac?.idpAllowedNamespaceIds !== undefined) {
-      const allowed = [...rbac.idpAllowedNamespaceIds];
-      if (allowed.length === 0) {
-        return [];
-      }
-      conditions.push(inArray(targets.namespaceId, allowed));
+    if (!applyIdpNamespaceGate(rbac, targets.namespaceId, conditions)) {
+      return [];
     }
 
     if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
@@ -420,12 +408,8 @@ export class FeatureFlagRepository {
     }
 
     // IdP gate: empty set → 0; non-empty → restrict to listed namespaces.
-    if (rbac?.idpAllowedNamespaceIds !== undefined) {
-      const allowed = [...rbac.idpAllowedNamespaceIds];
-      if (allowed.length === 0) {
-        return 0;
-      }
-      conditions.push(inArray(targets.namespaceId, allowed));
+    if (!applyIdpNamespaceGate(rbac, targets.namespaceId, conditions)) {
+      return 0;
     }
 
     if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
