@@ -43,6 +43,10 @@ func (n NoopMetrics) MeasureOperationPlanningTime(ctx context.Context, planningT
 
 }
 
+func (n NoopMetrics) MeasureResolverAcquireDuration(ctx context.Context, duration time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+
+}
+
 func (n NoopMetrics) MeasureSchemaFieldUsage(ctx context.Context, count int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
 
 }

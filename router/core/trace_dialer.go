@@ -3,9 +3,10 @@ package core
 import (
 	"context"
 	"errors"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"net"
 	"syscall"
+
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 )
 
 type TraceDialer struct {

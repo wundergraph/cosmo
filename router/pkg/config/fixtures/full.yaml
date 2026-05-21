@@ -165,8 +165,10 @@ telemetry:
       router_runtime: true
       graphql_cache: true
       connection_stats: true
+      enhanced_connection_stats: true
       engine_stats:
         subscriptions: true
+        resolvers: true
       cost_stats:
         estimated_enabled: false
         actual_enabled: false
@@ -193,8 +195,10 @@ telemetry:
       listen_addr: '127.0.0.1:8088'
       graphql_cache: true
       connection_stats: true
+      enhanced_connection_stats: true
       engine_stats:
         subscriptions: true
+        resolvers: true
       cost_stats:
         estimated_enabled: false
         actual_enabled: false

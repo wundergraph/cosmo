@@ -270,6 +270,7 @@ type MetricExclusions struct {
 
 type EngineStatOptions struct {
 	EnableSubscription bool
+	EnableResolver     bool
 }
 
 type MetricsLogExporterOptions struct {
@@ -280,22 +281,24 @@ type MetricsLogExporterOptions struct {
 }
 
 type MetricOptions struct {
-	MetricExclusions                      MetricExclusions
-	EnableRuntimeMetrics                  bool
-	EnableOTLPRouterCache                 bool
-	EnablePrometheusRouterCache           bool
-	OTLPEngineStatsOptions                EngineStatOptions
-	PrometheusEngineStatsOptions          EngineStatOptions
-	PrometheusSchemaFieldUsage            PrometheusSchemaFieldUsage
-	EnableOTLPConnectionMetrics           bool
-	EnableOTLPCircuitBreakerMetrics       bool
-	EnableOTLPStreamMetrics               bool
-	EnablePrometheusConnectionMetrics     bool
-	EnablePrometheusCircuitBreakerMetrics bool
-	EnablePrometheusStreamMetrics         bool
-	LogExporter                           MetricsLogExporterOptions
-	OTLPCostStats                         config.CostStats
-	PrometheusCostStats                   config.CostStats
+	MetricExclusions                        MetricExclusions
+	EnableRuntimeMetrics                    bool
+	EnableOTLPRouterCache                   bool
+	EnablePrometheusRouterCache             bool
+	OTLPEngineStatsOptions                  EngineStatOptions
+	PrometheusEngineStatsOptions            EngineStatOptions
+	PrometheusSchemaFieldUsage              PrometheusSchemaFieldUsage
+	EnableOTLPConnectionMetrics             bool
+	EnableOTLPEnhancedConnectionStats       bool
+	EnableOTLPCircuitBreakerMetrics         bool
+	EnableOTLPStreamMetrics                 bool
+	EnablePrometheusConnectionMetrics       bool
+	EnablePrometheusEnhancedConnectionStats bool
+	EnablePrometheusCircuitBreakerMetrics   bool
+	EnablePrometheusStreamMetrics           bool
+	LogExporter                             MetricsLogExporterOptions
+	OTLPCostStats                           config.CostStats
+	PrometheusCostStats                     config.CostStats
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -1630,14 +1633,16 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}
 
 		prometheusConfig = rmetric.PrometheusConfig{
-			Enabled:         true,
-			ListenAddr:      fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
-			Path:            "/metrics",
-			TestRegistry:    testConfig.PrometheusRegistry,
-			GraphqlCache:    testConfig.MetricOptions.EnablePrometheusRouterCache,
-			ConnectionStats: testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
+			Enabled:                 true,
+			ListenAddr:              fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
+			Path:                    "/metrics",
+			TestRegistry:            testConfig.PrometheusRegistry,
+			GraphqlCache:            testConfig.MetricOptions.EnablePrometheusRouterCache,
+			ConnectionStats:         testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
+			EnhancedConnectionStats: testConfig.MetricOptions.EnablePrometheusEnhancedConnectionStats,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
+				Resolver:     testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableResolver,
 			},
 			CircuitBreaker:       testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
 			CostStats:            testConfig.MetricOptions.PrometheusCostStats,
@@ -1660,13 +1665,15 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
-					Enabled:         true,
-					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
-					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
-					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
-					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
+					Enabled:                 true,
+					RouterRuntime:           testConfig.MetricOptions.EnableRuntimeMetrics,
+					GraphqlCache:            testConfig.MetricOptions.EnableOTLPRouterCache,
+					Streams:                 testConfig.MetricOptions.EnableOTLPStreamMetrics,
+					ConnectionStats:         testConfig.MetricOptions.EnableOTLPConnectionMetrics,
+					EnhancedConnectionStats: testConfig.MetricOptions.EnableOTLPEnhancedConnectionStats,
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
+						Resolvers:     testConfig.MetricOptions.OTLPEngineStatsOptions.EnableResolver,
 					},
 					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
 					CostStats:           testConfig.MetricOptions.OTLPCostStats,

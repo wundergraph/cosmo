@@ -100,6 +100,7 @@ type PropagationConfig struct {
 
 type EngineStats struct {
 	Subscriptions bool `yaml:"subscriptions" envDefault:"false" env:"ENGINE_STATS_SUBSCRIPTIONS"`
+	Resolvers     bool `yaml:"resolvers" envDefault:"false" env:"ENGINE_STATS_RESOLVERS"`
 }
 
 type CostStats struct {
@@ -108,18 +109,19 @@ type CostStats struct {
 }
 
 type Prometheus struct {
-	Enabled             bool        `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
-	Path                string      `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
-	ListenAddr          string      `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
-	GraphqlCache        bool        `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
-	ConnectionStats     bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
-	Streams             bool        `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
-	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
-	CostStats           CostStats   `yaml:"cost_stats" envPrefix:"PROMETHEUS_COST_STATS_"`
-	CircuitBreaker      bool        `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
-	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
-	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
-	ExcludeScopeInfo    bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
+	Enabled                 bool        `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
+	Path                    string      `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
+	ListenAddr              string      `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
+	GraphqlCache            bool        `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
+	ConnectionStats         bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
+	EnhancedConnectionStats bool        `yaml:"enhanced_connection_stats" envDefault:"false" env:"PROMETHEUS_ENHANCED_CONNECTION_STATS"`
+	Streams                 bool        `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
+	EngineStats             EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
+	CostStats               CostStats   `yaml:"cost_stats" envPrefix:"PROMETHEUS_COST_STATS_"`
+	CircuitBreaker          bool        `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
+	ExcludeMetrics          RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
+	ExcludeMetricLabels     RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
+	ExcludeScopeInfo        bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
 
 	SchemaFieldUsage PrometheusSchemaFieldUsage `yaml:"schema_usage" envPrefix:"PROMETHEUS_SCHEMA_FIELD_USAGE_"`
 }
@@ -160,18 +162,19 @@ type MetricsLogExporter struct {
 }
 
 type MetricsOTLP struct {
-	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
-	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
-	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
-	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
-	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
-	CostStats           CostStats             `yaml:"cost_stats" envPrefix:"METRICS_OTLP_COST_STATS_"`
-	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
-	Streams             bool                  `yaml:"streams" envDefault:"false" env:"METRICS_OTLP_STREAM"`
-	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
-	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
-	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
-	LogExporter         MetricsLogExporter    `yaml:"log_exporter" envPrefix:"METRICS_OTLP_LOG_EXPORTER_"`
+	Enabled                 bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
+	RouterRuntime           bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
+	GraphqlCache            bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
+	ConnectionStats         bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
+	EnhancedConnectionStats bool                  `yaml:"enhanced_connection_stats" envDefault:"false" env:"METRICS_OTLP_ENHANCED_CONNECTION_STATS"`
+	EngineStats             EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
+	CostStats               CostStats             `yaml:"cost_stats" envPrefix:"METRICS_OTLP_COST_STATS_"`
+	CircuitBreaker          bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
+	Streams                 bool                  `yaml:"streams" envDefault:"false" env:"METRICS_OTLP_STREAM"`
+	ExcludeMetrics          RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
+	ExcludeMetricLabels     RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
+	Exporters               []MetricsOTLPExporter `yaml:"exporters"`
+	LogExporter             MetricsLogExporter    `yaml:"log_exporter" envPrefix:"METRICS_OTLP_LOG_EXPORTER_"`
 }
 
 type Telemetry struct {

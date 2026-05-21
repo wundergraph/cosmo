@@ -41,8 +41,10 @@
         "RouterRuntime": true,
         "GraphqlCache": false,
         "ConnectionStats": false,
+        "EnhancedConnectionStats": false,
         "EngineStats": {
-          "Subscriptions": false
+          "Subscriptions": false,
+          "Resolvers": false
         },
         "CostStats": {
           "EstimatedEnabled": false,
@@ -65,9 +67,11 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
         "ConnectionStats": false,
+        "EnhancedConnectionStats": false,
         "Streams": false,
         "EngineStats": {
-          "Subscriptions": false
+          "Subscriptions": false,
+          "Resolvers": false
         },
         "CostStats": {
           "EstimatedEnabled": false,

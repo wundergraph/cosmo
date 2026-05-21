@@ -1257,6 +1257,11 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
+                "enhanced_connection_stats": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable enhanced connection stats: per-request HTTP client trace metrics (DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms) for outgoing subgraph requests. The default value is false."
+                },
                 "streams": {
                   "type": "boolean",
                   "default": false,
@@ -1275,6 +1280,11 @@
                       "type": "boolean",
                       "default": false,
                       "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
+                    },
+                    "resolvers": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable engine resolver concurrency metrics (max concurrent resolver slots and slots currently in use). The default value is false."
                     }
                   }
                 },
@@ -1413,6 +1423,11 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
+                "enhanced_connection_stats": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable enhanced connection stats: per-request HTTP client trace metrics (DNS lookup, TCP connect, TLS handshake, and time-to-first-byte histograms) for outgoing subgraph requests. The default value is false."
+                },
                 "streams": {
                   "type": "boolean",
                   "default": false,
@@ -1431,6 +1446,11 @@
                       "type": "boolean",
                       "default": false,
                       "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
+                    },
+                    "resolvers": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable engine resolver concurrency metrics (max concurrent resolver slots and slots currently in use). The default value is false."
                     }
                   }
                 },

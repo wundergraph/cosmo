@@ -156,9 +156,13 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, response.Config.CompatibilityVersion)
 	}
 
-	isConnStoreEnabled := r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
+	// Active-connection tracking via TraceDialer is only needed when ConnectionStats is on.
+	// The httptrace-based client trace phases (EnhancedConnectionStats) attach in the RoundTripper
+	// and don't require the dialer.
+	enhancedStatsEnabled := r.metricConfig.OpenTelemetry.EnhancedConnectionStats || r.metricConfig.Prometheus.EnhancedConnectionStats
+	connectionStatsEnabled := enhancedStatsEnabled || r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
 	var traceDialer *TraceDialer
-	if isConnStoreEnabled {
+	if connectionStatsEnabled {
 		traceDialer = NewTraceDialer()
 	}
 
@@ -248,7 +252,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		}
 	}
 
-	if isConnStoreEnabled {
+	if connectionStatsEnabled {
 		connStore, err := rmetric.NewConnectionMetricStore(
 			s.logger,
 			nil,
@@ -1049,10 +1053,12 @@ func (s *graphServer) buildGraphMux(
 		// but in this case we use the same metric store
 		otlpOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.OpenTelemetry.Enabled,
+			EngineResolverStats:  s.metricConfig.OpenTelemetry.EngineStats.Resolver,
 			CostStats:            s.metricConfig.OpenTelemetry.CostStats,
 		}
 		promOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.Prometheus.Enabled,
+			EngineResolverStats:  s.metricConfig.Prometheus.EngineStats.Resolver,
 			CostStats:            s.metricConfig.Prometheus.CostStats,
 		}
 
@@ -1454,6 +1460,13 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
+	if s.engineStats != nil && executor.Resolver != nil {
+		s.engineStats.RegisterResolver(executor.Resolver)
+		context.AfterFunc(graphMuxCtx, func() {
+			s.engineStats.UnregisterResolver(executor.Resolver)
+		})
+	}
+
 	s.pubSubProviders = providers
 	if pubSubStartupErr := s.startupPubSubProviders(s.graphServerCtx); pubSubStartupErr != nil {
 		return nil, pubSubStartupErr
@@ -1685,6 +1698,7 @@ func (s *graphServer) buildGraphMux(
 		EnableResponseHeaderPropagation: s.headerRules != nil,
 		EnableCostResponseHeaders:       s.securityConfiguration.CostControl != nil && s.securityConfiguration.CostControl.ExposeHeaders,
 		EngineStats:                     s.engineStats,
+		MetricStore:                     gm.metricStore,
 		TracerProvider:                  s.tracerProvider,
 		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
