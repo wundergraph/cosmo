@@ -10,6 +10,7 @@ on:
     paths-ignore:
       - 'docs-website/**'
       - '*.md'
+      - '.github/CODEOWNERS'
 
 permissions:
   contents: write
