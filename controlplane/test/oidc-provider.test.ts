@@ -40,7 +40,10 @@ describe('OIDC provider', (ctx) => {
     expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const { providers } = await client.listOIDCProviders({});
-    const providerId = providers[0].id;
+    const provider = providers.find((p) => p.name === 'okta')!;
+    expect(provider).toBeDefined();
+    expect(provider.id).toBeTruthy();
+    const providerId = provider.id;
 
     const getOIDCProviderResponse = await client.getOIDCProvider({ id: providerId });
     expect(getOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -142,7 +145,10 @@ describe('OIDC provider', (ctx) => {
     expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const { providers } = await client.listOIDCProviders({});
-    const providerId = providers[0].id;
+    const provider = providers.find((p) => p.name === 'okta')!;
+    expect(provider).toBeDefined();
+    expect(provider.id).toBeTruthy();
+    const providerId = provider.id;
 
     let getOIDCProviderResponse = await client.getOIDCProvider({ id: providerId });
     expect(getOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -219,19 +225,20 @@ describe('OIDC provider', (ctx) => {
     expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const { providers } = await client.listOIDCProviders({});
-    const providerId = providers[0].id;
+    const provider = providers.find((p) => p.name === 'okta')!;
+    expect(provider).toBeDefined();
+    expect(provider.id).toBeTruthy();
+    expect(provider.endpoint).toBe('localhost:8080');
 
-    const getOIDCProviderResponse = await client.getOIDCProvider({ id: providerId });
+    const getOIDCProviderResponse = await client.getOIDCProvider({ id: provider.id });
     expect(getOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getOIDCProviderResponse.endpoint).toBe('localhost:8080');
-    expect(getOIDCProviderResponse.name).toBe('okta');
     expect(getOIDCProviderResponse.mappers).toHaveLength(1);
     expect(getOIDCProviderResponse.mappers[0].groupId).toBe(adminGroup.groupId);
     expect(getOIDCProviderResponse.mappers[0].ssoGroup).toBe('admin_group');
 
     authenticator.changeUser(TestUser.devJoeCompanyA);
 
-    let deleteOIDCProviderResponse = await client.deleteOIDCProvider({ id: providerId });
+    let deleteOIDCProviderResponse = await client.deleteOIDCProvider({ id: provider.id });
     expect(deleteOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(deleteOIDCProviderResponse.response?.details).toBe(
       'The user does not have the permissions to perform this operation',
@@ -239,7 +246,7 @@ describe('OIDC provider', (ctx) => {
 
     authenticator.changeUser(TestUser.viewerTimCompanyA);
 
-    deleteOIDCProviderResponse = await client.deleteOIDCProvider({ id: providerId });
+    deleteOIDCProviderResponse = await client.deleteOIDCProvider({ id: provider.id });
     expect(deleteOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(deleteOIDCProviderResponse.response?.details).toBe(
       'The user does not have the permissions to perform this operation',
@@ -269,7 +276,10 @@ describe('OIDC provider', (ctx) => {
     expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const { providers } = await client.listOIDCProviders({});
-    const providerId = providers[0].id;
+    const provider = providers.find((p) => p.name === 'okta')!;
+    expect(provider).toBeDefined();
+    expect(provider.id).toBeTruthy();
+    const providerId = provider.id;
 
     let getOIDCProviderResponse = await client.getOIDCProvider({ id: providerId });
     expect(getOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -327,12 +337,13 @@ describe('OIDC provider', (ctx) => {
     expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const { providers } = await client.listOIDCProviders({});
-    const providerId = providers[0].id;
+    const provider = providers.find((p) => p.name === 'okta')!;
+    expect(provider).toBeDefined();
+    expect(provider.id).toBeTruthy();
+    expect(provider.endpoint).toBe('localhost:8080');
 
-    const getOIDCProviderResponse = await client.getOIDCProvider({ id: providerId });
+    const getOIDCProviderResponse = await client.getOIDCProvider({ id: provider.id });
     expect(getOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getOIDCProviderResponse.endpoint).toBe('localhost:8080');
-    expect(getOIDCProviderResponse.name).toBe('okta');
     expect(getOIDCProviderResponse.mappers).toHaveLength(1);
     expect(getOIDCProviderResponse.mappers[0].groupId).toBe(adminGroup.groupId);
     expect(getOIDCProviderResponse.mappers[0].ssoGroup).toBe('admin_group');
@@ -340,7 +351,7 @@ describe('OIDC provider', (ctx) => {
     authenticator.changeUser(TestUser.devJoeCompanyA);
 
     let updateMappersResponse = await client.updateIDPMappers({
-      id: providerId,
+      id: provider.id,
       mappers: [
         new GroupMapper({
           groupId: adminGroup.groupId,
@@ -360,7 +371,7 @@ describe('OIDC provider', (ctx) => {
     authenticator.changeUser(TestUser.viewerTimCompanyA);
 
     updateMappersResponse = await client.updateIDPMappers({
-      id: providerId,
+      id: provider.id,
       mappers: [
         new GroupMapper({
           groupId: adminGroup.groupId,
@@ -425,7 +436,10 @@ describe('OIDC provider', (ctx) => {
     expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const { providers } = await client.listOIDCProviders({});
-    const providerId = providers[0].id;
+    const provider = providers.find((p) => p.name === 'okta')!;
+    expect(provider).toBeDefined();
+    expect(provider.id).toBeTruthy();
+    const providerId = provider.id;
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
     await orgRepo.updateFeature({

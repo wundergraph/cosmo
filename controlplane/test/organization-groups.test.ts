@@ -350,7 +350,11 @@ describe('Organization Group tests', () => {
 
     // Ensure that the mapper was updated
     const { providers } = await client.listOIDCProviders({});
-    const getProviderResponse = await client.getOIDCProvider({ id: providers[0].id });
+    const provider = providers.find((p) => p.name === oidcName)!;
+    expect(provider).toBeDefined();
+    expect(provider.id).toBeTruthy();
+
+    const getProviderResponse = await client.getOIDCProvider({ id: provider.id });
     expect(getProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const mapper = getProviderResponse.mappers?.find((m) => m.groupId === adminGroup.groupId);
