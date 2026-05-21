@@ -122,13 +122,14 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 		// Extract description from operation definition
 		opDescription := extractOperationDescription(&opDoc)
 
-		// Strip operation/fragment descriptions before storing OperationString.
-		// Descriptions on OperationDefinition / FragmentDefinition are a September 2025
-		// GraphQL spec addition; most upstream parsers (including third-party APIs like
-		// rickandmorty, anilist, countries) still reject them as syntax errors. We keep
-		// the description on Operation.Description for MCP tool metadata.
-		clearOperationAndFragmentDescriptions(&opDoc)
-		cleanedOperationString, printErr := astprinter.PrintString(&opDoc)
+		// Strip executable-document descriptions before storing OperationString.
+		// Descriptions on OperationDefinition / FragmentDefinition / VariableDefinition
+		// are a recent GraphQL spec addition; most upstream parsers (including
+		// third-party APIs like rickandmorty, anilist, countries) still reject them as
+		// syntax errors. We keep the operation description on Operation.Description for
+		// MCP tool metadata, and keep variable-definition descriptions on the stored
+		// Document so BuildJsonSchema can still enrich the MCP tool input schema.
+		cleanedOperationString, printErr := printOperationWithoutExecutableDescriptions(&opDoc)
 		if printErr != nil {
 			l.Logger.Error("failed to re-print MCP operation after stripping descriptions",
 				zap.String("operation", opName),
@@ -204,17 +205,38 @@ func GetOperationNameAndType(doc *ast.Document) (string, string, error) {
 	return "", "", fmt.Errorf("no operation found in document")
 }
 
-// clearOperationAndFragmentDescriptions marks every OperationDefinition and
-// FragmentDefinition description in the document as undefined so the printer
-// emits a description-free GraphQL document. Used when forwarding operations
-// to upstreams that don't yet support the September 2025 description spec.
-func clearOperationAndFragmentDescriptions(doc *ast.Document) {
+// printOperationWithoutExecutableDescriptions prints doc as a GraphQL document
+// with all executable-document descriptions removed, so it can be forwarded to
+// upstreams that don't yet support the recent description spec additions.
+//
+// OperationDefinition / FragmentDefinition descriptions are cleared permanently:
+// the operation description is already extracted into Operation.Description, and
+// fragment descriptions are unused after loading.
+//
+// VariableDefinition descriptions are cleared only for the duration of printing,
+// then restored — BuildJsonSchema still reads them off the stored Document to
+// enrich the MCP tool input schema.
+func printOperationWithoutExecutableDescriptions(doc *ast.Document) (string, error) {
 	for i := range doc.OperationDefinitions {
 		doc.OperationDefinitions[i].Description.IsDefined = false
 	}
 	for i := range doc.FragmentDefinitions {
 		doc.FragmentDefinitions[i].Description.IsDefined = false
 	}
+
+	savedVarDescriptions := make([]bool, len(doc.VariableDefinitions))
+	for i := range doc.VariableDefinitions {
+		savedVarDescriptions[i] = doc.VariableDefinitions[i].Description.IsDefined
+		doc.VariableDefinitions[i].Description.IsDefined = false
+	}
+
+	out, err := astprinter.PrintString(doc)
+
+	for i := range doc.VariableDefinitions {
+		doc.VariableDefinitions[i].Description.IsDefined = savedVarDescriptions[i]
+	}
+
+	return out, err
 }
 
 // extractOperationDescription extracts the description string from an operation definition

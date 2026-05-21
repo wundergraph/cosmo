@@ -173,7 +173,15 @@ func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, 
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	md := make(metadata.MD)
+	// Preserve any outgoing metadata already set by upstream layers (e.g.
+	// propagated client headers like Authorization appended by the graphql
+	// gRPC datasource); merge OTel trace context into it rather than wiping.
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if ok {
+		md = md.Copy()
+	} else {
+		md = make(metadata.MD)
+	}
 	otel.GetTextMapPropagator().Inject(ctx, metadataCarrier{md})
 	ctx = metadata.NewOutgoingContext(ctx, md)
 

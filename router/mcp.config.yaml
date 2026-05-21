@@ -8,9 +8,25 @@
 # (yoko search + JS sandbox) bound to that tenant's schema. Yoko at :3400 is
 # shared — it keys schemas by content SHA so each tenant indexes its own SDL.
 
+headers:
+  all:
+    request:
+      - op: propagate
+        named: Authorization
+  subgraphs:
+    github:
+      request:
+        - op: propagate
+          named: Authorization
+
+plugins:
+  enabled: true
+  path: '/Users/asoorm/go/src/github.com/wundergraph/connnectors/plugins'
+
 execution_config:
   file:
-    path: '../router-tests/testenv/testdata/config.json'
+    #    path: '../router-tests/testenv/testdata/config.json'
+    path: '/Users/asoorm/go/src/github.com/wundergraph/connnectors/execution-config.json'
     watch: true
     watch_interval: 20s
 
@@ -21,6 +37,28 @@ mcp:
   router_url: 'http://localhost:3002/graphql'
 
   servers:
+    - name: 'router'
+      path: /router
+      omit_tool_name_prefix: true
+      session:
+        stateless: false
+      storage:
+        provider_id: router
+        watch: true
+        watch_interval: 1s
+      code_mode:
+        enabled: true
+        require_mutation_approval: false
+        execute_timeout: 180s
+        sandbox:
+          timeout: 180s
+        query_generation:
+          enabled: true
+          endpoint: http://127.0.0.1:3400
+          timeout: 180s
+        named_ops:
+          enabled: true
+
     - name: 'anilist'
       path: /anilist
       omit_tool_name_prefix: true
@@ -127,3 +165,5 @@ storage_providers:
       path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/anilist
     - id: swapi
       path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/swapi
+    - id: router
+      path: /Users/asoorm/go/src/github.com/wundergraph/conference-mcp-demo/.operations/router
