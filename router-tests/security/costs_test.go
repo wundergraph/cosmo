@@ -510,6 +510,53 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
+		t.Run("explicit null in remapped dot-path variable does not fall back to schema default", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled: true,
+						Mode:    config.CostControlModeMeasure,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Explicit null at pagination.first must be preserved through the remap
+				// (it overrides any schema default), so requireOneSlicingArgument sees
+				// "no slicing argument provided" rather than a defaulted value.
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:     `query S($searchInput: ProductSearchInput!) { searchThings(input: $searchInput) { a } }`,
+					Variables: []byte(`{"searchInput": {"pagination": {"first": null}}}`),
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"errors"`)
+				require.Contains(t, res.Body, `requires exactly one slicing argument, but none was provided`)
+				require.NotContains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("requireOneSlicingArgument validation across two remapped variables", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled: true,
+						Mode:    config.CostControlModeMeasure,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:     `query S($firstCount: Int, $lastCount: Int) { slicedThings(first: $firstCount, last: $lastCount) { a } }`,
+					Variables: []byte(`{"firstCount": 5, "lastCount": 3}`),
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"errors"`)
+				require.Contains(t, res.Body, `requires exactly one slicing argument, but 2 were provided`)
+				require.NotContains(t, res.Body, `"data":`)
+			})
+		})
+
 		t.Run("disabled variable remapping still computes cost correctly", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
