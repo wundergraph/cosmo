@@ -30,9 +30,9 @@ describe('IdP gate (namespace ↔ SSO/password mapping)', () => {
   let providerId: string;
   let providerAlias: string;
 
-  const ssoNs = genID('sso-ns');
-  const passwordNs = genID('password-ns');
-  const openNs = genID('open-ns');
+  const ssoNs = 'sso-ns';
+  const passwordNs = 'password-ns';
+  const openNs = 'open-ns';
 
   beforeAll(async () => {
     dbname = await beforeAllSetup();
