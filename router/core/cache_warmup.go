@@ -37,6 +37,7 @@ type CacheWarmupConfig struct {
 	FallbackSource CacheWarmupSource
 	Workers        int
 	ItemsPerSecond int
+	ItemDelay      time.Duration
 	Timeout        time.Duration
 	Processor      CacheWarmupProcessor
 	AfterOperation func(item *CacheWarmupOperationPlanResult)
@@ -49,6 +50,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 		fallbackSource: cfg.FallbackSource,
 		workers:        cfg.Workers,
 		itemsPerSecond: cfg.ItemsPerSecond,
+		itemDelay:      cfg.ItemDelay,
 		timeout:        cfg.Timeout,
 		processor:      cfg.Processor,
 		afterOperation: cfg.AfterOperation,
@@ -65,6 +67,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	w.log.Info("Warmup started",
 		zap.Int("workers", cfg.Workers),
 		zap.Int("items_per_second", cfg.ItemsPerSecond),
+		zap.Duration("item_delay", cfg.ItemDelay),
 		zap.Duration("timeout", cfg.Timeout),
 	)
 	start := time.Now()
@@ -97,6 +100,7 @@ type cacheWarmup struct {
 	fallbackSource CacheWarmupSource
 	workers        int
 	itemsPerSecond int
+	itemDelay      time.Duration
 	timeout        time.Duration
 	processor      CacheWarmupProcessor
 	afterOperation func(item *CacheWarmupOperationPlanResult)
@@ -177,6 +181,14 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 
 					if err == nil && res != nil && w.afterOperation != nil {
 						w.afterOperation(res)
+					}
+
+					if w.itemDelay > 0 {
+						select {
+						case <-done:
+							return
+						case <-time.After(w.itemDelay):
+						}
 					}
 
 					select {

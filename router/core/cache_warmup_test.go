@@ -436,4 +436,69 @@ func TestCacheWarmup(t *testing.T) {
 			}
 		}
 	})
+	t.Run("item delay spaces out processing", func(t *testing.T) {
+		t.Parallel()
+		const itemCount = 4
+		const itemDelay = 50 * time.Millisecond
+		items := make([]*nodev1.Operation, itemCount)
+		for i := range items {
+			items[i] = &nodev1.Operation{
+				Request: &nodev1.OperationRequest{
+					Query: "query { foo }",
+				},
+			}
+		}
+		source := &CacheWarmupMockSource{items: items}
+		processor := &CacheWarmupMockProcessor{
+			mux: sync.Mutex{},
+		}
+		cfg := &CacheWarmupConfig{
+			Log:            zap.NewNop(),
+			Source:         source,
+			Processor:      processor,
+			ItemsPerSecond: 0, // unlimited
+			ItemDelay:      itemDelay,
+			Workers:        1, // single worker so delays are sequential
+			Timeout:        10 * time.Second,
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		start := time.Now()
+		err := WarmupCaches(ctx, cfg)
+		elapsed := time.Since(start)
+		require.NoError(t, err)
+		processor.mux.Lock()
+		require.Len(t, processor.processedItems, itemCount)
+		processor.mux.Unlock()
+		// With one worker, a delay is applied after each of the itemCount items.
+		require.GreaterOrEqual(t, elapsed, time.Duration(itemCount)*itemDelay)
+	})
+	t.Run("zero item delay does not block processing", func(t *testing.T) {
+		t.Parallel()
+		source := &CacheWarmupMockSource{
+			items: []*nodev1.Operation{
+				{Request: &nodev1.OperationRequest{Query: "query { foo }"}},
+				{Request: &nodev1.OperationRequest{Query: "query { bar }"}},
+			},
+		}
+		processor := &CacheWarmupMockProcessor{
+			mux: sync.Mutex{},
+		}
+		cfg := &CacheWarmupConfig{
+			Log:            zap.NewNop(),
+			Source:         source,
+			Processor:      processor,
+			ItemsPerSecond: 0, // unlimited
+			ItemDelay:      0, // no delay
+			Workers:        2,
+			Timeout:        time.Second,
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		err := WarmupCaches(ctx, cfg)
+		require.NoError(t, err)
+		processor.mux.Lock()
+		require.Len(t, processor.processedItems, 2)
+		processor.mux.Unlock()
+	})
 }

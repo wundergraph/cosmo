@@ -1522,6 +1522,7 @@ func (s *graphServer) buildGraphMux(
 			Processor:      processor,
 			Workers:        s.cacheWarmup.Workers,
 			ItemsPerSecond: s.cacheWarmup.ItemsPerSecond,
+			ItemDelay:      s.cacheWarmup.ItemDelay,
 			Timeout:        s.cacheWarmup.Timeout,
 		}
 

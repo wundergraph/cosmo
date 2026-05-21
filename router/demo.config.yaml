@@ -20,3 +20,13 @@ events:
       - id: my-redis
         urls:
           - "redis://localhost:6379/2"
+
+# In-memory cache warmer: reuse cached query plans in memory and
+# re-warm normalization/validation/planning caches on schema changes
+# and hot config reloads.
+cache_warmup:
+  enabled: true
+  in_memory_fallback: true
+  source:
+    cdn:
+      enabled: false
