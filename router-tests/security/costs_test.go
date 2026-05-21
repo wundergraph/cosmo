@@ -602,7 +602,7 @@ func TestOperationCost(t *testing.T) {
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query:     `query($some: Int) { slicedThings(first: $some) { a } }`,
-					Variables: []byte(`{"$some": null}`),
+					Variables: []byte(`{"some": null}`),
 				})
 				require.NoError(t, err)
 				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
