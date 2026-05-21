@@ -43,15 +43,6 @@ export function deleteOIDCProvider(
       };
     }
 
-    if (!req.id) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_BAD_REQUEST,
-          details: 'Provider id is required',
-        },
-      };
-    }
-
     const provider = await oidcRepo.getOidcProviderById({
       id: req.id,
       organizationId: authContext.organizationId,
