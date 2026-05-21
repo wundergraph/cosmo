@@ -71,7 +71,12 @@ import {
 } from '../composition/composeGraphs.pool.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
-import { applyIdpNamespaceGate, checkIfLabelMatchersChanged, normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import {
+  applyIdpNamespaceGate,
+  checkIfLabelMatchersChanged,
+  normalizeLabelMatchers,
+  normalizeLabels,
+} from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
