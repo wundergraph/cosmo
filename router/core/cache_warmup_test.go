@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -436,69 +437,92 @@ func TestCacheWarmup(t *testing.T) {
 			}
 		}
 	})
-	t.Run("item delay spaces out processing", func(t *testing.T) {
+	t.Run("item delay combined with items per second", func(t *testing.T) {
 		t.Parallel()
-		const itemCount = 4
-		const itemDelay = 50 * time.Millisecond
-		items := make([]*nodev1.Operation, itemCount)
-		for i := range items {
-			items[i] = &nodev1.Operation{
-				Request: &nodev1.OperationRequest{
-					Query: "query { foo }",
-				},
+
+		newItems := func(n int) []*nodev1.Operation {
+			items := make([]*nodev1.Operation, n)
+			for i := range items {
+				items[i] = &nodev1.Operation{
+					Request: &nodev1.OperationRequest{Query: "query { foo }"},
+				}
 			}
+			return items
 		}
-		source := &CacheWarmupMockSource{items: items}
-		processor := &CacheWarmupMockProcessor{
-			mux: sync.Mutex{},
+
+		// runWarmup warms up itemCount items with a single worker so that the
+		// rate limiter and the item delay apply sequentially. It runs inside a
+		// testing/synctest bubble: the bubble's fake clock advances instantly
+		// and deterministically, so time.After (ItemDelay) and the rate
+		// limiter's sleeps produce an exact, flake-free elapsed duration.
+		runWarmup := func(t *testing.T, itemCount, itemsPerSecond int, itemDelay time.Duration) time.Duration {
+			t.Helper()
+			var elapsed time.Duration
+			synctest.Test(t, func(t *testing.T) {
+				source := &CacheWarmupMockSource{items: newItems(itemCount)}
+				processor := &CacheWarmupMockProcessor{mux: sync.Mutex{}}
+				cfg := &CacheWarmupConfig{
+					Log:            zap.NewNop(),
+					Source:         source,
+					Processor:      processor,
+					ItemsPerSecond: itemsPerSecond,
+					ItemDelay:      itemDelay,
+					Workers:        1, // single worker => spacing is sequential
+					Timeout:        30 * time.Second,
+				}
+				start := time.Now()
+				require.NoError(t, WarmupCaches(context.Background(), cfg))
+				elapsed = time.Since(start)
+
+				// WarmupCaches returns once all items are counted, but its
+				// worker goroutine still has to observe the closed index
+				// channel and exit. Wait for it so the bubble can settle.
+				synctest.Wait()
+
+				processor.mux.Lock()
+				require.Len(t, processor.processedItems, itemCount)
+				processor.mux.Unlock()
+			})
+			return elapsed
 		}
-		cfg := &CacheWarmupConfig{
-			Log:            zap.NewNop(),
-			Source:         source,
-			Processor:      processor,
-			ItemsPerSecond: 0, // unlimited
-			ItemDelay:      itemDelay,
-			Workers:        1, // single worker so delays are sequential
-			Timeout:        10 * time.Second,
-		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		start := time.Now()
-		err := WarmupCaches(ctx, cfg)
-		elapsed := time.Since(start)
-		require.NoError(t, err)
-		processor.mux.Lock()
-		require.Len(t, processor.processedItems, itemCount)
-		processor.mux.Unlock()
-		// With one worker, a delay is applied after each of the itemCount items.
-		require.GreaterOrEqual(t, elapsed, time.Duration(itemCount)*itemDelay)
-	})
-	t.Run("zero item delay does not block processing", func(t *testing.T) {
-		t.Parallel()
-		source := &CacheWarmupMockSource{
-			items: []*nodev1.Operation{
-				{Request: &nodev1.OperationRequest{Query: "query { foo }"}},
-				{Request: &nodev1.OperationRequest{Query: "query { bar }"}},
-			},
-		}
-		processor := &CacheWarmupMockProcessor{
-			mux: sync.Mutex{},
-		}
-		cfg := &CacheWarmupConfig{
-			Log:            zap.NewNop(),
-			Source:         source,
-			Processor:      processor,
-			ItemsPerSecond: 0, // unlimited
-			ItemDelay:      0, // no delay
-			Workers:        2,
-			Timeout:        time.Second,
-		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		err := WarmupCaches(ctx, cfg)
-		require.NoError(t, err)
-		processor.mux.Lock()
-		require.Len(t, processor.processedItems, 2)
-		processor.mux.Unlock()
+
+		// The rate limiter spaces the *start* of each item by 1/itemsPerSecond,
+		// while ItemDelay pauses *after* each item is processed. With a single
+		// worker the two overlap: effective per-item spacing is
+		// max(1/itemsPerSecond, ItemDelay), not the sum of the two.
+
+		t.Run("no item delay and no rate limit runs without throttling", func(t *testing.T) {
+			t.Parallel()
+			// With ItemDelay=0 the post-processing pause is skipped entirely and
+			// the unlimited rate limiter never sleeps: nothing advances the clock.
+			elapsed := runWarmup(t, 6, 0 /* unlimited */, 0 /* no delay */)
+			require.Equal(t, time.Duration(0), elapsed)
+		})
+
+		t.Run("item delay caps throughput below the configured items per second", func(t *testing.T) {
+			t.Parallel()
+			const itemCount = 6
+			const itemsPerSecond = 2                  // 500ms rate gap
+			const itemDelay = 1100 * time.Millisecond // slower than the 500ms rate gap
+			elapsed := runWarmup(t, itemCount, itemsPerSecond, itemDelay)
+
+			// Because itemDelay > rate gap, the delay — not the rate limiter —
+			// paces the run. 1 worker: elapsed is exactly itemCount*itemDelay,
+			// i.e. throughput 1/itemDelay (~0.91/s), capped below the configured
+			// itemsPerSecond (2/s).
+			require.Equal(t, itemCount*itemDelay, elapsed)
+		})
+
+		t.Run("rate limit dominates when slower than the item delay", func(t *testing.T) {
+			t.Parallel()
+			const itemCount = 6
+			const itemsPerSecond = 25 // => 40ms between item starts
+			const rateGap = time.Second / itemsPerSecond
+			const itemDelay = 5 * time.Millisecond // far smaller than the 40ms rate gap
+			elapsed := runWarmup(t, itemCount, itemsPerSecond, itemDelay)
+			// The rate limiter spaces the (itemCount-1) gaps between item
+			// starts; the final item still incurs one trailing ItemDelay.
+			require.Equal(t, (itemCount-1)*rateGap+itemDelay, elapsed)
+		})
 	})
 }
