@@ -88,7 +88,7 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
                 : 'flex items-center justify-start gap-4 rounded-lg px-3 py-1.5',
             )}
           >
-            {!isViewingGraphOrSubgraph && (
+            {(hasNoAccess || !isViewingGraphOrSubgraph) && (
               <span
                 className={cn(
                   truncateNamespace && 'max-w-[180px] truncate lg:max-w-xs',
