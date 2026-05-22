@@ -5,7 +5,7 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import { NamespaceSsoMappingRepository } from '../repositories/NamespaceSsoMappingRepository.js';
 import { traced } from '../tracing.js';
-import type { LoginMethod, NamespaceAccess } from '../../types/index.js';
+import type { LoginMethod } from '../../types/index.js';
 import { buildAuthState } from '../util.js';
 import type { RBACEvaluator } from './RBACEvaluator.js';
 
@@ -18,7 +18,6 @@ export type AccessTokenAuthContext = {
   organizationDeactivated: boolean;
   rbac: RBACEvaluator;
   loginMethod: LoginMethod;
-  idpNamespaceAccess?: NamespaceAccess;
 };
 
 @traced
@@ -62,7 +61,7 @@ export default class AccessTokenAuthenticator {
     // carries the same login method (and therefore the same IdP gate) as a web
     // session, derived from the `identity_provider` claim on the userinfo
     // response (absent → password login).
-    const { loginMethod, rbac, namespaceAccess } = await buildAuthState(
+    const { loginMethod, rbac } = await buildAuthState(
       { oidcRepo: this.oidcRepo, orgRepo: this.orgRepo, namespaceSsoMappingRepo: this.namespaceSsoMappingRepo },
       { organizationId: organization.id, userId: userInfoData.sub, idpAlias: userInfoData.identity_provider },
     );
@@ -76,7 +75,6 @@ export default class AccessTokenAuthenticator {
       organizationDeactivated,
       rbac,
       loginMethod,
-      idpNamespaceAccess: namespaceAccess,
     };
   }
 

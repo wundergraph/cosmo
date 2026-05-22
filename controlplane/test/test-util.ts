@@ -671,7 +671,7 @@ export async function loginAs({
     loginMethod,
   });
   const rbac = new RBACEvaluator(base.rbac.groups, base.userId, loginMethod.type === 'api-key', namespaceAccess);
-  authenticator.changeUserWithSuppliedContext({ ...base, loginMethod, idpNamespaceAccess: namespaceAccess, rbac });
+  authenticator.changeUserWithSuppliedContext({ ...base, loginMethod, rbac });
   return { namespaceAccess, rbac };
 }
 

@@ -506,7 +506,6 @@ export type AuthContext = {
   userDisplayName: string;
   apiKeyName?: string;
   loginMethod?: LoginMethod;
-  idpNamespaceAccess?: NamespaceAccess;
 };
 
 /**

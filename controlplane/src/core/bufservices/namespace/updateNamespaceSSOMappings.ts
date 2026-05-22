@@ -57,8 +57,9 @@ export function updateNamespaceSSOMappings(
 
       // Gate-self check: an admin can only configure a namespace their current
       // login method can already access (prevents a compromised non-prod IdP
-      // from re-mapping prod namespaces).
-      if (authContext.idpNamespaceAccess && !isNamespaceAllowed(authContext.idpNamespaceAccess, namespace.id)) {
+      // from re-mapping prod namespaces). API-key contexts are never gated, so
+      // their gate is `all` and this always passes.
+      if (!isNamespaceAllowed(authContext.rbac.idpNamespaceAccess, namespace.id)) {
         throw new UnauthorizedError();
       }
 

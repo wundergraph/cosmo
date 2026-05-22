@@ -970,8 +970,9 @@ export function applyIdpNamespaceGate(
  *  2. Applies the IdP namespace gate for that login method.
  *  3. Builds the RBAC evaluator from the org's member groups plus the gate.
  *
- * Returns the login method, the evaluator and the namespace-access result (the
- * auth context stores them separately). Shared by both authenticators.
+ * Returns the login method and the evaluator. The namespace gate is baked into
+ * the evaluator (`rbac.idpNamespaceAccess`), which is the single source of
+ * truth for it. Shared by both authenticators.
  */
 export async function buildAuthState(
   deps: {
@@ -980,7 +981,7 @@ export async function buildAuthState(
     namespaceSsoMappingRepo: NamespaceSsoMappingRepository;
   },
   input: { organizationId: string; userId: string; idpAlias: string | null | undefined },
-): Promise<{ loginMethod: LoginMethod; rbac: RBACEvaluator; namespaceAccess: NamespaceAccess }> {
+): Promise<{ loginMethod: LoginMethod; rbac: RBACEvaluator }> {
   let loginMethod: LoginMethod = { type: 'password' };
   if (input.idpAlias) {
     const provider = await deps.oidcRepo.getOidcProviderByAlias({
@@ -1009,7 +1010,7 @@ export async function buildAuthState(
     namespaceAccess,
   );
 
-  return { loginMethod, rbac, namespaceAccess };
+  return { loginMethod, rbac };
 }
 
 /** Whether a specific namespace is reachable under the given {@link NamespaceAccess}. */
