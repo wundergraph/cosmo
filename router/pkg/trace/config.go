@@ -77,6 +77,13 @@ type Config struct {
 	Attributes          []config.CustomAttribute
 	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values
 	SanitizeUTF8 *attributeprocessor.SanitizeUTF8Config
+	// EnhancedConnectionStats enables per-request HTTP client child spans
+	// (DNS lookup, TCP connect, TLS handshake, time-to-first-byte) under
+	// each subgraph HTTP span.
+	EnhancedConnectionStats bool
+	// ResolverAcquireSpans enables emission of a "Resolver - Acquire" child
+	// span representing time spent waiting for a resolver slot.
+	ResolverAcquireSpans bool
 }
 
 func DefaultExporter(cfg *Config) *ExporterConfig {

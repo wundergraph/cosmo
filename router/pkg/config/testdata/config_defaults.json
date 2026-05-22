@@ -27,6 +27,11 @@
       },
       "Attributes": null,
       "OperationContentAttributes": false,
+      "EnhancedConnectionStats": false,
+      "EngineStats": {
+        "Subscriptions": false,
+        "Resolvers": false
+      },
       "ExportGraphQLVariables": false,
       "WithNewRoot": false,
       "SanitizeUTF8": {

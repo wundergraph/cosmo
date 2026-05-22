@@ -1133,18 +1133,24 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		var info *resolve.GraphQLResolveInfo
+		resolveStart := time.Now()
 		info, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)
 		}
-		if info != nil && h.graphqlHandler.metricStore != nil {
-			h.graphqlHandler.metricStore.MeasureResolverAcquireDuration(
-				resolveCtx.Context(),
-				info.ResolveAcquireWaitTime,
-				reqContext.telemetry.metricSliceAttrs,
-				otelmetric.WithAttributes(reqContext.telemetry.metricAttrs...),
-			)
+		if info != nil {
+			if h.graphqlHandler.emitResolverAcquireSpan {
+				emitResolverAcquireSpan(resolveCtx.Context(), h.graphqlHandler.tracer, resolveStart, info.ResolveAcquireWaitTime, info.ResolveDeduplicated)
+			}
+			if h.graphqlHandler.metricStore != nil {
+				h.graphqlHandler.metricStore.MeasureResolverAcquireDuration(
+					resolveCtx.Context(),
+					info.ResolveAcquireWaitTime,
+					reqContext.telemetry.metricSliceAttrs,
+					otelmetric.WithAttributes(reqContext.telemetry.metricAttrs...),
+				)
+			}
 		}
 		_ = rw.Flush()
 		rw.Complete()

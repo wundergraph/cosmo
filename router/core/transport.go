@@ -51,6 +51,8 @@ func NewCustomTransport(
 	connectionMetricStore metric.ConnectionMetricStore,
 	breaker *circuit.Manager,
 	enableTraceClient bool,
+	tracerProvider otrace.TracerProvider,
+	emitConnectionPhaseSpan bool,
 ) *CustomTransport {
 	ct := &CustomTransport{
 		metricStore: metricStore,
@@ -79,7 +81,12 @@ func NewCustomTransport(
 			}
 			return &reqContext.expressionContext, activeSubgraphName
 		}
-		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getValuesFromRequest)
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, traceclient.Options{
+			ConnectionMetricStore:   connectionMetricStore,
+			TracerProvider:          tracerProvider,
+			EmitConnectionPhaseSpan: emitConnectionPhaseSpan,
+			ReqContextValuesGetter:  getValuesFromRequest,
+		})
 	}
 
 	if breaker.HasCircuits() {
@@ -196,6 +203,7 @@ type TransportFactory struct {
 	tracePropagators              propagation.TextMapPropagator
 	spanNameFormatter             SpanNameFormatterFunc
 	enableTraceClient             bool
+	emitConnectionPhaseSpan       bool
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -214,6 +222,9 @@ type TransportOptions struct {
 	TracePropagators              propagation.TextMapPropagator
 	SpanNameFormatter             SpanNameFormatterFunc
 	EnableTraceClient             bool
+	// EmitConnectionPhaseSpan toggles per-phase HTTP child spans (DNS, TCP,
+	// TLS, time-to-first-byte) on subgraph requests.
+	EmitConnectionPhaseSpan bool
 }
 
 type SubscriptionClientOptions struct {
@@ -243,6 +254,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		spanNameFormatter:             spanNameFormatter,
 		circuitBreaker:                opts.CircuitBreaker,
 		enableTraceClient:             opts.EnableTraceClient,
+		emitConnectionPhaseSpan:       opts.EmitConnectionPhaseSpan,
 	}
 }
 
@@ -281,6 +293,15 @@ func (t TransportFactory) RoundTripper(baseTransport http.RoundTripper) http.Rou
 			attributes = append(attributes, reqContext.telemetry.traceAttrs...)
 
 			span.SetAttributes(attributes...)
+
+			// Expose the HTTP client span context to the trace client so that the
+			// per-phase httptrace child spans (DNS lookup, TCP connect, TLS,
+			// time-to-first-byte) are parented under the subgraph HTTP span.
+			if t.enableTraceClient {
+				if ct, ok := r.Context().Value(traceclient.ClientTraceContextKey{}).(*traceclient.ClientTrace); ok && ct != nil {
+					ct.SetParentCtx(r.Context())
+				}
+			}
 		}),
 	)
 	tp := NewCustomTransport(
@@ -290,6 +311,8 @@ func (t TransportFactory) RoundTripper(baseTransport http.RoundTripper) http.Rou
 		t.connectionMetricStore,
 		t.circuitBreaker,
 		t.enableTraceClient,
+		t.tracerProvider,
+		t.emitConnectionPhaseSpan,
 	)
 
 	tp.preHandlers = t.preHandlers

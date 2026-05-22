@@ -1395,7 +1395,8 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
-	enableTraceClient := s.connectionMetrics != nil || exprManager.VisitorManager.IsSubgraphTraceUsedInExpressions()
+	emitConnectionPhaseSpan := s.traceConfig.Enabled && s.traceConfig.EnhancedConnectionStats
+	enableTraceClient := s.connectionMetrics != nil || exprManager.VisitorManager.IsSubgraphTraceUsedInExpressions() || emitConnectionPhaseSpan
 
 	var baseConnMetricStore rmetric.ConnectionMetricStore = &rmetric.NoopConnectionMetricStore{}
 	if s.connectionMetrics != nil {
@@ -1437,6 +1438,7 @@ func (s *graphServer) buildGraphMux(
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 			EnableTraceClient:             enableTraceClient,
+			EmitConnectionPhaseSpan:       emitConnectionPhaseSpan,
 			CircuitBreaker:                s.circuitBreakerManager,
 		},
 		subscriptionHooks: s.subscriptionHooks,
@@ -1700,6 +1702,7 @@ func (s *graphServer) buildGraphMux(
 		EngineStats:                     s.engineStats,
 		MetricStore:                     gm.metricStore,
 		TracerProvider:                  s.tracerProvider,
+		EmitResolverAcquireSpan:         s.traceConfig.Enabled && s.traceConfig.ResolverAcquireSpans,
 		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
 		EngineLoaderHooks:               loaderHooks,

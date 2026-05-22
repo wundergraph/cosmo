@@ -48,6 +48,11 @@
         }
       ],
       "OperationContentAttributes": false,
+      "EnhancedConnectionStats": true,
+      "EngineStats": {
+        "Subscriptions": false,
+        "Resolvers": true
+      },
       "ExportGraphQLVariables": true,
       "WithNewRoot": false,
       "SanitizeUTF8": {

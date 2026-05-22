@@ -2557,6 +2557,8 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 			Enabled:          cfg.Tracing.SanitizeUTF8.Enabled,
 			LogSanitizations: cfg.Tracing.SanitizeUTF8.LogSanitizations,
 		},
+		EnhancedConnectionStats: cfg.Tracing.EnhancedConnectionStats,
+		ResolverAcquireSpans:    cfg.Tracing.EngineStats.Resolvers,
 	}
 }
 

@@ -84,6 +84,12 @@ type Tracing struct {
 
 	OperationContentAttributes bool `yaml:"operation_content_attributes" envDefault:"false" env:"TRACING_OPERATION_CONTENT_ATTRIBUTES"`
 
+	// EnhancedConnectionStats enables per-request HTTP client child spans
+	// (DNS lookup, TCP connect, TLS handshake, time-to-first-byte) under each
+	// subgraph HTTP span. Mirrors the equivalent metrics flag.
+	EnhancedConnectionStats bool        `yaml:"enhanced_connection_stats" envDefault:"false" env:"TRACING_ENHANCED_CONNECTION_STATS"`
+	EngineStats             EngineStats `yaml:"engine_stats" envPrefix:"TRACING_"`
+
 	TracingGlobalFeatures `yaml:",inline"`
 
 	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values

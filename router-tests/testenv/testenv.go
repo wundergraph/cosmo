@@ -334,6 +334,13 @@ type Config struct {
 	TLSConfig                          config.TLSConfiguration
 	TraceExporter                      trace.SpanExporter
 	TracingSanitizeUTF8                *config.SanitizeUTF8Config
+	// TracingEnhancedConnectionStats enables per-request HTTP client child
+	// spans (DNS lookup, TCP connect, TLS handshake, time-to-first-byte)
+	// under each subgraph HTTP span when a TraceExporter is configured.
+	TracingEnhancedConnectionStats bool
+	// TracingResolverAcquireSpans enables a "Resolver - Acquire" child span
+	// using the resolver wait time reported by the engine.
+	TracingResolverAcquireSpans bool
 	IPAnonymization                    *core.IPAnonymizationConfig
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
@@ -1559,6 +1566,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Propagation:                testConfig.PropagationConfig,
 			TracingGlobalFeatures:      config.TracingGlobalFeatures{},
 			ResponseTraceHeader:        testConfig.ResponseTraceHeader,
+			EnhancedConnectionStats:    testConfig.TracingEnhancedConnectionStats,
+			EngineStats: config.EngineStats{
+				Resolvers: testConfig.TracingResolverAcquireSpans,
+			},
 		}
 
 		if testConfig.TracingSanitizeUTF8 != nil {

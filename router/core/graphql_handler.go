@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -88,6 +89,11 @@ type HandlerOptions struct {
 
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
+
+	// EmitResolverAcquireSpan emits a retroactive "Resolver - Acquire" child
+	// span using the resolver wait time reported by the engine. Disabled by
+	// default to avoid trace noise.
+	EmitResolverAcquireSpan bool
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -103,6 +109,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		engineStats:                              opts.EngineStats,
 		metricStore:                              opts.MetricStore,
 		tracer:                                   tracer,
+		emitResolverAcquireSpan:                  opts.EmitResolverAcquireSpan,
 		authorizer:                               opts.Authorizer,
 		rateLimiter:                              opts.RateLimiter,
 		rateLimitConfig:                          opts.RateLimitConfig,
@@ -143,6 +150,8 @@ type GraphQLHandler struct {
 	enableCostResponseHeaders       bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
+
+	emitResolverAcquireSpan bool
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -248,6 +257,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		resolveStart := time.Now()
 		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 		if err != nil {
@@ -267,6 +277,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
+
+		if h.emitResolverAcquireSpan {
+			emitResolverAcquireSpan(executionContext, h.tracer, resolveStart, info.ResolveAcquireWaitTime, info.ResolveDeduplicated)
+		}
 
 		if h.metricStore != nil {
 			h.metricStore.MeasureResolverAcquireDuration(
@@ -599,4 +613,24 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
 		}
 	}
+}
+
+// emitResolverAcquireSpan emits a retroactive "Resolver - Acquire" child span
+// representing the time the resolver spent waiting for a slot before executing.
+// The span is anchored at resolveStart (the moment we entered the resolver call)
+// and lasts for waitTime. When waitTime is zero the span is skipped to avoid
+// trace noise on uncontested fast paths.
+func emitResolverAcquireSpan(ctx context.Context, tracer trace.Tracer, resolveStart time.Time, waitTime time.Duration, deduplicated bool) {
+	if tracer == nil || waitTime <= 0 {
+		return
+	}
+	_, span := tracer.Start(ctx, "Resolver - Acquire",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithTimestamp(resolveStart),
+		trace.WithAttributes(
+			rotel.WgAcquireResolverWaitTimeMs.Int64(waitTime.Milliseconds()),
+			rotel.WgResolverDeduplicatedRequest.Bool(deduplicated),
+		),
+	)
+	span.End(trace.WithTimestamp(resolveStart.Add(waitTime)))
 }

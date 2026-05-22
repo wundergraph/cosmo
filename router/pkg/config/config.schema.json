@@ -1031,6 +1031,27 @@
               "default": false,
               "description": "Enable the addition of GraphQL operation body content as trace attributes. When enabled, original operation content will be added to the trace span for parse and normalized operation content will be added to the trace span for normalize. The default value is false."
             },
+            "enhanced_connection_stats": {
+              "type": "boolean",
+              "default": false,
+              "description": "Emit per-request HTTP client connection child spans (DNS lookup, TCP connect, TLS handshake, time-to-first-byte) under each outgoing subgraph HTTP span. The default value is false."
+            },
+            "engine_stats": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "resolvers": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Emit a Resolver - Acquire child span representing time spent waiting for a resolver slot before resolution begins. The default value is false."
+                },
+                "subscriptions": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Reserved. Currently has no effect on tracing. The default value is false."
+                }
+              }
+            },
             "exporters": {
               "type": "array",
               "description": "The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
