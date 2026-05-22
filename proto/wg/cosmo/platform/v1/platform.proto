@@ -1255,6 +1255,13 @@ enum LoginMethodType {
   LOGIN_METHOD_TYPE_SSO = 1;
   LOGIN_METHOD_TYPE_PASSWORD = 2;
   LOGIN_METHOD_TYPE_API_KEY = 3;
+  LOGIN_METHOD_TYPE_SOCIAL = 4;
+}
+
+enum SocialLoginProvider {
+  SOCIAL_LOGIN_PROVIDER_UNSPECIFIED = 0;
+  SOCIAL_LOGIN_PROVIDER_GOOGLE = 1;
+  SOCIAL_LOGIN_PROVIDER_GITHUB = 2;
 }
 
 message LoginMethod {
@@ -1263,6 +1270,8 @@ message LoginMethod {
   string sso_provider_id = 2;
   string sso_provider_name = 3;
   string sso_alias = 4;
+  // Only populated when type = LOGIN_METHOD_TYPE_SOCIAL.
+  SocialLoginProvider social_provider = 5;
 }
 
 message RouterToken {
@@ -3087,15 +3096,15 @@ message NamespaceSSOMapping {
   string namespace_id = 1;
   repeated string allowed_sso_provider_ids = 2;
   bool allow_password_login = 3;
+  bool allow_google_login = 4;
+  bool allow_github_login = 5;
 }
 
-message UpdateNamespaceSSOMappingRequest {
-  string namespace_id = 1;
-  repeated string allowed_sso_provider_ids = 2;
-  bool allow_password_login = 3;
+message UpdateNamespaceSSOMappingsRequest {
+  repeated NamespaceSSOMapping mappings = 1;
 }
 
-message UpdateNamespaceSSOMappingResponse {
+message UpdateNamespaceSSOMappingsResponse {
   Response response = 1;
 }
 
@@ -3720,8 +3729,8 @@ service PlatformService {
   rpc ConfigureNamespaceProposalConfig(ConfigureNamespaceProposalConfigRequest) returns (ConfigureNamespaceProposalConfigResponse) {}
   // GetNamespaceProposalConfig returns the proposal config of the namespace passed.
   rpc GetNamespaceProposalConfig(GetNamespaceProposalConfigRequest) returns (GetNamespaceProposalConfigResponse) {}
-  // UpdateNamespaceSSOMapping replaces the SSO mapping configuration for the namespace.
-  rpc UpdateNamespaceSSOMapping(UpdateNamespaceSSOMappingRequest) returns (UpdateNamespaceSSOMappingResponse) {}
+  // UpdateNamespaceSSOMappings replaces the org's namespace SSO mapping configuration in one call.
+  rpc UpdateNamespaceSSOMappings(UpdateNamespaceSSOMappingsRequest) returns (UpdateNamespaceSSOMappingsResponse) {}
   // ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
   rpc ListNamespaceSSOMappings(ListNamespaceSSOMappingsRequest) returns (ListNamespaceSSOMappingsResponse) {}
   // GetProposalsByFederatedGraph returns proposals for a federated graph.

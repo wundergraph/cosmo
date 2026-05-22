@@ -69,19 +69,13 @@ describe('IdP gate (namespace ↔ SSO/password mapping)', () => {
     const { namespaces } = await client.getNamespaces({});
     const idOf = (name: string) => namespaces.find((n) => n.name === name)!.id;
 
-    const mapSso = await client.updateNamespaceSSOMapping({
-      namespaceId: idOf(ssoNs),
-      allowedSsoProviderIds: [providerId],
-      allowPasswordLogin: false,
+    const mapped = await client.updateNamespaceSSOMappings({
+      mappings: [
+        { namespaceId: idOf(ssoNs), allowedSsoProviderIds: [providerId] },
+        { namespaceId: idOf(passwordNs), allowPasswordLogin: true },
+      ],
     });
-    expect(mapSso.response?.code).toBe(EnumStatusCode.OK);
-
-    const mapPassword = await client.updateNamespaceSSOMapping({
-      namespaceId: idOf(passwordNs),
-      allowedSsoProviderIds: [],
-      allowPasswordLogin: true,
-    });
-    expect(mapPassword.response?.code).toBe(EnumStatusCode.OK);
+    expect(mapped.response?.code).toBe(EnumStatusCode.OK);
   });
 
   afterAll(async () => {

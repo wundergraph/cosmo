@@ -18,7 +18,7 @@ import {
   getWorkspace,
   listNamespaceSSOMappings,
   listOIDCProviders,
-  updateNamespaceSSOMapping,
+  updateNamespaceSSOMappings,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -26,6 +26,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 // Sentinel value representing password login, which is not an SSO provider id.
 const PASSWORD_VALUE = '__password__';
+const GOOGLE_VALUE = '__google__';
+const GITHUB_VALUE = '__github__';
 
 // Stable key describing a namespace's allowed methods, for dirty-state and diffing.
 const methodsKey = (values: string[]) => [...values].sort().join(',');
@@ -58,7 +60,7 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
     refetch: refetchMappings,
   } = useQuery(listNamespaceSSOMappings, {});
 
-  const { mutateAsync, isPending } = useMutation(updateNamespaceSSOMapping);
+  const { mutate, isPending } = useMutation(updateNamespaceSSOMappings);
 
   const namespaces = useMemo<NamespaceLite[]>(
     () => (workspaceData?.namespaces ?? []).map((wns) => ({ id: wns.id, name: wns.name })),
@@ -70,6 +72,8 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
   const methodOptions = useMemo<MultiSelectOption[]>(
     () => [
       { value: PASSWORD_VALUE, label: 'Password login', description: 'Email and password sign-in', group: 'Password' },
+      { value: GOOGLE_VALUE, label: 'Google', description: 'Sign in with Google', group: 'Social login' },
+      { value: GITHUB_VALUE, label: 'GitHub', description: 'Sign in with GitHub', group: 'Social login' },
       ...providers.map((p) => ({
         value: p.id,
         label: p.name || p.alias || 'OIDC provider',
@@ -87,10 +91,17 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
   useEffect(() => {
     if (!mappingsData?.mappings) return;
     const seeded: MappingRow[] = mappingsData.mappings.map((m, index) => {
-      const methodValues = [...m.allowedSsoProviderIds];
+      const methodValues: string[] = [];
       if (m.allowPasswordLogin) {
-        methodValues.unshift(PASSWORD_VALUE);
+        methodValues.push(PASSWORD_VALUE);
       }
+      if (m.allowGoogleLogin) {
+        methodValues.push(GOOGLE_VALUE);
+      }
+      if (m.allowGithubLogin) {
+        methodValues.push(GITHUB_VALUE);
+      }
+      methodValues.push(...m.allowedSsoProviderIds);
       return { id: index, namespaceId: m.namespaceId, methodValues };
     });
     setRows(seeded);
@@ -116,41 +127,34 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
     });
   }, [desiredByNamespace, serverByNamespace]);
 
-  const onSave = async () => {
-    // Build the minimal set of updates: changed/added namespaces get their new
-    // methods; namespaces removed from the list are reset to default-open.
-    const updates: { namespaceId: string; allowedSsoProviderIds: string[]; allowPasswordLogin: boolean }[] = [];
+  const onSave = () => {
+    // Send the complete desired set in one call; the backend replaces the org's
+    // mappings, so any namespace dropped from the list becomes default-open.
+    const builtinMethodValues = new Set([PASSWORD_VALUE, GOOGLE_VALUE, GITHUB_VALUE]);
+    const mappings = Array.from(desiredByNamespace.entries()).map(([namespaceId, values]) => ({
+      namespaceId,
+      allowedSsoProviderIds: values.filter((v) => !builtinMethodValues.has(v)),
+      allowPasswordLogin: values.includes(PASSWORD_VALUE),
+      allowGoogleLogin: values.includes(GOOGLE_VALUE),
+      allowGithubLogin: values.includes(GITHUB_VALUE),
+    }));
 
-    for (const [namespaceId, values] of Array.from(desiredByNamespace.entries())) {
-      const server = serverByNamespace.get(namespaceId);
-      if (!server || methodsKey(server) !== methodsKey(values)) {
-        updates.push({
-          namespaceId,
-          allowedSsoProviderIds: values.filter((v) => v !== PASSWORD_VALUE),
-          allowPasswordLogin: values.includes(PASSWORD_VALUE),
-        });
-      }
-    }
-
-    for (const namespaceId of Array.from(serverByNamespace.keys())) {
-      if (!desiredByNamespace.has(namespaceId)) {
-        updates.push({ namespaceId, allowedSsoProviderIds: [], allowPasswordLogin: false });
-      }
-    }
-
-    try {
-      const results = await Promise.all(updates.map((u) => mutateAsync(u)));
-      const failed = results.find((r) => r.response?.code !== EnumStatusCode.OK);
-      if (failed) {
-        toast({ description: failed.response?.details || 'Could not update some namespaces.', duration: 4000 });
-      } else {
-        toast({ description: 'Namespace login methods updated successfully.', duration: 3000 });
-      }
-    } catch {
-      toast({ description: 'Could not update the namespace login methods. Please try again.', duration: 3000 });
-    } finally {
-      refetchMappings();
-    }
+    mutate(
+      { mappings },
+      {
+        onSuccess: (d) => {
+          if (d.response?.code === EnumStatusCode.OK) {
+            toast({ description: 'Namespace login methods updated successfully.', duration: 3000 });
+            refetchMappings();
+          } else if (d.response?.details) {
+            toast({ description: d.response.details, duration: 4000 });
+          }
+        },
+        onError: () => {
+          toast({ description: 'Could not update the namespace login methods. Please try again.', duration: 3000 });
+        },
+      },
+    );
   };
 
   if (!isAdmin) {

@@ -40,13 +40,26 @@ async function createOidcProvider(client: TestSetup['client'], name: string): Pr
   return provider!.id;
 }
 
-async function setMapping(
+// Replaces the org's mappings via the platform RPC for test setup.
+async function setMappings(
   client: TestSetup['client'],
-  namespaceId: string,
-  allowedSsoProviderIds: string[],
-  allowPasswordLogin: boolean,
+  mappings: {
+    namespaceId: string;
+    allowedSsoProviderIds?: string[];
+    allowPasswordLogin?: boolean;
+    allowGoogleLogin?: boolean;
+    allowGithubLogin?: boolean;
+  }[],
 ) {
-  const res = await client.updateNamespaceSSOMapping({ namespaceId, allowedSsoProviderIds, allowPasswordLogin });
+  const res = await client.updateNamespaceSSOMappings({
+    mappings: mappings.map((m) => ({
+      namespaceId: m.namespaceId,
+      allowedSsoProviderIds: m.allowedSsoProviderIds ?? [],
+      allowPasswordLogin: m.allowPasswordLogin ?? false,
+      allowGoogleLogin: m.allowGoogleLogin ?? false,
+      allowGithubLogin: m.allowGithubLogin ?? false,
+    })),
+  });
   expect(res.response?.code).toBe(EnumStatusCode.OK);
 }
 
@@ -79,7 +92,7 @@ describe('NamespaceSsoMappingRepository', () => {
     const providerId = await createOidcProvider(client, 'staging');
 
     // Map the default namespace to the SSO provider only (no password).
-    await setMapping(client, defaultNsId, [providerId], false);
+    await setMappings(client, [{ namespaceId: defaultNsId, allowedSsoProviderIds: [providerId] }]);
 
     const repo = new NamespaceSsoMappingRepository(server.db);
 
@@ -111,9 +124,11 @@ describe('NamespaceSsoMappingRepository', () => {
     const stagingId = await createOidcProvider(client, 'staging');
     const prodId = await createOidcProvider(client, 'production');
 
-    await setMapping(client, stagingNsId, [stagingId], false);
-    await setMapping(client, prodNsId, [prodId], false);
-    await setMapping(client, sharedNsId, [stagingId, prodId], true);
+    await setMappings(client, [
+      { namespaceId: stagingNsId, allowedSsoProviderIds: [stagingId] },
+      { namespaceId: prodNsId, allowedSsoProviderIds: [prodId] },
+      { namespaceId: sharedNsId, allowedSsoProviderIds: [stagingId, prodId], allowPasswordLogin: true },
+    ]);
     // legacyNs: no mapping rows → default-open.
 
     const repo = new NamespaceSsoMappingRepository(server.db);
@@ -152,13 +167,89 @@ describe('NamespaceSsoMappingRepository', () => {
     await server.close();
   });
 
+  test('gates namespace access by social login (google/github are separate)', async () => {
+    const { client, server, users } = await SetupTest({ dbname });
+    const orgId = users.adminAliceCompanyA.organizationId;
+
+    const legacyNsId = await getNamespaceId(client, DEFAULT_NAMESPACE);
+    const googleNsId = await createNamespace(client, 'google-ns');
+    const githubNsId = await createNamespace(client, 'github-ns');
+
+    // Each social provider is its own entry; google-ns allows only Google, etc.
+    await setMappings(client, [
+      { namespaceId: googleNsId, allowGoogleLogin: true },
+      { namespaceId: githubNsId, allowGithubLogin: true },
+    ]);
+
+    const repo = new NamespaceSsoMappingRepository(server.db);
+
+    // Google login → google-ns + open(default), not github-ns.
+    const googleAllowed = await repo.allowedNamespaces({
+      organizationId: orgId,
+      loginMethod: { type: 'social', provider: 'google', alias: 'google' },
+    });
+    expect(googleAllowed).toEqual({ kind: 'restricted', namespaceIds: new Set([googleNsId, legacyNsId]) });
+
+    // GitHub login → github-ns + open(default), not google-ns.
+    const githubAllowed = await repo.allowedNamespaces({
+      organizationId: orgId,
+      loginMethod: { type: 'social', provider: 'github', alias: 'github' },
+    });
+    expect(githubAllowed).toEqual({ kind: 'restricted', namespaceIds: new Set([githubNsId, legacyNsId]) });
+
+    // Password login → only open(default); neither social-only namespace.
+    const pwAllowed = await repo.allowedNamespaces({
+      organizationId: orgId,
+      loginMethod: { type: 'password' },
+    });
+    expect(pwAllowed).toEqual({ kind: 'restricted', namespaceIds: new Set([legacyNsId]) });
+
+    await server.close();
+  });
+
+  test('updateNamespaceSSOMappings replaces the org mappings in one call', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const nsA = await createNamespace(client, 'bulk-a');
+    const nsB = await createNamespace(client, 'bulk-b');
+
+    // Restrict A to password and B to Google.
+    const first = await client.updateNamespaceSSOMappings({
+      mappings: [
+        { namespaceId: nsA, allowPasswordLogin: true },
+        { namespaceId: nsB, allowGoogleLogin: true },
+      ],
+    });
+    expect(first.response?.code).toBe(EnumStatusCode.OK);
+
+    let listed = await client.listNamespaceSSOMappings({});
+    expect(listed.mappings.find((m) => m.namespaceId === nsA)?.allowPasswordLogin).toBe(true);
+    expect(listed.mappings.find((m) => m.namespaceId === nsB)?.allowGoogleLogin).toBe(true);
+
+    // Replace with only A (now GitHub) — B drops out of the payload, so it is
+    // reset to default-open.
+    const second = await client.updateNamespaceSSOMappings({
+      mappings: [{ namespaceId: nsA, allowGithubLogin: true }],
+    });
+    expect(second.response?.code).toBe(EnumStatusCode.OK);
+
+    listed = await client.listNamespaceSSOMappings({});
+    const aEntry = listed.mappings.find((m) => m.namespaceId === nsA);
+    expect(aEntry?.allowGithubLogin).toBe(true);
+    expect(aEntry?.allowPasswordLogin).toBe(false);
+    expect(listed.mappings.find((m) => m.namespaceId === nsB)).toBeUndefined();
+
+    await server.close();
+  });
+
   test('deleting an SSO provider cascades to namespace mappings (reopens namespace)', async () => {
-    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    const orgId = users.adminAliceCompanyA.organizationId;
 
     const nsId = await createNamespace(client, 'sso-only-ns');
     const providerId = await createOidcProvider(client, 'staging');
 
-    await setMapping(client, nsId, [providerId], false);
+    await setMappings(client, [{ namespaceId: nsId, allowedSsoProviderIds: [providerId] }]);
 
     const before = await client.listNamespaceSSOMappings({});
     const beforeEntry = before.mappings.find((m) => m.namespaceId === nsId);
@@ -173,9 +264,6 @@ describe('NamespaceSsoMappingRepository', () => {
     const after = await client.listNamespaceSSOMappings({});
     expect(after.mappings.find((m) => m.namespaceId === nsId)).toBeUndefined();
 
-    // The repository-level view agrees: no rows for the namespace.
-    const remaining = await new NamespaceSsoMappingRepository(server.db).getMapping({ namespaceId: nsId });
-    expect(remaining).toEqual([]);
 
     await server.close();
   });

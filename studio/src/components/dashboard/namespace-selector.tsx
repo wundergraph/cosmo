@@ -5,7 +5,7 @@ import { useUser } from '@/hooks/use-user';
 import { useRouter } from 'next/router';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn, socialProviderLabel } from '@/lib/utils';
 import * as React from 'react';
 import { CheckIcon, CaretSortIcon } from '@radix-ui/react-icons';
 import { docsBaseURL } from '@/lib/constants';
@@ -23,13 +23,19 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
   const [isOpen, setOpen] = useState(false);
   const { isLoading, namespace, namespaceByName, setNamespace } = useWorkspace();
   const loginMethod = useUser()?.loginMethod;
-  // Both SSO and password logins can be gated, so the visibility hint applies to
-  // either. (API-key logins never reach the web UI.)
-  const isGatedLogin = loginMethod?.type === LoginMethodType.SSO || loginMethod?.type === LoginMethodType.PASSWORD;
-  const loginMethodLabel =
-    loginMethod?.type === LoginMethodType.SSO
-      ? loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO'
-      : 'password';
+  // SSO, social and password logins can all be gated, so the visibility hint
+  // applies to any of them. (API-key logins never reach the web UI.)
+  const isGatedLogin =
+    loginMethod?.type === LoginMethodType.SSO ||
+    loginMethod?.type === LoginMethodType.SOCIAL ||
+    loginMethod?.type === LoginMethodType.PASSWORD;
+    
+  let loginMethodLabel = 'password';
+  if (loginMethod?.type === LoginMethodType.SSO) {
+    loginMethodLabel = loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO';
+  } else if (loginMethod?.type === LoginMethodType.SOCIAL) {
+    loginMethodLabel = socialProviderLabel(loginMethod.socialProvider);
+  }
 
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;

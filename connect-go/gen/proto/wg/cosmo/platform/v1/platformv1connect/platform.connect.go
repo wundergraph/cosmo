@@ -547,9 +547,9 @@ const (
 	// PlatformServiceGetNamespaceProposalConfigProcedure is the fully-qualified name of the
 	// PlatformService's GetNamespaceProposalConfig RPC.
 	PlatformServiceGetNamespaceProposalConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceProposalConfig"
-	// PlatformServiceUpdateNamespaceSSOMappingProcedure is the fully-qualified name of the
-	// PlatformService's UpdateNamespaceSSOMapping RPC.
-	PlatformServiceUpdateNamespaceSSOMappingProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateNamespaceSSOMapping"
+	// PlatformServiceUpdateNamespaceSSOMappingsProcedure is the fully-qualified name of the
+	// PlatformService's UpdateNamespaceSSOMappings RPC.
+	PlatformServiceUpdateNamespaceSSOMappingsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateNamespaceSSOMappings"
 	// PlatformServiceListNamespaceSSOMappingsProcedure is the fully-qualified name of the
 	// PlatformService's ListNamespaceSSOMappings RPC.
 	PlatformServiceListNamespaceSSOMappingsProcedure = "/wg.cosmo.platform.v1.PlatformService/ListNamespaceSSOMappings"
@@ -924,8 +924,8 @@ type PlatformServiceClient interface {
 	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
 	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
 	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
-	// UpdateNamespaceSSOMapping replaces the SSO mapping configuration for the namespace.
-	UpdateNamespaceSSOMapping(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingResponse], error)
+	// UpdateNamespaceSSOMappings replaces the org's namespace SSO mapping configuration in one call.
+	UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error)
 	// ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
 	ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error)
 	// GetProposalsByFederatedGraph returns proposals for a federated graph.
@@ -2002,10 +2002,10 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("GetNamespaceProposalConfig")),
 			connect.WithClientOptions(opts...),
 		),
-		updateNamespaceSSOMapping: connect.NewClient[v1.UpdateNamespaceSSOMappingRequest, v1.UpdateNamespaceSSOMappingResponse](
+		updateNamespaceSSOMappings: connect.NewClient[v1.UpdateNamespaceSSOMappingsRequest, v1.UpdateNamespaceSSOMappingsResponse](
 			httpClient,
-			baseURL+PlatformServiceUpdateNamespaceSSOMappingProcedure,
-			connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceSSOMapping")),
+			baseURL+PlatformServiceUpdateNamespaceSSOMappingsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceSSOMappings")),
 			connect.WithClientOptions(opts...),
 		),
 		listNamespaceSSOMappings: connect.NewClient[v1.ListNamespaceSSOMappingsRequest, v1.ListNamespaceSSOMappingsResponse](
@@ -2280,7 +2280,7 @@ type platformServiceClient struct {
 	enableProposalsForNamespace                        *connect.Client[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse]
 	configureNamespaceProposalConfig                   *connect.Client[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse]
 	getNamespaceProposalConfig                         *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
-	updateNamespaceSSOMapping                          *connect.Client[v1.UpdateNamespaceSSOMappingRequest, v1.UpdateNamespaceSSOMappingResponse]
+	updateNamespaceSSOMappings                         *connect.Client[v1.UpdateNamespaceSSOMappingsRequest, v1.UpdateNamespaceSSOMappingsResponse]
 	listNamespaceSSOMappings                           *connect.Client[v1.ListNamespaceSSOMappingsRequest, v1.ListNamespaceSSOMappingsResponse]
 	getProposalsByFederatedGraph                       *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
 	getProposalChecks                                  *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
@@ -3191,9 +3191,9 @@ func (c *platformServiceClient) GetNamespaceProposalConfig(ctx context.Context, 
 	return c.getNamespaceProposalConfig.CallUnary(ctx, req)
 }
 
-// UpdateNamespaceSSOMapping calls wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMapping.
-func (c *platformServiceClient) UpdateNamespaceSSOMapping(ctx context.Context, req *connect.Request[v1.UpdateNamespaceSSOMappingRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingResponse], error) {
-	return c.updateNamespaceSSOMapping.CallUnary(ctx, req)
+// UpdateNamespaceSSOMappings calls wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMappings.
+func (c *platformServiceClient) UpdateNamespaceSSOMappings(ctx context.Context, req *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error) {
+	return c.updateNamespaceSSOMappings.CallUnary(ctx, req)
 }
 
 // ListNamespaceSSOMappings calls wg.cosmo.platform.v1.PlatformService.ListNamespaceSSOMappings.
@@ -3602,8 +3602,8 @@ type PlatformServiceHandler interface {
 	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
 	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
 	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
-	// UpdateNamespaceSSOMapping replaces the SSO mapping configuration for the namespace.
-	UpdateNamespaceSSOMapping(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingResponse], error)
+	// UpdateNamespaceSSOMappings replaces the org's namespace SSO mapping configuration in one call.
+	UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error)
 	// ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
 	ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error)
 	// GetProposalsByFederatedGraph returns proposals for a federated graph.
@@ -4676,10 +4676,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("GetNamespaceProposalConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceUpdateNamespaceSSOMappingHandler := connect.NewUnaryHandler(
-		PlatformServiceUpdateNamespaceSSOMappingProcedure,
-		svc.UpdateNamespaceSSOMapping,
-		connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceSSOMapping")),
+	platformServiceUpdateNamespaceSSOMappingsHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateNamespaceSSOMappingsProcedure,
+		svc.UpdateNamespaceSSOMappings,
+		connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceSSOMappings")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceListNamespaceSSOMappingsHandler := connect.NewUnaryHandler(
@@ -5122,8 +5122,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceConfigureNamespaceProposalConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetNamespaceProposalConfigProcedure:
 			platformServiceGetNamespaceProposalConfigHandler.ServeHTTP(w, r)
-		case PlatformServiceUpdateNamespaceSSOMappingProcedure:
-			platformServiceUpdateNamespaceSSOMappingHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateNamespaceSSOMappingsProcedure:
+			platformServiceUpdateNamespaceSSOMappingsHandler.ServeHTTP(w, r)
 		case PlatformServiceListNamespaceSSOMappingsProcedure:
 			platformServiceListNamespaceSSOMappingsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetProposalsByFederatedGraphProcedure:
@@ -5849,8 +5849,8 @@ func (UnimplementedPlatformServiceHandler) GetNamespaceProposalConfig(context.Co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) UpdateNamespaceSSOMapping(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMapping is not implemented"))
+func (UnimplementedPlatformServiceHandler) UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMappings is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error) {

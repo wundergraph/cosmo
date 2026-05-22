@@ -29,6 +29,8 @@ import {
   NamespaceAccess,
   ResponseMessage,
   S3StorageOptions,
+  SOCIAL_LOGIN_PROVIDERS,
+  SocialLoginProvider,
 } from '../types/index.js';
 import { paginationDefaults } from './constants.js';
 import {
@@ -987,6 +989,8 @@ export async function buildAuthState(
     });
     if (provider) {
       loginMethod = { type: 'sso', ssoProviderId: provider.id, alias: input.idpAlias };
+    } else if (isSocialLoginProvider(input.idpAlias)) {
+      loginMethod = { type: 'social', provider: input.idpAlias, alias: input.idpAlias };
     }
   }
 
@@ -1021,4 +1025,9 @@ export function isNamespaceAllowed(access: NamespaceAccess, namespaceId: string)
       return access.namespaceIds.has(namespaceId);
     }
   }
+}
+
+/** Whether the given IdP alias is one of Keycloak's built-in social brokers. */
+export function isSocialLoginProvider(alias: string): alias is SocialLoginProvider {
+  return (SOCIAL_LOGIN_PROVIDERS as readonly string[]).includes(alias);
 }

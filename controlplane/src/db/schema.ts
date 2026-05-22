@@ -1994,6 +1994,8 @@ export const namespaceSsoProviders = pgTable(
       .references(() => namespaces.id, { onDelete: 'cascade' }),
     ssoProviderId: uuid('sso_provider_id').references(() => oidcProviders.id, { onDelete: 'cascade' }),
     isPasswordLogin: boolean('is_password_login').notNull().default(false),
+    isGoogleLogin: boolean('is_google_login').notNull().default(false),
+    isGithubLogin: boolean('is_github_login').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
@@ -2003,10 +2005,16 @@ export const namespaceSsoProviders = pgTable(
       uniqueSsoPerNamespace: uniqueIndex('nssp_unique_sso')
         .on(t.namespaceId, t.ssoProviderId)
         .where(sql`${t.ssoProviderId} IS NOT NULL`),
-      uniquePasswordPerNamespace: uniqueIndex('nssp_unique_password')
+      // At most one built-in-methods row (password/google/github) per namespace.
+      uniqueBuiltinPerNamespace: uniqueIndex('nssp_unique_builtin')
         .on(t.namespaceId)
-        .where(sql`${t.isPasswordLogin} = true`),
-      xorCheck: check('nssp_xor_check', sql`(${t.ssoProviderId} IS NOT NULL) <> ${t.isPasswordLogin}`),
+        .where(sql`${t.ssoProviderId} IS NULL`),
+      // A row is either an SSO-provider row (provider id, no built-in flags) or a
+      // built-in-methods row (no provider id, at least one flag) — never both, never neither.
+      builtinXorSsoCheck: check(
+        'nssp_builtin_xor_sso_check',
+        sql`(${t.ssoProviderId} IS NOT NULL) <> (${t.isPasswordLogin} OR ${t.isGoogleLogin} OR ${t.isGithubLogin})`,
+      ),
     };
   },
 );

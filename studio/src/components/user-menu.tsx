@@ -5,6 +5,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { socialProviderLabel } from '@/lib/utils';
 import { useUser } from '@/hooks/use-user';
 import { resetTracking } from '@/lib/track';
 import { LoginMethodType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -108,6 +109,11 @@ export const UserMenu = () => {
           {loginMethod?.type === LoginMethodType.SSO && (
             <p className="truncate text-xs text-muted-foreground">
               Logged in via {loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO'}
+            </p>
+          )}
+          {loginMethod?.type === LoginMethodType.SOCIAL && (
+            <p className="truncate text-xs text-muted-foreground">
+              Logged in via {socialProviderLabel(loginMethod.socialProvider)}
             </p>
           )}
           {loginMethod?.type === LoginMethodType.PASSWORD && (

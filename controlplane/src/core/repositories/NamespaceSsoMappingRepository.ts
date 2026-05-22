@@ -1,5 +1,5 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, eq, SQL } from 'drizzle-orm';
+import { and, eq, inArray, SQL } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { namespaces, namespaceSsoProviders } from '../../db/schema.js';
 import { traced } from '../tracing.js';
@@ -36,6 +36,8 @@ export class NamespaceSsoMappingRepository {
         namespaceId: namespaces.id,
         ssoProviderId: namespaceSsoProviders.ssoProviderId,
         isPasswordLogin: namespaceSsoProviders.isPasswordLogin,
+        isGoogleLogin: namespaceSsoProviders.isGoogleLogin,
+        isGithubLogin: namespaceSsoProviders.isGithubLogin,
       })
       .from(namespaces)
       .leftJoin(namespaceSsoProviders, eq(namespaceSsoProviders.namespaceId, namespaces.id))
@@ -43,22 +45,35 @@ export class NamespaceSsoMappingRepository {
       .execute();
 
     // If no row in the org has any mapping, the gate is default-open everywhere.
-    const isUnmapped = (r: (typeof rows)[number]) => r.ssoProviderId === null && !r.isPasswordLogin;
+    const isUnmapped = (r: (typeof rows)[number]) =>
+      r.ssoProviderId === null && !r.isPasswordLogin && !r.isGoogleLogin && !r.isGithubLogin;
     if (rows.every((r) => isUnmapped(r))) {
       return { kind: 'all' };
     }
+
+    const { loginMethod } = input;
+    const rowMatchesLogin = (r: (typeof rows)[number]): boolean => {
+      switch (loginMethod.type) {
+        case 'sso': {
+          return r.ssoProviderId === loginMethod.ssoProviderId;
+        }
+        case 'social': {
+          return loginMethod.provider === 'google' ? !!r.isGoogleLogin : !!r.isGithubLogin;
+        }
+        case 'password': {
+          return !!r.isPasswordLogin;
+        }
+        default: {
+          return false;
+        }
+      }
+    };
 
     // Build the allowed set: open namespaces always; restricted namespaces only
     // when at least one of their mapping rows matches the current login method.
     const namespaceIds = new Set<string>();
     for (const row of rows) {
-      if (isUnmapped(row)) {
-        namespaceIds.add(row.namespaceId);
-        continue;
-      }
-      const matches =
-        input.loginMethod.type === 'sso' ? row.ssoProviderId === input.loginMethod.ssoProviderId : row.isPasswordLogin;
-      if (matches) {
+      if (isUnmapped(row) || rowMatchesLogin(row)) {
         namespaceIds.add(row.namespaceId);
       }
     }
@@ -73,10 +88,15 @@ export class NamespaceSsoMappingRepository {
    * When `rbac` is provided, results are limited to the namespaces its IdP gate
    * allows, so callers only ever see namespaces they can access.
    */
-  async listMappings(input: {
-    organizationId: string;
-    rbac?: RBACEvaluator;
-  }): Promise<{ namespaceId: string; allowedSsoProviderIds: string[]; allowPasswordLogin: boolean }[]> {
+  async listMappings(input: { organizationId: string; rbac?: RBACEvaluator }): Promise<
+    {
+      namespaceId: string;
+      allowedSsoProviderIds: string[];
+      allowPasswordLogin: boolean;
+      allowGoogleLogin: boolean;
+      allowGithubLogin: boolean;
+    }[]
+  > {
     const conditions: (SQL<unknown> | undefined)[] = [eq(namespaces.organizationId, input.organizationId)];
     if (!applyIdpNamespaceGate(input.rbac, namespaces.id, conditions)) {
       return [];
@@ -87,20 +107,39 @@ export class NamespaceSsoMappingRepository {
         namespaceId: namespaceSsoProviders.namespaceId,
         ssoProviderId: namespaceSsoProviders.ssoProviderId,
         isPasswordLogin: namespaceSsoProviders.isPasswordLogin,
+        isGoogleLogin: namespaceSsoProviders.isGoogleLogin,
+        isGithubLogin: namespaceSsoProviders.isGithubLogin,
       })
       .from(namespaceSsoProviders)
       .innerJoin(namespaces, eq(namespaces.id, namespaceSsoProviders.namespaceId))
       .where(and(...conditions))
       .execute();
 
-    const byNamespace = new Map<string, { allowedSsoProviderIds: string[]; allowPasswordLogin: boolean }>();
+    type Entry = {
+      allowedSsoProviderIds: string[];
+      allowPasswordLogin: boolean;
+      allowGoogleLogin: boolean;
+      allowGithubLogin: boolean;
+    };
+    const byNamespace = new Map<string, Entry>();
     for (const row of rows) {
-      const entry = byNamespace.get(row.namespaceId) ?? { allowedSsoProviderIds: [], allowPasswordLogin: false };
+      const entry = byNamespace.get(row.namespaceId) ?? {
+        allowedSsoProviderIds: [],
+        allowPasswordLogin: false,
+        allowGoogleLogin: false,
+        allowGithubLogin: false,
+      };
       if (row.ssoProviderId) {
         entry.allowedSsoProviderIds.push(row.ssoProviderId);
       }
       if (row.isPasswordLogin) {
         entry.allowPasswordLogin = true;
+      }
+      if (row.isGoogleLogin) {
+        entry.allowGoogleLogin = true;
+      }
+      if (row.isGithubLogin) {
+        entry.allowGithubLogin = true;
       }
       byNamespace.set(row.namespaceId, entry);
     }
@@ -108,34 +147,70 @@ export class NamespaceSsoMappingRepository {
     return Array.from(byNamespace, ([namespaceId, entry]) => ({ namespaceId, ...entry }));
   }
 
-  getMapping(input: { namespaceId: string }) {
-    return this.db
-      .select({
-        id: namespaceSsoProviders.id,
-        namespaceId: namespaceSsoProviders.namespaceId,
-        ssoProviderId: namespaceSsoProviders.ssoProviderId,
-        isPasswordLogin: namespaceSsoProviders.isPasswordLogin,
-      })
-      .from(namespaceSsoProviders)
-      .where(eq(namespaceSsoProviders.namespaceId, input.namespaceId))
-      .execute();
-  }
-
   /**
-   * Replaces the mapping for a namespace with the given set of allowed login methods.
-   * Empty SSO list + allowPasswordLogin=false → namespace becomes default-open (all rows deleted).
-   * Performs delete + inserts inside a transaction.
+   * Replaces the org's namespace mappings in a single transaction: every
+   * namespace the caller can access (per the `rbac` IdP gate) has its rows
+   * cleared, then the provided `mappings` are inserted. Namespaces not in
+   * `mappings` therefore become default-open. Namespaces the caller can't access
+   * are left untouched.
+   *
+   * Each SSO provider is its own row; password/google/github share a single
+   * "built-in methods" row.
    */
-  async setMapping(input: { namespaceId: string; ssoProviderIds: string[]; allowPasswordLogin: boolean }) {
+  async setMappings(input: {
+    organizationId: string;
+    rbac?: RBACEvaluator;
+    mappings: {
+      namespaceId: string;
+      ssoProviderIds: string[];
+      allowPasswordLogin: boolean;
+      allowGoogleLogin: boolean;
+      allowGithubLogin: boolean;
+    }[];
+  }) {
     await this.db.transaction(async (tx) => {
-      await tx.delete(namespaceSsoProviders).where(eq(namespaceSsoProviders.namespaceId, input.namespaceId)).execute();
-
-      const rows: Array<{ namespaceId: string; ssoProviderId: string | null; isPasswordLogin: boolean }> = [];
-      for (const ssoProviderId of input.ssoProviderIds) {
-        rows.push({ namespaceId: input.namespaceId, ssoProviderId, isPasswordLogin: false });
+      // Clear existing rows only for the namespaces the caller can access — NOT
+      // a blanket org-wide delete. A caller whose own login is IdP-gated only
+      // sees (and submits) a subset of namespaces, so wiping everything would
+      // destroy the mappings of namespaces they can't see or manage (e.g. a
+      // staging-IdP session clearing prod's restrictions). For an ungated caller
+      // the gate adds no condition, so this still clears every org namespace.
+      // `none` (gate locks out everything) → wipe nothing.
+      const conditions: (SQL<unknown> | undefined)[] = [eq(namespaces.organizationId, input.organizationId)];
+      if (applyIdpNamespaceGate(input.rbac, namespaces.id, conditions)) {
+        const accessibleNamespaces = await tx
+          .select({ id: namespaces.id })
+          .from(namespaces)
+          .where(and(...conditions))
+          .execute();
+        const accessibleNamespaceIds = accessibleNamespaces.map((n) => n.id);
+        if (accessibleNamespaceIds.length > 0) {
+          await tx
+            .delete(namespaceSsoProviders)
+            .where(inArray(namespaceSsoProviders.namespaceId, accessibleNamespaceIds))
+            .execute();
+        }
       }
-      if (input.allowPasswordLogin) {
-        rows.push({ namespaceId: input.namespaceId, ssoProviderId: null, isPasswordLogin: true });
+
+      const rows: Array<{
+        namespaceId: string;
+        ssoProviderId?: string | null;
+        isPasswordLogin?: boolean;
+        isGoogleLogin?: boolean;
+        isGithubLogin?: boolean;
+      }> = [];
+      for (const mapping of input.mappings) {
+        for (const ssoProviderId of mapping.ssoProviderIds) {
+          rows.push({ namespaceId: mapping.namespaceId, ssoProviderId });
+        }
+        if (mapping.allowPasswordLogin || mapping.allowGoogleLogin || mapping.allowGithubLogin) {
+          rows.push({
+            namespaceId: mapping.namespaceId,
+            isPasswordLogin: mapping.allowPasswordLogin,
+            isGoogleLogin: mapping.allowGoogleLogin,
+            isGithubLogin: mapping.allowGithubLogin,
+          });
+        }
       }
       if (rows.length > 0) {
         await tx.insert(namespaceSsoProviders).values(rows).execute();

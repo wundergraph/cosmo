@@ -323,6 +323,11 @@ export enum LoginMethodType {
    * @generated from enum value: LOGIN_METHOD_TYPE_API_KEY = 3;
    */
   API_KEY = 3,
+
+  /**
+   * @generated from enum value: LOGIN_METHOD_TYPE_SOCIAL = 4;
+   */
+  SOCIAL = 4,
 }
 // Retrieve enum metadata with: proto3.getEnumType(LoginMethodType)
 proto3.util.setEnumType(LoginMethodType, "wg.cosmo.platform.v1.LoginMethodType", [
@@ -330,6 +335,33 @@ proto3.util.setEnumType(LoginMethodType, "wg.cosmo.platform.v1.LoginMethodType",
   { no: 1, name: "LOGIN_METHOD_TYPE_SSO" },
   { no: 2, name: "LOGIN_METHOD_TYPE_PASSWORD" },
   { no: 3, name: "LOGIN_METHOD_TYPE_API_KEY" },
+  { no: 4, name: "LOGIN_METHOD_TYPE_SOCIAL" },
+]);
+
+/**
+ * @generated from enum wg.cosmo.platform.v1.SocialLoginProvider
+ */
+export enum SocialLoginProvider {
+  /**
+   * @generated from enum value: SOCIAL_LOGIN_PROVIDER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: SOCIAL_LOGIN_PROVIDER_GOOGLE = 1;
+   */
+  GOOGLE = 1,
+
+  /**
+   * @generated from enum value: SOCIAL_LOGIN_PROVIDER_GITHUB = 2;
+   */
+  GITHUB = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(SocialLoginProvider)
+proto3.util.setEnumType(SocialLoginProvider, "wg.cosmo.platform.v1.SocialLoginProvider", [
+  { no: 0, name: "SOCIAL_LOGIN_PROVIDER_UNSPECIFIED" },
+  { no: 1, name: "SOCIAL_LOGIN_PROVIDER_GOOGLE" },
+  { no: 2, name: "SOCIAL_LOGIN_PROVIDER_GITHUB" },
 ]);
 
 /**
@@ -9488,6 +9520,13 @@ export class LoginMethod extends Message<LoginMethod> {
    */
   ssoAlias = "";
 
+  /**
+   * Only populated when type = LOGIN_METHOD_TYPE_SOCIAL.
+   *
+   * @generated from field: wg.cosmo.platform.v1.SocialLoginProvider social_provider = 5;
+   */
+  socialProvider = SocialLoginProvider.UNSPECIFIED;
+
   constructor(data?: PartialMessage<LoginMethod>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9500,6 +9539,7 @@ export class LoginMethod extends Message<LoginMethod> {
     { no: 2, name: "sso_provider_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "sso_provider_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "sso_alias", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "social_provider", kind: "enum", T: proto3.getEnumType(SocialLoginProvider) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LoginMethod {
@@ -24141,6 +24181,16 @@ export class NamespaceSSOMapping extends Message<NamespaceSSOMapping> {
    */
   allowPasswordLogin = false;
 
+  /**
+   * @generated from field: bool allow_google_login = 4;
+   */
+  allowGoogleLogin = false;
+
+  /**
+   * @generated from field: bool allow_github_login = 5;
+   */
+  allowGithubLogin = false;
+
   constructor(data?: PartialMessage<NamespaceSSOMapping>) {
     super();
     proto3.util.initPartial(data, this);
@@ -24152,6 +24202,8 @@ export class NamespaceSSOMapping extends Message<NamespaceSSOMapping> {
     { no: 1, name: "namespace_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "allowed_sso_provider_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "allow_password_login", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "allow_google_login", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "allow_github_login", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NamespaceSSOMapping {
@@ -24172,88 +24224,79 @@ export class NamespaceSSOMapping extends Message<NamespaceSSOMapping> {
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.UpdateNamespaceSSOMappingRequest
+ * @generated from message wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsRequest
  */
-export class UpdateNamespaceSSOMappingRequest extends Message<UpdateNamespaceSSOMappingRequest> {
+export class UpdateNamespaceSSOMappingsRequest extends Message<UpdateNamespaceSSOMappingsRequest> {
   /**
-   * @generated from field: string namespace_id = 1;
+   * The complete set of restricted namespaces for the org. Any namespace the
+   * caller can access that is NOT listed here becomes default-open.
+   *
+   * @generated from field: repeated wg.cosmo.platform.v1.NamespaceSSOMapping mappings = 1;
    */
-  namespaceId = "";
+  mappings: NamespaceSSOMapping[] = [];
 
-  /**
-   * @generated from field: repeated string allowed_sso_provider_ids = 2;
-   */
-  allowedSsoProviderIds: string[] = [];
-
-  /**
-   * @generated from field: bool allow_password_login = 3;
-   */
-  allowPasswordLogin = false;
-
-  constructor(data?: PartialMessage<UpdateNamespaceSSOMappingRequest>) {
+  constructor(data?: PartialMessage<UpdateNamespaceSSOMappingsRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.UpdateNamespaceSSOMappingRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "namespace_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "allowed_sso_provider_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "allow_password_login", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 1, name: "mappings", kind: "message", T: NamespaceSSOMapping, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateNamespaceSSOMappingRequest {
-    return new UpdateNamespaceSSOMappingRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateNamespaceSSOMappingsRequest {
+    return new UpdateNamespaceSSOMappingsRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateNamespaceSSOMappingRequest {
-    return new UpdateNamespaceSSOMappingRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateNamespaceSSOMappingsRequest {
+    return new UpdateNamespaceSSOMappingsRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateNamespaceSSOMappingRequest {
-    return new UpdateNamespaceSSOMappingRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateNamespaceSSOMappingsRequest {
+    return new UpdateNamespaceSSOMappingsRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateNamespaceSSOMappingRequest | PlainMessage<UpdateNamespaceSSOMappingRequest> | undefined, b: UpdateNamespaceSSOMappingRequest | PlainMessage<UpdateNamespaceSSOMappingRequest> | undefined): boolean {
-    return proto3.util.equals(UpdateNamespaceSSOMappingRequest, a, b);
+  static equals(a: UpdateNamespaceSSOMappingsRequest | PlainMessage<UpdateNamespaceSSOMappingsRequest> | undefined, b: UpdateNamespaceSSOMappingsRequest | PlainMessage<UpdateNamespaceSSOMappingsRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateNamespaceSSOMappingsRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse
+ * @generated from message wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsResponse
  */
-export class UpdateNamespaceSSOMappingResponse extends Message<UpdateNamespaceSSOMappingResponse> {
+export class UpdateNamespaceSSOMappingsResponse extends Message<UpdateNamespaceSSOMappingsResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
   response?: Response;
 
-  constructor(data?: PartialMessage<UpdateNamespaceSSOMappingResponse>) {
+  constructor(data?: PartialMessage<UpdateNamespaceSSOMappingsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateNamespaceSSOMappingResponse {
-    return new UpdateNamespaceSSOMappingResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateNamespaceSSOMappingsResponse {
+    return new UpdateNamespaceSSOMappingsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateNamespaceSSOMappingResponse {
-    return new UpdateNamespaceSSOMappingResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateNamespaceSSOMappingsResponse {
+    return new UpdateNamespaceSSOMappingsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateNamespaceSSOMappingResponse {
-    return new UpdateNamespaceSSOMappingResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateNamespaceSSOMappingsResponse {
+    return new UpdateNamespaceSSOMappingsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateNamespaceSSOMappingResponse | PlainMessage<UpdateNamespaceSSOMappingResponse> | undefined, b: UpdateNamespaceSSOMappingResponse | PlainMessage<UpdateNamespaceSSOMappingResponse> | undefined): boolean {
-    return proto3.util.equals(UpdateNamespaceSSOMappingResponse, a, b);
+  static equals(a: UpdateNamespaceSSOMappingsResponse | PlainMessage<UpdateNamespaceSSOMappingsResponse> | undefined, b: UpdateNamespaceSSOMappingsResponse | PlainMessage<UpdateNamespaceSSOMappingsResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateNamespaceSSOMappingsResponse, a, b);
   }
 }
 

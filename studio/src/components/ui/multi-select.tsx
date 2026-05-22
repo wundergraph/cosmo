@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { CaretSortIcon, CheckIcon, Cross2Icon } from '@radix-ui/react-icons';
 import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -69,7 +70,8 @@ export function MultiSelect({
           type="button"
           disabled={disabled}
           className={cn(
-            'flex min-h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background hover:border-input-active focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+            buttonVariants({ variant: 'outline' }),
+            'h-auto min-h-9 w-full justify-between gap-2 px-3 py-2 font-normal',
             className,
           )}
         >

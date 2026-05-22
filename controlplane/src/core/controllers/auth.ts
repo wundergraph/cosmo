@@ -1,13 +1,18 @@
 import { FastifyPluginCallback, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 import { PlainMessage } from '@bufbuild/protobuf';
-import { LoginMethod, LoginMethodType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  LoginMethod,
+  LoginMethodType,
+  SocialLoginProvider,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import cookie from 'cookie';
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
+import { isSocialLoginProvider } from '../util.js';
 import * as schema from '../../db/schema.js';
 import { sessions } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
@@ -94,23 +99,31 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
       const oidcRepo = new OidcRepository(opts.db);
 
-      const passwordLoginMethod: PlainMessage<LoginMethod> = {
-        type: LoginMethodType.PASSWORD,
+      const emptyLoginMethod = {
         ssoProviderId: '',
         ssoProviderName: '',
         ssoAlias: '',
+        socialProvider: SocialLoginProvider.UNSPECIFIED,
       };
-      let loginMethod: PlainMessage<LoginMethod> = passwordLoginMethod;
+      let loginMethod: PlainMessage<LoginMethod> = { ...emptyLoginMethod, type: LoginMethodType.PASSWORD };
       if (userSession.idpAlias) {
         const provider = await oidcRepo.getOidcProviderByAliasUnscoped({ alias: userSession.idpAlias });
-        loginMethod = provider
-          ? {
-              type: LoginMethodType.SSO,
-              ssoProviderId: provider.id,
-              ssoProviderName: provider.name,
-              ssoAlias: userSession.idpAlias,
-            }
-          : passwordLoginMethod;
+        if (provider) {
+          loginMethod = {
+            ...emptyLoginMethod,
+            type: LoginMethodType.SSO,
+            ssoProviderId: provider.id,
+            ssoProviderName: provider.name,
+            ssoAlias: userSession.idpAlias,
+          };
+        } else if (isSocialLoginProvider(userSession.idpAlias)) {
+          loginMethod = {
+            ...emptyLoginMethod,
+            type: LoginMethodType.SOCIAL,
+            socialProvider:
+              userSession.idpAlias === 'google' ? SocialLoginProvider.GOOGLE : SocialLoginProvider.GITHUB,
+          };
+        }
       }
 
       return {

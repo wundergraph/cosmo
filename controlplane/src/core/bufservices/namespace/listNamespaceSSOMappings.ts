@@ -39,6 +39,8 @@ export function listNamespaceSSOMappings(
         namespaceId: m.namespaceId,
         allowedSsoProviderIds: m.allowedSsoProviderIds,
         allowPasswordLogin: m.allowPasswordLogin,
+        allowGoogleLogin: m.allowGoogleLogin,
+        allowGithubLogin: m.allowGithubLogin,
       })),
     };
   });

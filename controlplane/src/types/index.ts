@@ -845,7 +845,11 @@ export interface FederatedGraphAndCompositionResults {
   results: ComposeGraphsTaskResultItem[];
 }
 
+export const SOCIAL_LOGIN_PROVIDERS = ['google', 'github'] as const;
+export type SocialLoginProvider = (typeof SOCIAL_LOGIN_PROVIDERS)[number];
+
 export type LoginMethod =
   | { type: 'sso'; ssoProviderId: string; alias: string }
+  | { type: 'social'; provider: SocialLoginProvider; alias: string }
   | { type: 'password' }
   | { type: 'api-key' };

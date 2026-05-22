@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   LoginMethod,
   LoginMethodType,
+  SocialLoginProvider,
   WhoAmIRequest,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -40,6 +41,12 @@ export function whoAmI(
     }
 
     const lm = authContext.loginMethod;
+    const emptyLoginMethod = {
+      ssoProviderId: '',
+      ssoProviderName: '',
+      ssoAlias: '',
+      socialProvider: SocialLoginProvider.UNSPECIFIED,
+    };
     let loginMethod: PlainMessage<LoginMethod>;
     switch (lm?.type) {
       case 'sso': {
@@ -49,6 +56,7 @@ export function whoAmI(
           organizationId: authContext.organizationId,
         });
         loginMethod = {
+          ...emptyLoginMethod,
           type: LoginMethodType.SSO,
           ssoProviderId: lm.ssoProviderId,
           ssoProviderName: provider?.name ?? '',
@@ -57,33 +65,27 @@ export function whoAmI(
 
         break;
       }
-      case 'password': {
+      case 'social': {
         loginMethod = {
-          type: LoginMethodType.PASSWORD,
-          ssoProviderId: '',
-          ssoProviderName: '',
-          ssoAlias: '',
+          ...emptyLoginMethod,
+          type: LoginMethodType.SOCIAL,
+          socialProvider: lm.provider === 'google' ? SocialLoginProvider.GOOGLE : SocialLoginProvider.GITHUB,
         };
+
+        break;
+      }
+      case 'password': {
+        loginMethod = { ...emptyLoginMethod, type: LoginMethodType.PASSWORD };
 
         break;
       }
       case 'api-key': {
-        loginMethod = {
-          type: LoginMethodType.API_KEY,
-          ssoProviderId: '',
-          ssoProviderName: '',
-          ssoAlias: '',
-        };
+        loginMethod = { ...emptyLoginMethod, type: LoginMethodType.API_KEY };
 
         break;
       }
       default: {
-        loginMethod = {
-          type: LoginMethodType.UNSPECIFIED,
-          ssoProviderId: '',
-          ssoProviderName: '',
-          ssoAlias: '',
-        };
+        loginMethod = { ...emptyLoginMethod, type: LoginMethodType.UNSPECIFIED };
       }
     }
 
