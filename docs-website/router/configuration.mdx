@@ -418,8 +418,8 @@ tls:
 
 ### Outbound TLS to Subgraphs
 
-Configure TLS for outbound connections from router to subgraphs.    
-See [Outbound mTLS to Subgraphs](/router/security/tls#router-mtls) for details.
+Configure TLS for outbound connections from router to subgraphs.
+See [TLS](/router/security/tls) for details.
 
 #### HTTP Subgraphs
 
@@ -456,10 +456,11 @@ tls:
 #### gRPC Subgraphs
 
 The configuration settings above are not applied to gRPC subgraphs.
-For gRPC subgraphs there are dedicated environment variables.
+For gRPC subgraphs, TLS must be explicitly enabled with `enabled: true`.
 
-| Environment Variable                               | YAML                                               | Required               | Description                                                                                              | Default Value |
-| -------------------------------------------------- | -------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------- | ------------- |
+| Environment Variable                               | YAML                                               | Required                | Description                                                                                              | Default Value |
+| -------------------------------------------------- | -------------------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- | ------------- |
+| TLS_CLIENT_GRPC_ALL_ENABLED                        | tls.client_grpc.all.enabled                        | <Icon icon="check-square" /> | Enable TLS for all gRPC subgraph connections.                                                       | false         |
 | TLS_CLIENT_GRPC_ALL_CA_FILE                        | tls.client_grpc.all.ca_file                        | <Icon icon="square" /> | Path to a custom CA certificate file for verifying gRPC subgraph server certificates.                    |               |
 | TLS_CLIENT_GRPC_ALL_CERT_FILE                      | tls.client_grpc.all.cert_file                      | <Icon icon="square" /> | Path to the client certificate chain file for authenticating the router to gRPC subgraphs. Enables mTLS. |               |
 | TLS_CLIENT_GRPC_ALL_KEY_FILE                       | tls.client_grpc.all.key_file                       | <Icon icon="square" /> | Path to the client private key file. Enables mTLS.                                                       |               |
@@ -472,14 +473,18 @@ version: "1"
 
 tls:
   client_grpc:
-    all: # global tls configuration affecting all gRPC subgraphs
+    all: # global TLS configuration for all gRPC subgraphs
+      enabled: true
       cert_file: /path/to/client.crt
       key_file: /path/to/client.key
       ca_file: /path/to/ca.crt
-    subgraphs: # additional overwrites for specific gRPC subgraphs
-      projects:
+    subgraphs: # per-subgraph overrides
+      products:
+        enabled: true
         cert_file: /path/to/products-client.crt
         key_file: /path/to/products-client.key
+      projects:
+        enabled: false # specifically disable TLS for this subgraph
 ```
 
 
