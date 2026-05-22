@@ -24123,43 +24123,6 @@ export class GetNamespaceProposalConfigResponse extends Message<GetNamespaceProp
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetNamespaceSSOMappingRequest
- */
-export class GetNamespaceSSOMappingRequest extends Message<GetNamespaceSSOMappingRequest> {
-  /**
-   * @generated from field: string namespace_id = 1;
-   */
-  namespaceId = "";
-
-  constructor(data?: PartialMessage<GetNamespaceSSOMappingRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetNamespaceSSOMappingRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "namespace_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespaceSSOMappingRequest {
-    return new GetNamespaceSSOMappingRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNamespaceSSOMappingRequest {
-    return new GetNamespaceSSOMappingRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNamespaceSSOMappingRequest {
-    return new GetNamespaceSSOMappingRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetNamespaceSSOMappingRequest | PlainMessage<GetNamespaceSSOMappingRequest> | undefined, b: GetNamespaceSSOMappingRequest | PlainMessage<GetNamespaceSSOMappingRequest> | undefined): boolean {
-    return proto3.util.equals(GetNamespaceSSOMappingRequest, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.platform.v1.NamespaceSSOMapping
  */
 export class NamespaceSSOMapping extends Message<NamespaceSSOMapping> {
@@ -24205,49 +24168,6 @@ export class NamespaceSSOMapping extends Message<NamespaceSSOMapping> {
 
   static equals(a: NamespaceSSOMapping | PlainMessage<NamespaceSSOMapping> | undefined, b: NamespaceSSOMapping | PlainMessage<NamespaceSSOMapping> | undefined): boolean {
     return proto3.util.equals(NamespaceSSOMapping, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.platform.v1.GetNamespaceSSOMappingResponse
- */
-export class GetNamespaceSSOMappingResponse extends Message<GetNamespaceSSOMappingResponse> {
-  /**
-   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
-   */
-  response?: Response;
-
-  /**
-   * @generated from field: wg.cosmo.platform.v1.NamespaceSSOMapping mapping = 2;
-   */
-  mapping?: NamespaceSSOMapping;
-
-  constructor(data?: PartialMessage<GetNamespaceSSOMappingResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetNamespaceSSOMappingResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "mapping", kind: "message", T: NamespaceSSOMapping },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespaceSSOMappingResponse {
-    return new GetNamespaceSSOMappingResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNamespaceSSOMappingResponse {
-    return new GetNamespaceSSOMappingResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNamespaceSSOMappingResponse {
-    return new GetNamespaceSSOMappingResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetNamespaceSSOMappingResponse | PlainMessage<GetNamespaceSSOMappingResponse> | undefined, b: GetNamespaceSSOMappingResponse | PlainMessage<GetNamespaceSSOMappingResponse> | undefined): boolean {
-    return proto3.util.equals(GetNamespaceSSOMappingResponse, a, b);
   }
 }
 
@@ -24334,6 +24254,83 @@ export class UpdateNamespaceSSOMappingResponse extends Message<UpdateNamespaceSS
 
   static equals(a: UpdateNamespaceSSOMappingResponse | PlainMessage<UpdateNamespaceSSOMappingResponse> | undefined, b: UpdateNamespaceSSOMappingResponse | PlainMessage<UpdateNamespaceSSOMappingResponse> | undefined): boolean {
     return proto3.util.equals(UpdateNamespaceSSOMappingResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ListNamespaceSSOMappingsRequest
+ */
+export class ListNamespaceSSOMappingsRequest extends Message<ListNamespaceSSOMappingsRequest> {
+  constructor(data?: PartialMessage<ListNamespaceSSOMappingsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ListNamespaceSSOMappingsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListNamespaceSSOMappingsRequest {
+    return new ListNamespaceSSOMappingsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListNamespaceSSOMappingsRequest {
+    return new ListNamespaceSSOMappingsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListNamespaceSSOMappingsRequest {
+    return new ListNamespaceSSOMappingsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListNamespaceSSOMappingsRequest | PlainMessage<ListNamespaceSSOMappingsRequest> | undefined, b: ListNamespaceSSOMappingsRequest | PlainMessage<ListNamespaceSSOMappingsRequest> | undefined): boolean {
+    return proto3.util.equals(ListNamespaceSSOMappingsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse
+ */
+export class ListNamespaceSSOMappingsResponse extends Message<ListNamespaceSSOMappingsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * One entry per namespace that is restricted to specific login methods.
+   * Namespaces with no mapping (default-open) are omitted.
+   *
+   * @generated from field: repeated wg.cosmo.platform.v1.NamespaceSSOMapping mappings = 2;
+   */
+  mappings: NamespaceSSOMapping[] = [];
+
+  constructor(data?: PartialMessage<ListNamespaceSSOMappingsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "mappings", kind: "message", T: NamespaceSSOMapping, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListNamespaceSSOMappingsResponse {
+    return new ListNamespaceSSOMappingsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListNamespaceSSOMappingsResponse {
+    return new ListNamespaceSSOMappingsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListNamespaceSSOMappingsResponse {
+    return new ListNamespaceSSOMappingsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListNamespaceSSOMappingsResponse | PlainMessage<ListNamespaceSSOMappingsResponse> | undefined, b: ListNamespaceSSOMappingsResponse | PlainMessage<ListNamespaceSSOMappingsResponse> | undefined): boolean {
+    return proto3.util.equals(ListNamespaceSSOMappingsResponse, a, b);
   }
 }
 

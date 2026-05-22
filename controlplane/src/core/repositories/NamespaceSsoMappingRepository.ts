@@ -1,9 +1,11 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq } from 'drizzle-orm';
+import { and, eq, SQL } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { namespaces, namespaceSsoProviders } from '../../db/schema.js';
 import { traced } from '../tracing.js';
+import { applyIdpNamespaceGate } from '../util.js';
 import type { LoginMethod, NamespaceAccess } from '../../types/index.js';
+import type { RBACEvaluator } from '../services/RBACEvaluator.js';
 
 @traced
 export class NamespaceSsoMappingRepository {
@@ -62,6 +64,48 @@ export class NamespaceSsoMappingRepository {
     }
 
     return namespaceIds.size === 0 ? { kind: 'none' } : { kind: 'restricted', namespaceIds };
+  }
+
+  /**
+   * Returns one entry per namespace in the org that has at least one mapping row
+   * (i.e. is restricted). Namespaces with no rows (default-open) are omitted.
+   *
+   * When `rbac` is provided, results are limited to the namespaces its IdP gate
+   * allows, so callers only ever see namespaces they can access.
+   */
+  async listMappings(input: {
+    organizationId: string;
+    rbac?: RBACEvaluator;
+  }): Promise<{ namespaceId: string; allowedSsoProviderIds: string[]; allowPasswordLogin: boolean }[]> {
+    const conditions: (SQL<unknown> | undefined)[] = [eq(namespaces.organizationId, input.organizationId)];
+    if (!applyIdpNamespaceGate(input.rbac, namespaces.id, conditions)) {
+      return [];
+    }
+
+    const rows = await this.db
+      .select({
+        namespaceId: namespaceSsoProviders.namespaceId,
+        ssoProviderId: namespaceSsoProviders.ssoProviderId,
+        isPasswordLogin: namespaceSsoProviders.isPasswordLogin,
+      })
+      .from(namespaceSsoProviders)
+      .innerJoin(namespaces, eq(namespaces.id, namespaceSsoProviders.namespaceId))
+      .where(and(...conditions))
+      .execute();
+
+    const byNamespace = new Map<string, { allowedSsoProviderIds: string[]; allowPasswordLogin: boolean }>();
+    for (const row of rows) {
+      const entry = byNamespace.get(row.namespaceId) ?? { allowedSsoProviderIds: [], allowPasswordLogin: false };
+      if (row.ssoProviderId) {
+        entry.allowedSsoProviderIds.push(row.ssoProviderId);
+      }
+      if (row.isPasswordLogin) {
+        entry.allowPasswordLogin = true;
+      }
+      byNamespace.set(row.namespaceId, entry);
+    }
+
+    return Array.from(byNamespace, ([namespaceId, entry]) => ({ namespaceId, ...entry }));
   }
 
   getMapping(input: { namespaceId: string }) {

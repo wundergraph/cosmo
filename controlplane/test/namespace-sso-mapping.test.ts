@@ -160,18 +160,18 @@ describe('NamespaceSsoMappingRepository', () => {
 
     await setMapping(client, nsId, [providerId], false);
 
-    const before = await client.getNamespaceSSOMapping({ namespaceId: nsId });
-    expect(before.mapping?.allowedSsoProviderIds).toEqual([providerId]);
-    expect(before.mapping?.allowPasswordLogin).toBe(false);
+    const before = await client.listNamespaceSSOMappings({});
+    const beforeEntry = before.mappings.find((m) => m.namespaceId === nsId);
+    expect(beforeEntry?.allowedSsoProviderIds).toEqual([providerId]);
+    expect(beforeEntry?.allowPasswordLogin).toBe(false);
 
     // Delete the provider via the RPC; the FK cascade should drop the mapping row.
     const deleted = await client.deleteOIDCProvider({ id: providerId });
     expect(deleted.response?.code).toBe(EnumStatusCode.OK);
 
-    // The namespace is now default-open: no SSO providers, no password row.
-    const after = await client.getNamespaceSSOMapping({ namespaceId: nsId });
-    expect(after.mapping?.allowedSsoProviderIds).toEqual([]);
-    expect(after.mapping?.allowPasswordLogin).toBe(false);
+    // The namespace is now default-open, so it drops out of the mappings list.
+    const after = await client.listNamespaceSSOMappings({});
+    expect(after.mappings.find((m) => m.namespaceId === nsId)).toBeUndefined();
 
     // The repository-level view agrees: no rows for the namespace.
     const remaining = await new NamespaceSsoMappingRepository(server.db).getMapping({ namespaceId: nsId });

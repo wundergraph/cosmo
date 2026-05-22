@@ -90,8 +90,8 @@ import { getOnboarding } from './onboarding/getOnboarding.js';
 import { createNamespace } from './namespace/createNamespace.js';
 import { deleteNamespace } from './namespace/deleteNamespace.js';
 import { getNamespace } from './namespace/getNamespace.js';
-import { getNamespaceSSOMapping } from './namespace/getNamespaceSSOMapping.js';
 import { updateNamespaceSSOMapping } from './namespace/updateNamespaceSSOMapping.js';
+import { listNamespaceSSOMappings } from './namespace/listNamespaceSSOMappings.js';
 import { getNamespaces } from './namespace/getNamespaces.js';
 import { renameNamespace } from './namespace/renameNamespace.js';
 import { createIntegration } from './notification/createIntegration.js';
@@ -897,11 +897,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getNamespaceProposalConfig(opts, req, ctx);
     },
 
-    getNamespaceSSOMapping: (req, ctx) => {
-      return getNamespaceSSOMapping(opts, req, ctx);
-    },
     updateNamespaceSSOMapping: (req, ctx) => {
       return updateNamespaceSSOMapping(opts, req, ctx);
+    },
+    listNamespaceSSOMappings: (req, ctx) => {
+      return listNamespaceSSOMappings(opts, req, ctx);
     },
 
     getOperations: (req, ctx) => {

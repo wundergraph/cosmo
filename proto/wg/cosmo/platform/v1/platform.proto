@@ -3083,19 +3083,10 @@ message GetNamespaceProposalConfigResponse {
   LintSeverity publishSeverityLevel = 4;
 }
 
-message GetNamespaceSSOMappingRequest {
-  string namespace_id = 1;
-}
-
 message NamespaceSSOMapping {
   string namespace_id = 1;
   repeated string allowed_sso_provider_ids = 2;
   bool allow_password_login = 3;
-}
-
-message GetNamespaceSSOMappingResponse {
-  Response response = 1;
-  NamespaceSSOMapping mapping = 2;
 }
 
 message UpdateNamespaceSSOMappingRequest {
@@ -3106,6 +3097,15 @@ message UpdateNamespaceSSOMappingRequest {
 
 message UpdateNamespaceSSOMappingResponse {
   Response response = 1;
+}
+
+message ListNamespaceSSOMappingsRequest {}
+
+message ListNamespaceSSOMappingsResponse {
+  Response response = 1;
+  // One entry per namespace that is restricted to specific login methods.
+  // Namespaces with no mapping (default-open) are omitted.
+  repeated NamespaceSSOMapping mappings = 2;
 }
 
 enum OperationsFetchBasedOn {
@@ -3720,10 +3720,10 @@ service PlatformService {
   rpc ConfigureNamespaceProposalConfig(ConfigureNamespaceProposalConfigRequest) returns (ConfigureNamespaceProposalConfigResponse) {}
   // GetNamespaceProposalConfig returns the proposal config of the namespace passed.
   rpc GetNamespaceProposalConfig(GetNamespaceProposalConfigRequest) returns (GetNamespaceProposalConfigResponse) {}
-  // GetNamespaceSSOMapping returns the SSO mapping configuration for the namespace.
-  rpc GetNamespaceSSOMapping(GetNamespaceSSOMappingRequest) returns (GetNamespaceSSOMappingResponse) {}
   // UpdateNamespaceSSOMapping replaces the SSO mapping configuration for the namespace.
   rpc UpdateNamespaceSSOMapping(UpdateNamespaceSSOMappingRequest) returns (UpdateNamespaceSSOMappingResponse) {}
+  // ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
+  rpc ListNamespaceSSOMappings(ListNamespaceSSOMappingsRequest) returns (ListNamespaceSSOMappingsResponse) {}
   // GetProposalsByFederatedGraph returns proposals for a federated graph.
   rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
   // GetProposalChecks returns checks for a proposal.

@@ -28121,50 +28121,6 @@ func (x *GetNamespaceProposalConfigResponse) GetPublishSeverityLevel() LintSever
 	return LintSeverity_warn
 }
 
-type GetNamespaceSSOMappingRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NamespaceId   string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetNamespaceSSOMappingRequest) Reset() {
-	*x = GetNamespaceSSOMappingRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[427]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetNamespaceSSOMappingRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetNamespaceSSOMappingRequest) ProtoMessage() {}
-
-func (x *GetNamespaceSSOMappingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[427]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetNamespaceSSOMappingRequest.ProtoReflect.Descriptor instead.
-func (*GetNamespaceSSOMappingRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{427}
-}
-
-func (x *GetNamespaceSSOMappingRequest) GetNamespaceId() string {
-	if x != nil {
-		return x.NamespaceId
-	}
-	return ""
-}
-
 type NamespaceSSOMapping struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	NamespaceId           string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
@@ -28176,7 +28132,7 @@ type NamespaceSSOMapping struct {
 
 func (x *NamespaceSSOMapping) Reset() {
 	*x = NamespaceSSOMapping{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[428]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[427]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28188,7 +28144,7 @@ func (x *NamespaceSSOMapping) String() string {
 func (*NamespaceSSOMapping) ProtoMessage() {}
 
 func (x *NamespaceSSOMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[428]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[427]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28201,7 +28157,7 @@ func (x *NamespaceSSOMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamespaceSSOMapping.ProtoReflect.Descriptor instead.
 func (*NamespaceSSOMapping) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{428}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{427}
 }
 
 func (x *NamespaceSSOMapping) GetNamespaceId() string {
@@ -28225,58 +28181,6 @@ func (x *NamespaceSSOMapping) GetAllowPasswordLogin() bool {
 	return false
 }
 
-type GetNamespaceSSOMappingResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Response      *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	Mapping       *NamespaceSSOMapping   `protobuf:"bytes,2,opt,name=mapping,proto3" json:"mapping,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetNamespaceSSOMappingResponse) Reset() {
-	*x = GetNamespaceSSOMappingResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[429]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetNamespaceSSOMappingResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetNamespaceSSOMappingResponse) ProtoMessage() {}
-
-func (x *GetNamespaceSSOMappingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[429]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetNamespaceSSOMappingResponse.ProtoReflect.Descriptor instead.
-func (*GetNamespaceSSOMappingResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{429}
-}
-
-func (x *GetNamespaceSSOMappingResponse) GetResponse() *Response {
-	if x != nil {
-		return x.Response
-	}
-	return nil
-}
-
-func (x *GetNamespaceSSOMappingResponse) GetMapping() *NamespaceSSOMapping {
-	if x != nil {
-		return x.Mapping
-	}
-	return nil
-}
-
 type UpdateNamespaceSSOMappingRequest struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	NamespaceId           string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
@@ -28288,7 +28192,7 @@ type UpdateNamespaceSSOMappingRequest struct {
 
 func (x *UpdateNamespaceSSOMappingRequest) Reset() {
 	*x = UpdateNamespaceSSOMappingRequest{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[430]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[428]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28300,7 +28204,7 @@ func (x *UpdateNamespaceSSOMappingRequest) String() string {
 func (*UpdateNamespaceSSOMappingRequest) ProtoMessage() {}
 
 func (x *UpdateNamespaceSSOMappingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[430]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[428]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28313,7 +28217,7 @@ func (x *UpdateNamespaceSSOMappingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateNamespaceSSOMappingRequest.ProtoReflect.Descriptor instead.
 func (*UpdateNamespaceSSOMappingRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{430}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{428}
 }
 
 func (x *UpdateNamespaceSSOMappingRequest) GetNamespaceId() string {
@@ -28346,7 +28250,7 @@ type UpdateNamespaceSSOMappingResponse struct {
 
 func (x *UpdateNamespaceSSOMappingResponse) Reset() {
 	*x = UpdateNamespaceSSOMappingResponse{}
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[431]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[429]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -28358,7 +28262,7 @@ func (x *UpdateNamespaceSSOMappingResponse) String() string {
 func (*UpdateNamespaceSSOMappingResponse) ProtoMessage() {}
 
 func (x *UpdateNamespaceSSOMappingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[431]
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[429]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -28371,12 +28275,102 @@ func (x *UpdateNamespaceSSOMappingResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use UpdateNamespaceSSOMappingResponse.ProtoReflect.Descriptor instead.
 func (*UpdateNamespaceSSOMappingResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{431}
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{429}
 }
 
 func (x *UpdateNamespaceSSOMappingResponse) GetResponse() *Response {
 	if x != nil {
 		return x.Response
+	}
+	return nil
+}
+
+type ListNamespaceSSOMappingsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListNamespaceSSOMappingsRequest) Reset() {
+	*x = ListNamespaceSSOMappingsRequest{}
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[430]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListNamespaceSSOMappingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListNamespaceSSOMappingsRequest) ProtoMessage() {}
+
+func (x *ListNamespaceSSOMappingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[430]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListNamespaceSSOMappingsRequest.ProtoReflect.Descriptor instead.
+func (*ListNamespaceSSOMappingsRequest) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{430}
+}
+
+type ListNamespaceSSOMappingsResponse struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Response *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	// One entry per namespace that is restricted to specific login methods.
+	// Namespaces with no mapping (default-open) are omitted.
+	Mappings      []*NamespaceSSOMapping `protobuf:"bytes,2,rep,name=mappings,proto3" json:"mappings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListNamespaceSSOMappingsResponse) Reset() {
+	*x = ListNamespaceSSOMappingsResponse{}
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[431]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListNamespaceSSOMappingsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListNamespaceSSOMappingsResponse) ProtoMessage() {}
+
+func (x *ListNamespaceSSOMappingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[431]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListNamespaceSSOMappingsResponse.ProtoReflect.Descriptor instead.
+func (*ListNamespaceSSOMappingsResponse) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{431}
+}
+
+func (x *ListNamespaceSSOMappingsResponse) GetResponse() *Response {
+	if x != nil {
+		return x.Response
+	}
+	return nil
+}
+
+func (x *ListNamespaceSSOMappingsResponse) GetMappings() []*NamespaceSSOMapping {
+	if x != nil {
+		return x.Mappings
 	}
 	return nil
 }
@@ -34890,22 +34884,21 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12\x18\n" +
 	"\aenabled\x18\x02 \x01(\bR\aenabled\x12R\n" +
 	"\x12checkSeverityLevel\x18\x03 \x01(\x0e2\".wg.cosmo.platform.v1.LintSeverityR\x12checkSeverityLevel\x12V\n" +
-	"\x14publishSeverityLevel\x18\x04 \x01(\x0e2\".wg.cosmo.platform.v1.LintSeverityR\x14publishSeverityLevel\"B\n" +
-	"\x1dGetNamespaceSSOMappingRequest\x12!\n" +
-	"\fnamespace_id\x18\x01 \x01(\tR\vnamespaceId\"\xa3\x01\n" +
+	"\x14publishSeverityLevel\x18\x04 \x01(\x0e2\".wg.cosmo.platform.v1.LintSeverityR\x14publishSeverityLevel\"\xa3\x01\n" +
 	"\x13NamespaceSSOMapping\x12!\n" +
 	"\fnamespace_id\x18\x01 \x01(\tR\vnamespaceId\x127\n" +
 	"\x18allowed_sso_provider_ids\x18\x02 \x03(\tR\x15allowedSsoProviderIds\x120\n" +
-	"\x14allow_password_login\x18\x03 \x01(\bR\x12allowPasswordLogin\"\xa1\x01\n" +
-	"\x1eGetNamespaceSSOMappingResponse\x12:\n" +
-	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12C\n" +
-	"\amapping\x18\x02 \x01(\v2).wg.cosmo.platform.v1.NamespaceSSOMappingR\amapping\"\xb0\x01\n" +
+	"\x14allow_password_login\x18\x03 \x01(\bR\x12allowPasswordLogin\"\xb0\x01\n" +
 	" UpdateNamespaceSSOMappingRequest\x12!\n" +
 	"\fnamespace_id\x18\x01 \x01(\tR\vnamespaceId\x127\n" +
 	"\x18allowed_sso_provider_ids\x18\x02 \x03(\tR\x15allowedSsoProviderIds\x120\n" +
 	"\x14allow_password_login\x18\x03 \x01(\bR\x12allowPasswordLogin\"_\n" +
 	"!UpdateNamespaceSSOMappingResponse\x12:\n" +
-	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\"\xc9\a\n" +
+	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\"!\n" +
+	"\x1fListNamespaceSSOMappingsRequest\"\xa5\x01\n" +
+	" ListNamespaceSSOMappingsResponse\x12:\n" +
+	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12E\n" +
+	"\bmappings\x18\x02 \x03(\v2).wg.cosmo.platform.v1.NamespaceSSOMappingR\bmappings\"\xc9\a\n" +
 	"\x14GetOperationsRequest\x12.\n" +
 	"\x12federatedGraphName\x18\x01 \x01(\tR\x12federatedGraphName\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12 \n" +
@@ -35192,7 +35185,7 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x06ERRORS\x10\x02*\"\n" +
 	"\rSortDirection\x12\a\n" +
 	"\x03ASC\x10\x00\x12\b\n" +
-	"\x04DESC\x10\x012\xf0\xc1\x01\n" +
+	"\x04DESC\x10\x012\xf6\xc1\x01\n" +
 	"\x0fPlatformService\x12\x85\x01\n" +
 	"\x16CreatePlaygroundScript\x123.wg.cosmo.platform.v1.CreatePlaygroundScriptRequest\x1a4.wg.cosmo.platform.v1.CreatePlaygroundScriptResponse\"\x00\x12\x85\x01\n" +
 	"\x16DeletePlaygroundScript\x123.wg.cosmo.platform.v1.DeletePlaygroundScriptRequest\x1a4.wg.cosmo.platform.v1.DeletePlaygroundScriptResponse\"\x00\x12\x85\x01\n" +
@@ -35369,9 +35362,9 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x0eUpdateProposal\x12+.wg.cosmo.platform.v1.UpdateProposalRequest\x1a,.wg.cosmo.platform.v1.UpdateProposalResponse\"\x00\x12\x94\x01\n" +
 	"\x1bEnableProposalsForNamespace\x128.wg.cosmo.platform.v1.EnableProposalsForNamespaceRequest\x1a9.wg.cosmo.platform.v1.EnableProposalsForNamespaceResponse\"\x00\x12\xa3\x01\n" +
 	" ConfigureNamespaceProposalConfig\x12=.wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest\x1a>.wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse\"\x00\x12\x91\x01\n" +
-	"\x1aGetNamespaceProposalConfig\x127.wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest\x1a8.wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse\"\x00\x12\x85\x01\n" +
-	"\x16GetNamespaceSSOMapping\x123.wg.cosmo.platform.v1.GetNamespaceSSOMappingRequest\x1a4.wg.cosmo.platform.v1.GetNamespaceSSOMappingResponse\"\x00\x12\x8e\x01\n" +
-	"\x19UpdateNamespaceSSOMapping\x126.wg.cosmo.platform.v1.UpdateNamespaceSSOMappingRequest\x1a7.wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse\"\x00\x12\x97\x01\n" +
+	"\x1aGetNamespaceProposalConfig\x127.wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest\x1a8.wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse\"\x00\x12\x8e\x01\n" +
+	"\x19UpdateNamespaceSSOMapping\x126.wg.cosmo.platform.v1.UpdateNamespaceSSOMappingRequest\x1a7.wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse\"\x00\x12\x8b\x01\n" +
+	"\x18ListNamespaceSSOMappings\x125.wg.cosmo.platform.v1.ListNamespaceSSOMappingsRequest\x1a6.wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse\"\x00\x12\x97\x01\n" +
 	"\x1cGetProposalsByFederatedGraph\x129.wg.cosmo.platform.v1.GetProposalsByFederatedGraphRequest\x1a:.wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse\"\x00\x12v\n" +
 	"\x11GetProposalChecks\x12..wg.cosmo.platform.v1.GetProposalChecksRequest\x1a/.wg.cosmo.platform.v1.GetProposalChecksResponse\"\x00\x12j\n" +
 	"\rGetOperations\x12*.wg.cosmo.platform.v1.GetOperationsRequest\x1a+.wg.cosmo.platform.v1.GetOperationsResponse\"\x00\x12\x88\x01\n" +
@@ -35847,11 +35840,11 @@ var file_wg_cosmo_platform_v1_platform_proto_goTypes = []any{
 	(*ConfigureNamespaceProposalConfigResponse)(nil),                   // 440: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse
 	(*GetNamespaceProposalConfigRequest)(nil),                          // 441: wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest
 	(*GetNamespaceProposalConfigResponse)(nil),                         // 442: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse
-	(*GetNamespaceSSOMappingRequest)(nil),                              // 443: wg.cosmo.platform.v1.GetNamespaceSSOMappingRequest
-	(*NamespaceSSOMapping)(nil),                                        // 444: wg.cosmo.platform.v1.NamespaceSSOMapping
-	(*GetNamespaceSSOMappingResponse)(nil),                             // 445: wg.cosmo.platform.v1.GetNamespaceSSOMappingResponse
-	(*UpdateNamespaceSSOMappingRequest)(nil),                           // 446: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingRequest
-	(*UpdateNamespaceSSOMappingResponse)(nil),                          // 447: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse
+	(*NamespaceSSOMapping)(nil),                                        // 443: wg.cosmo.platform.v1.NamespaceSSOMapping
+	(*UpdateNamespaceSSOMappingRequest)(nil),                           // 444: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingRequest
+	(*UpdateNamespaceSSOMappingResponse)(nil),                          // 445: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse
+	(*ListNamespaceSSOMappingsRequest)(nil),                            // 446: wg.cosmo.platform.v1.ListNamespaceSSOMappingsRequest
+	(*ListNamespaceSSOMappingsResponse)(nil),                           // 447: wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse
 	(*GetOperationsRequest)(nil),                                       // 448: wg.cosmo.platform.v1.GetOperationsRequest
 	(*GetOperationsResponse)(nil),                                      // 449: wg.cosmo.platform.v1.GetOperationsResponse
 	(*GetClientsFromAnalyticsRequest)(nil),                             // 450: wg.cosmo.platform.v1.GetClientsFromAnalyticsRequest
@@ -36388,9 +36381,9 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	17,  // 463: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	0,   // 464: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.checkSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
 	0,   // 465: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.publishSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
-	17,  // 466: wg.cosmo.platform.v1.GetNamespaceSSOMappingResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	444, // 467: wg.cosmo.platform.v1.GetNamespaceSSOMappingResponse.mapping:type_name -> wg.cosmo.platform.v1.NamespaceSSOMapping
-	17,  // 468: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	17,  // 466: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	17,  // 467: wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	443, // 468: wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse.mappings:type_name -> wg.cosmo.platform.v1.NamespaceSSOMapping
 	13,  // 469: wg.cosmo.platform.v1.GetOperationsRequest.fetchBasedOn:type_name -> wg.cosmo.platform.v1.OperationsFetchBasedOn
 	101, // 470: wg.cosmo.platform.v1.GetOperationsRequest.dateRange:type_name -> wg.cosmo.platform.v1.DateRange
 	14,  // 471: wg.cosmo.platform.v1.GetOperationsRequest.sortDirection:type_name -> wg.cosmo.platform.v1.SortDirection
@@ -36603,8 +36596,8 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	437, // 678: wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace:input_type -> wg.cosmo.platform.v1.EnableProposalsForNamespaceRequest
 	439, // 679: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig:input_type -> wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest
 	441, // 680: wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig:input_type -> wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest
-	443, // 681: wg.cosmo.platform.v1.PlatformService.GetNamespaceSSOMapping:input_type -> wg.cosmo.platform.v1.GetNamespaceSSOMappingRequest
-	446, // 682: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMapping:input_type -> wg.cosmo.platform.v1.UpdateNamespaceSSOMappingRequest
+	444, // 681: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMapping:input_type -> wg.cosmo.platform.v1.UpdateNamespaceSSOMappingRequest
+	446, // 682: wg.cosmo.platform.v1.PlatformService.ListNamespaceSSOMappings:input_type -> wg.cosmo.platform.v1.ListNamespaceSSOMappingsRequest
 	431, // 683: wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph:input_type -> wg.cosmo.platform.v1.GetProposalsByFederatedGraphRequest
 	433, // 684: wg.cosmo.platform.v1.PlatformService.GetProposalChecks:input_type -> wg.cosmo.platform.v1.GetProposalChecksRequest
 	448, // 685: wg.cosmo.platform.v1.PlatformService.GetOperations:input_type -> wg.cosmo.platform.v1.GetOperationsRequest
@@ -36791,8 +36784,8 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	438, // 866: wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace:output_type -> wg.cosmo.platform.v1.EnableProposalsForNamespaceResponse
 	440, // 867: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig:output_type -> wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse
 	442, // 868: wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig:output_type -> wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse
-	445, // 869: wg.cosmo.platform.v1.PlatformService.GetNamespaceSSOMapping:output_type -> wg.cosmo.platform.v1.GetNamespaceSSOMappingResponse
-	447, // 870: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMapping:output_type -> wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse
+	445, // 869: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMapping:output_type -> wg.cosmo.platform.v1.UpdateNamespaceSSOMappingResponse
+	447, // 870: wg.cosmo.platform.v1.PlatformService.ListNamespaceSSOMappings:output_type -> wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse
 	432, // 871: wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph:output_type -> wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse
 	434, // 872: wg.cosmo.platform.v1.PlatformService.GetProposalChecks:output_type -> wg.cosmo.platform.v1.GetProposalChecksResponse
 	449, // 873: wg.cosmo.platform.v1.PlatformService.GetOperations:output_type -> wg.cosmo.platform.v1.GetOperationsResponse
