@@ -575,6 +575,11 @@
               "description": "TLS configuration applied to all gRPC subgraph connections.",
               "additionalProperties": false,
               "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable TLS for all gRPC subgraph connections."
+                },
                 "cert_file": {
                   "type": "string",
                   "format": "file-path",
@@ -596,6 +601,7 @@
                   "description": "Skip verification of the gRPC subgraph server certificate. Only use for development or testing."
                 }
               },
+              "required": ["enabled"],
               "dependencies": {
                 "cert_file": ["key_file"],
                 "key_file": ["cert_file"]
@@ -608,6 +614,11 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable TLS for this gRPC subgraph connection."
+                  },
                   "cert_file": {
                     "type": "string",
                     "format": "file-path",
@@ -629,6 +640,7 @@
                     "description": "Skip verification of this gRPC subgraph's server certificate. Only use for development or testing."
                   }
                 },
+                "required": ["enabled"],
                 "dependencies": {
                   "cert_file": ["key_file"],
                   "key_file": ["cert_file"]

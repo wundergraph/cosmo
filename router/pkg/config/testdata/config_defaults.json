@@ -146,7 +146,8 @@
         "CertFile": "",
         "KeyFile": "",
         "CaFile": "",
-        "InsecureSkipCaVerification": false
+        "InsecureSkipCaVerification": false,
+        "Enabled": false
       },
       "Subgraphs": null
     }

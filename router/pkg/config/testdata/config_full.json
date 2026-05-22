@@ -186,14 +186,16 @@
         "CertFile": "/path/to/grpc-client.crt",
         "KeyFile": "/path/to/grpc-client.key",
         "CaFile": "/path/to/grpc-ca.crt",
-        "InsecureSkipCaVerification": false
+        "InsecureSkipCaVerification": false,
+        "Enabled": true
       },
       "Subgraphs": {
         "my-grpc-subgraph": {
           "CertFile": "/path/to/my-grpc-subgraph-client.crt",
           "KeyFile": "/path/to/my-grpc-subgraph-client.key",
           "CaFile": "/path/to/my-grpc-subgraph-ca.crt",
-          "InsecureSkipCaVerification": false
+          "InsecureSkipCaVerification": false,
+          "Enabled": true
         }
       }
     }

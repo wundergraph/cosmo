@@ -43,15 +43,9 @@ func buildTLSClientConfig(clientCfg config.TLSClientCertConfiguration) (*tls.Con
 	return tlsConfig, nil
 }
 
-type clientTLSConfiguration interface {
-	GetAll() config.TLSClientCertConfiguration
-	GetSubgraphs() map[string]config.TLSClientCertConfiguration
-	Enabled() bool
-}
-
-// buildSubgraphTLSConfigs builds the default and per-subgraph TLS configs from raw configuration.
-// Returns (defaultClientTLS, perSubgraphTLS, error).
-func buildSubgraphTLSConfigs[K clientTLSConfiguration](logger *zap.Logger, cfg K) (
+// buildSubgraphHTTPTLSConfigs builds the default and per-subgraph TLS configs for HTTP subgraphs
+// from raw configuration.
+func buildSubgraphHTTPTLSConfigs(logger *zap.Logger, cfg *config.HTTPClientTLSConfiguration) (
 	*tls.Config, map[string]*tls.Config, error) {
 	hasAll := (cfg.GetAll().CertFile != "" && cfg.GetAll().KeyFile != "") ||
 		cfg.GetAll().CaFile != "" || cfg.GetAll().InsecureSkipCaVerification
@@ -70,7 +64,7 @@ func buildSubgraphTLSConfigs[K clientTLSConfiguration](logger *zap.Logger, cfg K
 				"This is not recommended for production environments.")
 		}
 
-		defaultTLS, err := buildTLSClientConfig(cfg.GetAll())
+		defaultTLS, err := buildTLSClientConfig(cfg.GetAll().TLSClientCertConfiguration)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
 		}
@@ -84,7 +78,7 @@ func buildSubgraphTLSConfigs[K clientTLSConfiguration](logger *zap.Logger, cfg K
 				zap.String("subgraph", name))
 		}
 
-		subgraphTLS, err := buildTLSClientConfig(sgCfg)
+		subgraphTLS, err := buildTLSClientConfig(sgCfg.TLSClientCertConfiguration)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build TLS config for subgraph %q: %w", name, err)
 		}
@@ -92,4 +86,41 @@ func buildSubgraphTLSConfigs[K clientTLSConfiguration](logger *zap.Logger, cfg K
 	}
 
 	return defaultClientTLS, perSubgraphTLS, nil
+}
+
+// buildSubgraphGRPCTLSConfigs builds the default and per-subgraph TLS configs for gRPC subgraphs
+// from raw configuration.
+func buildSubgraphGRPCTLSConfigs(logger *zap.Logger, cfg *config.GRPCClientTLSConfiguration) (
+	*tls.Config, map[string]*tls.Config, error) {
+
+	var (
+		globalCfg *tls.Config
+		err       error
+	)
+
+	perSubgraphCfgs := make(map[string]*tls.Config, len(cfg.GetSubgraphs()))
+
+	// global config
+	if cfg.All.Enabled {
+		globalCfg, err = buildTLSClientConfig(cfg.All.TLSClientCertConfiguration)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
+		}
+	}
+
+	// per subgraph configs
+	for sgName, sgCfg := range cfg.Subgraphs {
+		if !sgCfg.Enabled {
+			perSubgraphCfgs[sgName] = nil
+			continue
+		}
+
+		perSubgraphCfgs[sgName], err = buildTLSClientConfig(sgCfg.TLSClientCertConfiguration)
+		if err != nil {
+			return nil, nil,
+				fmt.Errorf("failed to build TLS config for subgraph %q: %w", sgName, err)
+		}
+	}
+
+	return globalCfg, perSubgraphCfgs, nil
 }

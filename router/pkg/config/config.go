@@ -881,9 +881,10 @@ type AnonymizeIpConfiguration struct {
 	Method  string `yaml:"method" envDefault:"redact" env:"SECURITY_ANONYMIZE_IP_METHOD"`
 }
 
-type TLSClientAuthConfiguration struct {
-	CertFile string `yaml:"cert_file,omitempty" env:"TLS_CLIENT_AUTH_CERT_FILE"`
-	Required bool   `yaml:"required" envDefault:"false" env:"TLS_CLIENT_AUTH_REQUIRED"`
+type TLSConfiguration struct {
+	Server     TLSServerConfiguration     `yaml:"server"`
+	Client     HTTPClientTLSConfiguration `yaml:"client"`
+	ClientGRPC GRPCClientTLSConfiguration `yaml:"client_grpc"`
 }
 
 type TLSServerConfiguration struct {
@@ -895,25 +896,23 @@ type TLSServerConfiguration struct {
 	ClientAuth TLSClientAuthConfiguration `yaml:"client_auth,omitempty"`
 }
 
-type TLSClientCertConfiguration struct {
-	CertFile                   string `yaml:"cert_file,omitempty" env:"CERT_FILE"`
-	KeyFile                    string `yaml:"key_file,omitempty" env:"KEY_FILE"`
-	CaFile                     string `yaml:"ca_file,omitempty" env:"CA_FILE"`
-	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
+type TLSClientAuthConfiguration struct {
+	CertFile string `yaml:"cert_file,omitempty" env:"TLS_CLIENT_AUTH_CERT_FILE"`
+	Required bool   `yaml:"required" envDefault:"false" env:"TLS_CLIENT_AUTH_REQUIRED"`
 }
 
 type HTTPClientTLSConfiguration struct {
 	// All applies to all subgraph connections.
-	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
+	All HTTPTLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
 	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
-	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+	Subgraphs map[string]HTTPTLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
 }
 
-func (c *HTTPClientTLSConfiguration) GetAll() TLSClientCertConfiguration {
+func (c *HTTPClientTLSConfiguration) GetAll() HTTPTLSClientCertConfiguration {
 	return c.All
 }
 
-func (c *HTTPClientTLSConfiguration) GetSubgraphs() map[string]TLSClientCertConfiguration {
+func (c *HTTPClientTLSConfiguration) GetSubgraphs() map[string]HTTPTLSClientCertConfiguration {
 	return c.Subgraphs
 }
 
@@ -929,33 +928,44 @@ func (c *HTTPClientTLSConfiguration) Enabled() bool {
 
 type GRPCClientTLSConfiguration struct {
 	// All applies to all gRPC subgraph connections.
-	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_GRPC_ALL_"`
+	All GRPCTLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_GRPC_ALL_"`
 	// Subgraphs overrides per-subgraph gRPC TLS config. Key is the subgraph name.
-	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+	Subgraphs map[string]GRPCTLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
 }
 
-func (c *GRPCClientTLSConfiguration) GetAll() TLSClientCertConfiguration {
+func (c *GRPCClientTLSConfiguration) GetAll() GRPCTLSClientCertConfiguration {
 	return c.All
 }
 
-func (c *GRPCClientTLSConfiguration) GetSubgraphs() map[string]TLSClientCertConfiguration {
+func (c *GRPCClientTLSConfiguration) GetSubgraphs() map[string]GRPCTLSClientCertConfiguration {
 	return c.Subgraphs
 }
 
-// Enabled returns true if anything in c has been configured.
+// Enabled returns true if any subgraph or the default settings have TLS enabled.
 func (c *GRPCClientTLSConfiguration) Enabled() bool {
-	allConfigured := c.All.InsecureSkipCaVerification ||
-		c.All.CaFile != "" ||
-		c.All.KeyFile != "" ||
-		c.All.CertFile != ""
+	for _, v := range c.Subgraphs {
+		if v.Enabled {
+			return true
+		}
+	}
 
-	return allConfigured || len(c.Subgraphs) > 0
+	return c.All.Enabled
 }
 
-type TLSConfiguration struct {
-	Server     TLSServerConfiguration     `yaml:"server"`
-	Client     HTTPClientTLSConfiguration `yaml:"client"`
-	ClientGRPC GRPCClientTLSConfiguration `yaml:"client_grpc"`
+type HTTPTLSClientCertConfiguration struct {
+	TLSClientCertConfiguration `yaml:",inline"`
+}
+
+type GRPCTLSClientCertConfiguration struct {
+	TLSClientCertConfiguration `yaml:",inline"`
+	Enabled                    bool `yaml:"enabled" env:"ENABLED"`
+}
+
+type TLSClientCertConfiguration struct {
+	CertFile                   string `yaml:"cert_file,omitempty" env:"CERT_FILE"`
+	KeyFile                    string `yaml:"key_file,omitempty" env:"KEY_FILE"`
+	CaFile                     string `yaml:"ca_file,omitempty" env:"CA_FILE"`
+	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
 }
 
 type SubgraphErrorPropagationMode string

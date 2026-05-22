@@ -38,9 +38,11 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-								},
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										InsecureSkipCaVerification: true,
+									}},
 							},
 						}),
 					},
@@ -69,9 +71,11 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: false,
-								},
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										InsecureSkipCaVerification: false,
+									}},
 							},
 						}),
 					},
@@ -108,13 +112,15 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
+								All: config.GRPCTLSClientCertConfiguration{TLSClientCertConfiguration: config.TLSClientCertConfiguration{
 									CaFile: wrongCertPath,
-								},
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
+								}},
+								Subgraphs: map[string]config.GRPCTLSClientCertConfiguration{
 									"projects": {
-										InsecureSkipCaVerification: true,
-									},
+										Enabled: true,
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											InsecureSkipCaVerification: true,
+										}},
 								},
 							},
 						}),
@@ -152,11 +158,13 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert.pem",
-									KeyFile:                    "../testdata/tls/key.pem",
-								},
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										InsecureSkipCaVerification: true,
+										CertFile:                   "../testdata/tls/cert.pem",
+										KeyFile:                    "../testdata/tls/key.pem",
+									}},
 							},
 						}),
 					},
@@ -185,9 +193,11 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-								},
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										InsecureSkipCaVerification: true,
+									}},
 							},
 						}),
 					},
@@ -217,11 +227,13 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert-2.pem",
-									KeyFile:                    "../testdata/tls/key-2.pem",
-								},
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										InsecureSkipCaVerification: true,
+										CertFile:                   "../testdata/tls/cert-2.pem",
+										KeyFile:                    "../testdata/tls/key-2.pem",
+									}},
 							},
 						}),
 					},
@@ -255,12 +267,14 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
+								Subgraphs: map[string]config.GRPCTLSClientCertConfiguration{
 									"projects": {
-										InsecureSkipCaVerification: true,
-										CertFile:                   "../testdata/tls/cert.pem",
-										KeyFile:                    "../testdata/tls/key.pem",
-									},
+										Enabled: true,
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											InsecureSkipCaVerification: true,
+											CertFile:                   "../testdata/tls/cert.pem",
+											KeyFile:                    "../testdata/tls/key.pem",
+										}},
 								},
 							},
 						}),
@@ -290,17 +304,21 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert-2.pem",
-									KeyFile:                    "../testdata/tls/key-2.pem",
-								},
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
-									"projects": {
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
 										InsecureSkipCaVerification: true,
-										CertFile:                   "../testdata/tls/cert.pem",
-										KeyFile:                    "../testdata/tls/key.pem",
-									},
+										CertFile:                   "../testdata/tls/cert-2.pem",
+										KeyFile:                    "../testdata/tls/key-2.pem",
+									}},
+								Subgraphs: map[string]config.GRPCTLSClientCertConfiguration{
+									"projects": {
+										Enabled: true,
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											InsecureSkipCaVerification: true,
+											CertFile:                   "../testdata/tls/cert.pem",
+											KeyFile:                    "../testdata/tls/key.pem",
+										}},
 								},
 							},
 						}),
@@ -330,17 +348,21 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert.pem",
-									KeyFile:                    "../testdata/tls/key.pem",
-								},
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
-									"projects": {
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
 										InsecureSkipCaVerification: true,
-										CertFile:                   "../testdata/tls/cert-2.pem",
-										KeyFile:                    "../testdata/tls/key-2.pem",
-									},
+										CertFile:                   "../testdata/tls/cert.pem",
+										KeyFile:                    "../testdata/tls/key.pem",
+									}},
+								Subgraphs: map[string]config.GRPCTLSClientCertConfiguration{
+									"projects": {
+										Enabled: true,
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											InsecureSkipCaVerification: true,
+											CertFile:                   "../testdata/tls/cert-2.pem",
+											KeyFile:                    "../testdata/tls/key-2.pem",
+										}},
 								},
 							},
 						}),
@@ -371,16 +393,20 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert.pem",
-									KeyFile:                    "../testdata/tls/key.pem",
-								},
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
-									"projects": {
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
 										InsecureSkipCaVerification: true,
-										// NO CertFile/KeyFile — proves fields are NOT inherited from All
-									},
+										CertFile:                   "../testdata/tls/cert.pem",
+										KeyFile:                    "../testdata/tls/key.pem",
+									}},
+								Subgraphs: map[string]config.GRPCTLSClientCertConfiguration{
+									"projects": {
+										Enabled: true,
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											InsecureSkipCaVerification: true,
+											// NO CertFile/KeyFile — proves fields are NOT inherited from All
+										}},
 								},
 							},
 						}),
@@ -419,9 +445,11 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									CaFile: certPath,
-								},
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										CaFile: certPath,
+									}},
 							},
 						}),
 					},
@@ -454,10 +482,12 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
+								Subgraphs: map[string]config.GRPCTLSClientCertConfiguration{
 									"projects": {
-										CaFile: certPath,
-									},
+										Enabled: true,
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											CaFile: certPath,
+										}},
 								},
 							},
 						}),
@@ -472,7 +502,8 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 
 			t.Run("overrides global InsecureSkipVerify with proper verification", func(t *testing.T) {
 				t.Parallel()
-				// Global uses InsecureSkipCaVerification, per-subgraph replaces it with a proper CaFile check — proves per-subgraph can be more secure than global.
+				// Global uses InsecureSkipCaVerification, per-subgraph replaces it with a proper
+				// CaFile check — proves per-subgraph can be more secure than global.
 
 				serverTLS, certPath := grpcSubgraphTLSServerConfig(t, false)
 
@@ -487,13 +518,17 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-								},
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										InsecureSkipCaVerification: true,
+									}},
+								Subgraphs: map[string]config.GRPCTLSClientCertConfiguration{
 									"projects": {
-										CaFile: certPath,
-									},
+										Enabled: true,
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											CaFile: certPath,
+										}},
 								},
 							},
 						}),
@@ -504,6 +539,74 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					})
 					require.JSONEq(t, projectsExpectedData, res.Body)
 				})
+			})
+		})
+	})
+
+	t.Run("Disabled per-subgraph", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("connects to plaintext server when per-subgraph TLS is disabled", func(t *testing.T) {
+			t.Parallel()
+			// Global TLS is enabled. The projects subgraph explicitly disables it,
+			// which causes the router to use an insecure (plaintext)
+			// connection for that subgraph only.
+			// The subgraph service runs without TLS, so the request must succeed.
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				EnableGRPC:               true,
+				// No GRPCTLSConfig — server is plaintext.
+				RouterOptions: []core.Option{
+					core.WithTLSConfig(config.TLSConfiguration{
+						ClientGRPC: config.GRPCClientTLSConfiguration{
+							All: config.GRPCTLSClientCertConfiguration{
+								Enabled: true,
+								TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+									InsecureSkipCaVerification: true,
+								},
+							},
+							Subgraphs: map[string]config.GRPCTLSClientCertConfiguration{
+								"projects": {Enabled: false},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+				})
+				require.JSONEq(t, projectsExpectedData, res.Body)
+			})
+		})
+
+		t.Run("fails on plaintext server when tls-enabled subgraph config is inherited from global config", func(t *testing.T) {
+			t.Parallel()
+			// Global TLS is enabled, no per-subgraph override.
+			// The router inherits the global TLS config for the subgraph, enabling TLS for it.
+			// The subgraph service does not support TLS - the handshake fails.
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				EnableGRPC:               true,
+				RouterOptions: []core.Option{
+					core.WithTLSConfig(config.TLSConfiguration{
+						ClientGRPC: config.GRPCClientTLSConfiguration{
+							All: config.GRPCTLSClientCertConfiguration{
+								Enabled: true,
+								TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+									InsecureSkipCaVerification: true,
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+				})
+				require.NoError(t, err)
+				require.Contains(t, res.Body, "Failed to fetch from Subgraph")
 			})
 		})
 	})
@@ -531,11 +634,13 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									CaFile:   certPath,
-									CertFile: "../testdata/tls/cert.pem",
-									KeyFile:  "../testdata/tls/key.pem",
-								},
+								All: config.GRPCTLSClientCertConfiguration{
+									Enabled: true,
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										CaFile:   certPath,
+										CertFile: "../testdata/tls/cert.pem",
+										KeyFile:  "../testdata/tls/key.pem",
+									}},
 							},
 						}),
 					},
@@ -568,12 +673,14 @@ func TestSubgraphGRPCmTLS(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
 							ClientGRPC: config.GRPCClientTLSConfiguration{
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
+								Subgraphs: map[string]config.GRPCTLSClientCertConfiguration{
 									"projects": {
-										CaFile:   certPath,
-										CertFile: "../testdata/tls/cert.pem",
-										KeyFile:  "../testdata/tls/key.pem",
-									},
+										Enabled: true,
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											CaFile:   certPath,
+											CertFile: "../testdata/tls/cert.pem",
+											KeyFile:  "../testdata/tls/key.pem",
+										}},
 								},
 							},
 						}),

@@ -168,7 +168,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	}
 
 	// Build subgraph client TLS configs (mTLS for outbound subgraph connections)
-	defaultClientTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(
+	defaultClientTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(
 		r.logger,
 		&r.tls.settings.Client,
 	)
@@ -177,7 +177,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	}
 
 	// Build gRPC subgraph client TLS configs
-	defaultGRPCClientTLS, perSubgraphGRPCTLS, err := buildSubgraphTLSConfigs(
+	defaultGRPCClientTLS, perSubgraphGRPCTLS, err := buildSubgraphGRPCTLSConfigs(
 		r.logger,
 		&r.tls.settings.ClientGRPC,
 	)
