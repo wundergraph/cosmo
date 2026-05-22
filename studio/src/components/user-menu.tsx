@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useUser } from '@/hooks/use-user';
 import { resetTracking } from '@/lib/track';
+import { LoginMethodType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { ThemeToggle } from './theme-toggle';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -104,12 +105,14 @@ export const UserMenu = () => {
       <DropdownMenuContent align="end" className="w-[200px]">
         <div className="px-2 py-1.5">
           <p className="cursor-text truncate text-sm font-semibold">{user.email}</p>
-          {loginMethod?.type === 'sso' && (
+          {loginMethod?.type === LoginMethodType.SSO && (
             <p className="truncate text-xs text-muted-foreground">
               Logged in via {loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO'}
             </p>
           )}
-          {loginMethod?.type === 'password' && <p className="text-xs text-muted-foreground">Logged in via password</p>}
+          {loginMethod?.type === LoginMethodType.PASSWORD && (
+            <p className="text-xs text-muted-foreground">Logged in via password</p>
+          )}
         </div>
         <Link href="/account/invitations">
           <DropdownMenuItem>

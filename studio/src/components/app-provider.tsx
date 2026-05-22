@@ -1,8 +1,10 @@
 import { identify, resetTracking } from '@/lib/track';
+import { PlainMessage } from '@bufbuild/protobuf';
 import { Transport } from '@connectrpc/connect';
 import { TransportProvider } from '@connectrpc/connect-query';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
+import { LoginMethod as ProtoLoginMethod } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useRouter } from 'next/router';
 import { ReactNode, createContext, useEffect, useState } from 'react';
 import { useCookieOrganization } from '@/hooks/use-cookie-organization';
@@ -17,12 +19,9 @@ export const SessionClientContext = createContext<QueryClient>(sessionQueryClien
 
 const publicPaths = ['/login', '/signup'];
 
-export interface LoginMethod {
-  type: 'sso' | 'password';
-  ssoProviderId?: string;
-  ssoProviderName?: string;
-  ssoAlias?: string;
-}
+// The /session endpoint returns the same shape as the platform LoginMethod proto
+// message (plain JSON), so reuse the generated type instead of duplicating it.
+export type LoginMethod = PlainMessage<ProtoLoginMethod>;
 
 export interface User {
   id: string;

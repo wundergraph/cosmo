@@ -1,4 +1,5 @@
 import { PiLockKey } from 'react-icons/pi';
+import { LoginMethodType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EmptyState } from '@/components/empty-state';
 import { useUser } from '@/hooks/use-user';
 
@@ -6,7 +7,7 @@ export const NamespaceGateEmptyState = () => {
   const loginMethod = useUser()?.loginMethod;
 
   const loginMethodLabel =
-    loginMethod?.type === 'sso'
+    loginMethod?.type === LoginMethodType.SSO
       ? loginMethod.ssoProviderName || loginMethod.ssoAlias || 'your SSO provider'
       : 'password';
 

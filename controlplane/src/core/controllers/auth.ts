@@ -1,5 +1,7 @@
 import { FastifyPluginCallback, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
+import { PlainMessage } from '@bufbuild/protobuf';
+import { LoginMethod, LoginMethodType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
@@ -92,16 +94,23 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
       const oidcRepo = new OidcRepository(opts.db);
 
-      let loginMethod:
-        | { type: 'sso'; ssoProviderId: string; ssoProviderName: string; ssoAlias: string }
-        | { type: 'password' };
+      const passwordLoginMethod: PlainMessage<LoginMethod> = {
+        type: LoginMethodType.PASSWORD,
+        ssoProviderId: '',
+        ssoProviderName: '',
+        ssoAlias: '',
+      };
+      let loginMethod: PlainMessage<LoginMethod> = passwordLoginMethod;
       if (userSession.idpAlias) {
         const provider = await oidcRepo.getOidcProviderByAliasUnscoped({ alias: userSession.idpAlias });
         loginMethod = provider
-          ? { type: 'sso', ssoProviderId: provider.id, ssoProviderName: provider.name, ssoAlias: userSession.idpAlias }
-          : { type: 'password' };
-      } else {
-        loginMethod = { type: 'password' };
+          ? {
+              type: LoginMethodType.SSO,
+              ssoProviderId: provider.id,
+              ssoProviderName: provider.name,
+              ssoAlias: userSession.idpAlias,
+            }
+          : passwordLoginMethod;
       }
 
       return {

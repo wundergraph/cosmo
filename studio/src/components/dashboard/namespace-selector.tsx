@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { CheckIcon, CaretSortIcon } from '@radix-ui/react-icons';
 import { docsBaseURL } from '@/lib/constants';
+import { LoginMethodType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { WorkspaceCommandWrapper } from './workspace-command-wrapper';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
@@ -24,9 +25,10 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
   const loginMethod = useUser()?.loginMethod;
   // Both SSO and password logins can be gated, so the visibility hint applies to
   // either. (API-key logins never reach the web UI.)
-  const isGatedLogin = loginMethod?.type === 'sso' || loginMethod?.type === 'password';
+  const isGatedLogin =
+    loginMethod?.type === LoginMethodType.SSO || loginMethod?.type === LoginMethodType.PASSWORD;
   const loginMethodLabel =
-    loginMethod?.type === 'sso' ? loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO' : 'password';
+    loginMethod?.type === LoginMethodType.SSO ? loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO' : 'password';
 
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
