@@ -39,6 +39,15 @@ export function updateNamespaceSSOMappings(
     // Validate every namespace and SSO provider in the payload before writing.
     const namespacesById = new Map<string, { id: string; name: string }>();
     for (const mapping of req.mappings) {
+      if (namespacesById.has(mapping.namespaceId)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_BAD_REQUEST,
+            details: `Namespace appears more than once in the request: ${mapping.namespaceId}`,
+          },
+        };
+      }
+
       const namespace = await namespaceRepo.byId(mapping.namespaceId);
       if (!namespace) {
         return { response: { code: EnumStatusCode.ERR_NOT_FOUND, details: `Namespace not found: ${mapping.namespaceId}` } };

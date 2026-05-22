@@ -242,6 +242,25 @@ describe('NamespaceSsoMappingRepository', () => {
     await server.close();
   });
 
+  test('updateNamespaceSSOMappings rejects a namespace listed more than once', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const nsId = await createNamespace(client, 'dup-ns');
+    const res = await client.updateNamespaceSSOMappings({
+      mappings: [
+        { namespaceId: nsId, allowPasswordLogin: true },
+        { namespaceId: nsId, allowGoogleLogin: true },
+      ],
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
+
+    // Nothing was written — the namespace stays default-open.
+    const listed = await client.listNamespaceSSOMappings({});
+    expect(listed.mappings.find((m) => m.namespaceId === nsId)).toBeUndefined();
+
+    await server.close();
+  });
+
   test('deleting an SSO provider cascades to namespace mappings (reopens namespace)', async () => {
     const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
     const orgId = users.adminAliceCompanyA.organizationId;
