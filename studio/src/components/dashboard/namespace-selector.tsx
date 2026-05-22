@@ -29,7 +29,7 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
     loginMethod?.type === LoginMethodType.SSO ||
     loginMethod?.type === LoginMethodType.SOCIAL ||
     loginMethod?.type === LoginMethodType.PASSWORD;
-    
+
   let loginMethodLabel = 'password';
   if (loginMethod?.type === LoginMethodType.SSO) {
     loginMethodLabel = loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO';

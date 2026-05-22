@@ -50,7 +50,9 @@ export function updateNamespaceSSOMappings(
 
       const namespace = await namespaceRepo.byId(mapping.namespaceId);
       if (!namespace) {
-        return { response: { code: EnumStatusCode.ERR_NOT_FOUND, details: `Namespace not found: ${mapping.namespaceId}` } };
+        return {
+          response: { code: EnumStatusCode.ERR_NOT_FOUND, details: `Namespace not found: ${mapping.namespaceId}` },
+        };
       }
 
       // Gate-self check: an admin can only configure a namespace their current

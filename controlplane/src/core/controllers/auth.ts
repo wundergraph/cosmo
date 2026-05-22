@@ -120,8 +120,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           loginMethod = {
             ...emptyLoginMethod,
             type: LoginMethodType.SOCIAL,
-            socialProvider:
-              userSession.idpAlias === 'google' ? SocialLoginProvider.GOOGLE : SocialLoginProvider.GITHUB,
+            socialProvider: userSession.idpAlias === 'google' ? SocialLoginProvider.GOOGLE : SocialLoginProvider.GITHUB,
           };
         }
       }

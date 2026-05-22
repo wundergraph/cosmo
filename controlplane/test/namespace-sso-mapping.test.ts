@@ -283,7 +283,6 @@ describe('NamespaceSsoMappingRepository', () => {
     const after = await client.listNamespaceSSOMappings({});
     expect(after.mappings.find((m) => m.namespaceId === nsId)).toBeUndefined();
 
-
     await server.close();
   });
 });
