@@ -28259,9 +28259,7 @@ func (x *NamespaceSSOMapping) GetAllowGithubLogin() bool {
 }
 
 type UpdateNamespaceSSOMappingsRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The complete set of restricted namespaces for the org. Any namespace the
-	// caller can access that is NOT listed here becomes default-open.
+	state         protoimpl.MessageState `protogen:"open.v1"`
 	Mappings      []*NamespaceSSOMapping `protobuf:"bytes,1,rep,name=mappings,proto3" json:"mappings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

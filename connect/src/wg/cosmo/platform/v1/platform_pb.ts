@@ -24228,9 +24228,6 @@ export class NamespaceSSOMapping extends Message<NamespaceSSOMapping> {
  */
 export class UpdateNamespaceSSOMappingsRequest extends Message<UpdateNamespaceSSOMappingsRequest> {
   /**
-   * The complete set of restricted namespaces for the org. Any namespace the
-   * caller can access that is NOT listed here becomes default-open.
-   *
    * @generated from field: repeated wg.cosmo.platform.v1.NamespaceSSOMapping mappings = 1;
    */
   mappings: NamespaceSSOMapping[] = [];
