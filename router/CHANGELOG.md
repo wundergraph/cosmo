@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.318.2](https://github.com/wundergraph/cosmo/compare/router@0.318.1...router@0.318.2) (2026-05-22)
+
+### Bug Fixes
+
+* use remapped variables in cost calculation ([#2882](https://github.com/wundergraph/cosmo/issues/2882)) ([d211459](https://github.com/wundergraph/cosmo/commit/d211459d1d7d32e98eaa6c045c57b9df643ae41f)) (@ysmolski)
+
 ## [0.318.1](https://github.com/wundergraph/cosmo/compare/router@0.318.0...router@0.318.1) (2026-05-21)
 
 ### Bug Fixes
