@@ -515,10 +515,7 @@ export type AuthContext = {
  * - `none`       — the login method is allowed in no namespace.
  * - `restricted` — reachable only in `namespaceIds`.
  */
-export type NamespaceAccess =
-  | { kind: 'all' }
-  | { kind: 'none' }
-  | { kind: 'restricted'; namespaceIds: Set<string> };
+export type NamespaceAccess = { kind: 'all' } | { kind: 'none' } | { kind: 'restricted'; namespaceIds: Set<string> };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {
   federated_graph_id: string;

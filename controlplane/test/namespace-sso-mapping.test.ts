@@ -123,7 +123,10 @@ describe('NamespaceSsoMappingRepository', () => {
       organizationId: orgId,
       loginMethod: { type: 'sso', ssoProviderId: stagingId, alias: 'staging-alias' },
     });
-    expect(stagingAllowed).toEqual({ kind: 'restricted', namespaceIds: new Set([stagingNsId, sharedNsId, legacyNsId]) });
+    expect(stagingAllowed).toEqual({
+      kind: 'restricted',
+      namespaceIds: new Set([stagingNsId, sharedNsId, legacyNsId]),
+    });
 
     // Production IdP.
     const prodAllowed = await repo.allowedNamespaces({
