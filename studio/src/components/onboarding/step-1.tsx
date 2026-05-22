@@ -8,22 +8,8 @@ import { createOnboarding } from '@wundergraph/cosmo-connect/dist/platform/v1/pl
 import { useRouter } from 'next/router';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { useToast } from '../ui/use-toast';
-import { SubmitHandler, useZodForm } from '@/hooks/use-form';
 import { captureOnboardingEvent } from '@/lib/track';
-import { Controller } from 'react-hook-form';
-import { z } from 'zod';
-import { Form } from '../ui/form';
-import { Checkbox } from '../ui/checkbox';
 import { TrafficAnimation } from './traffic-animation';
-
-const onboardingSchema = z.object({
-  channels: z.object({
-    slack: z.boolean(),
-    email: z.boolean(),
-  }),
-});
-
-type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 
 const WhyListItem = ({ title, text }: { title: string; text: string }) => (
   <li className="flex gap-2">
@@ -47,20 +33,9 @@ export const Step1 = () => {
   const router = useRouter();
   const posthog = usePostHog();
   const { toast } = useToast();
-  const { setStep, setSkipped, setOnboarding, onboarding, initialized, setInitialized } = useOnboarding();
+  const { setStep, setSkipped, setOnboarding, initialized, setInitialized } = useOnboarding();
   // Referrer can be `wgc` when onboarding is opened via `wgc demo` command
   const referrer = normalizeReferrer(router.query.referrer || document?.referrer);
-
-  const form = useZodForm<OnboardingFormValues>({
-    mode: 'onChange',
-    schema: onboardingSchema,
-    defaultValues: {
-      channels: {
-        slack: onboarding?.slack ?? true,
-        email: onboarding?.email ?? false,
-      },
-    },
-  });
 
   const { mutate, isPending } = useMutation(createOnboarding, {
     onSuccess: (d) => {
@@ -81,20 +56,14 @@ export const Step1 = () => {
         return;
       }
 
-      const formValues = form.getValues();
       setOnboarding({
         federatedGraphsCount: d.federatedGraphsCount,
         finishedAt: d.finishedAt ? new Date(d.finishedAt) : undefined,
-        slack: formValues.channels.slack,
-        email: formValues.channels.email,
       });
       captureOnboardingEvent(posthog, {
         name: 'onboarding_step_completed',
         options: {
           step_name: 'welcome',
-          channel: (Object.keys(formValues.channels) as Array<keyof typeof formValues.channels>).filter(
-            (key) => formValues.channels[key],
-          ),
         },
       });
       router.push('/onboarding/2');
@@ -115,10 +84,6 @@ export const Step1 = () => {
       });
     },
   });
-
-  const onSubmit: SubmitHandler<OnboardingFormValues> = (data) => {
-    mutate(data.channels);
-  };
 
   useEffect(() => {
     setStep(1);
@@ -165,52 +130,6 @@ export const Step1 = () => {
             <WhyListItem title="Send a query" text="Watch real request metrics flow through the router." />
           </ul>
         </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full" aria-busy={isPending}>
-            <div className="rounded-md border border-dashed p-4">
-              <p className="text-sm font-medium">If you get stuck, how can we reach you?</p>
-              <div className="mt-3 flex flex-col gap-3">
-                <Controller
-                  control={form.control}
-                  name="channels.slack"
-                  render={({ field }) => (
-                    <label className="flex items-start gap-3">
-                      <Checkbox
-                        checked={field.value}
-                        disabled={isPending}
-                        onCheckedChange={(checked) => field.onChange(checked === true)}
-                      />
-                      <div className="flex flex-col gap-y-1">
-                        <span className="text-sm font-medium leading-none">Slack</span>
-                        <span className="text-[0.8rem] text-muted-foreground">
-                          We automatically create a Slack channel for you.
-                        </span>
-                      </div>
-                    </label>
-                  )}
-                />
-                <Controller
-                  control={form.control}
-                  name="channels.email"
-                  render={({ field }) => (
-                    <label className="flex items-start gap-3">
-                      <Checkbox
-                        checked={field.value}
-                        disabled={isPending}
-                        onCheckedChange={(checked) => field.onChange(checked === true)}
-                      />
-                      <div className="flex flex-col gap-y-1">
-                        <span className="text-sm font-medium leading-none">Email</span>
-                        <span className="text-[0.8rem] text-muted-foreground">Receive updates via email.</span>
-                      </div>
-                    </label>
-                  )}
-                />
-              </div>
-            </div>
-          </form>
-        </Form>
       </div>
 
       <OnboardingNavigation
@@ -225,7 +144,7 @@ export const Step1 = () => {
         }}
         forwardLabel="Start the tour"
         forward={{
-          onClick: form.handleSubmit(onSubmit),
+          onClick: () => mutate({}),
           isLoading: isPending,
         }}
       />

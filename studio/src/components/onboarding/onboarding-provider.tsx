@@ -14,8 +14,6 @@ import { useSessionStorage } from '@/hooks/use-session-storage';
 type Onboarding = {
   finishedAt?: Date;
   federatedGraphsCount: number;
-  slack: boolean;
-  email: boolean;
 };
 
 export interface OnboardingState {
