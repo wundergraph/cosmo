@@ -10,7 +10,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { NamespaceSsoMappingRepository } from '../../repositories/NamespaceSsoMappingRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isNamespaceAllowed } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateNamespaceSSOMapping(
@@ -37,7 +37,7 @@ export function updateNamespaceSSOMapping(
     // Gate-self check: an admin can only edit the mapping of a namespace their
     // current login method can already access. Prevents an attacker who has
     // compromised a non-prod IdP from re-mapping prod namespaces.
-    if (authContext.idpAllowedNamespaceIds && !authContext.idpAllowedNamespaceIds.has(namespace.id)) {
+    if (authContext.idpNamespaceAccess && !isNamespaceAllowed(authContext.idpNamespaceAccess, namespace.id)) {
       throw new UnauthorizedError();
     }
 

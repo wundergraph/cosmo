@@ -8,6 +8,7 @@ import { FederatedGraphRepository } from '../repositories/FederatedGraphReposito
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { AuthContext } from '../../types/index.js';
+import { isNamespaceAllowed } from '../util.js';
 import { traced } from '../tracing.js';
 
 @traced
@@ -80,8 +81,8 @@ export class Authorization {
         if (rbac.isOrganizationAdminOrDeveloper) {
           // Admin/developer bypass — still subject to the IdP gate.
           if (
-            rbac.idpAllowedNamespaceIds === undefined ||
-            (targetNamespaceId !== undefined && rbac.idpAllowedNamespaceIds.has(targetNamespaceId))
+            rbac.idpNamespaceAccess.kind === 'all' ||
+            (targetNamespaceId !== undefined && isNamespaceAllowed(rbac.idpNamespaceAccess, targetNamespaceId))
           ) {
             return;
           }
@@ -103,8 +104,8 @@ export class Authorization {
 
         if (rbac.isOrganizationAdminOrDeveloper) {
           if (
-            rbac.idpAllowedNamespaceIds === undefined ||
-            (targetNamespaceId !== undefined && rbac.idpAllowedNamespaceIds.has(targetNamespaceId))
+            rbac.idpNamespaceAccess.kind === 'all' ||
+            (targetNamespaceId !== undefined && isNamespaceAllowed(rbac.idpNamespaceAccess, targetNamespaceId))
           ) {
             return;
           }

@@ -666,13 +666,13 @@ export async function loginAs({
   loginMethod: LoginMethod;
 }) {
   const ssoMappingRepo = new NamespaceSsoMappingRepository(db);
-  const idpAllowedNamespaceIds = await ssoMappingRepo.allowedNamespaceIds({
+  const namespaceAccess = await ssoMappingRepo.allowedNamespaces({
     organizationId: base.organizationId,
     loginMethod,
   });
-  const rbac = new RBACEvaluator(base.rbac.groups, base.userId, loginMethod.type === 'api-key', idpAllowedNamespaceIds);
-  authenticator.changeUserWithSuppliedContext({ ...base, loginMethod, idpAllowedNamespaceIds, rbac });
-  return { idpAllowedNamespaceIds, rbac };
+  const rbac = new RBACEvaluator(base.rbac.groups, base.userId, loginMethod.type === 'api-key', namespaceAccess);
+  authenticator.changeUserWithSuppliedContext({ ...base, loginMethod, idpNamespaceAccess: namespaceAccess, rbac });
+  return { namespaceAccess, rbac };
 }
 
 export class InMemoryBlobStorage implements BlobStorage {

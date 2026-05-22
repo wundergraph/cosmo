@@ -26,6 +26,7 @@ import {
   FederatedGraphDTO,
   Label,
   LoginMethod,
+  NamespaceAccess,
   ResponseMessage,
   S3StorageOptions,
 } from '../types/index.js';
@@ -926,14 +927,13 @@ export function isValidGrpcNamingScheme(url: string): boolean {
 }
 
 /**
- * Applies the IdP namespace gate to a list-query's WHERE conditions.
+ * Applies the IdP namespace gate to a list-query's WHERE conditions, based on
+ * the actor's {@link NamespaceAccess}:
  *
- * - Gate inactive (`idpAllowedNamespaceIds === undefined`) → pushes nothing,
- *   returns `true`.
- * - Gate active but empty (login method is locked out of every namespace) →
- *   returns `false`; the caller must short-circuit with its own "no rows" value
- *   (`[]`, `0`, `false`, …) instead of running the query.
- * - Gate active with a set → pushes `namespaceColumn IN (...)`, returns `true`.
+ * - `all`        → pushes nothing, returns `true`.
+ * - `none`       → returns `false`; the caller must short-circuit with its own
+ *                  "no rows" value (`[]`, `0`, `false`, …) instead of querying.
+ * - `restricted` → pushes `namespaceColumn IN (...)`, returns `true`.
  *
  * `namespaceColumn` is the namespace-id column of the query's FROM table, which
  * differs per caller (e.g. `targets.namespaceId`, `namespaces.id`,
@@ -944,17 +944,19 @@ export function applyIdpNamespaceGate(
   namespaceColumn: PgColumn,
   conditions: (SQL<unknown> | undefined)[],
 ): boolean {
-  if (rbac?.idpAllowedNamespaceIds === undefined) {
-    return true;
+  const access = rbac?.idpNamespaceAccess ?? { kind: 'all' };
+  switch (access.kind) {
+    case 'all': {
+      return true;
+    }
+    case 'none': {
+      return false;
+    }
+    case 'restricted': {
+      conditions.push(inArray(namespaceColumn, [...access.namespaceIds]));
+      return true;
+    }
   }
-
-  const allowed = [...rbac.idpAllowedNamespaceIds];
-  if (allowed.length === 0) {
-    return false;
-  }
-
-  conditions.push(inArray(namespaceColumn, allowed));
-  return true;
 }
 
 /**
@@ -966,7 +968,7 @@ export function applyIdpNamespaceGate(
  *  2. Applies the IdP namespace gate for that login method.
  *  3. Builds the RBAC evaluator from the org's member groups plus the gate.
  *
- * Returns the login method, the evaluator and the allowed-namespace set (the
+ * Returns the login method, the evaluator and the namespace-access result (the
  * auth context stores them separately). Shared by both authenticators.
  */
 export async function buildAuthState(
@@ -976,7 +978,7 @@ export async function buildAuthState(
     namespaceSsoMappingRepo: NamespaceSsoMappingRepository;
   },
   input: { organizationId: string; userId: string; idpAlias: string | null | undefined },
-): Promise<{ loginMethod: LoginMethod; rbac: RBACEvaluator; idpAllowedNamespaceIds: Set<string> | undefined }> {
+): Promise<{ loginMethod: LoginMethod; rbac: RBACEvaluator; namespaceAccess: NamespaceAccess }> {
   let loginMethod: LoginMethod = { type: 'password' };
   if (input.idpAlias) {
     const provider = await deps.oidcRepo.getOidcProviderByAlias({
@@ -988,7 +990,7 @@ export async function buildAuthState(
     }
   }
 
-  const idpAllowedNamespaceIds = await deps.namespaceSsoMappingRepo.allowedNamespaceIds({
+  const namespaceAccess = await deps.namespaceSsoMappingRepo.allowedNamespaces({
     organizationId: input.organizationId,
     loginMethod,
   });
@@ -1000,8 +1002,23 @@ export async function buildAuthState(
     }),
     input.userId,
     /* isApiKey */ false,
-    idpAllowedNamespaceIds,
+    namespaceAccess,
   );
 
-  return { loginMethod, rbac, idpAllowedNamespaceIds };
+  return { loginMethod, rbac, namespaceAccess };
+}
+
+/** Whether a specific namespace is reachable under the given {@link NamespaceAccess}. */
+export function isNamespaceAllowed(access: NamespaceAccess, namespaceId: string): boolean {
+  switch (access.kind) {
+    case 'all': {
+      return true;
+    }
+    case 'none': {
+      return false;
+    }
+    case 'restricted': {
+      return access.namespaceIds.has(namespaceId);
+    }
+  }
 }

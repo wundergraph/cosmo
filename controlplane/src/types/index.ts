@@ -506,13 +506,19 @@ export type AuthContext = {
   userDisplayName: string;
   apiKeyName?: string;
   loginMethod?: LoginMethod;
-  /**
-   * The set of namespace IDs the current login method is allowed to access in
-   * the auth'd organization. `undefined` means the IdP gate does not apply
-   * (e.g. org has no mapping rows configured, or login is via API key).
-   */
-  idpAllowedNamespaceIds?: Set<string>;
+  idpNamespaceAccess?: NamespaceAccess;
 };
+
+/**
+ * The outcome of evaluating the IdP namespace gate for a login method:
+ * - `all`        — no gate applies; every namespace is reachable.
+ * - `none`       — the login method is allowed in no namespace.
+ * - `restricted` — reachable only in `namespaceIds`.
+ */
+export type NamespaceAccess =
+  | { kind: 'all' }
+  | { kind: 'none' }
+  | { kind: 'restricted'; namespaceIds: Set<string> };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {
   federated_graph_id: string;

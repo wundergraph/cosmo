@@ -1,6 +1,7 @@
 import { OrganizationRole } from '../../db/models.js';
-import { OrganizationGroupDTO } from '../../types/index.js';
+import { NamespaceAccess, OrganizationGroupDTO } from '../../types/index.js';
 import { traced } from '../tracing.js';
+import { isNamespaceAllowed } from '../util.js';
 
 interface RuleData {
   namespaces: string[];
@@ -48,7 +49,7 @@ export class RBACEvaluator {
     readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount'>[],
     private readonly userId?: string,
     isApiKey?: boolean,
-    readonly idpAllowedNamespaceIds?: ReadonlySet<string>,
+    readonly idpNamespaceAccess: NamespaceAccess = { kind: 'all' },
   ) {
     this.isApiKey = !!isApiKey;
     this.isLegacyApiKey = this.isApiKey && groups.length === 0;
@@ -91,7 +92,7 @@ export class RBACEvaluator {
   }
 
   private isAllowedByIdpGate(namespaceId: string): boolean {
-    return this.idpAllowedNamespaceIds === undefined || this.idpAllowedNamespaceIds.has(namespaceId);
+    return isNamespaceAllowed(this.idpNamespaceAccess, namespaceId);
   }
 
   canDeleteNamespace(namespace: Namespace) {

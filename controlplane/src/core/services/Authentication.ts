@@ -98,7 +98,7 @@ export class Authentication implements Authenticator {
       const organizationDeactivated = !!organization.deactivation;
 
       // Resolve the login method, IdP gate and RBAC from the session's idp_alias.
-      const { loginMethod, rbac, idpAllowedNamespaceIds } = await buildAuthState(
+      const { loginMethod, rbac, namespaceAccess } = await buildAuthState(
         { oidcRepo: this.oidcRepo, orgRepo: this.orgRepo, namespaceSsoMappingRepo: this.namespaceSsoMappingRepo },
         { organizationId: organization.id, userId: user.userId, idpAlias: user.idpAlias },
       );
@@ -112,7 +112,7 @@ export class Authentication implements Authenticator {
         rbac,
         userDisplayName: user.userDisplayName,
         loginMethod,
-        idpAllowedNamespaceIds,
+        idpNamespaceAccess: namespaceAccess,
       };
 
       this.#cache.set(cacheKey, userContext);

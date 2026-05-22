@@ -59,14 +59,14 @@ describe('NamespaceSsoMappingRepository', () => {
     await afterAllSetup(dbname);
   });
 
-  test('returns undefined when org has no mapping rows', async () => {
+  test("returns { kind: 'all' } when org has no mapping rows", async () => {
     const { server, users } = await SetupTest({ dbname });
     const repo = new NamespaceSsoMappingRepository(server.db);
-    const allowed = await repo.allowedNamespaceIds({
+    const allowed = await repo.allowedNamespaces({
       organizationId: users.adminAliceCompanyA.organizationId,
       loginMethod: { type: 'password' },
     });
-    expect(allowed).toBeUndefined();
+    expect(allowed).toEqual({ kind: 'all' });
     await server.close();
   });
 
@@ -83,17 +83,17 @@ describe('NamespaceSsoMappingRepository', () => {
 
     const repo = new NamespaceSsoMappingRepository(server.db);
 
-    const ssoAllowed = await repo.allowedNamespaceIds({
+    const ssoAllowed = await repo.allowedNamespaces({
       organizationId: orgId,
       loginMethod: { type: 'sso', ssoProviderId: providerId, alias: 'staging-alias' },
     });
-    expect(ssoAllowed).toEqual(new Set([defaultNsId, extraNsId]));
+    expect(ssoAllowed).toEqual({ kind: 'restricted', namespaceIds: new Set([defaultNsId, extraNsId]) });
 
-    const pwAllowed = await repo.allowedNamespaceIds({
+    const pwAllowed = await repo.allowedNamespaces({
       organizationId: orgId,
       loginMethod: { type: 'password' },
     });
-    expect(pwAllowed).toEqual(new Set([extraNsId])); // defaultNs restricted
+    expect(pwAllowed).toEqual({ kind: 'restricted', namespaceIds: new Set([extraNsId]) }); // defaultNs restricted
 
     await server.close();
   });
@@ -119,32 +119,32 @@ describe('NamespaceSsoMappingRepository', () => {
     const repo = new NamespaceSsoMappingRepository(server.db);
 
     // Staging IdP.
-    const stagingAllowed = await repo.allowedNamespaceIds({
+    const stagingAllowed = await repo.allowedNamespaces({
       organizationId: orgId,
       loginMethod: { type: 'sso', ssoProviderId: stagingId, alias: 'staging-alias' },
     });
-    expect(stagingAllowed).toEqual(new Set([stagingNsId, sharedNsId, legacyNsId]));
+    expect(stagingAllowed).toEqual({ kind: 'restricted', namespaceIds: new Set([stagingNsId, sharedNsId, legacyNsId]) });
 
     // Production IdP.
-    const prodAllowed = await repo.allowedNamespaceIds({
+    const prodAllowed = await repo.allowedNamespaces({
       organizationId: orgId,
       loginMethod: { type: 'sso', ssoProviderId: prodId, alias: 'prod-alias' },
     });
-    expect(prodAllowed).toEqual(new Set([prodNsId, sharedNsId, legacyNsId]));
+    expect(prodAllowed).toEqual({ kind: 'restricted', namespaceIds: new Set([prodNsId, sharedNsId, legacyNsId]) });
 
     // Password login.
-    const pwAllowed = await repo.allowedNamespaceIds({
+    const pwAllowed = await repo.allowedNamespaces({
       organizationId: orgId,
       loginMethod: { type: 'password' },
     });
-    expect(pwAllowed).toEqual(new Set([sharedNsId, legacyNsId]));
+    expect(pwAllowed).toEqual({ kind: 'restricted', namespaceIds: new Set([sharedNsId, legacyNsId]) });
 
     // API keys are not gated.
-    const apiKeyAllowed = await repo.allowedNamespaceIds({
+    const apiKeyAllowed = await repo.allowedNamespaces({
       organizationId: orgId,
       loginMethod: { type: 'api-key' },
     });
-    expect(apiKeyAllowed).toBeUndefined();
+    expect(apiKeyAllowed).toEqual({ kind: 'all' });
 
     await server.close();
   });

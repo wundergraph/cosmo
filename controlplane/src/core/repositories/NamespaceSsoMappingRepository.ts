@@ -3,29 +3,27 @@ import { eq } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { namespaces, namespaceSsoProviders } from '../../db/schema.js';
 import { traced } from '../tracing.js';
-import type { LoginMethod } from '../../types/index.js';
+import type { LoginMethod, NamespaceAccess } from '../../types/index.js';
 
 @traced
 export class NamespaceSsoMappingRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
   /**
-   * Returns the set of namespace IDs the given login method is allowed to access
-   * within the given organization. Returns `undefined` when the organization has
-   * zero mapping rows — i.e. the IdP gate is fully default-open and no filter
-   * needs to apply.
+   * Evaluates which namespaces the given login method may access within the org.
    *
    * Semantics:
    * - A namespace with zero rows in namespace_sso_providers is open to all login methods (default-open).
    * - A namespace with one or more rows is restricted to the listed login methods only.
+   *
+   * Returns {@link NamespaceAccess}: `all` when the org has no mapping rows (or
+   * the login is an API key, which is never gated), `none` when the login method
+   * matches no namespace, otherwise `restricted` with the reachable namespace ids.
    */
-  async allowedNamespaceIds(input: {
-    organizationId: string;
-    loginMethod: LoginMethod;
-  }): Promise<Set<string> | undefined> {
+  async allowedNamespaces(input: { organizationId: string; loginMethod: LoginMethod }): Promise<NamespaceAccess> {
     // API keys are never gated; bail before any DB work.
     if (input.loginMethod.type === 'api-key') {
-      return undefined;
+      return { kind: 'all' };
     }
 
     // Single LEFT JOIN: every org namespace appears at least once; restricted
@@ -45,24 +43,25 @@ export class NamespaceSsoMappingRepository {
     // If no row in the org has any mapping, the gate is default-open everywhere.
     const isUnmapped = (r: (typeof rows)[number]) => r.ssoProviderId === null && !r.isPasswordLogin;
     if (rows.every((r) => isUnmapped(r))) {
-      return undefined;
+      return { kind: 'all' };
     }
 
     // Build the allowed set: open namespaces always; restricted namespaces only
     // when at least one of their mapping rows matches the current login method.
-    const allowed = new Set<string>();
+    const namespaceIds = new Set<string>();
     for (const row of rows) {
       if (isUnmapped(row)) {
-        allowed.add(row.namespaceId);
+        namespaceIds.add(row.namespaceId);
         continue;
       }
       const matches =
         input.loginMethod.type === 'sso' ? row.ssoProviderId === input.loginMethod.ssoProviderId : row.isPasswordLogin;
       if (matches) {
-        allowed.add(row.namespaceId);
+        namespaceIds.add(row.namespaceId);
       }
     }
-    return allowed;
+
+    return namespaceIds.size === 0 ? { kind: 'none' } : { kind: 'restricted', namespaceIds };
   }
 
   getMapping(input: { namespaceId: string }) {
