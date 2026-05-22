@@ -109,8 +109,8 @@ export const Step1 = () => {
       <div className="flex w-full flex-col gap-8 text-left">
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            In ~<span className="font-medium text-foreground">3 minutes</span> you will have a federated GraphQL graph
-            running locally and serving live traffic into Cosmo Cloud platform.
+            In ~<span className="font-medium text-foreground">3 minutes</span>, you’ll have a federated GraphQL graph
+            running locally and reporting live traffic to Cosmo Cloud.
           </p>
         </div>
 
@@ -142,7 +142,7 @@ export const Step1 = () => {
           });
           setSkipped();
         }}
-        forwardLabel="Start the tour"
+        forwardLabel="Start"
         forward={{
           onClick: () => mutate({}),
           isLoading: isPending,
