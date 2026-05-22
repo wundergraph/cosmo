@@ -25,10 +25,11 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
   const loginMethod = useUser()?.loginMethod;
   // Both SSO and password logins can be gated, so the visibility hint applies to
   // either. (API-key logins never reach the web UI.)
-  const isGatedLogin =
-    loginMethod?.type === LoginMethodType.SSO || loginMethod?.type === LoginMethodType.PASSWORD;
+  const isGatedLogin = loginMethod?.type === LoginMethodType.SSO || loginMethod?.type === LoginMethodType.PASSWORD;
   const loginMethodLabel =
-    loginMethod?.type === LoginMethodType.SSO ? loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO' : 'password';
+    loginMethod?.type === LoginMethodType.SSO
+      ? loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO'
+      : 'password';
 
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
