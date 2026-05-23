@@ -1526,6 +1526,10 @@ func (s *graphServer) buildGraphMux(
 			Timeout:        s.cacheWarmup.Timeout,
 		}
 
+		if err := warmupConfig.Validate(); err != nil {
+			return nil, err
+		}
+
 		warmupConfig.AfterOperation = func(item *CacheWarmupOperationPlanResult) {
 			gm.metricStore.MeasureOperationPlanningTime(graphMuxCtx,
 				item.PlanningTime,

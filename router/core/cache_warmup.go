@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.uber.org/ratelimit"
@@ -43,6 +44,15 @@ type CacheWarmupConfig struct {
 	AfterOperation func(item *CacheWarmupOperationPlanResult)
 }
 
+// Validate checks cache warmup options that can't be expressed in the JSON schema.
+// Callers should treat a non-nil error as a fatal config error and refuse to start.
+func (c *CacheWarmupConfig) Validate() error {
+	if c.ItemDelay < 0 {
+		return fmt.Errorf("the warmup config value for item_delay must not be negative, got %s", c.ItemDelay)
+	}
+	return nil
+}
+
 func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	w := &cacheWarmup{
 		log:            cfg.Log.With(zap.String("component", "cache_warmup")),
@@ -60,6 +70,9 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	}
 	if cfg.ItemsPerSecond < 1 {
 		w.itemsPerSecond = 0
+	}
+	if cfg.ItemDelay < 0 {
+		w.itemDelay = 0
 	}
 	if cfg.Timeout <= 0 {
 		w.timeout = time.Second * 30

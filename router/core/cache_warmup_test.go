@@ -494,7 +494,7 @@ func TestCacheWarmup(t *testing.T) {
 		t.Run("no item delay and no rate limit runs without throttling", func(t *testing.T) {
 			t.Parallel()
 			// With ItemDelay=0 the post-processing pause is skipped entirely and
-			// the unlimited rate limiter never sleeps: nothing advances the clock.
+			// the unlimited rate limiter never sleeps: nothing advances the fake clock.
 			elapsed := runWarmup(t, 6, 0 /* unlimited */, 0 /* no delay */)
 			require.Equal(t, time.Duration(0), elapsed)
 		})
@@ -524,5 +524,29 @@ func TestCacheWarmup(t *testing.T) {
 			// starts; the final item still incurs one trailing ItemDelay.
 			require.Equal(t, (itemCount-1)*rateGap+itemDelay, elapsed)
 		})
+	})
+}
+
+func TestCacheWarmupConfigValidate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("negative item_delay is rejected", func(t *testing.T) {
+		t.Parallel()
+		cfg := &CacheWarmupConfig{ItemDelay: -1 * time.Second}
+		err := cfg.Validate()
+		require.Error(t, err)
+		require.ErrorContains(t, err, "the warmup config value for item_delay must not be negative")
+	})
+
+	t.Run("zero item_delay is accepted", func(t *testing.T) {
+		t.Parallel()
+		cfg := &CacheWarmupConfig{ItemDelay: 0}
+		require.NoError(t, cfg.Validate())
+	})
+
+	t.Run("positive item_delay is accepted", func(t *testing.T) {
+		t.Parallel()
+		cfg := &CacheWarmupConfig{ItemDelay: 250 * time.Millisecond}
+		require.NoError(t, cfg.Validate())
 	})
 }

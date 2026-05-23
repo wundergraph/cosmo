@@ -3061,8 +3061,7 @@
         "item_delay": {
           "type": "string",
           "description": "A fixed delay applied after each cache warmup item is processed, per worker. Use to further smooth load during warmup. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. Defaults to 0s (no delay).",
-          "default": "0s",
-          "duration": {}
+          "default": "0s"
         },
         "timeout": {
           "type": "string",
