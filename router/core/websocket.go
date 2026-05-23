@@ -366,7 +366,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Protocol:                     protocol,
 		Logger:                       requestLogger,
 		Stats:                        h.stats,
-		ConnectionID:                 resolve.ConnectionIDs.Inc(),
+		ConnectionID:                 resolve.NewConnectionID(),
 		ClientInfo:                   clientInfo,
 		InitRequestID:                requestID,
 		ForwardUpgradeHeaders:        h.forwardUpgradeHeadersConfig,
@@ -635,9 +635,15 @@ func (rw *websocketResponseWriter) Heartbeat() error {
 	return nil
 }
 
-func (rw *websocketResponseWriter) Close(kind resolve.SubscriptionCloseKind) {
-	err := rw.protocol.Close(kind.WSCode, kind.Reason)
-	if err != nil {
+// Error implements resolve.SubscriptionResponseWriter. The resolver invokes
+// Error with a terminal error payload after the subscription overhaul (graphql-go-tools
+// #1374) which split the old Close(kind) into Complete() / Error(data) / Done().
+// We surface the payload as GraphQL errors over the websocket protocol; the
+// resolver follows up by calling the trigger-level Done() which tears the
+// trigger down. We don't emit a websocket close frame here — the connection may
+// host other subscriptions on the same socket.
+func (rw *websocketResponseWriter) Error(data []byte) {
+	if err := rw.protocol.WriteGraphQLErrors(rw.id, json.RawMessage(data), nil); err != nil {
 		rw.logger.Debug("Sending error message", zap.Error(err))
 	}
 }
@@ -707,7 +713,7 @@ type WebSocketConnectionHandlerOptions struct {
 	Logger                       *zap.Logger
 	Stats                        statistics.EngineStatistics
 	PlanOptions                  PlanOptions
-	ConnectionID                 int64
+	ConnectionID                 resolve.ConnectionID
 	ClientInfo                   *ClientInfo
 	InitRequestID                string
 	ForwardUpgradeHeaders        forwardConfig
@@ -739,7 +745,7 @@ type WebSocketConnectionHandler struct {
 	upgradeRequestQueryParams json.RawMessage
 
 	initRequestID   string
-	connectionID    int64
+	connectionID    resolve.ConnectionID
 	subscriptionIDs atomic.Int64
 	subscriptions   sync.Map
 	stats           statistics.EngineStatistics
@@ -1069,7 +1075,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		_, err = h.graphqlHandler.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, rw)
+		_, err = h.graphqlHandler.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, rw)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL response", zap.Error(err))
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)
@@ -1134,7 +1140,9 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 		ConnectionID:   h.connectionID,
 		SubscriptionID: subscriptionID,
 	}
-	return h.graphqlHandler.executor.Resolver.AsyncCompleteSubscription(id)
+	// graphql-go-tools #1374 collapsed the Async* variants — UnsubscribeSubscription
+	// is the single path for tearing down a subscription identified by ID.
+	return h.graphqlHandler.executor.Resolver.UnsubscribeSubscription(id)
 }
 
 func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, msg *wsproto.Message) (err error) {
@@ -1292,7 +1300,7 @@ func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {
 func (h *WebSocketConnectionHandler) Close(unsubscribe bool) {
 	if unsubscribe {
 		// Remove any pending IDs associated with this connection
-		err := h.graphqlHandler.executor.Resolver.AsyncUnsubscribeClient(h.connectionID)
+		err := h.graphqlHandler.executor.Resolver.UnsubscribeClient(h.connectionID)
 		if err != nil {
 			h.logger.Debug("Unsubscribing client", zap.Error(err))
 		}

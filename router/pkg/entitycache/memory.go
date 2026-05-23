@@ -66,13 +66,19 @@ func (c *MemoryEntityCache) Get(_ context.Context, keys []string) ([]*resolve.Ca
 	return entries, nil
 }
 
-func (c *MemoryEntityCache) Set(_ context.Context, entries []*resolve.CacheEntry, ttl time.Duration) error {
+func (c *MemoryEntityCache) Set(_ context.Context, entries []*resolve.CacheEntry) error {
 	if len(entries) == 0 {
 		return nil
 	}
 	for _, entry := range entries {
 		if entry == nil {
 			continue
+		}
+		// Negative TTL means "no expiration" per the LoaderCache contract.
+		// Ristretto treats ttl<=0 as no expiration, so clamp negatives to 0.
+		ttl := entry.TTL
+		if ttl < 0 {
+			ttl = 0
 		}
 		// Check if key already exists (update vs new entry)
 		_, exists := c.cache.Get(entry.Key)

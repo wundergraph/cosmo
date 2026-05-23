@@ -26,8 +26,8 @@ func TestRedis(t *testing.T) {
 
 		// Set
 		err = cache.Set(ctx, []*resolve.CacheEntry{
-			{Key: "key1", Value: []byte(`{"id":"1","name":"Widget"}`)},
-		}, 300*time.Second)
+			{Key: "key1", Value: []byte(`{"id":"1","name":"Widget"}`), TTL: 300 * time.Second},
+		})
 		require.NoError(t, err)
 
 		// Get hit
@@ -47,10 +47,10 @@ func TestRedis(t *testing.T) {
 
 		// Batch Set
 		err := cache.Set(ctx, []*resolve.CacheEntry{
-			{Key: "a", Value: []byte(`{"id":"1"}`)},
-			{Key: "b", Value: []byte(`{"id":"2"}`)},
-			{Key: "c", Value: []byte(`{"id":"3"}`)},
-		}, 300*time.Second)
+			{Key: "a", Value: []byte(`{"id":"1"}`), TTL: 300 * time.Second},
+			{Key: "b", Value: []byte(`{"id":"2"}`), TTL: 300 * time.Second},
+			{Key: "c", Value: []byte(`{"id":"3"}`), TTL: 300 * time.Second},
+		})
 		require.NoError(t, err)
 
 		// Batch Get (MGet)
@@ -73,8 +73,8 @@ func TestRedis(t *testing.T) {
 		ctx := t.Context()
 
 		err := cache.Set(ctx, []*resolve.CacheEntry{
-			{Key: "expiring", Value: []byte(`{"ttl":"test"}`)},
-		}, 1*time.Second)
+			{Key: "expiring", Value: []byte(`{"ttl":"test"}`), TTL: 1 * time.Second},
+		})
 		require.NoError(t, err)
 
 		// Verify it's there
@@ -99,9 +99,9 @@ func TestRedis(t *testing.T) {
 
 		// Set entries
 		err := cache.Set(ctx, []*resolve.CacheEntry{
-			{Key: "del1", Value: []byte(`{"a":"1"}`)},
-			{Key: "del2", Value: []byte(`{"b":"2"}`)},
-		}, 300*time.Second)
+			{Key: "del1", Value: []byte(`{"a":"1"}`), TTL: 300 * time.Second},
+			{Key: "del2", Value: []byte(`{"b":"2"}`), TTL: 300 * time.Second},
+		})
 		require.NoError(t, err)
 
 		// Verify present

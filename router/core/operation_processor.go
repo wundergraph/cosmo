@@ -35,6 +35,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
@@ -1420,11 +1421,12 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 
 			// Validate that variables/arguments are correct for the requirements in listSize
 			var sliceReport operationreport.Report
-			costCalc.ValidateSliceArguments(opCtx.variables, &sliceReport)
+			varsView := resolve.NewVariablesView(opCtx.variables, opCtx.remapVariables)
+			costCalc.ValidateSliceArguments(varsView, &sliceReport)
 			if sliceReport.HasErrors() {
 				return &reportError{report: &sliceReport}
 			}
-			opCtx.costEstimated = costCalc.EstimateCost(opCtx.variables)
+			opCtx.costEstimated = costCalc.EstimateCost(varsView)
 			opCtx.costEstimatedSet = true
 		}
 	}

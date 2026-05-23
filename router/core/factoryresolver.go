@@ -84,7 +84,7 @@ type DefaultFactoryResolver struct {
 	baseTransport                 http.RoundTripper
 	transportFactory              ApiTransportFactory
 	defaultSubgraphRequestTimeout time.Duration
-	subscriptionClientOptions     []graphql_datasource.Options
+	subscriptionClientOptions     []graphql_datasource.SubscriptionClientOption
 }
 
 func NewDefaultFactoryResolver(
@@ -134,29 +134,25 @@ func NewDefaultFactoryResolver(
 		factoryLogger = abstractlogger.NewZapLogger(log, abstractlogger.DebugLevel)
 	}
 
-	var netPollConfig graphql_datasource.NetPollConfiguration
+	// Upstream's subscription overhaul (graphql-go-tools #1374) dropped the
+	// netpoll-based reader and the per-frame/read timeouts that used to live on
+	// the subscription client. The router still owns its own netpoller in
+	// websocket.go; `enableNetPoll` is consumed there, not here. The cosmo YAML
+	// fields `WebSocketClientReadTimeout` / `WebSocketClientFrameTimeout` no
+	// longer have an upstream consumer — keep them in the config struct for
+	// backwards compat, but no longer forward them.
+	_ = enableNetPoll
 
-	netPollConfig.ApplyDefaults()
-
-	netPollConfig.Enable = enableNetPoll
-
-	options := []graphql_datasource.Options{
+	options := []graphql_datasource.SubscriptionClientOption{
 		graphql_datasource.WithLogger(factoryLogger),
-		graphql_datasource.WithNetPollConfiguration(netPollConfig),
 	}
 
 	if subscriptionClientOptions != nil {
 		if subscriptionClientOptions.PingInterval > 0 {
 			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
 		}
-		if subscriptionClientOptions.ReadTimeout > 0 {
-			options = append(options, graphql_datasource.WithReadTimeout(subscriptionClientOptions.ReadTimeout))
-		}
 		if subscriptionClientOptions.PingTimeout > 0 {
 			options = append(options, graphql_datasource.WithPingTimeout(subscriptionClientOptions.PingTimeout))
-		}
-		if subscriptionClientOptions.FrameTimeout > 0 {
-			options = append(options, graphql_datasource.WithFrameTimeout(subscriptionClientOptions.FrameTimeout))
 		}
 	}
 
@@ -191,12 +187,11 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 
 	if d.transportFactory == nil || d.baseTransport == nil {
 		// dummy implementation for plan generator that doesn't make requests
-		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-			http.DefaultClient,
-			http.DefaultClient,
-			d.engineCtx,
-			d.subscriptionClientOptions...,
-		)
+		opts := append([]graphql_datasource.SubscriptionClientOption{
+			graphql_datasource.WithUpgradeClient(http.DefaultClient),
+			graphql_datasource.WithStreamingClient(http.DefaultClient),
+		}, d.subscriptionClientOptions...)
+		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.engineCtx, opts...)
 		return graphql_datasource.NewFactory(d.engineCtx, http.DefaultClient, subscriptionClient)
 	}
 
@@ -209,12 +204,11 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 		Transport: d.transportFactory.RoundTripper(d.baseTransport),
 	}
 
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		defaultHTTPClient,
-		streamingClient,
-		d.engineCtx,
-		d.subscriptionClientOptions...,
-	)
+	opts := append([]graphql_datasource.SubscriptionClientOption{
+		graphql_datasource.WithUpgradeClient(defaultHTTPClient),
+		graphql_datasource.WithStreamingClient(streamingClient),
+	}, d.subscriptionClientOptions...)
+	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.engineCtx, opts...)
 
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
 		// it's intentional that we're not using the subgraphClient for subscriptions
@@ -811,7 +805,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 		return out
 	}
 	for _, fw := range costConfig.GetFieldWeights() {
-		w := &plan.FieldWeight{}
+		w := &plan.FieldCost{}
 		if fw.Weight != nil {
 			w.HasWeight = true
 			w.Weight = int(*fw.Weight)

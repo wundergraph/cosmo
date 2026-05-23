@@ -3,7 +3,6 @@ package entitycache
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -50,7 +49,7 @@ func (c *RedisEntityCache) Get(ctx context.Context, keys []string) ([]*resolve.C
 	return entries, nil
 }
 
-func (c *RedisEntityCache) Set(ctx context.Context, entries []*resolve.CacheEntry, ttl time.Duration) error {
+func (c *RedisEntityCache) Set(ctx context.Context, entries []*resolve.CacheEntry) error {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -58,6 +57,12 @@ func (c *RedisEntityCache) Set(ctx context.Context, entries []*resolve.CacheEntr
 	for _, entry := range entries {
 		if entry == nil {
 			continue
+		}
+		// Per LoaderCache contract: TTL<=0 means no expiration; for go-redis
+		// passing 0 (redis.KeepTTL is -1) tells the server to omit EX/PX.
+		ttl := entry.TTL
+		if ttl < 0 {
+			ttl = 0
 		}
 		pipe.Set(ctx, c.keyPrefix+":"+entry.Key, entry.Value, ttl)
 	}

@@ -68,11 +68,11 @@ func (cb *CircuitBreakerCache) Get(ctx context.Context, keys []string) ([]*resol
 	return entries, nil
 }
 
-func (cb *CircuitBreakerCache) Set(ctx context.Context, entries []*resolve.CacheEntry, ttl time.Duration) error {
+func (cb *CircuitBreakerCache) Set(ctx context.Context, entries []*resolve.CacheEntry) error {
 	if !cb.allowRequest() {
 		return nil
 	}
-	err := cb.cache.Set(ctx, entries, ttl)
+	err := cb.cache.Set(ctx, entries)
 	cb.recordResult(err)
 	return nil
 }

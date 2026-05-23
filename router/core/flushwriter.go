@@ -66,7 +66,7 @@ func (f *HttpFlushWriter) Complete() {
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
 
-	f.Close(resolve.SubscriptionCloseKindNormal)
+	f.cancel()
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
@@ -104,11 +104,19 @@ func (f *HttpFlushWriter) Heartbeat() error {
 	return nil
 }
 
-func (f *HttpFlushWriter) Close(_ resolve.SubscriptionCloseKind) {
+// Error implements resolve.SubscriptionResponseWriter. The resolver invokes Error
+// to deliver a terminal error payload to the subscription transport. We write the
+// payload through the existing flush pipeline so SSE / multipart framing stays
+// consistent with regular updates, then cancel the request context to tear the
+// stream down.
+func (f *HttpFlushWriter) Error(data []byte) {
 	if f.ctx.Err() != nil {
 		return
 	}
-
+	if len(data) > 0 {
+		_, _ = f.Write(data)
+		_ = f.Flush()
+	}
 	f.cancel()
 }
 
@@ -159,7 +167,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	f.flusher.Flush()
 
 	if f.subscribeOnce {
-		defer f.Close(resolve.SubscriptionCloseKindNormal)
+		defer f.cancel()
 	}
 
 	return nil

@@ -373,7 +373,7 @@ func (f *FailingEntityCache) Get(_ context.Context, keys []string) ([]*resolve.C
 	return nil, errCacheFailed
 }
 
-func (f *FailingEntityCache) Set(_ context.Context, _ []*resolve.CacheEntry, _ time.Duration) error {
+func (f *FailingEntityCache) Set(_ context.Context, _ []*resolve.CacheEntry) error {
 	return errCacheFailed
 }
 
@@ -413,11 +413,11 @@ func (c *ControllableCache) Get(ctx context.Context, keys []string) ([]*resolve.
 	return c.inner.Get(ctx, keys)
 }
 
-func (c *ControllableCache) Set(ctx context.Context, entries []*resolve.CacheEntry, ttl time.Duration) error {
+func (c *ControllableCache) Set(ctx context.Context, entries []*resolve.CacheEntry) error {
 	if c.failing.Load() {
 		return errCacheFailed
 	}
-	return c.inner.Set(ctx, entries, ttl)
+	return c.inner.Set(ctx, entries)
 }
 
 func (c *ControllableCache) Delete(ctx context.Context, keys []string) error {

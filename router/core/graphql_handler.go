@@ -20,7 +20,7 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	subscriptionclient "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
@@ -249,7 +249,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					pw.writer.Header().Set(CostEstimatedHeader, strconv.Itoa(reqCtx.operation.costEstimated))
 					if actualListSizes != nil {
 						if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-							actual := costCalc.ActualCost(resolveCtx.Variables, actualListSizes)
+							actual := costCalc.ActualCost(resolveCtx.VariablesView(), actualListSizes)
 							reqCtx.operation.costActual = actual
 							reqCtx.operation.costActualSet = true
 							pw.writer.Header().Set(CostActualHeader, strconv.Itoa(actual))
@@ -259,7 +259,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		info, err := h.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, hpw)
+		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
@@ -271,7 +271,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !reqCtx.operation.costActualSet && resolveCtx.ActualListSizes != nil &&
 			reqCtx.operation.preparedPlan != nil && reqCtx.operation.preparedPlan.preparedPlan != nil {
 			if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-				reqCtx.operation.costActual = costCalc.ActualCost(resolveCtx.Variables, resolveCtx.ActualListSizes)
+				reqCtx.operation.costActual = costCalc.ActualCost(resolveCtx.VariablesView(), resolveCtx.ActualListSizes)
 				reqCtx.operation.costActualSet = true
 			}
 		}
@@ -470,7 +470,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
 	case errorTypeUpgradeFailed:
-		var upgradeErr *graphql_datasource.UpgradeRequestError
+		var upgradeErr subscriptionclient.ErrFailedUpgrade
 		if h.subgraphErrorPropagation.PropagateStatusCodes && errors.As(err, &upgradeErr) && upgradeErr.StatusCode != 0 {
 			response.Errors[0].Extensions = &Extensions{
 				StatusCode: upgradeErr.StatusCode,
