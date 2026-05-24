@@ -24,6 +24,7 @@ import (
 	"github.com/tidwall/sjson"
 
 	fastjson "github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -1417,14 +1418,14 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 	// Compute and cache estimated cost once after planning
 	if opCtx.preparedPlan != nil && opCtx.preparedPlan.preparedPlan != nil {
 		if costCalc := opCtx.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-
 			// Validate that variables/arguments are correct for the requirements in listSize
 			var sliceReport operationreport.Report
-			costCalc.ValidateSliceArguments(opCtx.variables, &sliceReport)
+			vs := opCtx.VariablesView()
+			costCalc.ValidateSliceArguments(vs, &sliceReport)
 			if sliceReport.HasErrors() {
 				return &reportError{report: &sliceReport}
 			}
-			opCtx.costEstimated = costCalc.EstimateCost(opCtx.variables)
+			opCtx.costEstimated = costCalc.EstimateCost(vs)
 			opCtx.costEstimatedSet = true
 		}
 	}
@@ -1469,7 +1470,8 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 				if value.Kind != ast.ValueKindVariable {
 					continue
 				}
-				variableName := o.kit.doc.VariableValueNameString(value.Ref)
+				// explicitly convert to string to not store unsafe reference in a map
+				variableName := string(o.kit.doc.VariableValueNameBytes(value.Ref))
 				variableNames[variableName] = struct{}{}
 			}
 		}

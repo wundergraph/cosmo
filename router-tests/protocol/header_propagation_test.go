@@ -119,6 +119,11 @@ func TestCacheControl(t *testing.T) {
 							},
 							{
 								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Vary",
+								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
 								Named:     "X-Custom-Header",
 								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
 							},
@@ -134,6 +139,7 @@ func TestCacheControl(t *testing.T) {
 							w.Header().Set("Content-Type", "application/custom-from-subgraph")
 							w.Header().Set("Content-Encoding", "gzip-from-subgraph")
 							w.Header().Set("Connection", "keep-alive-from-subgraph")
+							w.Header().Set("Vary", "Origin")
 							// This should be propagated
 							w.Header().Set("X-Custom-Header", "custom-value")
 							handler.ServeHTTP(w, r)
@@ -155,6 +161,9 @@ func TestCacheControl(t *testing.T) {
 
 			connection := res.Response.Header.Get("Connection")
 			require.NotEqual(t, "keep-alive-from-subgraph", connection, "Subgraph Connection should not be propagated")
+
+			vary := res.Response.Header.Get("Vary")
+			require.NotEqual(t, "Origin", vary, "Subgraph Vary should not be propagated")
 
 			// Verify custom header IS propagated (not in ignored list)
 			require.Equal(t, "custom-value", res.Response.Header.Get("X-Custom-Header"))

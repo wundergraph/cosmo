@@ -143,6 +143,18 @@ type TracePropagationProvider interface {
 	TracePropagators() []propagation.TextMapPropagator
 }
 
+// SpanNameFormatterFunc returns the OpenTelemetry span name for an HTTP
+// request.
+type SpanNameFormatterFunc func(r *http.Request) string
+
+// SpanNameFormatterProvider is a module interface for customizing span names.
+// The returned function wraps the next formatter in the chain. Multiple modules
+// implementing this interface compose in module Priority order (lower priority
+// = outer wrapper). Wrappers SHOULD delegate to next for the default behavior.
+type SpanNameFormatterProvider interface {
+	WrapSpanNameFormatter(next SpanNameFormatterFunc) SpanNameFormatterFunc
+}
+
 // Provisioner is called before the server starts
 // It allows you to initialize your module, e.g., create a database connection
 // or load a configuration file.
