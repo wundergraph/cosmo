@@ -132,6 +132,30 @@ export const Step1 = () => {
         </div>
       </div>
 
+      <div className="mt-2 self-start pl-4">
+        <p className="text-xs text-muted-foreground">
+          <em>Note:</em>&nbsp;
+          <a
+            href="https://nodejs.org/en/download/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary hover:underline"
+          >
+            NodeJS LTS
+          </a>{' '}
+          and{' '}
+          <a
+            href="https://docs.docker.com/get-started/get-docker/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary hover:underline"
+          >
+            Docker
+          </a>{' '}
+          are required in the next step.
+        </p>
+      </div>
+
       <OnboardingNavigation
         onSkip={() => {
           captureOnboardingEvent(posthog, {
@@ -142,6 +166,7 @@ export const Step1 = () => {
           });
           setSkipped();
         }}
+        className="pt-4"
         forwardLabel="Start"
         forward={{
           onClick: () => mutate({}),

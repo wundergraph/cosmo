@@ -30,7 +30,7 @@ export const OnboardingLayout = ({
             <div className="mx-auto w-full max-w-2xl">{children}</div>
           ) : (
             <Card className="mx-auto w-full max-w-2xl">
-              <CardContent className="flex min-h-[788px] flex-col p-6">{children}</CardContent>
+              <CardContent className="flex min-h-[300px] flex-col p-6">{children}</CardContent>
             </Card>
           )}
         </main>
