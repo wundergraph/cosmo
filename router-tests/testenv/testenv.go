@@ -340,48 +340,48 @@ type Config struct {
 	TracingEnhancedConnectionStats bool
 	// TracingResolverAcquireSpans enables a "Resolver - Acquire" child span
 	// using the resolver wait time reported by the engine.
-	TracingResolverAcquireSpans bool
-	IPAnonymization                    *core.IPAnonymizationConfig
-	CustomMetricAttributes             []config.CustomAttribute
-	CustomTelemetryAttributes          []config.CustomAttribute
-	CustomTracingAttributes            []config.CustomAttribute
-	CustomResourceAttributes           []config.CustomStaticAttribute
-	OperationContentAttributes         bool
-	MetricReader                       metric.Reader
-	PrometheusRegistry                 *prometheus.Registry
-	PrometheusPort                     int
-	ShutdownDelay                      time.Duration
-	NoRetryClient                      bool
-	PropagationConfig                  config.PropagationConfig
-	CacheControlPolicy                 config.CacheControlPolicy
-	ApqConfig                          config.AutomaticPersistedQueriesConfig
-	LogObservation                     LogObservationConfig
-	ClientHeader                       config.ClientHeader
-	ResponseTraceHeader                config.ResponseTraceHeader
-	Logger                             *zap.Logger
-	AccessLogger                       *zap.Logger
-	AccessLogFields                    []config.CustomAttribute
-	MetricOptions                      MetricOptions
-	ModifyEventsConfiguration          func(cfg *config.EventsConfiguration)
-	EnableRuntimeMetrics               bool
-	EnableNats                         bool
-	BatchingConfig                     config.BatchingConfig
-	EnableKafka                        bool
-	SubgraphAccessLogsEnabled          bool
-	SubgraphAccessLogFields            []config.CustomAttribute
-	AssertCacheMetrics                 *CacheMetricsAssertions
-	DisableSimulateCloudExporter       bool
-	CdnSever                           *httptest.Server
-	UseVersionedGraph                  bool
-	NoShutdownTestServer               bool
-	MCP                                config.MCPConfiguration
-	MCPOperationsPath                  string
-	MCPAuthToken                       string // Optional Bearer token for MCP authentication
-	EnableRedis                        bool
-	EnableRedisCluster                 bool
-	Plugins                            PluginConfig
-	EnableGRPC                         bool
-	IgnoreQueryParamsList              []string
+	TracingResolverAcquireSpans  bool
+	IPAnonymization              *core.IPAnonymizationConfig
+	CustomMetricAttributes       []config.CustomAttribute
+	CustomTelemetryAttributes    []config.CustomAttribute
+	CustomTracingAttributes      []config.CustomAttribute
+	CustomResourceAttributes     []config.CustomStaticAttribute
+	OperationContentAttributes   bool
+	MetricReader                 metric.Reader
+	PrometheusRegistry           *prometheus.Registry
+	PrometheusPort               int
+	ShutdownDelay                time.Duration
+	NoRetryClient                bool
+	PropagationConfig            config.PropagationConfig
+	CacheControlPolicy           config.CacheControlPolicy
+	ApqConfig                    config.AutomaticPersistedQueriesConfig
+	LogObservation               LogObservationConfig
+	ClientHeader                 config.ClientHeader
+	ResponseTraceHeader          config.ResponseTraceHeader
+	Logger                       *zap.Logger
+	AccessLogger                 *zap.Logger
+	AccessLogFields              []config.CustomAttribute
+	MetricOptions                MetricOptions
+	ModifyEventsConfiguration    func(cfg *config.EventsConfiguration)
+	EnableRuntimeMetrics         bool
+	EnableNats                   bool
+	BatchingConfig               config.BatchingConfig
+	EnableKafka                  bool
+	SubgraphAccessLogsEnabled    bool
+	SubgraphAccessLogFields      []config.CustomAttribute
+	AssertCacheMetrics           *CacheMetricsAssertions
+	DisableSimulateCloudExporter bool
+	CdnSever                     *httptest.Server
+	UseVersionedGraph            bool
+	NoShutdownTestServer         bool
+	MCP                          config.MCPConfiguration
+	MCPOperationsPath            string
+	MCPAuthToken                 string // Optional Bearer token for MCP authentication
+	EnableRedis                  bool
+	EnableRedisCluster           bool
+	Plugins                      PluginConfig
+	EnableGRPC                   bool
+	IgnoreQueryParamsList        []string
 }
 
 type PluginConfig struct {
