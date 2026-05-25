@@ -1902,6 +1902,52 @@
             }
           }
         },
+        "subgraph_patterns": {
+          "type": "array",
+          "description": "An ordered list of header rules that apply to every subgraph whose name matches the regular expression in 'matching'. Patterns are evaluated after 'all' and before exact 'subgraphs' rules, so an exact subgraph rule can still override a pattern rule. This is useful for targeting a base subgraph and its feature subgraphs with the same forwarding rules without duplicating the configuration.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["matching"],
+            "properties": {
+              "matching": {
+                "type": "string",
+                "description": "A Go regular expression evaluated against the subgraph name. Subgraph names are case-sensitive."
+              },
+              "negate_match": {
+                "type": "boolean",
+                "description": "If true, the regex result is inverted, applying the rule to every subgraph whose name does NOT match.",
+                "default": false
+              },
+              "request": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/traffic_shaping_header_rule"
+                    },
+                    {
+                      "$ref": "#/$defs/set_header_rule"
+                    }
+                  ]
+                }
+              },
+              "response": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/traffic_shaping_header_response_rule"
+                    },
+                    {
+                      "$ref": "#/$defs/set_header_rule"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
         "cookie_whitelist": {
           "type": "array",
           "description": "A list of Cookie keys allowed to be forwarded to the subgraph. If the list is empty or unspecified, all cookies are forwarded. This option will do nothing if the 'Cookie' header is not propagated.",

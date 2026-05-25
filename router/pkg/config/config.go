@@ -280,10 +280,34 @@ type CacheControlPolicy struct {
 
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All             *GlobalHeaderRule            `yaml:"all,omitempty"`
-	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
-	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
-	Router          RouterHeaderRules            `yaml:"router,omitempty"`
+	All *GlobalHeaderRule `yaml:"all,omitempty"`
+	// Subgraphs is a map of rules keyed by exact subgraph name. The name must match the
+	// subgraph name in the Studio.
+	Subgraphs map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	// SubgraphPatterns is an ordered list of rules whose `matching` selector is a Go
+	// regular expression evaluated against the subgraph name. This allows targeting a
+	// group of subgraphs (e.g. a base subgraph and its feature subgraphs) without
+	// duplicating the same rule under every individual subgraph entry. Patterns are
+	// applied in the order they are defined, after `all` and before exact `subgraphs`
+	// matches, so an exact subgraph rule can still override a pattern rule.
+	SubgraphPatterns []*SubgraphPatternHeaderRule `yaml:"subgraph_patterns,omitempty"`
+	CookieWhitelist  []string                     `yaml:"cookie_whitelist,omitempty"`
+	Router           RouterHeaderRules            `yaml:"router,omitempty"`
+}
+
+// SubgraphPatternHeaderRule applies a set of request/response header rules to every
+// subgraph whose name matches the `Matching` regex selector. Selectors are compiled at
+// startup; an invalid pattern will fail router initialization.
+type SubgraphPatternHeaderRule struct {
+	// Matching is a Go regular expression evaluated against the subgraph name.
+	// The match is case-sensitive (subgraph names are case-sensitive identifiers).
+	Matching string `yaml:"matching"`
+	// NegateMatch inverts the regex result, useful for "all subgraphs except X" rules.
+	NegateMatch bool `yaml:"negate_match,omitempty"`
+	// Request rules to apply to every subgraph matched by this pattern.
+	Request []*RequestHeaderRule `yaml:"request,omitempty"`
+	// Response rules to apply to every subgraph matched by this pattern.
+	Response []*ResponseHeaderRule `yaml:"response,omitempty"`
 }
 
 type RouterHeaderRules struct {

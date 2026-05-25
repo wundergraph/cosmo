@@ -53,6 +53,12 @@ headers:
         - op: "propagate"
           named: "Subgraph-Secret"
           default: "some-secret"
+
+  subgraph_patterns: # Apply rules to every subgraph whose name matches the regex
+    - matching: "^products(-feature-.+)?$"
+      request:
+        - op: "propagate"
+          named: "X-Products-Auth"
 ```
 
 ### What does the snippet do?
@@ -60,6 +66,29 @@ headers:
 With `all` we address all subgraph requests. Next, we can define several rules on the client's request. The operation `propagate` forwards all matching client request headers to the subgraphs. The operation `set` sets a new header which is forward to the subgraphs.
 
 The `subgraphs` section allows to propagate headers for specific subgraphs. The name must match with the subgraph name in the Studio.
+
+The `subgraph_patterns` section applies rules to every subgraph whose name matches the regular expression in `matching`. This is useful for targeting a base subgraph and its feature subgraphs (for example, PR-preview deployments named `products-feature-pr-123`) without duplicating the same block under every variant.
+
+### Rule evaluation order
+
+Rules are applied in this order:
+
+1. `headers.all` rules.
+2. `headers.subgraph_patterns` entries whose `matching` regex matches the subgraph name, in config order.
+3. `headers.subgraphs.<name>` rules for the exact subgraph name.
+
+Because exact rules are applied last, a rule under `headers.subgraphs.products` can still override a broader pattern rule when both target the same header.
+
+### Pattern selectors
+
+Each entry under `subgraph_patterns` accepts:
+
+* `matching` — A Go regular expression evaluated against the subgraph name. Required.
+* `negate_match` — If `true`, the regex result is inverted. Useful for "all subgraphs except X" rules.
+* `request` — Request rules to apply when the pattern matches.
+* `response` — Response rules to apply when the pattern matches.
+
+Subgraph names are case-sensitive identifiers. Invalid regular expressions fail router startup.
 
 ### Supported header rules
 

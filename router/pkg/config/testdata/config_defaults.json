@@ -198,6 +198,7 @@
   "Headers": {
     "All": null,
     "Subgraphs": null,
+    "SubgraphPatterns": null,
     "CookieWhitelist": null,
     "Router": {
       "Response": null

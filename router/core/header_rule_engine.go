@@ -155,6 +155,14 @@ type HeaderPropagation struct {
 	// Precomputed request rule presence for fast-path checks
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
+	// subgraphPatternRegex holds the compiled regex for each subgraph_patterns rule.
+	// The slice is index-aligned with rules.SubgraphPatterns so we never have to
+	// recompile while serving traffic.
+	subgraphPatternRegex []*regexp.Regexp
+	// hasAnyPatternRequestRules is true when at least one subgraph_patterns entry
+	// defines request rules. Used as a fast-path so subgraphs that have no
+	// `all`/exact rules can still skip the entire builder when no patterns apply.
+	hasAnyPatternRequestRules bool
 }
 
 func initHeaderRules(rules *config.HeaderRules) {
@@ -177,6 +185,28 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 		regex:                       map[string]*regexp.Regexp{},
 		compiledRules:               map[string]*vm.Program{},
 		compiledRouterResponseRules: map[string]*vm.Program{},
+	}
+
+	// Compile subgraph_patterns selectors up-front. Invalid patterns fail startup
+	// rather than only manifesting when a matching subgraph is composed.
+	if len(rules.SubgraphPatterns) > 0 {
+		hf.subgraphPatternRegex = make([]*regexp.Regexp, len(rules.SubgraphPatterns))
+		for i, p := range rules.SubgraphPatterns {
+			if p == nil {
+				return nil, fmt.Errorf("subgraph_patterns[%d] is nil", i)
+			}
+			if p.Matching == "" {
+				return nil, fmt.Errorf("subgraph_patterns[%d] is missing required field 'matching'", i)
+			}
+			re, err := regexp.Compile(p.Matching)
+			if err != nil {
+				return nil, fmt.Errorf("invalid regex %q for subgraph_patterns[%d]: %w", p.Matching, i, err)
+			}
+			hf.subgraphPatternRegex[i] = re
+			if len(p.Request) > 0 {
+				hf.hasAnyPatternRequestRules = true
+			}
+		}
 	}
 
 	rhrs, rhrrs, rrs := hf.getAllRules()
@@ -246,10 +276,22 @@ func (h *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*confi
 	for _, subgraph := range h.rules.Subgraphs {
 		rhrs = append(rhrs, subgraph.Request...)
 	}
+	for _, pattern := range h.rules.SubgraphPatterns {
+		if pattern == nil {
+			continue
+		}
+		rhrs = append(rhrs, pattern.Request...)
+	}
 
 	rhrrs := h.rules.All.Response
 	for _, subgraph := range h.rules.Subgraphs {
 		rhrrs = append(rhrrs, subgraph.Response...)
+	}
+	for _, pattern := range h.rules.SubgraphPatterns {
+		if pattern == nil {
+			continue
+		}
+		rhrrs = append(rhrrs, pattern.Response...)
 	}
 
 	return rhrs, rhrrs, h.rules.Router.Response
@@ -355,6 +397,23 @@ func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, c
 		h.applyRequestRuleToHeader(ctx, outHeader, rule)
 	}
 
+	// Apply pattern-based rules in config order. Patterns are evaluated after
+	// global rules but before exact subgraph rules so that an explicit per-subgraph
+	// rule can still override a broader pattern rule (e.g. via op: set).
+	if subgraphName != "" {
+		for i, pattern := range h.rules.SubgraphPatterns {
+			if pattern == nil || len(pattern.Request) == 0 {
+				continue
+			}
+			if !h.subgraphPatternMatches(i, subgraphName) {
+				continue
+			}
+			for _, rule := range pattern.Request {
+				h.applyRequestRuleToHeader(ctx, outHeader, rule)
+			}
+		}
+	}
+
 	// Apply subgraph-specific rules
 	if subgraphName != "" {
 		if subRules, ok := h.rules.Subgraphs[subgraphName]; ok {
@@ -368,8 +427,28 @@ func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, c
 	return outHeader, headerHash
 }
 
+// subgraphPatternMatches reports whether the subgraph_patterns rule at the given
+// index matches the supplied subgraph name. It honors the rule's NegateMatch
+// flag and assumes regexes were compiled successfully at startup.
+func (h *HeaderPropagation) subgraphPatternMatches(index int, subgraphName string) bool {
+	if h == nil || index < 0 || index >= len(h.subgraphPatternRegex) {
+		return false
+	}
+	re := h.subgraphPatternRegex[index]
+	if re == nil {
+		return false
+	}
+	matched := re.MatchString(subgraphName)
+	if h.rules.SubgraphPatterns[index].NegateMatch {
+		matched = !matched
+	}
+	return matched
+}
+
 // hasRequestRulesForSubgraph returns true if there are request header rules
-// that would apply to the given subgraph. The result is computed at creation time.
+// that would apply to the given subgraph. The result is computed at creation time
+// for `all` and exact-name rules, and computed on-demand for pattern rules
+// because they depend on the runtime subgraph name.
 func (h *HeaderPropagation) hasRequestRulesForSubgraph(subgraphName string) bool {
 	if h == nil || h.rules == nil {
 		return false
@@ -382,7 +461,20 @@ func (h *HeaderPropagation) hasRequestRulesForSubgraph(subgraphName string) bool
 		// No subgraph specified and no global rules
 		return false
 	}
-	return h.subgraphHasRequestRules != nil && h.subgraphHasRequestRules[subgraphName]
+	if h.subgraphHasRequestRules != nil && h.subgraphHasRequestRules[subgraphName] {
+		return true
+	}
+	if h.hasAnyPatternRequestRules {
+		for i, pattern := range h.rules.SubgraphPatterns {
+			if pattern == nil || len(pattern.Request) == 0 {
+				continue
+			}
+			if h.subgraphPatternMatches(i, subgraphName) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // hashHeaderStable computes a deterministic 64-bit hash over the provided header map.
@@ -436,6 +528,23 @@ func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, header
 
 	for _, rule := range h.rules.All.Response {
 		h.applyResponseRule(propagation, resp, rule)
+	}
+
+	// Apply pattern-based rules in config order. Patterns are evaluated after
+	// global rules but before exact subgraph rules so an explicit per-subgraph
+	// rule can still override a broader pattern rule.
+	if subgraphName != "" {
+		for i, pattern := range h.rules.SubgraphPatterns {
+			if pattern == nil || len(pattern.Response) == 0 {
+				continue
+			}
+			if !h.subgraphPatternMatches(i, subgraphName) {
+				continue
+			}
+			for _, rule := range pattern.Response {
+				h.applyResponseRule(propagation, resp, rule)
+			}
+		}
 	}
 
 	if subgraphName != "" {
@@ -866,7 +975,11 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 	return &result, cacheControlHeader
 }
 
-// SubgraphRules returns the list of header rules for the subgraph with the given name
+// SubgraphRules returns the list of header rules for the subgraph with the given name.
+// Rules are returned in evaluation order: `all` first, then any subgraph_patterns whose
+// regex matches the subgraph name (in config order), then exact-name rules. Patterns
+// with invalid regexes are skipped here; startup-time validation in NewHeaderPropagation
+// is the source of truth for failing the router on bad configuration.
 func SubgraphRules(rules *config.HeaderRules, subgraphName string) []*config.RequestHeaderRule {
 	if rules == nil {
 		return nil
@@ -874,6 +987,26 @@ func SubgraphRules(rules *config.HeaderRules, subgraphName string) []*config.Req
 	var subgraphRules []*config.RequestHeaderRule
 	if rules.All != nil {
 		subgraphRules = append(subgraphRules, rules.All.Request...)
+	}
+	if subgraphName != "" && len(rules.SubgraphPatterns) > 0 {
+		for _, pattern := range rules.SubgraphPatterns {
+			if pattern == nil || len(pattern.Request) == 0 || pattern.Matching == "" {
+				continue
+			}
+			re, err := regexp.Compile(pattern.Matching)
+			if err != nil {
+				// Selectors are validated at startup; if compilation fails here we
+				// silently skip the rule rather than panicking on a request path.
+				continue
+			}
+			matched := re.MatchString(subgraphName)
+			if pattern.NegateMatch {
+				matched = !matched
+			}
+			if matched {
+				subgraphRules = append(subgraphRules, pattern.Request...)
+			}
+		}
 	}
 	if rules.Subgraphs != nil {
 		if subgraphSpecificRules, ok := rules.Subgraphs[subgraphName]; ok {
