@@ -280,10 +280,42 @@ type CacheControlPolicy struct {
 
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All             *GlobalHeaderRule            `yaml:"all,omitempty"`
-	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
-	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
-	Router          RouterHeaderRules            `yaml:"router,omitempty"`
+	All *GlobalHeaderRule `yaml:"all,omitempty"`
+	// Subgraphs is a map of rules keyed by exact subgraph name. The name must match
+	// the subgraph name in the Studio.
+	Subgraphs map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	// Groups is an ordered list of named header rule bundles. Each group's selector
+	// can be an explicit list of subgraph names (`subgraphs:`), a Go regex against the
+	// subgraph name (`matching:`), or both (a subgraph qualifies if it matches either
+	// the list or the regex). Groups apply after `all` and before exact-name rules,
+	// so a `headers.subgraphs.<name>` rule can still override a group rule.
+	Groups          []*SubgraphHeaderGroup `yaml:"groups,omitempty"`
+	CookieWhitelist []string               `yaml:"cookie_whitelist,omitempty"`
+	Router          RouterHeaderRules      `yaml:"router,omitempty"`
+}
+
+// SubgraphHeaderGroup applies a set of request/response header rules to every
+// subgraph that matches the group's selector. The selector is the union of the
+// explicit `Subgraphs` list and the `Matching` regex; at least one must be set.
+// Selectors are validated and regexes compiled at startup; an invalid group
+// fails router initialization.
+type SubgraphHeaderGroup struct {
+	// ID is a required, unique identifier used in error messages and (potentially
+	// in the future) telemetry labels. It has no effect on matching semantics.
+	ID string `yaml:"id"`
+	// Subgraphs is an explicit list of subgraph names this group applies to.
+	// Names are case-sensitive identifiers. Optional if `Matching` is set.
+	Subgraphs []string `yaml:"subgraphs,omitempty"`
+	// Matching is a Go regular expression evaluated against the subgraph name.
+	// Optional if `Subgraphs` is set.
+	Matching string `yaml:"matching,omitempty"`
+	// NegateMatch inverts the result of the `Matching` regex only. Subgraphs in the
+	// explicit `Subgraphs` list are always included, regardless of NegateMatch.
+	NegateMatch bool `yaml:"negate_match,omitempty"`
+	// Request rules to apply to every subgraph the group matches.
+	Request []*RequestHeaderRule `yaml:"request,omitempty"`
+	// Response rules to apply to every subgraph the group matches.
+	Response []*ResponseHeaderRule `yaml:"response,omitempty"`
 }
 
 type RouterHeaderRules struct {

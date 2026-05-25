@@ -1902,6 +1902,65 @@
             }
           }
         },
+        "groups": {
+          "type": "array",
+          "description": "An ordered list of named header rule bundles. Each group's selector can be an explicit list of subgraph names ('subgraphs'), a Go regex against the subgraph name ('matching'), or both (the union — a subgraph matches if it appears in either). Groups apply after 'all' and before exact 'subgraphs.<name>' rules, so an exact-name rule can still override a group rule. This is useful for applying the same set of rules to a cohort of subgraphs (including base subgraphs and their feature variants) without duplicating the same block under every entry.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A unique identifier for the group. Used in router error messages and reserved for future telemetry labels. Has no effect on matching."
+              },
+              "subgraphs": {
+                "type": "array",
+                "description": "Explicit list of subgraph names this group applies to. Names are case-sensitive identifiers. Optional if 'matching' is set; at least one of 'subgraphs' or 'matching' must be specified.",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "matching": {
+                "type": "string",
+                "description": "A Go regular expression evaluated against the subgraph name. Optional if 'subgraphs' is set; at least one of 'subgraphs' or 'matching' must be specified."
+              },
+              "negate_match": {
+                "type": "boolean",
+                "description": "If true, the result of the 'matching' regex is inverted. Subgraphs in the explicit 'subgraphs' list are still included positively; negate_match only affects the regex.",
+                "default": false
+              },
+              "request": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/traffic_shaping_header_rule"
+                    },
+                    {
+                      "$ref": "#/$defs/set_header_rule"
+                    }
+                  ]
+                }
+              },
+              "response": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/traffic_shaping_header_response_rule"
+                    },
+                    {
+                      "$ref": "#/$defs/set_header_rule"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
         "cookie_whitelist": {
           "type": "array",
           "description": "A list of Cookie keys allowed to be forwarded to the subgraph. If the list is empty or unspecified, all cookies are forwarded. This option will do nothing if the 'Cookie' header is not propagated.",
