@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { usePostHog } from 'posthog-js/react';
 import { OnboardingContainer } from './onboarding-container';
@@ -10,16 +10,63 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { useToast } from '../ui/use-toast';
 import { captureOnboardingEvent } from '@/lib/track';
 import { TrafficAnimation } from './traffic-animation';
+import { useAnimate } from 'framer-motion';
+import { useResolvedTheme } from '@/hooks/use-resolved-theme';
 
-const WhyListItem = ({ title, text }: { title: string; text: string }) => (
-  <li className="flex gap-2">
-    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
-    <div className="flex flex-col">
-      <span className="text-sm font-medium">{title}</span>
-      <span className="text-sm text-muted-foreground">{text}</span>
-    </div>
-  </li>
-);
+type PulseState = { key: string | null; tick: number };
+
+function WhyListItem({
+  title,
+  text,
+  itemKey,
+  pulse,
+}: {
+  title: string;
+  text: string;
+  itemKey: string;
+  pulse: PulseState;
+}) {
+  const [scope, animate] = useAnimate();
+
+  const colors = useMemo(() => {
+    if (typeof document === 'undefined') {
+      return { primary: '', mutedFg: '', fg: '' };
+    }
+
+    const cs = getComputedStyle(document.documentElement);
+    return {
+      primary: `hsl(${cs.getPropertyValue('--primary').trim()})`,
+      mutedFg: `hsl(${cs.getPropertyValue('--muted-foreground').trim()} / 0.6)`,
+      fg: `hsl(${cs.getPropertyValue('--foreground').trim()})`,
+    };
+  }, []);
+
+  useEffect(() => {
+    if (pulse.key !== itemKey || pulse.tick === 0) return;
+
+    animate(
+      '[data-pulse-dot]',
+      {
+        scale: [1.8, 1],
+        backgroundColor: [colors.primary, colors.mutedFg],
+      },
+      { duration: 0.9, ease: 'easeOut' },
+    );
+    animate('[data-pulse-title]', { color: [colors.primary, colors.fg] }, { duration: 0.9, ease: 'easeOut' });
+  }, [pulse.tick, pulse.key, itemKey, colors, animate]);
+
+  return (
+    <li ref={scope} className="flex gap-2">
+      <span data-pulse-dot className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
+      <div className="flex flex-col">
+        <span data-pulse-title className="text-sm font-medium">
+          {title}
+        </span>
+        <span className="text-sm text-muted-foreground">{text}</span>
+      </div>
+    </li>
+  );
+}
 
 const normalizeReferrer = (referrer: string | string[]): string => {
   if (Array.isArray(referrer)) {
@@ -34,8 +81,13 @@ export const Step1 = () => {
   const posthog = usePostHog();
   const { toast } = useToast();
   const { setStep, setSkipped, setOnboarding, initialized, setInitialized } = useOnboarding();
+  const [pulse, setPulse] = useState<PulseState>({ key: null, tick: 0 });
   // Referrer can be `wgc` when onboarding is opened via `wgc demo` command
   const referrer = normalizeReferrer(router.query.referrer || document?.referrer);
+
+  function handleLabelClick(key: string) {
+    setPulse((p) => ({ key, tick: p.tick + 1 }));
+  }
 
   const { mutate, isPending } = useMutation(createOnboarding, {
     onSuccess: (d) => {
@@ -114,20 +166,29 @@ export const Step1 = () => {
           </p>
         </div>
 
-        <TrafficAnimation />
+        <TrafficAnimation onLabelClick={handleLabelClick} />
 
         <div className="space-y-3">
           <p className="text-sm font-semibold">What you&apos;ll get:</p>
           <ul className="flex flex-col gap-3">
             <WhyListItem
+              itemKey="composed-graph"
               title="Composed federated graph"
               text="See how the products and reviews subgraphs compose into one supergraph, giving your client a single endpoint to resolve the data it needs."
+              pulse={pulse}
             />
             <WhyListItem
+              itemKey="router"
               title="Connected Cosmo router"
               text="Run the same router stack you would run in production, locally."
+              pulse={pulse}
             />
-            <WhyListItem title="Live metrics" text="Watch real request metrics flow through the router." />
+            <WhyListItem
+              itemKey="live-metrics"
+              title="Live metrics"
+              text="Watch real request metrics flow through the router."
+              pulse={pulse}
+            />
           </ul>
         </div>
       </div>
@@ -168,6 +229,7 @@ export const Step1 = () => {
         }}
         className="pt-4"
         forwardLabel="Start"
+        jiggleForward={pulse.tick}
         forward={{
           onClick: () => mutate({}),
           isLoading: isPending,

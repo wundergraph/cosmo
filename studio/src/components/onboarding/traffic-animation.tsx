@@ -109,9 +109,10 @@ interface CardProps {
   spec: CardSpec;
   reduced: boolean;
   theme: 'light' | 'dark';
+  onLabelClick?: (key: string) => void;
 }
 
-function Card({ spec, reduced, theme }: CardProps) {
+function Card({ spec, reduced, theme, onLabelClick }: CardProps) {
   const src = `/onboarding/${spec.srcKey}-${theme}.png`;
   return (
     <motion.div
@@ -232,6 +233,7 @@ function Card({ spec, reduced, theme }: CardProps) {
               // Dark: dark pill + primary border + heavier shadow
               'dark:border-primary/35 dark:bg-[hsl(var(--gray-950)/0.92)]',
               'dark:shadow-[0_8px_24px_rgb(0_0_0/0.45),0_0_18px_hsl(var(--primary)/0.16)]',
+              onLabelClick && 'cursor-pointer',
             )}
             style={{
               position: 'absolute',
@@ -244,6 +246,7 @@ function Card({ spec, reduced, theme }: CardProps) {
               borderRadius: 8,
               textAlign: 'center',
             }}
+            onClick={onLabelClick ? () => onLabelClick(spec.srcKey) : undefined}
             initial={reduced ? false : { y: 12, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={reduced ? { duration: 0 } : { delay: spec.landAt + 0.5, duration: 0.5, ease: EASE_OUT }}
@@ -270,7 +273,7 @@ function Card({ spec, reduced, theme }: CardProps) {
   );
 }
 
-export function TrafficAnimation() {
+export function TrafficAnimation({ onLabelClick }: { onLabelClick?: (key: string) => void }) {
   const reduced = !!useReducedMotion();
   const resolvedTheme = useResolvedTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'dark' ? 'dark' : 'light';
@@ -281,7 +284,7 @@ export function TrafficAnimation() {
       style={{ aspectRatio: `${STAGE_W} / ${STAGE_H}` }}
     >
       {CARDS.map((spec, i) => (
-        <Card key={i} spec={spec} reduced={reduced} theme={theme} />
+        <Card key={i} spec={spec} reduced={reduced} theme={theme} onLabelClick={onLabelClick} />
       ))}
     </div>
   );
