@@ -117,17 +117,17 @@ export const Step1 = () => {
         <TrafficAnimation />
 
         <div className="space-y-3">
-          <p className="text-sm font-semibold">What you will do</p>
+          <p className="text-sm font-semibold">What you&apos;ll get:</p>
           <ul className="flex flex-col gap-3">
             <WhyListItem
-              title="Create your first graph"
+              title="Composed federated graph"
               text="See how the products and reviews subgraphs compose into one supergraph, giving your client a single endpoint to resolve the data it needs."
             />
             <WhyListItem
-              title="Run your services"
+              title="Connected Cosmo router"
               text="Run the same router stack you would run in production, locally."
             />
-            <WhyListItem title="Send a query" text="Watch real request metrics flow through the router." />
+            <WhyListItem title="Live metrics" text="Watch real request metrics flow through the router." />
           </ul>
         </div>
       </div>
