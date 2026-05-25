@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.143.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.142.1...@wundergraph/cosmo-connect@0.143.0) (2026-05-12)
+
+### Features
+
+* add feature flag recomposition support ([#2853](https://github.com/wundergraph/cosmo/issues/2853)) ([3f125a2](https://github.com/wundergraph/cosmo/commit/3f125a2effce36a1a2040f219bc1aa5a872aab93)) (@wilsonrivera)
+
 ## [0.142.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.142.0...@wundergraph/cosmo-connect@0.142.1) (2026-05-01)
 
 **Note:** Version bump only for package @wundergraph/cosmo-connect

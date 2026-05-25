@@ -424,7 +424,11 @@ type EngineExecutionConfiguration struct {
 	EnableInboundRequestDeduplication bool `envDefault:"true" env:"ENGINE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"enable_inbound_request_deduplication"`
 	// ForceEnableInboundRequestDeduplication forces enable inbound request deduplication, even when PreOriginHandlers are configured
 	ForceEnableInboundRequestDeduplication bool `envDefault:"false" env:"ENGINE_FORCE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"force_enable_inbound_request_deduplication"`
-	EnableRequestTracing                   bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+
+	EnableRequestTracing bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+	// ForceUnauthenticatedRequestTracing always enables request tracing for unauthenticated requests,
+	// even when Development Mode is not enabled. USE WITH CAUTION.
+	ForceUnauthenticatedRequestTracing bool `envDefault:"false" env:"ENGINE_FORCE_UNAUTHENTICATED_REQUEST_TRACING" yaml:"force_unauthenticated_request_tracing"`
 
 	// Deprecated: EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
 	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
@@ -887,6 +891,7 @@ type TLSServerConfiguration struct {
 	CertFile string `yaml:"cert_file,omitempty" env:"TLS_SERVER_CERT_FILE"`
 	KeyFile  string `yaml:"key_file,omitempty" env:"TLS_SERVER_KEY_FILE"`
 
+	// ClientAuth configures the router to accept or require mTLS from clients.
 	ClientAuth TLSClientAuthConfiguration `yaml:"client_auth,omitempty"`
 }
 
@@ -902,6 +907,16 @@ type ClientTLSConfiguration struct {
 	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
 	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
 	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
+// Enabled returns true if anything in s has been configured.©
+func (s ClientTLSConfiguration) Enabled() bool {
+	allConfigured := s.All.InsecureSkipCaVerification ||
+		s.All.CaFile != "" ||
+		s.All.KeyFile != "" ||
+		s.All.CertFile != ""
+
+	return allConfigured || len(s.Subgraphs) > 0
 }
 
 type TLSConfiguration struct {
@@ -928,6 +943,21 @@ type SubgraphErrorPropagationConfiguration struct {
 	AllowAllExtensionFields bool                         `yaml:"allow_all_extension_fields" envDefault:"false" env:"ALLOW_ALL_EXTENSION_FIELDS"`
 	AllowedExtensionFields  []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"ALLOWED_EXTENSION_FIELDS"`
 	AllowedFields           []string                     `yaml:"allowed_fields" env:"ALLOWED_FIELDS"`
+}
+
+type SubgraphExtensionPropagationAlgorithm string
+
+const (
+	// SubgraphExtensionPropagationAlgorithmFirstWrite propagates the first extension root field from a subgraph to the client
+	SubgraphExtensionPropagationAlgorithmFirstWrite SubgraphExtensionPropagationAlgorithm = "first_write"
+	// SubgraphExtensionPropagationAlgorithmLastWrite propagates the last extension root field from a subgraph to the client
+	SubgraphExtensionPropagationAlgorithmLastWrite SubgraphExtensionPropagationAlgorithm = "last_write"
+)
+
+type SubgraphExtensionPropagationConfiguration struct {
+	Enabled                bool                                  `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	AllowedExtensionFields []string                              `yaml:"allowed_extension_fields" env:"ALLOWED_EXTENSION_FIELDS"`
+	Algorithm              SubgraphExtensionPropagationAlgorithm `yaml:"algorithm,omitempty" envDefault:"first_write" env:"ALGORITHM"`
 }
 
 type StorageProviders struct {
@@ -992,6 +1022,19 @@ type ExecutionConfigFile struct {
 	Path          string        `yaml:"path,omitempty" env:"EXECUTION_CONFIG_FILE_PATH"`
 	Watch         bool          `yaml:"watch,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_FILE_WATCH"`
 	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"EXECUTION_CONFIG_FILE_WATCH_INTERVAL"`
+}
+
+// SplitConfigPollerRules governs the behavior of the split-config polling strategy used to
+// assemble the final router execution config. The split poller fetches the base graph and each
+// feature flag config as separate files from the CDN. These rules apply when individual files
+// are missing or should be excluded entirely.
+type SplitConfigPollerRules struct {
+	// SkipMissingFeatureFlags keeps polling alive when a feature flag listed in the mapper cannot
+	// be fetched. When false (default), a single missing feature flag aborts the poll cycle.
+	SkipMissingFeatureFlags bool `yaml:"skip_missing_feature_flags" envDefault:"false" env:"SKIP_MISSING_FEATURE_FLAGS"`
+	// IgnoredFeatureFlags is the list of feature flag names to skip entirely during polling.
+	// Listed flags are not fetched even when present in the mapper.
+	IgnoredFeatureFlags []string `yaml:"ignored_feature_flags,omitempty" env:"IGNORED_FEATURE_FLAGS"`
 }
 
 type ExecutionConfig struct {
@@ -1235,7 +1278,8 @@ type PluginsConfiguration struct {
 }
 
 type PluginRegistryConfiguration struct {
-	URL string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
+	URL      string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
+	Insecure bool   `yaml:"insecure" env:"INSECURE" envDefault:"false"`
 }
 
 type IntrospectionConfiguration struct {
@@ -1309,8 +1353,11 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
 
+	SubgraphExtensionPropagation SubgraphExtensionPropagationConfiguration `yaml:"subgraph_extension_propagation" envPrefix:"SUBGRAPH_EXTENSION_PROPAGATION_"`
+
 	StorageProviders               StorageProviders                `yaml:"storage_providers" envPrefix:"STORAGE_PROVIDER_"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
+	SplitConfigPoller              SplitConfigPollerRules          `yaml:"split_config_poller" envPrefix:"SPLIT_CONFIG_POLLER_"`
 	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`

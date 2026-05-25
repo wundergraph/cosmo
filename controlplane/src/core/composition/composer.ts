@@ -51,6 +51,7 @@ export function getRouterCompatibilityVersionPath(routerCompatibilityVersion: st
     }
   }
 }
+
 export type CompositionResult = {
   compositions: DeserializedComposedGraph[];
 };
@@ -137,6 +138,7 @@ export type CheckSubgraph = {
   // will be used only for new subgraphs
   labels?: Label[];
 };
+
 @traced
 export class Composer {
   constructor(
@@ -195,6 +197,7 @@ export class Composer {
     admissionWebhookSecret,
     actorId,
     routerCompatibilityVersion,
+    pathOverride,
   }: {
     routerConfig: RouterConfig;
     blobStorage: BlobStorage;
@@ -209,28 +212,38 @@ export class Composer {
     admissionWebhookSecret?: string;
     actorId: string;
     routerCompatibilityVersion: string;
+    pathOverride?: { ready: string; draft: string };
   }): Promise<{
     errors: ComposeDeploymentError[];
   }> {
     const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
     const errors: ComposeDeploymentError[] = [];
 
-    let versionPath = '';
-    if (routerCompatibilityVersion !== ROUTER_COMPATIBILITY_VERSION_ONE) {
-      if (ROUTER_COMPATIBILITY_VERSIONS.has(routerCompatibilityVersion as SupportedRouterCompatibilityVersion)) {
-        versionPath = `${routerCompatibilityVersion}/`;
-      } else {
-        errors.push(
-          new RouterConfigUploadError(`Invalid router compatibility version "${routerCompatibilityVersion}".`),
-        );
-        return {
-          errors,
-        };
+    let s3PathDraft: string;
+    let s3PathReady: string;
+
+    if (pathOverride?.ready && pathOverride?.draft) {
+      s3PathDraft = pathOverride.draft;
+      s3PathReady = pathOverride.ready;
+    } else {
+      let versionPath = '';
+      if (routerCompatibilityVersion !== ROUTER_COMPATIBILITY_VERSION_ONE) {
+        if (ROUTER_COMPATIBILITY_VERSIONS.has(routerCompatibilityVersion as SupportedRouterCompatibilityVersion)) {
+          versionPath = `${routerCompatibilityVersion}/`;
+        } else {
+          errors.push(
+            new RouterConfigUploadError(`Invalid router compatibility version "${routerCompatibilityVersion}".`),
+          );
+          return {
+            errors,
+          };
+        }
       }
+
+      // CDN path and bucket path are the same in this case
+      s3PathDraft = `${organizationId}/${federatedGraphId}/routerconfigs/draft.json`;
+      s3PathReady = `${organizationId}/${federatedGraphId}/routerconfigs/${versionPath}latest.json`;
     }
-    // CDN path and bucket path are the same in this case
-    const s3PathDraft = `${organizationId}/${federatedGraphId}/routerconfigs/draft.json`;
-    const s3PathReady = `${organizationId}/${federatedGraphId}/routerconfigs/${versionPath}latest.json`;
 
     // The signature will be added by the admission webhook
     let signatureSha256: undefined | string;
@@ -357,6 +370,7 @@ export class Composer {
     federatedGraphAdmissionWebhookURL,
     federatedGraphAdmissionWebhookSecret,
     actorId,
+    pathOverride,
   }: {
     admissionConfig: {
       jwtSecret: string;
@@ -371,6 +385,7 @@ export class Composer {
     federatedGraphAdmissionWebhookURL?: string;
     federatedGraphAdmissionWebhookSecret?: string;
     actorId: string;
+    pathOverride?: { ready: string; draft: string };
   }) {
     const baseRouterConfig = this.composeRouterConfigWithFeatureFlags({
       featureFlagRouterExecutionConfigByFeatureFlagName,
@@ -409,6 +424,7 @@ export class Composer {
       },
       actorId,
       routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
+      pathOverride,
     });
 
     return {

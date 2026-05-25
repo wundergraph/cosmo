@@ -4,6 +4,41 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.170.0](https://github.com/wundergraph/cosmo/compare/studio@0.169.6...studio@0.170.0) (2026-05-19)
+
+### Features
+
+* add PostHog name properties to identify call ([#2857](https://github.com/wundergraph/cosmo/issues/2857)) ([662d279](https://github.com/wundergraph/cosmo/commit/662d279530eb270beef8e0e2ed2a218124ae9430)) (@GrueneKatze)
+
+## [0.169.6](https://github.com/wundergraph/cosmo/compare/studio@0.169.5...studio@0.169.6) (2026-05-18)
+
+### Bug Fixes
+
+* **studio:** scope playground storage by graph ([#2871](https://github.com/wundergraph/cosmo/issues/2871)) ([0183ee3](https://github.com/wundergraph/cosmo/commit/0183ee38558a3368854971dc667809b7214e1fa2)) (@comatory)
+
+## [0.169.5](https://github.com/wundergraph/cosmo/compare/studio@0.169.4...studio@0.169.5) (2026-05-14)
+
+### Bug Fixes
+
+* **studio:** button style CTAs in onboarding empty state ([#2864](https://github.com/wundergraph/cosmo/issues/2864)) ([d8f5793](https://github.com/wundergraph/cosmo/commit/d8f57930307e628ad29cc583e0478b1c78e4296c)) (@comatory)
+* **studio:** remove wgc install suggestion in onboarding step 2 ([#2865](https://github.com/wundergraph/cosmo/issues/2865)) ([11c68f8](https://github.com/wundergraph/cosmo/commit/11c68f82a64563cedec4254c962c60fb61ee5a4d)) (@comatory)
+
+## [0.169.4](https://github.com/wundergraph/cosmo/compare/studio@0.169.3...studio@0.169.4) (2026-05-13)
+
+### Bug Fixes
+
+* using browser translation causes crash in onboarding ([#2862](https://github.com/wundergraph/cosmo/issues/2862)) ([fe85a3b](https://github.com/wundergraph/cosmo/commit/fe85a3b79f930f5614af94f92e0efeddcb37e46f)) (@comatory)
+
+## [0.169.3](https://github.com/wundergraph/cosmo/compare/studio@0.169.2...studio@0.169.3) (2026-05-12)
+
+**Note:** Version bump only for package studio
+
+## [0.169.2](https://github.com/wundergraph/cosmo/compare/studio@0.169.1...studio@0.169.2) (2026-05-11)
+
+### Bug Fixes
+
+* onboarding_started tracking event not fired + default channel ([#2852](https://github.com/wundergraph/cosmo/issues/2852)) ([465a971](https://github.com/wundergraph/cosmo/commit/465a971ebe26183532d133c2e6affd911b93e6e9)) (@comatory)
+
 ## [0.169.1](https://github.com/wundergraph/cosmo/compare/studio@0.169.0...studio@0.169.1) (2026-05-07)
 
 **Note:** Version bump only for package studio

@@ -6,18 +6,18 @@ import {
   DeleteFederatedSubgraphRequest,
   DeleteFederatedSubgraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
+import { FeatureFlagDTO } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function deleteFederatedSubgraph(
   opts: RouterOptions,
@@ -34,7 +34,6 @@ export function deleteFederatedSubgraph(
     const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
       authContext.organizationId,
@@ -125,11 +124,6 @@ export function deleteFederatedSubgraph(
       }
     }
 
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-    });
-
     const { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -137,11 +131,29 @@ export function deleteFederatedSubgraph(
         const featureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
         const auditLogRepo = new AuditLogRepository(tx);
 
+        const affectedFeatureFlags: FeatureFlagDTO[] = [];
+
         let labels = subgraph.labels;
         if (subgraph.isFeatureSubgraph) {
           const baseSubgraph = await featureFlagRepo.getBaseSubgraphByFeatureSubgraphId({ id: subgraph.id });
           if (baseSubgraph) {
             labels = baseSubgraph.labels;
+            const enabledFeatureFlags = await featureFlagRepo.getFeatureFlagsByBaseSubgraphId({
+              baseSubgraphId: baseSubgraph.id,
+              namespaceId: namespace.id,
+              excludeDisabled: true,
+            });
+
+            for (const enabledFeatureFlag of enabledFeatureFlags) {
+              const featureFlag = await featureFlagRepo.getFeatureFlagById({
+                featureFlagId: enabledFeatureFlag.id,
+                namespaceId: namespace.id,
+              });
+
+              if (featureFlag) {
+                affectedFeatureFlags.push(featureFlag);
+              }
+            }
           }
         } else {
           await featureFlagRepo.deleteFeatureSubgraphsByBaseSubgraphId({
@@ -177,21 +189,32 @@ export function deleteFederatedSubgraph(
 
         // Recompose and deploy all affected federated graphs and their respective contracts.
         // Collects all composition and deployment errors if any.
-        const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.composeAndDeployGraphs({
-          actorId: authContext.userId,
-          admissionConfig: {
-            webhookJWTSecret: opts.admissionWebhookJWTSecret,
-            cdnBaseUrl: opts.cdnBaseUrl,
-          },
-          blobStorage: opts.blobStorage,
-          chClient: opts.chClient!,
-          compositionOptions: {
-            disableResolvabilityValidation: req.disableResolvabilityValidation,
-            ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-          },
-          federatedGraphs: affectedFederatedGraphs,
-          webhookProxyUrl: opts.webhookProxyUrl,
-        });
+        const compositionService = new CompositionService(
+          tx,
+          authContext.organizationId,
+          logger,
+          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+          opts.blobStorage,
+          opts.chClient,
+          opts.webhookProxyUrl,
+          req.disableResolvabilityValidation,
+        );
+
+        if (subgraph.isFeatureSubgraph) {
+          // To avoid having to re-fetch the feature flags for v2, we are just going to update the feature flag
+          // reference to remove the deleted feature subgraph, that way, we have an up-to-date view of the feature flag
+          for (const featureFlag of affectedFeatureFlags) {
+            featureFlag.featureSubgraphs = featureFlag.featureSubgraphs.filter((fs) => fs.id !== subgraph.id);
+          }
+        }
+
+        const { deploymentErrors, compositionErrors, compositionWarnings } =
+          await compositionService.recomposeAndDeployAffected({
+            actorId: authContext.userId,
+            affectedFederatedGraphs,
+            affectedFeatureFlags,
+            isFeatureSubgraph: subgraph.isFeatureSubgraph,
+          });
 
         // Re-fetch the federated graphs to get the updated composedSchemaVersionId
         const refreshedGraphs = await Promise.all(affectedFederatedGraphs.map((g) => fedGraphRepo.byId(g.id)));
@@ -289,36 +312,17 @@ export function deleteFederatedSubgraph(
       }
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        deploymentErrors: [],
-        compositionErrors,
-        compositionWarnings,
-        proposalMatchMessage,
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        deploymentErrors,
-        compositionErrors: [],
-        compositionWarnings,
-        proposalMatchMessage,
-      };
-    }
-
     return {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
-      deploymentErrors: [],
-      compositionErrors: [],
+      deploymentErrors,
+      compositionErrors,
       compositionWarnings,
       proposalMatchMessage,
     };

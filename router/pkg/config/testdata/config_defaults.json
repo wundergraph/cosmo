@@ -441,6 +441,7 @@
     "EnableInboundRequestDeduplication": true,
     "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
+    "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,
     "EnableNetPoll": true,
@@ -528,6 +529,11 @@
     ],
     "AllowedFields": null
   },
+  "SubgraphExtensionPropagation": {
+    "Enabled": false,
+    "AllowedExtensionFields": null,
+    "Algorithm": "first_write"
+  },
   "StorageProviders": {
     "S3": null,
     "CDN": null,
@@ -549,6 +555,10 @@
       "ProviderID": "",
       "ObjectPath": ""
     }
+  },
+  "SplitConfigPoller": {
+    "SkipMissingFeatureFlags": false,
+    "IgnoredFeatureFlags": null
   },
   "PersistedOperationsConfig": {
     "Disabled": false,
@@ -630,7 +640,8 @@
     "Enabled": false,
     "Path": "plugins",
     "Registry": {
-      "URL": "cosmo-registry.wundergraph.com"
+      "URL": "cosmo-registry.wundergraph.com",
+      "Insecure": false
     }
   },
   "WatchConfig": {

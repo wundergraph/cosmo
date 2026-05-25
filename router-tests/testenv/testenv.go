@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"mime/multipart"
 	"net"
@@ -322,13 +321,14 @@ type Config struct {
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
+	ModifySubgraphExtensionPropagation func(subgraphExtensionPropagation *config.SubgraphExtensionPropagationConfiguration)
 	ModifyWebsocketConfiguration       func(websocketConfiguration *config.WebSocketConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	DemoMode                           bool
 	KafkaSeeds                         []string
 	DisableWebSockets                  bool
 	DisableParentBasedSampler          bool
-	TLSConfig                          *core.TlsConfig
+	TLSConfig                          config.TLSConfiguration
 	TraceExporter                      trace.SpanExporter
 	TracingSanitizeUTF8                *config.SanitizeUTF8Config
 	IPAnonymization                    *core.IPAnonymizationConfig
@@ -716,20 +716,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	})
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
-
-		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+	if cfg.TLSConfig.Server.Enabled {
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.CertFile, cfg.TLSConfig.Server.KeyFile)
 		require.NoError(t, err)
 
-		caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
-		if err != nil {
-			log.Fatal(err)
-		}
+		caCert, err := os.ReadFile(cfg.TLSConfig.Server.CertFile)
+		require.NoError(t, err)
 
 		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
-			t.Fatalf("could not append ca cert to pool")
-		}
+		require.True(t, caCertPool.AppendCertsFromPEM(caCert), "could not append ca cert to pool")
 
 		// Retain the default transport settings
 		httpClient := cleanhttp.DefaultPooledClient()
@@ -1147,20 +1142,15 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		return nil, err
 	}
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
-
-		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+	if cfg.TLSConfig.Server.Enabled {
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.CertFile, cfg.TLSConfig.Server.KeyFile)
 		require.NoError(t, err)
 
-		caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
-		if err != nil {
-			log.Fatal(err)
-		}
+		caCert, err := os.ReadFile(cfg.TLSConfig.Server.CertFile)
+		require.NoError(t, err)
 
 		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
-			t.Fatalf("could not append ca cert to pool")
-		}
+		require.True(t, caCertPool.AppendCertsFromPEM(caCert), "could not append ca cert to pool")
 
 		// Retain the default transport settings
 		httpClient := cleanhttp.DefaultPooledClient()
@@ -1412,6 +1402,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
+	if testConfig.ModifySubgraphExtensionPropagation != nil {
+		testConfig.ModifySubgraphExtensionPropagation(&cfg.SubgraphExtensionPropagation)
+	}
+
 	var natsEventSources []config.NatsEventSource
 	var kafkaEventSources []config.KafkaEventSource
 	var redisEventSources []config.RedisEventSource
@@ -1491,6 +1485,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			OmitExtensions:        testConfig.BatchingConfig.OmitExtensions,
 		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
+		core.WithSubgraphExtensionPropagation(cfg.SubgraphExtensionPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
@@ -1543,7 +1538,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			return nil, fmt.Errorf("RegistryURL must be a host-only OCI registry address (no http:// or https:// scheme), got %q", testConfig.Plugins.RegistryURL)
 		}
 		pluginsCfg.Registry = config.PluginRegistryConfiguration{
-			URL: testConfig.Plugins.RegistryURL,
+			URL:      testConfig.Plugins.RegistryURL,
+			Insecure: true,
 		}
 	}
 	routerOpts = append(routerOpts, core.WithPlugins(pluginsCfg))
@@ -2441,8 +2437,9 @@ type WebSocketMessage struct {
 }
 
 type GraphQLResponse struct {
-	Data   json.RawMessage `json:"data,omitempty"`
-	Errors []GraphQLError  `json:"errors,omitempty"`
+	Data       json.RawMessage `json:"data,omitempty"`
+	Errors     []GraphQLError  `json:"errors,omitempty"`
+	Extensions json.RawMessage `json:"extensions,omitempty"`
 }
 
 type GraphQLErrorExtensions struct {

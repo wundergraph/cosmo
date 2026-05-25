@@ -34,11 +34,11 @@ var _ configpoller.ConfigPoller = (*ConfigPollerMock)(nil)
 
 type ConfigPollerMock struct {
 	initConfig   *nodev1.RouterConfig
-	updateConfig func(newConfig *nodev1.RouterConfig, oldVersion string) error
+	updateConfig func(newConfig *routerconfig.Response) error
 	ready        chan struct{}
 }
 
-func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *routerconfig.Response) error) {
 	c.updateConfig = handler
 	close(c.ready)
 }
@@ -238,10 +238,12 @@ func TestNatsEvents(t *testing.T) {
 					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
 				EnableNats: true,
-				TLSConfig: &core.TlsConfig{
-					Enabled:  true,
-					CertFile: "../testdata/tls/cert.pem",
-					KeyFile:  "../testdata/tls/key.pem",
+				TLSConfig: config.TLSConfiguration{
+					Server: config.TLSServerConfiguration{
+						Enabled:  true,
+						CertFile: "../testdata/tls/cert.pem",
+						KeyFile:  "../testdata/tls/key.pem",
+					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
@@ -287,7 +289,7 @@ func TestNatsEvents(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
-				TLSConfig:                nil, // Force Http/1
+				TLSConfig:                config.TLSConfiguration{}, // empty to force HTTP/1
 				RouterOptions: []core.Option{
 					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
@@ -1583,7 +1585,7 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(3, EventWaitTimeout)
 
 			// Swap config
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			// Wait for all providers to shut down and restart
 			require.Eventually(t, func() bool {

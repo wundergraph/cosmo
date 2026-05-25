@@ -4,6 +4,44 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.225.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.225.0...controlplane@0.225.1) (2026-05-20)
+
+### Bug Fixes
+
+* continuous healthcheck for ClickHouse + HTTP status code for unavailability ([#2875](https://github.com/wundergraph/cosmo/issues/2875)) ([be9d015](https://github.com/wundergraph/cosmo/commit/be9d015228db043b3925b08c4a85065acc26a18b)) (@comatory)
+
+# [0.225.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.2...controlplane@0.225.0) (2026-05-19)
+
+### Features
+
+* add PostHog name properties to identify call ([#2857](https://github.com/wundergraph/cosmo/issues/2857)) ([662d279](https://github.com/wundergraph/cosmo/commit/662d279530eb270beef8e0e2ed2a218124ae9430)) (@GrueneKatze)
+
+## [0.224.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.1...controlplane@0.224.2) (2026-05-18)
+
+**Note:** Version bump only for package controlplane
+
+## [0.224.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.0...controlplane@0.224.1) (2026-05-14)
+
+**Note:** Version bump only for package controlplane
+
+# [0.224.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.223.0...controlplane@0.224.0) (2026-05-13)
+
+### Features
+
+* fix recomposition bugs and optimise recompositions ([#2860](https://github.com/wundergraph/cosmo/issues/2860)) ([e49a03b](https://github.com/wundergraph/cosmo/commit/e49a03ba5ea9bd62191276662f622615ab7eaaff)) (@wilsonrivera)
+
+# [0.223.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.222.0...controlplane@0.223.0) (2026-05-12)
+
+### Features
+
+* add feature flag recomposition support ([#2853](https://github.com/wundergraph/cosmo/issues/2853)) ([3f125a2](https://github.com/wundergraph/cosmo/commit/3f125a2effce36a1a2040f219bc1aa5a872aab93)) (@wilsonrivera)
+
+# [0.222.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.221.3...controlplane@0.222.0) (2026-05-11)
+
+### Features
+
+* split router execution configs ([#2847](https://github.com/wundergraph/cosmo/issues/2847)) ([893ff72](https://github.com/wundergraph/cosmo/commit/893ff721e28d34eb308b74c845773a0186a7467c)) (@Aenimus)
+
 ## [0.221.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.221.2...controlplane@0.221.3) (2026-05-07)
 
 ### Bug Fixes

@@ -166,7 +166,7 @@ message CreateFederatedSubgraphRequest {
   repeated Label labels = 3;
   // subscription protocol to use when subscribing to this subgraph
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
-    // url used for subscriptions
+  // url used for subscriptions
   optional string subscription_url = 6;
   // readme of the subgraph
   optional string readme = 7;
@@ -1616,7 +1616,7 @@ message UpgradePlanResponse {
 /**
  * MetricsDashboard
  */
- message GetGraphMetricsRequest {
+message GetGraphMetricsRequest {
   string federatedGraphName = 1;
   int32 range = 2;
   DateRange dateRange = 3;
@@ -1685,7 +1685,7 @@ message MetricsErrorRateSeriesItem {
   float errorRate = 3;
 }
 
- message GetSubgraphMetricsRequest {
+message GetSubgraphMetricsRequest {
   string subgraphName = 1;
   string namespace = 2;
   int32 range = 4;
@@ -1910,18 +1910,18 @@ message GetAuditLogsRequest {
 }
 
 message AuditLog {
-   string id = 1;
-   string actorDisplayName = 2;
-   string action = 3;
-   string actorType = 4;
-   string auditAction = 5;
-   string auditableDisplayName = 6;
-   string targetDisplayName = 7;
-   string targetType = 8;
-   string createdAt = 9;
-   string targetNamespaceId = 10;
-   string targetNamespaceDisplayName = 11;
-   string apiKeyName = 12;
+  string id = 1;
+  string actorDisplayName = 2;
+  string action = 3;
+  string actorType = 4;
+  string auditAction = 5;
+  string auditableDisplayName = 6;
+  string targetDisplayName = 7;
+  string targetType = 8;
+  string createdAt = 9;
+  string targetNamespaceId = 10;
+  string targetNamespaceDisplayName = 11;
+  string apiKeyName = 12;
 }
 
 message GetAuditLogsResponse {
@@ -2251,7 +2251,7 @@ message GetNamespaceLintConfigResponse {
 }
 
 message GetNamespaceChecksConfigurationRequest {
-   string namespace = 1;
+  string namespace = 1;
 }
 
 message GetNamespaceChecksConfigurationResponse {
@@ -2807,20 +2807,20 @@ message GetSubgraphCheckExtensionsConfigResponse {
 }
 
 message ConfigureSubgraphCheckExtensionsRequest {
-   string namespace = 1;
-   bool enableSubgraphCheckExtensions = 2;
-   string endpoint = 3;
-   optional string secretKey = 4;
-   bool includeComposedSdl = 5;
-   bool includeLintingIssues = 6;
-   bool includePruningIssues = 7;
-   bool includeSchemaChanges = 8;
-   bool includeAffectedOperations = 9;
+  string namespace = 1;
+  bool enableSubgraphCheckExtensions = 2;
+  string endpoint = 3;
+  optional string secretKey = 4;
+  bool includeComposedSdl = 5;
+  bool includeLintingIssues = 6;
+  bool includePruningIssues = 7;
+  bool includeSchemaChanges = 8;
+  bool includeAffectedOperations = 9;
 }
 
 message ConfigureSubgraphCheckExtensionsResponse {
   Response response = 1;
- }
+}
 
 message DeleteCacheWarmerOperationRequest {
   string id = 1;
@@ -2890,8 +2890,8 @@ message ProposalSubgraph {
 }
 
 enum ProposalOrigin {
-   INTERNAL = 0;
-   EXTERNAL = 1;
+  INTERNAL = 0;
+  EXTERNAL = 1;
 }
 
 enum ProposalNamingConvention {
@@ -2926,7 +2926,7 @@ message CreateProposalResponse {
   string checkUrl = 15;
   string proposalUrl = 16;
   string proposalName = 17;
-   // If true, it means the traffic check failed for the linked check
+  // If true, it means the traffic check failed for the linked check
   optional bool isLinkedTrafficCheckFailed = 18;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 19;
@@ -3006,7 +3006,7 @@ message UpdateProposalResponse {
   bool lintingSkipped = 12;
   bool graphPruningSkipped = 13;
   string checkUrl = 14;
-   // If true, it means the traffic check failed for the linked check
+  // If true, it means the traffic check failed for the linked check
   optional bool isLinkedTrafficCheckFailed = 15;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 16;
@@ -3193,25 +3193,25 @@ message VerifyAPIKeyGraphAccessResponse {
 }
 
 message InitializeCosmoUserRequest {
-   string token = 1;
+  string token = 1;
 }
 
 message InitializeCosmoUserResponse {
-   Response response = 1;
+  Response response = 1;
 }
 
 message ListOrganizationsRequest {}
 
 message ListOrganizationsResponse {
-   message OrganizationMembership {
-     string id = 1;
-     string slug = 2;
-     string name = 3;
-     repeated string roles = 4;
-   }
+  message OrganizationMembership {
+    string id = 1;
+    string slug = 2;
+    string name = 3;
+    repeated string roles = 4;
+  }
 
-   Response response = 1;
-   repeated OrganizationMembership organizations = 2;
+  Response response = 1;
+  repeated OrganizationMembership organizations = 2;
 }
 
 message RecomposeGraphRequest {
@@ -3223,6 +3223,21 @@ message RecomposeGraphRequest {
 }
 
 message RecomposeGraphResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
+  optional SubgraphPublishStats errorCounts = 5;
+}
+
+message RecomposeFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+  optional int32 limit = 3;
+  optional bool disable_resolvability_validation = 5;
+}
+
+message RecomposeFeatureFlagResponse {
   Response response = 1;
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
@@ -3496,7 +3511,7 @@ service PlatformService {
   rpc AcceptOrDeclineInvitation(AcceptOrDeclineInvitationRequest) returns (AcceptOrDeclineInvitationResponse) {}
   // GetCompositions returns all the compositions of the federated graph
   rpc GetCompositions(GetCompositionsRequest) returns (GetCompositionsResponse) {}
-   // GetCompositionDetails returns the details of that composition
+  // GetCompositionDetails returns the details of that composition
   rpc GetCompositionDetails(GetCompositionDetailsRequest) returns (GetCompositionDetailsResponse) {}
   // GetSdlBySchemaVersion returns the sdl based on the schema version
   rpc GetSdlBySchemaVersion(GetSdlBySchemaVersionRequest) returns (GetSdlBySchemaVersionResponse) {}
@@ -3663,6 +3678,8 @@ service PlatformService {
   rpc VerifyAPIKeyGraphAccess(VerifyAPIKeyGraphAccessRequest) returns (VerifyAPIKeyGraphAccessResponse) {}
   // RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
   rpc RecomposeGraph(RecomposeGraphRequest) returns (RecomposeGraphResponse) {}
+  // RecomposeFeatureFlag triggers a recomposition of the feature flag using its current subgraphs
+  rpc RecomposeFeatureFlag(RecomposeFeatureFlagRequest) returns (RecomposeFeatureFlagResponse) {}
 
   // Onboarding
   rpc GetOnboarding(GetOnboardingRequest) returns (GetOnboardingResponse) {}
