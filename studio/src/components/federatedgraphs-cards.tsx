@@ -618,23 +618,17 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
   );
 };
 
-export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGraph[]; refetch: () => void }) => {
-  const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
-  const [token, setToken] = useState<string | undefined>();
-  const [isMigrating, setIsMigrating] = useState(false);
-  const checkUserAccess = useCheckUserAccess();
+function OnboardingEmptyState() {
   const { onboarding, enabled, currentStep } = useOnboarding();
 
-  useEffect(() => {
-    if (isMigrationSuccess) {
-      const to = setTimeout(setIsMigrating, 1500, false);
-      return () => clearTimeout(to);
-    }
-  }, [isMigrationSuccess]);
+  if (!enabled || !onboarding || onboarding.federatedGraphsCount !== 0) {
+    return null;
+  }
 
-  if (enabled && onboarding && onboarding.federatedGraphsCount === 0) {
-    return currentStep !== undefined && !onboarding.finishedAt ? (
+  const emptyState =
+    currentStep !== undefined && !onboarding.finishedAt ? (
       <EmptyState
+        className="h-auto"
         icon={<BookmarkIcon />}
         title="Dive right back in"
         description="Want to finish the onboarding and create your first federated graph?"
@@ -646,6 +640,7 @@ export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGr
       />
     ) : (
       <EmptyState
+        className="h-auto"
         icon={<BoltIcon />}
         title="Need help?"
         description="Take a quick 5-minute tour to help you set up your first federated graph"
@@ -656,17 +651,40 @@ export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGr
         }
       />
     );
-  }
+
+  return (
+    <>
+      {emptyState}
+      <span className="text-sm font-bold">OR</span>
+    </>
+  );
+}
+
+export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGraph[]; refetch: () => void }) => {
+  const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
+  const [token, setToken] = useState<string | undefined>();
+  const [isMigrating, setIsMigrating] = useState(false);
+  const checkUserAccess = useCheckUserAccess();
+
+  useEffect(() => {
+    if (isMigrationSuccess) {
+      const to = setTimeout(setIsMigrating, 1500, false);
+      return () => clearTimeout(to);
+    }
+  }, [isMigrationSuccess]);
 
   if (!graphs || graphs.length === 0)
     return (
-      <Empty
-        refetch={refetch}
-        setIsMigrationSuccess={setIsMigrationSuccess}
-        setToken={setToken}
-        isMigrating={isMigrating}
-        setIsMigrating={setIsMigrating}
-      />
+      <div className="flex flex-col items-center gap-y-8">
+        <OnboardingEmptyState />
+        <Empty
+          refetch={refetch}
+          setIsMigrationSuccess={setIsMigrationSuccess}
+          setToken={setToken}
+          isMigrating={isMigrating}
+          setIsMigrating={setIsMigrating}
+        />
+      </div>
     );
 
   return (
