@@ -13,11 +13,11 @@ import (
 
 // TestConnectionPhaseAndResolverAcquireSpans verifies the spans added for
 // EnhancedConnectionStats (per-phase HTTP child spans under each subgraph
-// request span) and ResolverAcquireSpans (a "Resolver - Acquire" child span
-// under "Operation - Execute"). The test subgraphs listen on 127.0.0.1 over
-// plain HTTP, so DNS and TLS phases never fire; we only assert on the
-// phases that do trigger (TCP connect on first connection, time-to-first-byte
-// on every request).
+// request span, plus response body read and response processing spans) and
+// ResolverAcquireSpans (a "Resolver - Acquire" child span under
+// "Operation - Execute"). The test subgraphs listen on 127.0.0.1 over plain
+// HTTP, so DNS and TLS phases never fire; we only assert on the phases that do
+// trigger (TCP connect on first connection, time-to-first-byte on every request).
 func TestConnectionPhaseAndResolverAcquireSpans(t *testing.T) {
 	t.Parallel()
 
@@ -39,6 +39,8 @@ func TestConnectionPhaseAndResolverAcquireSpans(t *testing.T) {
 			require.False(t, hasSpanWithName(sn, "HTTP - TCP Connect"))
 			require.False(t, hasSpanWithName(sn, "HTTP - TLS Handshake"))
 			require.False(t, hasSpanWithName(sn, "HTTP - Time To First Byte"))
+			require.False(t, hasSpanWithName(sn, "HTTP - Read Response Body"))
+			require.False(t, hasSpanWithName(sn, "Engine - Fetch Response Processing"))
 			require.False(t, hasSpanWithName(sn, "Resolver - Acquire"))
 		})
 	})
@@ -65,9 +67,14 @@ func TestConnectionPhaseAndResolverAcquireSpans(t *testing.T) {
 			require.NotEmpty(t, tcp, "expected at least one TCP Connect span")
 			ttfb := spansByName(sn, "HTTP - Time To First Byte")
 			require.NotEmpty(t, ttfb, "expected at least one TTFB span")
+			bodyRead := spansByName(sn, "HTTP - Read Response Body")
+			require.NotEmpty(t, bodyRead, "expected at least one response body read span")
+			responseProcessing := spansByName(sn, "Engine - Fetch Response Processing")
+			require.NotEmpty(t, responseProcessing, "expected at least one response processing span")
 
 			// Each phase span must have a non-zero, non-error duration.
-			for _, s := range append(tcp, ttfb...) {
+			spansWithDuration := append(append(append(tcp, ttfb...), bodyRead...), responseProcessing...)
+			for _, s := range spansWithDuration {
 				require.True(t, s.EndTime().After(s.StartTime()), "phase span %q must end after start", s.Name())
 			}
 
@@ -81,6 +88,14 @@ func TestConnectionPhaseAndResolverAcquireSpans(t *testing.T) {
 				require.True(t, ok, "phase span %q parent must be present in the export", s.Name())
 				require.Equal(t, "query unnamed", parent.Name(),
 					"phase span %q must be a child of the subgraph HTTP client span", s.Name())
+			}
+
+			for _, s := range append(bodyRead, responseProcessing...) {
+				require.True(t, s.Parent().IsValid(), "span %q must have a parent", s.Name())
+				parent, ok := parents[s.Parent().SpanID().String()]
+				require.True(t, ok, "span %q parent must be present in the export", s.Name())
+				require.Equal(t, "Engine - Fetch", parent.Name(),
+					"span %q must be a child of Engine - Fetch", s.Name())
 			}
 
 			// Per-phase spans must carry server attributes (address + subgraph).
@@ -155,4 +170,3 @@ func hasAttribute(s sdktrace.ReadOnlySpan, key attribute.Key, value string) bool
 	}
 	return false
 }
-

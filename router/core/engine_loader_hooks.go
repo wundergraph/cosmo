@@ -48,8 +48,9 @@ type engineLoaderHooks struct {
 	telemetryAttributeExpressions *attributeExpressions
 	metricAttributeExpressions    *attributeExpressions
 
-	storeSubgraphResponseBody bool
-	headerPropagation         *HeaderPropagation
+	storeSubgraphResponseBody  bool
+	headerPropagation          *HeaderPropagation
+	emitResponseProcessingSpan bool
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -65,6 +66,7 @@ func NewEngineRequestHooks(
 	metricAttributes *attributeExpressions,
 	storeSubgraphResponseBody bool,
 	headerPropagation *HeaderPropagation,
+	emitResponseProcessingSpan bool,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -88,6 +90,7 @@ func NewEngineRequestHooks(
 		accessLogger:                  logger,
 		storeSubgraphResponseBody:     storeSubgraphResponseBody,
 		headerPropagation:             headerPropagation,
+		emitResponseProcessingSpan:    emitResponseProcessingSpan,
 	}
 }
 
@@ -101,20 +104,26 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 
 	ctx = context.WithValue(ctx, rcontext.CurrentSubgraphContextKey{}, ds.Name)
 
-	duration := atomic.Int64{}
-	ctx = context.WithValue(ctx, rcontext.FetchTimingKey, &duration)
+	fetchTimings := &rcontext.FetchTraceTimings{
+		SubgraphID:   ds.ID,
+		SubgraphName: ds.Name,
+	}
+	fetchTimings.FetchStartUnixNano.Store(start.UnixNano())
+	ctx = context.WithValue(ctx, rcontext.FetchTimingKey, &fetchTimings.TransportDuration)
+	ctx = context.WithValue(ctx, rcontext.FetchTraceTimingsKey, fetchTimings)
 
 	reqContext := getRequestContext(ctx)
 	if reqContext == nil {
 		return ctx
 	}
 
-	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
+	ctx, engineFetchSpan := f.tracer.Start(ctx, "Engine - Fetch",
 		trace.WithAttributes([]attribute.KeyValue{
 			rotel.WgSubgraphName.String(ds.Name),
 			rotel.WgSubgraphID.String(ds.ID),
 		}...),
 	)
+	fetchTimings.ParentContext = trace.ContextWithSpan(context.Background(), engineFetchSpan)
 
 	return context.WithValue(ctx, rcontext.EngineLoaderHooksContextKey, &engineLoaderHooksRequestContext{
 		startTime: start,
@@ -126,6 +135,8 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return
 	}
+
+	responseProcessingEnd := time.Now()
 
 	if responseInfo == nil {
 		responseInfo = &resolve.ResponseInfo{}
@@ -156,6 +167,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	latency := time.Since(hookCtx.startTime)
 
 	span := trace.SpanFromContext(ctx)
+	f.emitFetchResponseProcessingSpan(ctx, ds, responseProcessingEnd)
 	defer span.End()
 
 	commonAttrs := []attribute.KeyValue{
@@ -266,6 +278,43 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	f.metricStore.MeasureLatency(ctx, latency, measureSliceAttrs, metricAddOpt)
 
 	span.SetAttributes(traceAttrs...)
+}
+
+func (f *engineLoaderHooks) emitFetchResponseProcessingSpan(ctx context.Context, ds resolve.DataSourceInfo, end time.Time) {
+	if !f.emitResponseProcessingSpan {
+		return
+	}
+
+	timings, _ := ctx.Value(rcontext.FetchTraceTimingsKey).(*rcontext.FetchTraceTimings)
+	if timings == nil {
+		return
+	}
+
+	startUnixNano := timings.ResponseBodyReadEndUnixNano.Load()
+	if startUnixNano == 0 {
+		startUnixNano = timings.TransportEndUnixNano.Load()
+	}
+	if startUnixNano == 0 {
+		return
+	}
+
+	start := time.Unix(0, startUnixNano)
+	if !end.After(start) {
+		return
+	}
+
+	_, span := f.tracer.Start(
+		ctx,
+		"Engine - Fetch Response Processing",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithTimestamp(start),
+		trace.WithAttributes(
+			rotel.WgComponentName.String("engine-loader"),
+			rotel.WgSubgraphID.String(ds.ID),
+			rotel.WgSubgraphName.String(ds.Name),
+		),
+	)
+	span.End(trace.WithTimestamp(end))
 }
 
 // recordFetchError sets the span status to ERROR, extracts downstream error codes,

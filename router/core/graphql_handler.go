@@ -280,6 +280,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		if h.emitResolverAcquireSpan {
 			emitResolverAcquireSpan(executionContext, h.tracer, resolveStart, info.ResolveAcquireWaitTime, info.ResolveDeduplicated)
+			emitResolverPhaseSpan(executionContext, h.tracer, "Operation - Resolve Response", info.ResponseResolveStartTime, info.ResponseResolveDuration, "engine-resolver")
+			emitResolverPhaseSpan(executionContext, h.tracer, "HTTP - Write Response", info.ResponseWriteStartTime, info.ResponseWriteDuration, "router-server")
 		}
 
 		if h.metricStore != nil {
@@ -633,4 +635,21 @@ func emitResolverAcquireSpan(ctx context.Context, tracer trace.Tracer, resolveSt
 		),
 	)
 	span.End(trace.WithTimestamp(resolveStart.Add(waitTime)))
+}
+
+const minResolverPhaseSpanDuration = 100 * time.Microsecond
+
+func emitResolverPhaseSpan(ctx context.Context, tracer trace.Tracer, name string, start time.Time, duration time.Duration, componentName string) {
+	if tracer == nil || start.IsZero() || duration < minResolverPhaseSpanDuration {
+		return
+	}
+
+	_, span := tracer.Start(ctx, name,
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithTimestamp(start),
+		trace.WithAttributes(
+			rotel.WgComponentName.String(componentName),
+		),
+	)
+	span.End(trace.WithTimestamp(start.Add(duration)))
 }

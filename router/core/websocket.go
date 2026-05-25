@@ -1142,6 +1142,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		if info != nil {
 			if h.graphqlHandler.emitResolverAcquireSpan {
 				emitResolverAcquireSpan(resolveCtx.Context(), h.graphqlHandler.tracer, resolveStart, info.ResolveAcquireWaitTime, info.ResolveDeduplicated)
+				emitResolverPhaseSpan(resolveCtx.Context(), h.graphqlHandler.tracer, "Operation - Resolve Response", info.ResponseResolveStartTime, info.ResponseResolveDuration, "engine-resolver")
 			}
 			if h.graphqlHandler.metricStore != nil {
 				h.graphqlHandler.metricStore.MeasureResolverAcquireDuration(
