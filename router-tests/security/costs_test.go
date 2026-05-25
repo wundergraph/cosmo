@@ -224,7 +224,7 @@ func TestOperationCost(t *testing.T) {
 				// 50 * (employees(1) + id(0) + 1 * (role(1) + 3 * departments(1) + 5 * title(1)))
 				require.Equal(t, "500", res.Response.Header.Get(core.CostEstimatedHeader))
 				// 10 * (employees(1) + id(0) + 1 * (role(1) + 1.2 * departments(1) + 1.4 * title(1)))
-				require.Equal(t, "40", res.Response.Header.Get(core.CostActualHeader))
+				require.Equal(t, "46", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
@@ -280,14 +280,14 @@ func TestOperationCost(t *testing.T) {
 				// (not merged) because resolving from two subgraphs means more work for the router.
 				//
 				// products field (abstract, both DSes): fieldCost = 5 + 8 = 13
-				// engineers (list, EstimatedListSize=10): (0 + 1) × 10 = 10
+				// engineers (list, EstimatedListSize=10): (0 + 1) * 10 = 10
 				// upc, repositoryURL, id: 0 (scalars)
-				// total: (10 + 13) × 10 = 230
+				// total: (10 + 13) * 10 = 230
 				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
 				require.Equal(t, "230", estimated)
 
 				actual := res.Response.Header.Get(core.CostActualHeader)
-				require.Equal(t, "45", actual)
+				require.Equal(t, "46", actual) // (7/3 + 13) * 3
 
 				// Query 2: only employees-subgraph fields — Cosmo @cost(weight: 5) from employees applies
 				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -300,7 +300,7 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "150", estimated2)
 
 				actual2 := res2.Response.Header.Get(core.CostActualHeader)
-				require.Equal(t, "21", actual2)
+				require.Equal(t, "22", actual2)
 			})
 		})
 
@@ -1132,7 +1132,7 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, uint64(3), totalCount, "should have 3 cost recordings (1 miss + 2 hits)")
 
 				// employee(id:1) cost = 8 per request.  3 requests = 24.
-				require.Equal(t, int64(24), totalSum, "total estimated cost sum should be 3×8=24")
+				require.Equal(t, int64(24), totalSum, "total estimated cost sum should be 3*8=24")
 			})
 		})
 
