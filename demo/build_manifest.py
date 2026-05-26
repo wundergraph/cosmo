@@ -117,17 +117,14 @@ class ManifestBuilder:
         """Write the in-memory pieces produced by `destructure_router_config`
         to disk in the layout the router watches.
 
-        Order is intentional: mapper.json is written last in spirit (it's the
-        file the router stats for changes), though here the writes happen in
-        sequence and the router will only observe a complete manifest after
-        all three writes finish. Callers that want atomic swaps should write
-        to a sibling directory and rename — this script is for one-shot
-        local generation only.
+        Order is intentional: mapper.json is written last because it is the
+        file the router stats for mtime changes. Writing it after latest.json
+        and the feature-flag configs ensures the watcher never observes a
+        mapper that references files which are not yet on disk (or are stale).
+        Callers that want fully atomic swaps should write to a sibling
+        directory and rename — this script is for one-shot local generation
+        only.
         """
-        # mapper.json — the file the manifest watcher stats for mtime changes.
-        mapper_path = os.path.join(self.output_dir, "mapper.json")
-        self.write_content_to_file(self.mapper, Path(mapper_path))
-
         # latest.json — the base graph's execution config.
         latest_path = os.path.join(self.output_dir, "latest.json")
         self.write_content_to_file(self.latest_config, Path(latest_path))
@@ -143,6 +140,12 @@ class ManifestBuilder:
         for feature_flag_name, feature_flag_config in self.feature_flags.items():
             feature_flag_config_path = os.path.join(feature_flag_path, f"{feature_flag_name}.json")
             self.write_content_to_file(feature_flag_config, Path(feature_flag_config_path))
+
+        # mapper.json — the file the manifest watcher stats for mtime
+        # changes. Written last so its mtime bump only occurs after the
+        # configs it references are already on disk.
+        mapper_path = os.path.join(self.output_dir, "mapper.json")
+        self.write_content_to_file(self.mapper, Path(mapper_path))
 
     def write_content_to_file(self, content: dict[str, Any], path: Path):
         # Pretty-printed JSON so the generated files are diff-friendly in
