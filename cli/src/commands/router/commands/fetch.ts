@@ -1,7 +1,7 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { resolve } from 'pathe';
+import { resolve, join } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { fetchRouterConfig, type FetchRouterConfigResult } from '../utils.js';
 
@@ -14,7 +14,10 @@ export const handleOutput = async (
     if (config.splitConfigLoading) {
       let directory = resolve(out);
       await mkdir(directory, { recursive: true });
-      await writeFile(resolve(directory, 'latest.json'), config.routerConfig);
+      await writeFile(join(directory, 'latest.json'), config.routerConfig);
+      if (config.mapper) {
+        await writeFile(join(directory, 'mapper.json'), JSON.stringify(config.mapper));
+      }
 
       if (config.featureFlags && config.featureFlags.size > 0) {
         directory = resolve(directory, 'feature-flags');

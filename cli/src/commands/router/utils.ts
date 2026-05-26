@@ -10,6 +10,7 @@ export interface FetchRouterConfigResult {
   splitConfigLoading: boolean;
   routerConfig: string;
   featureFlags?: Map<string, string>;
+  mapper?: Record<string, string>;
 }
 
 export const fetchRouterConfig = async ({
@@ -81,6 +82,7 @@ export const fetchRouterConfig = async ({
       resp.token,
       graphSignKey,
     ),
+    mapper: Object.fromEntries(mapper),
   };
 
   if (mapper.size === 0) {

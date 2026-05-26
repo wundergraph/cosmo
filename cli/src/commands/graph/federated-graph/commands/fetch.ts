@@ -51,6 +51,10 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       });
       writeFileSync(join(superGraphPath, `cosmoConfig.json`), routerConfig.routerConfig);
+      if (routerConfig.mapper) {
+        writeFileSync(join(superGraphPath, `cosmoMapper.json`), JSON.stringify(routerConfig.mapper));
+      }
+
       if (routerConfig.featureFlags?.size) {
         const featureFlagsPath = join(basePath, 'feature-flags');
         if (!existsSync(featureFlagsPath)) {

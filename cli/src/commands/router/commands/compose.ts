@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import {
   buildRouterConfig,
   type ComposedSubgraph,
@@ -272,6 +273,9 @@ export default (opts: BaseCommandOptions) => {
       subgraphs: subgraphs.map((s, index) => constructRouterSubgraph(result, s, index)),
     });
 
+    const mapper = new Map<string, string>();
+    mapper.set('', createHash('sha256').update(routerConfig.toJsonString()).digest('hex'));
+
     if (config.feature_flags && config.feature_flags.length > 0) {
       const ffConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
       if (!options.splitConfigsEnabled) {
@@ -290,7 +294,9 @@ export default (opts: BaseCommandOptions) => {
             compatibilityVersion: routerConfig.compatibilityVersion,
           });
 
-          await writeFile(join(outDir, `${featureFlagName}.json`), ffRouterConfig.toJsonString());
+          const routerConfigJson = ffRouterConfig.toJsonString();
+          await writeFile(join(outDir, `${featureFlagName}.json`), routerConfigJson);
+          mapper.set(featureFlagName, createHash('sha256').update(routerConfigJson).digest('hex'));
         }
       }
     }
@@ -300,6 +306,10 @@ export default (opts: BaseCommandOptions) => {
         options.splitConfigsEnabled ? join(options.out, 'router-config.json') : options.out,
         routerConfig.toJsonString(),
       );
+
+      if (options.splitConfigsEnabled && mapper.size > 0) {
+        await writeFile(join(options.out, 'router-config-mapper.json'), JSON.stringify(Object.fromEntries(mapper)));
+      }
 
       console.log(pc.green(`Router config successfully written to ${pc.bold(options.out)}`));
     } else {
