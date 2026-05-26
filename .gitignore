@@ -16,6 +16,7 @@ lerna-debug.log
 /demo/cmd/subscriptiontest/subscriptiontest
 .github/scripts/keycloak-22.0.4/**
 .github/scripts/keycloak-22.0.4.zip
+/router-tests/cmd/config-validator/router-configs/**
 
 # Go workspace files
 go.work
@@ -26,3 +27,11 @@ go.work.sum
 
 # Serena
 .serena/
+/.playwright-mcp
+
+# PR review workspace — local-only, never commit
+/TODO.md
+/DONE.md
+/FEEDBACK.md
+/COMMENTS.md
+/docs/superpowers/

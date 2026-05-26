@@ -1,0 +1,7 @@
+query ArticlesByIdsBatch($ids: [ID!]!) {
+  articlesByIds(ids: $ids) {
+    id
+    title
+    authorName
+  }
+}

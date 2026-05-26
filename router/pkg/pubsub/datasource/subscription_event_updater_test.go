@@ -317,7 +317,10 @@ func TestSubscriptionEventUpdater_Complete(t *testing.T) {
 		fieldName:    "testField",
 	}
 
+	// graphql-go-tools #1374: Complete() must be paired with Done() to perform
+	// the trigger-level cleanup. The cosmo wrapper does both in its Complete().
 	mockUpdater.On("Complete").Return()
+	mockUpdater.On("Done").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,

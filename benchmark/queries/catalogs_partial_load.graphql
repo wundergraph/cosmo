@@ -1,0 +1,9 @@
+query CatalogsPartialLoad {
+  catalogs {
+    id
+    name
+    description
+    lastUpdated
+    itemCount
+  }
+}

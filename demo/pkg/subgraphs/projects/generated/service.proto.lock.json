@@ -352,7 +352,11 @@
         "tasksByPhase": 17,
         "milestoneGroups": 18,
         "priorityMatrix": 19
-      }
+      },
+      "reservedNumbers": [
+        20,
+        21
+      ]
     },
     "Milestone": {
       "fields": {
@@ -403,7 +407,10 @@
         "skills": 5,
         "certifications": 6,
         "projectHistory": 7
-      }
+      },
+      "reservedNumbers": [
+        8
+      ]
     },
     "Product": {
       "fields": {

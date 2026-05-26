@@ -1,0 +1,7 @@
+query ArticleSimple($id: ID!) {
+  article(id: $id) {
+    id
+    title
+    authorName
+  }
+}

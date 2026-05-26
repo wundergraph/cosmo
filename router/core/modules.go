@@ -155,6 +155,16 @@ type SpanNameFormatterProvider interface {
 	WrapSpanNameFormatter(next SpanNameFormatterFunc) SpanNameFormatterFunc
 }
 
+// EntityCacheKeyInterceptor allows custom modules to transform entity cache keys
+// before they are used for L2 cache operations.
+type EntityCacheKeyInterceptor interface {
+	// OnEntityCacheKeys transforms a batch of cache keys for an entity cache operation.
+	// Each key is a JSON-encoded entity key or root field key.
+	// Returns the transformed keys in the same order. The returned slice must have
+	// the same length as the input slice.
+	OnEntityCacheKeys(keys [][]byte, ctx RequestContext) [][]byte
+}
+
 // Provisioner is called before the server starts
 // It allows you to initialize your module, e.g., create a database connection
 // or load a configuration file.

@@ -20,21 +20,27 @@ var (
 	mood                    = flag.Int("mood", 4008, "Port for mood subgraph")
 	countries               = flag.Int("countries", 4009, "Port for countries subgraph")
 	productsFeatureSubgraph = flag.Int("products_fg", 4010, "Port for products feature subgraph")
+	cacheGraph              = flag.Int("cachegraph", 4012, "Port for cachegraph subgraph")
+	cacheGraphExt           = flag.Int("cachegraph_ext", 4013, "Port for cachegraph-ext subgraph")
+	viewerSubgraph          = flag.Int("viewer", 4014, "Port for viewer subgraph")
 )
 
 func main() {
 	flag.Parse()
 	config := subgraphs.Config{
 		Ports: subgraphs.Ports{
-			Employees:    *employees,
-			Family:       *family,
-			Hobbies:      *hobbies,
-			Products:     *products,
-			Test1:        *test1,
-			Availability: *availability,
-			Mood:         *mood,
-			Countries:    *countries,
-			ProductsFG:   *productsFeatureSubgraph,
+			Employees:     *employees,
+			Family:        *family,
+			Hobbies:       *hobbies,
+			Products:      *products,
+			Test1:         *test1,
+			Availability:  *availability,
+			Mood:          *mood,
+			Countries:     *countries,
+			ProductsFG:    *productsFeatureSubgraph,
+			CacheGraph:    *cacheGraph,
+			CacheGraphExt: *cacheGraphExt,
+			Viewer:        *viewerSubgraph,
 		},
 		EnableDebug: *debug,
 		GetPubSubName: func(name string) string {

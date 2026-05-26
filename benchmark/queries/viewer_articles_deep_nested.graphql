@@ -1,0 +1,45 @@
+query ViewerArticles {
+  articles {
+    id
+    title
+    body
+    relatedArticles {
+      ...ArticleFields
+      relatedArticles {
+        ...ArticleFields
+        relatedArticles {
+          ...ArticleFields
+        }
+      }
+    }
+  }
+  currentViewer {
+    id
+    name
+    email
+    recommendedArticles {
+      ...ArticleFields
+      relatedArticles {
+        ...ArticleFields
+        relatedArticles {
+          ...ArticleFields
+        }
+      }
+    }
+  }
+}
+
+fragment ArticleFields on Article {
+  id
+  title
+  tags
+  viewCount
+  rating
+  reviewSummary
+  personalizedRecommendation
+  currentViewer {
+    id
+    name
+    email
+  }
+}

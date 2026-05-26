@@ -86,6 +86,17 @@ export type RequiredFieldConfiguration = {
   disableEntityResolver?: boolean;
 };
 
+export type RequestScopedFieldConfig = {
+  fieldName: FieldName;
+  typeName: TypeName;
+  // L1 cache key used to store/lookup this field's value for the duration of a request.
+  // Format: "{subgraphName}.{key}" where `key` is the @openfed__requestScoped(key:) argument.
+  // All fields in the same subgraph declaring @openfed__requestScoped with the same key share
+  // the same L1 entry — the first one to resolve populates it, subsequent ones inject
+  // from it (subject to widening checks and alias-aware normalization).
+  l1Key: string;
+};
+
 export type ConfigurationData = {
   fieldNames: Set<FieldName>;
   isRootNode: boolean;
@@ -97,7 +108,88 @@ export type ConfigurationData = {
   provides?: RequiredFieldConfiguration[];
   keys?: RequiredFieldConfiguration[];
   requireFetchReasonsFieldNames?: Array<FieldName>;
+  requestScopedFields?: Array<RequestScopedFieldConfig>;
   requires?: RequiredFieldConfiguration[];
+  // Entity caching configuration — attached during composition when subgraph schemas
+  // use entity caching directives. These are serialized into the router configuration
+  // and consumed by the router's entity cache module at runtime.
+  //
+  // entityCacheConfigurations: attached to the entity type's ConfigurationData (e.g., "Product")
+  // rootFieldCacheConfigurations: attached to the Query type's ConfigurationData
+  // cachePopulateConfigurations: attached to the Mutation/Subscription type's ConfigurationData
+  // cacheInvalidateConfigurations: attached to the Mutation/Subscription type's ConfigurationData
+  entityCacheConfigurations?: Array<EntityCacheConfig>;
+  rootFieldCacheConfigurations?: Array<RootFieldCacheConfig>;
+  cachePopulateConfigurations?: Array<CachePopulateConfig>;
+  cacheInvalidateConfigurations?: Array<CacheInvalidateConfig>;
+};
+
+// Extracted from @openfed__entityCache(maxAge: Int!, negativeCacheTTL: Int, includeHeaders: Boolean, partialCacheLoad: Boolean, shadowMode: Boolean)
+// on OBJECT types. Defines per-entity cache TTL and behavior.
+export type EntityCacheConfig = {
+  typeName: TypeName;
+  maxAgeSeconds: number;
+  // TTL (in seconds) for caching "not found" entity responses (entity returned null
+  // from _entities without errors). 0 disables negative caching; composition rejects
+  // negative values at validation time.
+  notFoundCacheTtlSeconds: number;
+  // When true, request headers are included in the cache key (useful for user-specific entities)
+  includeHeaders: boolean;
+  // When true, allows partial cache hits — the router fetches only missing entities from the subgraph
+  partialCacheLoad: boolean;
+  // When true, the cache runs in shadow mode — cache reads/writes happen but responses always come from the subgraph.
+  // Useful for warming caches or validating cache correctness without affecting production traffic.
+  shadowMode: boolean;
+};
+
+// Extracted from @openfed__queryCache(maxAge: Int!, includeHeaders: Boolean, shadowMode: Boolean)
+// on Query fields. Tells the router which query fields can serve entities from cache.
+export type RootFieldCacheConfig = {
+  fieldName: FieldName;
+  maxAgeSeconds: number;
+  includeHeaders: boolean;
+  shadowMode: boolean;
+  // The entity type this query field returns (must have @openfed__entityCache)
+  entityTypeName: TypeName;
+  // Maps query arguments to entity @key fields so the router can construct cache keys from query arguments.
+  // Empty for list-returning fields (cache reads are skipped; only cache writes/population apply).
+  entityKeyMappings: Array<EntityKeyMappingConfig>;
+};
+
+// Groups field mappings for a single entity type returned by a @openfed__queryCache field.
+export type EntityKeyMappingConfig = {
+  entityTypeName: TypeName;
+  fieldMappings: Array<FieldMappingConfig>;
+};
+
+// Maps a single query argument to an entity's @key field.
+// Example: query { product(productId: ID!) @openfed__queryCache } with @openfed__is(fields: "id") on productId
+//   → entityKeyField: "id", argumentPath: ["productId"]
+// When the argument name matches the @key field name, auto-mapping occurs without @openfed__is.
+export type FieldMappingConfig = {
+  entityKeyField: FieldName;
+  argumentPath: Array<string>;
+  isBatch?: boolean;
+};
+
+// Extracted from @openfed__cachePopulate(maxAge: Int) on Mutation/Subscription fields.
+// Tells the router to populate the entity cache with the mutation's return value.
+// maxAgeSeconds overrides the entity's default TTL when provided.
+// entityTypeName identifies which cached entity this populate targets — derived from
+// the field's return type, which composition validates must be an @openfed__entityCache-marked entity.
+export type CachePopulateConfig = {
+  fieldName: FieldName;
+  operationType: string;
+  entityTypeName: TypeName;
+  maxAgeSeconds?: number;
+};
+
+// Extracted from @openfed__cacheInvalidate on Mutation/Subscription fields.
+// Tells the router to evict the returned entity from the cache after the operation completes.
+export type CacheInvalidateConfig = {
+  fieldName: FieldName;
+  operationType: string;
+  entityTypeName: TypeName;
 };
 
 export type Costs = {

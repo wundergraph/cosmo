@@ -18,7 +18,9 @@ export type TabsState = {
   activeTabIndex: number;
 };
 
-export type PlaygroundView = 'response' | 'request-trace' | 'query-plan';
+export type PlaygroundView = 'response' | 'request-trace' | 'query-plan' | 'cache-explorer';
+
+export type CacheMode = 'enabled' | 'no-l1' | 'no-l2' | 'disabled';
 
 type PlaygroundContextType = {
   graphId: string;
@@ -27,6 +29,8 @@ type PlaygroundContextType = {
   statusText?: string;
   view: PlaygroundView;
   setView: (val: PlaygroundView) => void;
+  cacheMode: CacheMode;
+  setCacheMode: (val: CacheMode) => void;
   isHydrated: boolean;
   setIsHydrated: (v: boolean) => void;
 };
@@ -36,9 +40,53 @@ export const PlaygroundContext = createContext<PlaygroundContextType>({
   tabsState: { tabs: [], activeTabIndex: 0 },
   view: 'response',
   setView: () => {},
+  cacheMode: 'enabled',
+  setCacheMode: () => {},
   isHydrated: false,
   setIsHydrated: () => {},
 });
+
+export type CacheTrace = {
+  l1Enabled: boolean;
+  l2Enabled: boolean;
+  cacheName: string;
+  ttlSeconds: number;
+  entityCount: number;
+  l1Hit: number;
+  l1Miss: number;
+  l2Hit: number;
+  l2Miss: number;
+  durationSinceStart?: number;
+  durationSinceStartPretty?: string;
+  duration?: number;
+  durationPretty?: string;
+  l2GetDurationPretty?: string;
+  l2SetDurationPretty?: string;
+  keys?: string[];
+};
+
+export type CacheStatus = 'l1-hit' | 'l2-hit' | 'miss' | 'no-lookup';
+
+export const getCacheStatus = (ct: CacheTrace): CacheStatus => {
+  if (ct.l1Hit > 0) return 'l1-hit';
+  if (ct.l2Hit > 0) return 'l2-hit';
+  if (ct.l1Miss > 0 || ct.l2Miss > 0) return 'miss';
+  return 'no-lookup';
+};
+
+export const getCacheStatusLabel = (ct: CacheTrace): string => {
+  const status = getCacheStatus(ct);
+  switch (status) {
+    case 'l1-hit':
+      return 'L1 HIT';
+    case 'l2-hit':
+      return 'L2 HIT';
+    case 'miss':
+      return 'MISS';
+    case 'no-lookup':
+      return 'NO LOOKUP';
+  }
+};
 
 export type LoadStatsEntry = {
   name: string;
@@ -78,6 +126,7 @@ export type ARTFetchNode = {
   singleFlightSharedResponse: boolean;
   loadSkipped: boolean;
   loadStats?: LoadStats;
+  cacheTrace?: CacheTrace;
 };
 
 export type Representation = {

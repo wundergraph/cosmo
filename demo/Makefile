@@ -44,6 +44,9 @@ plugin-build-ci: plugin-build-ci-go-binary plugin-build-ci-bun-binary
 	cp -a pkg/subgraphs/projects/bin/* ../router/plugins/projects/bin/
 	cp -a pkg/subgraphs/courses/bin/* ../router/plugins/courses/bin/
 
+compose-cache:
+	$(wgc_router_ci) compose -i ./graph-cache-only.yaml -o ./config-cache-only.json
+
 standalone-compose:
 	$(wgc_router) compose -i ./graph-with-standalone.yaml -o ./configWithStandalone.json
 	pnpx prettier ./configWithStandalone.json -w

@@ -30,7 +30,8 @@ import { Badge } from '../ui/badge';
 import { Button, buttonVariants } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { ARTFetchNode, QueryPlanFetchTypeNode } from './types';
+import { ARTFetchNode, QueryPlanFetchTypeNode, getCacheStatus, getCacheStatusLabel } from './types';
+import { ViewCache } from './view-cache';
 import { ViewHeaders } from './view-headers';
 import { ViewInput } from './view-input';
 import { ViewLoadStats } from './view-load-stats';
@@ -161,7 +162,7 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
             </span>
             <span className="text-xs font-normal text-muted-foreground">{data.dataSourceId}</span>
           </p>
-          {data.outputTrace && (
+          {data.outputTrace && !data.loadSkipped && (
             <Badge variant={isFailure ? 'destructive' : 'success'}>{data.outputTrace?.response?.statusCode}</Badge>
           )}
         </div>
@@ -185,8 +186,27 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
             Single Flight Shared Response: {getIcon(data.singleFlightSharedResponse)}
           </p>
           <p className="flex items-center gap-x-2">Load Skipped: {getIcon(data.loadSkipped)}</p>
+          {data.cacheTrace && (() => {
+            const status = getCacheStatus(data.cacheTrace);
+            return (
+              <>
+                <Separator className="my-1" />
+                <p className="flex items-center gap-x-2">
+                  Cache:{' '}
+                  <Badge variant={status === 'l1-hit' || status === 'l2-hit' ? 'success' : 'secondary'}>
+                    {getCacheStatusLabel(data.cacheTrace)}
+                  </Badge>
+                </p>
+                <p>Cache Name: {data.cacheTrace.cacheName}</p>
+                <p>TTL: {data.cacheTrace.ttlSeconds}s</p>
+                <p>Entities: {data.cacheTrace.entityCount}</p>
+                <p>L1: {data.cacheTrace.l1Hit} hit / {data.cacheTrace.l1Miss} miss</p>
+                <p>L2: {data.cacheTrace.l2Hit} hit / {data.cacheTrace.l2Miss} miss</p>
+              </>
+            );
+          })()}
         </div>
-        {(data.outputTrace || data.input || data.rawInput || data.output) && <Separator className="mb-4" />}
+        {(data.outputTrace || data.input || data.rawInput || data.output || data.cacheTrace) && <Separator className="mb-4" />}
         <div
           className={cn('flex gap-2 px-4', {
             'grid grid-cols-2': data.outputTrace && (data.input || data.rawInput) && data.output && data.loadStats,
@@ -202,6 +222,7 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
           {(data.input || data.rawInput) && <ViewInput input={data.input} rawInput={data.rawInput} asChild />}
           {data.output && <ViewOutput output={data.output} asChild />}
           {data.loadStats && <ViewLoadStats loadStats={data.loadStats} asChild />}
+          {data.cacheTrace && <ViewCache cacheTrace={data.cacheTrace} asChild />}
         </div>
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} />

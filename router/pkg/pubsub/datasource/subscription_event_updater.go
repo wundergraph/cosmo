@@ -14,8 +14,14 @@ import (
 const defaultTimeout = 5 * time.Second
 
 // SubscriptionEventUpdater is a wrapper around the SubscriptionUpdater interface
-// that provides a way to send the event struct instead of the raw data
+// that provides a way to send the event struct instead of the raw data.
 // It is used to give access to the event additional fields to the hooks.
+//
+// Note: graphql-go-tools #1374 (subscriptions overhaul) collapsed the old
+// Close(kind) entry point into Complete() / Error(data) / Done(). The cosmo
+// adapters only call Update(), Complete(), and SetHooks(), so the cosmo wrapper
+// no longer exposes Close — callers should rely on Complete() for graceful
+// finishes; terminal errors flow through the resolver via Error/Done.
 type SubscriptionEventUpdater interface {
 	Update(events []StreamEvent)
 	Complete()
@@ -81,6 +87,9 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 }
 
 func (s *subscriptionEventUpdater) Complete() {
+	// New upstream contract: Complete() delivers the "subscription done" signal
+	// to all subscriptions on the trigger; Done() then performs internal
+	// cleanup. The two must be paired.
 	s.eventUpdater.Complete()
 }
 
@@ -123,6 +132,9 @@ func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Co
 	}
 
 	// In case there was an error we close the affected subscription.
+	// Upstream removed the per-subscription "kind" argument — CloseSubscription
+	// now takes only the identifier; the error/normal distinction lives at the
+	// trigger level via Error()/Complete().
 	if err != nil {
 		s.eventUpdater.CloseSubscription(subID)
 	}
