@@ -1263,7 +1263,7 @@ The execution config source is exclusive. Configure exactly one of `storage`, `f
   ```
 </CodeGroup>
 
-A manifest directory contains a `mapper.json` indexing the base graph and every feature flag by version, a `latest.json` with the base graph's execution config, and one `feature-flags/<name>.json` per feature flag. When `watch` is enabled, the router stats `mapper.json` and reloads the assembled config without downtime whenever the file's mtime changes.
+A manifest directory contains a `mapper.json` indexing the base graph and every feature flag by version, a `latest.json` with the base graph's execution config, and one `feature-flags/<name>.json` per feature flag. When `watch` is enabled, the router watches `mapper.json`. Whenever the file's mtime changes, the router reloads the assembled config without downtime.
 
 When using a storage provider, the `object_path` field points to the file in your bucket that is updated after each schema deployment in your CI/CD pipeline:
 
