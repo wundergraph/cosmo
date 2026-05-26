@@ -73,15 +73,7 @@ export function createFederatedGraphToken(
     }
 
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-    const splitConfigFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: 'split-config-loading',
-    });
-
-    const features: string[] = [];
-    if (splitConfigFeature?.enabled) {
-      features.push('split-config-loading');
-    }
+    const features = await orgRepo.getOrganizationGraphTokenFeatures(authContext.organizationId);
 
     const tokenValue = await signJwtHS256<GraphApiKeyJwtPayload>({
       secret: opts.jwtSecret,

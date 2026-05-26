@@ -37,7 +37,11 @@ import {
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
+import {
+  delayForManualOrgDeletionInDays,
+  delayForOrgAuditLogsDeletionInDays,
+  featuresToSurfaceWithGraphToken,
+} from '../constants.js';
 import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
@@ -1700,5 +1704,18 @@ export class OrganizationRepository {
         groupId: groups[0].groupId,
       }),
     };
+  }
+
+  async getOrganizationGraphTokenFeatures(organizationId: string): Promise<string[]> {
+    const features: string[] = [];
+
+    const orgFeatures = await this.getFeatures({ organizationId });
+    for (const feature of orgFeatures) {
+      if (featuresToSurfaceWithGraphToken.includes(feature.id) && feature.enabled) {
+        features.push('split-config-loading');
+      }
+    }
+
+    return features;
   }
 }

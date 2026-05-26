@@ -13,6 +13,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function generateRouterToken(
   opts: RouterOptions,
@@ -49,6 +50,9 @@ export function generateRouterToken(
       throw new UnauthorizedError();
     }
 
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const features = await orgRepo.getOrganizationGraphTokenFeatures(authContext.organizationId);
+
     const token = await signJwtHS256<GraphApiKeyJwtPayload>({
       secret: opts.jwtSecret,
       token: {
@@ -57,6 +61,7 @@ export function generateRouterToken(
         aud: audiences.cosmoGraphKey, // to distinguish from other tokens
         organization_id: authContext.organizationId,
         exp: nowInSeconds() + 5 * 60, // 5 minutes
+        features: features.length > 0 ? features : undefined,
       },
     });
 

@@ -24,11 +24,14 @@ export interface KeycloakTokenResponse {
   refresh_expires_in: number;
 }
 
+export type GraphTokenFeature = 'split-config-loading';
+
 export interface GraphToken {
   iss?: string;
   iat?: number;
   federated_graph_id: string;
   organization_id: string;
+  features?: GraphTokenFeature[];
 }
 
 export interface DecodedAccessToken {
