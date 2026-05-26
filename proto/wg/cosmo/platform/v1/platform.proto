@@ -10,6 +10,7 @@ import "wg/cosmo/notifications/events.proto";
 message Label {
   string key = 1;
   string value = 2;
+  optional string description = 3;
 }
 
 message Response {

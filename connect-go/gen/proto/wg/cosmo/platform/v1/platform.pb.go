@@ -803,6 +803,7 @@ type Label struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
 	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -847,6 +848,13 @@ func (x *Label) GetKey() string {
 func (x *Label) GetValue() string {
 	if x != nil {
 		return x.Value
+	}
+	return ""
+}
+
+func (x *Label) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
 	}
 	return ""
 }
@@ -31808,10 +31816,12 @@ var File_wg_cosmo_platform_v1_platform_proto protoreflect.FileDescriptor
 
 const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\n" +
-	"#wg/cosmo/platform/v1/platform.proto\x12\x14wg.cosmo.platform.v1\x1a\x1cwg/cosmo/common/common.proto\x1a#wg/cosmo/notifications/events.proto\"/\n" +
+	"#wg/cosmo/platform/v1/platform.proto\x12\x14wg.cosmo.platform.v1\x1a\x1cwg/cosmo/common/common.proto\x1a#wg/cosmo/notifications/events.proto\"f\n" +
 	"\x05Label\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"j\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01B\x0e\n" +
+	"\f_description\"j\n" +
 	"\bResponse\x123\n" +
 	"\x04code\x18\x01 \x01(\x0e2\x1f.wg.cosmo.common.EnumStatusCodeR\x04code\x12\x1d\n" +
 	"\adetails\x18\x02 \x01(\tH\x00R\adetails\x88\x01\x01B\n" +
@@ -36151,6 +36161,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 	if File_wg_cosmo_platform_v1_platform_proto != nil {
 		return
 	}
+	file_wg_cosmo_platform_v1_platform_proto_msgTypes[0].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[1].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[6].OneofWrappers = []any{}
 	file_wg_cosmo_platform_v1_platform_proto_msgTypes[7].OneofWrappers = []any{}
