@@ -128,6 +128,7 @@ export type AuditLogFullAction =
   | 'feature_flag.deleted'
   | 'feature_flag.disabled'
   | 'feature_flag.enabled'
+  | 'feature_flag.recomposed'
   | 'feature_subgraph.created'
   | 'feature_subgraph.deleted'
   | 'feature_subgraph.published'

@@ -734,16 +734,16 @@ export class FeatureFlagRepository {
     includeContracts?: boolean;
   }): Promise<FederatedGraphDTO[]> {
     const federatedGraphs: FederatedGraphDTO[] = [];
-    const featureSubraphsOfFeatureFlag = await this.getFeatureSubgraphsByFeatureFlagId({
+    const featureSubgraphsOfFeatureFlag = await this.getFeatureSubgraphsByFeatureFlagId({
       featureFlagId,
       namespaceId,
     });
-    if (featureSubraphsOfFeatureFlag.length === 0) {
+    if (featureSubgraphsOfFeatureFlag.length === 0) {
       return [];
     }
-    const baseSubgraphIds = featureSubraphsOfFeatureFlag.map((f) => f.baseSubgraphId);
+    const baseSubgraphIds = featureSubgraphsOfFeatureFlag.map((f) => f.baseSubgraphId);
 
-    // fetches the federated graphs which contains all the base subgraphs of the feature subgraphs
+    // fetches the federated graphs which contain all the base subgraphs of the feature subgraphs
     const federatedGraphIds = await this.db
       .select({
         federatedGraphId: subgraphsToFederatedGraph.federatedGraphId,
@@ -997,6 +997,69 @@ export class FeatureFlagRepository {
     return featureGraphsByFlag;
   }
 
+  public async getFeatureFlagsBySubgraphLabels({
+    namespaceId,
+    labels,
+    excludeDisabled,
+  }: {
+    namespaceId: string;
+    labels: Label[];
+    excludeDisabled: boolean;
+  }) {
+    const uniqueLabels = normalizeLabels(labels);
+
+    const conditions: SQL<unknown>[] = [];
+    if (excludeDisabled) {
+      conditions.push(eq(featureFlags.isEnabled, true));
+    }
+
+    if (uniqueLabels.length > 0) {
+      conditions.push(
+        arrayOverlaps(
+          featureFlags.labels,
+          uniqueLabels.map((l) => joinLabel(l)),
+        ),
+      );
+    } else {
+      conditions.push(eq(featureFlags.labels, []));
+    }
+
+    const matchingFeatureFlags = await this.db
+      .select({
+        id: featureFlags.id,
+        name: featureFlags.name,
+      })
+      .from(featureFlags)
+      .where(
+        and(
+          eq(featureFlags.namespaceId, namespaceId),
+          eq(featureFlags.organizationId, this.organizationId),
+          ...conditions,
+        ),
+      )
+      .execute();
+
+    if (matchingFeatureFlags.length === 0) {
+      return [];
+    }
+
+    const result: FeatureFlagWithFeatureSubgraphs[] = [];
+    for (const featureFlag of matchingFeatureFlags) {
+      const featureSubgraphsByFlag = await this.getFeatureSubgraphsByFeatureFlagId({
+        featureFlagId: featureFlag.id,
+        namespaceId,
+      });
+
+      result.push({
+        id: featureFlag.id,
+        name: featureFlag.name,
+        featureSubgraphs: featureSubgraphsByFlag.filter((fsg) => fsg.schemaVersionId !== ''),
+      });
+    }
+
+    return result;
+  }
+
   // evaluates all the feature flags which have fgs whose base subgraph id and fed graph label matchers are passed as input and returns the feature flags that should be composed
   public async getFeatureFlagsByBaseSubgraphIdAndLabelMatchers({
     baseSubgraphId,
@@ -1042,6 +1105,7 @@ export class FeatureFlagRepository {
       }
 
       const baseSubgraphNamesOfFeatureFlags = featureSubgraphsByFlag.map((ff) => ff.baseSubgraphName);
+
       // check if all base subgraphs of feature flags are one of the base subgraphs of this composition
       const isSubset = baseSubgraphNamesOfFeatureFlags.every((name) => baseSubgraphNames.includes(name));
       if (!isSubset) {
@@ -1124,6 +1188,7 @@ export class FeatureFlagRepository {
         baseSubgraphNames: baseCompositionSubgraphs.map((baseSubgraph) => baseSubgraph.name),
         excludeDisabled: true,
       });
+
       for (const flag of enabledFeatureFlags) {
         if (featureFlagToComposeByFlagId.has(flag.id)) {
           continue;

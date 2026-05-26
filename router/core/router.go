@@ -11,12 +11,14 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"slices"
 	"sync"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -141,24 +143,21 @@ type (
 		Method  IPAnonymizationMethod
 	}
 
-	TlsClientAuthConfig struct {
-		Required bool
-		CertFile string
-	}
-
 	TlsConfig struct {
-		Enabled  bool
-		CertFile string
-		KeyFile  string
+		settings config.TLSConfiguration
 
-		ClientAuth *TlsClientAuthConfig
+		// compiledServerConfig resembles a tls.Config created out of the "settings" field.
+		// It's used for the routers http server.
+		// It's created once during bootstrap and reused during server swap.
+		compiledServerConfig *tls.Config
 	}
 
 	RouterConfigPollerConfig struct {
 		config.ExecutionConfig
-		PollInterval time.Duration
-		PollJitter   time.Duration
-		GraphSignKey string
+		PollInterval      time.Duration
+		PollJitter        time.Duration
+		GraphSignKey      string
+		SplitConfigPoller config.SplitConfigPollerRules
 	}
 
 	ExecutionConfig struct {
@@ -313,12 +312,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
-	r.headerRules = AddCacheControlPolicyToRules(r.headerRules, r.cacheControlPolicy)
+	postRules := CreateCacheControlPolicyHeaderRules(r.cacheControlPolicy)
 	var err error
-	r.headerPropagation, err = NewHeaderPropagation(r.headerRules)
+	r.headerPropagation, err = NewHeaderPropagation(r.headerRules, postRules)
 	if err != nil {
 		return nil, err
 	}
+
 	defaultCorsHeaders := []string{
 		// Common headers
 		"authorization",
@@ -357,8 +357,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultCorsHeaders...))
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
 
-	if r.tlsConfig != nil && r.tlsConfig.Enabled {
+	if r.tls.settings.Server.Enabled {
 		r.baseURL = fmt.Sprintf("https://%s", r.listenAddr)
+		r.tls.compiledServerConfig, err = r.serverTLSConfig()
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct tls config: %w", err)
+		}
 	} else {
 		r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
 	}
@@ -368,53 +372,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		return nil, fmt.Errorf("failed to construct graphql endpoint url: %w", err)
 	}
 	r.graphqlEndpointURL = graphqlEndpointURL
-
-	if r.tlsConfig != nil && r.tlsConfig.Enabled {
-		if r.tlsConfig.CertFile == "" {
-			return nil, errors.New("tls cert file not provided")
-		}
-
-		if r.tlsConfig.KeyFile == "" {
-			return nil, errors.New("tls key file not provided")
-		}
-
-		var caCertPool *x509.CertPool
-		clientAuthMode := tls.NoClientCert
-
-		if r.tlsConfig.ClientAuth != nil && r.tlsConfig.ClientAuth.CertFile != "" {
-			caCert, err := os.ReadFile(r.tlsConfig.ClientAuth.CertFile)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read cert file: %w", err)
-			}
-
-			// Create a CA an empty cert pool and add the CA cert to it to serve as authority to validate client certs
-			caPool := x509.NewCertPool()
-			if ok := caPool.AppendCertsFromPEM(caCert); !ok {
-				return nil, errors.New("failed to append cert to pool")
-			}
-			caCertPool = caPool
-
-			if r.tlsConfig.ClientAuth.Required {
-				clientAuthMode = tls.RequireAndVerifyClientCert
-			} else {
-				clientAuthMode = tls.VerifyClientCertIfGiven
-			}
-
-			r.logger.Debug("Client auth enabled", zap.String("mode", clientAuthMode.String()))
-		}
-
-		// Load the server cert and private key
-		cer, err := tls.LoadX509KeyPair(r.tlsConfig.CertFile, r.tlsConfig.KeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
-		}
-
-		r.tlsServerConfig = &tls.Config{
-			ClientCAs:    caCertPool,
-			Certificates: []tls.Certificate{cer},
-			ClientAuth:   clientAuthMode,
-		}
-	}
 
 	if r.traceConfig.Enabled {
 		if len(r.traceConfig.Propagators) > 0 {
@@ -433,7 +390,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 				r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
 				r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
 					Endpoint: endpoint,
-					Exporter: otelconfig.ExporterOLTPHTTP,
+					Exporter: otelconfig.ExporterOTLPHTTP,
 					HTTPPath: "/v1/traces",
 					Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 				})
@@ -448,7 +405,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &rmetric.OpenTelemetryExporter{
 				Endpoint: endpoint,
-				Exporter: otelconfig.ExporterOLTPHTTP,
+				Exporter: otelconfig.ExporterOTLPHTTP,
 				HTTPPath: "/v1/metrics",
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
@@ -601,9 +558,66 @@ func NewRouter(opts ...Option) (*Router, error) {
 	return r, nil
 }
 
+// serverTLSConfig creates a new tls.Config from r.tls.Server.Settings.
+// It's meant to be used as the routers http server tls configuration.
+// If TLS is not configured it returns nil.
+// If settings are invalid or a config can't be created it returns an error.
+func (r *Router) serverTLSConfig() (*tls.Config, error) {
+	serverTLS := r.tls.settings.Server
+
+	if !serverTLS.Enabled {
+		return nil, nil
+	}
+
+	if serverTLS.CertFile == "" {
+		return nil, errors.New("tls cert file not provided")
+	}
+
+	if serverTLS.KeyFile == "" {
+		return nil, errors.New("tls key file not provided")
+	}
+
+	var caCertPool *x509.CertPool
+	clientAuthMode := tls.NoClientCert
+
+	if serverTLS.ClientAuth.CertFile != "" {
+		caCert, err := os.ReadFile(serverTLS.ClientAuth.CertFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read cert file: %w", err)
+		}
+
+		// Create a CA an empty cert pool and add the CA cert to it to serve as authority to validate client certs
+		caPool := x509.NewCertPool()
+		if ok := caPool.AppendCertsFromPEM(caCert); !ok {
+			return nil, errors.New("failed to append cert to pool")
+		}
+		caCertPool = caPool
+
+		if serverTLS.ClientAuth.Required {
+			clientAuthMode = tls.RequireAndVerifyClientCert
+		} else {
+			clientAuthMode = tls.VerifyClientCertIfGiven
+		}
+
+		r.logger.Debug("Client auth enabled", zap.String("mode", clientAuthMode.String()))
+	}
+
+	// Load the server cert and private key
+	cer, err := tls.LoadX509KeyPair(serverTLS.CertFile, serverTLS.KeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
+	}
+
+	return &tls.Config{
+		ClientCAs:    caCertPool,
+		Certificates: []tls.Certificate{cer},
+		ClientAuth:   clientAuthMode,
+	}, nil
+}
+
 // newGraphServer creates a new server.
-func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	server, err := newGraphServer(ctx, r, cfg, r.proxy)
+func (r *Router) newServer(ctx context.Context, response *routerconfig.Response) error {
+	server, err := newGraphServer(ctx, r, response, r.proxy)
 	if err != nil {
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
 		return err
@@ -612,7 +626,7 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 	r.httpServer.SwapGraphServer(ctx, server)
 
 	// Cleanup any unused feature flags in case a feature flag was removed
-	r.reloadPersistentState.CleanupFeatureFlags(cfg)
+	r.reloadPersistentState.CleanupFeatureFlags(response.Config)
 
 	return nil
 }
@@ -640,6 +654,8 @@ func (r *Router) listenAndServe() error {
 }
 
 func (r *Router) initModules(ctx context.Context) error {
+	var spanNameFormatterChain []func(SpanNameFormatterFunc) SpanNameFormatterFunc
+
 	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
 
 	for _, module := range modules {
@@ -724,6 +740,10 @@ func (r *Router) initModules(ctx context.Context) error {
 			}
 		}
 
+		if provider, ok := moduleInstance.(SpanNameFormatterProvider); ok {
+			spanNameFormatterChain = append(spanNameFormatterChain, provider.WrapSpanNameFormatter)
+		}
+
 		if handler, ok := moduleInstance.(SubscriptionOnStartHandler); ok {
 			r.subscriptionHooks.onStart.handlers = append(r.subscriptionHooks.onStart.handlers, handler.SubscriptionOnStart)
 		}
@@ -743,6 +763,16 @@ func (r *Router) initModules(ctx context.Context) error {
 			zap.String("duration", time.Since(now).String()),
 		)
 	}
+
+	// Fold module-provided span name formatter wrappers over the default
+	// implementation. Wrappers were collected in module Priority order
+	// (sortModules); folding right-to-left ensures the lowest-priority
+	// wrapper sits outermost and the default sits at the bottom.
+	formatter := SpanNameFormatterFunc(DefaultSpanNameFormatter)
+	for _, wrap := range slices.Backward(spanNameFormatterChain) {
+		formatter = wrap(formatter)
+	}
+	r.spanNameFormatter = formatter
 
 	return nil
 }
@@ -768,8 +798,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
-		tlsConfig:          r.tlsConfig,
-		tlsServerConfig:    r.tlsServerConfig,
+		tlsServerConfig:    r.tls.compiledServerConfig,
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
@@ -792,7 +821,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
 		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by providing a config.")
-		return r.httpServer, r.newServer(ctx, r.staticExecutionConfig)
+		return r.httpServer, r.newServer(ctx, &routerconfig.Response{Config: r.staticExecutionConfig})
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -805,7 +834,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
-	if err := r.newServer(ctx, cfg.Config); err != nil {
+	if err := r.newServer(ctx, cfg); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return nil, err
 	}
@@ -944,68 +973,8 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
-	if r.mcp.Enabled {
-		var operationsDir string
-
-		// If storage provider ID is set, resolve it to a directory path
-		if r.mcp.Storage.ProviderID != "" {
-			r.logger.Debug("Resolving storage provider for MCP operations",
-				zap.String("provider_id", r.mcp.Storage.ProviderID))
-
-			provider, ok := r.providerRegistry.FileSystem(r.mcp.Storage.ProviderID)
-			if !ok {
-				return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
-			}
-			r.logger.Debug("Found file_system storage provider for MCP",
-				zap.String("id", provider.ID),
-				zap.String("path", provider.Path))
-			operationsDir = provider.Path
-		}
-
-		logFields := []zap.Field{
-			zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
-		}
-
-		// Initialize the MCP server with the resolved operations directory
-		mcpOpts := []func(*mcpserver.Options){
-			mcpserver.WithGraphName(r.mcp.GraphName),
-			mcpserver.WithOperationsDir(operationsDir),
-			mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
-			mcpserver.WithLogger(r.logger.With(logFields...)),
-			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
-			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
-			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
-			mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
-			mcpserver.WithStateless(r.mcp.Session.Stateless),
-		}
-
-		if r.corsOptions != nil {
-			mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
-		}
-
-		mcpGraphQLEndpoint := r.graphqlEndpointURL
-		if r.mcp.RouterURL != "" {
-			mcpGraphQLEndpoint = r.mcp.RouterURL
-		}
-
-		mcpss, err := mcpserver.NewGraphQLSchemaServer(
-			mcpGraphQLEndpoint,
-			mcpOpts...,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to create mcp server: %w", err)
-		}
-
-		err = mcpss.Start()
-		if err != nil {
-			// Cleanup the server if Start() fails to prevent resource leaks
-			if stopErr := mcpss.Stop(ctx); stopErr != nil {
-				r.logger.Warn("Failed to stop MCP server during error cleanup", zap.Error(stopErr))
-			}
-			return fmt.Errorf("failed to start MCP server: %w", err)
-		}
-
-		r.mcpServer = mcpss
+	if err := r.startMCPServer(ctx); err != nil {
+		return err
 	}
 
 	if r.connectRPC.Enabled {
@@ -1092,7 +1061,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.playgroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Html:             graphiql.PlaygroundHTML(),
 			GraphqlURL:       r.graphqlWebURL,
-			PlaygroundPath:   r.playgroundPath,
+			PlaygroundPath:   r.playgroundConfig.Path,
 			ConcurrencyLimit: int64(r.playgroundConfig.ConcurrencyLimit),
 		})
 	}
@@ -1124,6 +1093,89 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+// startMCPServer initializes and starts the MCP server if enabled.
+func (r *Router) startMCPServer(ctx context.Context) error {
+	if !r.mcp.Enabled {
+		return nil
+	}
+
+	var operationsDir string
+
+	// If storage provider ID is set, resolve it to a directory path
+	if r.mcp.Storage.ProviderID != "" {
+		r.logger.Debug("Resolving storage provider for MCP operations",
+			zap.String("provider_id", r.mcp.Storage.ProviderID))
+
+		provider, ok := r.providerRegistry.FileSystem(r.mcp.Storage.ProviderID)
+		if !ok {
+			return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
+		}
+		r.logger.Debug("Found file_system storage provider for MCP",
+			zap.String("id", provider.ID),
+			zap.String("path", provider.Path))
+		operationsDir = provider.Path
+	}
+
+	logFields := []zap.Field{
+		zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
+	}
+
+	// Initialize the MCP server with the resolved operations directory
+	mcpOpts := []func(*mcpserver.Options){
+		mcpserver.WithGraphName(r.mcp.GraphName),
+		mcpserver.WithOperationsDir(operationsDir),
+		mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
+		mcpserver.WithLogger(r.logger.With(logFields...)),
+		mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
+		mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
+		mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
+		mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
+		mcpserver.WithStateless(r.mcp.Session.Stateless),
+	}
+
+	if r.corsOptions != nil {
+		mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
+	}
+
+	// Add OAuth configuration if enabled
+	if r.mcp.OAuth.Enabled {
+		mcpOpts = append(mcpOpts, mcpserver.WithOAuth(&r.mcp.OAuth))
+
+		if r.mcp.Server.BaseURL != "" {
+			mcpOpts = append(mcpOpts, mcpserver.WithServerBaseURL(r.mcp.Server.BaseURL))
+		}
+	}
+
+	if r.mcp.ResourceDocumentation != "" {
+		mcpOpts = append(mcpOpts, mcpserver.WithResourceDocumentation(r.mcp.ResourceDocumentation))
+	}
+
+	mcpGraphQLEndpoint := r.graphqlEndpointURL
+	if r.mcp.RouterURL != "" {
+		mcpGraphQLEndpoint = r.mcp.RouterURL
+	}
+
+	mcpss, err := mcpserver.NewGraphQLSchemaServer(
+		ctx,
+		mcpGraphQLEndpoint,
+		mcpOpts...,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create mcp server: %w", err)
+	}
+
+	if err := mcpss.Start(); err != nil {
+		// Cleanup the server if Start() fails to prevent resource leaks
+		if stopErr := mcpss.Stop(ctx); stopErr != nil {
+			r.logger.Warn("Failed to stop MCP server during error cleanup", zap.Error(stopErr))
+		}
+		return fmt.Errorf("failed to start MCP server: %w", err)
+	}
+
+	r.mcpServer = mcpss
 	return nil
 }
 
@@ -1411,8 +1463,7 @@ func (r *Router) Start(ctx context.Context) error {
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
-		tlsConfig:          r.tlsConfig,
-		tlsServerConfig:    r.tlsServerConfig,
+		tlsServerConfig:    r.tls.compiledServerConfig,
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
@@ -1431,6 +1482,15 @@ func (r *Router) Start(ctx context.Context) error {
 
 	r.reloadPersistentState.UpdateReloadPersistentState(&r.Config)
 
+	if r.engineExecutionConfiguration.EnableRequestTracing {
+		if r.developmentMode && r.graphApiToken == "" {
+			r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
+		}
+		if r.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing {
+			r.logger.Warn("Advanced Request Tracing (ART) is enabled for unauthenticated requests. This exposes internal subgraph URLs, request and response payloads, propagated headers, and query plans to any client that can reach the router. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
+		}
+	}
+
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
 
@@ -1440,7 +1500,7 @@ func (r *Router) Start(ctx context.Context) error {
 			return err
 		}
 
-		if err := r.newServer(ctx, r.staticExecutionConfig); err != nil {
+		if err := r.newServer(ctx, &routerconfig.Response{Config: r.staticExecutionConfig}); err != nil {
 			return err
 		}
 
@@ -1484,7 +1544,7 @@ func (r *Router) Start(ctx context.Context) error {
 						return
 					}
 
-					if err := r.newServer(ctx, cfg); err != nil {
+					if err := r.newServer(ctx, &routerconfig.Response{Config: cfg}); err != nil {
 						ll.Error("Failed to update server with new config", zap.Error(err))
 						return
 					}
@@ -1534,7 +1594,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return err
 	}
 
-	if err := r.newServer(ctx, cfg.Config); err != nil {
+	if err := r.newServer(ctx, cfg); err != nil {
 		return err
 	}
 
@@ -1555,10 +1615,6 @@ func (r *Router) Start(ctx context.Context) error {
 		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
 	}
 
-	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {
-		r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
-	}
-
 	if r.redisClient != nil {
 		r.logger.Info("Rate limiting enabled",
 			zap.Int("rate", r.rateLimit.SimpleStrategy.Rate),
@@ -1568,15 +1624,15 @@ func (r *Router) Start(ctx context.Context) error {
 		)
 	}
 
-	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
+	r.configPoller.Subscribe(ctx, func(response *routerconfig.Response) error {
 		if r.shutdown.Load() {
 			r.logger.Warn("Router is in shutdown state. Skipping config update")
 			return nil
 		}
 
-		r.trackExecutionConfigUsage(newConfig, false)
+		r.trackExecutionConfigUsage(response.Config, false)
 
-		if err := r.newServer(ctx, newConfig); err != nil {
+		if err := r.newServer(ctx, response); err != nil {
 			return err
 		}
 
@@ -2266,21 +2322,21 @@ func WithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfigurati
 	}
 }
 
+func WithSubgraphExtensionPropagation(cfg config.SubgraphExtensionPropagationConfiguration) Option {
+	return func(r *Router) {
+		r.subgraphExtensionPropagation = cfg
+	}
+}
+
 func WithAccessLogs(cfg *AccessLogsConfig) Option {
 	return func(r *Router) {
 		r.accessLogsConfig = cfg
 	}
 }
 
-func WithTLSConfig(cfg *TlsConfig) Option {
+func WithTLSConfig(cfg config.TLSConfiguration) Option {
 	return func(r *Router) {
-		r.tlsConfig = cfg
-	}
-}
-
-func WithSubgraphTLSConfiguration(cfg config.ClientTLSConfiguration) Option {
-	return func(r *Router) {
-		r.subgraphTLSConfiguration = cfg
+		r.tls.settings = cfg
 	}
 }
 

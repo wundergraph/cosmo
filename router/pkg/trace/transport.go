@@ -1,12 +1,18 @@
 package trace
 
 import (
+	gocontext "context"
+	"errors"
 	"net/http"
 	"sync/atomic"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/context"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	otrace "go.opentelemetry.io/otel/trace"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type TransportOption func(svr *transport)
@@ -41,6 +47,13 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	startTime := time.Now()
 
+	// otelhttp v0.67.0 no longer emits http.request_content_length on client spans.
+	// Set it here for backward compatibility with downstream systems.
+	if r.ContentLength > 0 {
+		span := otrace.SpanFromContext(r.Context())
+		span.SetAttributes(semconv.HTTPRequestContentLength(int(r.ContentLength)))
+	}
+
 	res, err := t.rt.RoundTrip(r)
 
 	if value := r.Context().Value(context.FetchTimingKey); value != nil {
@@ -49,8 +62,21 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 
+	// otelhttp v0.67.0 no longer emits http.response_content_length on client spans.
+	// Set it here for backward compatibility with downstream systems.
+	if res != nil && res.ContentLength > 0 {
+		span := otrace.SpanFromContext(r.Context())
+		span.SetAttributes(semconv.HTTPResponseContentLength(int(res.ContentLength)))
+	}
+
 	// In case of a roundtrip error the span status is set to error by the otelhttp.RoundTrip function.
-	// Also, status code >= 500 is considered an error
+	// Also, status code >= 500 is considered an error.
+	// Client disconnections (context.Canceled) are not server-side errors. Pre-set the span
+	// status to Ok so that otelhttp cannot override it with Error (per OTel spec, Ok is final).
+	if err != nil && errors.Is(err, gocontext.Canceled) {
+		span := otrace.SpanFromContext(r.Context())
+		span.SetStatus(codes.Ok, "client disconnected")
+	}
 
 	return res, err
 }

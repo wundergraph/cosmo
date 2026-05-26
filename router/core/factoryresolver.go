@@ -23,6 +23,7 @@ import (
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+
 	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -76,7 +77,7 @@ type DefaultFactoryResolver struct {
 	baseTransport                 http.RoundTripper
 	transportFactory              ApiTransportFactory
 	defaultSubgraphRequestTimeout time.Duration
-	subscriptionClientOptions     []graphql_datasource.Options
+	subscriptionClientOptions     []graphql_datasource.SubscriptionClientOption
 }
 
 func NewDefaultFactoryResolver(
@@ -126,29 +127,28 @@ func NewDefaultFactoryResolver(
 		factoryLogger = abstractlogger.NewZapLogger(log, abstractlogger.DebugLevel)
 	}
 
-	var netPollConfig graphql_datasource.NetPollConfiguration
-
-	netPollConfig.ApplyDefaults()
-
-	netPollConfig.Enable = enableNetPoll
-
-	options := []graphql_datasource.Options{
+	options := []graphql_datasource.SubscriptionClientOption{
 		graphql_datasource.WithLogger(factoryLogger),
-		graphql_datasource.WithNetPollConfiguration(netPollConfig),
 	}
 
 	if subscriptionClientOptions != nil {
 		if subscriptionClientOptions.PingInterval > 0 {
 			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
 		}
-		if subscriptionClientOptions.ReadTimeout > 0 {
-			options = append(options, graphql_datasource.WithReadTimeout(subscriptionClientOptions.ReadTimeout))
-		}
 		if subscriptionClientOptions.PingTimeout > 0 {
 			options = append(options, graphql_datasource.WithPingTimeout(subscriptionClientOptions.PingTimeout))
 		}
-		if subscriptionClientOptions.FrameTimeout > 0 {
-			options = append(options, graphql_datasource.WithFrameTimeout(subscriptionClientOptions.FrameTimeout))
+		if subscriptionClientOptions.WriteTimeout > 0 {
+			options = append(options, graphql_datasource.WithWriteTimeout(subscriptionClientOptions.WriteTimeout))
+		}
+		if subscriptionClientOptions.AckTimeout > 0 {
+			options = append(options, graphql_datasource.WithAckTimeout(subscriptionClientOptions.AckTimeout))
+		}
+		if subscriptionClientOptions.ReadLimit > 0 {
+			options = append(options, graphql_datasource.WithReadLimit(subscriptionClientOptions.ReadLimit))
+		}
+		if subscriptionClientOptions.DefaultErrorExtensionCode != "" {
+			options = append(options, graphql_datasource.WithDefaultErrorExtensionCode(subscriptionClientOptions.DefaultErrorExtensionCode))
 		}
 	}
 
@@ -183,10 +183,7 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 
 	if d.transportFactory == nil || d.baseTransport == nil {
 		// dummy implementation for plan generator that doesn't make requests
-		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-			http.DefaultClient,
-			http.DefaultClient,
-			d.engineCtx,
+		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.engineCtx,
 			d.subscriptionClientOptions...,
 		)
 		return graphql_datasource.NewFactory(d.engineCtx, http.DefaultClient, subscriptionClient)
@@ -202,10 +199,8 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 	}
 
 	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		defaultHTTPClient,
-		streamingClient,
 		d.engineCtx,
-		d.subscriptionClientOptions...,
+		append([]graphql_datasource.SubscriptionClientOption{graphql_datasource.WithUpgradeClient(defaultHTTPClient), graphql_datasource.WithStreamingClient(streamingClient)}, d.subscriptionClientOptions...)...,
 	)
 
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
@@ -245,12 +240,13 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 }
 
 type RouterEngineConfiguration struct {
-	Execution                config.EngineExecutionConfiguration
-	Headers                  *config.HeaderRules
-	Events                   config.EventsConfiguration
-	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-	StreamMetricStore        rmetric.StreamMetricStore
-	CostControl              *config.CostControl
+	Execution                    config.EngineExecutionConfiguration
+	Headers                      *config.HeaderRules
+	Events                       config.EventsConfiguration
+	SubgraphErrorPropagation     config.SubgraphErrorPropagationConfiguration
+	SubgraphExtensionPropagation config.SubgraphExtensionPropagationConfiguration
+	StreamMetricStore            rmetric.StreamMetricStore
+	CostControl                  *config.CostControl
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
@@ -683,20 +679,26 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	if costConfig == nil {
 		return out
 	}
-	for _, fw := range costConfig.GetFieldWeights() {
-		w := &plan.FieldWeight{}
-		if fw.Weight != nil {
-			w.HasWeight = true
-			w.Weight = int(*fw.Weight)
+	for _, fieldWeightConfig := range costConfig.GetFieldWeights() {
+		fieldCost := &plan.FieldCost{}
+		if fieldWeightConfig.Weight != nil {
+			fieldCost.HasWeight = true
+			fieldCost.Weight = int(*fieldWeightConfig.Weight)
 		}
-		if args := fw.GetArgumentWeights(); len(args) > 0 {
-			w.ArgumentWeights = make(map[string]int, len(args))
+		if args := fieldWeightConfig.GetArgumentWeights(); len(args) > 0 {
+			fieldCost.ArgumentWeights = make(map[string]int, len(args))
 			for k, v := range args {
-				w.ArgumentWeights[k] = int(v)
+				fieldCost.ArgumentWeights[k] = int(v)
 			}
 		}
-		coordinate := plan.FieldCoordinate{TypeName: fw.GetTypeName(), FieldName: fw.GetFieldName()}
-		out.CostConfig.Weights[coordinate] = w
+		if dw := fieldWeightConfig.GetDirectiveArgumentWeights(); len(dw) > 0 {
+			fieldCost.DirectiveArgumentWeights = make(map[string]int, len(dw))
+			for k, v := range dw {
+				fieldCost.DirectiveArgumentWeights[k] = int(v)
+			}
+		}
+		coordinate := plan.FieldCoordinate{TypeName: fieldWeightConfig.GetTypeName(), FieldName: fieldWeightConfig.GetFieldName()}
+		out.CostConfig.Weights[coordinate] = fieldCost
 	}
 	for _, ls := range costConfig.GetListSizes() {
 		listSizes := &plan.FieldListSize{
@@ -718,8 +720,6 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	for k, v := range costConfig.GetTypeWeights() {
 		out.CostConfig.Types[k] = int(v)
 	}
-	// Directives with argument weights are TBD.
-
 	return out
 }
 

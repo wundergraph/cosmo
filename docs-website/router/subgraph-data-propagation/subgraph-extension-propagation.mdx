@@ -1,0 +1,89 @@
+---
+title: "Subgraph Extension Propagation"
+description: "Forward the extensions object returned by subgraphs to the client response, with control over which fields are propagated and how conflicts between subgraphs are resolved."
+icon: "puzzle-piece"
+---
+
+## Forwarding Subgraph Response Extensions
+
+GraphQL subgraphs can attach an `extensions` object to their responses. By default, the router does not propagate these extensions to the client. When forwarding is enabled, the router merges the top-level keys of the `extensions` object from every subgraph that participated in the query and returns the merged object on the final response.
+
+This is useful for surfacing metadata such as rate-limit state, auth context, or custom telemetry from subgraphs back to the client without exposing every internal field.
+
+### Enabling Extension Forwarding
+
+Add the following to your [config.yaml](/router/configuration#config-file):
+
+```yaml
+# config.yaml
+
+subgraph_extension_propagation:
+  enabled: true
+  allowed_extension_fields:
+    - rateLimit
+    - auth
+  algorithm: first_write
+```
+
+For the full list of options, see [Subgraph Extension Propagation](/router/configuration#subgraph-extension-propagation).
+
+### Allow List
+
+`allowed_extension_fields` restricts which top-level keys of the `extensions` object are propagated to the client. Any key not on the list is dropped before the response is sent.
+
+The list applies to the top level only. Nested values inside an allowed field are forwarded as-is.
+
+<Warning>
+  When the allow list is empty, all extension fields returned by subgraphs are forwarded. Subgraph extensions can carry internal metadata, so prefer an explicit allow list in production.
+</Warning>
+
+### Conflict Resolution Algorithms
+
+When more than one subgraph returns the same extension field, the router applies the configured algorithm to pick a single value for the merged response. The algorithm operates on top-level keys only and never deep-merges nested values.
+
+1. `first_write`: Keeps the value from the first subgraph that wrote the field. Later writes from other subgraphs to the same field are ignored. This is the default.
+
+2. `last_write`: Keeps the value from the last subgraph that wrote the field. Earlier writes are overwritten.
+
+Fields that are returned by only one subgraph are forwarded as-is regardless of the algorithm.
+
+### Example
+
+Configuration:
+
+```yaml
+subgraph_extension_propagation:
+  enabled: true
+  allowed_extension_fields:
+    - rateLimit
+    - traceId
+  algorithm: first_write
+```
+
+Subgraph responses:
+
+* `employees` returns `extensions: { "traceId": "abc", "rateLimit": { "remaining": 100 } }`
+
+* `products` returns `extensions: { "rateLimit": { "remaining": 50 }, "debug": { "source": "products" } }`
+
+Client response:
+
+```json
+{
+  "data": { "...": "..." },
+  "extensions": {
+    "traceId": "abc",
+    "rateLimit": { "remaining": 100 }
+  }
+}
+```
+
+`traceId` came from `employees`. `rateLimit` came from `employees` because `first_write` keeps the first write. `debug` was dropped because it is not in the allow list. With `algorithm: last_write`, `rateLimit` would instead resolve to `{ "remaining": 50 }` from `products`.
+
+<Note>
+  Subgraph response extensions are merged independently for each client request. State from earlier requests does not leak into later ones.
+</Note>
+
+<Note>
+  This is the inverse direction of [Forward Client Extensions](/router/proxy-capabilities/forward-client-extensions), which forwards the `extensions` object the client sends with the request to each subgraph.
+</Note>

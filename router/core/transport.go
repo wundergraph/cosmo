@@ -194,6 +194,7 @@ type TransportFactory struct {
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
+	spanNameFormatter             SpanNameFormatterFunc
 	enableTraceClient             bool
 }
 
@@ -211,17 +212,24 @@ type TransportOptions struct {
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
+	SpanNameFormatter             SpanNameFormatterFunc
 	EnableTraceClient             bool
 }
 
 type SubscriptionClientOptions struct {
-	PingInterval time.Duration
-	PingTimeout  time.Duration
-	ReadTimeout  time.Duration
-	FrameTimeout time.Duration
+	PingInterval              time.Duration
+	PingTimeout               time.Duration
+	WriteTimeout              time.Duration
+	AckTimeout                time.Duration
+	ReadLimit                 int64
+	DefaultErrorExtensionCode string
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
+	spanNameFormatter := opts.SpanNameFormatter
+	if spanNameFormatter == nil {
+		spanNameFormatter = DefaultSpanNameFormatter
+	}
 	return &TransportFactory{
 		preHandlers:                   opts.PreHandlers,
 		postHandlers:                  opts.PostHandlers,
@@ -232,6 +240,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
 		tracePropagators:              opts.TracePropagators,
+		spanNameFormatter:             spanNameFormatter,
 		circuitBreaker:                opts.CircuitBreaker,
 		enableTraceClient:             opts.EnableTraceClient,
 	}
@@ -243,9 +252,11 @@ func (t TransportFactory) RoundTripper(baseTransport http.RoundTripper) http.Rou
 	}
 
 	otelHttpOptions := []otelhttp.Option{
-		otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+			return t.spanNameFormatter(r)
+		}),
 		otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
-		otelhttp.WithTracerProvider(t.tracerProvider),
+		otelhttp.WithTracerProvider(&trace.FilteringTracerProvider{TracerProvider: t.tracerProvider}),
 	}
 
 	if t.tracePropagators != nil {
@@ -292,8 +303,8 @@ func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {
 	return nil
 }
 
-// SpanNameFormatter formats the span name based on the http request
-func SpanNameFormatter(_ string, r *http.Request) string {
+// DefaultSpanNameFormatter is the built-in span name formatter.
+func DefaultSpanNameFormatter(r *http.Request) string {
 	requestContext := getRequestContext(r.Context())
 
 	if requestContext != nil && requestContext.operation != nil {
@@ -313,6 +324,7 @@ func GetSpanName(operationName string, operationType string) string {
 func CreateGRPCTraceGetter(
 	telemetryAttributeExpressions *attributeExpressions,
 	tracingAttributeExpressions *attributeExpressions,
+	spanNameFormatter SpanNameFormatterFunc,
 ) func(context.Context) (string, otrace.SpanStartEventOption) {
 	return func(ctx context.Context) (string, otrace.SpanStartEventOption) {
 		reqCtx := getRequestContext(ctx)
@@ -351,7 +363,7 @@ func CreateGRPCTraceGetter(
 		// Override http operation protocol with grpc
 		attrs = append(attrs, otel.EngineTransportAttribute, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))
 
-		spanName := SpanNameFormatter("", reqCtx.request)
+		spanName := spanNameFormatter(reqCtx.request)
 		return spanName, otrace.WithAttributes(attrs...)
 	}
 }

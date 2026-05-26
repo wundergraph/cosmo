@@ -74,6 +74,9 @@ export interface Organization {
 export interface Session {
   id: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
   organizations: Organization[];
   invitations: InvitedOrgs[];
 }
@@ -176,6 +179,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       identify({
         id: data.id,
         email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        fullName: data.fullName,
         organizationId: organization.id,
         organizationName: organization.name,
         organizationSlug: organization.slug,
@@ -186,7 +192,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
-        router.pathname !== '/account/invitations'
+        router.pathname !== '/account/invitations' &&
+        // match onboarding URL `/onboarding/1` etc
+        !/^\/onboarding(?:\/\d+)?(?:\/|$)/.test(router.pathname)
       ) {
         const url = new URL(window.location.origin + router.basePath + router.asPath);
         const params = new URLSearchParams(url.search);

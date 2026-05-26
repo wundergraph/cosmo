@@ -53,10 +53,6 @@ headers:
         default: "123"             # Set the value when the header was not set
         algorithm: "last_write"
 
-      - op: "set"
-        name: "X-Custom-Header"
-        value: "my-required-key"
-
   subgraphs:
     specific-subgraph: # Will only affect this subgraph
       response:
@@ -68,7 +64,7 @@ headers:
 
 ### What does the snippet do?
 
-With `all` we address all subgraph requests. Next, we can define several rules on the client's request. The operation `propagate` forwards all matching client request headers to the subgraphs. The operation `set` sets a new header which is forward to the subgraphs.
+With `all` we address all subgraph responses. Next, we can define several rules on the response headers. The operation `propagate` forwards matching subgraph response headers to the client. The operation `set` injects a header value into the subgraph response — for `Cache-Control`, this value is picked up by the cache control algorithm; for other headers, the value is not forwarded to the client unless a separate `propagate` rule matches it.
 
 The `subgraphs` section allows to propagate headers for specific subgraphs. The name must match with the subgraph name in the Studio.
 
@@ -90,12 +86,35 @@ Currently, we support the following header rules:
 
   * `default` - Fallback to this value when the `named`, `matching` or `rename` header could not be found.
 
-* `set` - Sets a header on the request forward to the subgraph. You must set the following values:
-
-  * `name` - The name of the header to set
-
-  * `value` - The value to set for the header
+* **set** - Sets a header on the response from the subgraph to the router.
 
 <Note>
   Go canonicalizes headers by default e.g. `x-my-header` to `X-My-Header.` Write your rule accordingly or use `(?i)``^X-Test-.*` flags to make your regex case insensitive.
 </Note>
+
+## Order of Execution
+
+Response header rules are applied per subgraph fetch in the following order:
+
+1. **`all` rules** — Rules defined under `headers.all.response` are applied first, in the order they are defined.
+2. **Subgraph-specific rules** — Rules defined under `headers.subgraphs.<name>.response` are applied next, in the order they are defined.
+3. **Cache control policy** — The `cache_control_policy` rules run last. This ensures that all `set` rules (both global and subgraph-specific) have already injected their values into the subgraph response before the [restrictive cache control algorithm](/router/proxy-capabilities/adjusting-cache-control) reads them.
+
+Within each scope, rules execute in definition order. This means a `set` rule defined before a `propagate` rule in the same scope will inject the value into the subgraph response before the `propagate` rule evaluates it.
+
+## Response Header Set
+
+The `set` operation injects a header value into the subgraph response, making it appear as if the subgraph returned it. This value is then processed by downstream rules (e.g., `propagate` rules or the [restrictive cache control algorithm](/router/proxy-capabilities/adjusting-cache-control)).
+
+<Warning>
+    The `set` value is **not** forwarded to the client response unless a `propagate` rule explicitly forwards it. We caution against relying on this pattern, as the header will not be propagated if no subgraph is actually called.
+</Warning>
+
+### Configuration
+
+* `name` - The name of the header to set
+* `value` - The value to set for the header
+
+### Setting Cache Control on a Subgraph Response
+
+While users can use `set` on to set `Cache-Control` headers on subgraph responses, we instead recommend using the [`cache_control_policy` configuration](/router/proxy-capabilities/adjusting-cache-control).

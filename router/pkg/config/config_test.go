@@ -124,6 +124,59 @@ poll_interval: 11s
 	require.Equal(t, time.Second*11, cfg.Config.PollInterval)
 }
 
+func TestForceUnauthenticatedRequestTracingConfigLoading(t *testing.T) {
+	t.Run("defaults to false", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.EngineExecutionConfiguration.ForceUnauthenticatedRequestTracing)
+	})
+
+	t.Run("can be enabled from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+engine:
+  force_unauthenticated_request_tracing: true
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.EngineExecutionConfiguration.ForceUnauthenticatedRequestTracing)
+	})
+
+	t.Run("yaml value takes precedence over env", func(t *testing.T) {
+		t.Setenv("ENGINE_FORCE_UNAUTHENTICATED_REQUEST_TRACING", "false")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+engine:
+  force_unauthenticated_request_tracing: true
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.EngineExecutionConfiguration.ForceUnauthenticatedRequestTracing)
+	})
+}
+
 // Confirms https://github.com/caarlos0/env/issues/354 is fixed
 func TestConfigSlicesHaveDefaults(t *testing.T) {
 	t.Parallel()
@@ -1531,6 +1584,41 @@ authentication:
 `)
 		_, err := LoadConfig([]string{f})
 		require.NoError(t, err)
+	})
+
+	t.Run("scope claim can be configured", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    scope_claim: "scp"
+    jwks:
+      - url: "http://url/valid.json"
+
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "scp", cfg.Config.Authentication.JWT.ScopeClaim)
+	})
+
+	t.Run("verify scope claim defaults to scope", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - url: "http://url/valid.json"
+
+`)
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.Equal(t, "scope", cfg.Config.Authentication.JWT.ScopeClaim)
 	})
 
 	t.Run("verify both secret and url are not allowed together", func(t *testing.T) {
