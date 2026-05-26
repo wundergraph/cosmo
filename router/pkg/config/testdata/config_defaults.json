@@ -554,6 +554,13 @@
       "Enabled": false,
       "ProviderID": "",
       "ObjectPath": ""
+    },
+    "Manifest": {
+      "Path": "",
+      "SkipMissingFeatureFlags": false,
+      "IgnoredFeatureFlags": null,
+      "Watch": false,
+      "WatchInterval": 1000000000
     }
   },
   "SplitConfigPoller": {

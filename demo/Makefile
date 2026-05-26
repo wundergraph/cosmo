@@ -50,3 +50,10 @@ standalone-compose:
 
 standalone-integration: standalone-compose
 	mv ./configWithStandalone.json ../router-tests/testenv/testdata/configWithGRPC.json
+
+.PHONY: build-manifest build-manifest-integration
+build-manifest:
+	python3 build_manifest.py --router-config ./config.json --out ./manifest --cleanup
+
+build-manifest-integration:
+	python3 build_manifest.py --router-config ./config.json --out ../router-tests/testenv/testdata/manifest --cleanup
