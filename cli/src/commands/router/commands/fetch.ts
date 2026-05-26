@@ -62,10 +62,6 @@ export default (opts: BaseCommandOptions) => {
       });
 
       await handleOutput(options.out, options.graphSignKey, result);
-      if (options.graphSignKey) {
-        console.log(pc.green('The signature of the router config matches the local computed signature.'));
-      }
-
       process.exit(0);
     } catch (err) {
       if (err instanceof Error) {
