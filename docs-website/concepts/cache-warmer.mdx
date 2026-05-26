@@ -64,7 +64,7 @@ For detailed information on the configuration, click [here](/router/configuratio
 
 #### Cache Warmer Optimization
 
-Three settings shape warmup throughput: `workers`, `items_per_second`, and `item_delay`. The `timeout`, bounds how long startup will wait for warming to complete. Tune them to balance warm-up speed against system load and deploy time.
+Three settings shape warmup throughput: `workers`, `items_per_second`, and `item_delay`. The `timeout` bounds how long startup will wait for warmup to complete. Tune them to balance warm-up speed against system load and deploy time.
 
 ```yaml
 cache_warmup:
