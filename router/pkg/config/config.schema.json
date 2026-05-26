@@ -577,7 +577,6 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "default": false,
                   "description": "Enable TLS for all gRPC subgraph connections."
                 },
                 "cert_file": {
@@ -616,7 +615,6 @@
                 "properties": {
                   "enabled": {
                     "type": "boolean",
-                    "default": false,
                     "description": "Enable TLS for this gRPC subgraph connection."
                   },
                   "cert_file": {
