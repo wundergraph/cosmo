@@ -1,15 +1,12 @@
-import { readFileSync, readSync, rmSync } from 'node:fs';
+import { readFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { Command } from 'commander';
-import { beforeEach, afterEach, describe, expect, onTestFinished, test, vi, type MockInstance } from 'vitest';
-import { type PartialMessage } from '@bufbuild/protobuf';
+import { describe, expect, test } from 'vitest';
 import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { CheckSubgraphSchemaResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { resolve } from 'pathe';
-import { config } from '../../src/core/config.js';
 import ComposeCommand from '../../src/commands/router/commands/compose.js';
 import { Client } from '../../src/core/client/client.js';
 
@@ -26,16 +23,21 @@ describe('router compose command', () => {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
 
-    const outputFile = join(tmpdir(), 'router-config.json');
+    const outputDir = join(tmpdir(), 'router-config');
+    const outputFile = join(outputDir, 'router-config.json');
+    if (!existsSync(outputDir)) {
+      await mkdir(outputDir);
+    }
+
     const program = new Command();
 
     program.addCommand(ComposeCommand({ client }));
-    program.parse(['compose', '-i', resolve('./test/testdata/compose.yaml'), '-o', outputFile], {
+    await program.parseAsync(['compose', '-i', resolve('./test/testdata/compose.yaml'), '-o', outputFile], {
       from: 'user',
     });
 
     // The output file must match the expected snapshot
-    const content = readFileSync(outputFile, 'utf8');
+    const content = await readFile(outputFile, 'utf8');
     await expect(content).toMatchFileSnapshot(join(FIXTURES_DIR_PATH, 'router-compose', `router-config.json.snap`));
   });
 
@@ -45,10 +47,14 @@ describe('router compose command', () => {
     };
 
     const outputDir = join(tmpdir(), 'router-config-split');
+    if (!existsSync(outputDir)) {
+      await mkdir(outputDir);
+    }
+
     const program = new Command();
 
     program.addCommand(ComposeCommand({ client }));
-    program.parse(
+    await program.parseAsync(
       ['compose', '-i', resolve('./test/testdata/compose.yaml'), '-o', outputDir, '--split-configs-enabled'],
       {
         from: 'user',
@@ -62,7 +68,7 @@ describe('router compose command', () => {
   });
 });
 
-function expectSplitOutputMatchSnapshot(outputDir: string, name: string) {
-  const content = readFileSync(join(outputDir, name), 'utf8');
-  return expect(content).toMatchFileSnapshot(join(FIXTURES_DIR_PATH, 'router-compose', 'split-config', `${name}.snap`));
+async function expectSplitOutputMatchSnapshot(outputDir: string, name: string) {
+  const content = await readFile(join(outputDir, name), 'utf8');
+  await expect(content).toMatchFileSnapshot(join(FIXTURES_DIR_PATH, 'router-compose', 'split-config', `${name}.snap`));
 }
