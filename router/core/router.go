@@ -1628,17 +1628,6 @@ func (r *Router) startWithStaticExecutionConfig(ctx context.Context) error {
 
 	r.startPQLPoller(ctx)
 
-	defer func() {
-		r.httpServer.healthcheck.SetReady(true)
-
-		r.logger.Info("Server initialized and ready to serve requests",
-			zap.String("listen_addr", r.listenAddr),
-			zap.Bool("playground", r.playgroundConfig.Enabled),
-			zap.Bool("introspection", r.introspection),
-			zap.String("config_version", r.staticExecutionConfig.Version),
-		)
-	}()
-
 	var (
 		w          watcher.WatcherFunc
 		watcherErr error
@@ -1663,6 +1652,15 @@ func (r *Router) startWithStaticExecutionConfig(ctx context.Context) error {
 			return fmt.Errorf("failed to create manifest config watcher: %w", watcherErr)
 		}
 	}
+
+	r.httpServer.healthcheck.SetReady(true)
+
+	r.logger.Info("Server initialized and ready to serve requests",
+		zap.String("listen_addr", r.listenAddr),
+		zap.Bool("playground", r.playgroundConfig.Enabled),
+		zap.Bool("introspection", r.introspection),
+		zap.String("config_version", r.staticExecutionConfig.Version),
+	)
 
 	if w != nil {
 		go func() {

@@ -12,25 +12,6 @@ import shutil
 from typing import Any
 
 
-# Sketches of the shape of the router config consumed below. Kept as comments
-# rather than real TypedDicts because we never validate against them — they
-# only exist to help a reader understand the JSON structure.
-#
-# class EngineConfiguration(TypedDict):
-#     id: str
-#
-# class Subgraph(TypedDict):
-#     id: str
-#     name: str
-#     routing_url: str
-#
-# class ExecutionConfig(TypedDict):
-#     engine_config: EngineConfiguration
-#     version: str
-#     subgraphs: list[Subgraph]
-#     feature_flags: list[FeatureFlag]
-
-
 class ManifestBuilder:
     """Splits a single router execution config into the manifest layout the
     router expects when `WithManifestConfig` is used:

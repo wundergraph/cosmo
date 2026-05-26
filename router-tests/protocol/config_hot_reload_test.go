@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -128,10 +129,11 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			var done atomic.Uint32
+			var wg sync.WaitGroup
+			wg.Add(2)
 
 			go func() {
-				defer done.Add(1)
+				defer wg.Done()
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
@@ -142,7 +144,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			}()
 
 			go func() {
-				defer done.Add(1)
+				defer wg.Done()
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
@@ -170,9 +172,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			// Ensure that all requests are served successfully
-			require.Eventually(t, func() bool {
-				return done.Load() == 2
-			}, time.Second*5, time.Millisecond*100)
+			wg.Wait()
 		})
 	})
 
@@ -372,10 +372,11 @@ func TestConfigHotReloadFile(t *testing.T) {
 			require.Equal(t, res.Response.StatusCode, 200)
 			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
 
-			var done atomic.Uint32
+			var wg sync.WaitGroup
+			wg.Add(2)
 
 			go func() {
-				defer done.Add(1)
+				defer wg.Done()
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { hello }`,
@@ -385,7 +386,7 @@ func TestConfigHotReloadFile(t *testing.T) {
 			}()
 
 			go func() {
-				defer done.Add(1)
+				defer wg.Done()
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { hello }`,
@@ -406,9 +407,7 @@ func TestConfigHotReloadFile(t *testing.T) {
 			}, 2*time.Second, 100*time.Millisecond)
 
 			// Ensure that all requests are served successfully
-			require.Eventually(t, func() bool {
-				return done.Load() == 2
-			}, time.Second*5, time.Millisecond*100)
+			wg.Wait()
 		})
 	})
 
@@ -512,10 +511,11 @@ func TestConfigHotReloadManifest(t *testing.T) {
 			require.Equal(t, res.Response.StatusCode, 200)
 			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
 
-			var done atomic.Uint32
+			var wg sync.WaitGroup
+			wg.Add(2)
 
 			go func() {
-				defer done.Add(1)
+				defer wg.Done()
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { hello }`,
@@ -525,7 +525,7 @@ func TestConfigHotReloadManifest(t *testing.T) {
 			}()
 
 			go func() {
-				defer done.Add(1)
+				defer wg.Done()
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { hello }`,
@@ -546,9 +546,7 @@ func TestConfigHotReloadManifest(t *testing.T) {
 			}, 2*time.Second, 100*time.Millisecond)
 
 			// Ensure that all requests are served successfully
-			require.Eventually(t, func() bool {
-				return done.Load() == 2
-			}, time.Second*5, time.Millisecond*100)
+			wg.Wait()
 		})
 	})
 
@@ -967,8 +965,8 @@ func writeTestManifest(t *testing.T, version string, manifestDir string) {
 
 	require.NoError(t, os.MkdirAll(filepath.Join(manifestDir, "feature-flags"), 0o755))
 
-	writeTestMapper(t, manifestDir, version, nil)
 	writeBaseGraphConfig(t, version, manifestDir)
+	writeTestMapper(t, manifestDir, version, nil)
 }
 
 func writeTestMapper(t *testing.T, manifestDir string, baseVersion string, featureFlags map[string]string) {

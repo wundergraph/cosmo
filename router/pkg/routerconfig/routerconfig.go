@@ -75,6 +75,10 @@ type AssembleConfigRules struct {
 // The feature flag configs are the feature-flags/<feature-flag-name>.json files in the manifest directory.
 // The rules are the rules for skipping missing feature flags and ignored feature flags.
 func AssembleConfig(basePath string, mapper map[string]string, rules *AssembleConfigRules) (*nodev1.RouterConfig, error) {
+	if rules == nil {
+		rules = &AssembleConfigRules{}
+	}
+
 	baseConfigPath := filepath.Join(basePath, "latest.json")
 
 	_, err := os.Stat(baseConfigPath)
@@ -125,6 +129,8 @@ func AssembleConfig(basePath string, mapper map[string]string, rules *AssembleCo
 
 				return nil, fmt.Errorf("feature flag config not found: %w", err)
 			}
+
+			return nil, fmt.Errorf("failed to read feature flag config %q: %w", key, err)
 		}
 
 		featureFlagConfig, err := execution_config.UnmarshalConfig(fileBytes)
