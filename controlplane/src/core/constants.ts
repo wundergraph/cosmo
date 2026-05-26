@@ -57,4 +57,4 @@ export const organizationSchema = z.object({
 
 export const defaultRetentionLimitInDays = 7;
 
-export const featuresToSurfaceWithGraphToken: FeatureIds[] = ['split-config-loading'];
+export const graphTokenFeatures: FeatureIds[] = ['split-config-loading'];

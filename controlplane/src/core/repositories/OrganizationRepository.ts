@@ -40,7 +40,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import {
   delayForManualOrgDeletionInDays,
   delayForOrgAuditLogsDeletionInDays,
-  featuresToSurfaceWithGraphToken,
+  graphTokenFeatures,
 } from '../constants.js';
 import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
@@ -1711,7 +1711,7 @@ export class OrganizationRepository {
 
     const orgFeatures = await this.getFeatures({ organizationId });
     for (const feature of orgFeatures) {
-      if (featuresToSurfaceWithGraphToken.includes(feature.id) && feature.enabled) {
+      if (graphTokenFeatures.includes(feature.id) && feature.enabled) {
         features.push('split-config-loading');
       }
     }
