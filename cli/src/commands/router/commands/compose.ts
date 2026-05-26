@@ -191,7 +191,7 @@ export default (opts: BaseCommandOptions) => {
 
     if (options.out) {
       options.out = resolve(options.out);
-      if (!existsSync(options.out)) {
+      if (options.splitConfigsEnabled && !existsSync(options.out)) {
         await mkdir(options.out, { recursive: true });
       }
     }
