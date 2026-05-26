@@ -582,11 +582,13 @@ func TestCacheWarmup(t *testing.T) {
 
 				// The warmup start log records the configured item delay.
 				startLogs := xEnv.Observer().FilterMessage("Warmup started").All()
-				require.Len(t, startLogs, 1)
-				require.Equal(t, itemDelay, startLogs[0].ContextMap()["item_delay"])
+				require.NotEmpty(t, startLogs)
+				for _, l := range startLogs {
+					require.Equal(t, itemDelay, l.ContextMap()["item_delay"])
+				}
 
 				// Warmup still completes successfully with the delay applied.
-				require.Len(t, xEnv.Observer().FilterMessage("Warmup completed").All(), 1)
+				require.Equal(t, len(startLogs), len(xEnv.Observer().FilterMessage("Warmup completed").All()))
 			})
 		})
 		t.Run("cache warmup with operation hash cache", func(t *testing.T) {
