@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.uber.org/ratelimit"
@@ -37,9 +38,19 @@ type CacheWarmupConfig struct {
 	FallbackSource CacheWarmupSource
 	Workers        int
 	ItemsPerSecond int
+	ItemDelay      time.Duration
 	Timeout        time.Duration
 	Processor      CacheWarmupProcessor
 	AfterOperation func(item *CacheWarmupOperationPlanResult)
+}
+
+// Validate checks cache warmup options that can't be expressed in the JSON schema.
+// Callers should treat a non-nil error as a fatal config error and refuse to start.
+func (c *CacheWarmupConfig) Validate() error {
+	if c.ItemDelay < 0 {
+		return fmt.Errorf("the warmup config value for item_delay must not be negative, got %s", c.ItemDelay)
+	}
+	return nil
 }
 
 func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
@@ -49,6 +60,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 		fallbackSource: cfg.FallbackSource,
 		workers:        cfg.Workers,
 		itemsPerSecond: cfg.ItemsPerSecond,
+		itemDelay:      cfg.ItemDelay,
 		timeout:        cfg.Timeout,
 		processor:      cfg.Processor,
 		afterOperation: cfg.AfterOperation,
@@ -59,12 +71,16 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	if cfg.ItemsPerSecond < 1 {
 		w.itemsPerSecond = 0
 	}
+	if cfg.ItemDelay < 0 {
+		w.itemDelay = 0
+	}
 	if cfg.Timeout <= 0 {
 		w.timeout = time.Second * 30
 	}
 	w.log.Info("Warmup started",
 		zap.Int("workers", cfg.Workers),
 		zap.Int("items_per_second", cfg.ItemsPerSecond),
+		zap.Duration("item_delay", cfg.ItemDelay),
 		zap.Duration("timeout", cfg.Timeout),
 	)
 	start := time.Now()
@@ -97,6 +113,7 @@ type cacheWarmup struct {
 	fallbackSource CacheWarmupSource
 	workers        int
 	itemsPerSecond int
+	itemDelay      time.Duration
 	timeout        time.Duration
 	processor      CacheWarmupProcessor
 	afterOperation func(item *CacheWarmupOperationPlanResult)
@@ -177,6 +194,14 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 
 					if err == nil && res != nil && w.afterOperation != nil {
 						w.afterOperation(res)
+					}
+
+					if w.itemDelay > 0 {
+						select {
+						case <-done:
+							return
+						case <-time.After(w.itemDelay):
+						}
 					}
 
 					select {

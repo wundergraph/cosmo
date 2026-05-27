@@ -25468,16 +25468,6 @@ export class GetOnboardingResponse extends Message<GetOnboardingResponse> {
    */
   enabled = false;
 
-  /**
-   * @generated from field: bool slack = 6;
-   */
-  slack = false;
-
-  /**
-   * @generated from field: bool email = 7;
-   */
-  email = false;
-
   constructor(data?: PartialMessage<GetOnboardingResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -25490,8 +25480,6 @@ export class GetOnboardingResponse extends Message<GetOnboardingResponse> {
     { no: 3, name: "finishedAt", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "federatedGraphsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "slack", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 7, name: "email", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOnboardingResponse {
@@ -25515,16 +25503,6 @@ export class GetOnboardingResponse extends Message<GetOnboardingResponse> {
  * @generated from message wg.cosmo.platform.v1.CreateOnboardingRequest
  */
 export class CreateOnboardingRequest extends Message<CreateOnboardingRequest> {
-  /**
-   * @generated from field: bool slack = 1;
-   */
-  slack = false;
-
-  /**
-   * @generated from field: bool email = 2;
-   */
-  email = false;
-
   constructor(data?: PartialMessage<CreateOnboardingRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -25533,8 +25511,6 @@ export class CreateOnboardingRequest extends Message<CreateOnboardingRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.CreateOnboardingRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "slack", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 2, name: "email", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOnboardingRequest {
@@ -25573,16 +25549,6 @@ export class CreateOnboardingResponse extends Message<CreateOnboardingResponse> 
    */
   federatedGraphsCount = 0;
 
-  /**
-   * @generated from field: bool slack = 4;
-   */
-  slack = false;
-
-  /**
-   * @generated from field: bool email = 5;
-   */
-  email = false;
-
   constructor(data?: PartialMessage<CreateOnboardingResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -25594,8 +25560,6 @@ export class CreateOnboardingResponse extends Message<CreateOnboardingResponse> 
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "finishedAt", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "federatedGraphsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 4, name: "slack", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 5, name: "email", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOnboardingResponse {

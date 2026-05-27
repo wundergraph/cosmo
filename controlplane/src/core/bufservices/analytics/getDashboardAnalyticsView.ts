@@ -77,15 +77,20 @@ export function getDashboardAnalyticsView(
       published: true,
     });
     const view = await analyticsDashRepo.getView(graph.id, authContext.organizationId, timeFilters, subgraphs);
+    const isStaleData =
+      !view.mostRequestedOperations.ok ||
+      !view.requestSeries.ok ||
+      !view.subgraphMetrics.ok ||
+      !view.federatedGraphMetrics.ok;
 
     return {
       response: {
-        code: EnumStatusCode.OK,
+        code: isStaleData ? EnumStatusCode.WARN_PARTIAL_DATA : EnumStatusCode.OK,
       },
-      mostRequestedOperations: view.mostRequestedOperations,
-      requestSeries: view.requestSeries,
-      subgraphMetrics: view.subgraphMetrics,
-      federatedGraphMetrics: view.federatedGraphMetrics,
+      mostRequestedOperations: view.mostRequestedOperations.operations,
+      requestSeries: view.requestSeries.series,
+      subgraphMetrics: view.subgraphMetrics.metrics,
+      federatedGraphMetrics: view.federatedGraphMetrics.view,
     };
   });
 }
