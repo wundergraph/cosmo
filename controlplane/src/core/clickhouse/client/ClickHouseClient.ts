@@ -318,6 +318,43 @@ export class ClickHouseClient {
   }
 
   /**
+   * Promise based query with fallback. Returns data or falls back to empty array on ClickHouseUnavailableError.
+   * Type T is inferred from the defaultValue parameter (a sample/default element).
+   * The API for querying is same as [queryPromise].
+   */
+  public async queryPromiseWithDefault<T = any>(
+    query: string,
+    options: {
+      params?: Record<string, string | number | boolean>;
+      defaultValue?: T extends string ? string | T[] : T[];
+    },
+  ) {
+    this._validateQuery<T>(query);
+
+    try {
+      const maybeData = await this._queryPromise<T>(query, options.params);
+
+      return {
+        data: maybeData,
+        ok: true,
+      };
+    } catch (err) {
+      if (err instanceof ClickHouseUnavailableError) {
+        this.options?.logger?.warn(
+          { err },
+          'ClickHouse unavailable, returning default value from queryPromiseWithDefault',
+        );
+        return {
+          data: options.defaultValue ?? [],
+          ok: false,
+        };
+      }
+
+      throw err;
+    }
+  }
+
+  /**
    * Insert data to table (Observable)
    */
   public insert<T = any>(table: string, data: T[]) {
