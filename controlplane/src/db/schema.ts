@@ -2665,8 +2665,8 @@ export const onboarding = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
     version: integer('version').notNull().default(1),
-    slack: boolean('slack').notNull().default(false),
-    email: boolean('email').notNull().default(false),
+    slack: boolean('slack').notNull().default(true),
+    email: boolean('email').notNull().default(true),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),

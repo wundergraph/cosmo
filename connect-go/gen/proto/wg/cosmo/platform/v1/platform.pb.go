@@ -29318,8 +29318,6 @@ type GetOnboardingResponse struct {
 	FinishedAt           *string                `protobuf:"bytes,3,opt,name=finishedAt,proto3,oneof" json:"finishedAt,omitempty"`
 	FederatedGraphsCount int32                  `protobuf:"varint,4,opt,name=federatedGraphsCount,proto3" json:"federatedGraphsCount,omitempty"`
 	Enabled              bool                   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Slack                bool                   `protobuf:"varint,6,opt,name=slack,proto3" json:"slack,omitempty"`
-	Email                bool                   `protobuf:"varint,7,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -29382,24 +29380,8 @@ func (x *GetOnboardingResponse) GetEnabled() bool {
 	return false
 }
 
-func (x *GetOnboardingResponse) GetSlack() bool {
-	if x != nil {
-		return x.Slack
-	}
-	return false
-}
-
-func (x *GetOnboardingResponse) GetEmail() bool {
-	if x != nil {
-		return x.Email
-	}
-	return false
-}
-
 type CreateOnboardingRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Slack         bool                   `protobuf:"varint,1,opt,name=slack,proto3" json:"slack,omitempty"`
-	Email         bool                   `protobuf:"varint,2,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -29434,27 +29416,11 @@ func (*CreateOnboardingRequest) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{449}
 }
 
-func (x *CreateOnboardingRequest) GetSlack() bool {
-	if x != nil {
-		return x.Slack
-	}
-	return false
-}
-
-func (x *CreateOnboardingRequest) GetEmail() bool {
-	if x != nil {
-		return x.Email
-	}
-	return false
-}
-
 type CreateOnboardingResponse struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Response             *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
 	FinishedAt           *string                `protobuf:"bytes,2,opt,name=finishedAt,proto3,oneof" json:"finishedAt,omitempty"`
 	FederatedGraphsCount int32                  `protobuf:"varint,3,opt,name=federatedGraphsCount,proto3" json:"federatedGraphsCount,omitempty"`
-	Slack                bool                   `protobuf:"varint,4,opt,name=slack,proto3" json:"slack,omitempty"`
-	Email                bool                   `protobuf:"varint,5,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -29508,20 +29474,6 @@ func (x *CreateOnboardingResponse) GetFederatedGraphsCount() int32 {
 		return x.FederatedGraphsCount
 	}
 	return 0
-}
-
-func (x *CreateOnboardingResponse) GetSlack() bool {
-	if x != nil {
-		return x.Slack
-	}
-	return false
-}
-
-func (x *CreateOnboardingResponse) GetEmail() bool {
-	if x != nil {
-		return x.Email
-	}
-	return false
 }
 
 type FinishOnboardingRequest struct {
@@ -34439,28 +34391,22 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x13compositionWarnings\x18\x04 \x03(\v2(.wg.cosmo.platform.v1.CompositionWarningR\x13compositionWarnings\x12Q\n" +
 	"\verrorCounts\x18\x05 \x01(\v2*.wg.cosmo.platform.v1.SubgraphPublishStatsH\x00R\verrorCounts\x88\x01\x01B\x0e\n" +
 	"\f_errorCounts\"\x16\n" +
-	"\x14GetOnboardingRequest\"\x81\x02\n" +
+	"\x14GetOnboardingRequest\"\xd5\x01\n" +
 	"\x15GetOnboardingResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12#\n" +
 	"\n" +
 	"finishedAt\x18\x03 \x01(\tH\x00R\n" +
 	"finishedAt\x88\x01\x01\x122\n" +
 	"\x14federatedGraphsCount\x18\x04 \x01(\x05R\x14federatedGraphsCount\x12\x18\n" +
-	"\aenabled\x18\x05 \x01(\bR\aenabled\x12\x14\n" +
-	"\x05slack\x18\x06 \x01(\bR\x05slack\x12\x14\n" +
-	"\x05email\x18\a \x01(\bR\x05emailB\r\n" +
-	"\v_finishedAt\"E\n" +
-	"\x17CreateOnboardingRequest\x12\x14\n" +
-	"\x05slack\x18\x01 \x01(\bR\x05slack\x12\x14\n" +
-	"\x05email\x18\x02 \x01(\bR\x05email\"\xea\x01\n" +
+	"\aenabled\x18\x05 \x01(\bR\aenabledB\r\n" +
+	"\v_finishedAt\"\x19\n" +
+	"\x17CreateOnboardingRequest\"\xbe\x01\n" +
 	"\x18CreateOnboardingResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12#\n" +
 	"\n" +
 	"finishedAt\x18\x02 \x01(\tH\x00R\n" +
 	"finishedAt\x88\x01\x01\x122\n" +
-	"\x14federatedGraphsCount\x18\x03 \x01(\x05R\x14federatedGraphsCount\x12\x14\n" +
-	"\x05slack\x18\x04 \x01(\bR\x05slack\x12\x14\n" +
-	"\x05email\x18\x05 \x01(\bR\x05emailB\r\n" +
+	"\x14federatedGraphsCount\x18\x03 \x01(\x05R\x14federatedGraphsCountB\r\n" +
 	"\v_finishedAt\"\x19\n" +
 	"\x17FinishOnboardingRequest\"\xaa\x01\n" +
 	"\x18FinishOnboardingResponse\x12:\n" +

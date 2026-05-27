@@ -636,6 +636,48 @@ const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStale
   );
 };
 
+function OnboardingEmptyState() {
+  const { onboarding, enabled, currentStep } = useOnboarding();
+
+  if (!enabled || !onboarding || onboarding.federatedGraphsCount !== 0) {
+    return null;
+  }
+
+  const emptyState =
+    currentStep !== undefined && !onboarding.finishedAt ? (
+      <EmptyState
+        className="h-auto"
+        icon={<BookmarkIcon />}
+        title="Dive right back in"
+        description="Want to finish the onboarding and create your first federated graph?"
+        actions={
+          <Button asChild>
+            <Link href={`/onboarding/${currentStep}`}>Continue</Link>
+          </Button>
+        }
+      />
+    ) : (
+      <EmptyState
+        className="h-auto"
+        icon={<BoltIcon />}
+        title="Need help?"
+        description="Take a quick 5-minute tour to help you set up your first federated graph"
+        actions={
+          <Button asChild>
+            <Link href={`/onboarding/1`}>Start here</Link>
+          </Button>
+        }
+      />
+    );
+
+  return (
+    <>
+      {emptyState}
+      <span className="text-sm font-bold">OR</span>
+    </>
+  );
+}
+
 export const FederatedGraphsCards = ({
   graphs,
   refetch,
@@ -649,7 +691,6 @@ export const FederatedGraphsCards = ({
   const [token, setToken] = useState<string | undefined>();
   const [isMigrating, setIsMigrating] = useState(false);
   const checkUserAccess = useCheckUserAccess();
-  const { onboarding, enabled, currentStep } = useOnboarding();
 
   useEffect(() => {
     if (isMigrationSuccess) {
@@ -658,41 +699,18 @@ export const FederatedGraphsCards = ({
     }
   }, [isMigrationSuccess]);
 
-  if (enabled && onboarding && onboarding.federatedGraphsCount === 0) {
-    return currentStep !== undefined && !onboarding.finishedAt ? (
-      <EmptyState
-        icon={<BookmarkIcon />}
-        title="Dive right back in"
-        description="Want to finish the onboarding and create your first federated graph?"
-        actions={
-          <Button asChild>
-            <Link href={`/onboarding/${currentStep}`}>Continue</Link>
-          </Button>
-        }
-      />
-    ) : (
-      <EmptyState
-        icon={<BoltIcon />}
-        title="Need help?"
-        description="Take a quick 5-minute tour to help you set up your first federated graph"
-        actions={
-          <Button asChild>
-            <Link href={`/onboarding/1`}>Start here</Link>
-          </Button>
-        }
-      />
-    );
-  }
-
   if (!graphs || graphs.length === 0)
     return (
-      <Empty
-        refetch={refetch}
-        setIsMigrationSuccess={setIsMigrationSuccess}
-        setToken={setToken}
-        isMigrating={isMigrating}
-        setIsMigrating={setIsMigrating}
-      />
+      <div className="flex flex-col items-center gap-y-8">
+        <OnboardingEmptyState />
+        <Empty
+          refetch={refetch}
+          setIsMigrationSuccess={setIsMigrationSuccess}
+          setToken={setToken}
+          isMigrating={isMigrating}
+          setIsMigrating={setIsMigrating}
+        />
+      </div>
     );
 
   return (
