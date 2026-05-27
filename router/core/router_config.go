@@ -1,7 +1,6 @@
 package core
 
 import (
-	"crypto/tls"
 	"net/http"
 	"time"
 
@@ -120,9 +119,7 @@ type Config struct {
 	accessLogsConfig                *AccessLogsConfig
 	// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 	localhostFallbackInsideDocker bool
-	tlsServerConfig               *tls.Config
-	tlsConfig                     *TlsConfig
-	subgraphTLSConfiguration      config.ClientTLSConfiguration
+	tls                           TlsConfig
 	telemetryAttributes           []config.CustomAttribute
 	tracePropagators              []propagation.TextMapPropagator
 	compositePropagator           propagation.TextMapPropagator
@@ -260,8 +257,8 @@ func (c *Config) Usage() map[string]any {
 	usage["development_mode"] = c.developmentMode
 	usage["access_logs"] = c.accessLogsConfig != nil
 	usage["localhost_fallback_inside_docker"] = c.localhostFallbackInsideDocker
-	usage["tls_server"] = c.tlsServerConfig != nil
-	usage["tls_client"] = c.tlsConfig != nil
+	usage["tls_server"] = c.tls.settings.Server.Enabled
+	usage["tls_client"] = c.tls.settings.Client.Enabled()
 	usage["self_register"] = c.selfRegister != nil
 	usage["registration_info"] = c.registrationInfo != nil
 

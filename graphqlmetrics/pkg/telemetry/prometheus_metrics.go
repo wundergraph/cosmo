@@ -5,6 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/otlptranslator"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
@@ -26,7 +27,8 @@ func (c *Config) NewPrometheusMeterProvider(ctx context.Context) (*sdkmetric.Met
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	promExporter, err := otelprom.New(
-		otelprom.WithoutUnits(),
+		// see: https://github.com/open-telemetry/opentelemetry-specification/blob/v1.48.0/specification/metrics/sdk_exporters/prometheus.md#configuration
+		otelprom.WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 		otelprom.WithRegisterer(registry),
 	)
 

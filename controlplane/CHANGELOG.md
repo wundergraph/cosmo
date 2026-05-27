@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.227.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.226.0...controlplane@0.227.0) (2026-05-27)
+
+### Features
+
+* declutter step 1 in the onboarding + new empty state ([#2888](https://github.com/wundergraph/cosmo/issues/2888)) ([89635b7](https://github.com/wundergraph/cosmo/commit/89635b75e4cb6ff893d6c4fbbe2b541cfc0dfa12)) (@comatory)
+
+# [0.226.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.225.1...controlplane@0.226.0) (2026-05-27)
+
+### Features
+
+* studio handles analytics downtime gracefully ([#2878](https://github.com/wundergraph/cosmo/issues/2878)) ([716b786](https://github.com/wundergraph/cosmo/commit/716b786bd55008292015ec8950182aa61e98cb16)) (@comatory)
+
+## [0.225.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.225.0...controlplane@0.225.1) (2026-05-20)
+
+### Bug Fixes
+
+* continuous healthcheck for ClickHouse + HTTP status code for unavailability ([#2875](https://github.com/wundergraph/cosmo/issues/2875)) ([be9d015](https://github.com/wundergraph/cosmo/commit/be9d015228db043b3925b08c4a85065acc26a18b)) (@comatory)
+
+# [0.225.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.2...controlplane@0.225.0) (2026-05-19)
+
+### Features
+
+* add PostHog name properties to identify call ([#2857](https://github.com/wundergraph/cosmo/issues/2857)) ([662d279](https://github.com/wundergraph/cosmo/commit/662d279530eb270beef8e0e2ed2a218124ae9430)) (@GrueneKatze)
+
+## [0.224.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.1...controlplane@0.224.2) (2026-05-18)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.224.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.224.0...controlplane@0.224.1) (2026-05-14)
 
 **Note:** Version bump only for package controlplane

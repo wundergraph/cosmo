@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.172.0](https://github.com/wundergraph/cosmo/compare/studio@0.171.0...studio@0.172.0) (2026-05-27)
+
+### Features
+
+* declutter step 1 in the onboarding + new empty state ([#2888](https://github.com/wundergraph/cosmo/issues/2888)) ([89635b7](https://github.com/wundergraph/cosmo/commit/89635b75e4cb6ff893d6c4fbbe2b541cfc0dfa12)) (@comatory)
+
+# [0.171.0](https://github.com/wundergraph/cosmo/compare/studio@0.170.0...studio@0.171.0) (2026-05-27)
+
+### Features
+
+* studio handles analytics downtime gracefully ([#2878](https://github.com/wundergraph/cosmo/issues/2878)) ([716b786](https://github.com/wundergraph/cosmo/commit/716b786bd55008292015ec8950182aa61e98cb16)) (@comatory)
+
+# [0.170.0](https://github.com/wundergraph/cosmo/compare/studio@0.169.6...studio@0.170.0) (2026-05-19)
+
+### Features
+
+* add PostHog name properties to identify call ([#2857](https://github.com/wundergraph/cosmo/issues/2857)) ([662d279](https://github.com/wundergraph/cosmo/commit/662d279530eb270beef8e0e2ed2a218124ae9430)) (@GrueneKatze)
+
+## [0.169.6](https://github.com/wundergraph/cosmo/compare/studio@0.169.5...studio@0.169.6) (2026-05-18)
+
+### Bug Fixes
+
+* **studio:** scope playground storage by graph ([#2871](https://github.com/wundergraph/cosmo/issues/2871)) ([0183ee3](https://github.com/wundergraph/cosmo/commit/0183ee38558a3368854971dc667809b7214e1fa2)) (@comatory)
+
 ## [0.169.5](https://github.com/wundergraph/cosmo/compare/studio@0.169.4...studio@0.169.5) (2026-05-14)
 
 ### Bug Fixes

@@ -143,17 +143,13 @@ type (
 		Method  IPAnonymizationMethod
 	}
 
-	TlsClientAuthConfig struct {
-		Required bool
-		CertFile string
-	}
-
 	TlsConfig struct {
-		Enabled  bool
-		CertFile string
-		KeyFile  string
+		settings config.TLSConfiguration
 
-		ClientAuth *TlsClientAuthConfig
+		// compiledServerConfig resembles a tls.Config created out of the "settings" field.
+		// It's used for the routers http server.
+		// It's created once during bootstrap and reused during server swap.
+		compiledServerConfig *tls.Config
 	}
 
 	RouterConfigPollerConfig struct {
@@ -316,12 +312,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
-	r.headerRules = AddCacheControlPolicyToRules(r.headerRules, r.cacheControlPolicy)
+	postRules := CreateCacheControlPolicyHeaderRules(r.cacheControlPolicy)
 	var err error
-	r.headerPropagation, err = NewHeaderPropagation(r.headerRules)
+	r.headerPropagation, err = NewHeaderPropagation(r.headerRules, postRules)
 	if err != nil {
 		return nil, err
 	}
+
 	defaultCorsHeaders := []string{
 		// Common headers
 		"authorization",
@@ -360,8 +357,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultCorsHeaders...))
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
 
-	if r.tlsConfig != nil && r.tlsConfig.Enabled {
+	if r.tls.settings.Server.Enabled {
 		r.baseURL = fmt.Sprintf("https://%s", r.listenAddr)
+		r.tls.compiledServerConfig, err = r.serverTLSConfig()
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct tls config: %w", err)
+		}
 	} else {
 		r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
 	}
@@ -371,53 +372,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		return nil, fmt.Errorf("failed to construct graphql endpoint url: %w", err)
 	}
 	r.graphqlEndpointURL = graphqlEndpointURL
-
-	if r.tlsConfig != nil && r.tlsConfig.Enabled {
-		if r.tlsConfig.CertFile == "" {
-			return nil, errors.New("tls cert file not provided")
-		}
-
-		if r.tlsConfig.KeyFile == "" {
-			return nil, errors.New("tls key file not provided")
-		}
-
-		var caCertPool *x509.CertPool
-		clientAuthMode := tls.NoClientCert
-
-		if r.tlsConfig.ClientAuth != nil && r.tlsConfig.ClientAuth.CertFile != "" {
-			caCert, err := os.ReadFile(r.tlsConfig.ClientAuth.CertFile)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read cert file: %w", err)
-			}
-
-			// Create a CA an empty cert pool and add the CA cert to it to serve as authority to validate client certs
-			caPool := x509.NewCertPool()
-			if ok := caPool.AppendCertsFromPEM(caCert); !ok {
-				return nil, errors.New("failed to append cert to pool")
-			}
-			caCertPool = caPool
-
-			if r.tlsConfig.ClientAuth.Required {
-				clientAuthMode = tls.RequireAndVerifyClientCert
-			} else {
-				clientAuthMode = tls.VerifyClientCertIfGiven
-			}
-
-			r.logger.Debug("Client auth enabled", zap.String("mode", clientAuthMode.String()))
-		}
-
-		// Load the server cert and private key
-		cer, err := tls.LoadX509KeyPair(r.tlsConfig.CertFile, r.tlsConfig.KeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
-		}
-
-		r.tlsServerConfig = &tls.Config{
-			ClientCAs:    caCertPool,
-			Certificates: []tls.Certificate{cer},
-			ClientAuth:   clientAuthMode,
-		}
-	}
 
 	if r.traceConfig.Enabled {
 		if len(r.traceConfig.Propagators) > 0 {
@@ -436,7 +390,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 				r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
 				r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
 					Endpoint: endpoint,
-					Exporter: otelconfig.ExporterOLTPHTTP,
+					Exporter: otelconfig.ExporterOTLPHTTP,
 					HTTPPath: "/v1/traces",
 					Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 				})
@@ -451,7 +405,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &rmetric.OpenTelemetryExporter{
 				Endpoint: endpoint,
-				Exporter: otelconfig.ExporterOLTPHTTP,
+				Exporter: otelconfig.ExporterOTLPHTTP,
 				HTTPPath: "/v1/metrics",
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
@@ -602,6 +556,63 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	return r, nil
+}
+
+// serverTLSConfig creates a new tls.Config from r.tls.Server.Settings.
+// It's meant to be used as the routers http server tls configuration.
+// If TLS is not configured it returns nil.
+// If settings are invalid or a config can't be created it returns an error.
+func (r *Router) serverTLSConfig() (*tls.Config, error) {
+	serverTLS := r.tls.settings.Server
+
+	if !serverTLS.Enabled {
+		return nil, nil
+	}
+
+	if serverTLS.CertFile == "" {
+		return nil, errors.New("tls cert file not provided")
+	}
+
+	if serverTLS.KeyFile == "" {
+		return nil, errors.New("tls key file not provided")
+	}
+
+	var caCertPool *x509.CertPool
+	clientAuthMode := tls.NoClientCert
+
+	if serverTLS.ClientAuth.CertFile != "" {
+		caCert, err := os.ReadFile(serverTLS.ClientAuth.CertFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read cert file: %w", err)
+		}
+
+		// Create a CA an empty cert pool and add the CA cert to it to serve as authority to validate client certs
+		caPool := x509.NewCertPool()
+		if ok := caPool.AppendCertsFromPEM(caCert); !ok {
+			return nil, errors.New("failed to append cert to pool")
+		}
+		caCertPool = caPool
+
+		if serverTLS.ClientAuth.Required {
+			clientAuthMode = tls.RequireAndVerifyClientCert
+		} else {
+			clientAuthMode = tls.VerifyClientCertIfGiven
+		}
+
+		r.logger.Debug("Client auth enabled", zap.String("mode", clientAuthMode.String()))
+	}
+
+	// Load the server cert and private key
+	cer, err := tls.LoadX509KeyPair(serverTLS.CertFile, serverTLS.KeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
+	}
+
+	return &tls.Config{
+		ClientCAs:    caCertPool,
+		Certificates: []tls.Certificate{cer},
+		ClientAuth:   clientAuthMode,
+	}, nil
 }
 
 // newGraphServer creates a new server.
@@ -787,8 +798,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
-		tlsConfig:          r.tlsConfig,
-		tlsServerConfig:    r.tlsServerConfig,
+		tlsServerConfig:    r.tls.compiledServerConfig,
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
@@ -1453,8 +1463,7 @@ func (r *Router) Start(ctx context.Context) error {
 	r.httpServer, err = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
-		tlsConfig:          r.tlsConfig,
-		tlsServerConfig:    r.tlsServerConfig,
+		tlsServerConfig:    r.tls.compiledServerConfig,
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
@@ -2325,15 +2334,9 @@ func WithAccessLogs(cfg *AccessLogsConfig) Option {
 	}
 }
 
-func WithTLSConfig(cfg *TlsConfig) Option {
+func WithTLSConfig(cfg config.TLSConfiguration) Option {
 	return func(r *Router) {
-		r.tlsConfig = cfg
-	}
-}
-
-func WithSubgraphTLSConfiguration(cfg config.ClientTLSConfiguration) Option {
-	return func(r *Router) {
-		r.subgraphTLSConfiguration = cfg
+		r.tls.settings = cfg
 	}
 }
 
