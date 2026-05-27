@@ -43,9 +43,13 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    if (resp.response?.code !== EnumStatusCode.OK) {
+    if (resp.response?.code !== EnumStatusCode.OK && resp.response?.code !== EnumStatusCode.WARN_PARTIAL_DATA) {
       console.log(pc.red(resp.response?.details));
       program.error(pc.red('Could not fetch the monographs.'));
+    }
+
+    if (resp.response?.code === EnumStatusCode.WARN_PARTIAL_DATA) {
+      console.log(pc.yellow('⚠️ Metrics data not available.'));
     }
 
     const filteredGraphs = [];
