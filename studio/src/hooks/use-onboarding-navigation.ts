@@ -9,10 +9,11 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
  * Manages the initial navigation to onboarding wizard and evaluates
  * the conditions based on feature flag and onboarding metadata
  */
-export const useOnboardingNavigation = () => {
+export const useOnboardingNavigation = ({ disabled }: { disabled: boolean }) => {
   const { enabled, setOnboarding, skipped, currentStep } = useOnboarding();
   const { data, isError, isPending } = useQuery(getOnboarding);
   const initialRedirect = useRef<boolean>(false);
+  const shouldEnableRedirect = enabled && !disabled;
 
   const initialLoadSuccess = useMemo(() => {
     if (isPending) return null;
@@ -22,7 +23,7 @@ export const useOnboardingNavigation = () => {
 
   useEffect(
     function syncOnboardingMetadata() {
-      if (initialLoadSuccess !== true || !data) {
+      if (!shouldEnableRedirect || initialLoadSuccess !== true || !data) {
         return;
       }
 
@@ -31,13 +32,13 @@ export const useOnboardingNavigation = () => {
         federatedGraphsCount: data.federatedGraphsCount,
       });
     },
-    [initialLoadSuccess, data, setOnboarding],
+    [initialLoadSuccess, data, setOnboarding, shouldEnableRedirect],
   );
 
   useEffect(
     function handleNavigationToOnboarding() {
-      // Do not redirect if feature flag is off
-      if (!enabled) {
+      // Do not redirect if feature flag is off or if it's explicitly disabled
+      if (!shouldEnableRedirect) {
         return;
       }
       // Wait for the onboarding metadata query to resolve
@@ -68,6 +69,6 @@ export const useOnboardingNavigation = () => {
       initialRedirect.current = true;
       Router.replace(pathWithParams);
     },
-    [data, enabled, initialLoadSuccess, skipped, currentStep],
+    [data, shouldEnableRedirect, initialLoadSuccess, skipped, currentStep],
   );
 };

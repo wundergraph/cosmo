@@ -19,7 +19,14 @@ export interface WorkspaceContextType {
 
 export const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
 
-export function WorkspaceProvider({ children }: React.PropsWithChildren) {
+export function WorkspaceProvider({
+  children,
+  isNewUser,
+  hasPendingInvitations,
+}: React.PropsWithChildren<{
+  isNewUser?: boolean;
+  hasPendingInvitations?: boolean;
+}>) {
   const router = useRouter();
   const applyParams = useApplyParams();
   const { data, isLoading } = useQuery(getWorkspace, {});
@@ -104,7 +111,9 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
     [namespace, namespaces, setStoredNamespace, applyParams],
   );
 
-  useOnboardingNavigation();
+  useOnboardingNavigation({
+    disabled: Boolean(isNewUser && hasPendingInvitations),
+  });
 
   // Finally, render :)
   return (

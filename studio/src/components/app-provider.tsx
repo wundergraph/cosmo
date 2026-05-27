@@ -3,7 +3,7 @@ import { Transport } from '@connectrpc/connect';
 import { TransportProvider } from '@connectrpc/connect-query';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/router';
+import { Router, useRouter, NextRouter } from 'next/router';
 import { ReactNode, createContext, useEffect, useState } from 'react';
 import { useCookieOrganization } from '@/hooks/use-cookie-organization';
 import { setUser as setSentryUser } from '@sentry/nextjs';
@@ -107,6 +107,9 @@ const fetchSession = async () => {
   }
 };
 
+const isNewUser = (router: NextRouter) => router.query.onboarding === 'true';
+const hasPendingInvitations = (invitations?: InvitedOrgs[]) => invitations && invitations.length > 0;
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const currentOrgSlug = router.query.organizationSlug;
@@ -190,11 +193,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       setVerifiedOrganizationSlug(organization.slug);
 
+      const isNewUserWithInvitations = isNewUser(router) && hasPendingInvitations(data.invitations);
+
       if (
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
         router.pathname !== '/account/invitations' &&
         // match onboarding URL `/onboarding/1` etc
-        !/^\/onboarding(?:\/\d+)?(?:\/|$)/.test(router.pathname)
+        !/^\/onboarding(?:\/\d+)?(?:\/|$)/.test(router.pathname) &&
+        // in a situation where pending invite is present for new users
+        !isNewUserWithInvitations
       ) {
         const url = new URL(window.location.origin + router.basePath + router.asPath);
         const params = new URLSearchParams(url.search);
@@ -253,7 +260,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     <TransportProvider transport={transport}>
       <UserContext.Provider value={user}>
         <SessionClientContext.Provider value={sessionQueryClient}>
-          <WorkspaceProvider>{children}</WorkspaceProvider>
+          <WorkspaceProvider
+            isNewUser={isNewUser(router)}
+            hasPendingInvitations={hasPendingInvitations(data?.invitations)}
+          >
+            {children}
+          </WorkspaceProvider>
         </SessionClientContext.Provider>
       </UserContext.Provider>
     </TransportProvider>
