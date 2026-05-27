@@ -195,6 +195,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const isNewUserWithInvitations = isNewUser(router) && hasPendingInvitations(data.invitations);
 
+      const url = new URL(window.location.origin + router.basePath + router.asPath);
+      const params = new URLSearchParams(url.search);
+
       if (
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
         router.pathname !== '/account/invitations' &&
@@ -203,9 +206,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         // in a situation where pending invite is present for new users
         !isNewUserWithInvitations
       ) {
-        const url = new URL(window.location.origin + router.basePath + router.asPath);
-        const params = new URLSearchParams(url.search);
         router.replace(params.size !== 0 ? `/${organization.slug}?${params}` : `/${organization.slug}`);
+      } else if (isNewUserWithInvitations) {
+        router.replace('/account/invites/join');
       }
     }
   }, [router, data, isFetching, error, cookieOrgSlug]);
