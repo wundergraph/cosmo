@@ -1522,7 +1522,12 @@ func (s *graphServer) buildGraphMux(
 			Processor:      processor,
 			Workers:        s.cacheWarmup.Workers,
 			ItemsPerSecond: s.cacheWarmup.ItemsPerSecond,
+			ItemDelay:      s.cacheWarmup.ItemDelay,
 			Timeout:        s.cacheWarmup.Timeout,
+		}
+
+		if err := warmupConfig.Validate(); err != nil {
+			return nil, err
 		}
 
 		warmupConfig.AfterOperation = func(item *CacheWarmupOperationPlanResult) {
@@ -1682,7 +1687,7 @@ func (s *graphServer) buildGraphMux(
 		Executor:                        executor,
 		Log:                             s.logger,
 		EnableCacheResponseHeaders:      s.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders,
-		EnableResponseHeaderPropagation: s.headerRules != nil,
+		EnableResponseHeaderPropagation: s.headerPropagation.HasResponseRules(),
 		EnableCostResponseHeaders:       s.securityConfiguration.CostControl != nil && s.securityConfiguration.CostControl.ExposeHeaders,
 		EngineStats:                     s.engineStats,
 		TracerProvider:                  s.tracerProvider,

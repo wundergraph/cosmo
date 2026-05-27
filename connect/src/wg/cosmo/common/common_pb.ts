@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { proto3 } from "@bufbuild/protobuf";
+import { proto3 } from '@bufbuild/protobuf';
 
 /**
  * @generated from enum wg.cosmo.common.EnumStatusCode
@@ -103,28 +103,34 @@ export enum EnumStatusCode {
    * @generated from enum value: ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL = 18;
    */
   ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL = 18,
+
+  /**
+   * @generated from enum value: WARN_PARTIAL_DATA = 19;
+   */
+  WARN_PARTIAL_DATA = 19,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EnumStatusCode)
-proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
-  { no: 0, name: "OK" },
-  { no: 1, name: "ERR" },
-  { no: 2, name: "ERR_NOT_FOUND" },
-  { no: 3, name: "ERR_ALREADY_EXISTS" },
-  { no: 4, name: "ERR_INVALID_SUBGRAPH_SCHEMA" },
-  { no: 5, name: "ERR_SUBGRAPH_COMPOSITION_FAILED" },
-  { no: 6, name: "ERR_SUBGRAPH_CHECK_FAILED" },
-  { no: 7, name: "ERR_INVALID_LABELS" },
-  { no: 8, name: "ERR_ANALYTICS_DISABLED" },
-  { no: 9, name: "ERROR_NOT_AUTHENTICATED" },
-  { no: 10, name: "ERR_OPENAI_DISABLED" },
-  { no: 11, name: "ERR_FREE_TRIAL_EXPIRED" },
-  { no: 12, name: "ERROR_NOT_AUTHORIZED" },
-  { no: 13, name: "ERR_LIMIT_REACHED" },
-  { no: 14, name: "ERR_DEPLOYMENT_FAILED" },
-  { no: 15, name: "ERR_INVALID_NAME" },
-  { no: 16, name: "ERR_UPGRADE_PLAN" },
-  { no: 17, name: "ERR_BAD_REQUEST" },
-  { no: 18, name: "ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL" },
+proto3.util.setEnumType(EnumStatusCode, 'wg.cosmo.common.EnumStatusCode', [
+  { no: 0, name: 'OK' },
+  { no: 1, name: 'ERR' },
+  { no: 2, name: 'ERR_NOT_FOUND' },
+  { no: 3, name: 'ERR_ALREADY_EXISTS' },
+  { no: 4, name: 'ERR_INVALID_SUBGRAPH_SCHEMA' },
+  { no: 5, name: 'ERR_SUBGRAPH_COMPOSITION_FAILED' },
+  { no: 6, name: 'ERR_SUBGRAPH_CHECK_FAILED' },
+  { no: 7, name: 'ERR_INVALID_LABELS' },
+  { no: 8, name: 'ERR_ANALYTICS_DISABLED' },
+  { no: 9, name: 'ERROR_NOT_AUTHENTICATED' },
+  { no: 10, name: 'ERR_OPENAI_DISABLED' },
+  { no: 11, name: 'ERR_FREE_TRIAL_EXPIRED' },
+  { no: 12, name: 'ERROR_NOT_AUTHORIZED' },
+  { no: 13, name: 'ERR_LIMIT_REACHED' },
+  { no: 14, name: 'ERR_DEPLOYMENT_FAILED' },
+  { no: 15, name: 'ERR_INVALID_NAME' },
+  { no: 16, name: 'ERR_UPGRADE_PLAN' },
+  { no: 17, name: 'ERR_BAD_REQUEST' },
+  { no: 18, name: 'ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL' },
+  { no: 19, name: 'WARN_PARTIAL_DATA' },
 ]);
 
 /**
@@ -153,10 +159,10 @@ export enum GraphQLSubscriptionProtocol {
   GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(GraphQLSubscriptionProtocol)
-proto3.util.setEnumType(GraphQLSubscriptionProtocol, "wg.cosmo.common.GraphQLSubscriptionProtocol", [
-  { no: 0, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS" },
-  { no: 1, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE" },
-  { no: 2, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST" },
+proto3.util.setEnumType(GraphQLSubscriptionProtocol, 'wg.cosmo.common.GraphQLSubscriptionProtocol', [
+  { no: 0, name: 'GRAPHQL_SUBSCRIPTION_PROTOCOL_WS' },
+  { no: 1, name: 'GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE' },
+  { no: 2, name: 'GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST' },
 ]);
 
 /**
@@ -179,9 +185,8 @@ export enum GraphQLWebsocketSubprotocol {
   GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(GraphQLWebsocketSubprotocol)
-proto3.util.setEnumType(GraphQLWebsocketSubprotocol, "wg.cosmo.common.GraphQLWebsocketSubprotocol", [
-  { no: 0, name: "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO" },
-  { no: 1, name: "GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS" },
-  { no: 2, name: "GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS" },
+proto3.util.setEnumType(GraphQLWebsocketSubprotocol, 'wg.cosmo.common.GraphQLWebsocketSubprotocol', [
+  { no: 0, name: 'GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO' },
+  { no: 1, name: 'GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS' },
+  { no: 2, name: 'GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS' },
 ]);
-
