@@ -340,6 +340,10 @@ export class ClickHouseClient {
       };
     } catch (err) {
       if (err instanceof ClickHouseUnavailableError) {
+        this.options?.logger?.warn(
+          { err },
+          'ClickHouse unavailable, returning default value from queryPromiseWithDefault',
+        );
         return {
           data: options.defaultValue ?? [],
           ok: false,
