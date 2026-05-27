@@ -102,6 +102,11 @@ func buildSubgraphGRPCTLSConfigs(logger *zap.Logger, cfg *config.GRPCClientTLSCo
 
 	// global config
 	if cfg.All.Enabled {
+		if cfg.All.InsecureSkipCaVerification {
+			logger.Warn("Global TLS config for gRPC subgraphs has InsecureSkipCaVerification enabled. " +
+				"This is not recommended for production environments.")
+		}
+
 		globalCfg, err = buildTLSClientConfig(cfg.All.TLSClientCertConfiguration)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
@@ -113,6 +118,13 @@ func buildSubgraphGRPCTLSConfigs(logger *zap.Logger, cfg *config.GRPCClientTLSCo
 		if !sgCfg.Enabled {
 			perSubgraphCfgs[sgName] = nil
 			continue
+		}
+
+		if sgCfg.InsecureSkipCaVerification {
+			logger.Warn("Subgraph TLS config has InsecureSkipCaVerification enabled."+
+				"This is not recommended for production environments.",
+				zap.String("subgraph", sgName))
+
 		}
 
 		perSubgraphCfgs[sgName], err = buildTLSClientConfig(sgCfg.TLSClientCertConfiguration)
