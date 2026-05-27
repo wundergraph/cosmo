@@ -52,7 +52,7 @@ export default (opts: BaseCommandOptions) => {
       });
       writeFileSync(join(superGraphPath, `cosmoConfig.json`), routerConfig.routerConfig);
       if (routerConfig.mapper) {
-        writeFileSync(join(superGraphPath, `cosmoMapper.json`), JSON.stringify(routerConfig.mapper));
+        writeFileSync(join(basePath, `cosmo-mapper.json`), JSON.stringify(routerConfig.mapper));
       }
 
       if (routerConfig.featureFlags?.size) {

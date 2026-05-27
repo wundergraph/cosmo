@@ -9,21 +9,20 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { resolve } from 'pathe';
 import ComposeCommand from '../../src/commands/router/commands/compose.js';
 import { Client } from '../../src/core/client/client.js';
-
-const FIXTURES_DIR_PATH = resolve('./test/fixtures');
+import { FIXTURES_DIR_PATH } from './utils.js';
 
 export const mockPlatformTransport = () =>
   createRouterTransport(({ service }) => {
     service(PlatformService, {});
   });
 
-describe('router compose command', () => {
+describe('router compose', () => {
   test('that generated router config matches expected snapshot when config splitting is disabled', async () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
 
-    const outputDir = join(tmpdir(), 'router-config');
+    const outputDir = join(tmpdir(), 'router-compose');
     const outputFile = join(outputDir, 'router-config.json');
     if (!existsSync(outputDir)) {
       await mkdir(outputDir);
@@ -36,6 +35,8 @@ describe('router compose command', () => {
       from: 'user',
     });
 
+    expect(existsSync(outputFile)).toBe(true);
+
     // The output file must match the expected snapshot
     const content = await readFile(outputFile, 'utf8');
     await expect(content).toMatchFileSnapshot(join(FIXTURES_DIR_PATH, 'router-compose', `router-config.json.snap`));
@@ -46,7 +47,7 @@ describe('router compose command', () => {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
 
-    const outputDir = join(tmpdir(), 'router-config-split');
+    const outputDir = join(tmpdir(), 'router-compose-split');
     if (!existsSync(outputDir)) {
       await mkdir(outputDir);
     }
@@ -61,9 +62,15 @@ describe('router compose command', () => {
       },
     );
 
+    expect(existsSync(outputDir)).toBe(true);
+    expect(existsSync(join(outputDir, 'router-config.json'))).toBe(true);
+    expect(existsSync(join(outputDir, 'mapper.json'))).toBe(true);
+    expect(existsSync(join(outputDir, 'feature-flags'))).toBe(true);
+    expect(existsSync(join(outputDir, 'feature-flags', 'my-feature-flag.json'))).toBe(true);
+
     // All output files should match the snapshots
     await expectSplitOutputMatchSnapshot(outputDir, 'router-config.json');
-    await expectSplitOutputMatchSnapshot(outputDir, 'router-config-mapper.json');
+    await expectSplitOutputMatchSnapshot(outputDir, 'mapper.json');
     await expectSplitOutputMatchSnapshot(outputDir, join('feature-flags', 'my-feature-flag.json'));
   });
 });

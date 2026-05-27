@@ -308,7 +308,7 @@ export default (opts: BaseCommandOptions) => {
       );
 
       if (options.splitConfigsEnabled && mapper.size > 0) {
-        await writeFile(join(options.out, 'router-config-mapper.json'), JSON.stringify(Object.fromEntries(mapper)));
+        await writeFile(join(options.out, 'mapper.json'), JSON.stringify(Object.fromEntries(mapper)));
       }
 
       console.log(pc.green(`Router config successfully written to ${pc.bold(options.out)}`));

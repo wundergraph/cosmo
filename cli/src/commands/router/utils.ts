@@ -63,6 +63,12 @@ export const fetchRouterConfig = async ({
     };
   }
 
+  // Retrieve the latest router configuration
+  const result: FetchRouterConfigResult = {
+    splitConfigLoading: true,
+    routerConfig: await fetchFileContentFromCdn(new URL('manifest/latest.json', baseUrl), resp.token, graphSignKey),
+  };
+
   // Retrieve the `mapper.json` file and convert the content to a `Map<string, string>` for validation
   const mapperTextContent = await fetchFileContentFromCdn(new URL('manifest/mapper.json', baseUrl), resp.token);
 
@@ -72,18 +78,8 @@ export const fetchRouterConfig = async ({
       ? new Map<string, string>(Object.entries(mapperRecord))
       : new Map<string, string>();
 
+  result.mapper = Object.fromEntries(mapper);
   mapper.delete(''); // Delete the federated graph hash
-
-  // Retrieve the latest router configuration
-  const result: FetchRouterConfigResult = {
-    splitConfigLoading: true,
-    routerConfig: await fetchFileContentFromCdn(
-      new URL('routerconfigs/latest.json', baseUrl),
-      resp.token,
-      graphSignKey,
-    ),
-    mapper: Object.fromEntries(mapper),
-  };
 
   if (mapper.size === 0) {
     return result;
