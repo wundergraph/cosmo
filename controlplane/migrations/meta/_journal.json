@@ -981,6 +981,13 @@
       "when": 1779448685202,
       "tag": "0139_familiar_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 140,
+      "version": "7",
+      "when": 1779907358946,
+      "tag": "0140_loose_swordsman",
+      "breakpoints": true
     }
   ]
 }
