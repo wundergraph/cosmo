@@ -23,6 +23,7 @@ export type FeatureIds =
   | 'trace-sampling-rate'
   | 'requests'
   | 'feature-flags'
+  | 'persisted-operations'
   // Boolean features
   | 'ai'
   | 'cache-warmer'

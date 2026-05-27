@@ -1406,6 +1406,7 @@ export class OrganizationRepository {
       'feature-flags': 0,
       'field-pruning-grace-period': 0,
       plugins: 0,
+      'persisted-operations': 3000,
       users: 25,
       requests: 30,
       // Boolean features
