@@ -18,12 +18,14 @@ on:
     paths-ignore:
       - 'docs-website/**'
       - '*.md'
+      - '.github/CODEOWNERS'
   pull_request:
     branches:
       - main
     paths-ignore:
       - 'docs-website/**'
       - '*.md'
+      - '.github/CODEOWNERS'
   schedule:
     - cron: '27 3 * * 1'
 

@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.318.4](https://github.com/wundergraph/cosmo/compare/router@0.318.3...router@0.318.4) (2026-05-25)
+
+**Note:** Version bump only for package router
+
+## [0.318.3](https://github.com/wundergraph/cosmo/compare/router@0.318.2...router@0.318.3) (2026-05-25)
+
+### Bug Fixes
+
+* use float64 for intermediate cost calculations ([#2887](https://github.com/wundergraph/cosmo/issues/2887)) ([33f4016](https://github.com/wundergraph/cosmo/commit/33f40161ef5dc8b077ab763151fa4faeeac7e6f3)) (@ysmolski)
+
+## [0.318.2](https://github.com/wundergraph/cosmo/compare/router@0.318.1...router@0.318.2) (2026-05-22)
+
+### Bug Fixes
+
+* use remapped variables in cost calculation ([#2882](https://github.com/wundergraph/cosmo/issues/2882)) ([d211459](https://github.com/wundergraph/cosmo/commit/d211459d1d7d32e98eaa6c045c57b9df643ae41f)) (@ysmolski)
+
+## [0.318.1](https://github.com/wundergraph/cosmo/compare/router@0.318.0...router@0.318.1) (2026-05-21)
+
+### Bug Fixes
+
+* handle default values for slicingArguments ([#2880](https://github.com/wundergraph/cosmo/issues/2880)) ([8ad7d44](https://github.com/wundergraph/cosmo/commit/8ad7d4400d24369ef31c930025611abb7835abc4)) (@ysmolski)
+
 # [0.318.0](https://github.com/wundergraph/cosmo/compare/router@0.317.0...router@0.318.0) (2026-05-20)
 
 ### Features
