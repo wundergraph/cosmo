@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.320.0](https://github.com/wundergraph/cosmo/compare/router@0.319.0...router@0.320.0) (2026-05-27)
+
+### Features
+
+* add a delay after each item is processed for cache warmer ([#2885](https://github.com/wundergraph/cosmo/issues/2885)) ([cdee362](https://github.com/wundergraph/cosmo/commit/cdee36265db1f257716b14be18520d8dab3cf8b8)) (@SkArchon)
+
 # [0.319.0](https://github.com/wundergraph/cosmo/compare/router@0.318.4...router@0.319.0) (2026-05-27)
 
 ### Features
