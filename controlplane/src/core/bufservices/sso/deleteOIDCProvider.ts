@@ -48,7 +48,7 @@ export function deleteOIDCProvider(
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Organization ${authContext.organizationSlug} doesn't have an oidc identity provider `,
+          details: `Organization ${authContext.organizationSlug} doesn't have an OIDC provider `,
         },
       };
     }
