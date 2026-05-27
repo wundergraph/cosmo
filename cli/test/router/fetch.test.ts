@@ -57,7 +57,7 @@ export const mockPlatformTransport = (splitConfigsEnabled: boolean) =>
 describe('router fetch', () => {
   afterEach(vi.clearAllMocks);
 
-  test('that generated router config matches expected snapshot when config splitting is disabled', async () => {
+  test('that router config matches expected snapshot when config splitting is disabled', async () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport(false)),
     };
@@ -84,7 +84,7 @@ describe('router fetch', () => {
     await expect(content).toMatchFileSnapshot(join(FIXTURES_DIR_PATH, 'router-compose', `router-config.json.snap`));
   });
 
-  test('that generated router config matches expected snapshot when config splitting is enabled ', async () => {
+  test('that router config matches expected snapshot when config splitting is enabled ', async () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport(true)),
     };
