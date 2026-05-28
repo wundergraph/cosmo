@@ -1,3 +1,20 @@
+// Package routerconfig loads and assembles the router's execution config.
+//
+// The execution config drives query planning and subgraph routing. It can be
+// fetched at runtime from a remote provider (see the [Client] interface and
+// its CDN and S3 implementations in the cdn and s3 subpackages) or read from
+// a local manifest directory.
+//
+// A manifest directory contains a mapper.json indexing the base graph and any
+// feature-flag variants, a latest.json holding the base graph config, and a
+// feature-flags/ subdirectory with one JSON file per feature flag. Use
+// [isValidManifestPath] to validate a directory, [readMapperFile] to load the
+// index, and [assembleConfig] to merge the base config with its feature-flag
+// variants into a single [nodev1.RouterConfig].
+//
+// [GetDefaultConfig] returns a minimal "hello world" config used when no
+// other config is available, so the router can start and surface a guided
+// onboarding response.
 package routerconfig
 
 import (
@@ -20,9 +37,34 @@ func VersionPath(version int) string {
 	}
 }
 
-// IsValidManifestPath checks if the given path is a valid manifest path.
+type AssembleConfigRules struct {
+	SkipMissingFeatureFlags bool
+	IgnoredFeatureFlags     []string
+}
+
+// AssembleStaticExecutionConfigFromManifest assembles the static execution config from the manifest directory.
+func AssembleStaticExecutionConfigFromManifest(manifestConfigPath string, rules AssembleConfigRules) (*nodev1.RouterConfig, error) {
+	if !isValidManifestPath(manifestConfigPath) {
+		return nil, fmt.Errorf("invalid manifest path: %s", manifestConfigPath)
+	}
+
+	mapper, err := readMapperFile(filepath.Join(manifestConfigPath, "mapper.json"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read mapper file: %w", err)
+	}
+
+	executionConfig, err := assembleConfig(manifestConfigPath, mapper, rules)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to assemble execution config: %w", err)
+	}
+
+	return executionConfig, nil
+}
+
+// isValidManifestPath checks if the given path is a valid manifest path.
 // It checks if the path is a directory, and if it contains a mapper.json file.
-func IsValidManifestPath(path string) bool {
+func isValidManifestPath(path string) bool {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return false
@@ -48,9 +90,9 @@ func IsValidManifestPath(path string) bool {
 	return mapperStat.Mode().IsRegular()
 }
 
-// ReadMapperFile reads the mapper.json file from the given path and returns the mapper.
+// readMapperFile reads the mapper.json file from the given path and returns the mapper.
 // The mapper file is a JSON object with the feature flag name as the key and the hash as the value.
-func ReadMapperFile(path string) (map[string]string, error) {
+func readMapperFile(path string) (map[string]string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -64,16 +106,11 @@ func ReadMapperFile(path string) (map[string]string, error) {
 	return mapper, nil
 }
 
-type AssembleConfigRules struct {
-	SkipMissingFeatureFlags bool
-	IgnoredFeatureFlags     []string
-}
-
-// AssembleConfig assembles the router execution config from the base config and the feature flag configs.
+// assembleConfig assembles the router execution config from the base config and the feature flag configs.
 // The base config is the latest.json file in the manifest directory.
 // The feature flag configs are the feature-flags/<feature-flag-name>.json files in the manifest directory.
 // The rules are the rules for skipping missing feature flags and ignored feature flags.
-func AssembleConfig(basePath string, mapper map[string]string, rules AssembleConfigRules) (*nodev1.RouterConfig, error) {
+func assembleConfig(basePath string, mapper map[string]string, rules AssembleConfigRules) (*nodev1.RouterConfig, error) {
 	baseConfigPath := filepath.Join(basePath, "latest.json")
 
 	_, err := os.Stat(baseConfigPath)

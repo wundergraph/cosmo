@@ -1085,7 +1085,13 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.manifestConfig != nil && r.manifestConfig.Path != "" {
-		executionConfig, err := r.assembleStaticExecutionConfigFromManifest()
+		executionConfig, err := routerconfig.AssembleStaticExecutionConfigFromManifest(
+			r.manifestConfig.Path,
+			routerconfig.AssembleConfigRules{
+				SkipMissingFeatureFlags: r.manifestConfig.SkipMissingFeatureFlags,
+				IgnoredFeatureFlags:     r.manifestConfig.IgnoredFeatureFlags,
+			})
+
 		if err != nil {
 			return fmt.Errorf("failed to assemble static execution config from manifest: %w", err)
 		}
@@ -1113,31 +1119,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (r *Router) assembleStaticExecutionConfigFromManifest() (*nodev1.RouterConfig, error) {
-	manifestConfigPath := r.manifestConfig.Path
-
-	if !routerconfig.IsValidManifestPath(manifestConfigPath) {
-		return nil, fmt.Errorf("invalid manifest path: %s", manifestConfigPath)
-	}
-
-	mapper, err := routerconfig.ReadMapperFile(filepath.Join(manifestConfigPath, "mapper.json"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read mapper file: %w", err)
-	}
-
-	executionConfig, err := routerconfig.AssembleConfig(manifestConfigPath, mapper,
-		routerconfig.AssembleConfigRules{
-			SkipMissingFeatureFlags: r.manifestConfig.SkipMissingFeatureFlags,
-			IgnoredFeatureFlags:     r.manifestConfig.IgnoredFeatureFlags,
-		})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to assemble execution config: %w", err)
-	}
-
-	return executionConfig, nil
 }
 
 // startMCPServer initializes and starts the MCP server if enabled.
@@ -1735,7 +1716,12 @@ func (r *Router) buildManifestConfigWatcher(ctx context.Context, ll *zap.Logger)
 				return
 			}
 
-			cfg, err := r.assembleStaticExecutionConfigFromManifest()
+			cfg, err := routerconfig.AssembleStaticExecutionConfigFromManifest(
+				r.manifestConfig.Path, routerconfig.AssembleConfigRules{
+					SkipMissingFeatureFlags: r.manifestConfig.SkipMissingFeatureFlags,
+					IgnoredFeatureFlags:     r.manifestConfig.IgnoredFeatureFlags,
+				})
+
 			if err != nil {
 				ll.Error("Failed to assemble static execution config from manifest", zap.Error(err))
 				return
