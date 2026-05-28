@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.320.0](https://github.com/wundergraph/cosmo/compare/router@0.319.0...router@0.320.0) (2026-05-27)
+
+### Features
+
+* add a delay after each item is processed for cache warmer ([#2885](https://github.com/wundergraph/cosmo/issues/2885)) ([cdee362](https://github.com/wundergraph/cosmo/commit/cdee36265db1f257716b14be18520d8dab3cf8b8)) (@SkArchon)
+
+# [0.319.0](https://github.com/wundergraph/cosmo/compare/router@0.318.4...router@0.319.0) (2026-05-27)
+
+### Features
+
+* **dx:** add .gitattributes to collapse generated files in GitHub PRs ([#2891](https://github.com/wundergraph/cosmo/issues/2891)) ([b96296a](https://github.com/wundergraph/cosmo/commit/b96296acc66763fb59f9879573658350079fc19c)) (@comatory)
+* studio handles analytics downtime gracefully ([#2878](https://github.com/wundergraph/cosmo/issues/2878)) ([716b786](https://github.com/wundergraph/cosmo/commit/716b786bd55008292015ec8950182aa61e98cb16)) (@comatory)
+
+## [0.318.4](https://github.com/wundergraph/cosmo/compare/router@0.318.3...router@0.318.4) (2026-05-25)
+
+**Note:** Version bump only for package router
+
+## [0.318.3](https://github.com/wundergraph/cosmo/compare/router@0.318.2...router@0.318.3) (2026-05-25)
+
+### Bug Fixes
+
+* use float64 for intermediate cost calculations ([#2887](https://github.com/wundergraph/cosmo/issues/2887)) ([33f4016](https://github.com/wundergraph/cosmo/commit/33f40161ef5dc8b077ab763151fa4faeeac7e6f3)) (@ysmolski)
+
 ## [0.318.2](https://github.com/wundergraph/cosmo/compare/router@0.318.1...router@0.318.2) (2026-05-22)
 
 ### Bug Fixes

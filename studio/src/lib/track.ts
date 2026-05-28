@@ -151,14 +151,7 @@ type OnboardingTrackEvent =
   | {
       name: 'onboarding_step_completed';
       options: {
-        step_name: Exclude<OnboardingStepId, 'onboarding_users_invited_opt' | 'welcome'>;
-      };
-    }
-  | {
-      name: 'onboarding_step_completed';
-      options: {
-        step_name: 'welcome';
-        channel: string[];
+        step_name: Exclude<OnboardingStepId, 'onboarding_users_invited_opt'>;
       };
     }
   | {
