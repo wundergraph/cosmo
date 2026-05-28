@@ -92,6 +92,8 @@ import { deleteNamespace } from './namespace/deleteNamespace.js';
 import { getNamespace } from './namespace/getNamespace.js';
 import { updateNamespaceSSOMappings } from './namespace/updateNamespaceSSOMappings.js';
 import { listNamespaceSSOMappings } from './namespace/listNamespaceSSOMappings.js';
+import { getOrganizationLoginMethods } from './organization/getOrganizationLoginMethods.js';
+import { updateOrganizationLoginMethods } from './organization/updateOrganizationLoginMethods.js';
 import { getNamespaces } from './namespace/getNamespaces.js';
 import { renameNamespace } from './namespace/renameNamespace.js';
 import { createIntegration } from './notification/createIntegration.js';
@@ -902,6 +904,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
     },
     listNamespaceSSOMappings: (req, ctx) => {
       return listNamespaceSSOMappings(opts, req, ctx);
+    },
+    getOrganizationLoginMethods: (req, ctx) => {
+      return getOrganizationLoginMethods(opts, req, ctx);
+    },
+    updateOrganizationLoginMethods: (req, ctx) => {
+      return updateOrganizationLoginMethods(opts, req, ctx);
     },
 
     getOperations: (req, ctx) => {

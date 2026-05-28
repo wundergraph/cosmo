@@ -9,6 +9,8 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { NamespaceSsoMappingRepository } from '../../repositories/NamespaceSsoMappingRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
+import { OrganizationLoginMethodRepository } from '../../repositories/OrganizationLoginMethodRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isNamespaceAllowed } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -28,6 +30,20 @@ export function updateNamespaceSSOMappings(
       throw new UnauthorizedError();
     }
 
+    const orgRepo = new OrganizationRepository(logger, opts.db);
+    const feature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'login-method-restrictions',
+    });
+    if (!feature?.enabled) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_UPGRADE_PLAN,
+          details: 'Login method restrictions are available on the Enterprise plan.',
+        },
+      };
+    }
+
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const oidcRepo = new OidcRepository(opts.db);
     const orgProviderIds = new Set(
@@ -35,6 +51,9 @@ export function updateNamespaceSSOMappings(
         (p) => p.id,
       ),
     );
+
+    const orgLoginMethodRepo = new OrganizationLoginMethodRepository(opts.db);
+    const orgAllowed = await orgLoginMethodRepo.getAllowedLoginMethods({ organizationId: authContext.organizationId });
 
     // Validate every namespace and SSO provider in the payload before writing.
     const namespacesById = new Map<string, { id: string; name: string }>();
@@ -66,6 +85,23 @@ export function updateNamespaceSSOMappings(
       for (const id of mapping.allowedSsoProviderIds) {
         if (!orgProviderIds.has(id)) {
           return { response: { code: EnumStatusCode.ERR_BAD_REQUEST, details: `Unknown SSO provider id: ${id}` } };
+        }
+      }
+
+      if (orgAllowed.isRestricted) {
+        if (mapping.allowPasswordLogin && !orgAllowed.allowPasswordLogin) {
+          return { response: { code: EnumStatusCode.ERR_BAD_REQUEST, details: 'Password login is not allowed for this organization.' } };
+        }
+        if (mapping.allowGoogleLogin && !orgAllowed.allowGoogleLogin) {
+          return { response: { code: EnumStatusCode.ERR_BAD_REQUEST, details: 'Google login is not allowed for this organization.' } };
+        }
+        if (mapping.allowGithubLogin && !orgAllowed.allowGithubLogin) {
+          return { response: { code: EnumStatusCode.ERR_BAD_REQUEST, details: 'GitHub login is not allowed for this organization.' } };
+        }
+        for (const id of mapping.allowedSsoProviderIds) {
+          if (!orgAllowed.allowedSsoProviderIds.includes(id)) {
+            return { response: { code: EnumStatusCode.ERR_BAD_REQUEST, details: `SSO provider ${id} is not allowed for this organization.` } };
+          }
         }
       }
 

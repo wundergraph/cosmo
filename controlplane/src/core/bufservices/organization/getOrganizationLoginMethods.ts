@@ -2,23 +2,23 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  ListNamespaceSSOMappingsRequest,
-  ListNamespaceSSOMappingsResponse,
+  GetOrganizationLoginMethodsRequest,
+  GetOrganizationLoginMethodsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { NamespaceSsoMappingRepository } from '../../repositories/NamespaceSsoMappingRepository.js';
+import { OrganizationLoginMethodRepository } from '../../repositories/OrganizationLoginMethodRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function listNamespaceSSOMappings(
+export function getOrganizationLoginMethods(
   opts: RouterOptions,
-  _req: ListNamespaceSSOMappingsRequest,
+  _req: GetOrganizationLoginMethodsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<ListNamespaceSSOMappingsResponse>> {
+): Promise<PlainMessage<GetOrganizationLoginMethodsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<ListNamespaceSSOMappingsResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<GetOrganizationLoginMethodsResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -37,27 +37,21 @@ export function listNamespaceSSOMappings(
           code: EnumStatusCode.ERR_UPGRADE_PLAN,
           details: 'Login method restrictions are available on the Enterprise plan.',
         },
-        mappings: [],
       };
     }
 
-    const mappingRepo = new NamespaceSsoMappingRepository(opts.db);
-    // Pass rbac so the repo limits results to namespaces the caller's login
-    // method can access (matches the namespace dropdown and the update self-check).
-    const mappings = await mappingRepo.listMappings({
-      organizationId: authContext.organizationId,
-      rbac: authContext.rbac,
-    });
+    const repo = new OrganizationLoginMethodRepository(opts.db);
+    const methods = await repo.getAllowedLoginMethods({ organizationId: authContext.organizationId });
 
     return {
       response: { code: EnumStatusCode.OK },
-      mappings: mappings.map((m) => ({
-        namespaceId: m.namespaceId,
-        allowedSsoProviderIds: m.allowedSsoProviderIds,
-        allowPasswordLogin: m.allowPasswordLogin,
-        allowGoogleLogin: m.allowGoogleLogin,
-        allowGithubLogin: m.allowGithubLogin,
-      })),
+      loginMethods: {
+        allowedSsoProviderIds: methods.allowedSsoProviderIds,
+        allowPasswordLogin: methods.allowPasswordLogin,
+        allowGoogleLogin: methods.allowGoogleLogin,
+        allowGithubLogin: methods.allowGithubLogin,
+        isRestricted: methods.isRestricted,
+      },
     };
   });
 }

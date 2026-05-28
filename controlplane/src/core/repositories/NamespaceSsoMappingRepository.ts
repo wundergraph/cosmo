@@ -3,7 +3,7 @@ import { and, eq, inArray, SQL } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { namespaces, namespaceSsoProviders } from '../../db/schema.js';
 import { traced } from '../tracing.js';
-import { applyIdpNamespaceGate } from '../util.js';
+import { applyIdpNamespaceGate, loginMethodMatchesRow } from '../util.js';
 import type { LoginMethod, NamespaceAccess } from '../../types/index.js';
 import type { RBACEvaluator } from '../services/RBACEvaluator.js';
 
@@ -52,28 +52,12 @@ export class NamespaceSsoMappingRepository {
     }
 
     const { loginMethod } = input;
-    const rowMatchesLogin = (r: (typeof rows)[number]): boolean => {
-      switch (loginMethod.type) {
-        case 'sso': {
-          return r.ssoProviderId === loginMethod.ssoProviderId;
-        }
-        case 'social': {
-          return loginMethod.provider === 'google' ? !!r.isGoogleLogin : !!r.isGithubLogin;
-        }
-        case 'password': {
-          return !!r.isPasswordLogin;
-        }
-        default: {
-          return false;
-        }
-      }
-    };
 
     // Build the allowed set: open namespaces always; restricted namespaces only
     // when at least one of their mapping rows matches the current login method.
     const namespaceIds = new Set<string>();
     for (const row of rows) {
-      if (isUnmapped(row) || rowMatchesLogin(row)) {
+      if (isUnmapped(row) || loginMethodMatchesRow(loginMethod, row)) {
         namespaceIds.add(row.namespaceId);
       }
     }

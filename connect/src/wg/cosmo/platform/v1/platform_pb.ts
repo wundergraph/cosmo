@@ -24375,6 +24375,260 @@ export class ListNamespaceSSOMappingsResponse extends Message<ListNamespaceSSOMa
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.OrganizationLoginMethods
+ */
+export class OrganizationLoginMethods extends Message<OrganizationLoginMethods> {
+  /**
+   * @generated from field: repeated string allowed_sso_provider_ids = 1;
+   */
+  allowedSsoProviderIds: string[] = [];
+
+  /**
+   * @generated from field: bool allow_password_login = 2;
+   */
+  allowPasswordLogin = false;
+
+  /**
+   * @generated from field: bool allow_google_login = 3;
+   */
+  allowGoogleLogin = false;
+
+  /**
+   * @generated from field: bool allow_github_login = 4;
+   */
+  allowGithubLogin = false;
+
+  /**
+   * Output only. False when the org has no restriction configured (all methods allowed).
+   *
+   * @generated from field: bool is_restricted = 5;
+   */
+  isRestricted = false;
+
+  constructor(data?: PartialMessage<OrganizationLoginMethods>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.OrganizationLoginMethods";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "allowed_sso_provider_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "allow_password_login", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "allow_google_login", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "allow_github_login", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "is_restricted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationLoginMethods {
+    return new OrganizationLoginMethods().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationLoginMethods {
+    return new OrganizationLoginMethods().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationLoginMethods {
+    return new OrganizationLoginMethods().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OrganizationLoginMethods | PlainMessage<OrganizationLoginMethods> | undefined, b: OrganizationLoginMethods | PlainMessage<OrganizationLoginMethods> | undefined): boolean {
+    return proto3.util.equals(OrganizationLoginMethods, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationLoginMethodsRequest
+ */
+export class GetOrganizationLoginMethodsRequest extends Message<GetOrganizationLoginMethodsRequest> {
+  constructor(data?: PartialMessage<GetOrganizationLoginMethodsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationLoginMethodsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationLoginMethodsRequest {
+    return new GetOrganizationLoginMethodsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationLoginMethodsRequest {
+    return new GetOrganizationLoginMethodsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationLoginMethodsRequest {
+    return new GetOrganizationLoginMethodsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationLoginMethodsRequest | PlainMessage<GetOrganizationLoginMethodsRequest> | undefined, b: GetOrganizationLoginMethodsRequest | PlainMessage<GetOrganizationLoginMethodsRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationLoginMethodsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationLoginMethodsResponse
+ */
+export class GetOrganizationLoginMethodsResponse extends Message<GetOrganizationLoginMethodsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.OrganizationLoginMethods login_methods = 2;
+   */
+  loginMethods?: OrganizationLoginMethods;
+
+  constructor(data?: PartialMessage<GetOrganizationLoginMethodsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationLoginMethodsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "login_methods", kind: "message", T: OrganizationLoginMethods },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationLoginMethodsResponse {
+    return new GetOrganizationLoginMethodsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationLoginMethodsResponse {
+    return new GetOrganizationLoginMethodsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationLoginMethodsResponse {
+    return new GetOrganizationLoginMethodsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationLoginMethodsResponse | PlainMessage<GetOrganizationLoginMethodsResponse> | undefined, b: GetOrganizationLoginMethodsResponse | PlainMessage<GetOrganizationLoginMethodsResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationLoginMethodsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateOrganizationLoginMethodsRequest
+ */
+export class UpdateOrganizationLoginMethodsRequest extends Message<UpdateOrganizationLoginMethodsRequest> {
+  /**
+   * @generated from field: repeated string allowed_sso_provider_ids = 1;
+   */
+  allowedSsoProviderIds: string[] = [];
+
+  /**
+   * @generated from field: bool allow_password_login = 2;
+   */
+  allowPasswordLogin = false;
+
+  /**
+   * @generated from field: bool allow_google_login = 3;
+   */
+  allowGoogleLogin = false;
+
+  /**
+   * @generated from field: bool allow_github_login = 4;
+   */
+  allowGithubLogin = false;
+
+  /**
+   * Set true to confirm that namespace mappings may be altered by this change.
+   * Left false (a preview), if the change would strip methods from existing
+   * namespace mappings the server returns requires_confirmation and makes no changes.
+   *
+   * @generated from field: bool confirm_namespace_changes = 5;
+   */
+  confirmNamespaceChanges = false;
+
+  constructor(data?: PartialMessage<UpdateOrganizationLoginMethodsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationLoginMethodsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "allowed_sso_provider_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "allow_password_login", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "allow_google_login", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "allow_github_login", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "confirm_namespace_changes", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationLoginMethodsRequest {
+    return new UpdateOrganizationLoginMethodsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationLoginMethodsRequest {
+    return new UpdateOrganizationLoginMethodsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationLoginMethodsRequest {
+    return new UpdateOrganizationLoginMethodsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateOrganizationLoginMethodsRequest | PlainMessage<UpdateOrganizationLoginMethodsRequest> | undefined, b: UpdateOrganizationLoginMethodsRequest | PlainMessage<UpdateOrganizationLoginMethodsRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationLoginMethodsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateOrganizationLoginMethodsResponse
+ */
+export class UpdateOrganizationLoginMethodsResponse extends Message<UpdateOrganizationLoginMethodsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * True when the change needs confirmation because it would alter namespace
+   * mappings listed in affected_namespaces. No changes were made in this case.
+   *
+   * @generated from field: bool requires_confirmation = 2;
+   */
+  requiresConfirmation = false;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Namespace affected_namespaces = 3;
+   */
+  affectedNamespaces: Namespace[] = [];
+
+  constructor(data?: PartialMessage<UpdateOrganizationLoginMethodsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationLoginMethodsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "requires_confirmation", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "affected_namespaces", kind: "message", T: Namespace, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationLoginMethodsResponse {
+    return new UpdateOrganizationLoginMethodsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationLoginMethodsResponse {
+    return new UpdateOrganizationLoginMethodsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationLoginMethodsResponse {
+    return new UpdateOrganizationLoginMethodsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateOrganizationLoginMethodsResponse | PlainMessage<UpdateOrganizationLoginMethodsResponse> | undefined, b: UpdateOrganizationLoginMethodsResponse | PlainMessage<UpdateOrganizationLoginMethodsResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationLoginMethodsResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetOperationsRequest
  */
 export class GetOperationsRequest extends Message<GetOperationsRequest> {

@@ -553,6 +553,12 @@ const (
 	// PlatformServiceListNamespaceSSOMappingsProcedure is the fully-qualified name of the
 	// PlatformService's ListNamespaceSSOMappings RPC.
 	PlatformServiceListNamespaceSSOMappingsProcedure = "/wg.cosmo.platform.v1.PlatformService/ListNamespaceSSOMappings"
+	// PlatformServiceGetOrganizationLoginMethodsProcedure is the fully-qualified name of the
+	// PlatformService's GetOrganizationLoginMethods RPC.
+	PlatformServiceGetOrganizationLoginMethodsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationLoginMethods"
+	// PlatformServiceUpdateOrganizationLoginMethodsProcedure is the fully-qualified name of the
+	// PlatformService's UpdateOrganizationLoginMethods RPC.
+	PlatformServiceUpdateOrganizationLoginMethodsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrganizationLoginMethods"
 	// PlatformServiceGetProposalsByFederatedGraphProcedure is the fully-qualified name of the
 	// PlatformService's GetProposalsByFederatedGraph RPC.
 	PlatformServiceGetProposalsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalsByFederatedGraph"
@@ -928,6 +934,10 @@ type PlatformServiceClient interface {
 	UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error)
 	// ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
 	ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error)
+	// GetOrganizationLoginMethods returns the org's allowed login methods (empty restriction = all allowed).
+	GetOrganizationLoginMethods(context.Context, *connect.Request[v1.GetOrganizationLoginMethodsRequest]) (*connect.Response[v1.GetOrganizationLoginMethodsResponse], error)
+	// UpdateOrganizationLoginMethods replaces the org's allowed login methods and reconciles namespace mappings.
+	UpdateOrganizationLoginMethods(context.Context, *connect.Request[v1.UpdateOrganizationLoginMethodsRequest]) (*connect.Response[v1.UpdateOrganizationLoginMethodsResponse], error)
 	// GetProposalsByFederatedGraph returns proposals for a federated graph.
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
 	// GetProposalChecks returns checks for a proposal.
@@ -2014,6 +2024,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("ListNamespaceSSOMappings")),
 			connect.WithClientOptions(opts...),
 		),
+		getOrganizationLoginMethods: connect.NewClient[v1.GetOrganizationLoginMethodsRequest, v1.GetOrganizationLoginMethodsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOrganizationLoginMethodsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("GetOrganizationLoginMethods")),
+			connect.WithClientOptions(opts...),
+		),
+		updateOrganizationLoginMethods: connect.NewClient[v1.UpdateOrganizationLoginMethodsRequest, v1.UpdateOrganizationLoginMethodsResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateOrganizationLoginMethodsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationLoginMethods")),
+			connect.WithClientOptions(opts...),
+		),
 		getProposalsByFederatedGraph: connect.NewClient[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceGetProposalsByFederatedGraphProcedure,
@@ -2282,6 +2304,8 @@ type platformServiceClient struct {
 	getNamespaceProposalConfig                         *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
 	updateNamespaceSSOMappings                         *connect.Client[v1.UpdateNamespaceSSOMappingsRequest, v1.UpdateNamespaceSSOMappingsResponse]
 	listNamespaceSSOMappings                           *connect.Client[v1.ListNamespaceSSOMappingsRequest, v1.ListNamespaceSSOMappingsResponse]
+	getOrganizationLoginMethods                        *connect.Client[v1.GetOrganizationLoginMethodsRequest, v1.GetOrganizationLoginMethodsResponse]
+	updateOrganizationLoginMethods                     *connect.Client[v1.UpdateOrganizationLoginMethodsRequest, v1.UpdateOrganizationLoginMethodsResponse]
 	getProposalsByFederatedGraph                       *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
 	getProposalChecks                                  *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
 	getOperations                                      *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
@@ -3201,6 +3225,18 @@ func (c *platformServiceClient) ListNamespaceSSOMappings(ctx context.Context, re
 	return c.listNamespaceSSOMappings.CallUnary(ctx, req)
 }
 
+// GetOrganizationLoginMethods calls
+// wg.cosmo.platform.v1.PlatformService.GetOrganizationLoginMethods.
+func (c *platformServiceClient) GetOrganizationLoginMethods(ctx context.Context, req *connect.Request[v1.GetOrganizationLoginMethodsRequest]) (*connect.Response[v1.GetOrganizationLoginMethodsResponse], error) {
+	return c.getOrganizationLoginMethods.CallUnary(ctx, req)
+}
+
+// UpdateOrganizationLoginMethods calls
+// wg.cosmo.platform.v1.PlatformService.UpdateOrganizationLoginMethods.
+func (c *platformServiceClient) UpdateOrganizationLoginMethods(ctx context.Context, req *connect.Request[v1.UpdateOrganizationLoginMethodsRequest]) (*connect.Response[v1.UpdateOrganizationLoginMethodsResponse], error) {
+	return c.updateOrganizationLoginMethods.CallUnary(ctx, req)
+}
+
 // GetProposalsByFederatedGraph calls
 // wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph.
 func (c *platformServiceClient) GetProposalsByFederatedGraph(ctx context.Context, req *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {
@@ -3606,6 +3642,10 @@ type PlatformServiceHandler interface {
 	UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error)
 	// ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
 	ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error)
+	// GetOrganizationLoginMethods returns the org's allowed login methods (empty restriction = all allowed).
+	GetOrganizationLoginMethods(context.Context, *connect.Request[v1.GetOrganizationLoginMethodsRequest]) (*connect.Response[v1.GetOrganizationLoginMethodsResponse], error)
+	// UpdateOrganizationLoginMethods replaces the org's allowed login methods and reconciles namespace mappings.
+	UpdateOrganizationLoginMethods(context.Context, *connect.Request[v1.UpdateOrganizationLoginMethodsRequest]) (*connect.Response[v1.UpdateOrganizationLoginMethodsResponse], error)
 	// GetProposalsByFederatedGraph returns proposals for a federated graph.
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
 	// GetProposalChecks returns checks for a proposal.
@@ -4688,6 +4728,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("ListNamespaceSSOMappings")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetOrganizationLoginMethodsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOrganizationLoginMethodsProcedure,
+		svc.GetOrganizationLoginMethods,
+		connect.WithSchema(platformServiceMethods.ByName("GetOrganizationLoginMethods")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateOrganizationLoginMethodsHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateOrganizationLoginMethodsProcedure,
+		svc.UpdateOrganizationLoginMethods,
+		connect.WithSchema(platformServiceMethods.ByName("UpdateOrganizationLoginMethods")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetProposalsByFederatedGraphHandler := connect.NewUnaryHandler(
 		PlatformServiceGetProposalsByFederatedGraphProcedure,
 		svc.GetProposalsByFederatedGraph,
@@ -5126,6 +5178,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUpdateNamespaceSSOMappingsHandler.ServeHTTP(w, r)
 		case PlatformServiceListNamespaceSSOMappingsProcedure:
 			platformServiceListNamespaceSSOMappingsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOrganizationLoginMethodsProcedure:
+			platformServiceGetOrganizationLoginMethodsHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateOrganizationLoginMethodsProcedure:
+			platformServiceUpdateOrganizationLoginMethodsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetProposalsByFederatedGraphProcedure:
 			platformServiceGetProposalsByFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceGetProposalChecksProcedure:
@@ -5855,6 +5911,14 @@ func (UnimplementedPlatformServiceHandler) UpdateNamespaceSSOMappings(context.Co
 
 func (UnimplementedPlatformServiceHandler) ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ListNamespaceSSOMappings is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOrganizationLoginMethods(context.Context, *connect.Request[v1.GetOrganizationLoginMethodsRequest]) (*connect.Response[v1.GetOrganizationLoginMethodsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationLoginMethods is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateOrganizationLoginMethods(context.Context, *connect.Request[v1.UpdateOrganizationLoginMethodsRequest]) (*connect.Response[v1.UpdateOrganizationLoginMethodsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateOrganizationLoginMethods is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {

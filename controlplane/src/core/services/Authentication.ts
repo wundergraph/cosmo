@@ -7,6 +7,7 @@ import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import { NamespaceSsoMappingRepository } from '../repositories/NamespaceSsoMappingRepository.js';
+import { OrganizationLoginMethodRepository } from '../repositories/OrganizationLoginMethodRepository.js';
 import { traced } from '../tracing.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
@@ -34,6 +35,7 @@ export class Authentication implements Authenticator {
     private orgRepo: OrganizationRepository,
     private oidcRepo: OidcRepository,
     private namespaceSsoMappingRepo: NamespaceSsoMappingRepository,
+    private orgLoginMethodRepo: OrganizationLoginMethodRepository,
     private logger: FastifyBaseLogger,
   ) {}
 
@@ -99,7 +101,7 @@ export class Authentication implements Authenticator {
 
       // Resolve the login method, IdP gate and RBAC from the session's idp_alias.
       const { loginMethod, rbac } = await buildAuthState(
-        { oidcRepo: this.oidcRepo, orgRepo: this.orgRepo, namespaceSsoMappingRepo: this.namespaceSsoMappingRepo },
+        { oidcRepo: this.oidcRepo, orgRepo: this.orgRepo, namespaceSsoMappingRepo: this.namespaceSsoMappingRepo, orgLoginMethodRepo: this.orgLoginMethodRepo },
         { organizationId: organization.id, userId: user.userId, idpAlias: user.idpAlias },
       );
 

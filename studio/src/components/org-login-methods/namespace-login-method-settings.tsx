@@ -1,20 +1,17 @@
 import { EmptyState } from '@/components/empty-state';
-import { getDashboardLayout } from '@/components/layout/dashboard-layout';
 import { MappingRow, NamespaceLite, NamespaceMappingRows } from '@/components/namespace-sso/namespace-mapping-rows';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from '@/components/ui/loader';
 import { MultiSelectOption } from '@/components/ui/multi-select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
-import { useFeature } from '@/hooks/use-feature';
-import { useIsAdmin } from '@/hooks/use-is-admin';
 import { docsBaseURL } from '@/lib/constants';
-import { NextPageWithLayout } from '@/lib/page';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { ExclamationTriangleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
+  getOrganizationLoginMethods,
   getWorkspace,
   listNamespaceSSOMappings,
   listOIDCProviders,
@@ -24,7 +21,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 
-// Sentinel value representing password login, which is not an SSO provider id.
+// Sentinel values representing built-in methods, which are not SSO provider ids.
 const PASSWORD_VALUE = '__password__';
 const GOOGLE_VALUE = '__google__';
 const GITHUB_VALUE = '__github__';
@@ -32,11 +29,30 @@ const GITHUB_VALUE = '__github__';
 // Stable key describing a namespace's allowed methods, for dirty-state and diffing.
 const methodsKey = (values: string[]) => [...values].sort().join(',');
 
-const NamespaceSSOMappingPage: NextPageWithLayout = () => {
+const sectionCard = (children: React.ReactNode) => (
+  <Card>
+    <CardHeader>
+      <CardTitle>Namespaces</CardTitle>
+      <CardDescription>
+        Restrict which login methods can access each namespace. Namespaces that aren&apos;t listed are open to all login
+        methods (default-open).{' '}
+        <Link
+          href={docsBaseURL + '/studio/namespace-login-methods'}
+          className="text-primary"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Learn more
+        </Link>
+      </CardDescription>
+    </CardHeader>
+    <CardContent>{children}</CardContent>
+  </Card>
+);
+
+export function NamespaceLoginMethodSettings() {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
-  const isAdmin = useIsAdmin();
-  const oidc = useFeature('oidc');
   const { toast } = useToast();
 
   const {
@@ -60,6 +76,8 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
     refetch: refetchMappings,
   } = useQuery(listNamespaceSSOMappings, {});
 
+  const { data: orgLoginMethodsData } = useQuery(getOrganizationLoginMethods, {});
+
   const { mutate, isPending } = useMutation(updateNamespaceSSOMappings);
 
   const namespaces = useMemo<NamespaceLite[]>(
@@ -69,8 +87,11 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
 
   const providers = useMemo(() => providersData?.providers ?? [], [providersData?.providers]);
 
-  const methodOptions = useMemo<MultiSelectOption[]>(
-    () => [
+  const orgLoginMethods = orgLoginMethodsData?.loginMethods;
+  const orgIsRestricted = orgLoginMethods?.isRestricted ?? false;
+
+  const methodOptions = useMemo<MultiSelectOption[]>(() => {
+    const allOptions: MultiSelectOption[] = [
       { value: PASSWORD_VALUE, label: 'Password login', description: 'Email and password sign-in', group: 'Password' },
       { value: GOOGLE_VALUE, label: 'Google', description: 'Sign in with Google', group: 'Social login' },
       { value: GITHUB_VALUE, label: 'GitHub', description: 'Sign in with GitHub', group: 'Social login' },
@@ -80,9 +101,28 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
         description: p.alias || undefined,
         group: 'SSO apps',
       })),
-    ],
-    [providers],
-  );
+    ];
+    if (!orgIsRestricted || !orgLoginMethods) return allOptions;
+    // Filter to only org-allowed methods
+    const allowedSsoIds = new Set(orgLoginMethods.allowedSsoProviderIds);
+    return allOptions.filter((opt) => {
+      if (opt.value === PASSWORD_VALUE) return orgLoginMethods.allowPasswordLogin;
+      if (opt.value === GOOGLE_VALUE) return orgLoginMethods.allowGoogleLogin;
+      if (opt.value === GITHUB_VALUE) return orgLoginMethods.allowGithubLogin;
+      return allowedSsoIds.has(opt.value);
+    });
+  }, [providers, orgIsRestricted, orgLoginMethods]);
+
+  // Count of allowed methods when org restriction is active
+  const orgAllowedCount = useMemo(() => {
+    if (!orgIsRestricted || !orgLoginMethods) return null;
+    let count = 0;
+    if (orgLoginMethods.allowPasswordLogin) count++;
+    if (orgLoginMethods.allowGoogleLogin) count++;
+    if (orgLoginMethods.allowGithubLogin) count++;
+    count += orgLoginMethods.allowedSsoProviderIds.length;
+    return count;
+  }, [orgIsRestricted, orgLoginMethods]);
 
   const [rows, setRows] = useState<MappingRow[]>([]);
   // Server snapshot keyed by namespace id, for dirty-state and save diffing.
@@ -157,38 +197,8 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
     );
   };
 
-  if (!isAdmin) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Namespace SSO</CardTitle>
-          <CardDescription>You need organization admin access to view this page.</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
-  if (!oidc) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-x-2">
-            <span>Namespace SSO mapping</span>
-            <Badge variant="outline">Enterprise feature</Badge>
-          </CardTitle>
-          <CardDescription>
-            Restrict namespaces to specific login methods. This feature is part of the SSO add-on.{' '}
-            <Link href={docsBaseURL + '/studio/sso'} className="text-sm text-primary" target="_blank" rel="noreferrer">
-              Learn more
-            </Link>
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
   if (isLoadingWorkspace || isLoadingProviders || isLoadingMappings) {
-    return <Loader fullscreen />;
+    return sectionCard(<Loader />);
   }
 
   if (
@@ -202,10 +212,11 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
     providersData.response?.code !== EnumStatusCode.OK ||
     mappingsData.response?.code !== EnumStatusCode.OK
   ) {
-    return (
+    return sectionCard(
       <EmptyState
+        className="h-auto py-10"
         icon={<ExclamationTriangleIcon />}
-        title="Could not load namespace SSO mappings"
+        title="Could not load namespace login methods"
         description={
           workspaceData?.response?.details ||
           providersData?.response?.details ||
@@ -226,13 +237,14 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
             Retry
           </Button>
         }
-      />
+      />,
     );
   }
 
   if (providers.length === 0) {
-    return (
+    return sectionCard(
       <EmptyState
+        className="h-auto py-10"
         icon={<LockClosedIcon />}
         title="No SSO apps configured"
         description="Connect at least one OIDC provider before you can restrict namespace access by login method."
@@ -241,44 +253,36 @@ const NamespaceSSOMappingPage: NextPageWithLayout = () => {
             <Link href={`/${organizationSlug}/settings`}>Connect an SSO app</Link>
           </Button>
         }
-      />
+      />,
     );
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Namespace login methods</CardTitle>
-        <CardDescription>
-          Restrict which login methods can access each namespace. Namespaces that aren&apos;t listed are open to all
-          login methods (default-open).
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-y-6">
-        <NamespaceMappingRows
-          namespaces={namespaces}
-          methodOptions={methodOptions}
-          rows={rows}
-          updateRows={setRows}
-          disabled={!isAdmin}
-        />
+  // If org is restricted to a single method, namespace-level gating has no effect.
+  if (orgIsRestricted && orgAllowedCount !== null && orgAllowedCount <= 1) {
+    return sectionCard(
+      <Alert>
+        <AlertDescription>
+          Your organization allows a single login method, so namespace-level login methods have no effect. Allow more
+          methods in the Organization section above to gate namespaces.
+        </AlertDescription>
+      </Alert>,
+    );
+  }
 
-        <div className="flex justify-end">
-          <Button type="button" isLoading={isPending} disabled={!isDirty} onClick={onSave}>
-            Save
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+  return sectionCard(
+    <div className="flex flex-col gap-y-6">
+      <NamespaceMappingRows
+        namespaces={namespaces}
+        methodOptions={methodOptions}
+        rows={rows}
+        updateRows={setRows}
+      />
+
+      <div className="flex justify-end">
+        <Button type="button" isLoading={isPending} disabled={!isDirty} onClick={onSave}>
+          Save
+        </Button>
+      </div>
+    </div>,
   );
-};
-
-NamespaceSSOMappingPage.getLayout = (page) => {
-  return getDashboardLayout(
-    page,
-    'Namespace SSO',
-    'Restrict which login methods can access each namespace in your organization.',
-  );
-};
-
-export default NamespaceSSOMappingPage;
+}

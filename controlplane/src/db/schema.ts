@@ -2019,6 +2019,40 @@ export const namespaceSsoProviders = pgTable(
   },
 );
 
+export const organizationLoginMethods = pgTable(
+  'organization_login_methods', // olm
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    ssoProviderId: uuid('sso_provider_id').references(() => oidcProviders.id, { onDelete: 'cascade' }),
+    isPasswordLogin: boolean('is_password_login').notNull().default(false),
+    isGoogleLogin: boolean('is_google_login').notNull().default(false),
+    isGithubLogin: boolean('is_github_login').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      organizationIdIndex: index('olm_organization_id_idx').on(t.organizationId),
+      ssoProviderIdIndex: index('olm_sso_provider_id_idx').on(t.ssoProviderId),
+      // At most one row per allowed SSO app per org.
+      uniqueSsoPerOrg: uniqueIndex('olm_unique_sso')
+        .on(t.organizationId, t.ssoProviderId)
+        .where(sql`${t.ssoProviderId} IS NOT NULL`),
+      // At most one built-in-methods row (password/google/github) per org.
+      uniqueBuiltinPerOrg: uniqueIndex('olm_unique_builtin')
+        .on(t.organizationId)
+        .where(sql`${t.ssoProviderId} IS NULL`),
+      // A row is either an SSO-provider row or a built-in-methods row, never both, never neither.
+      builtinXorSsoCheck: check(
+        'olm_builtin_xor_sso_check',
+        sql`(${t.ssoProviderId} IS NOT NULL) <> (${t.isPasswordLogin} OR ${t.isGoogleLogin} OR ${t.isGithubLogin})`,
+      ),
+    };
+  },
+);
+
 export const auditLogs = pgTable(
   'audit_logs', // auditlogs
   {

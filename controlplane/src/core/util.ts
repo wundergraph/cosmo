@@ -38,12 +38,14 @@ import {
   isAuthorizationError,
   isClickHouseUnavailableError,
   isPublicError,
+  LoginMethodNotAllowedError,
 } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 import { RBACEvaluator } from './services/RBACEvaluator.js';
 import type { OidcRepository } from './repositories/OidcRepository.js';
 import type { OrganizationRepository } from './repositories/OrganizationRepository.js';
 import type { NamespaceSsoMappingRepository } from './repositories/NamespaceSsoMappingRepository.js';
+import type { OrganizationLoginMethodRepository } from './repositories/OrganizationLoginMethodRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
@@ -962,6 +964,32 @@ export function applyIdpNamespaceGate(
 }
 
 /**
+ * Resolves the login method from a session's IdP alias, scoped to a specific
+ * organization. Returns an `sso` method when the alias matches an org OIDC
+ * provider, a `social` method for built-in social brokers, or `password` as
+ * the default. Extracted so callers outside of `buildAuthState` (e.g. the
+ * `/session` endpoint) can reuse the identical resolution logic.
+ */
+export async function resolveLoginMethod(
+  deps: { oidcRepo: OidcRepository },
+  input: { organizationId: string; idpAlias: string | null | undefined },
+): Promise<LoginMethod> {
+  if (input.idpAlias) {
+    const provider = await deps.oidcRepo.getOidcProviderByAlias({
+      alias: input.idpAlias,
+      organizationId: input.organizationId,
+    });
+    if (provider) {
+      return { type: 'sso', ssoProviderId: provider.id, alias: input.idpAlias };
+    }
+    if (isSocialLoginProvider(input.idpAlias)) {
+      return { type: 'social', provider: input.idpAlias, alias: input.idpAlias };
+    }
+  }
+  return { type: 'password' };
+}
+
+/**
  * Derives the full auth state for an interactive (web-session or access-token)
  * login from the session's IdP alias:
  *  1. Resolves the login method — a custom OIDC app when the alias matches an
@@ -979,20 +1007,22 @@ export async function buildAuthState(
     oidcRepo: OidcRepository;
     orgRepo: OrganizationRepository;
     namespaceSsoMappingRepo: NamespaceSsoMappingRepository;
+    orgLoginMethodRepo: OrganizationLoginMethodRepository;
   },
   input: { organizationId: string; userId: string; idpAlias: string | null | undefined },
 ): Promise<{ loginMethod: LoginMethod; rbac: RBACEvaluator }> {
-  let loginMethod: LoginMethod = { type: 'password' };
-  if (input.idpAlias) {
-    const provider = await deps.oidcRepo.getOidcProviderByAlias({
-      alias: input.idpAlias,
-      organizationId: input.organizationId,
-    });
-    if (provider) {
-      loginMethod = { type: 'sso', ssoProviderId: provider.id, alias: input.idpAlias };
-    } else if (isSocialLoginProvider(input.idpAlias)) {
-      loginMethod = { type: 'social', provider: input.idpAlias, alias: input.idpAlias };
-    }
+  const loginMethod = await resolveLoginMethod(
+    { oidcRepo: deps.oidcRepo },
+    { organizationId: input.organizationId, idpAlias: input.idpAlias },
+  );
+
+  // Org-level login-method gate: deny the whole org when the method is not allowed.
+  const isOrgLoginMethodAllowed = await deps.orgLoginMethodRepo.isLoginMethodAllowed({
+    organizationId: input.organizationId,
+    loginMethod,
+  });
+  if (!isOrgLoginMethodAllowed) {
+    throw new LoginMethodNotAllowedError();
   }
 
   const namespaceAccess = await deps.namespaceSsoMappingRepo.allowedNamespaces({
@@ -1011,6 +1041,71 @@ export async function buildAuthState(
   );
 
   return { loginMethod, rbac };
+}
+
+/**
+ * Whether an organization allow-list permits the given login method. Used by the
+ * org login-method update to verify the acting admin's method stays allowed (the
+ * self-lockout guard). API keys cannot be the actor — they are rejected before
+ * this is reached — so they are excluded from the parameter type by design.
+ */
+export function isLoginMethodAllowedToUpdate(
+  allow: {
+    allowPasswordLogin: boolean;
+    allowGoogleLogin: boolean;
+    allowGithubLogin: boolean;
+    allowedSsoProviderIds: string[];
+  },
+  method: LoginMethod,
+): boolean {
+  switch (method.type) {
+    case 'sso': {
+      return allow.allowedSsoProviderIds.includes(method.ssoProviderId);
+    }
+    case 'social': {
+      return method.provider === 'google' ? allow.allowGoogleLogin : allow.allowGithubLogin;
+    }
+    case 'password': {
+      return allow.allowPasswordLogin;
+    }
+    case 'api-key': {
+      return false;
+    }
+    default: {
+      throw new Error(`Unhandled login method type: ${JSON.stringify(method)}`);
+    }
+  }
+}
+
+/**
+ * Whether a single login-method config row (from `organization_login_methods` or
+ * `namespace_sso_providers`) matches the given login method. Shared by both gates
+ * so the matching rule lives in one place. API keys (and any unknown method) do
+ * not match a row; callers that exempt API keys must short-circuit before this.
+ */
+export function loginMethodMatchesRow(
+  method: LoginMethod,
+  row: {
+    ssoProviderId: string | null;
+    isPasswordLogin: boolean | null;
+    isGoogleLogin: boolean | null;
+    isGithubLogin: boolean | null;
+  },
+): boolean {
+  switch (method.type) {
+    case 'sso': {
+      return row.ssoProviderId === method.ssoProviderId;
+    }
+    case 'social': {
+      return method.provider === 'google' ? !!row.isGoogleLogin : !!row.isGithubLogin;
+    }
+    case 'password': {
+      return !!row.isPasswordLogin;
+    }
+    default: {
+      return false;
+    }
+  }
 }
 
 /** Whether a specific namespace is reachable under the given {@link NamespaceAccess}. */
