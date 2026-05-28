@@ -49,7 +49,12 @@ import {
 } from '../../types/index.js';
 import { CompositionSubgraphRecord } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
-import { checkIfLabelMatchersChanged, normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import {
+  applyIdpNamespaceGate,
+  checkIfLabelMatchersChanged,
+  normalizeLabelMatchers,
+  normalizeLabels,
+} from '../util.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
 import type { CompositionService } from '../services/CompositionService.js';
@@ -352,6 +357,11 @@ export class FederatedGraphRepository {
     rbac: RBACEvaluator | undefined,
     conditions: (SQL<unknown> | undefined)[],
   ): boolean {
+    // Apply the IdP gate regardless of RBAC level. Empty allowed-set → no rows.
+    if (!applyIdpNamespaceGate(rbac, schema.targets.namespaceId, conditions)) {
+      return false;
+    }
+
     if (!rbac || rbac.isOrganizationViewer) {
       return true;
     }

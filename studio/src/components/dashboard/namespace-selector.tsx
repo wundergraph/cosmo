@@ -1,13 +1,15 @@
 import { CommandItem, CommandGroup, CommandSeparator } from '@/components/ui/command';
 import { Popover, PopoverTrigger } from '@/components/ui/popover';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { useUser } from '@/hooks/use-user';
 import { useRouter } from 'next/router';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn, socialProviderLabel } from '@/lib/utils';
 import * as React from 'react';
 import { CheckIcon, CaretSortIcon } from '@radix-ui/react-icons';
 import { docsBaseURL } from '@/lib/constants';
+import { LoginMethodType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { WorkspaceCommandWrapper } from './workspace-command-wrapper';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
@@ -20,6 +22,20 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
   const [filter, setFilter] = useState('');
   const [isOpen, setOpen] = useState(false);
   const { isLoading, namespace, namespaceByName, setNamespace } = useWorkspace();
+  const loginMethod = useUser()?.loginMethod;
+  // SSO, social and password logins can all be gated, so the visibility hint
+  // applies to any of them. (API-key logins never reach the web UI.)
+  const isGatedLogin =
+    loginMethod?.type === LoginMethodType.SSO ||
+    loginMethod?.type === LoginMethodType.SOCIAL ||
+    loginMethod?.type === LoginMethodType.PASSWORD;
+
+  let loginMethodLabel = 'password';
+  if (loginMethod?.type === LoginMethodType.SSO) {
+    loginMethodLabel = loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO';
+  } else if (loginMethod?.type === LoginMethodType.SOCIAL) {
+    loginMethodLabel = socialProviderLabel(loginMethod.socialProvider);
+  }
 
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
@@ -29,6 +45,8 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
   );
 
   const namespaces = Array.from(namespaceByName.keys());
+  const hasNoAccess = !isLoading && namespaces.length === 0;
+  const displayName = hasNoAccess ? 'No access' : namespace.name;
   if (isLoading) {
     return (
       <span className="flex flex-shrink-0 animate-pulse items-center justify-start gap-x-4 rounded-lg bg-primary/15 px-3 py-1.5 text-sm text-primary">
@@ -40,7 +58,7 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
 
   return (
     <div className="flex items-center justify-start">
-      {isViewingGraphOrSubgraph && (
+      {isViewingGraphOrSubgraph && !hasNoAccess && (
         <>
           <Link
             href={{
@@ -79,8 +97,15 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
                 : 'flex items-center justify-start gap-4 rounded-lg px-3 py-1.5',
             )}
           >
-            {!isViewingGraphOrSubgraph && (
-              <span className={cn(truncateNamespace && 'max-w-[180px] truncate lg:max-w-xs')}>{namespace.name}</span>
+            {(hasNoAccess || !isViewingGraphOrSubgraph) && (
+              <span
+                className={cn(
+                  truncateNamespace && 'max-w-[180px] truncate lg:max-w-xs',
+                  hasNoAccess && 'text-muted-foreground',
+                )}
+              >
+                {displayName}
+              </span>
             )}
             <CaretSortIcon className="h-4 w-4 flex-shrink-0 opacity-50" />
           </button>
@@ -103,6 +128,14 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
                 here.
               </Link>
             </p>
+            {isGatedLogin && (
+              <p className="mt-2 flex items-start gap-x-1.5 text-sm text-muted-foreground">
+                <span>
+                  Some namespaces may be hidden because they&apos;re not enabled for your current login method (
+                  {loginMethodLabel}).
+                </span>
+              </p>
+            )}
           </div>
           {namespaces.length > 0 && (
             <>
