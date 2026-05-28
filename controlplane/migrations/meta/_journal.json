@@ -974,20 +974,6 @@
       "when": 1778492417221,
       "tag": "0138_lazy_speedball",
       "breakpoints": true
-    },
-    {
-      "idx": 139,
-      "version": "7",
-      "when": 1778747867650,
-      "tag": "0139_nappy_fallen_one",
-      "breakpoints": true
-    },
-    {
-      "idx": 140,
-      "version": "7",
-      "when": 1779441399178,
-      "tag": "0140_glamorous_sharon_ventura",
-      "breakpoints": true
     }
   ]
 }
