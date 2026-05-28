@@ -98,7 +98,6 @@ export const fetchRouterConfig = async ({
     );
   }
 
-  //
   return result;
 };
 

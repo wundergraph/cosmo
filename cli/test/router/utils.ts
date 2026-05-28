@@ -10,6 +10,9 @@ import { join, resolve } from 'pathe';
 
 export const FIXTURES_DIR_PATH = resolve('./test/fixtures');
 
+export const ROUTER_SDL = 'type Query {\n  users: [User]!\n}\n\ntype User {\n  id: String @authenticated\n}';
+export const CLIENT_SDL = 'type Query {\n  users: [User]!\n}\n\ntype User {\n  id: String\n}';
+
 export function mockGenerateRouterToken(
   splitConfigsEnabled: boolean,
   _: GenerateRouterTokenRequest,

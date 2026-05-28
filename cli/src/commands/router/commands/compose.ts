@@ -178,7 +178,10 @@ export default (opts: BaseCommandOptions) => {
     'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
   );
   command.option('--ignore-external-keys', 'This flag ignores errors related to true external entity keys.');
-  command.option('--split-configs-enabled', 'This flag enables splitting the router config into multiple files.');
+  command.option(
+    '--split-configs-enabled',
+    'This flag enables splitting the router config into multiple files. Router version 0.315.0 or higher is required.',
+  );
 
   command.action(async (options) => {
     const inputFile = resolve(options.input);

@@ -9,10 +9,13 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import FetchCommand from '../../../src/commands/graph/federated-graph/commands/fetch.js';
 import { Client } from '../../../src/core/client/client.js';
-import { FIXTURES_DIR_PATH, mockFetchRouterConfig, mockGenerateRouterToken } from '../../router/utils.js';
-
-const routerSdl = 'type User {\n  id: String @authenticated\n}';
-const clientSdl = 'type User {\n  id: String\n}';
+import {
+  FIXTURES_DIR_PATH,
+  ROUTER_SDL,
+  CLIENT_SDL,
+  mockFetchRouterConfig,
+  mockGenerateRouterToken,
+} from '../../router/utils.js';
 
 export const mockPlatformTransport = (splitConfigsEnabled: boolean) =>
   createRouterTransport(({ service }) => {
@@ -22,8 +25,8 @@ export const mockPlatformTransport = (splitConfigsEnabled: boolean) =>
           response: {
             code: EnumStatusCode.OK,
           },
-          sdl: routerSdl,
-          clientSchema: clientSdl,
+          sdl: ROUTER_SDL,
+          clientSchema: CLIENT_SDL,
         };
       },
       getSubgraphSDLFromLatestComposition(_) {
@@ -54,7 +57,7 @@ export const mockPlatformTransport = (splitConfigsEnabled: boolean) =>
     });
   });
 
-describe('federated-graph fetch', () => {
+describe('federated-graph fetch command', () => {
   afterEach(vi.clearAllMocks);
 
   test('that router config matches expected snapshot when config splitting is disabled', async () => {

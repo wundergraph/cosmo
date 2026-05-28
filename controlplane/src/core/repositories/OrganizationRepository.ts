@@ -1711,7 +1711,7 @@ export class OrganizationRepository {
 
     const orgFeatures = await this.getFeatures({ organizationId });
     for (const feature of orgFeatures) {
-      if (graphTokenFeatures.includes(feature.id) && feature.enabled) {
+      if (feature.enabled && graphTokenFeatures.includes(feature.id)) {
         features.push('split-config-loading');
       }
     }
