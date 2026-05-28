@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func setupTestContext(t *testing.T, tp *sdktrace.TracerProvider) (context.Context, *requestContext) {
@@ -89,28 +90,36 @@ func TestEmitResolverPhaseSpan(t *testing.T) {
 	tracer := tp.Tracer("test")
 
 	parentCtx, parentSpan := tracer.Start(context.Background(), "Operation - Execute")
+	parentCtx = trace.ContextWithSpan(context.Background(), parentSpan)
 	start := time.Now().Add(-time.Millisecond)
-	emitResolverPhaseSpan(parentCtx, tracer, "Operation - Resolve Response", start, time.Millisecond, "engine-resolver")
+	emitRouterPhaseSpan(parentCtx, tracer, "Operation - Resolve Response", start, time.Millisecond, rotel.WgComponentName.String("engine-resolver"))
+	emitRouterPhaseSpan(parentCtx, tracer, "Router - Write Response", start.Add(time.Millisecond), time.Millisecond, rotel.WgComponentName.String("router-server"))
 	parentSpan.End()
 
 	spans := exporter.GetSpans().Snapshots()
-	require.Len(t, spans, 2)
+	require.Len(t, spans, 3)
 
-	var executeSpan, resolveSpan sdktrace.ReadOnlySpan
+	var executeSpan, resolveSpan, writeSpan sdktrace.ReadOnlySpan
 	for _, span := range spans {
 		switch span.Name() {
 		case "Operation - Execute":
 			executeSpan = span
 		case "Operation - Resolve Response":
 			resolveSpan = span
+		case "Router - Write Response":
+			writeSpan = span
 		}
 	}
 
 	require.NotNil(t, executeSpan)
 	require.NotNil(t, resolveSpan)
+	require.NotNil(t, writeSpan)
 	require.Equal(t, executeSpan.SpanContext().SpanID(), resolveSpan.Parent().SpanID())
+	require.Equal(t, executeSpan.SpanContext().SpanID(), writeSpan.Parent().SpanID())
 	require.True(t, resolveSpan.EndTime().After(resolveSpan.StartTime()))
+	require.True(t, writeSpan.EndTime().After(writeSpan.StartTime()))
 	require.Contains(t, resolveSpan.Attributes(), rotel.WgComponentName.String("engine-resolver"))
+	require.Contains(t, writeSpan.Attributes(), rotel.WgComponentName.String("router-server"))
 }
 
 func TestOnFinished_ClientDisconnect(t *testing.T) {

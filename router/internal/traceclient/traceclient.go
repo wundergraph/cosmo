@@ -21,9 +21,9 @@ const tracerName = "wundergraph/cosmo/router/traceclient"
 // Child span names emitted for each httptrace phase under the subgraph HTTP
 // client span.
 const (
-	spanDNSLookup     = "HTTP - DNS Lookup"
-	spanTCPConnect    = "HTTP - TCP Connect"
-	spanTLSHandshake  = "HTTP - TLS Handshake"
+	spanDNSLookup       = "HTTP - DNS Lookup"
+	spanTCPConnect      = "HTTP - TCP Connect"
+	spanTLSHandshake    = "HTTP - TLS Handshake"
 	spanTimeToFirstByte = "HTTP - Time To First Byte"
 )
 

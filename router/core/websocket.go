@@ -28,6 +28,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -1142,7 +1143,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		if info != nil {
 			if h.graphqlHandler.emitResolverAcquireSpan {
 				emitResolverAcquireSpan(resolveCtx.Context(), h.graphqlHandler.tracer, resolveStart, info.ResolveAcquireWaitTime, info.ResolveDeduplicated)
-				emitResolverPhaseSpan(resolveCtx.Context(), h.graphqlHandler.tracer, "Operation - Resolve Response", info.ResponseResolveStartTime, info.ResponseResolveDuration, "engine-resolver")
+				emitRouterPhaseSpan(resolveCtx.Context(), h.graphqlHandler.tracer, "Operation - Resolve Response", info.ResponseResolveStartTime, info.ResponseResolveDuration, rotel.WgComponentName.String("engine-resolver"))
 			}
 			if h.graphqlHandler.metricStore != nil {
 				h.graphqlHandler.metricStore.MeasureResolverAcquireDuration(

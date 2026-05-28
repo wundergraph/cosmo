@@ -42,6 +42,10 @@ func TestConnectionPhaseAndResolverAcquireSpans(t *testing.T) {
 			require.False(t, hasSpanWithName(sn, "HTTP - Read Response Body"))
 			require.False(t, hasSpanWithName(sn, "Engine - Fetch Response Processing"))
 			require.False(t, hasSpanWithName(sn, "Resolver - Acquire"))
+			require.False(t, hasSpanWithName(sn, "Operation - Resolve Response"))
+			require.False(t, hasSpanWithName(sn, "Router - Write Response"))
+			require.False(t, hasSpanWithName(sn, "Telemetry - Record Metrics"))
+			require.False(t, hasSpanWithName(sn, "Router - Finalize Response"))
 		})
 	})
 

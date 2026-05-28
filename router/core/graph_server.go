@@ -406,9 +406,16 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	 */
 	httpRouter.Group(func(cr chi.Router) {
 		// We are applying it conditionally because compressing 3MB playground is still slow even with stdlib gzip
-		cr.Use(func(h http.Handler) http.Handler {
-			return wrapper(h)
-		})
+		if s.traceConfig.Enabled && s.traceConfig.ResolverAcquireSpans {
+			cr.Use(responseFinalizationSpanMiddleware(
+				wrapper,
+				s.tracerProvider.Tracer("wundergraph/cosmo/router/response_finalization", oteltrace.WithInstrumentationVersion("0.0.1")),
+			))
+		} else {
+			cr.Use(func(h http.Handler) http.Handler {
+				return wrapper(h)
+			})
+		}
 
 		if s.headerRules != nil {
 			cr.Use(rmiddleware.CookieWhitelist(s.headerRules.CookieWhitelist, []string{featureFlagCookie}))
@@ -1796,6 +1803,7 @@ func (s *graphServer) buildGraphMux(
 		HeaderPropagation:                      s.headerPropagation,
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
 		SpanNameFormatter:                      s.spanNameFormatter,
+		EmitRouterPhaseSpans:                   s.traceConfig.Enabled && s.traceConfig.ResolverAcquireSpans,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
