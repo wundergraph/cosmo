@@ -243,6 +243,31 @@ tls:
 	})
 }
 
+func TestGRPCClientTLSConfiguration_LoadFromEnv(t *testing.T) {
+	t.Setenv("TLS_CLIENT_GRPC_ALL_ENABLED", "true")
+	t.Setenv("TLS_CLIENT_GRPC_ALL_CERT_FILE", "client.pem")
+	t.Setenv("TLS_CLIENT_GRPC_ALL_KEY_FILE", "client.key")
+	t.Setenv("TLS_CLIENT_GRPC_ALL_CA_FILE", "ca.pem")
+	t.Setenv("TLS_CLIENT_GRPC_ALL_INSECURE_SKIP_CA_VERIFICATION", "true")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "mytoken"
+`)
+	cfg, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+
+	grpc := cfg.Config.TLS.ClientGRPC
+	require.True(t, grpc.All.Enabled)
+	require.Equal(t, "client.pem", grpc.All.CertFile)
+	require.Equal(t, "client.key", grpc.All.KeyFile)
+	require.Equal(t, "ca.pem", grpc.All.CaFile)
+	require.True(t, grpc.All.InsecureSkipCaVerification)
+	require.Empty(t, grpc.Subgraphs)
+}
+
 func TestGRPCClientTLSConfiguration_SchemaValidation(t *testing.T) {
 	t.Parallel()
 
