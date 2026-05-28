@@ -1,4 +1,5 @@
 import { identify, resetTracking } from '@/lib/track';
+import type { NextRouter } from 'next/router';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { Transport } from '@connectrpc/connect';
 import { TransportProvider } from '@connectrpc/connect-query';
@@ -11,6 +12,8 @@ import { useCookieOrganization } from '@/hooks/use-cookie-organization';
 import { setUser as setSentryUser } from '@sentry/nextjs';
 import { OrganizationRole } from '@/lib/constants';
 import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
+import JoinInvitationsPage from '@/pages/account/join';
+import { Loader } from './ui/loader';
 
 const sessionQueryClient = new QueryClient();
 
@@ -36,6 +39,7 @@ export interface InvitedOrgs {
   id: string;
   name: string;
   slug: string;
+  invitedBy: string;
 }
 
 export interface Organization {
@@ -116,9 +120,18 @@ const fetchSession = async () => {
   }
 };
 
+const shouldSeeInvitationsJoinPage = ({
+  router,
+  invitations,
+}: {
+  router: NextRouter;
+  invitations?: User['invitations'];
+}) => router.query.onboarding === 'true' && invitations && invitations.length > 0;
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const currentOrgSlug = router.query.organizationSlug;
+  const isNewUser = router.query.onboarding === 'true';
 
   // we store the current org slug in a cookie, so that we can redirect to the correct org after login
   // as well as being able to access the cookie on the server.
@@ -216,14 +229,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
         router.pathname !== '/account/invitations' &&
         // match onboarding URL `/onboarding/1` etc
-        !/^\/onboarding(?:\/\d+)?(?:\/|$)/.test(router.pathname)
+        !/^\/onboarding(?:\/\d+)?(?:\/|$)/.test(router.pathname) &&
+        !shouldSeeInvitationsJoinPage({ router, invitations: data.invitations })
       ) {
         const url = new URL(window.location.origin + router.basePath + router.asPath);
         const params = new URLSearchParams(url.search);
         router.replace(params.size !== 0 ? `/${organization.slug}?${params}` : `/${organization.slug}`);
       }
     }
-  }, [router, data, isFetching, error, cookieOrgSlug]);
+  }, [router, data, isFetching, error, cookieOrgSlug, isNewUser]);
 
   useEffect(() => {
     if (!verifiedOrganizationSlug) {
@@ -268,6 +282,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           <WorkspaceProvider>{children}</WorkspaceProvider>
         </SessionClientContext.Provider>
       </UserContext.Provider>
+    );
+  }
+
+  // TODO: add skeleton
+  if (isFetching) {
+    return <Loader />;
+  }
+
+  if (shouldSeeInvitationsJoinPage({ router, invitations: data?.invitations })) {
+    return (
+      <TransportProvider transport={transport}>
+        <UserContext.Provider value={user}>
+          <SessionClientContext.Provider value={sessionQueryClient}>
+            <JoinInvitationsPage invitations={data?.invitations ?? []} isLoading={isFetching} />
+          </SessionClientContext.Provider>
+        </UserContext.Provider>
+      </TransportProvider>
     );
   }
 

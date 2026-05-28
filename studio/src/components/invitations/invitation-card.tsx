@@ -58,18 +58,18 @@ export const InvitationCard = ({ id, name, slug, invitedBy, onAcceptSuccess }: I
   };
 
   return (
-    <Card className="flex items-center justify-between p-4">
+    <Card className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
       {invitedBy ? (
-        <span>
+        <span className="min-w-0 break-words">
           <span className="font-semibold">{invitedBy}</span> invites you to the{' '}
           <span className="font-semibold">{name}</span> organization.
         </span>
       ) : (
-        <span>
+        <span className="min-w-0 break-words">
           You have been invited to the <span className="font-semibold capitalize">{name}</span> organization.
         </span>
       )}
-      <div className="flex gap-x-3">
+      <div className="flex shrink-0 justify-end gap-x-3 self-end sm:self-auto">
         <Button
           type="submit"
           variant="default"
