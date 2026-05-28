@@ -208,7 +208,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       ) {
         router.replace(params.size !== 0 ? `/${organization.slug}?${params}` : `/${organization.slug}`);
       } else if (isNewUserWithInvitations) {
-        router.replace('/account/invites/join');
+        router.replace('/account/join');
       }
     }
   }, [router, data, isFetching, error, cookieOrgSlug]);
