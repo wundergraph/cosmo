@@ -109,6 +109,8 @@ const fetchSession = async () => {
 
 const isNewUser = (router: NextRouter) => router.query.onboarding === 'true';
 const hasPendingInvitations = (invitations?: InvitedOrgs[]) => invitations && invitations.length > 0;
+const hasMultipleOrganizations = (organizations?: Organization[]) =>
+  organizations !== undefined && organizations.length > 1;
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
@@ -193,7 +195,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       setVerifiedOrganizationSlug(organization.slug);
 
-      const isNewUserWithInvitations = isNewUser(router) && hasPendingInvitations(data.invitations);
+      // A fresh signup who still needs to handle invitations: hasn't joined any org
+      // beyond their auto-created personal one yet AND has pending invites. Once they
+      // accept any invite, hasMultipleOrganizations flips true and we stop bouncing
+      // them back to /account/join — even if other invitations are still pending.
+      const isNewUserWithInvitations =
+        isNewUser(router) && hasPendingInvitations(data.invitations) && !hasMultipleOrganizations(data.organizations);
+      const isOnJoinInvitationsPage = router.pathname === '/account/join';
 
       const url = new URL(window.location.origin + router.basePath + router.asPath);
       const params = new URLSearchParams(url.search);
@@ -201,14 +209,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
         router.pathname !== '/account/invitations' &&
+        !isOnJoinInvitationsPage &&
         // match onboarding URL `/onboarding/1` etc
         !/^\/onboarding(?:\/\d+)?(?:\/|$)/.test(router.pathname) &&
         // in a situation where pending invite is present for new users
         !isNewUserWithInvitations
       ) {
         router.replace(params.size !== 0 ? `/${organization.slug}?${params}` : `/${organization.slug}`);
-      } else if (isNewUserWithInvitations) {
-        router.replace('/account/join');
+      } else if (isNewUserWithInvitations && !isOnJoinInvitationsPage) {
+        router.replace({ pathname: '/account/join', query: { onboarding: 'true' } });
       }
     }
   }, [router, data, isFetching, error, cookieOrgSlug]);
@@ -266,6 +275,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           <WorkspaceProvider
             isNewUser={isNewUser(router)}
             hasPendingInvitations={hasPendingInvitations(data?.invitations)}
+            hasMultipleOrganizations={hasMultipleOrganizations(data?.organizations)}
           >
             {children}
           </WorkspaceProvider>

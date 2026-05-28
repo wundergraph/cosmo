@@ -9,6 +9,9 @@ const DashboardPage: NextPageWithLayout = () => {
 
   useEffect(() => {
     if (!organizationSlug) return;
+    // Defer to useOnboardingNavigation when the user is in the post-signup skip flow:
+    // it will navigate them to onboarding instead of the graphs dashboard.
+    if (router.query['post-signup-skip'] === 'true') return;
     const url = new URL(window.location.origin + router.basePath + router.asPath);
     const params = new URLSearchParams(url.search);
     router.replace(params.size !== 0 ? `/${organizationSlug}/graphs?${params}` : `/${organizationSlug}/graphs`);

@@ -23,9 +23,11 @@ export function WorkspaceProvider({
   children,
   isNewUser,
   hasPendingInvitations,
+  hasMultipleOrganizations,
 }: React.PropsWithChildren<{
   isNewUser?: boolean;
   hasPendingInvitations?: boolean;
+  hasMultipleOrganizations?: boolean;
 }>) {
   const router = useRouter();
   const applyParams = useApplyParams();
@@ -111,8 +113,21 @@ export function WorkspaceProvider({
     [namespace, namespaces, setStoredNamespace, applyParams],
   );
 
+  const postSignupSkip = router.query['post-signup-skip'] === 'true';
+  // `hasPendingInvitations` is tri-state: undefined while the session is loading or
+  // mid-reset, true with pending invites, false only when the session has resolved
+  // to an empty invitations list. Treat undefined as "still pending" so we don't
+  // race the session query against getOnboarding during transport setup.
+  // `isNewUser && hasMultipleOrganizations` catches the post-signup Accept flow:
+  // a freshly signed-up user who already belongs to more than one org just accepted
+  // an invitation, so we should send them to that org's dashboard rather than the
+  // onboarding wizard. Existing users (isNewUser=false) with multiple orgs still
+  // get onboarding gated only by the standard invitations check.
+  const justAcceptedFreshUser = Boolean(isNewUser) && Boolean(hasMultipleOrganizations);
+  const onboardingDisabled = justAcceptedFreshUser || (hasPendingInvitations !== false && !postSignupSkip);
+
   useOnboardingNavigation({
-    disabled: Boolean(isNewUser && hasPendingInvitations),
+    disabled: onboardingDisabled,
   });
 
   // Finally, render :)

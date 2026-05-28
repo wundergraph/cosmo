@@ -9,7 +9,6 @@ import { useQuery } from '@connectrpc/connect-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getInvitations } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { useRouter } from 'next/router';
-import { useEffect } from 'react';
 import { EmptyState } from '@/components/empty-state';
 
 const JoinInvitationsPage: NextPageWithLayout = () => {
@@ -19,13 +18,6 @@ const JoinInvitationsPage: NextPageWithLayout = () => {
 
   const personalOrgSlug = user?.currentOrganization?.slug;
   const invitationCount = data?.invitations?.length ?? 0;
-  const invitationsResolved = !isLoading && !error && data?.response?.code === EnumStatusCode.OK;
-
-  useEffect(() => {
-    if (invitationsResolved && invitationCount === 0 && personalOrgSlug) {
-      router.replace(`/${personalOrgSlug}`);
-    }
-  }, [invitationsResolved, invitationCount, personalOrgSlug, router]);
 
   if (isLoading || !user) {
     return <Loader fullscreen />;
@@ -44,7 +36,9 @@ const JoinInvitationsPage: NextPageWithLayout = () => {
     );
   }
 
-  if (invitationCount === 0 && isLoading) {
+  // Invitations dropped to zero (decline-all). Show a loader while
+  // useOnboardingNavigation takes over and redirects.
+  if (invitationCount === 0) {
     return <Loader fullscreen />;
   }
 
@@ -64,7 +58,9 @@ const JoinInvitationsPage: NextPageWithLayout = () => {
             name={name}
             slug={slug}
             invitedBy={invitedBy}
-            onAcceptSuccess={(acceptedSlug) => router.push(`/${acceptedSlug}`)}
+            onAcceptSuccess={(acceptedSlug) =>
+              router.push({ pathname: `/${acceptedSlug}`, query: { onboarding: 'true' } })
+            }
           />
         ))}
       </div>
@@ -73,7 +69,7 @@ const JoinInvitationsPage: NextPageWithLayout = () => {
           variant="ghost"
           onClick={() => {
             if (personalOrgSlug) {
-              router.push(`/${personalOrgSlug}`);
+              router.push({ pathname: `/${personalOrgSlug}`, query: { 'post-signup-skip': 'true' } });
             }
           }}
         >
