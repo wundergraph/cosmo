@@ -24,6 +24,7 @@ import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../
 import SchemaGraphPruner from '../../services/SchemaGraphPruner.js';
 import { UsageRepository } from '../../repositories/analytics/UsageRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getOperations(
   opts: RouterOptions,
@@ -60,6 +61,10 @@ export function getOperations(
         },
         operations: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     req.limit = req.limit ?? 100;

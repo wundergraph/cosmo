@@ -83,8 +83,8 @@ export class UserRepository {
     // get all providers
     const oidcProviders: { alias: string; orgSlug: string }[] = [];
     for (const org of orgMemberships.soloAdminSoloMemberOrgs) {
-      const provider = await oidcRepo.getOidcProvider({ organizationId: org.id });
-      if (provider) {
+      const providers = await oidcRepo.listOidcProvidersByOrganizationId({ organizationId: org.id });
+      for (const provider of providers) {
         oidcProviders.push({ ...provider, orgSlug: org.slug });
       }
     }

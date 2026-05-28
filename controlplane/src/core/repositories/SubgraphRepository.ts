@@ -62,6 +62,7 @@ import {
   SchemaUsageTrafficInspector,
 } from '../services/SchemaUsageTrafficInspector.js';
 import {
+  applyIdpNamespaceGate,
   getFederatedGraphRouterCompatibilityVersion,
   hasLabelsChanged,
   normalizeLabels,
@@ -741,6 +742,11 @@ export class SubgraphRepository {
    * @private
    */
   static applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+    // Apply the IdP gate regardless of RBAC level. Empty allowed-set → no rows.
+    if (!applyIdpNamespaceGate(rbac, schema.targets.namespaceId, conditions)) {
+      return false;
+    }
+
     if (!rbac || rbac.isOrganizationViewer) {
       return true;
     }

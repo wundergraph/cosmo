@@ -375,6 +375,7 @@
                   "studio/sso/microsoft-entra"
                 ]
               },
+              "studio/namespace-login-methods",
               {
                 "group": "SCIM",
                 "icon": "file-user",
