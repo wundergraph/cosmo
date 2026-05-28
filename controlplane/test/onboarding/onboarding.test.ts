@@ -30,8 +30,6 @@ describe('Onboarding', () => {
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
       expect(resp.enabled).toBe(false);
-      expect(resp.slack).toBe(false);
-      expect(resp.email).toBe(false);
     });
 
     test('returns enabled=false for admin who is not the creator', async (testContext) => {
@@ -66,8 +64,6 @@ describe('Onboarding', () => {
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
       expect(resp.enabled).toBe(true);
-      expect(resp.slack).toBe(false);
-      expect(resp.email).toBe(false);
       expect(resp.finishedAt).toBeFalsy();
       expect(resp.federatedGraphsCount).toBe(0);
     });
@@ -83,14 +79,12 @@ describe('Onboarding', () => {
 
       authenticator.changeUserWithSuppliedContext(adminAliceCompanyA);
 
-      await client.createOnboarding({ slack: true, email: true });
+      await client.createOnboarding({});
 
       const resp = await client.getOnboarding({});
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
       expect(resp.enabled).toBe(true);
-      expect(resp.slack).toBe(true);
-      expect(resp.email).toBe(true);
       expect(resp.finishedAt).toBeFalsy();
     });
 
@@ -128,11 +122,9 @@ describe('Onboarding', () => {
 
       authenticator.changeUserWithSuppliedContext(adminAliceCompanyA);
 
-      const resp = await client.createOnboarding({ slack: true, email: false });
+      const resp = await client.createOnboarding({});
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
-      expect(resp.slack).toBe(true);
-      expect(resp.email).toBe(false);
       expect(resp.federatedGraphsCount).toBe(0);
       expect(resp.finishedAt).toBeFalsy();
     });
@@ -165,7 +157,7 @@ describe('Onboarding', () => {
 
       authenticator.changeUserWithSuppliedContext(devJoeCompanyA!);
 
-      const resp = await client.createOnboarding({ slack: false, email: true });
+      const resp = await client.createOnboarding({});
 
       expect(resp.response?.code).toBe(EnumStatusCode.ERR);
       expect(resp.response?.details).toBe('Only the organization creator can create onboarding.');
@@ -182,13 +174,11 @@ describe('Onboarding', () => {
 
       authenticator.changeUserWithSuppliedContext(adminAliceCompanyA);
 
-      await client.createOnboarding({ slack: true, email: false });
+      await client.createOnboarding({});
 
-      const resp = await client.createOnboarding({ slack: false, email: true });
+      const resp = await client.createOnboarding({});
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
-      expect(resp.slack).toBe(false);
-      expect(resp.email).toBe(true);
     });
 
     test('resets finishedAt when updating after finish', async (testContext) => {
@@ -202,18 +192,16 @@ describe('Onboarding', () => {
 
       authenticator.changeUserWithSuppliedContext(adminAliceCompanyA);
 
-      await client.createOnboarding({ slack: true, email: true });
+      await client.createOnboarding({});
       await client.finishOnboarding({});
 
       // Update after finishing should reset finishedAt
-      await client.createOnboarding({ slack: false, email: false });
+      await client.createOnboarding({});
 
       const resp = await client.getOnboarding({});
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
       expect(resp.finishedAt).toBeFalsy();
-      expect(resp.slack).toBe(false);
-      expect(resp.email).toBe(false);
     });
   });
 
@@ -229,7 +217,7 @@ describe('Onboarding', () => {
 
       authenticator.changeUserWithSuppliedContext(adminAliceCompanyA);
 
-      await client.createOnboarding({ slack: true, email: true });
+      await client.createOnboarding({});
 
       const resp = await client.finishOnboarding({});
 
