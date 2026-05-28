@@ -1,5 +1,5 @@
 {
-  "id": "558f8eb1-80a7-418b-a382-1c0fe34e7094",
+  "id": "8462c8f2-a1d5-418c-8689-972e478ac5d6",
   "prevId": "d64b6ece-eddb-46cb-a112-229e1ec17746",
   "version": "7",
   "dialect": "postgresql",
@@ -3415,6 +3415,165 @@
       },
       "checkConstraints": {}
     },
+    "public.namespace_sso_providers": {
+      "name": "namespace_sso_providers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "namespace_id": {
+          "name": "namespace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sso_provider_id": {
+          "name": "sso_provider_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_password_login": {
+          "name": "is_password_login",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_google_login": {
+          "name": "is_google_login",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_github_login": {
+          "name": "is_github_login",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "nssp_namespace_id_idx": {
+          "name": "nssp_namespace_id_idx",
+          "columns": [
+            {
+              "expression": "namespace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nssp_sso_provider_id_idx": {
+          "name": "nssp_sso_provider_id_idx",
+          "columns": [
+            {
+              "expression": "sso_provider_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nssp_unique_sso": {
+          "name": "nssp_unique_sso",
+          "columns": [
+            {
+              "expression": "namespace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sso_provider_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"namespace_sso_providers\".\"sso_provider_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nssp_unique_builtin": {
+          "name": "nssp_unique_builtin",
+          "columns": [
+            {
+              "expression": "namespace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"namespace_sso_providers\".\"sso_provider_id\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "namespace_sso_providers_namespace_id_namespaces_id_fk": {
+          "name": "namespace_sso_providers_namespace_id_namespaces_id_fk",
+          "tableFrom": "namespace_sso_providers",
+          "tableTo": "namespaces",
+          "columnsFrom": [
+            "namespace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "namespace_sso_providers_sso_provider_id_oidc_providers_id_fk": {
+          "name": "namespace_sso_providers_sso_provider_id_oidc_providers_id_fk",
+          "tableFrom": "namespace_sso_providers",
+          "tableTo": "oidc_providers",
+          "columnsFrom": [
+            "sso_provider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "nssp_builtin_xor_sso_check": {
+          "name": "nssp_builtin_xor_sso_check",
+          "value": "(\"namespace_sso_providers\".\"sso_provider_id\" IS NOT NULL) <> (\"namespace_sso_providers\".\"is_password_login\" OR \"namespace_sso_providers\".\"is_google_login\" OR \"namespace_sso_providers\".\"is_github_login\")"
+        }
+      }
+    },
     "public.namespace_subgraph_check_extensions_config": {
       "name": "namespace_subgraph_check_extensions_config",
       "schema": "",
@@ -3661,6 +3820,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {
@@ -6009,21 +6175,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "scca_schema_check_subgraph_id_idx": {
-          "name": "scca_schema_check_subgraph_id_idx",
-          "columns": [
-            {
-              "expression": "schema_check_subgraph_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -6618,21 +6769,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "scgpa_schema_check_subgraph_id_idx": {
-          "name": "scgpa_schema_check_subgraph_id_idx",
-          "columns": [
-            {
-              "expression": "schema_check_subgraph_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -6742,21 +6878,6 @@
           "columns": [
             {
               "expression": "schema_check_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "sclact_schema_check_subgraph_id_idx": {
-          "name": "sclact_schema_check_subgraph_id_idx",
-          "columns": [
-            {
-              "expression": "schema_check_subgraph_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -6986,21 +7107,6 @@
           "columns": [
             {
               "expression": "subgraph_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "scs_namespace_id_idx": {
-          "name": "scs_namespace_id_idx",
-          "columns": [
-            {
-              "expression": "namespace_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7303,21 +7409,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "sce_webhook_delivery_id_idx": {
-          "name": "sce_webhook_delivery_id_idx",
-          "columns": [
-            {
-              "expression": "check_extension_delivery_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -7566,6 +7657,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "idp_alias": {
+          "name": "idp_alias",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "expires_at": {
           "name": "expires_at",

@@ -867,6 +867,21 @@
             "jsonType.label": "String",
             "userinfo.token.claim": "true"
           }
+        },
+        {
+          "id": "e14ceebd-f090-5bfc-b487-089d6993d8b5",
+          "name": "identity_provider",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.session.note": "identity_provider",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "identity_provider",
+            "jsonType.label": "String"
+          }
         }
       ]
     },

@@ -1,6 +1,7 @@
 import { relations, sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   integer,
   bigint,
   pgEnum,
@@ -1208,6 +1209,7 @@ export const sessions = pgTable(
     accessToken: text('access_token').notNull(),
     refreshToken: text('refresh_token').notNull(),
     idToken: text('id_token').notNull(),
+    idpAlias: text('idp_alias'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
@@ -1977,10 +1979,45 @@ export const oidcProviders = pgTable(
     name: text('name').notNull(),
     alias: text('alias').notNull().unique(),
     endpoint: text('endpoint').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
     return {
       organizationIdIndex: index('oidcp_organization_id_idx').on(t.organizationId),
+    };
+  },
+);
+
+export const namespaceSsoProviders = pgTable(
+  'namespace_sso_providers', // nssp
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .references(() => namespaces.id, { onDelete: 'cascade' }),
+    ssoProviderId: uuid('sso_provider_id').references(() => oidcProviders.id, { onDelete: 'cascade' }),
+    isPasswordLogin: boolean('is_password_login').notNull().default(false),
+    isGoogleLogin: boolean('is_google_login').notNull().default(false),
+    isGithubLogin: boolean('is_github_login').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      namespaceIdIndex: index('nssp_namespace_id_idx').on(t.namespaceId),
+      ssoProviderIdIndex: index('nssp_sso_provider_id_idx').on(t.ssoProviderId),
+      uniqueSsoPerNamespace: uniqueIndex('nssp_unique_sso')
+        .on(t.namespaceId, t.ssoProviderId)
+        .where(sql`${t.ssoProviderId} IS NOT NULL`),
+      // At most one built-in-methods row (password/google/github) per namespace.
+      uniqueBuiltinPerNamespace: uniqueIndex('nssp_unique_builtin')
+        .on(t.namespaceId)
+        .where(sql`${t.ssoProviderId} IS NULL`),
+      // A row is either an SSO-provider row (provider id, no built-in flags) or a
+      // built-in-methods row (no provider id, at least one flag) — never both, never neither.
+      builtinXorSsoCheck: check(
+        'nssp_builtin_xor_sso_check',
+        sql`(${t.ssoProviderId} IS NOT NULL) <> (${t.isPasswordLogin} OR ${t.isGoogleLogin} OR ${t.isGithubLogin})`,
+      ),
     };
   },
 );
