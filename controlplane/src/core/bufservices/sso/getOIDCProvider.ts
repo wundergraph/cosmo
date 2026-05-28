@@ -26,7 +26,10 @@ export function getOIDCProvider(
 
     await opts.keycloakClient.authenticateClient();
 
-    const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+    const provider = await oidcRepo.getOidcProviderById({
+      id: req.id,
+      organizationId: authContext.organizationId,
+    });
     if (!provider) {
       return {
         response: {

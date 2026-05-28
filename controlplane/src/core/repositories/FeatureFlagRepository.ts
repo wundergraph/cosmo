@@ -29,7 +29,7 @@ import {
   ProtoSubgraph,
   SubgraphDTO,
 } from '../../types/index.js';
-import { normalizeLabels } from '../util.js';
+import { applyIdpNamespaceGate, normalizeLabels } from '../util.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { traced } from '../tracing.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -175,8 +175,8 @@ export class FeatureFlagRepository {
       .execute();
   }
 
-  public async getFeatureFlags({ namespaceId, limit, offset, query }: FeatureFlagListFilterOptions) {
-    const conditions: SQL<unknown>[] = [eq(featureFlags.organizationId, this.organizationId)];
+  public async getFeatureFlags({ namespaceId, limit, offset, query, rbac }: FeatureFlagListFilterOptions) {
+    const conditions: (SQL<unknown> | undefined)[] = [eq(featureFlags.organizationId, this.organizationId)];
 
     if (query) {
       conditions.push(like(featureFlags.name, `%${query}%`));
@@ -184,6 +184,15 @@ export class FeatureFlagRepository {
 
     if (namespaceId) {
       conditions.push(eq(featureFlags.namespaceId, namespaceId));
+    }
+
+    // IdP gate: empty set → no rows; non-empty → restrict to listed namespaces.
+    if (!applyIdpNamespaceGate(rbac, featureFlags.namespaceId, conditions)) {
+      return [];
+    }
+
+    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+      return [];
     }
 
     const dbQuery = this.db
@@ -221,10 +230,19 @@ export class FeatureFlagRepository {
     }));
   }
 
-  public async getFeatureFlagsCount({ namespaceId }: { namespaceId?: string }) {
-    const conditions: SQL<unknown>[] = [eq(featureFlags.organizationId, this.organizationId)];
+  public async getFeatureFlagsCount({ namespaceId, rbac }: { namespaceId?: string; rbac?: RBACEvaluator }) {
+    const conditions: (SQL<unknown> | undefined)[] = [eq(featureFlags.organizationId, this.organizationId)];
     if (namespaceId) {
       conditions.push(eq(featureFlags.namespaceId, namespaceId));
+    }
+
+    // IdP gate: empty set → 0; non-empty → restrict to listed namespaces.
+    if (!applyIdpNamespaceGate(rbac, featureFlags.namespaceId, conditions)) {
+      return 0;
+    }
+
+    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+      return 0;
     }
 
     const featureFlagsCount = await this.db
@@ -318,6 +336,11 @@ export class FeatureFlagRepository {
       conditions.push(isValidUuid(query) ? eq(subgraphs.id, query) : like(schema.targets.name, `%${query}%`));
     }
 
+    // IdP gate: empty set → no rows; non-empty → restrict to listed namespaces.
+    if (!applyIdpNamespaceGate(rbac, targets.namespaceId, conditions)) {
+      return [];
+    }
+
     if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
       return [];
     }
@@ -382,6 +405,11 @@ export class FeatureFlagRepository {
 
     if (query) {
       conditions.push(like(targets.name, `%${query}%`));
+    }
+
+    // IdP gate: empty set → 0; non-empty → restrict to listed namespaces.
+    if (!applyIdpNamespaceGate(rbac, targets.namespaceId, conditions)) {
+      return 0;
     }
 
     if (!this.applyRbacConditionsToQuery(rbac, conditions)) {

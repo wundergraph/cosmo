@@ -61,6 +61,10 @@ export function configureCacheWarmer(
       };
     }
 
+    if (!authContext.rbac.hasNamespaceWriteAccess(namespace)) {
+      throw new UnauthorizedError();
+    }
+
     if (req.maxOperationsCount > 500) {
       return {
         response: {
