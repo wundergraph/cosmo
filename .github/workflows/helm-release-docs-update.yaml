@@ -23,10 +23,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Authenticate
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: |
+            cosmo
+          permission-actions: write
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+          permission-statuses: write
+
       - name: checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN_HELM_RELEASES }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - uses: ./.github/actions/go
 
@@ -41,7 +55,7 @@ jobs:
         with:
           commit_message: 'chore: update helm docs and prepare release'
           file_pattern: 'helm/**/*.md'
-          token: ${{ secrets.GH_TOKEN_HELM_RELEASES }}
+          token: ${{ steps.app-token.outputs.token }}
           commit_user_name: hardworker-bot
           commit_user_email: bot@wundergraph.com
           commit_author: hardworker-bot <bot@wundergraph.com>
