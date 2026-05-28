@@ -74,10 +74,7 @@ type AssembleConfigRules struct {
 // The base config is the latest.json file in the manifest directory.
 // The feature flag configs are the feature-flags/<feature-flag-name>.json files in the manifest directory.
 // The rules are the rules for skipping missing feature flags and ignored feature flags.
-func AssembleConfig(basePath string, mapper map[string]string, rules *AssembleConfigRules) (*nodev1.RouterConfig, error) {
-	if rules == nil {
-		rules = &AssembleConfigRules{}
-	}
+func AssembleConfig(basePath string, mapper map[string]string, rules AssembleConfigRules) (*nodev1.RouterConfig, error) {
 
 	baseConfigPath := filepath.Join(basePath, "latest.json")
 

@@ -1128,7 +1128,7 @@ func (r *Router) assembleStaticExecutionConfigFromManifest() (*nodev1.RouterConf
 	}
 
 	executionConfig, err := routerconfig.AssembleConfig(manifestConfigPath, mapper,
-		&routerconfig.AssembleConfigRules{
+		routerconfig.AssembleConfigRules{
 			SkipMissingFeatureFlags: r.manifestConfig.SkipMissingFeatureFlags,
 			IgnoredFeatureFlags:     r.manifestConfig.IgnoredFeatureFlags,
 		})
