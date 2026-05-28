@@ -5,6 +5,7 @@ import * as schema from '../../db/schema.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { traced } from '../tracing.js';
+import type { LoginMethod } from '../../types/index.js';
 import { RBACEvaluator } from './RBACEvaluator.js';
 
 export type ApiKeyAuthContext = {
@@ -16,6 +17,7 @@ export type ApiKeyAuthContext = {
   userDisplayName: string;
   apiKeyName: string;
   rbac: RBACEvaluator;
+  loginMethod: LoginMethod;
 };
 
 @traced
@@ -84,6 +86,7 @@ export default class ApiKeyAuthenticator {
       organizationSlug: organization.slug,
       organizationDeactivated,
       rbac,
+      loginMethod: { type: 'api-key' },
     };
   }
 }

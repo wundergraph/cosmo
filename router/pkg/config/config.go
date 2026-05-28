@@ -1189,6 +1189,7 @@ type CacheWarmupConfiguration struct {
 	Source           CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`
 	Workers          int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
 	ItemsPerSecond   int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
+	ItemDelay        time.Duration     `yaml:"item_delay" envDefault:"0s" env:"CACHE_WARMUP_ITEM_DELAY"`
 	Timeout          time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 	InMemoryFallback bool              `yaml:"in_memory_fallback" envDefault:"true" env:"CACHE_WARMUP_IN_MEMORY_FALLBACK"`
 }

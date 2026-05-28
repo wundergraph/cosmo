@@ -346,6 +346,9 @@ const (
 	// PlatformServiceGetOIDCProviderProcedure is the fully-qualified name of the PlatformService's
 	// GetOIDCProvider RPC.
 	PlatformServiceGetOIDCProviderProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOIDCProvider"
+	// PlatformServiceListOIDCProvidersProcedure is the fully-qualified name of the PlatformService's
+	// ListOIDCProviders RPC.
+	PlatformServiceListOIDCProvidersProcedure = "/wg.cosmo.platform.v1.PlatformService/ListOIDCProviders"
 	// PlatformServiceDeleteOIDCProviderProcedure is the fully-qualified name of the PlatformService's
 	// DeleteOIDCProvider RPC.
 	PlatformServiceDeleteOIDCProviderProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteOIDCProvider"
@@ -544,6 +547,12 @@ const (
 	// PlatformServiceGetNamespaceProposalConfigProcedure is the fully-qualified name of the
 	// PlatformService's GetNamespaceProposalConfig RPC.
 	PlatformServiceGetNamespaceProposalConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceProposalConfig"
+	// PlatformServiceUpdateNamespaceSSOMappingsProcedure is the fully-qualified name of the
+	// PlatformService's UpdateNamespaceSSOMappings RPC.
+	PlatformServiceUpdateNamespaceSSOMappingsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateNamespaceSSOMappings"
+	// PlatformServiceListNamespaceSSOMappingsProcedure is the fully-qualified name of the
+	// PlatformService's ListNamespaceSSOMappings RPC.
+	PlatformServiceListNamespaceSSOMappingsProcedure = "/wg.cosmo.platform.v1.PlatformService/ListNamespaceSSOMappings"
 	// PlatformServiceGetProposalsByFederatedGraphProcedure is the fully-qualified name of the
 	// PlatformService's GetProposalsByFederatedGraph RPC.
 	PlatformServiceGetProposalsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalsByFederatedGraph"
@@ -789,6 +798,8 @@ type PlatformServiceClient interface {
 	CreateOIDCProvider(context.Context, *connect.Request[v1.CreateOIDCProviderRequest]) (*connect.Response[v1.CreateOIDCProviderResponse], error)
 	// GetOIDCProvider gets the oidc provider connected the organization
 	GetOIDCProvider(context.Context, *connect.Request[v1.GetOIDCProviderRequest]) (*connect.Response[v1.GetOIDCProviderResponse], error)
+	// ListOIDCProviders lists all OIDC providers configured for the organization
+	ListOIDCProviders(context.Context, *connect.Request[v1.ListOIDCProvidersRequest]) (*connect.Response[v1.ListOIDCProvidersResponse], error)
 	// DeleteOIDCProvider deletes the oidc provider connected the organization
 	DeleteOIDCProvider(context.Context, *connect.Request[v1.DeleteOIDCProviderRequest]) (*connect.Response[v1.DeleteOIDCProviderResponse], error)
 	// UpdateIDPMappers updates the mappings of the oidc provider
@@ -913,6 +924,10 @@ type PlatformServiceClient interface {
 	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
 	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
 	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
+	// UpdateNamespaceSSOMappings replaces the org's namespace SSO mapping configuration in one call.
+	UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error)
+	// ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
+	ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error)
 	// GetProposalsByFederatedGraph returns proposals for a federated graph.
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
 	// GetProposalChecks returns checks for a proposal.
@@ -1578,6 +1593,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("GetOIDCProvider")),
 			connect.WithClientOptions(opts...),
 		),
+		listOIDCProviders: connect.NewClient[v1.ListOIDCProvidersRequest, v1.ListOIDCProvidersResponse](
+			httpClient,
+			baseURL+PlatformServiceListOIDCProvidersProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("ListOIDCProviders")),
+			connect.WithClientOptions(opts...),
+		),
 		deleteOIDCProvider: connect.NewClient[v1.DeleteOIDCProviderRequest, v1.DeleteOIDCProviderResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteOIDCProviderProcedure,
@@ -1981,6 +2002,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceMethods.ByName("GetNamespaceProposalConfig")),
 			connect.WithClientOptions(opts...),
 		),
+		updateNamespaceSSOMappings: connect.NewClient[v1.UpdateNamespaceSSOMappingsRequest, v1.UpdateNamespaceSSOMappingsResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateNamespaceSSOMappingsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceSSOMappings")),
+			connect.WithClientOptions(opts...),
+		),
+		listNamespaceSSOMappings: connect.NewClient[v1.ListNamespaceSSOMappingsRequest, v1.ListNamespaceSSOMappingsResponse](
+			httpClient,
+			baseURL+PlatformServiceListNamespaceSSOMappingsProcedure,
+			connect.WithSchema(platformServiceMethods.ByName("ListNamespaceSSOMappings")),
+			connect.WithClientOptions(opts...),
+		),
 		getProposalsByFederatedGraph: connect.NewClient[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceGetProposalsByFederatedGraphProcedure,
@@ -2180,6 +2213,7 @@ type platformServiceClient struct {
 	isGitHubAppInstalled                               *connect.Client[v1.IsGitHubAppInstalledRequest, v1.IsGitHubAppInstalledResponse]
 	createOIDCProvider                                 *connect.Client[v1.CreateOIDCProviderRequest, v1.CreateOIDCProviderResponse]
 	getOIDCProvider                                    *connect.Client[v1.GetOIDCProviderRequest, v1.GetOIDCProviderResponse]
+	listOIDCProviders                                  *connect.Client[v1.ListOIDCProvidersRequest, v1.ListOIDCProvidersResponse]
 	deleteOIDCProvider                                 *connect.Client[v1.DeleteOIDCProviderRequest, v1.DeleteOIDCProviderResponse]
 	updateIDPMappers                                   *connect.Client[v1.UpdateIDPMappersRequest, v1.UpdateIDPMappersResponse]
 	getClients                                         *connect.Client[v1.GetClientsRequest, v1.GetClientsResponse]
@@ -2246,6 +2280,8 @@ type platformServiceClient struct {
 	enableProposalsForNamespace                        *connect.Client[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse]
 	configureNamespaceProposalConfig                   *connect.Client[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse]
 	getNamespaceProposalConfig                         *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
+	updateNamespaceSSOMappings                         *connect.Client[v1.UpdateNamespaceSSOMappingsRequest, v1.UpdateNamespaceSSOMappingsResponse]
+	listNamespaceSSOMappings                           *connect.Client[v1.ListNamespaceSSOMappingsRequest, v1.ListNamespaceSSOMappingsResponse]
 	getProposalsByFederatedGraph                       *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
 	getProposalChecks                                  *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
 	getOperations                                      *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
@@ -2800,6 +2836,11 @@ func (c *platformServiceClient) GetOIDCProvider(ctx context.Context, req *connec
 	return c.getOIDCProvider.CallUnary(ctx, req)
 }
 
+// ListOIDCProviders calls wg.cosmo.platform.v1.PlatformService.ListOIDCProviders.
+func (c *platformServiceClient) ListOIDCProviders(ctx context.Context, req *connect.Request[v1.ListOIDCProvidersRequest]) (*connect.Response[v1.ListOIDCProvidersResponse], error) {
+	return c.listOIDCProviders.CallUnary(ctx, req)
+}
+
 // DeleteOIDCProvider calls wg.cosmo.platform.v1.PlatformService.DeleteOIDCProvider.
 func (c *platformServiceClient) DeleteOIDCProvider(ctx context.Context, req *connect.Request[v1.DeleteOIDCProviderRequest]) (*connect.Response[v1.DeleteOIDCProviderResponse], error) {
 	return c.deleteOIDCProvider.CallUnary(ctx, req)
@@ -3150,6 +3191,16 @@ func (c *platformServiceClient) GetNamespaceProposalConfig(ctx context.Context, 
 	return c.getNamespaceProposalConfig.CallUnary(ctx, req)
 }
 
+// UpdateNamespaceSSOMappings calls wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMappings.
+func (c *platformServiceClient) UpdateNamespaceSSOMappings(ctx context.Context, req *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error) {
+	return c.updateNamespaceSSOMappings.CallUnary(ctx, req)
+}
+
+// ListNamespaceSSOMappings calls wg.cosmo.platform.v1.PlatformService.ListNamespaceSSOMappings.
+func (c *platformServiceClient) ListNamespaceSSOMappings(ctx context.Context, req *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error) {
+	return c.listNamespaceSSOMappings.CallUnary(ctx, req)
+}
+
 // GetProposalsByFederatedGraph calls
 // wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph.
 func (c *platformServiceClient) GetProposalsByFederatedGraph(ctx context.Context, req *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {
@@ -3425,6 +3476,8 @@ type PlatformServiceHandler interface {
 	CreateOIDCProvider(context.Context, *connect.Request[v1.CreateOIDCProviderRequest]) (*connect.Response[v1.CreateOIDCProviderResponse], error)
 	// GetOIDCProvider gets the oidc provider connected the organization
 	GetOIDCProvider(context.Context, *connect.Request[v1.GetOIDCProviderRequest]) (*connect.Response[v1.GetOIDCProviderResponse], error)
+	// ListOIDCProviders lists all OIDC providers configured for the organization
+	ListOIDCProviders(context.Context, *connect.Request[v1.ListOIDCProvidersRequest]) (*connect.Response[v1.ListOIDCProvidersResponse], error)
 	// DeleteOIDCProvider deletes the oidc provider connected the organization
 	DeleteOIDCProvider(context.Context, *connect.Request[v1.DeleteOIDCProviderRequest]) (*connect.Response[v1.DeleteOIDCProviderResponse], error)
 	// UpdateIDPMappers updates the mappings of the oidc provider
@@ -3549,6 +3602,10 @@ type PlatformServiceHandler interface {
 	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
 	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
 	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
+	// UpdateNamespaceSSOMappings replaces the org's namespace SSO mapping configuration in one call.
+	UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error)
+	// ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
+	ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error)
 	// GetProposalsByFederatedGraph returns proposals for a federated graph.
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
 	// GetProposalChecks returns checks for a proposal.
@@ -4210,6 +4267,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("GetOIDCProvider")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceListOIDCProvidersHandler := connect.NewUnaryHandler(
+		PlatformServiceListOIDCProvidersProcedure,
+		svc.ListOIDCProviders,
+		connect.WithSchema(platformServiceMethods.ByName("ListOIDCProviders")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceDeleteOIDCProviderHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteOIDCProviderProcedure,
 		svc.DeleteOIDCProvider,
@@ -4613,6 +4676,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceMethods.ByName("GetNamespaceProposalConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceUpdateNamespaceSSOMappingsHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateNamespaceSSOMappingsProcedure,
+		svc.UpdateNamespaceSSOMappings,
+		connect.WithSchema(platformServiceMethods.ByName("UpdateNamespaceSSOMappings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceListNamespaceSSOMappingsHandler := connect.NewUnaryHandler(
+		PlatformServiceListNamespaceSSOMappingsProcedure,
+		svc.ListNamespaceSSOMappings,
+		connect.WithSchema(platformServiceMethods.ByName("ListNamespaceSSOMappings")),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetProposalsByFederatedGraphHandler := connect.NewUnaryHandler(
 		PlatformServiceGetProposalsByFederatedGraphProcedure,
 		svc.GetProposalsByFederatedGraph,
@@ -4913,6 +4988,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceCreateOIDCProviderHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOIDCProviderProcedure:
 			platformServiceGetOIDCProviderHandler.ServeHTTP(w, r)
+		case PlatformServiceListOIDCProvidersProcedure:
+			platformServiceListOIDCProvidersHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteOIDCProviderProcedure:
 			platformServiceDeleteOIDCProviderHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateIDPMappersProcedure:
@@ -5045,6 +5122,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceConfigureNamespaceProposalConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetNamespaceProposalConfigProcedure:
 			platformServiceGetNamespaceProposalConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateNamespaceSSOMappingsProcedure:
+			platformServiceUpdateNamespaceSSOMappingsHandler.ServeHTTP(w, r)
+		case PlatformServiceListNamespaceSSOMappingsProcedure:
+			platformServiceListNamespaceSSOMappingsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetProposalsByFederatedGraphProcedure:
 			platformServiceGetProposalsByFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceGetProposalChecksProcedure:
@@ -5500,6 +5581,10 @@ func (UnimplementedPlatformServiceHandler) GetOIDCProvider(context.Context, *con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOIDCProvider is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) ListOIDCProviders(context.Context, *connect.Request[v1.ListOIDCProvidersRequest]) (*connect.Response[v1.ListOIDCProvidersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ListOIDCProviders is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) DeleteOIDCProvider(context.Context, *connect.Request[v1.DeleteOIDCProviderRequest]) (*connect.Response[v1.DeleteOIDCProviderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteOIDCProvider is not implemented"))
 }
@@ -5762,6 +5847,14 @@ func (UnimplementedPlatformServiceHandler) ConfigureNamespaceProposalConfig(cont
 
 func (UnimplementedPlatformServiceHandler) GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateNamespaceSSOMappings(context.Context, *connect.Request[v1.UpdateNamespaceSSOMappingsRequest]) (*connect.Response[v1.UpdateNamespaceSSOMappingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMappings is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) ListNamespaceSSOMappings(context.Context, *connect.Request[v1.ListNamespaceSSOMappingsRequest]) (*connect.Response[v1.ListNamespaceSSOMappingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ListNamespaceSSOMappings is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {

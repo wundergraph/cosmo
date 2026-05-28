@@ -5,8 +5,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { socialProviderLabel } from '@/lib/utils';
 import { useUser } from '@/hooks/use-user';
 import { resetTracking } from '@/lib/track';
+import { LoginMethodType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { ThemeToggle } from './theme-toggle';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -80,6 +82,7 @@ export const UserMenu = () => {
 
   if (!user) return null;
 
+  const loginMethod = user.loginMethod;
   const hasInvitations = user.invitations.length > 0;
 
   return (
@@ -100,8 +103,23 @@ export const UserMenu = () => {
           ) : null}
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[180px]">
-        <p className="cursor-text truncate px-2 py-1.5 text-sm font-semibold">{user.email}</p>
+      <DropdownMenuContent align="end" className="w-[200px]">
+        <div className="px-2 py-1.5">
+          <p className="cursor-text truncate text-sm font-semibold">{user.email}</p>
+          {loginMethod?.type === LoginMethodType.SSO && (
+            <p className="truncate text-xs text-muted-foreground">
+              Logged in via {loginMethod.ssoProviderName || loginMethod.ssoAlias || 'SSO'}
+            </p>
+          )}
+          {loginMethod?.type === LoginMethodType.SOCIAL && (
+            <p className="truncate text-xs text-muted-foreground">
+              Logged in via {socialProviderLabel(loginMethod.socialProvider)}
+            </p>
+          )}
+          {loginMethod?.type === LoginMethodType.PASSWORD && (
+            <p className="text-xs text-muted-foreground">Logged in via password</p>
+          )}
+        </div>
         <Link href="/account/invitations">
           <DropdownMenuItem>
             Invitations
