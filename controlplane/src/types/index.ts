@@ -491,6 +491,9 @@ export type UserInfoEndpointResponse = {
   family_name: string;
   email: string;
   groups: string[];
+  // Set by the realm-level `identity_provider` protocol mapper when the user
+  // federated through a broker IdP. Absent for direct username/password logins.
+  identity_provider?: string;
 };
 
 export type AuthContext = {
@@ -502,7 +505,16 @@ export type AuthContext = {
   rbac: RBACEvaluator;
   userDisplayName: string;
   apiKeyName?: string;
+  loginMethod?: LoginMethod;
 };
+
+/**
+ * The outcome of evaluating the IdP namespace gate for a login method:
+ * - `all`        — no gate applies; every namespace is reachable.
+ * - `none`       — the login method is allowed in no namespace.
+ * - `restricted` — reachable only in `namespaceIds`.
+ */
+export type NamespaceAccess = { kind: 'all' } | { kind: 'none' } | { kind: 'restricted'; namespaceIds: Set<string> };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {
   federated_graph_id: string;
@@ -598,6 +610,7 @@ export interface UpdatedPersistedOperation {
 export interface GraphCompositionDTO {
   id: string;
   schemaVersionId: string;
+  targetId?: string;
   createdAt: string;
   createdBy?: string;
   compositionErrors?: string;
@@ -830,3 +843,12 @@ export interface FederatedGraphAndCompositionResults {
   federatedGraph: FederatedGraphDTO;
   results: ComposeGraphsTaskResultItem[];
 }
+
+export const SOCIAL_LOGIN_PROVIDERS = ['google', 'github'] as const;
+export type SocialLoginProvider = (typeof SOCIAL_LOGIN_PROVIDERS)[number];
+
+export type LoginMethod =
+  | { type: 'sso'; ssoProviderId: string; alias: string }
+  | { type: 'social'; provider: SocialLoginProvider; alias: string }
+  | { type: 'password' }
+  | { type: 'api-key' };

@@ -46,6 +46,8 @@ import {
   isGoogleCloudStorageUrl,
 } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
+import { OidcRepository } from './repositories/OidcRepository.js';
+import { NamespaceSsoMappingRepository } from './repositories/NamespaceSsoMappingRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 import {
   createDeleteOrganizationAuditLogsWorker,
@@ -287,13 +289,22 @@ export default async function build(opts: BuildConfig) {
   const apiKeyRepository = new ApiKeyRepository(fastify.db);
   const webAuth = new WebSessionAuthenticator(fastify.db, opts.auth.secret, userRepo);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
-  const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
+  const oidcRepository = new OidcRepository(fastify.db);
+  const namespaceSsoMappingRepository = new NamespaceSsoMappingRepository(fastify.db);
+  const accessTokenAuth = new AccessTokenAuthenticator(
+    organizationRepository,
+    authUtils,
+    oidcRepository,
+    namespaceSsoMappingRepository,
+  );
   const authenticator = new Authentication(
     webAuth,
     apiKeyAuth,
     accessTokenAuth,
     graphKeyAuth,
     organizationRepository,
+    oidcRepository,
+    namespaceSsoMappingRepository,
     logger,
   );
 

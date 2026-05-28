@@ -234,6 +234,7 @@ export class GraphCompositionRepository {
     return {
       id: composition.id,
       schemaVersionId: composition.schemaVersionId,
+      targetId: composition.targetId,
       createdAt: composition.createdAt.toISOString(),
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,
@@ -294,6 +295,7 @@ export class GraphCompositionRepository {
     return {
       id: composition.id,
       schemaVersionId: composition.schemaVersionId,
+      targetId: composition.targetId,
       createdAt: composition.createdAt.toISOString(),
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,

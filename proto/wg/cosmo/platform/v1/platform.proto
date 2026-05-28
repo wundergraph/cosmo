@@ -1247,6 +1247,31 @@ message WhoAmIResponse {
   optional string userEmail = 3;
   string organizationSlug = 4;
   string organizationId = 5;
+  LoginMethod login_method = 6;
+}
+
+enum LoginMethodType {
+  LOGIN_METHOD_TYPE_UNSPECIFIED = 0;
+  LOGIN_METHOD_TYPE_SSO = 1;
+  LOGIN_METHOD_TYPE_PASSWORD = 2;
+  LOGIN_METHOD_TYPE_API_KEY = 3;
+  LOGIN_METHOD_TYPE_SOCIAL = 4;
+}
+
+enum SocialLoginProvider {
+  SOCIAL_LOGIN_PROVIDER_UNSPECIFIED = 0;
+  SOCIAL_LOGIN_PROVIDER_GOOGLE = 1;
+  SOCIAL_LOGIN_PROVIDER_GITHUB = 2;
+}
+
+message LoginMethod {
+  LoginMethodType type = 1;
+  // Only populated when type = LOGIN_METHOD_TYPE_SSO.
+  string sso_provider_id = 2;
+  string sso_provider_name = 3;
+  string sso_alias = 4;
+  // Only populated when type = LOGIN_METHOD_TYPE_SOCIAL.
+  SocialLoginProvider social_provider = 5;
 }
 
 message RouterToken {
@@ -1860,7 +1885,27 @@ message CreateOIDCProviderResponse {
   string loginURL = 4;
 }
 
-message GetOIDCProviderRequest {}
+message OIDCProvider {
+  string id = 1;
+  string name = 2;
+  string alias = 3;
+  string endpoint = 4;
+  string login_url = 5;
+  string sign_in_redirect_url = 6;
+  string sign_out_redirect_url = 7;
+  string createdAt = 8;
+}
+
+message ListOIDCProvidersRequest {}
+
+message ListOIDCProvidersResponse {
+  Response response = 1;
+  repeated OIDCProvider providers = 2;
+}
+
+message GetOIDCProviderRequest {
+  string id = 1;
+}
 
 message GetOIDCProviderResponse {
   Response response = 1;
@@ -1872,7 +1917,9 @@ message GetOIDCProviderResponse {
   repeated GroupMapper mappers = 7;
 }
 
-message DeleteOIDCProviderRequest {}
+message DeleteOIDCProviderRequest {
+  string id = 1;
+}
 
 message DeleteOIDCProviderResponse {
   Response response = 1;
@@ -1880,6 +1927,7 @@ message DeleteOIDCProviderResponse {
 
 message UpdateIDPMappersRequest {
   repeated GroupMapper mappers = 1;
+  string id = 2;
 }
 
 message UpdateIDPMappersResponse {
@@ -3044,6 +3092,31 @@ message GetNamespaceProposalConfigResponse {
   LintSeverity publishSeverityLevel = 4;
 }
 
+message NamespaceSSOMapping {
+  string namespace_id = 1;
+  repeated string allowed_sso_provider_ids = 2;
+  bool allow_password_login = 3;
+  bool allow_google_login = 4;
+  bool allow_github_login = 5;
+}
+
+message UpdateNamespaceSSOMappingsRequest {
+  repeated NamespaceSSOMapping mappings = 1;
+}
+
+message UpdateNamespaceSSOMappingsResponse {
+  Response response = 1;
+}
+
+message ListNamespaceSSOMappingsRequest {}
+
+message ListNamespaceSSOMappingsResponse {
+  Response response = 1;
+  // One entry per namespace that is restricted to specific login methods.
+  // Namespaces with no mapping (default-open) are omitted.
+  repeated NamespaceSSOMapping mappings = 2;
+}
+
 enum OperationsFetchBasedOn {
   REQUESTS = 0;
   LATENCY = 1;
@@ -3490,6 +3563,8 @@ service PlatformService {
   rpc CreateOIDCProvider(CreateOIDCProviderRequest) returns (CreateOIDCProviderResponse) {}
   // GetOIDCProvider gets the oidc provider connected the organization
   rpc GetOIDCProvider(GetOIDCProviderRequest) returns (GetOIDCProviderResponse) {}
+  // ListOIDCProviders lists all OIDC providers configured for the organization
+  rpc ListOIDCProviders(ListOIDCProvidersRequest) returns (ListOIDCProvidersResponse) {}
   // DeleteOIDCProvider deletes the oidc provider connected the organization
   rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
   // UpdateIDPMappers updates the mappings of the oidc provider
@@ -3647,6 +3722,10 @@ service PlatformService {
   rpc ConfigureNamespaceProposalConfig(ConfigureNamespaceProposalConfigRequest) returns (ConfigureNamespaceProposalConfigResponse) {}
   // GetNamespaceProposalConfig returns the proposal config of the namespace passed.
   rpc GetNamespaceProposalConfig(GetNamespaceProposalConfigRequest) returns (GetNamespaceProposalConfigResponse) {}
+  // UpdateNamespaceSSOMappings replaces the org's namespace SSO mapping configuration in one call.
+  rpc UpdateNamespaceSSOMappings(UpdateNamespaceSSOMappingsRequest) returns (UpdateNamespaceSSOMappingsResponse) {}
+  // ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
+  rpc ListNamespaceSSOMappings(ListNamespaceSSOMappingsRequest) returns (ListNamespaceSSOMappingsResponse) {}
   // GetProposalsByFederatedGraph returns proposals for a federated graph.
   rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
   // GetProposalChecks returns checks for a proposal.
