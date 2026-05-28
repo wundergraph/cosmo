@@ -1118,7 +1118,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 func (r *Router) assembleStaticExecutionConfigFromManifest() (*nodev1.RouterConfig, error) {
 	manifestConfigPath := r.manifestConfig.Path
 
-	if !routerconfig.IsValidSplitConfigPath(manifestConfigPath) {
+	if !routerconfig.IsValidManifestPath(manifestConfigPath) {
 		return nil, fmt.Errorf("invalid manifest path: %s", manifestConfigPath)
 	}
 

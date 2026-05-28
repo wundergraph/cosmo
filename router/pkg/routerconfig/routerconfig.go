@@ -20,10 +20,9 @@ func VersionPath(version int) string {
 	}
 }
 
-// IsValidSplitConfigPath checks if the given path is a valid split config path.
+// IsValidManifestPath checks if the given path is a valid manifest path.
 // It checks if the path is a directory, and if it contains a mapper.json file.
-// It does not support symlinks for now.
-func IsValidSplitConfigPath(path string) bool {
+func IsValidManifestPath(path string) bool {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return false
@@ -75,7 +74,6 @@ type AssembleConfigRules struct {
 // The feature flag configs are the feature-flags/<feature-flag-name>.json files in the manifest directory.
 // The rules are the rules for skipping missing feature flags and ignored feature flags.
 func AssembleConfig(basePath string, mapper map[string]string, rules AssembleConfigRules) (*nodev1.RouterConfig, error) {
-
 	baseConfigPath := filepath.Join(basePath, "latest.json")
 
 	_, err := os.Stat(baseConfigPath)
