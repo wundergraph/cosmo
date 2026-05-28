@@ -44,7 +44,10 @@ describe('OrganizationLoginMethodRepository', () => {
 
     expect(await repo.isLoginMethodAllowed({ organizationId: orgId, loginMethod: { type: 'password' } })).toBe(true);
     expect(
-      await repo.isLoginMethodAllowed({ organizationId: orgId, loginMethod: { type: 'social', provider: 'google', alias: 'google' } }),
+      await repo.isLoginMethodAllowed({
+        organizationId: orgId,
+        loginMethod: { type: 'social', provider: 'google', alias: 'google' },
+      }),
     ).toBe(true);
     await server.close();
   });
@@ -76,7 +79,10 @@ describe('OrganizationLoginMethodRepository', () => {
     expect(res.response?.code).toBe(EnumStatusCode.OK);
 
     expect(
-      await repo.isLoginMethodAllowed({ organizationId: orgId, loginMethod: { type: 'sso', ssoProviderId: providerId, alias: 'okta' } }),
+      await repo.isLoginMethodAllowed({
+        organizationId: orgId,
+        loginMethod: { type: 'sso', ssoProviderId: providerId, alias: 'okta' },
+      }),
     ).toBe(true);
     expect(await repo.isLoginMethodAllowed({ organizationId: orgId, loginMethod: { type: 'password' } })).toBe(false);
     expect(await repo.isLoginMethodAllowed({ organizationId: orgId, loginMethod: { type: 'api-key' } })).toBe(true);
@@ -288,7 +294,15 @@ describe('OrganizationLoginMethodRepository', () => {
 
     // Try to map the namespace to github (disallowed at org level) → rejected.
     const res = await client.updateNamespaceSSOMappings({
-      mappings: [{ namespaceId: nsId, allowedSsoProviderIds: [], allowPasswordLogin: false, allowGoogleLogin: false, allowGithubLogin: true }],
+      mappings: [
+        {
+          namespaceId: nsId,
+          allowedSsoProviderIds: [],
+          allowPasswordLogin: false,
+          allowGoogleLogin: false,
+          allowGithubLogin: true,
+        },
+      ],
     });
     expect(res.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
     expect(res.response?.details).toBe('GitHub login is not allowed for this organization.');

@@ -101,7 +101,12 @@ export class Authentication implements Authenticator {
 
       // Resolve the login method, IdP gate and RBAC from the session's idp_alias.
       const { loginMethod, rbac } = await buildAuthState(
-        { oidcRepo: this.oidcRepo, orgRepo: this.orgRepo, namespaceSsoMappingRepo: this.namespaceSsoMappingRepo, orgLoginMethodRepo: this.orgLoginMethodRepo },
+        {
+          oidcRepo: this.oidcRepo,
+          orgRepo: this.orgRepo,
+          namespaceSsoMappingRepo: this.namespaceSsoMappingRepo,
+          orgLoginMethodRepo: this.orgLoginMethodRepo,
+        },
         { organizationId: organization.id, userId: user.userId, idpAlias: user.idpAlias },
       );
 

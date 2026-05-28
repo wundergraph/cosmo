@@ -90,17 +90,37 @@ export function updateNamespaceSSOMappings(
 
       if (orgAllowed.isRestricted) {
         if (mapping.allowPasswordLogin && !orgAllowed.allowPasswordLogin) {
-          return { response: { code: EnumStatusCode.ERR_BAD_REQUEST, details: 'Password login is not allowed for this organization.' } };
+          return {
+            response: {
+              code: EnumStatusCode.ERR_BAD_REQUEST,
+              details: 'Password login is not allowed for this organization.',
+            },
+          };
         }
         if (mapping.allowGoogleLogin && !orgAllowed.allowGoogleLogin) {
-          return { response: { code: EnumStatusCode.ERR_BAD_REQUEST, details: 'Google login is not allowed for this organization.' } };
+          return {
+            response: {
+              code: EnumStatusCode.ERR_BAD_REQUEST,
+              details: 'Google login is not allowed for this organization.',
+            },
+          };
         }
         if (mapping.allowGithubLogin && !orgAllowed.allowGithubLogin) {
-          return { response: { code: EnumStatusCode.ERR_BAD_REQUEST, details: 'GitHub login is not allowed for this organization.' } };
+          return {
+            response: {
+              code: EnumStatusCode.ERR_BAD_REQUEST,
+              details: 'GitHub login is not allowed for this organization.',
+            },
+          };
         }
         for (const id of mapping.allowedSsoProviderIds) {
           if (!orgAllowed.allowedSsoProviderIds.includes(id)) {
-            return { response: { code: EnumStatusCode.ERR_BAD_REQUEST, details: `SSO provider ${id} is not allowed for this organization.` } };
+            return {
+              response: {
+                code: EnumStatusCode.ERR_BAD_REQUEST,
+                details: `SSO provider ${id} is not allowed for this organization.`,
+              },
+            };
           }
         }
       }

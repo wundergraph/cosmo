@@ -104,7 +104,10 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       const loginMethodAllowedByOrg = new Map<string, boolean>();
       await Promise.all(
         orgs.map(async (o) => {
-          const method = await resolveLoginMethod({ oidcRepo }, { organizationId: o.id, idpAlias: userSession.idpAlias });
+          const method = await resolveLoginMethod(
+            { oidcRepo },
+            { organizationId: o.id, idpAlias: userSession.idpAlias },
+          );
           const allowed = await orgLoginMethodRepo.isLoginMethodAllowed({ organizationId: o.id, loginMethod: method });
           loginMethodAllowedByOrg.set(o.id, allowed);
         }),

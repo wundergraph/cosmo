@@ -64,7 +64,12 @@ export default class AccessTokenAuthenticator {
     // session, derived from the `identity_provider` claim on the userinfo
     // response (absent → password login).
     const { loginMethod, rbac } = await buildAuthState(
-      { oidcRepo: this.oidcRepo, orgRepo: this.orgRepo, namespaceSsoMappingRepo: this.namespaceSsoMappingRepo, orgLoginMethodRepo: this.orgLoginMethodRepo },
+      {
+        oidcRepo: this.oidcRepo,
+        orgRepo: this.orgRepo,
+        namespaceSsoMappingRepo: this.namespaceSsoMappingRepo,
+        orgLoginMethodRepo: this.orgLoginMethodRepo,
+      },
       { organizationId: organization.id, userId: userInfoData.sub, idpAlias: userInfoData.identity_provider },
     );
 

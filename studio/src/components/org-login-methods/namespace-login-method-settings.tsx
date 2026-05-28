@@ -271,12 +271,7 @@ export function NamespaceLoginMethodSettings() {
 
   return sectionCard(
     <div className="flex flex-col gap-y-6">
-      <NamespaceMappingRows
-        namespaces={namespaces}
-        methodOptions={methodOptions}
-        rows={rows}
-        updateRows={setRows}
-      />
+      <NamespaceMappingRows namespaces={namespaces} methodOptions={methodOptions} rows={rows} updateRows={setRows} />
 
       <div className="flex justify-end">
         <Button type="button" isLoading={isPending} disabled={!isDirty} onClick={onSave}>

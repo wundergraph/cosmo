@@ -32,9 +32,7 @@ const LoginMethodsPage: NextPageWithLayout = () => {
         icon={<InfoCircledIcon className="h-12 w-12" />}
         title="Login method restrictions are not available"
         description="Upgrade to the Enterprise plan to restrict which login methods can access your organization and its namespaces."
-        actions={
-          <Button onClick={() => router.push(`/${user?.currentOrganization.slug}/billing`)}>Upgrade</Button>
-        }
+        actions={<Button onClick={() => router.push(`/${user?.currentOrganization.slug}/billing`)}>Upgrade</Button>}
       />
     );
   }

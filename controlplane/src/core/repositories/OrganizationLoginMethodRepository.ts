@@ -159,7 +159,9 @@ export class OrganizationLoginMethodRepository {
           isGithubLogin: namespaceSsoProviders.isGithubLogin,
         })
         .from(namespaceSsoProviders)
-        .where(and(inArray(namespaceSsoProviders.namespaceId, orgNamespaceIds), isNull(namespaceSsoProviders.ssoProviderId)))
+        .where(
+          and(inArray(namespaceSsoProviders.namespaceId, orgNamespaceIds), isNull(namespaceSsoProviders.ssoProviderId)),
+        )
         .execute();
 
       for (const row of builtinRows) {

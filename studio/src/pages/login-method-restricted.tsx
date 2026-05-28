@@ -16,8 +16,8 @@ const LoginMethodRestrictedPage: NextPageWithLayout = () => {
           </div>
           <CardTitle>Login method not allowed</CardTitle>
           <CardDescription className="text-balance">
-            None of your organizations can be accessed with your current login method. Sign in with a different method to
-            continue.
+            None of your organizations can be accessed with your current login method. Sign in with a different method
+            to continue.
           </CardDescription>
         </CardHeader>
         <CardContent>
