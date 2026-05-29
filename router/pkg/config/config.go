@@ -1085,6 +1085,15 @@ type ExecutionConfig struct {
 	File            ExecutionConfigFile            `yaml:"file,omitempty"`
 	Storage         ExecutionConfigStorage         `yaml:"storage,omitempty" envPrefix:"EXECUTION_CONFIG_STORAGE_"`
 	FallbackStorage FallbackExecutionConfigStorage `yaml:"fallback_storage,omitempty" envPrefix:"EXECUTION_CONFIG_FALLBACK_STORAGE_"`
+	Manifest        ExecutionConfigManifest        `yaml:"manifest,omitempty" envPrefix:"EXECUTION_CONFIG_MANIFEST_"`
+}
+
+type ExecutionConfigManifest struct {
+	Path                    string        `yaml:"path,omitempty" env:"PATH"`
+	SkipMissingFeatureFlags bool          `yaml:"skip_missing_feature_flags" envDefault:"false" env:"SKIP_MISSING_FEATURE_FLAGS"`
+	IgnoredFeatureFlags     []string      `yaml:"ignored_feature_flags,omitempty" env:"IGNORED_FEATURE_FLAGS"`
+	Watch                   bool          `yaml:"watch,omitempty" envDefault:"false" env:"WATCH"`
+	WatchInterval           time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"WATCH_INTERVAL"`
 }
 
 type PersistedOperationsCacheConfig struct {

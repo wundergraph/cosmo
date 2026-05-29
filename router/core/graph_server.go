@@ -1979,6 +1979,7 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 				StartupConfig:      startupConfig,
 				Tracer:             tracer,
 				GetTraceAttributes: getTraceAttributes,
+				DialOptions:        s.grpcPluginDialOptions,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
@@ -2001,6 +2002,7 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 				StartupConfig:      startupConfig,
 				Tracer:             tracer,
 				GetTraceAttributes: getTraceAttributes,
+				DialOptions:        s.grpcPluginDialOptions,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)

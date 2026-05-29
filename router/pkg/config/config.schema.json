@@ -399,6 +399,57 @@
               }
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "manifest": {
+              "type": "object",
+              "description": "The configuration for loading the execution config from a manifest directory on the local file system. The manifest describes the base graph and any feature flag execution configs as separate files in a directory.",
+              "additionalProperties": false,
+              "required": ["path"],
+              "dependentSchemas": {
+                "watch_interval": {
+                  "properties": {
+                    "watch": {
+                      "const": true
+                    }
+                  }
+                }
+              },
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "format": "directory-path",
+                  "description": "The path to the manifest directory. The directory contains the manifest file and the individual execution config files referenced by it."
+                },
+                "skip_missing_feature_flags": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip feature flags listed in the manifest whose execution config file cannot be loaded, instead of aborting the load. Use this when occasional missing feature flag files should not prevent the router from loading the rest of the manifest."
+                },
+                "ignored_feature_flags": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Feature flag names to skip entirely when loading the manifest. Listed flags are not loaded even when referenced by the manifest."
+                },
+                "watch": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the watch mode. The watch mode is used to watch the manifest directory for changes. If a file changes, the router will reload the execution config without downtime."
+                },
+                "watch_interval": {
+                  "type": "string",
+                  "description": "The interval at which the manifest directory is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                  "default": "1s",
+                  "duration": {
+                    "minimum": "100ms"
+                  }
+                }
+              }
+            }
+          }
         }
       ]
     },
