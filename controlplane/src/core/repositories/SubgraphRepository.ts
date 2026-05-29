@@ -269,7 +269,7 @@ export class SubgraphRepository {
     await this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
 
-      const collected = await this.#writeSchemaAndCollectAffected(tx, data);
+      const collected = await this.writeSchemaAndCollectAffected(tx, data);
       const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds } = collected;
       subgraphChanged = collected.subgraphChanged;
       labelChanged = collected.labelChanged;
@@ -279,7 +279,7 @@ export class SubgraphRepository {
       }
 
       // Resolve the affected feature flag DTOs.
-      const affectedFeatureFlags = await this.#resolveFeatureFlags(tx, data.namespaceId, affectedFeatureFlagIds);
+      const affectedFeatureFlags = await this.resolveFeatureFlags(tx, data.namespaceId, affectedFeatureFlagIds);
 
       if (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
         return;
@@ -321,7 +321,7 @@ export class SubgraphRepository {
   /**
    * Resolves feature flag DTOs from a set of feature flag ids within the given transaction.
    */
-  async #resolveFeatureFlags(
+  private async resolveFeatureFlags(
     tx: PostgresJsDatabase<typeof schema>,
     namespaceId: string,
     featureFlagIds: Set<string>,
@@ -354,7 +354,7 @@ export class SubgraphRepository {
    * it performs no composition. Callers merge the returned maps/sets (union) and compose once. The returned maps
    * use the subgraph's own old/new label reconciliation, so callers must merge by union (never delete).
    */
-  async #writeSchemaAndCollectAffected(
+  private async writeSchemaAndCollectAffected(
     tx: PostgresJsDatabase<typeof schema>,
     data: UpdateSubgraphSchemaData,
   ): Promise<{
@@ -656,7 +656,7 @@ export class SubgraphRepository {
       // Write every schema version and collect the affected graphs/flags. NO composition happens here.
       for (const item of items) {
         const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds, subgraphChanged, labelChanged } =
-          await this.#writeSchemaAndCollectAffected(tx, item);
+          await this.writeSchemaAndCollectAffected(tx, item);
 
         if (subgraph && (subgraphChanged || labelChanged)) {
           changedSubgraphNames.push(item.name);
@@ -672,7 +672,7 @@ export class SubgraphRepository {
         }
       }
 
-      affectedFeatureFlags = await this.#resolveFeatureFlags(tx, namespaceId, mergedFeatureFlagIds);
+      affectedFeatureFlags = await this.resolveFeatureFlags(tx, namespaceId, mergedFeatureFlagIds);
     });
 
     return {

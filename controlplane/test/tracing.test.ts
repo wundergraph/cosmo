@@ -80,6 +80,47 @@ describe('traced decorator', () => {
     expect(startSpanMock).toHaveBeenCalledWith({ name: 'Config.getValue' }, expect.any(Function));
   });
 
+  test('wraps TypeScript private methods (on the prototype at runtime)', () => {
+    @traced
+    class RepoWithPrivate {
+      publicEntry() {
+        return this.helper();
+      }
+
+      // TypeScript `private` is compile-time only; at runtime it lives on the prototype, so @traced wraps it.
+      private helper() {
+        return 'helped';
+      }
+    }
+
+    const repo = new RepoWithPrivate();
+    expect(repo.publicEntry()).toBe('helped');
+    expect(startSpanMock).toHaveBeenCalledWith({ name: 'RepoWithPrivate.publicEntry' }, expect.any(Function));
+    // The private method must also get its own span — this is what SubgraphRepository relies on.
+    expect(startSpanMock).toHaveBeenCalledWith({ name: 'RepoWithPrivate.helper' }, expect.any(Function));
+  });
+
+  test('does NOT wrap ECMAScript #private methods (not on the prototype)', () => {
+    @traced
+    class RepoWithHash {
+      publicEntry() {
+        return this.#helper();
+      }
+
+      // ECMAScript #private methods are not own properties of the prototype, so @traced cannot see or wrap them.
+      #helper() {
+        return 'helped';
+      }
+    }
+
+    const repo = new RepoWithHash();
+    expect(repo.publicEntry()).toBe('helped');
+    expect(startSpanMock).toHaveBeenCalledWith({ name: 'RepoWithHash.publicEntry' }, expect.any(Function));
+    // No span is created for the #private method — this is why such helpers use `private` instead of `#`.
+    expect(startSpanMock).not.toHaveBeenCalledWith({ name: 'RepoWithHash.#helper' }, expect.any(Function));
+    expect(startSpanMock).toHaveBeenCalledTimes(1);
+  });
+
   test('preserves class name', () => {
     @traced
     class OriginalName {}
