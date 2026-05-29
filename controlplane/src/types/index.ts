@@ -29,6 +29,7 @@ export type FeatureIds =
   | 'cache-warmer'
   | 'composition-ignore-external-keys' // COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
   | 'field-pruning-grace-period'
+  | 'login-method-restrictions'
   | 'oidc'
   | 'plugins'
   | 'proposals'

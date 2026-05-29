@@ -256,7 +256,7 @@ describe('Organization Group tests', () => {
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       mappers: [],
       name: 'okta',
     });
@@ -287,7 +287,7 @@ describe('Organization Group tests', () => {
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       mappers: [
         new GroupMapper({
           groupId: createGroupResponse.group!.groupId,
@@ -328,7 +328,7 @@ describe('Organization Group tests', () => {
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       mappers: [
         new GroupMapper({
           groupId: createGroupResponse.group!.groupId,

@@ -197,6 +197,10 @@
         {
           "id": "subgraph-check-extensions",
           "description": "Subgraph Check Extensions"
+        },
+        {
+          "id": "login-method-restrictions",
+          "description": "Restrict login methods per organization and namespace"
         }
       ]
     }
