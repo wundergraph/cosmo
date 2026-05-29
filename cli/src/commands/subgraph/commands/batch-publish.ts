@@ -32,7 +32,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.requiredOption(
     '-c, --config <path-to-config>',
-    'The path to the YAML/JSON config file listing the subgraphs and feature subgraphs to publish.',
+    'The path to the YAML config file listing the subgraphs and feature subgraphs to publish.',
   );
   command.option('-n, --namespace [string]', 'The namespace of the subgraphs.');
   command.option(
