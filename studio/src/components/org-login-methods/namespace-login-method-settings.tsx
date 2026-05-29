@@ -11,6 +11,7 @@ import { MultiSelectOption } from '@/components/ui/multi-select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { docsBaseURL } from '@/lib/constants';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { ExclamationTriangleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
@@ -22,7 +23,6 @@ import {
   updateNamespaceLoginMethods,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 
 // Sentinel values representing built-in methods, which are not SSO provider ids.
@@ -57,8 +57,7 @@ const SectionCard = ({ children }: { children: React.ReactNode }) => {
 };
 
 export function NamespaceLoginMethodSettings() {
-  const router = useRouter();
-  const organizationSlug = router.query.organizationSlug as string;
+  const organizationSlug = useCurrentOrganization()?.slug;
   const { toast } = useToast();
 
   // Namespaces come from the app-wide workspace context (already fetched by the
