@@ -148,12 +148,12 @@ type (
 		logger               *zap.Logger
 		routerBaseAttributes otelmetric.ObserveOption
 
-		engineResolverStats bool
+		resolverStats bool
 	}
 
 	MetricOpts struct {
 		EnableCircuitBreaker bool
-		EngineResolverStats  bool
+		ResolverStats        bool
 		CostStats            config.CostStats
 	}
 
@@ -210,7 +210,7 @@ func NewStore(otlpOpts MetricOpts, promOpts MetricOpts, opts ...Option) (Store, 
 	}
 
 	h.baseAttributesOpt = otelmetric.WithAttributes(h.baseAttributes...)
-	h.engineResolverStats = otlpOpts.EngineResolverStats || promOpts.EngineResolverStats
+	h.resolverStats = otlpOpts.ResolverStats || promOpts.ResolverStats
 
 	// Create OTLP metrics exported to OTEL
 	otlpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.routerBaseAttributes, otlpOpts)
@@ -429,7 +429,7 @@ func (h *Metrics) MeasureOperationPlanningTime(ctx context.Context, planningTime
 }
 
 func (h *Metrics) MeasureResolverAcquireDuration(ctx context.Context, duration time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
-	if !h.engineResolverStats {
+	if !h.resolverStats {
 		return
 	}
 

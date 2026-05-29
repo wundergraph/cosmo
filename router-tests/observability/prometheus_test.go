@@ -4193,8 +4193,8 @@ func TestPrometheus(t *testing.T) {
 			MetricOptions: testenv.MetricOptions{
 				PrometheusEngineStatsOptions: testenv.EngineStatOptions{
 					EnableSubscription: true,
-					EnableResolver:     true,
 				},
+				EnablePrometheusResolverMetrics: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{
@@ -5317,7 +5317,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 		})
 	})
 
-	t.Run("validate http client trace metrics are present when enhanced_connection_stats is enabled", func(t *testing.T) {
+	t.Run("validate http client network metrics are present when network metrics are enabled", func(t *testing.T) {
 		t.Parallel()
 
 		promRegistry := prometheus.NewRegistry()
@@ -5327,7 +5327,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			MetricReader:       metricReader,
 			PrometheusRegistry: promRegistry,
 			MetricOptions: testenv.MetricOptions{
-				EnablePrometheusEnhancedConnectionStats: true,
+				EnablePrometheusNetworkMetrics: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -5354,7 +5354,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			require.NotEmpty(t, tcpConnect.GetMetric())
 
 			// And the existing acquire_duration metric must still be there since
-			// enabling enhanced_connection_stats implies enabling the connection metric store.
+			// enabling network metrics implies enabling the connection metric store.
 			require.NotNil(t, findMetricFamilyByName(mf, "router_http_client_connection_acquire_duration"))
 		})
 	})
@@ -5587,8 +5587,8 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					MetricOptions: testenv.MetricOptions{
 						PrometheusEngineStatsOptions: testenv.EngineStatOptions{
 							EnableSubscription: true,
-							EnableResolver:     true,
 						},
+						EnablePrometheusResolverMetrics: true,
 					},
 					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
 				}

@@ -198,6 +198,9 @@ func (c *Config) Usage() map[string]any {
 			exporters[i].Endpoint = exporter.Endpoint
 		}
 		usage["tracing_exporters"] = exporters
+		usage["tracing_network_spans"] = c.traceConfig.NetworkSpans
+		usage["tracing_resolver_spans"] = c.traceConfig.ResolverSpans
+		usage["tracing_router_spans"] = c.traceConfig.RouterSpans
 	}
 
 	metricsEnabled := c.metricConfig != nil && c.metricConfig.IsEnabled()
@@ -218,6 +221,8 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_otel_graphql_cache"] = c.metricConfig.OpenTelemetry.GraphqlCache
 			usage["metrics_otel_router_runtime"] = c.metricConfig.OpenTelemetry.RouterRuntime
 			usage["metrics_otel_connection_stats"] = c.metricConfig.OpenTelemetry.ConnectionStats
+			usage["metrics_otel_network_stats"] = c.metricConfig.OpenTelemetry.NetworkStats
+			usage["metrics_otel_resolver_stats"] = c.metricConfig.OpenTelemetry.ResolverStats
 		}
 		usage["metrics_prometheus_enabled"] = c.metricConfig.Prometheus.Enabled
 		if c.metricConfig.Prometheus.Enabled {
@@ -229,6 +234,8 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_prometheus_exclude_scope_info"] = c.metricConfig.Prometheus.ExcludeScopeInfo
 			usage["metrics_prometheus_schema_field_usage_enabled"] = c.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled
 			usage["metrics_prometheus_connection_stats"] = c.metricConfig.Prometheus.ConnectionStats
+			usage["metrics_prometheus_network_stats"] = c.metricConfig.Prometheus.NetworkStats
+			usage["metrics_prometheus_resolver_stats"] = c.metricConfig.Prometheus.ResolverStats
 		}
 	}
 

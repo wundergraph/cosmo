@@ -157,10 +157,9 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	}
 
 	// Active-connection tracking via TraceDialer is only needed when ConnectionStats is on.
-	// The httptrace-based client trace phases (EnhancedConnectionStats) attach in the RoundTripper
-	// and don't require the dialer.
-	enhancedStatsEnabled := r.metricConfig.OpenTelemetry.EnhancedConnectionStats || r.metricConfig.Prometheus.EnhancedConnectionStats
-	connectionStatsEnabled := enhancedStatsEnabled || r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
+	// The httptrace-based network metrics attach in the RoundTripper and don't require the dialer.
+	networkStatsEnabled := r.metricConfig.OpenTelemetry.NetworkStats || r.metricConfig.Prometheus.NetworkStats
+	connectionStatsEnabled := networkStatsEnabled || r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
 	var traceDialer *TraceDialer
 	if connectionStatsEnabled {
 		traceDialer = NewTraceDialer()
@@ -406,7 +405,7 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	 */
 	httpRouter.Group(func(cr chi.Router) {
 		// We are applying it conditionally because compressing 3MB playground is still slow even with stdlib gzip
-		if s.traceConfig.Enabled && s.traceConfig.ResolverAcquireSpans {
+		if s.traceConfig.Enabled && s.traceConfig.RouterSpans {
 			cr.Use(responseFinalizationSpanMiddleware(
 				wrapper,
 				s.tracerProvider.Tracer("wundergraph/cosmo/router/response_finalization", oteltrace.WithInstrumentationVersion("0.0.1")),
@@ -630,6 +629,7 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 		s.otlpMeterProvider,
 		s.engineStats,
 		&s.metricConfig.OpenTelemetry.EngineStats,
+		s.metricConfig.OpenTelemetry.ResolverStats,
 	)
 	if err != nil {
 		return err
@@ -641,6 +641,7 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 		s.promMeterProvider,
 		s.engineStats,
 		&s.metricConfig.Prometheus.EngineStats,
+		s.metricConfig.Prometheus.ResolverStats,
 	)
 	if err != nil {
 		return err
@@ -1060,12 +1061,12 @@ func (s *graphServer) buildGraphMux(
 		// but in this case we use the same metric store
 		otlpOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.OpenTelemetry.Enabled,
-			EngineResolverStats:  s.metricConfig.OpenTelemetry.EngineStats.Resolver,
+			ResolverStats:        s.metricConfig.OpenTelemetry.ResolverStats,
 			CostStats:            s.metricConfig.OpenTelemetry.CostStats,
 		}
 		promOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.Prometheus.Enabled,
-			EngineResolverStats:  s.metricConfig.Prometheus.EngineStats.Resolver,
+			ResolverStats:        s.metricConfig.Prometheus.ResolverStats,
 			CostStats:            s.metricConfig.Prometheus.CostStats,
 		}
 
@@ -1402,7 +1403,7 @@ func (s *graphServer) buildGraphMux(
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
-	emitConnectionPhaseSpan := s.traceConfig.Enabled && s.traceConfig.EnhancedConnectionStats
+	emitConnectionPhaseSpan := s.traceConfig.Enabled && s.traceConfig.NetworkSpans
 	enableTraceClient := s.connectionMetrics != nil || exprManager.VisitorManager.IsSubgraphTraceUsedInExpressions() || emitConnectionPhaseSpan
 
 	var baseConnMetricStore rmetric.ConnectionMetricStore = &rmetric.NoopConnectionMetricStore{}
@@ -1703,7 +1704,7 @@ func (s *graphServer) buildGraphMux(
 		metricAttExpressions,
 		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		s.headerPropagation,
-		s.traceConfig.Enabled && s.traceConfig.EnhancedConnectionStats,
+		s.traceConfig.Enabled && s.traceConfig.NetworkSpans,
 	)
 
 	handlerOpts := HandlerOptions{
@@ -1715,7 +1716,8 @@ func (s *graphServer) buildGraphMux(
 		EngineStats:                     s.engineStats,
 		MetricStore:                     gm.metricStore,
 		TracerProvider:                  s.tracerProvider,
-		EmitResolverAcquireSpan:         s.traceConfig.Enabled && s.traceConfig.ResolverAcquireSpans,
+		EmitResolverSpans:               s.traceConfig.Enabled && s.traceConfig.ResolverSpans,
+		EmitRouterSpans:                 s.traceConfig.Enabled && s.traceConfig.RouterSpans,
 		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
 		EngineLoaderHooks:               loaderHooks,
@@ -1808,7 +1810,7 @@ func (s *graphServer) buildGraphMux(
 		HeaderPropagation:                      s.headerPropagation,
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
 		SpanNameFormatter:                      s.spanNameFormatter,
-		EmitRouterPhaseSpans:                   s.traceConfig.Enabled && s.traceConfig.ResolverAcquireSpans,
+		EmitRouterPhaseSpans:                   s.traceConfig.Enabled && s.traceConfig.RouterSpans,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {

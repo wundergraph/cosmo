@@ -58,16 +58,16 @@ func NewConnectionMetricStore(
 		promConnectionMetrics: &noopConnectionMetricProvider{},
 	}
 
-	if metricsConfig.OpenTelemetry.ConnectionStats || metricsConfig.OpenTelemetry.EnhancedConnectionStats {
-		otlpMetrics, err := newOtlpConnectionMetrics(logger, otelProvider, connectionPoolStats, baseAttributes, metricsConfig.OpenTelemetry.EnhancedConnectionStats)
+	if metricsConfig.OpenTelemetry.ConnectionStats || metricsConfig.OpenTelemetry.NetworkStats {
+		otlpMetrics, err := newOtlpConnectionMetrics(logger, otelProvider, connectionPoolStats, baseAttributes, metricsConfig.OpenTelemetry.NetworkStats)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create otlp connection metrics: %w", err)
 		}
 		connMetrics.otlpConnectionMetrics = otlpMetrics
 	}
 
-	if metricsConfig.Prometheus.ConnectionStats || metricsConfig.Prometheus.EnhancedConnectionStats {
-		promMetrics, err := newPromConnectionMetrics(logger, promProvider, connectionPoolStats, baseAttributes, metricsConfig.Prometheus.EnhancedConnectionStats)
+	if metricsConfig.Prometheus.ConnectionStats || metricsConfig.Prometheus.NetworkStats {
+		promMetrics, err := newPromConnectionMetrics(logger, promProvider, connectionPoolStats, baseAttributes, metricsConfig.Prometheus.NetworkStats)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create prometheus connection metrics: %w", err)
 		}

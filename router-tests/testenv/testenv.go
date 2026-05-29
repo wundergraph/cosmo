@@ -269,7 +269,6 @@ type MetricExclusions struct {
 
 type EngineStatOptions struct {
 	EnableSubscription bool
-	EnableResolver     bool
 }
 
 type MetricsLogExporterOptions struct {
@@ -280,24 +279,26 @@ type MetricsLogExporterOptions struct {
 }
 
 type MetricOptions struct {
-	MetricExclusions                        MetricExclusions
-	EnableRuntimeMetrics                    bool
-	EnableOTLPRouterCache                   bool
-	EnablePrometheusRouterCache             bool
-	OTLPEngineStatsOptions                  EngineStatOptions
-	PrometheusEngineStatsOptions            EngineStatOptions
-	PrometheusSchemaFieldUsage              PrometheusSchemaFieldUsage
-	EnableOTLPConnectionMetrics             bool
-	EnableOTLPEnhancedConnectionStats       bool
-	EnableOTLPCircuitBreakerMetrics         bool
-	EnableOTLPStreamMetrics                 bool
-	EnablePrometheusConnectionMetrics       bool
-	EnablePrometheusEnhancedConnectionStats bool
-	EnablePrometheusCircuitBreakerMetrics   bool
-	EnablePrometheusStreamMetrics           bool
-	LogExporter                             MetricsLogExporterOptions
-	OTLPCostStats                           config.CostStats
-	PrometheusCostStats                     config.CostStats
+	MetricExclusions                      MetricExclusions
+	EnableRuntimeMetrics                  bool
+	EnableOTLPRouterCache                 bool
+	EnablePrometheusRouterCache           bool
+	OTLPEngineStatsOptions                EngineStatOptions
+	PrometheusEngineStatsOptions          EngineStatOptions
+	PrometheusSchemaFieldUsage            PrometheusSchemaFieldUsage
+	EnableOTLPConnectionMetrics           bool
+	EnableOTLPNetworkMetrics              bool
+	EnableOTLPResolverMetrics             bool
+	EnableOTLPCircuitBreakerMetrics       bool
+	EnableOTLPStreamMetrics               bool
+	EnablePrometheusConnectionMetrics     bool
+	EnablePrometheusNetworkMetrics        bool
+	EnablePrometheusResolverMetrics       bool
+	EnablePrometheusCircuitBreakerMetrics bool
+	EnablePrometheusStreamMetrics         bool
+	LogExporter                           MetricsLogExporterOptions
+	OTLPCostStats                         config.CostStats
+	PrometheusCostStats                   config.CostStats
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -334,13 +335,12 @@ type Config struct {
 	TLSConfig                          config.TLSConfiguration
 	TraceExporter                      trace.SpanExporter
 	TracingSanitizeUTF8                *config.SanitizeUTF8Config
-	// TracingEnhancedConnectionStats enables per-request HTTP client child
-	// spans (DNS lookup, TCP connect, TLS handshake, time-to-first-byte)
-	// under each subgraph HTTP span when a TraceExporter is configured.
-	TracingEnhancedConnectionStats bool
-	// TracingResolverAcquireSpans enables a "Resolver - Acquire" child span
-	// using the resolver wait time reported by the engine.
-	TracingResolverAcquireSpans  bool
+	// TracingNetworkSpans enables additional subgraph HTTP phase spans.
+	TracingNetworkSpans bool
+	// TracingResolverSpans enables resolver phase spans.
+	TracingResolverSpans bool
+	// TracingRouterSpans enables router phase spans.
+	TracingRouterSpans           bool
 	IPAnonymization              *core.IPAnonymizationConfig
 	CustomMetricAttributes       []config.CustomAttribute
 	CustomTelemetryAttributes    []config.CustomAttribute
@@ -1566,10 +1566,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Propagation:                testConfig.PropagationConfig,
 			TracingGlobalFeatures:      config.TracingGlobalFeatures{},
 			ResponseTraceHeader:        testConfig.ResponseTraceHeader,
-			EnhancedConnectionStats:    testConfig.TracingEnhancedConnectionStats,
-			EngineStats: config.EngineStats{
-				Resolvers: testConfig.TracingResolverAcquireSpans,
-			},
+			Network:                    config.TelemetryCategory{Enabled: testConfig.TracingNetworkSpans},
+			Resolver:                   config.TelemetryCategory{Enabled: testConfig.TracingResolverSpans},
+			Router:                     config.TelemetryCategory{Enabled: testConfig.TracingRouterSpans},
 		}
 
 		if testConfig.TracingSanitizeUTF8 != nil {
@@ -1633,16 +1632,16 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}
 
 		prometheusConfig = rmetric.PrometheusConfig{
-			Enabled:                 true,
-			ListenAddr:              fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
-			Path:                    "/metrics",
-			TestRegistry:            testConfig.PrometheusRegistry,
-			GraphqlCache:            testConfig.MetricOptions.EnablePrometheusRouterCache,
-			ConnectionStats:         testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
-			EnhancedConnectionStats: testConfig.MetricOptions.EnablePrometheusEnhancedConnectionStats,
+			Enabled:         true,
+			ListenAddr:      fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
+			Path:            "/metrics",
+			TestRegistry:    testConfig.PrometheusRegistry,
+			GraphqlCache:    testConfig.MetricOptions.EnablePrometheusRouterCache,
+			ConnectionStats: testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
+			NetworkStats:    testConfig.MetricOptions.EnablePrometheusNetworkMetrics,
+			ResolverStats:   testConfig.MetricOptions.EnablePrometheusResolverMetrics,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
-				Resolver:     testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableResolver,
 			},
 			CircuitBreaker:       testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
 			CostStats:            testConfig.MetricOptions.PrometheusCostStats,
@@ -1665,15 +1664,15 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
-					Enabled:                 true,
-					RouterRuntime:           testConfig.MetricOptions.EnableRuntimeMetrics,
-					GraphqlCache:            testConfig.MetricOptions.EnableOTLPRouterCache,
-					Streams:                 testConfig.MetricOptions.EnableOTLPStreamMetrics,
-					ConnectionStats:         testConfig.MetricOptions.EnableOTLPConnectionMetrics,
-					EnhancedConnectionStats: testConfig.MetricOptions.EnableOTLPEnhancedConnectionStats,
+					Enabled:         true,
+					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
+					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
+					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
+					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
+					Network:         config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPNetworkMetrics},
+					Resolver:        config.TelemetryCategory{Enabled: testConfig.MetricOptions.EnableOTLPResolverMetrics},
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
-						Resolvers:     testConfig.MetricOptions.OTLPEngineStatsOptions.EnableResolver,
 					},
 					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
 					CostStats:           testConfig.MetricOptions.OTLPCostStats,

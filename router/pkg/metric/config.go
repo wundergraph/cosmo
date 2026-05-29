@@ -19,15 +19,16 @@ const DefaultServerName = "cosmo-router"
 const DefaultCardinalityLimit = 2000
 
 type PrometheusConfig struct {
-	Enabled                 bool
-	ConnectionStats         bool
-	EnhancedConnectionStats bool
-	ListenAddr              string
-	Path                    string
-	GraphqlCache            bool
-	EngineStats             EngineStatsConfig
-	CircuitBreaker          bool
-	CostStats               config.CostStats
+	Enabled         bool
+	ConnectionStats bool
+	NetworkStats    bool
+	ResolverStats   bool
+	ListenAddr      string
+	Path            string
+	GraphqlCache    bool
+	EngineStats     EngineStatsConfig
+	CircuitBreaker  bool
+	CostStats       config.CostStats
 	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from Prometheus exporter
@@ -71,11 +72,10 @@ type OpenTelemetryExporter struct {
 
 type EngineStatsConfig struct {
 	Subscription bool
-	Resolver     bool
 }
 
 func (e *EngineStatsConfig) Enabled() bool {
-	return e.Subscription || e.Resolver
+	return e.Subscription
 }
 
 type LogExporterConfig struct {
@@ -88,15 +88,16 @@ type LogExporterConfig struct {
 }
 
 type OpenTelemetry struct {
-	Enabled                 bool
-	ConnectionStats         bool
-	EnhancedConnectionStats bool
-	RouterRuntime           bool
-	GraphqlCache            bool
-	CircuitBreaker          bool
-	CostStats               config.CostStats
-	EngineStats             EngineStatsConfig
-	Exporters               []*OpenTelemetryExporter
+	Enabled         bool
+	ConnectionStats bool
+	NetworkStats    bool
+	ResolverStats   bool
+	RouterRuntime   bool
+	GraphqlCache    bool
+	CircuitBreaker  bool
+	CostStats       config.CostStats
+	EngineStats     EngineStatsConfig
+	Exporters       []*OpenTelemetryExporter
 	// Metrics to exclude from the OTLP exporter.
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from the OTLP exporter.

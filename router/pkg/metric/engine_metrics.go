@@ -80,14 +80,15 @@ func NewEngineMetrics(
 	provider *metric.MeterProvider,
 	stats statistics.EngineStatistics,
 	statConfig *EngineStatsConfig,
+	resolverStats bool,
 ) (*EngineMetrics, error) {
-	if !statConfig.Enabled() {
+	if !statConfig.Enabled() && !resolverStats {
 		return nil, nil
 	}
 
 	meter := provider.Meter(cosmoEngineMeterName, otelmetric.WithInstrumentationVersion(cosmoEngineMeterVersion))
 
-	instruments, err := setupInstruments(meter, statConfig)
+	instruments, err := setupInstruments(meter, statConfig, resolverStats)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func NewEngineMetrics(
 	return em, nil
 }
 
-func setupInstruments(m otelmetric.Meter, statConfig *EngineStatsConfig) (*engineInstruments, error) {
+func setupInstruments(m otelmetric.Meter, statConfig *EngineStatsConfig, resolverStats bool) (*engineInstruments, error) {
 	var (
 		err error
 
@@ -145,7 +146,7 @@ func setupInstruments(m otelmetric.Meter, statConfig *EngineStatsConfig) (*engin
 		}
 	}
 
-	if statConfig.Resolver {
+	if resolverStats {
 		resolversMaxConcurrent, err = m.Int64ObservableUpDownCounter(engineResolversMaxConcurrentKey,
 			otelmetric.WithDescription("Configured maximum number of concurrent GraphQL resolver slots (ENGINE_MAX_CONCURRENT_RESOLVERS)."))
 		if err != nil {

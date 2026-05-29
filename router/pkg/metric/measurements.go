@@ -98,7 +98,7 @@ func createMeasures(meter otelmetric.Meter, opts MetricOpts) (*Measurements, err
 
 	h.histograms[OperationPlanningTime] = operationPlanningTime
 
-	if opts.EngineResolverStats {
+	if opts.ResolverStats {
 		resolverAcquireDuration, err := meter.Float64Histogram(
 			ResolverAcquireDurationHistogram,
 			ResolverAcquireDurationHistogramOptions...,

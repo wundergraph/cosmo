@@ -1043,7 +1043,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if _, isNoop := r.EngineStats.(*statistics.NoopEngineStats); isNoop {
-		if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+		if r.metricConfig.OpenTelemetry.EngineStats.Enabled() ||
+			r.metricConfig.OpenTelemetry.ResolverStats ||
+			r.metricConfig.Prometheus.EngineStats.Enabled() ||
+			r.metricConfig.Prometheus.ResolverStats ||
+			r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
 			r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
 		}
 	}
@@ -2558,8 +2562,9 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 			Enabled:          cfg.Tracing.SanitizeUTF8.Enabled,
 			LogSanitizations: cfg.Tracing.SanitizeUTF8.LogSanitizations,
 		},
-		EnhancedConnectionStats: cfg.Tracing.EnhancedConnectionStats,
-		ResolverAcquireSpans:    cfg.Tracing.EngineStats.Resolvers,
+		NetworkSpans:  cfg.Tracing.Network.Enabled,
+		ResolverSpans: cfg.Tracing.Resolver.Enabled,
+		RouterSpans:   cfg.Tracing.Router.Enabled,
 	}
 }
 
@@ -2633,14 +2638,14 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		CardinalityLimit:   cfg.Metrics.CardinalityLimit,
 		OpenTelemetry: rmetric.OpenTelemetry{
-			Enabled:                 cfg.Metrics.OTLP.Enabled,
-			RouterRuntime:           cfg.Metrics.OTLP.RouterRuntime,
-			GraphqlCache:            cfg.Metrics.OTLP.GraphqlCache,
-			ConnectionStats:         cfg.Metrics.OTLP.ConnectionStats,
-			EnhancedConnectionStats: cfg.Metrics.OTLP.EnhancedConnectionStats,
+			Enabled:         cfg.Metrics.OTLP.Enabled,
+			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
+			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
+			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
+			NetworkStats:    cfg.Metrics.OTLP.Network.Enabled,
+			ResolverStats:   cfg.Metrics.OTLP.Resolver.Enabled,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
-				Resolver:     cfg.Metrics.OTLP.EngineStats.Resolvers,
 			},
 			Exporters:           openTelemetryExporters,
 			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
@@ -2655,15 +2660,15 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			},
 		},
 		Prometheus: rmetric.PrometheusConfig{
-			Enabled:                 cfg.Metrics.Prometheus.Enabled,
-			ListenAddr:              cfg.Metrics.Prometheus.ListenAddr,
-			Path:                    cfg.Metrics.Prometheus.Path,
-			GraphqlCache:            cfg.Metrics.Prometheus.GraphqlCache,
-			ConnectionStats:         cfg.Metrics.Prometheus.ConnectionStats,
-			EnhancedConnectionStats: cfg.Metrics.Prometheus.EnhancedConnectionStats,
+			Enabled:         cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:      cfg.Metrics.Prometheus.ListenAddr,
+			Path:            cfg.Metrics.Prometheus.Path,
+			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,
+			ConnectionStats: cfg.Metrics.Prometheus.ConnectionStats,
+			NetworkStats:    cfg.Metrics.Prometheus.Network.Enabled,
+			ResolverStats:   cfg.Metrics.Prometheus.Resolver.Enabled,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
-				Resolver:     cfg.Metrics.Prometheus.EngineStats.Resolvers,
 			},
 			CircuitBreaker:      cfg.Metrics.Prometheus.CircuitBreaker,
 			CostStats:           cfg.Metrics.Prometheus.CostStats,

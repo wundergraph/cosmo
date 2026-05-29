@@ -48,10 +48,14 @@
         }
       ],
       "OperationContentAttributes": false,
-      "EnhancedConnectionStats": true,
-      "EngineStats": {
-        "Subscriptions": false,
-        "Resolvers": true
+      "Network": {
+        "Enabled": true
+      },
+      "Resolver": {
+        "Enabled": true
+      },
+      "Router": {
+        "Enabled": true
       },
       "ExportGraphQLVariables": true,
       "WithNewRoot": false,
@@ -67,10 +71,14 @@
         "RouterRuntime": true,
         "GraphqlCache": true,
         "ConnectionStats": true,
-        "EnhancedConnectionStats": true,
+        "Network": {
+          "Enabled": true
+        },
+        "Resolver": {
+          "Enabled": true
+        },
         "EngineStats": {
-          "Subscriptions": true,
-          "Resolvers": true
+          "Subscriptions": true
         },
         "CostStats": {
           "EstimatedEnabled": false,
@@ -105,11 +113,15 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
         "ConnectionStats": true,
-        "EnhancedConnectionStats": true,
+        "Network": {
+          "Enabled": true
+        },
+        "Resolver": {
+          "Enabled": true
+        },
         "Streams": false,
         "EngineStats": {
-          "Subscriptions": true,
-          "Resolvers": true
+          "Subscriptions": true
         },
         "CostStats": {
           "EstimatedEnabled": false,

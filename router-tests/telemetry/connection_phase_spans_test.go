@@ -11,14 +11,14 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// TestConnectionPhaseAndResolverAcquireSpans verifies the spans added for
-// EnhancedConnectionStats (per-phase HTTP child spans under each subgraph
-// request span, plus response body read and response processing spans) and
-// ResolverAcquireSpans (a "Resolver - Acquire" child span under
-// "Operation - Execute"). The test subgraphs listen on 127.0.0.1 over plain
-// HTTP, so DNS and TLS phases never fire; we only assert on the phases that do
-// trigger (TCP connect on first connection, time-to-first-byte on every request).
-func TestConnectionPhaseAndResolverAcquireSpans(t *testing.T) {
+// TestNetworkAndResolverSpans verifies the spans added for network tracing
+// (per-phase HTTP child spans under each subgraph request span, plus response
+// body read and response processing spans) and resolver tracing (a
+// "Resolver - Acquire" child span under "Operation - Execute"). The test
+// subgraphs listen on 127.0.0.1 over plain HTTP, so DNS and TLS phases never
+// fire; we only assert on the phases that do trigger (TCP connect on first
+// connection, time-to-first-byte on every request).
+func TestNetworkAndResolverSpans(t *testing.T) {
 	t.Parallel()
 
 	t.Run("phase spans are absent by default", func(t *testing.T) {
@@ -49,14 +49,14 @@ func TestConnectionPhaseAndResolverAcquireSpans(t *testing.T) {
 		})
 	})
 
-	t.Run("enhanced_connection_stats emits per-phase child spans", func(t *testing.T) {
+	t.Run("network tracing emits per-phase child spans", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:                  exporter,
-			TracingEnhancedConnectionStats: true,
+			TraceExporter:       exporter,
+			TracingNetworkSpans: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -109,14 +109,14 @@ func TestConnectionPhaseAndResolverAcquireSpans(t *testing.T) {
 		})
 	})
 
-	t.Run("engine_stats.resolvers emits a Resolver - Acquire span", func(t *testing.T) {
+	t.Run("resolver tracing emits a Resolver - Acquire span", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:               exporter,
-			TracingResolverAcquireSpans: true,
+			TraceExporter:        exporter,
+			TracingResolverSpans: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -124,7 +124,7 @@ func TestConnectionPhaseAndResolverAcquireSpans(t *testing.T) {
 
 			sn := exporter.GetSpans().Snapshots()
 			require.True(t, hasSpanWithName(sn, "Resolver - Acquire"),
-				"expected a Resolver - Acquire child span when tracing.engine_stats.resolvers is enabled")
+				"expected a Resolver - Acquire child span when tracing.resolver.enabled is true")
 
 			// The Resolver - Acquire span must be a child of "Operation - Execute".
 			parents := indexByID(sn)

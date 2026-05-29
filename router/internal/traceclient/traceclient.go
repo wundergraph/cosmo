@@ -220,9 +220,9 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		)
 	}
 
-	// Per-phase httptrace metrics. The trace.ConnectionMetricStore method is a
-	// no-op when enhanced_connection_stats is disabled, so unconditionally calling
-	// these is cheap on the disabled path.
+	// Per-phase httptrace metrics. The ConnectionMetricStore method is a no-op
+	// when network metrics are disabled, so unconditionally calling these is
+	// cheap on the disabled path.
 	if !trace.phases.DNSStart.IsZero() && !trace.phases.DNSDone.IsZero() {
 		t.connectionMetricStore.MeasureDNSLookupDuration(
 			ctx,

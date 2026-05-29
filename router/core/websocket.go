@@ -1141,7 +1141,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response, rw)
 		}
 		if info != nil {
-			if h.graphqlHandler.emitResolverAcquireSpan {
+			if h.graphqlHandler.emitResolverSpans {
 				emitResolverAcquireSpan(resolveCtx.Context(), h.graphqlHandler.tracer, resolveStart, info.ResolveAcquireWaitTime, info.ResolveDeduplicated)
 				emitRouterPhaseSpan(resolveCtx.Context(), h.graphqlHandler.tracer, "Operation - Resolve Response", info.ResponseResolveStartTime, info.ResponseResolveDuration, rotel.WgComponentName.String("engine-resolver"))
 			}
