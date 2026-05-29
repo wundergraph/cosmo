@@ -35,26 +35,28 @@ const BUILTIN_VALUES = new Set([PASSWORD_VALUE, GOOGLE_VALUE, GITHUB_VALUE]);
 // Stable key describing the allowed methods, for dirty-state and diffing.
 const methodsKey = (values: string[]) => [...values].sort().join(',');
 
-const sectionCard = (children: React.ReactNode) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Organization</CardTitle>
-      <CardDescription>
-        Choose which login methods can be used to access this organization. Leave it empty to allow all methods. Members
-        who use a method you remove lose access on their next request.{' '}
-        <Link
-          href={docsBaseURL + '/studio/organization-login-methods'}
-          className="text-primary"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Learn more
-        </Link>
-      </CardDescription>
-    </CardHeader>
-    <CardContent>{children}</CardContent>
-  </Card>
-);
+const SectionCard = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Organization</CardTitle>
+        <CardDescription>
+          Choose which login methods can be used to access this organization. Leave it empty to allow all methods.
+          Members who use a method you remove lose access on their next request.{' '}
+          <Link
+            href={docsBaseURL + '/studio/organization-login-methods'}
+            className="text-primary"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Learn more
+          </Link>
+        </CardDescription>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
 
 // Map the server's allow-flags into the multiselect's selected values.
 const toSelected = (m: {
@@ -164,7 +166,11 @@ export function OrganizationLoginMethodSettings() {
   };
 
   if (isLoadingLoginMethods || isLoadingProviders) {
-    return sectionCard(<Loader />);
+    return (
+      <SectionCard>
+        <Loader />
+      </SectionCard>
+    );
   }
 
   if (
@@ -175,34 +181,36 @@ export function OrganizationLoginMethodSettings() {
     loginMethodsData.response?.code !== EnumStatusCode.OK ||
     providersData.response?.code !== EnumStatusCode.OK
   ) {
-    return sectionCard(
-      <EmptyState
-        className="h-auto py-10"
-        icon={<ExclamationTriangleIcon />}
-        title="Could not load login method settings"
-        description={
-          loginMethodsData?.response?.details ||
-          providersData?.response?.details ||
-          loginMethodsError?.message ||
-          providersError?.message ||
-          'Please try again'
-        }
-        actions={
-          <Button
-            onClick={() => {
-              refetchLoginMethods();
-              refetchProviders();
-            }}
-          >
-            Retry
-          </Button>
-        }
-      />,
+    return (
+      <SectionCard>
+        <EmptyState
+          className="h-auto py-10"
+          icon={<ExclamationTriangleIcon />}
+          title="Could not load login method settings"
+          description={
+            loginMethodsData?.response?.details ||
+            providersData?.response?.details ||
+            loginMethodsError?.message ||
+            providersError?.message ||
+            'Please try again'
+          }
+          actions={
+            <Button
+              onClick={() => {
+                refetchLoginMethods();
+                refetchProviders();
+              }}
+            >
+              Retry
+            </Button>
+          }
+        />
+      </SectionCard>
     );
   }
 
-  return sectionCard(
-    <>
+  return (
+    <SectionCard>
       <div className="flex flex-col gap-y-6">
         <div className="flex flex-col gap-y-2">
           <p className="text-sm font-medium text-muted-foreground">Allowed login methods</p>
@@ -249,6 +257,6 @@ export function OrganizationLoginMethodSettings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>,
+    </SectionCard>
   );
 }

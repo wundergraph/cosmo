@@ -29,26 +29,28 @@ const GITHUB_VALUE = '__github__';
 // Stable key describing a namespace's allowed methods, for dirty-state and diffing.
 const methodsKey = (values: string[]) => [...values].sort().join(',');
 
-const sectionCard = (children: React.ReactNode) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Namespaces</CardTitle>
-      <CardDescription>
-        Restrict which login methods can access each namespace. Namespaces that aren&apos;t listed are open to all login
-        methods (default-open).{' '}
-        <Link
-          href={docsBaseURL + '/studio/namespace-login-methods'}
-          className="text-primary"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Learn more
-        </Link>
-      </CardDescription>
-    </CardHeader>
-    <CardContent>{children}</CardContent>
-  </Card>
-);
+const SectionCard = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Namespaces</CardTitle>
+        <CardDescription>
+          Restrict which login methods can access each namespace. Namespaces that aren&apos;t listed are open to all
+          login methods (default-open).{' '}
+          <Link
+            href={docsBaseURL + '/studio/namespace-login-methods'}
+            className="text-primary"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Learn more
+          </Link>
+        </CardDescription>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
 
 export function NamespaceLoginMethodSettings() {
   const router = useRouter();
@@ -200,7 +202,11 @@ export function NamespaceLoginMethodSettings() {
   };
 
   if (isLoadingWorkspace || isLoadingProviders || isLoadingMappings || isLoadingOrgLoginMethods) {
-    return sectionCard(<Loader />);
+    return (
+      <SectionCard>
+        <Loader />
+      </SectionCard>
+    );
   }
 
   if (
@@ -214,72 +220,80 @@ export function NamespaceLoginMethodSettings() {
     mappingsData.response?.code !== EnumStatusCode.OK ||
     orgLoginMethodsData.response?.code !== EnumStatusCode.OK
   ) {
-    return sectionCard(
-      <EmptyState
-        className="h-auto py-10"
-        icon={<ExclamationTriangleIcon />}
-        title="Could not load namespace login methods"
-        description={
-          providersData?.response?.details ||
-          mappingsData?.response?.details ||
-          orgLoginMethodsData?.response?.details ||
-          providersError?.message ||
-          mappingsError?.message ||
-          orgLoginMethodsError?.message ||
-          'Please try again'
-        }
-        actions={
-          <Button
-            onClick={() => {
-              refetchProviders();
-              refetchMappings();
-              refetchOrgLoginMethods();
-            }}
-          >
-            Retry
-          </Button>
-        }
-      />,
+    return (
+      <SectionCard>
+        <EmptyState
+          className="h-auto py-10"
+          icon={<ExclamationTriangleIcon />}
+          title="Could not load namespace login methods"
+          description={
+            providersData?.response?.details ||
+            mappingsData?.response?.details ||
+            orgLoginMethodsData?.response?.details ||
+            providersError?.message ||
+            mappingsError?.message ||
+            orgLoginMethodsError?.message ||
+            'Please try again'
+          }
+          actions={
+            <Button
+              onClick={() => {
+                refetchProviders();
+                refetchMappings();
+                refetchOrgLoginMethods();
+              }}
+            >
+              Retry
+            </Button>
+          }
+        />
+      </SectionCard>
     );
   }
 
   if (providers.length === 0) {
-    return sectionCard(
-      <EmptyState
-        className="h-auto py-10"
-        icon={<LockClosedIcon />}
-        title="No SSO apps configured"
-        description="Connect at least one OIDC provider before you can restrict namespace access by login method."
-        actions={
-          <Button asChild>
-            <Link href={`/${organizationSlug}/settings`}>Connect an SSO app</Link>
-          </Button>
-        }
-      />,
+    return (
+      <SectionCard>
+        <EmptyState
+          className="h-auto py-10"
+          icon={<LockClosedIcon />}
+          title="No SSO apps configured"
+          description="Connect at least one OIDC provider before you can restrict namespace access by login method."
+          actions={
+            <Button asChild>
+              <Link href={`/${organizationSlug}/settings`}>Connect an SSO app</Link>
+            </Button>
+          }
+        />
+      </SectionCard>
     );
   }
 
   // If org is restricted to a single method, namespace-level gating has no effect.
   if (orgIsRestricted && orgAllowedCount !== null && orgAllowedCount <= 1) {
-    return sectionCard(
-      <Alert>
-        <AlertDescription>
-          Your organization allows a single login method, so namespace-level login methods have no effect. Allow more
-          methods in the Organization section above to gate namespaces.
-        </AlertDescription>
-      </Alert>,
+    return (
+      <SectionCard>
+        <Alert>
+          <AlertDescription>
+            Your organization allows a single login method, so namespace-level login methods have no effect. Allow more
+            methods in the Organization section above to gate namespaces.
+          </AlertDescription>
+        </Alert>
+      </SectionCard>
     );
   }
 
-  return sectionCard(
-    <div className="flex flex-col gap-y-6">
-      <NamespaceMappingRows namespaces={namespaces} methodOptions={methodOptions} rows={rows} updateRows={setRows} />
+  return (
+    <SectionCard>
+      <div className="flex flex-col gap-y-6">
+        <NamespaceMappingRows namespaces={namespaces} methodOptions={methodOptions} rows={rows} updateRows={setRows} />
 
-      <div className="flex justify-end">
-        <Button type="button" isLoading={isPending} disabled={!isDirty} onClick={onSave}>
-          Save
-        </Button>
+        <div className="flex justify-end">
+          <Button type="button" isLoading={isPending} disabled={!isDirty} onClick={onSave}>
+            Save
+          </Button>
+        </div>
       </div>
-    </div>,
+    </SectionCard>
   );
 }
