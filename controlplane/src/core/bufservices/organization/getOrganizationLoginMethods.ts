@@ -45,13 +45,7 @@ export function getOrganizationLoginMethods(
 
     return {
       response: { code: EnumStatusCode.OK },
-      loginMethods: {
-        allowedSsoProviderIds: methods.allowedSsoProviderIds,
-        allowPasswordLogin: methods.allowPasswordLogin,
-        allowGoogleLogin: methods.allowGoogleLogin,
-        allowGithubLogin: methods.allowGithubLogin,
-        isRestricted: methods.isRestricted,
-      },
+      loginMethods: { ...methods },
     };
   });
 }
