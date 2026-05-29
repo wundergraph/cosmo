@@ -1108,6 +1108,33 @@ export function loginMethodMatchesRow(
   }
 }
 
+/**
+ * Whether a namespace login-method mapping references any method that the given
+ * org allow-list no longer permits. Used to find the namespace mappings an org
+ * restriction would have to prune.
+ */
+export function doesNamespaceMappingExceedsOrgAllowList(
+  mapping: {
+    allowPasswordLogin: boolean;
+    allowGoogleLogin: boolean;
+    allowGithubLogin: boolean;
+    allowedSsoProviderIds: string[];
+  },
+  allow: {
+    allowPasswordLogin: boolean;
+    allowGoogleLogin: boolean;
+    allowGithubLogin: boolean;
+    allowedSsoProviderIds: string[];
+  },
+): boolean {
+  return (
+    (mapping.allowPasswordLogin && !allow.allowPasswordLogin) ||
+    (mapping.allowGoogleLogin && !allow.allowGoogleLogin) ||
+    (mapping.allowGithubLogin && !allow.allowGithubLogin) ||
+    mapping.allowedSsoProviderIds.some((id) => !allow.allowedSsoProviderIds.includes(id))
+  );
+}
+
 /** Whether a specific namespace is reachable under the given {@link NamespaceAccess}. */
 export function isNamespaceAllowed(access: NamespaceAccess, namespaceId: string): boolean {
   switch (access.kind) {

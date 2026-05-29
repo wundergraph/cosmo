@@ -12,7 +12,13 @@ import { OrganizationLoginMethodRepository } from '../../repositories/Organizati
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isLoginMethodAllowedToUpdate } from '../../util.js';
+import {
+  enrichLogger,
+  getLogger,
+  handleError,
+  isLoginMethodAllowedToUpdate,
+  doesNamespaceMappingExceedsOrgAllowList,
+} from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateOrganizationLoginMethods(
@@ -115,12 +121,7 @@ export function updateOrganizationLoginMethods(
       const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
       const mappings = await mappingRepo.listMappings({ organizationId: authContext.organizationId });
       for (const m of mappings) {
-        const referencesDisallowed =
-          (m.allowPasswordLogin && !allow.allowPasswordLogin) ||
-          (m.allowGoogleLogin && !allow.allowGoogleLogin) ||
-          (m.allowGithubLogin && !allow.allowGithubLogin) ||
-          m.allowedSsoProviderIds.some((id) => !allow.allowedSsoProviderIds.includes(id));
-        if (referencesDisallowed) {
+        if (doesNamespaceMappingExceedsOrgAllowList(m, allow)) {
           const ns = await namespaceRepo.byId(m.namespaceId);
           if (ns) {
             affected.push({ id: ns.id, name: ns.name });
