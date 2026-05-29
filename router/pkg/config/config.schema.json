@@ -615,6 +615,88 @@
               }
             }
           }
+        },
+        "client_grpc": {
+          "type": "object",
+          "description": "The TLS configuration for outbound gRPC connections from the router to gRPC subgraphs. Enables TLS/mTLS by presenting a client certificate when connecting to gRPC subgraphs.",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "object",
+              "description": "TLS configuration applied to all gRPC subgraph connections.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable TLS for all gRPC subgraph connections."
+                },
+                "cert_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client certificate chain file. Used to authenticate the router to gRPC subgraphs. May include intermediate certificates."
+                },
+                "key_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client private key file."
+                },
+                "ca_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the CA certificate file. Used to verify gRPC subgraph server certificates. If not set, the system's root CAs are used."
+                },
+                "insecure_skip_ca_verification": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip verification of the gRPC subgraph server certificate. Only use for development or testing."
+                }
+              },
+              "required": ["enabled"],
+              "dependencies": {
+                "cert_file": ["key_file"],
+                "key_file": ["cert_file"]
+              }
+            },
+            "subgraphs": {
+              "type": "object",
+              "description": "Per-subgraph gRPC TLS configuration overrides. Each key is a subgraph name. Fully overrides the 'all' config for that subgraph.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Enable TLS for this gRPC subgraph connection."
+                  },
+                  "cert_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client certificate chain file for this gRPC subgraph. May include intermediate certificates."
+                  },
+                  "key_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client private key file for this gRPC subgraph."
+                  },
+                  "ca_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the CA certificate file for verifying this gRPC subgraph's server certificate."
+                  },
+                  "insecure_skip_ca_verification": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip verification of this gRPC subgraph's server certificate. Only use for development or testing."
+                  }
+                },
+                "required": ["enabled"],
+                "dependencies": {
+                  "cert_file": ["key_file"],
+                  "key_file": ["cert_file"]
+                }
+              }
+            }
+          }
         }
       }
     },
