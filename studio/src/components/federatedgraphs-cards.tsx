@@ -5,7 +5,14 @@ import { docsBaseURL } from '@/lib/constants';
 import { formatMetric } from '@/lib/format-metric';
 import { useChartData } from '@/lib/insights-helpers';
 import { cn } from '@/lib/utils';
-import { ChevronDoubleRightIcon, CommandLineIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import {
+  BoltIcon,
+  BookmarkIcon,
+  ChevronDoubleRightIcon,
+  CommandLineIcon,
+  DocumentArrowDownIcon,
+  ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
 import { Component2Icon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { migrateFromApollo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
@@ -38,6 +45,7 @@ import { useMutation } from '@connectrpc/connect-query';
 import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { useOnboarding } from '@/hooks/use-onboarding';
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -467,7 +475,7 @@ export const Empty = ({
   );
 };
 
-const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
+const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStaleMetrics: boolean }) => {
   const user = useContext(UserContext);
   const { data, ticks, domain, timeFormatter } = useChartData(
     4,
@@ -502,7 +510,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                 type="monotone"
                 dataKey="totalRequests"
                 animationDuration={300}
-                stroke="#0284C7"
+                stroke={hasStaleMetrics ? 'hsl(var(--gray-100))' : '#0284C7'}
                 dot={false}
                 strokeWidth={1.5}
               />
@@ -518,9 +526,26 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <div className="flex w-full justify-end px-4 font-mono text-xs text-muted-foreground">
-          {`${formatMetric(totalRequests / (4 * 60))} RPM`}
-        </div>
+        {hasStaleMetrics ? (
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <div
+                className="flex w-full items-center justify-end gap-1 px-4 font-mono text-xs text-gray-100"
+                tabIndex={0}
+                role="img"
+                aria-label="Analytics are not available at this moment"
+              >
+                <ExclamationTriangleIcon width={12} height={12} aria-hidden />
+                N/A
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>Analytics are not available at this moment</TooltipContent>
+          </Tooltip>
+        ) : (
+          <div className="flex w-full justify-end px-4 font-mono text-xs text-muted-foreground">
+            {`${formatMetric(totalRequests / (4 * 60))} RPM`}
+          </div>
+        )}
 
         <div className="mt-3 flex flex-1 flex-col items-start px-6">
           <div className="text-base font-semibold">{graph.name}</div>
@@ -611,7 +636,57 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
   );
 };
 
-export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGraph[]; refetch: () => void }) => {
+function OnboardingEmptyState() {
+  const { onboarding, enabled, currentStep } = useOnboarding();
+
+  if (!enabled || !onboarding || onboarding.federatedGraphsCount !== 0) {
+    return null;
+  }
+
+  const emptyState =
+    currentStep !== undefined && !onboarding.finishedAt ? (
+      <EmptyState
+        className="h-auto"
+        icon={<BookmarkIcon />}
+        title="Dive right back in"
+        description="Want to finish the onboarding and create your first federated graph?"
+        actions={
+          <Button asChild>
+            <Link href={`/onboarding/${currentStep}`}>Continue</Link>
+          </Button>
+        }
+      />
+    ) : (
+      <EmptyState
+        className="h-auto"
+        icon={<BoltIcon />}
+        title="Need help?"
+        description="Take a quick 5-minute tour to help you set up your first federated graph"
+        actions={
+          <Button asChild>
+            <Link href={`/onboarding/1`}>Start here</Link>
+          </Button>
+        }
+      />
+    );
+
+  return (
+    <>
+      {emptyState}
+      <span className="text-sm font-bold">OR</span>
+    </>
+  );
+}
+
+export const FederatedGraphsCards = ({
+  graphs,
+  refetch,
+  hasStaleMetrics,
+}: {
+  graphs?: FederatedGraph[];
+  refetch: () => void;
+  hasStaleMetrics: boolean;
+}) => {
   const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
   const [token, setToken] = useState<string | undefined>();
   const [isMigrating, setIsMigrating] = useState(false);
@@ -626,13 +701,16 @@ export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGr
 
   if (!graphs || graphs.length === 0)
     return (
-      <Empty
-        refetch={refetch}
-        setIsMigrationSuccess={setIsMigrationSuccess}
-        setToken={setToken}
-        isMigrating={isMigrating}
-        setIsMigrating={setIsMigrating}
-      />
+      <div className="flex flex-col items-center gap-y-8">
+        <OnboardingEmptyState />
+        <Empty
+          refetch={refetch}
+          setIsMigrationSuccess={setIsMigrationSuccess}
+          setToken={setToken}
+          isMigrating={isMigrating}
+          setIsMigrating={setIsMigrating}
+        />
+      </div>
     );
 
   return (
@@ -653,7 +731,7 @@ export const FederatedGraphsCards = ({ graphs, refetch }: { graphs?: FederatedGr
       )}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {graphs.map((graph, graphIndex) => {
-          return <GraphCard key={graphIndex.toString()} graph={graph} />;
+          return <GraphCard key={graphIndex.toString()} graph={graph} hasStaleMetrics={hasStaleMetrics} />;
         })}
         {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
           <MigrationDialog

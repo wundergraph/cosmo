@@ -119,6 +119,11 @@ func TestCacheControl(t *testing.T) {
 							},
 							{
 								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Vary",
+								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
 								Named:     "X-Custom-Header",
 								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
 							},
@@ -134,6 +139,7 @@ func TestCacheControl(t *testing.T) {
 							w.Header().Set("Content-Type", "application/custom-from-subgraph")
 							w.Header().Set("Content-Encoding", "gzip-from-subgraph")
 							w.Header().Set("Connection", "keep-alive-from-subgraph")
+							w.Header().Set("Vary", "Origin")
 							// This should be propagated
 							w.Header().Set("X-Custom-Header", "custom-value")
 							handler.ServeHTTP(w, r)
@@ -155,6 +161,9 @@ func TestCacheControl(t *testing.T) {
 
 			connection := res.Response.Header.Get("Connection")
 			require.NotEqual(t, "keep-alive-from-subgraph", connection, "Subgraph Connection should not be propagated")
+
+			vary := res.Response.Header.Get("Vary")
+			require.NotEqual(t, "Origin", vary, "Subgraph Vary should not be propagated")
 
 			// Verify custom header IS propagated (not in ignored list)
 			require.Equal(t, "custom-value", res.Response.Header.Get("X-Custom-Header"))
@@ -1122,10 +1131,15 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
-		t.Run("set operation can override cache control policies", func(t *testing.T) {
+		t.Run("set operation feeds into cache control algorithm", func(t *testing.T) {
 			t.Parallel()
-			t.Run("global set operation", func(t *testing.T) {
+			// The set operation injects into res.Header, so the cache control
+			// algorithm sees the set value as if the subgraph returned it.
+			t.Run("global set injects value for algorithm", func(t *testing.T) {
 				t.Parallel()
+				// set in All.Response runs before the cache control algorithm.
+				// It overwrites the subgraph's real CC header, so the algorithm
+				// sees the injected value for every subgraph.
 				testenv.Run(t, &testenv.Config{
 					CacheControlPolicy: config.CacheControlPolicy{
 						Enabled: true,
@@ -1138,7 +1152,7 @@ func TestHeaderPropagation(t *testing.T) {
 								{
 									Operation: config.HeaderRuleOperationSet,
 									Name:      "Cache-Control",
-									Value:     "my-fake-value",
+									Value:     "max-age=60",
 								},
 							},
 						},
@@ -1148,13 +1162,19 @@ func TestHeaderPropagation(t *testing.T) {
 						Query: queryEmployeeWithHobby,
 					})
 					cc := res.Response.Header.Get("Cache-Control")
-					require.Equal(t, "my-fake-value", cc)
+					// The set value (max-age=60) is injected into every subgraph
+					// response, overwriting the real headers. The algorithm picks
+					// max-age=60 as the most restrictive.
+					require.Equal(t, "max-age=60", cc)
 					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 				})
 			})
 
-			t.Run("local subgraph set operation", func(t *testing.T) {
+			t.Run("subgraph set feeds into algorithm", func(t *testing.T) {
 				t.Parallel()
+				// The cache control algorithm runs after all rules (including
+				// subgraph-specific set rules), so the set value is visible to
+				// the algorithm.
 				testenv.Run(t, &testenv.Config{
 					CacheControlPolicy: config.CacheControlPolicy{
 						Enabled: true,
@@ -1168,7 +1188,7 @@ func TestHeaderPropagation(t *testing.T) {
 									{
 										Operation: config.HeaderRuleOperationSet,
 										Name:      "Cache-Control",
-										Value:     "my-fake-value",
+										Value:     "max-age=10",
 									},
 								},
 							},
@@ -1179,7 +1199,9 @@ func TestHeaderPropagation(t *testing.T) {
 						Query: queryEmployeeWithHobby,
 					})
 					cc := res.Response.Header.Get("Cache-Control")
-					require.Equal(t, "my-fake-value", cc)
+					// The set overwrites employees' max-age=180 with max-age=10.
+					// The algorithm sees employees=10 and hobbies=250, picks 10.
+					require.Equal(t, "max-age=10", cc)
 					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 				})
 			})

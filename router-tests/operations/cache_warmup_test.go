@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type fakeSelfRegister struct{}
@@ -541,6 +542,55 @@ func TestCacheWarmup(t *testing.T) {
 				require.Equal(t, `{"data":{"a":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 			})
 		})
+		t.Run("cache warmup item delay", func(t *testing.T) {
+			t.Parallel()
+			const itemDelay = 50 * time.Millisecond
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testdata/cache_warmup/rate_limit",
+							},
+						},
+						Workers:        4,
+						ItemsPerSecond: 100,
+						ItemDelay:      itemDelay,
+						Timeout:        time.Second * 10,
+					}),
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
+					BaseGraphAssertions: testenv.CacheMetricsAssertion{
+						QueryNormalizationMisses: 10,
+						QueryNormalizationHits:   1,
+						ValidationMisses:         10,
+						ValidationHits:           1,
+						PlanMisses:               10,
+						PlanHits:                 1,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { a: employees { id } }`,
+				})
+				require.Equal(t, `{"data":{"a":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+
+				// The warmup start log records the configured item delay.
+				startLogs := xEnv.Observer().FilterMessage("Warmup started").All()
+				require.NotEmpty(t, startLogs)
+				for _, l := range startLogs {
+					require.Equal(t, itemDelay, l.ContextMap()["item_delay"])
+				}
+
+				// Warmup still completes successfully with the delay applied.
+				require.Equal(t, len(startLogs), len(xEnv.Observer().FilterMessage("Warmup completed").All()))
+			})
+		})
 		t.Run("cache warmup with operation hash cache", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -1016,7 +1066,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -1061,7 +1111,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -1110,7 +1160,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id customDetails: details { forename } } }`,
@@ -1412,11 +1462,11 @@ func writeTestConfig(t *testing.T, version string, path string) {
 
 type ConfigPollerMock struct {
 	initConfig   *nodev1.RouterConfig
-	updateConfig func(newConfig *nodev1.RouterConfig, oldVersion string) error
+	updateConfig func(newConfig *routerconfig.Response) error
 	ready        chan struct{}
 }
 
-func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(_ *routerconfig.Response) error) {
 	c.updateConfig = handler
 	close(c.ready)
 }

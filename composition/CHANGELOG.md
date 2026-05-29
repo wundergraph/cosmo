@@ -4,6 +4,32 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.59.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.4...@wundergraph/composition@0.59.0) (2026-05-18)
+
+### Features
+
+* support dot-path in slicingArguments ([#2801](https://github.com/wundergraph/cosmo/issues/2801)) ([aec1738](https://github.com/wundergraph/cosmo/commit/aec1738c071e028893239b6c4f9bf492cf175f36)) (@ysmolski)
+
+## [0.58.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.3...@wundergraph/composition@0.58.4) (2026-05-14)
+
+### Bug Fixes
+
+* **composition:** apply subscription filters on union and interface return types ([#2797](https://github.com/wundergraph/cosmo/issues/2797)) ([4c91d4f](https://github.com/wundergraph/cosmo/commit/4c91d4fd7420b19b2e9aa0dd382ba7e1c95b85a3)) (@jensneuse)
+
+## [0.58.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.2...@wundergraph/composition@0.58.3) (2026-05-07)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.58.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.1...@wundergraph/composition@0.58.2) (2026-05-01)
+
+### Bug Fixes
+
+* import set methods explicitly ([#2812](https://github.com/wundergraph/cosmo/issues/2812)) ([aa5cae1](https://github.com/wundergraph/cosmo/commit/aa5cae10723fef95fceaa89995233529c39dbc01)) (@Aenimus)
+
+## [0.58.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.58.0...@wundergraph/composition@0.58.1) (2026-05-01)
+
+**Note:** Version bump only for package @wundergraph/composition
+
 # [0.58.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.57.0...@wundergraph/composition@0.58.0) (2026-04-29)
 
 ### Features

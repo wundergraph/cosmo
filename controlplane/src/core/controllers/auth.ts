@@ -1,14 +1,22 @@
 import { FastifyPluginCallback, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
+import { PlainMessage } from '@bufbuild/protobuf';
+import {
+  LoginMethod,
+  LoginMethodType,
+  SocialLoginProvider,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import cookie from 'cookie';
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
+import { isSocialLoginProvider } from '../util.js';
 import * as schema from '../../db/schema.js';
 import { sessions } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
@@ -89,9 +97,40 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         userId: userSession.userId,
       });
 
+      const oidcRepo = new OidcRepository(opts.db);
+
+      const emptyLoginMethod = {
+        ssoProviderId: '',
+        ssoProviderName: '',
+        ssoAlias: '',
+        socialProvider: SocialLoginProvider.UNSPECIFIED,
+      };
+      let loginMethod: PlainMessage<LoginMethod> = { ...emptyLoginMethod, type: LoginMethodType.PASSWORD };
+      if (userSession.idpAlias) {
+        const provider = await oidcRepo.getOidcProviderByAliasUnscoped({ alias: userSession.idpAlias });
+        if (provider) {
+          loginMethod = {
+            ...emptyLoginMethod,
+            type: LoginMethodType.SSO,
+            ssoProviderId: provider.id,
+            ssoProviderName: provider.name,
+            ssoAlias: userSession.idpAlias,
+          };
+        } else if (isSocialLoginProvider(userSession.idpAlias)) {
+          loginMethod = {
+            ...emptyLoginMethod,
+            type: LoginMethodType.SOCIAL,
+            socialProvider: userSession.idpAlias === 'google' ? SocialLoginProvider.GOOGLE : SocialLoginProvider.GITHUB,
+          };
+        }
+      }
+
       return {
         id: userSession.userId,
         email: userInfoData.email,
+        firstName: userInfoData.given_name,
+        lastName: userInfoData.family_name,
+        fullName: userInfoData.name,
         organizations: orgs
           .filter((o) => !o.deletion || o.rbac.isOrganizationAdmin)
           .map(({ rbac, ...org }) => ({
@@ -102,6 +141,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           })),
         invitations,
         expiresAt: userSession.expiresAt,
+        loginMethod,
       };
     } catch (err: any) {
       if (err instanceof AuthenticationError) {

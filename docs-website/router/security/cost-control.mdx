@@ -241,6 +241,36 @@ all immediate list children inherit the size estimate.
     The parent field must return a composite type (object, interface, or union).
 </Info>
 
+#### Nested paths in slicingArguments
+
+When the slicing value lives inside an input object, reference it with a dot-separated path.
+The first segment is the argument name. Each following segment is a field on the preceding input object.
+The leaf must be `Int` or `Int!`.
+
+```graphql
+type Query {
+  search(input: SearchInput!): [Result]
+    @listSize(slicingArguments: ["input.pagination.first"])
+}
+
+input SearchInput {
+  pagination: PaginationInput
+  query: String
+}
+
+input PaginationInput {
+  first: Int
+  after: String
+}
+```
+
+A query like `search(input: { pagination: { first: 25 } })` resolves the multiplier to `25`.
+
+Rules for nested paths:
+
+- Every intermediate segment must be a field that returns an input object. Lists and scalars cannot appear in the middle of a path.
+- Flat and nested paths can be mixed in the same `slicingArguments` list, for example `["limit", "input.pagination.first"]`.
+
 ## Accessing Cost in Custom Modules
 
 In custom modules, the calculated cost is accessible through the operation context:

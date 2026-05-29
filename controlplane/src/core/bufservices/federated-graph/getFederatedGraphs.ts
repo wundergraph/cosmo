@@ -53,7 +53,7 @@ export function getFederatedGraphs(
       rbac: authContext.rbac,
     });
 
-    const requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
+    const requestSeriesList: Record<string, { requestSeries: PlainMessage<RequestSeriesItem>[]; ok: boolean }> = {};
 
     const { dateRange } = parseTimeFilters({
       start: subHours(new Date(), 4).toString(),
@@ -65,15 +65,21 @@ export function getFederatedGraphs(
 
       await Promise.all(
         list.map(async (g) => {
-          const requestSeries = await analyticsDashRepo.getRequestSeries(g.id, authContext.organizationId, {
-            granule: '5',
-            dateRange,
-          });
-          requestSeriesList[g.id] = [];
-          requestSeriesList[g.id].push(...requestSeries);
+          const { series: requestSeries, ok } = await analyticsDashRepo.getRequestSeries(
+            g.id,
+            authContext.organizationId,
+            {
+              granule: '5',
+              dateRange,
+            },
+          );
+          requestSeriesList[g.id] = { requestSeries: [], ok };
+          requestSeriesList[g.id].requestSeries.push(...requestSeries);
         }),
       );
     }
+    const isRequestSeriesDataStale =
+      req.includeMetrics && opts.chClient && Object.values(requestSeriesList).some(({ ok }) => !ok);
 
     return {
       graphs: list.map((g) => ({
@@ -88,14 +94,14 @@ export function getFederatedGraphs(
         compositionErrors: g.compositionErrors ?? '',
         isComposable: g.isComposable,
         compositionId: g.compositionId,
-        requestSeries: requestSeriesList[g.id] ?? [],
+        requestSeries: requestSeriesList[g.id]?.requestSeries ?? [],
         supportsFederation: g.supportsFederation,
         contract: g.contract,
         admissionWebhookUrl: g.admissionWebhookURL,
         routerCompatibilityVersion: g.routerCompatibilityVersion,
       })),
       response: {
-        code: EnumStatusCode.OK,
+        code: isRequestSeriesDataStale ? EnumStatusCode.WARN_PARTIAL_DATA : EnumStatusCode.OK,
       },
     };
   });

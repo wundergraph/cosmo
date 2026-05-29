@@ -5,15 +5,20 @@ import (
 
 	"context"
 	"encoding/json"
+	"maps"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"os"
-	"sync/atomic"
-	"testing"
-	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
@@ -33,11 +38,11 @@ var (
 
 type ConfigPollerMock struct {
 	initConfig   *nodev1.RouterConfig
-	updateConfig func(newConfig *nodev1.RouterConfig, oldVersion string) error
+	updateConfig func(response *routerconfig.Response) error
 	ready        chan struct{}
 }
 
-func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(response *routerconfig.Response) error) {
 	c.updateConfig = handler
 	close(c.ready)
 }
@@ -86,7 +91,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			<-pm.ready
 
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -124,10 +129,11 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			var done atomic.Uint32
+			var wg sync.WaitGroup
+			wg.Add(2)
 
 			go func() {
-				defer done.Add(1)
+				defer wg.Done()
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
@@ -138,7 +144,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			}()
 
 			go func() {
-				defer done.Add(1)
+				defer wg.Done()
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
@@ -156,7 +162,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 
 			// Swap config
 			pm.initConfig.Version = "updated"
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
@@ -166,9 +172,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			// Ensure that all requests are served successfully
-			require.Eventually(t, func() bool {
-				return done.Load() == 2
-			}, time.Second*5, time.Millisecond*100)
+			wg.Wait()
 		})
 	})
 
@@ -201,7 +205,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := conn.WriteJSON(&testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
@@ -223,7 +227,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 
 			// Swap config — the ReadJSON below expects a possible websocket close error,
 			// so use a deadline instead of WSReadJSON (which retries on errors)
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 			conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 			err = conn.ReadJSON(&msg)
 			conn.SetReadDeadline(time.Time{})
@@ -368,10 +372,11 @@ func TestConfigHotReloadFile(t *testing.T) {
 			require.Equal(t, res.Response.StatusCode, 200)
 			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
 
-			var done atomic.Uint32
+			var wg sync.WaitGroup
+			wg.Add(2)
 
 			go func() {
-				defer done.Add(1)
+				defer wg.Done()
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { hello }`,
@@ -381,7 +386,7 @@ func TestConfigHotReloadFile(t *testing.T) {
 			}()
 
 			go func() {
-				defer done.Add(1)
+				defer wg.Done()
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { hello }`,
@@ -402,12 +407,223 @@ func TestConfigHotReloadFile(t *testing.T) {
 			}, 2*time.Second, 100*time.Millisecond)
 
 			// Ensure that all requests are served successfully
-			require.Eventually(t, func() bool {
-				return done.Load() == 2
-			}, time.Second*5, time.Millisecond*100)
+			wg.Wait()
 		})
 	})
 
+}
+
+// TestConfigHotReloadManifest mirrors TestConfigHotReloadFile, but the router loads its
+// configuration from a manifest directory instead of a single JSON file. A manifest
+// consists of mapper.json (maps the base graph and each feature flag to a version),
+// latest.json (the base graph config), and feature-flags/<name>.json (per-flag configs).
+// The watcher detects updates by observing mapper.json's mtime, so any change — base
+// graph swap, flag addition, or flag mutation — must be reflected by rewriting mapper.json.
+func TestConfigHotReloadManifest(t *testing.T) {
+	t.Parallel()
+
+	t.Run("hot-reload config from manifest", func(t *testing.T) {
+		t.Parallel()
+
+		manifestDir := t.TempDir()
+		writeTestManifest(t, "initial", manifestDir)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithManifestConfig(&core.ManifestConfig{
+					Path:          manifestDir,
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+
+			writeTestManifest(t, "updated", manifestDir)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+			}, 2*time.Second, 100*time.Millisecond)
+		})
+	})
+
+	t.Run("does not hot-reload config from manifest if watch is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		manifestDir := t.TempDir()
+		writeTestManifest(t, "initial", manifestDir)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithManifestConfig(&core.ManifestConfig{
+					Path:          manifestDir,
+					Watch:         false,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+
+			writeTestManifest(t, "updated", manifestDir)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			}, 2*time.Second, 100*time.Millisecond)
+		})
+	})
+
+	t.Run("does not interrupt existing client traffic", func(t *testing.T) {
+		t.Parallel()
+
+		manifestDir := t.TempDir()
+		writeTestManifest(t, "initial", manifestDir)
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 500,
+			},
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithManifestConfig(&core.ManifestConfig{
+					Path:          manifestDir,
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     false,
+					MaxConcurrentResolvers: 32,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+
+			var wg sync.WaitGroup
+			wg.Add(2)
+
+			go func() {
+				defer wg.Done()
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				assert.Equal(t, res.Response.StatusCode, 200)
+				assert.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			}()
+
+			go func() {
+				defer wg.Done()
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				assert.Equal(t, res.Response.StatusCode, 200)
+				assert.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			}()
+
+			time.Sleep(time.Millisecond * 100)
+
+			writeTestManifest(t, "updated", manifestDir)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+			}, 2*time.Second, 100*time.Millisecond)
+
+			// Ensure that all requests are served successfully
+			wg.Wait()
+		})
+	})
+
+	// Unique to the manifest format: feature flags live in separate files and the mapper
+	// can grow over time. The single-file config can't express this — adding a new flag
+	// there is just a normal config swap.
+	t.Run("reload picks up newly added feature flag", func(t *testing.T) {
+		t.Parallel()
+
+		manifestDir := t.TempDir()
+		writeTestManifest(t, "initial", manifestDir)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithManifestConfig(&core.ManifestConfig{
+					Path:          manifestDir,
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+
+			// Add a feature flag config file and update the mapper to reference it.
+			writeFeatureFlagConfig(t, "myff", "myff-initial", manifestDir)
+			writeTestMapper(t, manifestDir, "initial", map[string]string{"myff": "myff-initial"})
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:  `query { hello }`,
+					Header: http.Header{"X-Feature-Flag": []string{"myff"}},
+				})
+				require.Equal(t, "myff-initial", res.Response.Header.Get("X-Router-Config-Version"))
+			}, 2*time.Second, 100*time.Millisecond)
+		})
+	})
+
+	// Unique to the manifest format: because flag configs are separate files, the mapper
+	// can reference a flag whose file hasn't been written yet. SkipMissingFeatureFlags
+	// lets the router boot anyway instead of failing. No analog exists for the single-file
+	// config, where the config either parses or it doesn't.
+	t.Run("skip_missing_feature_flags allows the router to start with a mapper entry that has no config file", func(t *testing.T) {
+		t.Parallel()
+
+		manifestDir := t.TempDir()
+		writeTestManifest(t, "initial", manifestDir)
+		// mapper references a feature flag whose config file does not exist
+		writeTestMapper(t, manifestDir, "initial", map[string]string{"ghost": "ghost-v1"})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithManifestConfig(&core.ManifestConfig{
+					Path:                    manifestDir,
+					SkipMissingFeatureFlags: true,
+					Watch:                   false,
+					WatchInterval:           100 * time.Millisecond,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+		})
+	})
 }
 
 func TestSwapConfig(t *testing.T) {
@@ -424,7 +640,7 @@ func TestSwapConfig(t *testing.T) {
 			var requestsStarted atomic.Uint32
 			var requestsDone atomic.Uint32
 
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				requestsStarted.Add(1)
 				func() {
 					defer requestsDone.Add(1)
@@ -581,6 +797,118 @@ func TestFlakyConfigHotReloadPoller(t *testing.T) {
 	})
 }
 
+func TestConfigHotReloadGraphServerSwap(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify only ws connections on swapped muxes are closed", func(t *testing.T) {
+		// verifies that after a config update that changes only one feature flag's mux, websocket connections on
+		// unchanged muxes (base graph and unmodified feature flags) remain active, while
+		// connections on the changed mux are closed by the server.
+
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(cfg *nodev1.RouterConfig) configpoller.ConfigPoller {
+					// Add "myff2" as a second feature flag (clone of "myff") so the router
+					// starts with three distinct muxes: base graph, myff, and myff2.
+					if cfg.FeatureFlagConfigs != nil {
+						if myff, ok := cfg.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]; ok {
+							cfg.FeatureFlagConfigs.ConfigByFeatureFlagName["myff2"] = &nodev1.FeatureFlagRouterExecutionConfig{
+								EngineConfig: myff.EngineConfig,
+								Version:      "myff2-initial",
+								Subgraphs:    myff.Subgraphs,
+							}
+						}
+					}
+					pm.initConfig = cfg
+					return &pm
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Wait for the config poller to be ready before establishing connections.
+			<-pm.ready
+
+			// subscribe dials a WebSocket, starts a currentTime subscription, and reads
+			// one initial message to confirm the subscription is live before returning.
+			subscribe := func(header http.Header) *websocket.Conn {
+				t.Helper()
+				conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+				err := conn.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+				var msg testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &msg)
+				require.NoError(t, err)
+				require.Equal(t, "next", msg.Type)
+				return conn
+			}
+
+			// Establish 2 connections on each of the three muxes (6 total).
+			baseConn1 := subscribe(nil)
+			baseConn2 := subscribe(nil)
+			myffConn1 := subscribe(http.Header{"X-Feature-Flag": []string{"myff"}})
+			myffConn2 := subscribe(http.Header{"X-Feature-Flag": []string{"myff"}})
+			myff2Conn1 := subscribe(http.Header{"X-Feature-Flag": []string{"myff2"}})
+			myff2Conn2 := subscribe(http.Header{"X-Feature-Flag": []string{"myff2"}})
+
+			// Trigger a config update where only "myff" has changed.
+			// The base graph mux and "myff2" mux are unchanged and will be reused.
+			pm.initConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"].Version = "myff-v2"
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{
+				Config: pm.initConfig,
+				Changes: &routerconfig.Changes{
+					ChangedConfigs: map[string]struct{}{"myff": {}},
+				},
+			}))
+
+			// assertConnectionClosed drains any pending subscription messages then expects
+			// a WebSocket close error, confirming the server closed the connection.
+			// A single absolute deadline is set on the connection before the loop so that
+			// continuous data messages cannot prevent the timeout from firing.
+			assertConnectionClosed := func(conn *websocket.Conn) {
+				t.Helper()
+				conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+				defer conn.SetReadDeadline(time.Time{})
+				for {
+					var msg testenv.WebSocketMessage
+					err := conn.ReadJSON(&msg)
+					if err != nil {
+						var wsErr *websocket.CloseError
+						require.ErrorAs(t, err, &wsErr, "expected websocket close error, got: %v", err)
+						return
+					}
+					// A data message arrived before the close — keep draining.
+					require.Equal(t, "next", msg.Type)
+				}
+			}
+
+			// The "myff" connections must be closed because their mux was rebuilt.
+			assertConnectionClosed(myffConn1)
+			assertConnectionClosed(myffConn2)
+
+			// The base graph and "myff2" connections must still receive data because their
+			// muxes were reused and their per-mux contexts were not cancelled.
+			for _, conn := range []*websocket.Conn{baseConn1, baseConn2, myff2Conn1, myff2Conn2} {
+				var msg testenv.WebSocketMessage
+				err := testenv.WSReadJSON(t, conn, &msg)
+				require.NoError(t, err)
+				require.Equal(t, "next", msg.Type)
+			}
+
+			// Close the remaining connections.
+			for _, conn := range []*websocket.Conn{baseConn1, baseConn2, myff2Conn1, myff2Conn2} {
+				require.NoError(t, conn.Close())
+			}
+		})
+	})
+}
+
 func writeTestConfig(t *testing.T, version string, path string) {
 	t.Helper()
 
@@ -641,6 +969,109 @@ func writeTestConfig(t *testing.T, version string, path string) {
 	require.NoError(t, err)
 }
 
+// writeTestManifest writes a minimal manifest directory: a mapper.json with only the
+// base graph entry, a latest.json with a static "hello" datasource, and an empty
+// feature-flags/ directory. Calling this again with a new version rewrites all files,
+// which bumps mapper.json's mtime and triggers the manifest watcher.
+func writeTestManifest(t *testing.T, version string, manifestDir string) {
+	t.Helper()
+
+	require.NoError(t, os.MkdirAll(filepath.Join(manifestDir, "feature-flags"), 0o755))
+
+	writeBaseGraphConfig(t, version, manifestDir)
+	writeTestMapper(t, manifestDir, version, nil)
+}
+
+func writeTestMapper(t *testing.T, manifestDir string, baseVersion string, featureFlags map[string]string) {
+	t.Helper()
+
+	mapper := make(map[string]string, len(featureFlags)+1)
+	mapper[""] = baseVersion
+	maps.Copy(mapper, featureFlags)
+
+	data, err := json.Marshal(mapper)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(manifestDir, "mapper.json"), data, 0o644))
+}
+
+func writeBaseGraphConfig(t *testing.T, version string, manifestDir string) {
+	t.Helper()
+
+	cfg := &nodev1.RouterConfig{
+		Version: version,
+		EngineConfig: &nodev1.EngineConfiguration{
+			DefaultFlushInterval: 500,
+			DatasourceConfigurations: []*nodev1.DataSourceConfiguration{
+				{
+					Kind: nodev1.DataSourceKind_STATIC,
+					RootNodes: []*nodev1.TypeField{
+						{
+							TypeName:   "Query",
+							FieldNames: []string{"hello"},
+						},
+					},
+					CustomStatic: &nodev1.DataSourceCustom_Static{
+						Data: &nodev1.ConfigurationVariable{
+							StaticVariableContent: `{"hello": "Hello!"}`,
+						},
+					},
+					Id: "0",
+				},
+			},
+			GraphqlSchema: "schema {\n  query: Query\n}\ntype Query {\n  hello: String\n}",
+			FieldConfigurations: []*nodev1.FieldConfiguration{
+				{
+					TypeName:  "Query",
+					FieldName: "hello",
+				},
+			},
+		},
+	}
+
+	data, err := json.Marshal(cfg)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(manifestDir, "latest.json"), data, 0o644))
+}
+
+func writeFeatureFlagConfig(t *testing.T, name string, version string, manifestDir string) {
+	t.Helper()
+
+	cfg := &nodev1.RouterConfig{
+		Version: version,
+		EngineConfig: &nodev1.EngineConfiguration{
+			DefaultFlushInterval: 500,
+			DatasourceConfigurations: []*nodev1.DataSourceConfiguration{
+				{
+					Kind: nodev1.DataSourceKind_STATIC,
+					RootNodes: []*nodev1.TypeField{
+						{
+							TypeName:   "Query",
+							FieldNames: []string{"hello"},
+						},
+					},
+					CustomStatic: &nodev1.DataSourceCustom_Static{
+						Data: &nodev1.ConfigurationVariable{
+							StaticVariableContent: `{"hello": "Hello from ` + name + `!"}`,
+						},
+					},
+					Id: "0",
+				},
+			},
+			GraphqlSchema: "schema {\n  query: Query\n}\ntype Query {\n  hello: String\n}",
+			FieldConfigurations: []*nodev1.FieldConfiguration{
+				{
+					TypeName:  "Query",
+					FieldName: "hello",
+				},
+			},
+		},
+	}
+
+	data, err := json.Marshal(cfg)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(manifestDir, "feature-flags", name+".json"), data, 0o644))
+}
+
 func BenchmarkConfigHotReload(b *testing.B) {
 	pm := ConfigPollerMock{
 		ready: make(chan struct{}),
@@ -657,7 +1088,7 @@ func BenchmarkConfigHotReload(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			require.NoError(t, pm.updateConfig(&routerconfig.Response{Config: pm.initConfig}))
 		}
 
 	})

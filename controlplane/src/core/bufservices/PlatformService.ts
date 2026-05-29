@@ -49,6 +49,7 @@ import { getFeatureFlagsInLatestCompositionByFederatedGraph } from './feature-fl
 import { getFeatureSubgraphs } from './feature-flag/getFeatureSubgraphs.js';
 import { getFeatureSubgraphsByFederatedGraph } from './feature-flag/getFeatureSubgraphsByFederatedGraph.js';
 import { getFeatureSubgraphsByFeatureFlag } from './feature-flag/getFeatureSubgraphsByFeatureFlag.js';
+import { recomposeFeatureFlag } from './feature-flag/recomposeFeatureFlag.js';
 import { updateFeatureFlag } from './feature-flag/updateFeatureFlag.js';
 import { checkFederatedGraph } from './federated-graph/checkFederatedGraph.js';
 import { createFederatedGraph } from './federated-graph/createFederatedGraph.js';
@@ -83,9 +84,14 @@ import { migrateMonograph } from './monograph/migrateMonograph.js';
 import { moveMonograph } from './monograph/moveMonograph.js';
 import { publishMonograph } from './monograph/publishMonograph.js';
 import { updateMonograph } from './monograph/updateMonograph.js';
+import { createOnboarding } from './onboarding/createOnboarding.js';
+import { finishOnboarding } from './onboarding/finishOnboarding.js';
+import { getOnboarding } from './onboarding/getOnboarding.js';
 import { createNamespace } from './namespace/createNamespace.js';
 import { deleteNamespace } from './namespace/deleteNamespace.js';
 import { getNamespace } from './namespace/getNamespace.js';
+import { updateNamespaceSSOMappings } from './namespace/updateNamespaceSSOMappings.js';
+import { listNamespaceSSOMappings } from './namespace/listNamespaceSSOMappings.js';
 import { getNamespaces } from './namespace/getNamespaces.js';
 import { renameNamespace } from './namespace/renameNamespace.js';
 import { createIntegration } from './notification/createIntegration.js';
@@ -131,6 +137,7 @@ import { getSdlBySchemaVersion } from './schema-version/getSdlBySchemaVersion.js
 import { createOIDCProvider } from './sso/createOIDCProvider.js';
 import { deleteOIDCProvider } from './sso/deleteOIDCProvider.js';
 import { getOIDCProvider } from './sso/getOIDCProvider.js';
+import { listOIDCProviders } from './sso/listOIDCProviders.js';
 import { updateIDPMappers } from './sso/updateIDPMappers.js';
 import { addReadme } from './subgraph/addReadme.js';
 import { checkSubgraphSchema } from './subgraph/checkSubgraphSchema.js';
@@ -152,6 +159,7 @@ import { getInvitations } from './user/getInvitations.js';
 import { getUserAccessiblePermissions } from './user/getUserAccessiblePermissions.js';
 import { getUserAccessibleResources } from './user/getUserAccessibleResources.js';
 import { inviteUser } from './user/inviteUser.js';
+import { inviteUsers } from './user/inviteUsers.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberGroup } from './user/updateOrgMemberGroup.js';
@@ -346,6 +354,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     inviteUser: (req, ctx) => {
       return inviteUser(opts, req, ctx);
+    },
+
+    inviteUsers: (req, ctx) => {
+      return inviteUsers(opts, req, ctx);
     },
 
     createAPIKey: (req, ctx) => {
@@ -640,6 +652,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getOIDCProvider(opts, req, ctx);
     },
 
+    listOIDCProviders: (req, ctx) => {
+      return listOIDCProviders(opts, req, ctx);
+    },
+
     getPersistedOperations: (req, ctx) => {
       return getPersistedOperations(opts, req, ctx);
     },
@@ -881,6 +897,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getNamespaceProposalConfig(opts, req, ctx);
     },
 
+    updateNamespaceSSOMappings: (req, ctx) => {
+      return updateNamespaceSSOMappings(opts, req, ctx);
+    },
+    listNamespaceSSOMappings: (req, ctx) => {
+      return listNamespaceSSOMappings(opts, req, ctx);
+    },
+
     getOperations: (req, ctx) => {
       return getOperations(opts, req, ctx);
     },
@@ -915,6 +938,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     recomposeGraph: (req, ctx) => {
       return recomposeGraph(opts, req, ctx);
+    },
+
+    recomposeFeatureFlag: (req, ctx) => {
+      return recomposeFeatureFlag(opts, req, ctx);
+    },
+
+    getOnboarding: (req, ctx) => {
+      return getOnboarding(opts, req, ctx);
+    },
+
+    createOnboarding: (req, ctx) => {
+      return createOnboarding(opts, req, ctx);
+    },
+
+    finishOnboarding: (req, ctx) => {
+      return finishOnboarding(opts, req, ctx);
     },
   };
 }

@@ -124,6 +124,59 @@ poll_interval: 11s
 	require.Equal(t, time.Second*11, cfg.Config.PollInterval)
 }
 
+func TestForceUnauthenticatedRequestTracingConfigLoading(t *testing.T) {
+	t.Run("defaults to false", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.EngineExecutionConfiguration.ForceUnauthenticatedRequestTracing)
+	})
+
+	t.Run("can be enabled from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+engine:
+  force_unauthenticated_request_tracing: true
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.EngineExecutionConfiguration.ForceUnauthenticatedRequestTracing)
+	})
+
+	t.Run("yaml value takes precedence over env", func(t *testing.T) {
+		t.Setenv("ENGINE_FORCE_UNAUTHENTICATED_REQUEST_TRACING", "false")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+engine:
+  force_unauthenticated_request_tracing: true
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.EngineExecutionConfiguration.ForceUnauthenticatedRequestTracing)
+	})
+}
+
 // Confirms https://github.com/caarlos0/env/issues/354 is fixed
 func TestConfigSlicesHaveDefaults(t *testing.T) {
 	t.Parallel()
@@ -742,7 +795,7 @@ execution_config:
 		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
 	})
 
 	t.Run("too low watch interval", func(t *testing.T) {
@@ -760,7 +813,7 @@ execution_config:
 		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 100ms\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 100ms\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
 	})
 
 	t.Run("watch interval with watch disabled", func(t *testing.T) {
@@ -777,7 +830,7 @@ execution_config:
 		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch': value must be true\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch': value must be true\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
 	})
 }
 
@@ -821,7 +874,11 @@ execution_config:
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 	require.True(t,
-		js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed" || js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed",
+		js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed" ||
+			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed" ||
+			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed\n- at '/execution_config': additional properties 'file', 'storage' not allowed" ||
+			js.Causes[0].Error() == "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed\n- at '/execution_config': additional properties 'storage', 'file' not allowed",
+		js.Causes[0].Error(),
 	)
 }
 

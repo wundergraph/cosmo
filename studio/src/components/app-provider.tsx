@@ -1,8 +1,10 @@
 import { identify, resetTracking } from '@/lib/track';
+import { PlainMessage } from '@bufbuild/protobuf';
 import { Transport } from '@connectrpc/connect';
 import { TransportProvider } from '@connectrpc/connect-query';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
+import { LoginMethod as ProtoLoginMethod } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useRouter } from 'next/router';
 import { ReactNode, createContext, useEffect, useState } from 'react';
 import { useCookieOrganization } from '@/hooks/use-cookie-organization';
@@ -17,12 +19,17 @@ export const SessionClientContext = createContext<QueryClient>(sessionQueryClien
 
 const publicPaths = ['/login', '/signup'];
 
+// The /session endpoint returns the same shape as the platform LoginMethod proto
+// message (plain JSON), so reuse the generated type instead of duplicating it.
+export type LoginMethod = PlainMessage<ProtoLoginMethod>;
+
 export interface User {
   id: string;
   email: string;
   currentOrganization: Organization;
   organizations: Organization[];
   invitations: InvitedOrgs[];
+  loginMethod?: LoginMethod;
 }
 
 export interface InvitedOrgs {
@@ -74,8 +81,12 @@ export interface Organization {
 export interface Session {
   id: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
   organizations: Organization[];
   invitations: InvitedOrgs[];
+  loginMethod?: LoginMethod;
 }
 
 export class UnauthorizedError extends Error {
@@ -159,6 +170,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         },
         organizations: data.organizations,
         invitations: data.invitations,
+        loginMethod: data.loginMethod,
       });
 
       if (process.env.NEXT_PUBLIC_SENTRY_ENABLED) {
@@ -176,6 +188,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       identify({
         id: data.id,
         email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        fullName: data.fullName,
         organizationId: organization.id,
         organizationName: organization.name,
         organizationSlug: organization.slug,
@@ -186,7 +201,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
-        router.pathname !== '/account/invitations'
+        router.pathname !== '/account/invitations' &&
+        // match onboarding URL `/onboarding/1` etc
+        !/^\/onboarding(?:\/\d+)?(?:\/|$)/.test(router.pathname)
       ) {
         const url = new URL(window.location.origin + router.basePath + router.asPath);
         const params = new URLSearchParams(url.search);

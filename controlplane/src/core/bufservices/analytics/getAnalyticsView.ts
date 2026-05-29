@@ -10,6 +10,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { AnalyticsRequestViewRepository } from '../../repositories/analytics/AnalyticsRequestViewRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 
 export function getAnalyticsView(
@@ -42,6 +43,10 @@ export function getAnalyticsView(
           details: `Federated graph '${req.federatedGraphName}' not found`,
         },
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     const tracingRetention = await orgRepo.getFeature({
