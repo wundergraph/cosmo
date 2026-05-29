@@ -48,7 +48,7 @@ function removeLocalStorageItems() {
   }
 }
 
-const LogoutLink = ({ children }: PropsWithChildren) => {
+export const LogoutLink = ({ children, className }: PropsWithChildren<{ className?: string }>) => {
   return (
     <Link
       onClick={() => {
@@ -56,6 +56,7 @@ const LogoutLink = ({ children }: PropsWithChildren) => {
         resetTracking();
       }}
       href={process.env.NEXT_PUBLIC_COSMO_CP_URL + '/v1/auth/logout'}
+      className={className}
     >
       {children || 'Logout'}
     </Link>

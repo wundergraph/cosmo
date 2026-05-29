@@ -505,7 +505,7 @@ const ConnectOIDCProviderDialog = ({
     mutate(
       {
         clientID: formData.clientID,
-        clientSecrect: formData.clientSecret,
+        clientSecret: formData.clientSecret,
         discoveryEndpoint: formData.discoveryEndpoint,
         name: formData.name,
         mappers: groupMappers,
