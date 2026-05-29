@@ -1,5 +1,7 @@
 import { joinLabel } from '@wundergraph/cosmo-shared';
+import { PromiseClient } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { formatISO } from 'date-fns';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import {
@@ -28,15 +30,17 @@ import {
 let dbname = '';
 
 const getCompositionCount = async (
-  client: any,
+  client: PromiseClient<typeof PlatformService>,
   fedGraphName: string,
   namespace = DEFAULT_NAMESPACE,
+  excludeFeatureFlagCompositions = false,
 ): Promise<number> => {
   const res = await client.getCompositions({
     fedGraphName,
     namespace,
     startDate: formatISO(yearStartDate),
     endDate: formatISO(tomorrowDate),
+    excludeFeatureFlagCompositions,
   });
   expect(res.response?.code).toBe(EnumStatusCode.OK);
   return res.compositions.length;
@@ -482,4 +486,140 @@ describe('Batch publish subgraphs tests', () => {
       expect(resp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     },
   );
+
+  /**
+   * A single batch publish that fans out across two federated graphs, a contract, and a feature flag:
+   *
+   *   - subgraph A        -> fed graph A (+ contract A)
+   *   - subgraph B        -> fed graph B            (base subgraph of feature subgraph B)
+   *   - subgraph C        -> fed graph A AND fed graph B (+ contract A)
+   *   - feature subgraph B -> feature flag A (enabled, on fed graph B)
+   *
+   * Each affected graph must be composed exactly once even though multiple subgraphs touch it, its contract must be
+   * recomposed once, and the feature flag must be recomposed. Verified with split-config-loading both off and on.
+   */
+  // eslint-disable-next-line unicorn/consistent-function-scoping
+  const runFanOutScenario = async (client: PromiseClient<typeof PlatformService>) => {
+    const labelA = genUniqueLabel('teamA');
+    const labelB = genUniqueLabel('teamB');
+    const fedGraphA = genID('fedGraphA');
+    const fedGraphB = genID('fedGraphB');
+    const contractA = genID('contractA');
+    const featureFlagA = genID('ffA');
+    const subgraphA = genID('subgraphA');
+    const subgraphB = genID('subgraphB');
+    const subgraphC = genID('subgraphC');
+    const featureSubgraphB = genID('featureSubgraphB');
+
+    await createFederatedGraph(client, fedGraphA, DEFAULT_NAMESPACE, [joinLabel(labelA)], DEFAULT_ROUTER_URL);
+    await createFederatedGraph(client, fedGraphB, DEFAULT_NAMESPACE, [joinLabel(labelB)], DEFAULT_ROUTER_URL);
+
+    // subgraph A -> fed graph A only (carries a tagged field so contract A has something to exclude).
+    await createAndPublishSubgraph(
+      client,
+      subgraphA,
+      DEFAULT_NAMESPACE,
+      `type Query { a: String internalA: String @tag(name: "internal") }`,
+      [labelA],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+    // subgraph B -> fed graph B only; it is the base subgraph for feature subgraph B.
+    await createAndPublishSubgraph(
+      client,
+      subgraphB,
+      DEFAULT_NAMESPACE,
+      `type Query { b: String }`,
+      [labelB],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+    // subgraph C -> both fed graph A and fed graph B.
+    await createAndPublishSubgraph(
+      client,
+      subgraphC,
+      DEFAULT_NAMESPACE,
+      `type Query { c: String }`,
+      [labelA, labelB],
+      'http://localhost:4003',
+    );
+
+    const createContractRes = await client.createContract({
+      name: contractA,
+      namespace: DEFAULT_NAMESPACE,
+      sourceGraphName: fedGraphA,
+      excludeTags: ['internal'],
+      routingUrl: 'http://localhost:5001',
+    });
+    expect(createContractRes.response?.code).toBe(EnumStatusCode.OK);
+
+    // Feature subgraph B (base = subgraph B) inside an enabled feature flag matching fed graph B.
+    await createThenPublishFeatureSubgraph(
+      client,
+      featureSubgraphB,
+      subgraphB,
+      DEFAULT_NAMESPACE,
+      `type Query { b: String }`,
+      [],
+      'http://localhost:4004',
+    );
+    await createFeatureFlag(client, featureFlagA, [labelB], [featureSubgraphB], DEFAULT_NAMESPACE, true);
+
+    // Baselines captured immediately before the batch. Base-only counts exclude feature-flag compositions so they
+    // are comparable across split / non-split modes.
+    const aBaseBefore = await getCompositionCount(client, fedGraphA, DEFAULT_NAMESPACE, true);
+    const bBaseBefore = await getCompositionCount(client, fedGraphB, DEFAULT_NAMESPACE, true);
+    const contractBefore = await getCompositionCount(client, contractA, DEFAULT_NAMESPACE, true);
+    const bTotalBefore = await getCompositionCount(client, fedGraphB, DEFAULT_NAMESPACE, false);
+
+    const resp = await client.publishFederatedSubgraphs({
+      namespace: DEFAULT_NAMESPACE,
+      subgraphs: [
+        { name: subgraphA, schema: `type Query { a: String a2: String internalA: String @tag(name: "internal") }` },
+        { name: subgraphB, schema: `type Query { b: String b2: String }` },
+        { name: subgraphC, schema: `type Query { c: String c2: String }` },
+        { name: featureSubgraphB, schema: `type Query { b: String bFeature: String }` },
+      ],
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(resp.counts?.compositionErrors).toBe(0);
+    expect(resp.counts?.deploymentErrors).toBe(0);
+    expect(resp.updatedSubgraphNames).toHaveLength(4);
+    expect(resp.updatedSubgraphNames).toEqual(
+      expect.arrayContaining([subgraphA, subgraphB, subgraphC, featureSubgraphB]),
+    );
+
+    // Each base federated graph is composed exactly once, even though two subgraphs touch each of them.
+    expect(await getCompositionCount(client, fedGraphA, DEFAULT_NAMESPACE, true)).toBe(aBaseBefore + 1);
+    expect(await getCompositionCount(client, fedGraphB, DEFAULT_NAMESPACE, true)).toBe(bBaseBefore + 1);
+    // The contract of fed graph A is recomposed exactly once as part of its source graph.
+    expect(await getCompositionCount(client, contractA, DEFAULT_NAMESPACE, true)).toBe(contractBefore + 1);
+    // Fed graph B also gains a feature-flag composition (feature subgraph B changed), beyond its single base recompose.
+    expect(await getCompositionCount(client, fedGraphB, DEFAULT_NAMESPACE, false)).toBeGreaterThan(bTotalBefore + 1);
+
+    // The composed schemas reflect every published change.
+    const sdlA = await client.getFederatedGraphSDLByName({ name: fedGraphA, namespace: DEFAULT_NAMESPACE });
+    expect(sdlA.sdl).toContain('a2');
+    expect(sdlA.sdl).toContain('c2');
+    const sdlB = await client.getFederatedGraphSDLByName({ name: fedGraphB, namespace: DEFAULT_NAMESPACE });
+    expect(sdlB.sdl).toContain('b2');
+    expect(sdlB.sdl).toContain('c2');
+    const sdlContract = await client.getFederatedGraphSDLByName({ name: contractA, namespace: DEFAULT_NAMESPACE });
+    expect(sdlContract.sdl).toContain('a2');
+    // The excluded-tag field is hidden in the contract, confirming the contract was actually recomposed.
+    expect(sdlContract.sdl).toContain('@inaccessible');
+  };
+
+  test('that a batch publish fans out across graphs, a contract, and a feature flag (non-split config)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    await runFanOutScenario(client);
+  });
+
+  test('that a batch publish fans out across graphs, a contract, and a feature flag (split config)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient, enabledFeatures: ['split-config-loading'] });
+    testContext.onTestFinished(() => server.close());
+
+    await runFanOutScenario(client);
+  });
 });
