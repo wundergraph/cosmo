@@ -1074,14 +1074,14 @@ export class SubgraphPublishStats extends Message<SubgraphPublishStats> {
  */
 export class PublishSubgraph extends Message<PublishSubgraph> {
   /**
-   * The FQDN of the subgraph to be published e.g. "wg.team1.orders". The subgraph must already exist.
+   * The name of the subgraph to publish.
    *
    * @generated from field: string name = 1;
    */
   name = "";
 
   /**
-   * The string representation of the schema, the content of the schema file.
+   * The schema to publish for the subgraph.
    *
    * @generated from field: string schema = 2;
    */
@@ -1128,28 +1128,21 @@ export class PublishFederatedSubgraphsRequest extends Message<PublishFederatedSu
   namespace = "";
 
   /**
-   * The regular subgraphs to publish. Each must already exist in the namespace.
+   * The subgraphs to publish. Each must already exist in the namespace. Feature subgraphs are detected automatically.
    *
    * @generated from field: repeated wg.cosmo.platform.v1.PublishSubgraph subgraphs = 2;
    */
   subgraphs: PublishSubgraph[] = [];
 
   /**
-   * The feature subgraphs to publish. Each must already exist in the namespace.
-   *
-   * @generated from field: repeated wg.cosmo.platform.v1.PublishSubgraph feature_subgraphs = 3;
-   */
-  featureSubgraphs: PublishSubgraph[] = [];
-
-  /**
-   * @generated from field: optional bool disable_resolvability_validation = 4;
+   * @generated from field: optional bool disable_resolvability_validation = 3;
    */
   disableResolvabilityValidation?: boolean;
 
   /**
    * Optional limit for the number of errors/warnings returned.
    *
-   * @generated from field: optional int32 limit = 5;
+   * @generated from field: optional int32 limit = 4;
    */
   limit?: number;
 
@@ -1163,9 +1156,8 @@ export class PublishFederatedSubgraphsRequest extends Message<PublishFederatedSu
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "subgraphs", kind: "message", T: PublishSubgraph, repeated: true },
-    { no: 3, name: "feature_subgraphs", kind: "message", T: PublishSubgraph, repeated: true },
-    { no: 4, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 5, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 3, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphsRequest {

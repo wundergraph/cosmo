@@ -88,22 +88,20 @@ message SubgraphPublishStats {
 
 // A single subgraph entry to publish as part of a batch publish request.
 message PublishSubgraph {
-  // The FQDN of the subgraph to be published e.g. "wg.team1.orders". The subgraph must already exist.
+  // The name of the subgraph to publish.
   string name = 1;
-  // The string representation of the schema, the content of the schema file.
+  // The schema to publish for the subgraph.
   string schema = 2;
 }
 
 message PublishFederatedSubgraphsRequest {
   // The namespace all the subgraphs belong to.
   string namespace = 1;
-  // The regular subgraphs to publish. Each must already exist in the namespace.
+  // The subgraphs to publish. Each must already exist in the namespace. Feature subgraphs are detected automatically.
   repeated PublishSubgraph subgraphs = 2;
-  // The feature subgraphs to publish. Each must already exist in the namespace.
-  repeated PublishSubgraph feature_subgraphs = 3;
-  optional bool disable_resolvability_validation = 4;
+  optional bool disable_resolvability_validation = 3;
   // Optional limit for the number of errors/warnings returned.
-  optional int32 limit = 5;
+  optional int32 limit = 4;
 }
 
 message PublishFederatedSubgraphsResponse {

@@ -16,19 +16,10 @@ const entrySchema = z.object({
   schema: z.string().trim().min(1, 'a non-empty "schema" file path is required'),
 });
 
-/* eslint-disable camelcase -- snake_case alias accepted for the feature subgraphs section */
-const configSchema = z
-  .object({
-    subgraphs: z.array(entrySchema).default([]),
-    // Accept both camelCase and snake_case for the feature subgraphs section.
-    featureSubgraphs: z.array(entrySchema).optional(),
-    feature_subgraphs: z.array(entrySchema).optional(),
-  })
-  .transform(({ subgraphs, featureSubgraphs, feature_subgraphs }) => ({
-    subgraphs,
-    featureSubgraphs: featureSubgraphs ?? feature_subgraphs ?? [],
-  }));
-/* eslint-enable camelcase */
+// Regular subgraphs and feature subgraphs are listed together; feature subgraphs are detected by the control plane.
+const configSchema = z.object({
+  subgraphs: z.array(entrySchema).min(1, 'at least one subgraph is required'),
+});
 
 type BatchPublishEntry = z.infer<typeof entrySchema>;
 
@@ -37,8 +28,7 @@ export default (opts: BaseCommandOptions) => {
   command.description(
     'Publishes the schemas of multiple subgraphs at once using a config file.\n' +
       'All subgraphs and feature subgraphs listed in the config must already exist.\n' +
-      'If the publication leads to composition errors, the errors will be visible in the Studio.\n' +
-      'The router will continue to work with the latest valid schema.',
+      'Any composition errors are reported per federated graph, and the router keeps serving the last valid schema.',
   );
   command.requiredOption(
     '-c, --config <path-to-config>',
@@ -92,13 +82,7 @@ export default (opts: BaseCommandOptions) => {
       program.error(pc.red(pc.bold(`The config file '${configFile}' is invalid:\n${details}`)));
     }
 
-    const { subgraphs: subgraphEntries, featureSubgraphs: featureSubgraphEntries } = parsed.data;
-
-    if (subgraphEntries.length === 0 && featureSubgraphEntries.length === 0) {
-      program.error(
-        pc.red(pc.bold(`The config file must list at least one subgraph under "subgraphs" or "featureSubgraphs".`)),
-      );
-    }
+    const { subgraphs: subgraphEntries } = parsed.data;
 
     const limit = Number(options.limit);
     if (!Number.isInteger(limit) || limit <= 0 || limit > limitMaxValue) {
@@ -132,10 +116,7 @@ export default (opts: BaseCommandOptions) => {
         }),
       );
 
-    const [subgraphs, featureSubgraphs] = await Promise.all([
-      readEntries(subgraphEntries),
-      readEntries(featureSubgraphEntries),
-    ]);
+    const subgraphs = await readEntries(subgraphEntries);
 
     const spinner = ora('Subgraphs are being published...').start();
 
@@ -143,7 +124,6 @@ export default (opts: BaseCommandOptions) => {
       {
         namespace: options.namespace,
         subgraphs,
-        featureSubgraphs,
         disableResolvabilityValidation: options.disableResolvabilityValidation,
         limit,
       },
@@ -152,7 +132,7 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    const total = subgraphs.length + featureSubgraphs.length;
+    const total = subgraphs.length;
     const changed = resp.updatedSubgraphNames?.length ?? 0;
 
     handleCompositionResult({

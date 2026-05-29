@@ -74,12 +74,9 @@ export function publishFederatedSubgraphs(
       };
     }
 
-    // Combine regular subgraphs and feature subgraphs into a single ordered list, remembering which section each
-    // entry came from so we can validate that the resolved subgraph is of the expected kind.
-    const requestedEntries: { name: string; schema: string; isFeatureSubgraph: boolean }[] = [
-      ...req.subgraphs.map((s) => ({ name: s.name, schema: s.schema, isFeatureSubgraph: false })),
-      ...req.featureSubgraphs.map((s) => ({ name: s.name, schema: s.schema, isFeatureSubgraph: true })),
-    ];
+    // A single list of subgraphs to publish. Regular subgraphs and feature subgraphs share a namespace and cannot
+    // have the same name, so the kind of each entry is resolved from the database rather than from the request.
+    const requestedEntries = req.subgraphs;
 
     if (requestedEntries.length === 0) {
       return {
@@ -136,19 +133,6 @@ export function publishFederatedSubgraphs(
       if (subgraph.type === 'grpc_service') {
         typeErrors.push(
           `Subgraph "${subgraph.name}" is a grpc service. Please use the 'wgc grpc-service publish' command to publish it.`,
-        );
-        continue;
-      }
-
-      if (entry.isFeatureSubgraph && !subgraph.isFeatureSubgraph) {
-        typeErrors.push(
-          `Subgraph "${subgraph.name}" is not a feature subgraph. Move it to the "subgraphs" section of the config.`,
-        );
-        continue;
-      }
-      if (!entry.isFeatureSubgraph && subgraph.isFeatureSubgraph) {
-        typeErrors.push(
-          `Subgraph "${subgraph.name}" is a feature subgraph. Move it to the "featureSubgraphs" section of the config.`,
         );
         continue;
       }

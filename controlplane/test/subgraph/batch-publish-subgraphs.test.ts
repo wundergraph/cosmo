@@ -12,9 +12,7 @@ import {
 } from '../../src/core/test-util.js';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import {
-  assertNumberOfCompositions,
-  createAndPublishSubgraph,
-  createBaseAndFeatureSubgraph,
+    createAndPublishSubgraph,
   createFeatureFlag,
   createFederatedGraph,
   createThenPublishFeatureSubgraph,
@@ -99,7 +97,6 @@ describe('Batch publish subgraphs tests', () => {
         { name: subgraphA, schema: `type Query { a: String a2: String }` },
         { name: subgraphB, schema: `type Query { b: String b2: String }` },
       ],
-      featureSubgraphs: [],
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
@@ -161,7 +158,6 @@ describe('Batch publish subgraphs tests', () => {
         { name: subgraphB, schema: `type Query { b: String b2: String }` },
         { name: subgraphC, schema: `type Query { c: String c2: String }` },
       ],
-      featureSubgraphs: [],
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
@@ -199,7 +195,6 @@ describe('Batch publish subgraphs tests', () => {
         { name: existing, schema: `type Query { a: String a2: String }` },
         { name: missing, schema: `type Query { b: String }` },
       ],
-      featureSubgraphs: [],
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
@@ -260,7 +255,6 @@ describe('Batch publish subgraphs tests', () => {
         { name: subgraphB, schema: `type Query { b: String a: Int }` },
         { name: subgraphC, schema: `type Query { c: String c2: String }` },
       ],
-      featureSubgraphs: [],
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
@@ -306,7 +300,6 @@ describe('Batch publish subgraphs tests', () => {
       subgraphs: [
         { name: subgraphA, schema: `type Query { a: String more: String secret: String @tag(name: "exclude") }` },
       ],
-      featureSubgraphs: [],
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
@@ -319,7 +312,7 @@ describe('Batch publish subgraphs tests', () => {
     expect(contractSdl.sdl).toContain('secret: String @tag(name: "exclude") @inaccessible');
   });
 
-  test('that feature subgraphs can be batch published via the featureSubgraphs section', async (testContext) => {
+  test('that feature subgraphs can be batch published alongside regular subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
@@ -349,67 +342,23 @@ describe('Batch publish subgraphs tests', () => {
     await createFederatedGraph(client, fedGraph, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
     await createFeatureFlag(client, featureFlag, [label], [featureSubgraph], DEFAULT_NAMESPACE, true);
 
+    // A regular subgraph and a feature subgraph are published in the same request; the control plane detects the
+    // feature subgraph automatically from a single subgraphs list.
     const resp = await client.publishFederatedSubgraphs({
       namespace: DEFAULT_NAMESPACE,
-      subgraphs: [],
-      featureSubgraphs: [{ name: featureSubgraph, schema: `type Query { hello: String world: String }` }],
+      subgraphs: [
+        { name: baseSubgraph, schema: `type Query { hello: String again: String }` },
+        { name: featureSubgraph, schema: `type Query { hello: String world: String }` },
+      ],
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
-    expect(resp.updatedSubgraphNames).toEqual([featureSubgraph]);
-  });
+    expect(resp.updatedSubgraphNames).toHaveLength(2);
+    expect(resp.updatedSubgraphNames).toEqual(expect.arrayContaining([baseSubgraph, featureSubgraph]));
 
-  test('that a regular subgraph cannot be published in the featureSubgraphs section', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname, chClient });
-    testContext.onTestFinished(() => server.close());
-
-    const label = genUniqueLabel('team');
-    const fedGraph = genID('fedGraph');
-    const subgraphA = genID('subgraphA');
-
-    await createFederatedGraph(client, fedGraph, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
-    await createAndPublishSubgraph(
-      client,
-      subgraphA,
-      DEFAULT_NAMESPACE,
-      `type Query { a: String }`,
-      [label],
-      DEFAULT_SUBGRAPH_URL_ONE,
-    );
-
-    const resp = await client.publishFederatedSubgraphs({
-      namespace: DEFAULT_NAMESPACE,
-      subgraphs: [],
-      featureSubgraphs: [{ name: subgraphA, schema: `type Query { a: String a2: String }` }],
-    });
-
-    expect(resp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(resp.response?.details).toContain('not a feature subgraph');
-  });
-
-  test('that a feature subgraph cannot be published in the subgraphs section', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname, chClient });
-    testContext.onTestFinished(() => server.close());
-
-    const baseSubgraph = genID('base');
-    const featureSubgraph = genID('feature');
-
-    await createBaseAndFeatureSubgraph(
-      client,
-      baseSubgraph,
-      featureSubgraph,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
-
-    const resp = await client.publishFederatedSubgraphs({
-      namespace: DEFAULT_NAMESPACE,
-      subgraphs: [{ name: featureSubgraph, schema: `type Query { hello: String }` }],
-      featureSubgraphs: [],
-    });
-
-    expect(resp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(resp.response?.details).toContain('is a feature subgraph');
+    // The base federated graph reflects the regular subgraph's new schema.
+    const sdl = await client.getFederatedGraphSDLByName({ name: fedGraph, namespace: DEFAULT_NAMESPACE });
+    expect(sdl.sdl).toContain('again');
   });
 
   test('that an error is returned when the namespace does not exist', async (testContext) => {
@@ -419,7 +368,6 @@ describe('Batch publish subgraphs tests', () => {
     const resp = await client.publishFederatedSubgraphs({
       namespace: 'does-not-exist',
       subgraphs: [{ name: genID('subgraph'), schema: `type Query { a: String }` }],
-      featureSubgraphs: [],
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
@@ -432,7 +380,6 @@ describe('Batch publish subgraphs tests', () => {
     const resp = await client.publishFederatedSubgraphs({
       namespace: DEFAULT_NAMESPACE,
       subgraphs: [],
-      featureSubgraphs: [],
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.ERR);
@@ -462,7 +409,6 @@ describe('Batch publish subgraphs tests', () => {
         { name: subgraphA, schema: `type Query { a: String }` },
         { name: subgraphA, schema: `type Query { a: String a2: String }` },
       ],
-      featureSubgraphs: [],
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.ERR);
@@ -497,7 +443,6 @@ describe('Batch publish subgraphs tests', () => {
       const resp = await client.publishFederatedSubgraphs({
         namespace: DEFAULT_NAMESPACE,
         subgraphs: [{ name: subgraphA, schema: `type Query { a: String a2: String }` }],
-        featureSubgraphs: [],
       });
 
       expect(resp.response?.code).toBe(EnumStatusCode.OK);
@@ -532,7 +477,6 @@ describe('Batch publish subgraphs tests', () => {
       const resp = await client.publishFederatedSubgraphs({
         namespace: DEFAULT_NAMESPACE,
         subgraphs: [{ name: subgraphA, schema: `type Query { a: String a2: String }` }],
-        featureSubgraphs: [],
       });
 
       expect(resp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
