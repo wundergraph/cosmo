@@ -174,6 +174,11 @@ func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, 
 	defer g.mu.RUnlock()
 
 	md := make(metadata.MD)
+	// check if we already have metadata in the context
+	if existingMd, ok := metadata.FromOutgoingContext(ctx); ok {
+		md = existingMd
+	}
+
 	otel.GetTextMapPropagator().Inject(ctx, metadataCarrier{md})
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
