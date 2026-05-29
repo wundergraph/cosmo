@@ -13,7 +13,7 @@ import (
 )
 
 // buildTLSClientConfig creates a *tls.Config from a TLSClientCertConfiguration.
-func buildTLSClientConfig(clientCfg *config.TLSClientCertConfiguration) (*tls.Config, error) {
+func buildTLSClientConfig(clientCfg config.TLSClientCertConfiguration) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: clientCfg.InsecureSkipCaVerification,
 	}
@@ -43,10 +43,12 @@ func buildTLSClientConfig(clientCfg *config.TLSClientCertConfiguration) (*tls.Co
 	return tlsConfig, nil
 }
 
-// buildSubgraphTLSConfigs builds the default and per-subgraph TLS configs from raw configuration.
-// Returns (defaultClientTLS, perSubgraphTLS, error).
-func buildSubgraphTLSConfigs(logger *zap.Logger, cfg *config.ClientTLSConfiguration) (*tls.Config, map[string]*tls.Config, error) {
-	hasAll := (cfg.All.CertFile != "" && cfg.All.KeyFile != "") || cfg.All.CaFile != "" || cfg.All.InsecureSkipCaVerification
+// buildSubgraphHTTPTLSConfigs builds the default and per-subgraph TLS configs for HTTP subgraphs
+// from raw configuration.
+func buildSubgraphHTTPTLSConfigs(logger *zap.Logger, cfg *config.HTTPClientTLSConfiguration) (
+	*tls.Config, map[string]*tls.Config, error) {
+	hasAll := (cfg.GetAll().CertFile != "" && cfg.GetAll().KeyFile != "") ||
+		cfg.GetAll().CaFile != "" || cfg.GetAll().InsecureSkipCaVerification
 
 	// If no global TLS config is provided and there are no subgraph specific TLS configs
 	if !cfg.Enabled() {
@@ -57,24 +59,26 @@ func buildSubgraphTLSConfigs(logger *zap.Logger, cfg *config.ClientTLSConfigurat
 	perSubgraphTLS := make(map[string]*tls.Config)
 
 	if hasAll {
-		if cfg.All.InsecureSkipCaVerification {
-			logger.Warn("Global TLS config has InsecureSkipCaVerification enabled. This is not recommended for production environments.")
+		if cfg.GetAll().InsecureSkipCaVerification {
+			logger.Warn("Global TLS config has InsecureSkipCaVerification enabled. " +
+				"This is not recommended for production environments.")
 		}
 
-		defaultTLS, err := buildTLSClientConfig(&cfg.All)
+		defaultTLS, err := buildTLSClientConfig(cfg.GetAll().TLSClientCertConfiguration)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
 		}
 		defaultClientTLS = defaultTLS
 	}
 
-	for name, sgCfg := range cfg.Subgraphs {
+	for name, sgCfg := range cfg.GetSubgraphs() {
 		if sgCfg.InsecureSkipCaVerification {
-			logger.Warn("Subgraph TLS config inherits InsecureSkipCaVerification from global config. This is not recommended for production environments.",
+			logger.Warn("Subgraph TLS config inherits InsecureSkipCaVerification from "+
+				"global config. This is not recommended for production environments.",
 				zap.String("subgraph", name))
 		}
 
-		subgraphTLS, err := buildTLSClientConfig(&sgCfg)
+		subgraphTLS, err := buildTLSClientConfig(sgCfg.TLSClientCertConfiguration)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build TLS config for subgraph %q: %w", name, err)
 		}
@@ -82,4 +86,53 @@ func buildSubgraphTLSConfigs(logger *zap.Logger, cfg *config.ClientTLSConfigurat
 	}
 
 	return defaultClientTLS, perSubgraphTLS, nil
+}
+
+// buildSubgraphGRPCTLSConfigs builds the default and per-subgraph TLS configs for gRPC subgraphs
+// from raw configuration.
+func buildSubgraphGRPCTLSConfigs(logger *zap.Logger, cfg *config.GRPCClientTLSConfiguration) (
+	*tls.Config, map[string]*tls.Config, error) {
+
+	var (
+		globalCfg *tls.Config
+		err       error
+	)
+
+	perSubgraphCfgs := make(map[string]*tls.Config, len(cfg.GetSubgraphs()))
+
+	// global config
+	if cfg.All.Enabled {
+		if cfg.All.InsecureSkipCaVerification {
+			logger.Warn("Global TLS config for gRPC subgraphs has InsecureSkipCaVerification enabled. " +
+				"This is not recommended for production environments.")
+		}
+
+		globalCfg, err = buildTLSClientConfig(cfg.All.TLSClientCertConfiguration)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
+		}
+	}
+
+	// per subgraph configs
+	for sgName, sgCfg := range cfg.Subgraphs {
+		if !sgCfg.Enabled {
+			perSubgraphCfgs[sgName] = nil
+			continue
+		}
+
+		if sgCfg.InsecureSkipCaVerification {
+			logger.Warn("Subgraph TLS config has InsecureSkipCaVerification enabled."+
+				"This is not recommended for production environments.",
+				zap.String("subgraph", sgName))
+
+		}
+
+		perSubgraphCfgs[sgName], err = buildTLSClientConfig(sgCfg.TLSClientCertConfiguration)
+		if err != nil {
+			return nil, nil,
+				fmt.Errorf("failed to build TLS config for subgraph %q: %w", sgName, err)
+		}
+	}
+
+	return globalCfg, perSubgraphCfgs, nil
 }

@@ -7,7 +7,7 @@ icon: "shield-halved"
 <Info>
   Available since version [0.71.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.71.0)
 </Info>
-The Cosmo Router supports TLS to secure and authenticate communications for both client and subgraph connections. For subgraph connections, encryption and authentication are automatically enabled when the subgraph URL uses the `https://` protocol. For client connections, you can configure TLS as follow:
+The Cosmo Router supports TLS to secure and authenticate communications for both client and subgraph connections. For client connections, you can configure TLS as follow:
 
 
 ```yaml config.yaml
@@ -119,6 +119,25 @@ That's it! The router should now be able to receive TLS connections **only** fro
 
 ## TLS with Subgraphs
 
+For subgraph connections, encryption and authentication are automatically enabled when the subgraph URL uses the `https://` protocol.
+
+<Note>
+These settings do not apply to [Cosmo Connect](/connect/overview) subgraphs.
+See [TLS with gRPC Subgraphs](#tls-with-grpc-subgraphs) on how to configure them.
+</Note>
+
+### Custom CA Certificates
+
+By default, the router uses your operating system's root CA store to verify subgraph server certificates. If your subgraphs use TLS certificates signed by an internal or private CA that is not in the system's root CA store, you can provide a custom CA certificate file using `ca_file`. The router will use this CA to verify the subgraph's server certificate during the TLS handshake.
+
+```yaml config.yaml
+tls:
+  client:
+    all:
+      ca_file: /path/to/internal-ca.crt
+      insecure_skip_ca_verification: false
+```
+
 ### Router mTLS
 
 In addition to accepting mTLS connections from clients (inbound), the router can also present client certificates when connecting to subgraphs (outbound). This is useful when your subgraphs require mTLS authentication to accept requests from the router.
@@ -160,18 +179,122 @@ tls:
   Per-subgraph entries live under `tls.client.subgraphs` and use the same field structure as `tls.client.all` (e.g., `cert_file`, `key_file`). A per-subgraph entry fully overrides the global `all` config for that subgraph.
 </Note>
 
-### Custom CA Certificates
-
-By default, the router uses your operating system's root CA store to verify subgraph server certificates. If your subgraphs use TLS certificates signed by an internal or private CA that is not in the system's root CA store, you can provide a custom CA certificate file using `ca_file`. The router will use this CA to verify the subgraph's server certificate during the TLS handshake.
-
-```yaml config.yaml
-tls:
-  client:
-    all:
-      ca_file: /path/to/internal-ca.crt
-      insecure_skip_ca_verification: false
-```
-
 <Warning>
   `insecure_skip_ca_verification` disables subgraph certificate validation. Only use this for development or testing environments.
 </Warning>
+
+## TLS with gRPC Subgraphs
+
+gRPC subgraph connections use a separate configuration section from HTTP subgraphs: `tls.client_grpc`.
+Unlike HTTP subgraphs, where a `https://` URL automatically enables TLS, gRPC subgraph TLS must be explicitly activated with `enabled: true`.
+
+### Enabling TLS
+
+Set `enabled: true` under `tls.client_grpc.all` to enable TLS for all gRPC subgraph connections. By default, the router uses the operating system's root CA store to verify server certificates.
+
+```yaml config.yaml
+tls:
+  client_grpc:
+    all:
+      enabled: true
+```
+
+To enable TLS for a specific subgraph only, omit the global `all` config and configure it under `subgraphs`:
+
+```yaml config.yaml
+tls:
+  client_grpc:
+    subgraphs:
+      products:
+        enabled: true
+```
+
+To disable TLS for a specific subgraph while keeping it enabled globally, set `enabled: false` in the per-subgraph entry. Per-subgraph config fully replaces the global `all` config for that subgraph.
+
+```yaml config.yaml
+tls:
+  client_grpc:
+    all:
+      enabled: true
+    subgraphs:
+      products:
+        enabled: false
+```
+
+### Custom CA Certificates
+
+If your gRPC subgraphs use certificates signed by an internal or private CA, provide the CA certificate via `ca_file`:
+
+```yaml config.yaml
+tls:
+  client_grpc:
+    all:
+      enabled: true
+      ca_file: /path/to/internal-ca.crt
+```
+
+`ca_file` can also be set per-subgraph to use a different CA for a specific subgraph:
+
+```yaml config.yaml
+tls:
+  client_grpc:
+    all:
+      enabled: true
+      ca_file: /path/to/internal-ca.crt
+    subgraphs:
+      products:
+        enabled: true
+        ca_file: /path/to/products-ca.crt
+```
+
+### mTLS
+
+To present a client certificate to gRPC subgraphs (mutual TLS), provide both `cert_file` and `key_file`. Both fields are required together.
+
+#### Global Configuration
+
+Apply a client certificate to all gRPC subgraph connections:
+
+```yaml config.yaml
+tls:
+  client_grpc:
+    all:
+      enabled: true
+      cert_file: /path/to/client.crt
+      key_file: /path/to/client.key
+      ca_file: /path/to/ca.crt
+```
+
+#### Per-Subgraph Configuration
+
+Override the global config for specific gRPC subgraphs. A per-subgraph entry fully replaces the global `all` config for that subgraph. It does not merge with it.
+
+```yaml config.yaml
+tls:
+  client_grpc:
+    all:
+      enabled: true
+      cert_file: /path/to/default-client.crt
+      key_file: /path/to/default-client.key
+    subgraphs:
+      products:
+        enabled: true
+        cert_file: /path/to/products-client.crt
+        key_file: /path/to/products-client.key
+      inventory:
+        enabled: true
+        cert_file: /path/to/inventory-client.crt
+        key_file: /path/to/inventory-client.key
+```
+
+<Warning>
+  `insecure_skip_ca_verification` disables gRPC subgraph certificate validation. Only use this for development or testing environments.
+</Warning>
+
+```yaml config.yaml
+tls:
+  client_grpc:
+    all:
+      enabled: true
+      insecure_skip_ca_verification: true
+```
