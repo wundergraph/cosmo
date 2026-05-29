@@ -416,33 +416,77 @@ tls:
       cert_file: ../your/cert.pem
 ```
 
-### Outbound Client TLS (mTLS to Subgraphs)
+### Outbound TLS to Subgraphs
 
-Configure TLS client certificates for outbound connections from the router to subgraphs. See [Outbound mTLS to Subgraphs](/router/security/tls#router-mtls) for details.
+Configure TLS for outbound connections from router to subgraphs.
+See [TLS](/router/security/tls) for details.
 
-| Environment Variable                      | YAML                                          | Required               | Description                                                                                                                   | Default Value |
-| ----------------------------------------- | --------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| TLS_CLIENT_CERT_FILE                      | tls.client.all.cert_file                      | <Icon icon="square" /> | Path to the client certificate chain file for authenticating the router to subgraphs.                                         |               |
-| TLS_CLIENT_KEY_FILE                       | tls.client.all.key_file                       | <Icon icon="square" /> | Path to the client private key file.                                                                                          |               |
-| TLS_CLIENT_CA_FILE                        | tls.client.all.ca_file                        | <Icon icon="square" /> | Path to a custom CA certificate file for verifying subgraph server certificates.                                              |               |
-| TLS_CLIENT_INSECURE_SKIP_CA_VERIFICATION  | tls.client.all.insecure_skip_ca_verification  | <Icon icon="square" /> | Skip verification of the subgraph server certificate. Only use for development or testing.                                    | false         |
+#### HTTP Subgraphs
 
-### Example YAML config:
+Configuring a subgraph URL with a `https://` scheme activates TLS to subgraphs.
+Specifying `ca_file` additionally verifies a subgraphs certificate against that CA certificate.  
+Additionally specifying `cert_file` and `key_file` enables mTLS on subgraph connections.
+
+The following settings configure TLS for HTTP based subgraphs.
+
+| Environment Variable                          | YAML                                          | Required               | Description                                                                                         | Default Value |
+| --------------------------------------------- | --------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------- | ------------- |
+| TLS_CLIENT_ALL_CA_FILE                        | tls.client.all.ca_file                        | <Icon icon="square" /> | Path to a custom CA certificate file for verifying subgraph server certificates.                    |               |
+| TLS_CLIENT_ALL_CERT_FILE                      | tls.client.all.cert_file                      | <Icon icon="square" /> | Path to the client certificate chain file for authenticating the router to subgraphs. Enables mTLS. |               |
+| TLS_CLIENT_ALL_KEY_FILE                       | tls.client.all.key_file                       | <Icon icon="square" /> | Path to the client private key file. Enables mTLS.                                                  |               |
+| TLS_CLIENT_ALL_INSECURE_SKIP_CA_VERIFICATION  | tls.client.all.insecure_skip_ca_verification  | <Icon icon="square" /> | Skip verification of the subgraph server certificate. Only use for development or testing.          | false         |
+
+##### Example YAML config:
 
 ```yaml config.yaml
 version: "1"
 
 tls:
   client:
-    all:
+    all: # global tls configuration affecting all HTTP subgraphs
       cert_file: /path/to/client.crt
       key_file: /path/to/client.key
       ca_file: /path/to/ca.crt
-    subgraphs:
+    subgraphs: # additional overwrites for specific HTTP subgraphs
       products:
         cert_file: /path/to/products-client.crt
         key_file: /path/to/products-client.key
 ```
+
+#### gRPC Subgraphs
+
+The configuration settings above are not applied to gRPC subgraphs.
+For gRPC subgraphs, TLS must be explicitly enabled with `enabled: true`.
+
+| Environment Variable                               | YAML                                               | Required                | Description                                                                                              | Default Value |
+| -------------------------------------------------- | -------------------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- | ------------- |
+| TLS_CLIENT_GRPC_ALL_ENABLED                        | tls.client_grpc.all.enabled                        | <Icon icon="check-square" /> | Enable TLS for all gRPC subgraph connections.                                                       |               |
+| TLS_CLIENT_GRPC_ALL_CA_FILE                        | tls.client_grpc.all.ca_file                        | <Icon icon="square" /> | Path to a custom CA certificate file for verifying gRPC subgraph server certificates.                    |               |
+| TLS_CLIENT_GRPC_ALL_CERT_FILE                      | tls.client_grpc.all.cert_file                      | <Icon icon="square" /> | Path to the client certificate chain file for authenticating the router to gRPC subgraphs. Enables mTLS. |               |
+| TLS_CLIENT_GRPC_ALL_KEY_FILE                       | tls.client_grpc.all.key_file                       | <Icon icon="square" /> | Path to the client private key file. Enables mTLS.                                                       |               |
+| TLS_CLIENT_GRPC_ALL_INSECURE_SKIP_CA_VERIFICATION  | tls.client_grpc.all.insecure_skip_ca_verification  | <Icon icon="square" /> | Skip verification of the gRPC subgraph server certificate. Only use for development or testing.          | false         |
+
+##### Example YAML config:
+
+```yaml config.yaml
+version: "1"
+
+tls:
+  client_grpc:
+    all: # global TLS configuration for all gRPC subgraphs
+      enabled: true
+      cert_file: /path/to/client.crt
+      key_file: /path/to/client.key
+      ca_file: /path/to/ca.crt
+    subgraphs: # per-subgraph overrides
+      products:
+        enabled: true
+        cert_file: /path/to/products-client.crt
+        key_file: /path/to/products-client.key
+      projects:
+        enabled: false # specifically disable TLS for this subgraph
+```
+
 
 ## Compliance
 
@@ -1218,7 +1262,7 @@ The configuration for the execution setup contains instructions for the router t
 
 ### Example YAML config:
 
-You can load the execution config from a [storage provider](/router/storage-providers) or from a local file:
+The execution config source is exclusive. Configure exactly one of `storage`, `file`, or `manifest`. `fallback_storage` is the only field that may be combined with `storage` and is used to retry from a secondary location when the primary storage provider fails.
 
 <CodeGroup>
   ```yaml Storage provider
@@ -1238,6 +1282,18 @@ You can load the execution config from a [storage provider](/router/storage-prov
       watch_interval: "1s"
   ```
 
+  ```yaml Local manifest
+  version: "1"
+  execution_config:
+    manifest:
+      path: "./__schemas/manifest"
+      skip_missing_feature_flags: false
+      ignored_feature_flags:
+        - "experimental-checkout"
+      watch: true
+      watch_interval: "1s"
+  ```
+
   ```yaml Fallback storage
   version: "1"
   execution_config:
@@ -1250,6 +1306,8 @@ You can load the execution config from a [storage provider](/router/storage-prov
       object_path: "router.json"
   ```
 </CodeGroup>
+
+A manifest directory contains a `mapper.json` indexing the base graph and every feature flag by version, a `latest.json` with the base graph's execution config, and one `feature-flags/<name>.json` per feature flag. When `watch` is enabled, the router watches `mapper.json`. Whenever the file's mtime changes, the router reloads the assembled config without downtime.
 
 When using a storage provider, the `object_path` field points to the file in your bucket that is updated after each schema deployment in your CI/CD pipeline:
 
@@ -1268,19 +1326,25 @@ You can configure a fallback storage for fetching the execution config in the ev
 
 ### Execution config options
 
-| Environment Variable                          | YAML                                          | Required                                      | Description                                                                                                                                                                                         | Default Value |
-| --------------------------------------------- | --------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|                                               | execution_config                              | <Icon icon="square" />                        | The configuration for the execution config.                                                                                                                                                         |               |
-|                                               | file                                          | <Icon icon="square" />                        | The configuration for the execution config file. The config file is used to load the execution config from the local file system. The file has precedence over the storage provider.                |               |
-| EXECUTION_CONFIG_FILE_PATH                    | file.path                                     | <Icon icon="square" />                        | The path to the execution config file. The path is used to load the execution config from the local file system.                                                                                    |               |
-| EXECUTION_CONFIG_FILE_WATCH                   | file.watch                                    | <Icon icon="square" />                        | Enable the watch mode. The watch mode is used to watch the execution config file for changes. If the file changes, the router will reload the execution config without downtime.                    | true          |
-| EXECUTION_CONFIG_FILE_WATCH_INTERVAL          | file.watch_interval                           | <Icon icon="square" />                        | The interval at which the file is checked for changes.                                                                                                                                              | 1s            |
-|                                               | execution_config.storage                      | <Icon icon="square" />                        | The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config. |               |
-| EXECUTION_CONFIG_STORAGE_PROVIDER_ID          | execution_config.storage.provider_id          | <Icon icon="square-check" iconType="solid" /> | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                |               |
-| EXECUTION_CONFIG_STORAGE_OBJECT_PATH          | execution_config.storage.object_path          | <Icon icon="square-check" iconType="solid" /> | The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket.                                                                     |               |
-| EXECUTION_CONFIG_FALLBACK_STORAGE_ENABLED     | execution_config.fallback_storage.enabled     | <Icon icon="square" />                        | Enable a fallback storage to fetch the execution config in case the above primary source fails.                                                                                                     | false         |
-| EXECUTION_CONFIG_FALLBACK_STORAGE_PROVIDER_ID | execution_config.fallback_storage.provider_id | <Icon icon="square" />                        | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                |               |
-| EXECUTION_CONFIG_FALLBACK_STORAGE_OBJECT_PATH | execution_config.fallback_storage.object_path | <Icon icon="square" />                        | The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket.                                                                     |               |
+| Environment Variable                                 | YAML                                          | Required                                      | Description                                                                                                                                                                                                                                  | Default Value |
+| ---------------------------------------------------- | --------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+|                                                      | execution_config                              | <Icon icon="square" />                        | The configuration for the execution config.                                                                                                                                                                                                  |               |
+|                                                      | file                                          | <Icon icon="square" />                        | The configuration for the execution config file. The config file is used to load the execution config from the local file system. The file has precedence over the storage provider.                                                         |               |
+| EXECUTION_CONFIG_FILE_PATH                           | file.path                                     | <Icon icon="square" />                        | The path to the execution config file. The path is used to load the execution config from the local file system.                                                                                                                             |               |
+| EXECUTION_CONFIG_FILE_WATCH                          | file.watch                                    | <Icon icon="square" />                        | Enable the watch mode. The watch mode is used to watch the execution config file for changes. If the file changes, the router will reload the execution config without downtime.                                                             | true          |
+| EXECUTION_CONFIG_FILE_WATCH_INTERVAL                 | file.watch_interval                           | <Icon icon="square" />                        | The interval at which the file is checked for changes.                                                                                                                                                                                       | 1s            |
+|                                                      | manifest                                      | <Icon icon="square" />                        | The configuration for loading the execution config from a local manifest directory. The directory contains `mapper.json`, `latest.json`, and one `feature-flags/<name>.json` per feature flag. Mutually exclusive with `file` and `storage`. |               |
+| EXECUTION_CONFIG_MANIFEST_PATH                       | manifest.path                                 | <Icon icon="square-check" iconType="solid" /> | The path to the manifest directory.                                                                                                                                                                                                          |               |
+| EXECUTION_CONFIG_MANIFEST_SKIP_MISSING_FEATURE_FLAGS | manifest.skip_missing_feature_flags           | <Icon icon="square" />                        | Skip feature flags listed in `mapper.json` whose execution config file cannot be loaded, instead of aborting the load.                                                                                                                       | false         |
+| EXECUTION_CONFIG_MANIFEST_IGNORED_FEATURE_FLAGS      | manifest.ignored_feature_flags                | <Icon icon="square" />                        | Feature flag names to skip entirely when loading the manifest. Listed flags are not loaded even when referenced by `mapper.json`.                                                                                                            |               |
+| EXECUTION_CONFIG_MANIFEST_WATCH                      | manifest.watch                                | <Icon icon="square" />                        | Enable the watch mode. When enabled, the router stats `mapper.json` for changes and reloads the assembled execution config without downtime.                                                                                                 | false         |
+| EXECUTION_CONFIG_MANIFEST_WATCH_INTERVAL             | manifest.watch_interval                       | <Icon icon="square" />                        | The interval at which `mapper.json` is checked for changes. Only applied when `manifest.watch` is enabled.                                                                                                                                   | 1s            |
+|                                                      | execution_config.storage                      | <Icon icon="square" />                        | The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config.                                          |               |
+| EXECUTION_CONFIG_STORAGE_PROVIDER_ID                 | execution_config.storage.provider_id          | <Icon icon="square-check" iconType="solid" /> | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                                                         |               |
+| EXECUTION_CONFIG_STORAGE_OBJECT_PATH                 | execution_config.storage.object_path          | <Icon icon="square-check" iconType="solid" /> | The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket.                                                                                                              |               |
+| EXECUTION_CONFIG_FALLBACK_STORAGE_ENABLED            | execution_config.fallback_storage.enabled     | <Icon icon="square" />                        | Enable a fallback storage to fetch the execution config in case the above primary source fails.                                                                                                                                              | false         |
+| EXECUTION_CONFIG_FALLBACK_STORAGE_PROVIDER_ID        | execution_config.fallback_storage.provider_id | <Icon icon="square" />                        | The ID of the storage provider. The ID must match the ID of the storage provider in the `storage_providers` section.                                                                                                                         |               |
+| EXECUTION_CONFIG_FALLBACK_STORAGE_OBJECT_PATH        | execution_config.fallback_storage.object_path | <Icon icon="square" />                        | The path to the execution config in the storage provider. The path is used to download the execution config from the S3 bucket.                                                                                                              |               |
 
 ## Split Config Poller
 

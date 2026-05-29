@@ -349,7 +349,12 @@ describe('Organization Group tests', () => {
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Ensure that the mapper was updated
-    const getProviderResponse = await client.getOIDCProvider({});
+    const { providers } = await client.listOIDCProviders({});
+    const provider = providers.find((p) => p.name === oidcName)!;
+    expect(provider).toBeDefined();
+    expect(provider.id).toBeTruthy();
+
+    const getProviderResponse = await client.getOIDCProvider({ id: provider.id });
     expect(getProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const mapper = getProviderResponse.mappers?.find((m) => m.groupId === adminGroup.groupId);

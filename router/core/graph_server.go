@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -120,6 +121,8 @@ type BuildGraphMuxOptions struct {
 	ConfigSubgraphs       []*nodev1.Subgraph
 	RoutingUrlGroupings   map[string]map[string]bool
 	ReloadPersistentState *ReloadPersistentState
+	defaultClientTLS      *tls.Config
+	perSubgraphTLS        map[string]*tls.Config
 }
 
 func (b BuildGraphMuxOptions) IsBaseGraph() bool {
@@ -133,6 +136,8 @@ type buildMultiGraphHandlerOptions struct {
 	reloadPersistentState *ReloadPersistentState
 	currentGraphMuxes     map[string]*graphMux
 	changes               *routerconfig.Changes
+	defaultClientTLS      *tls.Config
+	perSubgraphTLS        map[string]*tls.Config
 }
 
 // reusedGraphMux holds a graph mux from the previous server that the new server
@@ -167,9 +172,21 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 	}
 
 	// Build subgraph client TLS configs (mTLS for outbound subgraph connections)
-	defaultClientTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(r.logger, &r.tls.settings.Client)
+	defaultClientTLS, perSubgraphTLS, err := buildSubgraphHTTPTLSConfigs(
+		r.logger,
+		&r.tls.settings.Client,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+	}
+
+	// Build gRPC subgraph client TLS configs
+	defaultGRPCClientTLS, perSubgraphGRPCTLS, err := buildSubgraphGRPCTLSConfigs(
+		r.logger,
+		&r.tls.settings.ClientGRPC,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not build gRPC subgraph client TLS config: %w", err)
 	}
 
 	// Base transport
@@ -341,6 +358,8 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 			ConfigSubgraphs:       response.Config.GetSubgraphs(),
 			RoutingUrlGroupings:   routingUrlGroupings,
 			ReloadPersistentState: r.reloadPersistentState,
+			defaultClientTLS:      defaultGRPCClientTLS,
+			perSubgraphTLS:        perSubgraphGRPCTLS,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build base mux: %w", err)
@@ -362,6 +381,8 @@ func newGraphServer(routerCtx context.Context, r *Router, response *routerconfig
 		reloadPersistentState: r.reloadPersistentState,
 		currentGraphMuxes:     currentMuxes,
 		changes:               response.Changes,
+		defaultClientTLS:      defaultGRPCClientTLS,
+		perSubgraphTLS:        perSubgraphGRPCTLS,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
@@ -589,6 +610,8 @@ func (s *graphServer) buildMultiGraphHandler(
 			EngineConfig:          executionConfig.GetEngineConfig(),
 			ConfigSubgraphs:       executionConfig.Subgraphs,
 			ReloadPersistentState: opts.reloadPersistentState,
+			defaultClientTLS:      opts.defaultClientTLS,
+			perSubgraphTLS:        opts.perSubgraphTLS,
 		})
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
@@ -1398,7 +1421,15 @@ func (s *graphServer) buildGraphMux(
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	if err := s.setupConnector(s.graphServerCtx, opts.EngineConfig, opts.ConfigSubgraphs, telemetryAttExpressions, tracingAttExpressions); err != nil {
+	err = s.setupConnector(s.graphServerCtx, setupConnectorOpts{
+		config:                        opts.EngineConfig,
+		configSubgraphs:               opts.ConfigSubgraphs,
+		telemetryAttributeExpressions: telemetryAttExpressions,
+		tracingAttributeExpressions:   tracingAttExpressions,
+		defaultClientTLS:              opts.defaultClientTLS,
+		perSubgraphTLS:                opts.perSubgraphTLS,
+	})
+	if err != nil {
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
@@ -1881,16 +1912,19 @@ func (s *graphServer) buildGraphMux(
 	return gm, nil
 }
 
-func (s *graphServer) setupConnector(
-	ctx context.Context,
-	config *nodev1.EngineConfiguration,
-	configSubgraphs []*nodev1.Subgraph,
-	telemetryAttributeExpressions *attributeExpressions,
-	tracingAttributeExpressions *attributeExpressions,
-) error {
+type setupConnectorOpts struct {
+	config                        *nodev1.EngineConfiguration
+	configSubgraphs               []*nodev1.Subgraph
+	telemetryAttributeExpressions *attributeExpressions
+	tracingAttributeExpressions   *attributeExpressions
+	defaultClientTLS              *tls.Config
+	perSubgraphTLS                map[string]*tls.Config
+}
+
+func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpts) error {
 	s.connector = grpcconnector.NewConnector()
 
-	for _, dsConfig := range config.DatasourceConfigurations {
+	for _, dsConfig := range opts.config.DatasourceConfigurations {
 		grpcConfig := dsConfig.GetCustomGraphql().GetGrpc()
 		if grpcConfig == nil {
 			continue
@@ -1898,7 +1932,7 @@ func (s *graphServer) setupConnector(
 
 		var sg *nodev1.Subgraph
 
-		for _, subgraph := range configSubgraphs {
+		for _, subgraph := range opts.configSubgraphs {
 			if subgraph.Id == dsConfig.Id {
 				sg = subgraph
 				break
@@ -1911,9 +1945,18 @@ func (s *graphServer) setupConnector(
 
 		pluginConfig := grpcConfig.GetPlugin()
 		if pluginConfig == nil {
+			// Resolve per-subgraph gRPC TLS config, falling back to the default.
+			var grpcTLS *tls.Config
+			if sgTLS, ok := opts.perSubgraphTLS[sg.Name]; ok {
+				grpcTLS = sgTLS
+			} else {
+				grpcTLS = opts.defaultClientTLS
+			}
+
 			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
-				Logger:   s.logger,
-				Endpoint: sg.RoutingUrl,
+				Logger:    s.logger,
+				Endpoint:  sg.RoutingUrl,
+				TLSConfig: grpcTLS,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)
@@ -1942,8 +1985,8 @@ func (s *graphServer) setupConnector(
 		tracer := s.tracerProvider.Tracer("wundergraph/cosmo/router/engine/grpc", oteltrace.WithInstrumentationVersion("0.0.1"))
 
 		getTraceAttributes := CreateGRPCTraceGetter(
-			telemetryAttributeExpressions,
-			tracingAttributeExpressions,
+			opts.telemetryAttributeExpressions,
+			opts.tracingAttributeExpressions,
 			s.spanNameFormatter,
 		)
 
@@ -1962,6 +2005,7 @@ func (s *graphServer) setupConnector(
 				StartupConfig:      startupConfig,
 				Tracer:             tracer,
 				GetTraceAttributes: getTraceAttributes,
+				DialOptions:        s.grpcPluginDialOptions,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
@@ -1984,6 +2028,7 @@ func (s *graphServer) setupConnector(
 				StartupConfig:      startupConfig,
 				Tracer:             tracer,
 				GetTraceAttributes: getTraceAttributes,
+				DialOptions:        s.grpcPluginDialOptions,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)

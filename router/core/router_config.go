@@ -25,6 +25,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 type subscriptionHooks struct {
@@ -97,6 +98,7 @@ type Config struct {
 	prometheusServer                *http.Server
 	modulesConfig                   map[string]interface{}
 	executionConfig                 *ExecutionConfig
+	manifestConfig                  *ManifestConfig
 	routerOnRequestHandlers         []func(http.Handler) http.Handler
 	routerMiddlewares               []func(http.Handler) http.Handler
 	preOriginHandlers               []TransportPreHandler
@@ -148,6 +150,7 @@ type Config struct {
 	mcp                           config.MCPConfiguration
 	connectRPC                    config.ConnectRPCConfiguration
 	plugins                       config.PluginsConfiguration
+	grpcPluginDialOptions         []grpc.DialOption
 	tracingAttributes             []config.CustomAttribute
 	subscriptionHooks             subscriptionHooks
 }
@@ -343,6 +346,7 @@ func (c *Config) Usage() map[string]any {
 	usage["cosmo_cdn"] = c.cdnConfig.URL == "https://cosmo-cdn.wundergraph.com"
 
 	usage["static_execution_config"] = c.staticExecutionConfig != nil
+	usage["manifest_config"] = c.manifestConfig != nil
 
 	if c.clusterName != "" {
 		usage["cluster_name"] = c.clusterName

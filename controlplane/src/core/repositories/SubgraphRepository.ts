@@ -62,6 +62,7 @@ import {
   SchemaUsageTrafficInspector,
 } from '../services/SchemaUsageTrafficInspector.js';
 import {
+  applyIdpNamespaceGate,
   getFederatedGraphRouterCompatibilityVersion,
   hasLabelsChanged,
   normalizeLabels,
@@ -741,6 +742,11 @@ export class SubgraphRepository {
    * @private
    */
   static applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+    // Apply the IdP gate regardless of RBAC level. Empty allowed-set → no rows.
+    if (!applyIdpNamespaceGate(rbac, schema.targets.namespaceId, conditions)) {
+      return false;
+    }
+
     if (!rbac || rbac.isOrganizationViewer) {
       return true;
     }
@@ -2146,8 +2152,8 @@ export class SubgraphRepository {
         });
         if (matches.length === 0) {
           const message = isDeleted
-            ? `The subgraph ${subgraphName} is not proposed to be deleted in any of the approved proposals.`
-            : `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`;
+            ? `The subgraph ${subgraphName} is not proposed to be deleted in any of the approved or draft proposals.`
+            : `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved or draft proposals.`;
           if (proposalConfig.checkSeverityLevel === 'warn') {
             proposalMatchMessage = message;
           } else {
