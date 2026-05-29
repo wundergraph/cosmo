@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.121.1](https://github.com/wundergraph/cosmo/compare/wgc@0.121.0...wgc@0.121.1) (2026-05-27)
+
+**Note:** Version bump only for package wgc
+
+# [0.121.0](https://github.com/wundergraph/cosmo/compare/wgc@0.120.0...wgc@0.121.0) (2026-05-27)
+
+### Features
+
+* studio handles analytics downtime gracefully ([#2878](https://github.com/wundergraph/cosmo/issues/2878)) ([716b786](https://github.com/wundergraph/cosmo/commit/716b786bd55008292015ec8950182aa61e98cb16)) (@comatory)
+
 # [0.120.0](https://github.com/wundergraph/cosmo/compare/wgc@0.118.1...wgc@0.120.0) (2026-05-18)
 
 ### Features

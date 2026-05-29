@@ -8,12 +8,10 @@ export class OnboardingRepository {
     private organizationId: string,
   ) {}
 
-  public async createOrUpdate({ userId, slack, email }: { userId: string; slack: boolean; email: boolean }) {
+  public async createOrUpdate({ userId }: { userId: string }) {
     const values = {
       userId,
       organizationId: this.organizationId,
-      slack,
-      email,
     };
 
     const result = await this.db
@@ -22,8 +20,6 @@ export class OnboardingRepository {
       .onConflictDoUpdate({
         target: [schema.onboarding.userId, schema.onboarding.organizationId, schema.onboarding.version],
         set: {
-          slack,
-          email,
           finishedAt: null,
         },
       })

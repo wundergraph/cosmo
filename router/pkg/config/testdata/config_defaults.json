@@ -388,6 +388,7 @@
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
+    "ItemDelay": 0,
     "Timeout": 30000000000,
     "InMemoryFallback": true
   },

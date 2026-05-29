@@ -32,8 +32,6 @@ export function createOnboarding(
           details: 'Only the organization creator can create onboarding.',
         },
         federatedGraphsCount: 0,
-        slack: false,
-        email: false,
       };
     }
 
@@ -43,8 +41,6 @@ export function createOnboarding(
     const [onboarding, federatedGraphsCount] = await Promise.all([
       onboardingRepo.createOrUpdate({
         userId: authContext.userId,
-        slack: req.slack,
-        email: req.email,
       }),
       fedGraphRepo.count(),
     ]);
@@ -55,8 +51,6 @@ export function createOnboarding(
       },
       finishedAt: onboarding.finishedAt?.toISOString(),
       federatedGraphsCount,
-      slack: onboarding.slack,
-      email: onboarding.email,
     };
   });
 }

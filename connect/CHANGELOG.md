@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.145.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.144.0...@wundergraph/cosmo-connect@0.145.0) (2026-05-27)
+
+### Features
+
+* declutter step 1 in the onboarding + new empty state ([#2888](https://github.com/wundergraph/cosmo/issues/2888)) ([89635b7](https://github.com/wundergraph/cosmo/commit/89635b75e4cb6ff893d6c4fbbe2b541cfc0dfa12)) (@comatory)
+
+# [0.144.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.143.0...@wundergraph/cosmo-connect@0.144.0) (2026-05-27)
+
+### Features
+
+* **dx:** add .gitattributes to collapse generated files in GitHub PRs ([#2891](https://github.com/wundergraph/cosmo/issues/2891)) ([b96296a](https://github.com/wundergraph/cosmo/commit/b96296acc66763fb59f9879573658350079fc19c)) (@comatory)
+* studio handles analytics downtime gracefully ([#2878](https://github.com/wundergraph/cosmo/issues/2878)) ([716b786](https://github.com/wundergraph/cosmo/commit/716b786bd55008292015ec8950182aa61e98cb16)) (@comatory)
+
 # [0.143.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.142.1...@wundergraph/cosmo-connect@0.143.0) (2026-05-12)
 
 ### Features

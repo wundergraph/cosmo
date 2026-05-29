@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.23.9](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.8...@wundergraph/protographic@0.23.9) (2026-05-27)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.8](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.7...@wundergraph/protographic@0.23.8) (2026-05-27)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
 ## [0.23.7](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.6...@wundergraph/protographic@0.23.7) (2026-05-18)
 
 **Note:** Version bump only for package @wundergraph/protographic
