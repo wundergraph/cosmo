@@ -593,8 +593,9 @@ describe('Batch publish subgraphs tests', () => {
     expect(await getCompositionCount(client, fedGraphB, DEFAULT_NAMESPACE, true)).toBe(bBaseBefore + 1);
     // The contract of fed graph A is recomposed exactly once as part of its source graph.
     expect(await getCompositionCount(client, contractA, DEFAULT_NAMESPACE, true)).toBe(contractBefore + 1);
-    // Fed graph B also gains a feature-flag composition (feature subgraph B changed), beyond its single base recompose.
-    expect(await getCompositionCount(client, fedGraphB, DEFAULT_NAMESPACE, false)).toBeGreaterThan(bTotalBefore + 1);
+    // Fed graph B gains exactly two compositions: one base recompose plus one feature-flag composition for the
+    // single enabled feature flag whose feature subgraph changed.
+    expect(await getCompositionCount(client, fedGraphB, DEFAULT_NAMESPACE, false)).toBe(bTotalBefore + 2);
 
     // The composed schemas reflect every published change.
     const sdlA = await client.getFederatedGraphSDLByName({ name: fedGraphA, namespace: DEFAULT_NAMESPACE });
