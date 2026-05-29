@@ -35,14 +35,15 @@ export const InvitationCard = ({ id, name, slug, invitedBy, onAcceptSuccess }: I
             description: accept ? 'Accepted the invite successfully.' : 'Declined the invite successfully. ',
             duration: 3000,
           });
+          if (accept && onAcceptSuccess) {
+            onAcceptSuccess(slug);
+            return;
+          }
           refetch();
           sessionQueryClient.invalidateQueries({
             queryKey: ['user', router.asPath],
           });
           setAccepted(undefined);
-          if (accept) {
-            onAcceptSuccess?.(slug);
-          }
         },
         onError: () => {
           setAccepted(undefined);

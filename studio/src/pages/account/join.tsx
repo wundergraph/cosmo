@@ -46,12 +46,17 @@ const JoinInvitationsPage: NextPageWithLayout<{
   const personalOrgSlug = user?.currentOrganization?.slug;
   const invitationCount = invitations?.length ?? 0;
 
+  const handleInvitationAcceptButtonClick = (slug: string) => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('redirected-to-invited-org', 'true');
+
+    router.push(`/${slug}?${queryParams.toString()}`);
+  };
+  const handleSkipButtonClick = () => router.push(`/${personalOrgSlug}`);
+
   if (isLoading || !user) {
     return <Loader fullscreen />;
   }
-
-  const handleInvitationAcceptButtonClick = (slug: string) => router.push(`/${slug}`);
-  const handleSkipButtonClick = () => router.push(`/${personalOrgSlug}`);
 
   return (
     <div className="relative min-h-screen px-4 py-16">
