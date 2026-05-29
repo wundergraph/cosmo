@@ -959,7 +959,7 @@ export class SchemaCheckRepository {
       });
     }
 
-    let proposalMatchMessage: string | undefined;
+    let proposalMatchMessage = '';
     for (const [subgraphName, checkSubgraph] of checkSubgraphs.entries()) {
       const {
         subgraph,
@@ -1482,7 +1482,7 @@ export class SchemaCheckRepository {
       graphPruneErrors,
       compositionWarnings,
       operationUsageStats: collectOperationUsageStats(inspectedOperations),
-      proposalMatchMessage,
+      proposalMatchMessage: proposalMatchMessage || undefined,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
     };
