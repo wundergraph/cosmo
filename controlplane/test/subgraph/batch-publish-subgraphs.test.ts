@@ -12,7 +12,7 @@ import {
 } from '../../src/core/test-util.js';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import {
-    createAndPublishSubgraph,
+  createAndPublishSubgraph,
   createFeatureFlag,
   createFederatedGraph,
   createThenPublishFeatureSubgraph,
