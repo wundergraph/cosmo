@@ -671,8 +671,20 @@ func TestRouterPluginWithHeaderForwarding(t *testing.T) {
 
 			require.Equal(t, []string{"acme"}, captured.Get("x-tenant-id"))
 
+			// Look specifically for a plugin gRPC span — the router emits its own spans
+			// regardless of whether the plugin's trace was recorded, so a plain non-empty
+			// check would silently pass if the propagator-vs-metadata regression came back.
 			snapshots := exporter.GetSpans().Snapshots()
-			require.NotEmpty(t, snapshots, "expected distributed trace spans to be recorded alongside header propagation")
+			pluginSpans := 0
+			for _, sn := range snapshots {
+				for _, attr := range sn.Attributes() {
+					if attr.Key == otel.WgOperationProtocol && attr.Value.AsString() == "grpc" {
+						pluginSpans++
+						break
+					}
+				}
+			}
+			require.NotZero(t, pluginSpans, "expected at least one plugin gRPC span alongside header propagation")
 		})
 	})
 }
