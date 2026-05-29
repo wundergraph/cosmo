@@ -1016,6 +1016,37 @@ export class SubgraphRepository {
       : Promise.resolve([]);
   }
 
+  public async getSubgraphNameByIds(subgraphIds: string[]): Promise<Map<string, string>> {
+    const results = new Map<string, string>();
+    if (subgraphIds.length === 0) {
+      return results;
+    }
+
+    const pendingIds = [...new Set(subgraphIds)];
+    while (pendingIds.length > 0) {
+      const chunkOfIds = pendingIds.splice(0, 100);
+      const chunkOfSubgraphNames = await this.db
+        .select({
+          id: subgraphs.id,
+          name: targets.name,
+        })
+        .from(targets)
+        .innerJoin(subgraphs, eq(subgraphs.targetId, targets.id))
+        .where(and(eq(targets.type, 'subgraph'), inArray(subgraphs.id, chunkOfIds)))
+        .execute();
+
+      for (const subgraph of chunkOfSubgraphNames) {
+        results.set(subgraph.id, subgraph.name);
+      }
+
+      if (chunkOfIds.length < 100) {
+        break;
+      }
+    }
+
+    return results;
+  }
+
   private async getSubgraphsMatching({
     conditions,
     published,
@@ -1050,7 +1081,7 @@ export class SubgraphRepository {
         svSchemaSDL: schema.schemaVersion.schemaSDL,
         svIsV2Graph: schema.schemaVersion.isV2Graph,
         // Proto
-        protoSchemaVersion: schema.protobufSchemaVersions.protoSchema,
+        protoSchema: schema.protobufSchemaVersions.protoSchema,
         protoMappings: schema.protobufSchemaVersions.protoMappings,
         protoLock: schema.protobufSchemaVersions.protoLock,
         // Plugin Data
@@ -1095,14 +1126,14 @@ export class SubgraphRepository {
     return subgraphs.map((sg) => {
       let proto: ProtoSubgraph | undefined;
       if (sg.type === 'grpc_plugin' || sg.type === 'grpc_service') {
-        if (!sg.protoSchemaVersion) {
+        if (!sg.protoSchema) {
           this.logger.warn(
             `Missing protobuf schema for ${sg.type} subgraph with schemaVersionId: ${sg.schemaVersionId}`,
           );
         }
 
         proto = {
-          schema: sg.protoSchemaVersion ?? '',
+          schema: sg.protoSchema ?? '',
           mappings: sg.protoMappings ?? '',
           lock: sg.protoLock ?? '',
         };
