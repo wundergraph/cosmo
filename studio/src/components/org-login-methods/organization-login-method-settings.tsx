@@ -1,11 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { useMutation } from '@connectrpc/connect-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
-  getOrganizationLoginMethods,
-  listOIDCProviders,
-  updateOrganizationLoginMethods,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { OIDCProvider, OrganizationLoginMethods } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { updateOrganizationLoginMethods } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
@@ -19,11 +16,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader } from '@/components/ui/loader';
-import { EmptyState } from '@/components/empty-state';
 import { useToast } from '@/components/ui/use-toast';
 import { docsBaseURL } from '@/lib/constants';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 
 // Sentinel values representing built-in methods, which are not SSO provider ids.
@@ -73,22 +67,19 @@ const toSelected = (m: {
   return values;
 };
 
-export function OrganizationLoginMethodSettings() {
+export function OrganizationLoginMethodSettings({
+  loginMethods,
+  providers,
+  refetchLoginMethods,
+}: {
+  // The org's current allow-list, fetched and entitlement-gated by the page.
+  loginMethods: OrganizationLoginMethods | undefined;
+  // Connected OIDC providers, fetched by the page (used as SSO-app options).
+  providers: OIDCProvider[];
+  // Refetches the page's getOrganizationLoginMethods query after a save.
+  refetchLoginMethods: () => void;
+}) {
   const { toast } = useToast();
-
-  const {
-    data: loginMethodsData,
-    isLoading: isLoadingLoginMethods,
-    error: loginMethodsError,
-    refetch: refetchLoginMethods,
-  } = useQuery(getOrganizationLoginMethods, {});
-
-  const {
-    data: providersData,
-    isLoading: isLoadingProviders,
-    error: providersError,
-    refetch: refetchProviders,
-  } = useQuery(listOIDCProviders, {});
 
   const { mutate, isPending } = useMutation(updateOrganizationLoginMethods);
 
@@ -101,13 +92,11 @@ export function OrganizationLoginMethodSettings() {
   const [pendingAffectedNamespaces, setPendingAffectedNamespaces] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!loginMethodsData?.loginMethods) return;
-    const next = toSelected(loginMethodsData.loginMethods);
+    if (!loginMethods) return;
+    const next = toSelected(loginMethods);
     setSelected(next);
     setServer(next);
-  }, [loginMethodsData]);
-
-  const providers = useMemo(() => providersData?.providers ?? [], [providersData?.providers]);
+  }, [loginMethods]);
 
   const methodOptions = useMemo<MultiSelectOption[]>(
     () => [
@@ -164,50 +153,6 @@ export function OrganizationLoginMethodSettings() {
     setConfirmDialogOpen(false);
     doSave(true);
   };
-
-  if (isLoadingLoginMethods || isLoadingProviders) {
-    return (
-      <SectionCard>
-        <Loader />
-      </SectionCard>
-    );
-  }
-
-  if (
-    loginMethodsError ||
-    providersError ||
-    !loginMethodsData ||
-    !providersData ||
-    loginMethodsData.response?.code !== EnumStatusCode.OK ||
-    providersData.response?.code !== EnumStatusCode.OK
-  ) {
-    return (
-      <SectionCard>
-        <EmptyState
-          className="h-auto py-10"
-          icon={<ExclamationTriangleIcon />}
-          title="Could not load login method settings"
-          description={
-            loginMethodsData?.response?.details ||
-            providersData?.response?.details ||
-            loginMethodsError?.message ||
-            providersError?.message ||
-            'Please try again'
-          }
-          actions={
-            <Button
-              onClick={() => {
-                refetchLoginMethods();
-                refetchProviders();
-              }}
-            >
-              Retry
-            </Button>
-          }
-        />
-      </SectionCard>
-    );
-  }
 
   return (
     <SectionCard>

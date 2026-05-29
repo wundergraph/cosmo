@@ -16,10 +16,9 @@ import { docsBaseURL } from '@/lib/constants';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { ExclamationTriangleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { OIDCProvider, OrganizationLoginMethods } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
-  getOrganizationLoginMethods,
   listNamespaceLoginMethods,
-  listOIDCProviders,
   updateNamespaceLoginMethods,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
@@ -56,7 +55,16 @@ const SectionCard = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export function NamespaceLoginMethodSettings() {
+export function NamespaceLoginMethodSettings({
+  orgLoginMethods,
+  providers,
+}: {
+  // The org's current allow-list, fetched and entitlement-gated by the page.
+  // Used to limit the per-namespace options to methods the org allows.
+  orgLoginMethods: OrganizationLoginMethods | undefined;
+  // Connected OIDC providers, fetched by the page (used as SSO-app options).
+  providers: OIDCProvider[];
+}) {
   const organizationSlug = useCurrentOrganization()?.slug;
   const { toast } = useToast();
 
@@ -65,25 +73,11 @@ export function NamespaceLoginMethodSettings() {
   const { namespaceByName, isLoading: isLoadingWorkspace } = useWorkspace();
 
   const {
-    data: providersData,
-    isLoading: isLoadingProviders,
-    error: providersError,
-    refetch: refetchProviders,
-  } = useQuery(listOIDCProviders, {});
-
-  const {
     data: mappingsData,
     isLoading: isLoadingMappings,
     error: mappingsError,
     refetch: refetchMappings,
   } = useQuery(listNamespaceLoginMethods, {});
-
-  const {
-    data: orgLoginMethodsData,
-    isLoading: isLoadingOrgLoginMethods,
-    error: orgLoginMethodsError,
-    refetch: refetchOrgLoginMethods,
-  } = useQuery(getOrganizationLoginMethods, {});
 
   const { mutate, isPending } = useMutation(updateNamespaceLoginMethods);
 
@@ -92,9 +86,6 @@ export function NamespaceLoginMethodSettings() {
     [namespaceByName],
   );
 
-  const providers = useMemo(() => providersData?.providers ?? [], [providersData?.providers]);
-
-  const orgLoginMethods = orgLoginMethodsData?.loginMethods;
   const orgIsRestricted = orgLoginMethods?.isRestricted ?? false;
 
   const methodOptions = useMemo<MultiSelectOption[]>(() => {
@@ -204,7 +195,7 @@ export function NamespaceLoginMethodSettings() {
     );
   };
 
-  if (isLoadingWorkspace || isLoadingProviders || isLoadingMappings || isLoadingOrgLoginMethods) {
+  if (isLoadingWorkspace || isLoadingMappings) {
     return (
       <SectionCard>
         <Loader />
@@ -212,38 +203,18 @@ export function NamespaceLoginMethodSettings() {
     );
   }
 
-  if (
-    providersError ||
-    mappingsError ||
-    orgLoginMethodsError ||
-    !providersData ||
-    !mappingsData ||
-    !orgLoginMethodsData ||
-    providersData.response?.code !== EnumStatusCode.OK ||
-    mappingsData.response?.code !== EnumStatusCode.OK ||
-    orgLoginMethodsData.response?.code !== EnumStatusCode.OK
-  ) {
+  if (mappingsError || !mappingsData || mappingsData.response?.code !== EnumStatusCode.OK) {
     return (
       <SectionCard>
         <EmptyState
           className="h-auto py-10"
           icon={<ExclamationTriangleIcon />}
           title="Could not load namespace login methods"
-          description={
-            providersData?.response?.details ||
-            mappingsData?.response?.details ||
-            orgLoginMethodsData?.response?.details ||
-            providersError?.message ||
-            mappingsError?.message ||
-            orgLoginMethodsError?.message ||
-            'Please try again'
-          }
+          description={mappingsData?.response?.details || mappingsError?.message || 'Please try again'}
           actions={
             <Button
               onClick={() => {
-                refetchProviders();
                 refetchMappings();
-                refetchOrgLoginMethods();
               }}
             >
               Retry
