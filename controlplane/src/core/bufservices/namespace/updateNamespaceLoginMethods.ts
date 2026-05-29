@@ -2,12 +2,12 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  UpdateNamespaceSSOMappingsRequest,
-  UpdateNamespaceSSOMappingsResponse,
+  UpdateNamespaceLoginMethodsRequest,
+  UpdateNamespaceLoginMethodsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
-import { NamespaceSsoMappingRepository } from '../../repositories/NamespaceSsoMappingRepository.js';
+import { NamespaceLoginMethodRepository } from '../../repositories/NamespaceLoginMethodRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { OrganizationLoginMethodRepository } from '../../repositories/OrganizationLoginMethodRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -15,14 +15,14 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isNamespaceAllowed } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
-export function updateNamespaceSSOMappings(
+export function updateNamespaceLoginMethods(
   opts: RouterOptions,
-  req: UpdateNamespaceSSOMappingsRequest,
+  req: UpdateNamespaceLoginMethodsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<UpdateNamespaceSSOMappingsResponse>> {
+): Promise<PlainMessage<UpdateNamespaceLoginMethodsResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<UpdateNamespaceSSOMappingsResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<UpdateNamespaceLoginMethodsResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -128,7 +128,7 @@ export function updateNamespaceSSOMappings(
       namespacesById.set(namespace.id, namespace);
     }
 
-    const mappingRepo = new NamespaceSsoMappingRepository(opts.db);
+    const mappingRepo = new NamespaceLoginMethodRepository(opts.db);
     await mappingRepo.setMappings({
       organizationId: authContext.organizationId,
       rbac: authContext.rbac,

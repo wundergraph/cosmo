@@ -1,6 +1,6 @@
 {
-  "id": "f09af38f-4da0-4e2a-a822-586b665f9a88",
-  "prevId": "54c4a614-c82a-4ee6-a12c-c22392ea613a",
+  "id": "cf701524-2af6-40c6-b864-aa8b9a3a95aa",
+  "prevId": "8462c8f2-a1d5-418c-8689-972e478ac5d6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3348,6 +3348,165 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "public.namespace_login_methods": {
+      "name": "namespace_login_methods",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "namespace_id": {
+          "name": "namespace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sso_provider_id": {
+          "name": "sso_provider_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_password_login": {
+          "name": "is_password_login",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_google_login": {
+          "name": "is_google_login",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_github_login": {
+          "name": "is_github_login",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "nlm_namespace_id_idx": {
+          "name": "nlm_namespace_id_idx",
+          "columns": [
+            {
+              "expression": "namespace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nlm_sso_provider_id_idx": {
+          "name": "nlm_sso_provider_id_idx",
+          "columns": [
+            {
+              "expression": "sso_provider_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nlm_unique_sso": {
+          "name": "nlm_unique_sso",
+          "columns": [
+            {
+              "expression": "namespace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sso_provider_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"namespace_login_methods\".\"sso_provider_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "nlm_unique_builtin": {
+          "name": "nlm_unique_builtin",
+          "columns": [
+            {
+              "expression": "namespace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"namespace_login_methods\".\"sso_provider_id\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "namespace_login_methods_namespace_id_namespaces_id_fk": {
+          "name": "namespace_login_methods_namespace_id_namespaces_id_fk",
+          "tableFrom": "namespace_login_methods",
+          "tableTo": "namespaces",
+          "columnsFrom": [
+            "namespace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "namespace_login_methods_sso_provider_id_oidc_providers_id_fk": {
+          "name": "namespace_login_methods_sso_provider_id_oidc_providers_id_fk",
+          "tableFrom": "namespace_login_methods",
+          "tableTo": "oidc_providers",
+          "columnsFrom": [
+            "sso_provider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "nlm_builtin_xor_sso_check": {
+          "name": "nlm_builtin_xor_sso_check",
+          "value": "(\"namespace_login_methods\".\"sso_provider_id\" IS NOT NULL) <> (\"namespace_login_methods\".\"is_password_login\" OR \"namespace_login_methods\".\"is_google_login\" OR \"namespace_login_methods\".\"is_github_login\")"
+        }
+      }
+    },
     "public.namespace_proposal_config": {
       "name": "namespace_proposal_config",
       "schema": "",
@@ -3414,165 +3573,6 @@
         }
       },
       "checkConstraints": {}
-    },
-    "public.namespace_sso_providers": {
-      "name": "namespace_sso_providers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "namespace_id": {
-          "name": "namespace_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sso_provider_id": {
-          "name": "sso_provider_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_password_login": {
-          "name": "is_password_login",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_google_login": {
-          "name": "is_google_login",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_github_login": {
-          "name": "is_github_login",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "nssp_namespace_id_idx": {
-          "name": "nssp_namespace_id_idx",
-          "columns": [
-            {
-              "expression": "namespace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "nssp_sso_provider_id_idx": {
-          "name": "nssp_sso_provider_id_idx",
-          "columns": [
-            {
-              "expression": "sso_provider_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "nssp_unique_sso": {
-          "name": "nssp_unique_sso",
-          "columns": [
-            {
-              "expression": "namespace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "sso_provider_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"namespace_sso_providers\".\"sso_provider_id\" IS NOT NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "nssp_unique_builtin": {
-          "name": "nssp_unique_builtin",
-          "columns": [
-            {
-              "expression": "namespace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"namespace_sso_providers\".\"sso_provider_id\" IS NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "namespace_sso_providers_namespace_id_namespaces_id_fk": {
-          "name": "namespace_sso_providers_namespace_id_namespaces_id_fk",
-          "tableFrom": "namespace_sso_providers",
-          "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "namespace_sso_providers_sso_provider_id_oidc_providers_id_fk": {
-          "name": "namespace_sso_providers_sso_provider_id_oidc_providers_id_fk",
-          "tableFrom": "namespace_sso_providers",
-          "tableTo": "oidc_providers",
-          "columnsFrom": [
-            "sso_provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {
-        "nssp_builtin_xor_sso_check": {
-          "name": "nssp_builtin_xor_sso_check",
-          "value": "(\"namespace_sso_providers\".\"sso_provider_id\" IS NOT NULL) <> (\"namespace_sso_providers\".\"is_password_login\" OR \"namespace_sso_providers\".\"is_google_login\" OR \"namespace_sso_providers\".\"is_github_login\")"
-        }
-      }
     },
     "public.namespace_subgraph_check_extensions_config": {
       "name": "namespace_subgraph_check_extensions_config",
@@ -3909,14 +3909,14 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": false
+          "default": true
         },
         "email": {
           "name": "email",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": false
+          "default": true
         },
         "user_id": {
           "name": "user_id",

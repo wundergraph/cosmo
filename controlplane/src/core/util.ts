@@ -44,7 +44,7 @@ import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 import { RBACEvaluator } from './services/RBACEvaluator.js';
 import type { OidcRepository } from './repositories/OidcRepository.js';
 import type { OrganizationRepository } from './repositories/OrganizationRepository.js';
-import type { NamespaceSsoMappingRepository } from './repositories/NamespaceSsoMappingRepository.js';
+import type { NamespaceLoginMethodRepository } from './repositories/NamespaceLoginMethodRepository.js';
 import type { OrganizationLoginMethodRepository } from './repositories/OrganizationLoginMethodRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
@@ -1006,7 +1006,7 @@ export async function buildAuthState(
   deps: {
     oidcRepo: OidcRepository;
     orgRepo: OrganizationRepository;
-    namespaceSsoMappingRepo: NamespaceSsoMappingRepository;
+    namespaceLoginMethodRepo: NamespaceLoginMethodRepository;
     orgLoginMethodRepo: OrganizationLoginMethodRepository;
   },
   input: { organizationId: string; userId: string; idpAlias: string | null | undefined },
@@ -1025,7 +1025,7 @@ export async function buildAuthState(
     throw new LoginMethodNotAllowedError();
   }
 
-  const namespaceAccess = await deps.namespaceSsoMappingRepo.allowedNamespaces({
+  const namespaceAccess = await deps.namespaceLoginMethodRepo.allowedNamespaces({
     organizationId: input.organizationId,
     loginMethod,
   });
@@ -1079,7 +1079,7 @@ export function isLoginMethodAllowedToUpdate(
 
 /**
  * Whether a single login-method config row (from `organization_login_methods` or
- * `namespace_sso_providers`) matches the given login method. Shared by both gates
+ * `namespace_login_methods`) matches the given login method. Shared by both gates
  * so the matching rule lives in one place. API keys (and any unknown method) do
  * not match a row; callers that exempt API keys must short-circuit before this.
  */

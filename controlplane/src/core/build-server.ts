@@ -47,7 +47,7 @@ import {
 } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { OidcRepository } from './repositories/OidcRepository.js';
-import { NamespaceSsoMappingRepository } from './repositories/NamespaceSsoMappingRepository.js';
+import { NamespaceLoginMethodRepository } from './repositories/NamespaceLoginMethodRepository.js';
 import { OrganizationLoginMethodRepository } from './repositories/OrganizationLoginMethodRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 import {
@@ -291,13 +291,13 @@ export default async function build(opts: BuildConfig) {
   const webAuth = new WebSessionAuthenticator(fastify.db, opts.auth.secret, userRepo);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const oidcRepository = new OidcRepository(fastify.db);
-  const namespaceSsoMappingRepository = new NamespaceSsoMappingRepository(fastify.db);
+  const namespaceLoginMethodRepository = new NamespaceLoginMethodRepository(fastify.db);
   const organizationLoginMethodRepository = new OrganizationLoginMethodRepository(fastify.db);
   const accessTokenAuth = new AccessTokenAuthenticator(
     organizationRepository,
     authUtils,
     oidcRepository,
-    namespaceSsoMappingRepository,
+    namespaceLoginMethodRepository,
     organizationLoginMethodRepository,
   );
   const authenticator = new Authentication(
@@ -307,7 +307,7 @@ export default async function build(opts: BuildConfig) {
     graphKeyAuth,
     organizationRepository,
     oidcRepository,
-    namespaceSsoMappingRepository,
+    namespaceLoginMethodRepository,
     organizationLoginMethodRepository,
     logger,
   );

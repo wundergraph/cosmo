@@ -6,7 +6,7 @@ import {
   UpdateOrganizationLoginMethodsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { NamespaceSsoMappingRepository } from '../../repositories/NamespaceSsoMappingRepository.js';
+import { NamespaceLoginMethodRepository } from '../../repositories/NamespaceLoginMethodRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { OrganizationLoginMethodRepository } from '../../repositories/OrganizationLoginMethodRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
@@ -111,7 +111,7 @@ export function updateOrganizationLoginMethods(
 
       // Namespace reconciliation: find namespace mappings referencing a method the
       // new org allow-list disallows.
-      const mappingRepo = new NamespaceSsoMappingRepository(opts.db);
+      const mappingRepo = new NamespaceLoginMethodRepository(opts.db);
       const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
       const mappings = await mappingRepo.listMappings({ organizationId: authContext.organizationId });
       for (const m of mappings) {

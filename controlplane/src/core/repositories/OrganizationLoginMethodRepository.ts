@@ -1,7 +1,7 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, inArray, isNotNull, isNull, notInArray } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
-import { namespaces, namespaceSsoProviders, organizationLoginMethods } from '../../db/schema.js';
+import { namespaces, namespaceLoginMethods, organizationLoginMethods } from '../../db/schema.js';
 import { traced } from '../tracing.js';
 import { loginMethodMatchesRow } from '../util.js';
 import type { LoginMethod } from '../../types/index.js';
@@ -136,14 +136,14 @@ export class OrganizationLoginMethodRepository {
 
       // Drop namespace SSO rows whose provider is no longer allowed.
       const ssoConditions = [
-        inArray(namespaceSsoProviders.namespaceId, orgNamespaceIds),
-        isNotNull(namespaceSsoProviders.ssoProviderId),
+        inArray(namespaceLoginMethods.namespaceId, orgNamespaceIds),
+        isNotNull(namespaceLoginMethods.ssoProviderId),
       ];
       if (input.allowedSsoProviderIds.length > 0) {
-        ssoConditions.push(notInArray(namespaceSsoProviders.ssoProviderId, input.allowedSsoProviderIds));
+        ssoConditions.push(notInArray(namespaceLoginMethods.ssoProviderId, input.allowedSsoProviderIds));
       }
       await tx
-        .delete(namespaceSsoProviders)
+        .delete(namespaceLoginMethods)
         .where(and(...ssoConditions))
         .execute();
 
@@ -153,14 +153,14 @@ export class OrganizationLoginMethodRepository {
       // namespaces (few), so a simple read-then-write per row is clear and sufficient.
       const builtinRows = await tx
         .select({
-          id: namespaceSsoProviders.id,
-          isPasswordLogin: namespaceSsoProviders.isPasswordLogin,
-          isGoogleLogin: namespaceSsoProviders.isGoogleLogin,
-          isGithubLogin: namespaceSsoProviders.isGithubLogin,
+          id: namespaceLoginMethods.id,
+          isPasswordLogin: namespaceLoginMethods.isPasswordLogin,
+          isGoogleLogin: namespaceLoginMethods.isGoogleLogin,
+          isGithubLogin: namespaceLoginMethods.isGithubLogin,
         })
-        .from(namespaceSsoProviders)
+        .from(namespaceLoginMethods)
         .where(
-          and(inArray(namespaceSsoProviders.namespaceId, orgNamespaceIds), isNull(namespaceSsoProviders.ssoProviderId)),
+          and(inArray(namespaceLoginMethods.namespaceId, orgNamespaceIds), isNull(namespaceLoginMethods.ssoProviderId)),
         )
         .execute();
 
@@ -181,9 +181,9 @@ export class OrganizationLoginMethodRepository {
 
         if (!next.isPasswordLogin && !next.isGoogleLogin && !next.isGithubLogin) {
           // No allowed method remains, so the namespace falls back to default-open.
-          await tx.delete(namespaceSsoProviders).where(eq(namespaceSsoProviders.id, row.id)).execute();
+          await tx.delete(namespaceLoginMethods).where(eq(namespaceLoginMethods.id, row.id)).execute();
         } else {
-          await tx.update(namespaceSsoProviders).set(next).where(eq(namespaceSsoProviders.id, row.id)).execute();
+          await tx.update(namespaceLoginMethods).set(next).where(eq(namespaceLoginMethods.id, row.id)).execute();
         }
       }
     });

@@ -5,7 +5,7 @@ import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
 import { OrganizationLoginMethodRepository } from '../src/core/repositories/OrganizationLoginMethodRepository.js';
 import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
-import { NamespaceSsoMappingRepository } from '../src/core/repositories/NamespaceSsoMappingRepository.js';
+import { NamespaceLoginMethodRepository } from '../src/core/repositories/NamespaceLoginMethodRepository.js';
 import { LoginMethodNotAllowedError } from '../src/core/errors/errors.js';
 import { buildAuthState } from '../src/core/util.js';
 import { loginAs, SetupTest } from './test-util.js';
@@ -96,7 +96,7 @@ describe('OrganizationLoginMethodRepository', () => {
     const get = await client.getOrganizationLoginMethods({});
     expect(get.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
 
-    const list = await client.listNamespaceSSOMappings({});
+    const list = await client.listNamespaceLoginMethods({});
     expect(list.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
 
     const update = await client.updateOrganizationLoginMethods({
@@ -227,7 +227,7 @@ describe('OrganizationLoginMethodRepository', () => {
     const nsId = namespaces.find((n) => n.name === 'staging')!.id;
 
     // Namespace mapped to github only.
-    const mapped = await client.updateNamespaceSSOMappings({
+    const mapped = await client.updateNamespaceLoginMethods({
       mappings: [
         {
           namespaceId: nsId,
@@ -260,7 +260,7 @@ describe('OrganizationLoginMethodRepository', () => {
       confirmNamespaceChanges: true,
     });
     expect(applied.response?.code).toBe(EnumStatusCode.OK);
-    const list = await client.listNamespaceSSOMappings({});
+    const list = await client.listNamespaceLoginMethods({});
     expect(list.mappings.find((m) => m.namespaceId === nsId)).toBeUndefined();
     await server.close();
   });
@@ -293,7 +293,7 @@ describe('OrganizationLoginMethodRepository', () => {
     const nsId = namespaces.find((n) => n.name === 'prod')!.id;
 
     // Try to map the namespace to github (disallowed at org level) → rejected.
-    const res = await client.updateNamespaceSSOMappings({
+    const res = await client.updateNamespaceLoginMethods({
       mappings: [
         {
           namespaceId: nsId,
@@ -337,7 +337,7 @@ describe('OrganizationLoginMethodRepository', () => {
     const deps = {
       oidcRepo: new OidcRepository(server.db),
       orgRepo: new OrganizationRepository(pino(), server.db, undefined),
-      namespaceSsoMappingRepo: new NamespaceSsoMappingRepository(server.db),
+      namespaceLoginMethodRepo: new NamespaceLoginMethodRepository(server.db),
       orgLoginMethodRepo: new OrganizationLoginMethodRepository(server.db),
     };
 

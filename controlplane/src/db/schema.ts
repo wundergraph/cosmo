@@ -1985,8 +1985,8 @@ export const oidcProviders = pgTable(
   },
 );
 
-export const namespaceSsoProviders = pgTable(
-  'namespace_sso_providers', // nssp
+export const namespaceLoginMethods = pgTable(
+  'namespace_login_methods', // nlm
   {
     id: uuid('id').notNull().primaryKey().defaultRandom(),
     namespaceId: uuid('namespace_id')
@@ -2000,19 +2000,19 @@ export const namespaceSsoProviders = pgTable(
   },
   (t) => {
     return {
-      namespaceIdIndex: index('nssp_namespace_id_idx').on(t.namespaceId),
-      ssoProviderIdIndex: index('nssp_sso_provider_id_idx').on(t.ssoProviderId),
-      uniqueSsoPerNamespace: uniqueIndex('nssp_unique_sso')
+      namespaceIdIndex: index('nlm_namespace_id_idx').on(t.namespaceId),
+      ssoProviderIdIndex: index('nlm_sso_provider_id_idx').on(t.ssoProviderId),
+      uniqueSsoPerNamespace: uniqueIndex('nlm_unique_sso')
         .on(t.namespaceId, t.ssoProviderId)
         .where(sql`${t.ssoProviderId} IS NOT NULL`),
       // At most one built-in-methods row (password/google/github) per namespace.
-      uniqueBuiltinPerNamespace: uniqueIndex('nssp_unique_builtin')
+      uniqueBuiltinPerNamespace: uniqueIndex('nlm_unique_builtin')
         .on(t.namespaceId)
         .where(sql`${t.ssoProviderId} IS NULL`),
       // A row is either an SSO-provider row (provider id, no built-in flags) or a
       // built-in-methods row (no provider id, at least one flag) — never both, never neither.
       builtinXorSsoCheck: check(
-        'nssp_builtin_xor_sso_check',
+        'nlm_builtin_xor_sso_check',
         sql`(${t.ssoProviderId} IS NOT NULL) <> (${t.isPasswordLogin} OR ${t.isGoogleLogin} OR ${t.isGithubLogin})`,
       ),
     };

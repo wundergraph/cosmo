@@ -3092,7 +3092,7 @@ message GetNamespaceProposalConfigResponse {
   LintSeverity publishSeverityLevel = 4;
 }
 
-message NamespaceSSOMapping {
+message NamespaceLoginMethodMapping {
   string namespace_id = 1;
   repeated string allowed_sso_provider_ids = 2;
   bool allow_password_login = 3;
@@ -3100,21 +3100,21 @@ message NamespaceSSOMapping {
   bool allow_github_login = 5;
 }
 
-message UpdateNamespaceSSOMappingsRequest {
-  repeated NamespaceSSOMapping mappings = 1;
+message UpdateNamespaceLoginMethodsRequest {
+  repeated NamespaceLoginMethodMapping mappings = 1;
 }
 
-message UpdateNamespaceSSOMappingsResponse {
+message UpdateNamespaceLoginMethodsResponse {
   Response response = 1;
 }
 
-message ListNamespaceSSOMappingsRequest {}
+message ListNamespaceLoginMethodsRequest {}
 
-message ListNamespaceSSOMappingsResponse {
+message ListNamespaceLoginMethodsResponse {
   Response response = 1;
   // One entry per namespace that is restricted to specific login methods.
   // Namespaces with no mapping (default-open) are omitted.
-  repeated NamespaceSSOMapping mappings = 2;
+  repeated NamespaceLoginMethodMapping mappings = 2;
 }
 
 message OrganizationLoginMethods {
@@ -3757,10 +3757,10 @@ service PlatformService {
   rpc ConfigureNamespaceProposalConfig(ConfigureNamespaceProposalConfigRequest) returns (ConfigureNamespaceProposalConfigResponse) {}
   // GetNamespaceProposalConfig returns the proposal config of the namespace passed.
   rpc GetNamespaceProposalConfig(GetNamespaceProposalConfigRequest) returns (GetNamespaceProposalConfigResponse) {}
-  // UpdateNamespaceSSOMappings replaces the org's namespace SSO mapping configuration in one call.
-  rpc UpdateNamespaceSSOMappings(UpdateNamespaceSSOMappingsRequest) returns (UpdateNamespaceSSOMappingsResponse) {}
-  // ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
-  rpc ListNamespaceSSOMappings(ListNamespaceSSOMappingsRequest) returns (ListNamespaceSSOMappingsResponse) {}
+  // UpdateNamespaceLoginMethods replaces the org's per-namespace login-method configuration in one call.
+  rpc UpdateNamespaceLoginMethods(UpdateNamespaceLoginMethodsRequest) returns (UpdateNamespaceLoginMethodsResponse) {}
+  // ListNamespaceLoginMethods returns the login-method configuration for every restricted namespace in the org.
+  rpc ListNamespaceLoginMethods(ListNamespaceLoginMethodsRequest) returns (ListNamespaceLoginMethodsResponse) {}
   // GetOrganizationLoginMethods returns the org's allowed login methods (empty restriction = all allowed).
   rpc GetOrganizationLoginMethods(GetOrganizationLoginMethodsRequest) returns (GetOrganizationLoginMethodsResponse) {}
   // UpdateOrganizationLoginMethods replaces the org's allowed login methods and reconciles namespace mappings.

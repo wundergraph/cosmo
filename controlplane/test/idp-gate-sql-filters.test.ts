@@ -69,7 +69,7 @@ describe('IdP gate (namespace ↔ SSO/password mapping)', () => {
     const { namespaces } = await client.getNamespaces({});
     const idOf = (name: string) => namespaces.find((n) => n.name === name)!.id;
 
-    const mapped = await client.updateNamespaceSSOMappings({
+    const mapped = await client.updateNamespaceLoginMethods({
       mappings: [
         { namespaceId: idOf(ssoNs), allowedSsoProviderIds: [providerId] },
         { namespaceId: idOf(passwordNs), allowPasswordLogin: true },

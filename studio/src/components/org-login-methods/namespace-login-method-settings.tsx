@@ -1,5 +1,5 @@
 import { EmptyState } from '@/components/empty-state';
-import { MappingRow, NamespaceLite, NamespaceMappingRows } from '@/components/namespace-sso/namespace-mapping-rows';
+import { MappingRow, NamespaceLite, NamespaceMappingRows } from '@/components/namespace-login-methods/namespace-mapping-rows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from '@/components/ui/loader';
@@ -13,9 +13,9 @@ import { ExclamationTriangleIcon, LockClosedIcon } from '@heroicons/react/24/out
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getOrganizationLoginMethods,
-  listNamespaceSSOMappings,
+  listNamespaceLoginMethods,
   listOIDCProviders,
-  updateNamespaceSSOMappings,
+  updateNamespaceLoginMethods,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -71,7 +71,7 @@ export function NamespaceLoginMethodSettings() {
     isLoading: isLoadingMappings,
     error: mappingsError,
     refetch: refetchMappings,
-  } = useQuery(listNamespaceSSOMappings, {});
+  } = useQuery(listNamespaceLoginMethods, {});
 
   const {
     data: orgLoginMethodsData,
@@ -80,7 +80,7 @@ export function NamespaceLoginMethodSettings() {
     refetch: refetchOrgLoginMethods,
   } = useQuery(getOrganizationLoginMethods, {});
 
-  const { mutate, isPending } = useMutation(updateNamespaceSSOMappings);
+  const { mutate, isPending } = useMutation(updateNamespaceLoginMethods);
 
   const namespaces = useMemo<NamespaceLite[]>(
     () => Array.from(namespaceByName.values()).map((ns) => ({ id: ns.id, name: ns.name })),

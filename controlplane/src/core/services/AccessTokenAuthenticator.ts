@@ -3,7 +3,7 @@ import AuthUtils from '../auth-utils.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
-import { NamespaceSsoMappingRepository } from '../repositories/NamespaceSsoMappingRepository.js';
+import { NamespaceLoginMethodRepository } from '../repositories/NamespaceLoginMethodRepository.js';
 import { OrganizationLoginMethodRepository } from '../repositories/OrganizationLoginMethodRepository.js';
 import { traced } from '../tracing.js';
 import type { LoginMethod } from '../../types/index.js';
@@ -27,7 +27,7 @@ export default class AccessTokenAuthenticator {
     private orgRepo: OrganizationRepository,
     private authUtils: AuthUtils,
     private oidcRepo: OidcRepository,
-    private namespaceSsoMappingRepo: NamespaceSsoMappingRepository,
+    private namespaceLoginMethodRepo: NamespaceLoginMethodRepository,
     private orgLoginMethodRepo: OrganizationLoginMethodRepository,
   ) {}
 
@@ -67,7 +67,7 @@ export default class AccessTokenAuthenticator {
       {
         oidcRepo: this.oidcRepo,
         orgRepo: this.orgRepo,
-        namespaceSsoMappingRepo: this.namespaceSsoMappingRepo,
+        namespaceLoginMethodRepo: this.namespaceLoginMethodRepo,
         orgLoginMethodRepo: this.orgLoginMethodRepo,
       },
       { organizationId: organization.id, userId: userInfoData.sub, idpAlias: userInfoData.identity_provider },

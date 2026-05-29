@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
-import { NamespaceSsoMappingRepository } from '../src/core/repositories/NamespaceSsoMappingRepository.js';
+import { NamespaceLoginMethodRepository } from '../src/core/repositories/NamespaceLoginMethodRepository.js';
 import { DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -53,7 +53,7 @@ async function setMappings(
     allowGithubLogin?: boolean;
   }[],
 ) {
-  const res = await client.updateNamespaceSSOMappings({
+  const res = await client.updateNamespaceLoginMethods({
     mappings: mappings.map((m) => ({
       namespaceId: m.namespaceId,
       allowedSsoProviderIds: m.allowedSsoProviderIds ?? [],
@@ -65,7 +65,7 @@ async function setMappings(
   expect(res.response?.code).toBe(EnumStatusCode.OK);
 }
 
-describe('NamespaceSsoMappingRepository', () => {
+describe('NamespaceLoginMethodRepository', () => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -76,7 +76,7 @@ describe('NamespaceSsoMappingRepository', () => {
 
   test("returns { kind: 'all' } when org has no mapping rows", async () => {
     const { server, users } = await SetupTest({ dbname });
-    const repo = new NamespaceSsoMappingRepository(server.db);
+    const repo = new NamespaceLoginMethodRepository(server.db);
     const allowed = await repo.allowedNamespaces({
       organizationId: users.adminAliceCompanyA.organizationId,
       loginMethod: { type: 'password' },
@@ -99,7 +99,7 @@ describe('NamespaceSsoMappingRepository', () => {
     // Map the default namespace to the SSO provider only (no password).
     await setMappings(client, [{ namespaceId: defaultNsId, allowedSsoProviderIds: [providerId] }]);
 
-    const repo = new NamespaceSsoMappingRepository(server.db);
+    const repo = new NamespaceLoginMethodRepository(server.db);
 
     const ssoAllowed = await repo.allowedNamespaces({
       organizationId: orgId,
@@ -139,7 +139,7 @@ describe('NamespaceSsoMappingRepository', () => {
     ]);
     // legacyNs: no mapping rows → default-open.
 
-    const repo = new NamespaceSsoMappingRepository(server.db);
+    const repo = new NamespaceLoginMethodRepository(server.db);
 
     // Staging IdP.
     const stagingAllowed = await repo.allowedNamespaces({
@@ -189,7 +189,7 @@ describe('NamespaceSsoMappingRepository', () => {
       { namespaceId: githubNsId, allowGithubLogin: true },
     ]);
 
-    const repo = new NamespaceSsoMappingRepository(server.db);
+    const repo = new NamespaceLoginMethodRepository(server.db);
 
     // Google login → google-ns + open(default), not github-ns.
     const googleAllowed = await repo.allowedNamespaces({
@@ -215,14 +215,14 @@ describe('NamespaceSsoMappingRepository', () => {
     await server.close();
   });
 
-  test('updateNamespaceSSOMappings replaces the org mappings in one call', async () => {
+  test('updateNamespaceLoginMethods replaces the org mappings in one call', async () => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['login-method-restrictions'] });
 
     const nsA = await createNamespace(client, 'bulk-a');
     const nsB = await createNamespace(client, 'bulk-b');
 
     // Restrict A to password and B to Google.
-    const first = await client.updateNamespaceSSOMappings({
+    const first = await client.updateNamespaceLoginMethods({
       mappings: [
         { namespaceId: nsA, allowPasswordLogin: true },
         { namespaceId: nsB, allowGoogleLogin: true },
@@ -230,18 +230,18 @@ describe('NamespaceSsoMappingRepository', () => {
     });
     expect(first.response?.code).toBe(EnumStatusCode.OK);
 
-    let listed = await client.listNamespaceSSOMappings({});
+    let listed = await client.listNamespaceLoginMethods({});
     expect(listed.mappings.find((m) => m.namespaceId === nsA)?.allowPasswordLogin).toBe(true);
     expect(listed.mappings.find((m) => m.namespaceId === nsB)?.allowGoogleLogin).toBe(true);
 
     // Replace with only A (now GitHub) — B drops out of the payload, so it is
     // reset to default-open.
-    const second = await client.updateNamespaceSSOMappings({
+    const second = await client.updateNamespaceLoginMethods({
       mappings: [{ namespaceId: nsA, allowGithubLogin: true }],
     });
     expect(second.response?.code).toBe(EnumStatusCode.OK);
 
-    listed = await client.listNamespaceSSOMappings({});
+    listed = await client.listNamespaceLoginMethods({});
     const aEntry = listed.mappings.find((m) => m.namespaceId === nsA);
     expect(aEntry?.allowGithubLogin).toBe(true);
     expect(aEntry?.allowPasswordLogin).toBe(false);
@@ -250,11 +250,11 @@ describe('NamespaceSsoMappingRepository', () => {
     await server.close();
   });
 
-  test('updateNamespaceSSOMappings rejects a namespace listed more than once', async () => {
+  test('updateNamespaceLoginMethods rejects a namespace listed more than once', async () => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['login-method-restrictions'] });
 
     const nsId = await createNamespace(client, 'dup-ns');
-    const res = await client.updateNamespaceSSOMappings({
+    const res = await client.updateNamespaceLoginMethods({
       mappings: [
         { namespaceId: nsId, allowPasswordLogin: true },
         { namespaceId: nsId, allowGoogleLogin: true },
@@ -263,7 +263,7 @@ describe('NamespaceSsoMappingRepository', () => {
     expect(res.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
 
     // Nothing was written — the namespace stays default-open.
-    const listed = await client.listNamespaceSSOMappings({});
+    const listed = await client.listNamespaceLoginMethods({});
     expect(listed.mappings.find((m) => m.namespaceId === nsId)).toBeUndefined();
 
     await server.close();
@@ -273,10 +273,10 @@ describe('NamespaceSsoMappingRepository', () => {
     // Default plan does not include the enterprise feature.
     const { client, server } = await SetupTest({ dbname });
 
-    const list = await client.listNamespaceSSOMappings({});
+    const list = await client.listNamespaceLoginMethods({});
     expect(list.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
 
-    const update = await client.updateNamespaceSSOMappings({
+    const update = await client.updateNamespaceLoginMethods({
       mappings: [
         {
           namespaceId: await getNamespaceId(client, DEFAULT_NAMESPACE),
@@ -304,7 +304,7 @@ describe('NamespaceSsoMappingRepository', () => {
 
     await setMappings(client, [{ namespaceId: nsId, allowedSsoProviderIds: [providerId] }]);
 
-    const before = await client.listNamespaceSSOMappings({});
+    const before = await client.listNamespaceLoginMethods({});
     const beforeEntry = before.mappings.find((m) => m.namespaceId === nsId);
     expect(beforeEntry?.allowedSsoProviderIds).toEqual([providerId]);
     expect(beforeEntry?.allowPasswordLogin).toBe(false);
@@ -314,7 +314,7 @@ describe('NamespaceSsoMappingRepository', () => {
     expect(deleted.response?.code).toBe(EnumStatusCode.OK);
 
     // The namespace is now default-open, so it drops out of the mappings list.
-    const after = await client.listNamespaceSSOMappings({});
+    const after = await client.listNamespaceLoginMethods({});
     expect(after.mappings.find((m) => m.namespaceId === nsId)).toBeUndefined();
 
     await server.close();

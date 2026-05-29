@@ -28182,7 +28182,7 @@ func (x *GetNamespaceProposalConfigResponse) GetPublishSeverityLevel() LintSever
 	return LintSeverity_warn
 }
 
-type NamespaceSSOMapping struct {
+type NamespaceLoginMethodMapping struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	NamespaceId           string                 `protobuf:"bytes,1,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
 	AllowedSsoProviderIds []string               `protobuf:"bytes,2,rep,name=allowed_sso_provider_ids,json=allowedSsoProviderIds,proto3" json:"allowed_sso_provider_ids,omitempty"`
@@ -28193,20 +28193,20 @@ type NamespaceSSOMapping struct {
 	sizeCache             protoimpl.SizeCache
 }
 
-func (x *NamespaceSSOMapping) Reset() {
-	*x = NamespaceSSOMapping{}
+func (x *NamespaceLoginMethodMapping) Reset() {
+	*x = NamespaceLoginMethodMapping{}
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[427]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *NamespaceSSOMapping) String() string {
+func (x *NamespaceLoginMethodMapping) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*NamespaceSSOMapping) ProtoMessage() {}
+func (*NamespaceLoginMethodMapping) ProtoMessage() {}
 
-func (x *NamespaceSSOMapping) ProtoReflect() protoreflect.Message {
+func (x *NamespaceLoginMethodMapping) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[427]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -28218,67 +28218,67 @@ func (x *NamespaceSSOMapping) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use NamespaceSSOMapping.ProtoReflect.Descriptor instead.
-func (*NamespaceSSOMapping) Descriptor() ([]byte, []int) {
+// Deprecated: Use NamespaceLoginMethodMapping.ProtoReflect.Descriptor instead.
+func (*NamespaceLoginMethodMapping) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{427}
 }
 
-func (x *NamespaceSSOMapping) GetNamespaceId() string {
+func (x *NamespaceLoginMethodMapping) GetNamespaceId() string {
 	if x != nil {
 		return x.NamespaceId
 	}
 	return ""
 }
 
-func (x *NamespaceSSOMapping) GetAllowedSsoProviderIds() []string {
+func (x *NamespaceLoginMethodMapping) GetAllowedSsoProviderIds() []string {
 	if x != nil {
 		return x.AllowedSsoProviderIds
 	}
 	return nil
 }
 
-func (x *NamespaceSSOMapping) GetAllowPasswordLogin() bool {
+func (x *NamespaceLoginMethodMapping) GetAllowPasswordLogin() bool {
 	if x != nil {
 		return x.AllowPasswordLogin
 	}
 	return false
 }
 
-func (x *NamespaceSSOMapping) GetAllowGoogleLogin() bool {
+func (x *NamespaceLoginMethodMapping) GetAllowGoogleLogin() bool {
 	if x != nil {
 		return x.AllowGoogleLogin
 	}
 	return false
 }
 
-func (x *NamespaceSSOMapping) GetAllowGithubLogin() bool {
+func (x *NamespaceLoginMethodMapping) GetAllowGithubLogin() bool {
 	if x != nil {
 		return x.AllowGithubLogin
 	}
 	return false
 }
 
-type UpdateNamespaceSSOMappingsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Mappings      []*NamespaceSSOMapping `protobuf:"bytes,1,rep,name=mappings,proto3" json:"mappings,omitempty"`
+type UpdateNamespaceLoginMethodsRequest struct {
+	state         protoimpl.MessageState         `protogen:"open.v1"`
+	Mappings      []*NamespaceLoginMethodMapping `protobuf:"bytes,1,rep,name=mappings,proto3" json:"mappings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UpdateNamespaceSSOMappingsRequest) Reset() {
-	*x = UpdateNamespaceSSOMappingsRequest{}
+func (x *UpdateNamespaceLoginMethodsRequest) Reset() {
+	*x = UpdateNamespaceLoginMethodsRequest{}
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[428]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateNamespaceSSOMappingsRequest) String() string {
+func (x *UpdateNamespaceLoginMethodsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateNamespaceSSOMappingsRequest) ProtoMessage() {}
+func (*UpdateNamespaceLoginMethodsRequest) ProtoMessage() {}
 
-func (x *UpdateNamespaceSSOMappingsRequest) ProtoReflect() protoreflect.Message {
+func (x *UpdateNamespaceLoginMethodsRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[428]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -28290,39 +28290,39 @@ func (x *UpdateNamespaceSSOMappingsRequest) ProtoReflect() protoreflect.Message 
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateNamespaceSSOMappingsRequest.ProtoReflect.Descriptor instead.
-func (*UpdateNamespaceSSOMappingsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateNamespaceLoginMethodsRequest.ProtoReflect.Descriptor instead.
+func (*UpdateNamespaceLoginMethodsRequest) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{428}
 }
 
-func (x *UpdateNamespaceSSOMappingsRequest) GetMappings() []*NamespaceSSOMapping {
+func (x *UpdateNamespaceLoginMethodsRequest) GetMappings() []*NamespaceLoginMethodMapping {
 	if x != nil {
 		return x.Mappings
 	}
 	return nil
 }
 
-type UpdateNamespaceSSOMappingsResponse struct {
+type UpdateNamespaceLoginMethodsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Response      *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UpdateNamespaceSSOMappingsResponse) Reset() {
-	*x = UpdateNamespaceSSOMappingsResponse{}
+func (x *UpdateNamespaceLoginMethodsResponse) Reset() {
+	*x = UpdateNamespaceLoginMethodsResponse{}
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[429]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateNamespaceSSOMappingsResponse) String() string {
+func (x *UpdateNamespaceLoginMethodsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateNamespaceSSOMappingsResponse) ProtoMessage() {}
+func (*UpdateNamespaceLoginMethodsResponse) ProtoMessage() {}
 
-func (x *UpdateNamespaceSSOMappingsResponse) ProtoReflect() protoreflect.Message {
+func (x *UpdateNamespaceLoginMethodsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[429]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -28334,38 +28334,38 @@ func (x *UpdateNamespaceSSOMappingsResponse) ProtoReflect() protoreflect.Message
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateNamespaceSSOMappingsResponse.ProtoReflect.Descriptor instead.
-func (*UpdateNamespaceSSOMappingsResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateNamespaceLoginMethodsResponse.ProtoReflect.Descriptor instead.
+func (*UpdateNamespaceLoginMethodsResponse) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{429}
 }
 
-func (x *UpdateNamespaceSSOMappingsResponse) GetResponse() *Response {
+func (x *UpdateNamespaceLoginMethodsResponse) GetResponse() *Response {
 	if x != nil {
 		return x.Response
 	}
 	return nil
 }
 
-type ListNamespaceSSOMappingsRequest struct {
+type ListNamespaceLoginMethodsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListNamespaceSSOMappingsRequest) Reset() {
-	*x = ListNamespaceSSOMappingsRequest{}
+func (x *ListNamespaceLoginMethodsRequest) Reset() {
+	*x = ListNamespaceLoginMethodsRequest{}
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[430]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListNamespaceSSOMappingsRequest) String() string {
+func (x *ListNamespaceLoginMethodsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListNamespaceSSOMappingsRequest) ProtoMessage() {}
+func (*ListNamespaceLoginMethodsRequest) ProtoMessage() {}
 
-func (x *ListNamespaceSSOMappingsRequest) ProtoReflect() protoreflect.Message {
+func (x *ListNamespaceLoginMethodsRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[430]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -28377,35 +28377,35 @@ func (x *ListNamespaceSSOMappingsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListNamespaceSSOMappingsRequest.ProtoReflect.Descriptor instead.
-func (*ListNamespaceSSOMappingsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListNamespaceLoginMethodsRequest.ProtoReflect.Descriptor instead.
+func (*ListNamespaceLoginMethodsRequest) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{430}
 }
 
-type ListNamespaceSSOMappingsResponse struct {
+type ListNamespaceLoginMethodsResponse struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Response *Response              `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
 	// One entry per namespace that is restricted to specific login methods.
 	// Namespaces with no mapping (default-open) are omitted.
-	Mappings      []*NamespaceSSOMapping `protobuf:"bytes,2,rep,name=mappings,proto3" json:"mappings,omitempty"`
+	Mappings      []*NamespaceLoginMethodMapping `protobuf:"bytes,2,rep,name=mappings,proto3" json:"mappings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListNamespaceSSOMappingsResponse) Reset() {
-	*x = ListNamespaceSSOMappingsResponse{}
+func (x *ListNamespaceLoginMethodsResponse) Reset() {
+	*x = ListNamespaceLoginMethodsResponse{}
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[431]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListNamespaceSSOMappingsResponse) String() string {
+func (x *ListNamespaceLoginMethodsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListNamespaceSSOMappingsResponse) ProtoMessage() {}
+func (*ListNamespaceLoginMethodsResponse) ProtoMessage() {}
 
-func (x *ListNamespaceSSOMappingsResponse) ProtoReflect() protoreflect.Message {
+func (x *ListNamespaceLoginMethodsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[431]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -28417,19 +28417,19 @@ func (x *ListNamespaceSSOMappingsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListNamespaceSSOMappingsResponse.ProtoReflect.Descriptor instead.
-func (*ListNamespaceSSOMappingsResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListNamespaceLoginMethodsResponse.ProtoReflect.Descriptor instead.
+func (*ListNamespaceLoginMethodsResponse) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{431}
 }
 
-func (x *ListNamespaceSSOMappingsResponse) GetResponse() *Response {
+func (x *ListNamespaceLoginMethodsResponse) GetResponse() *Response {
 	if x != nil {
 		return x.Response
 	}
 	return nil
 }
 
-func (x *ListNamespaceSSOMappingsResponse) GetMappings() []*NamespaceSSOMapping {
+func (x *ListNamespaceLoginMethodsResponse) GetMappings() []*NamespaceLoginMethodMapping {
 	if x != nil {
 		return x.Mappings
 	}
@@ -35204,21 +35204,21 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12\x18\n" +
 	"\aenabled\x18\x02 \x01(\bR\aenabled\x12R\n" +
 	"\x12checkSeverityLevel\x18\x03 \x01(\x0e2\".wg.cosmo.platform.v1.LintSeverityR\x12checkSeverityLevel\x12V\n" +
-	"\x14publishSeverityLevel\x18\x04 \x01(\x0e2\".wg.cosmo.platform.v1.LintSeverityR\x14publishSeverityLevel\"\xff\x01\n" +
-	"\x13NamespaceSSOMapping\x12!\n" +
+	"\x14publishSeverityLevel\x18\x04 \x01(\x0e2\".wg.cosmo.platform.v1.LintSeverityR\x14publishSeverityLevel\"\x87\x02\n" +
+	"\x1bNamespaceLoginMethodMapping\x12!\n" +
 	"\fnamespace_id\x18\x01 \x01(\tR\vnamespaceId\x127\n" +
 	"\x18allowed_sso_provider_ids\x18\x02 \x03(\tR\x15allowedSsoProviderIds\x120\n" +
 	"\x14allow_password_login\x18\x03 \x01(\bR\x12allowPasswordLogin\x12,\n" +
 	"\x12allow_google_login\x18\x04 \x01(\bR\x10allowGoogleLogin\x12,\n" +
-	"\x12allow_github_login\x18\x05 \x01(\bR\x10allowGithubLogin\"j\n" +
-	"!UpdateNamespaceSSOMappingsRequest\x12E\n" +
-	"\bmappings\x18\x01 \x03(\v2).wg.cosmo.platform.v1.NamespaceSSOMappingR\bmappings\"`\n" +
-	"\"UpdateNamespaceSSOMappingsResponse\x12:\n" +
-	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\"!\n" +
-	"\x1fListNamespaceSSOMappingsRequest\"\xa5\x01\n" +
-	" ListNamespaceSSOMappingsResponse\x12:\n" +
-	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12E\n" +
-	"\bmappings\x18\x02 \x03(\v2).wg.cosmo.platform.v1.NamespaceSSOMappingR\bmappings\"\x86\x02\n" +
+	"\x12allow_github_login\x18\x05 \x01(\bR\x10allowGithubLogin\"s\n" +
+	"\"UpdateNamespaceLoginMethodsRequest\x12M\n" +
+	"\bmappings\x18\x01 \x03(\v21.wg.cosmo.platform.v1.NamespaceLoginMethodMappingR\bmappings\"a\n" +
+	"#UpdateNamespaceLoginMethodsResponse\x12:\n" +
+	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\"\"\n" +
+	" ListNamespaceLoginMethodsRequest\"\xae\x01\n" +
+	"!ListNamespaceLoginMethodsResponse\x12:\n" +
+	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12M\n" +
+	"\bmappings\x18\x02 \x03(\v21.wg.cosmo.platform.v1.NamespaceLoginMethodMappingR\bmappings\"\x86\x02\n" +
 	"\x18OrganizationLoginMethods\x127\n" +
 	"\x18allowed_sso_provider_ids\x18\x01 \x03(\tR\x15allowedSsoProviderIds\x120\n" +
 	"\x14allow_password_login\x18\x02 \x01(\bR\x12allowPasswordLogin\x12,\n" +
@@ -35524,7 +35524,7 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x06ERRORS\x10\x02*\"\n" +
 	"\rSortDirection\x12\a\n" +
 	"\x03ASC\x10\x00\x12\b\n" +
-	"\x04DESC\x10\x012\xb0\xc4\x01\n" +
+	"\x04DESC\x10\x012\xb6\xc4\x01\n" +
 	"\x0fPlatformService\x12\x85\x01\n" +
 	"\x16CreatePlaygroundScript\x123.wg.cosmo.platform.v1.CreatePlaygroundScriptRequest\x1a4.wg.cosmo.platform.v1.CreatePlaygroundScriptResponse\"\x00\x12\x85\x01\n" +
 	"\x16DeletePlaygroundScript\x123.wg.cosmo.platform.v1.DeletePlaygroundScriptRequest\x1a4.wg.cosmo.platform.v1.DeletePlaygroundScriptResponse\"\x00\x12\x85\x01\n" +
@@ -35701,9 +35701,9 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\x0eUpdateProposal\x12+.wg.cosmo.platform.v1.UpdateProposalRequest\x1a,.wg.cosmo.platform.v1.UpdateProposalResponse\"\x00\x12\x94\x01\n" +
 	"\x1bEnableProposalsForNamespace\x128.wg.cosmo.platform.v1.EnableProposalsForNamespaceRequest\x1a9.wg.cosmo.platform.v1.EnableProposalsForNamespaceResponse\"\x00\x12\xa3\x01\n" +
 	" ConfigureNamespaceProposalConfig\x12=.wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest\x1a>.wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse\"\x00\x12\x91\x01\n" +
-	"\x1aGetNamespaceProposalConfig\x127.wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest\x1a8.wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse\"\x00\x12\x91\x01\n" +
-	"\x1aUpdateNamespaceSSOMappings\x127.wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsRequest\x1a8.wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsResponse\"\x00\x12\x8b\x01\n" +
-	"\x18ListNamespaceSSOMappings\x125.wg.cosmo.platform.v1.ListNamespaceSSOMappingsRequest\x1a6.wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse\"\x00\x12\x94\x01\n" +
+	"\x1aGetNamespaceProposalConfig\x127.wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest\x1a8.wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse\"\x00\x12\x94\x01\n" +
+	"\x1bUpdateNamespaceLoginMethods\x128.wg.cosmo.platform.v1.UpdateNamespaceLoginMethodsRequest\x1a9.wg.cosmo.platform.v1.UpdateNamespaceLoginMethodsResponse\"\x00\x12\x8e\x01\n" +
+	"\x19ListNamespaceLoginMethods\x126.wg.cosmo.platform.v1.ListNamespaceLoginMethodsRequest\x1a7.wg.cosmo.platform.v1.ListNamespaceLoginMethodsResponse\"\x00\x12\x94\x01\n" +
 	"\x1bGetOrganizationLoginMethods\x128.wg.cosmo.platform.v1.GetOrganizationLoginMethodsRequest\x1a9.wg.cosmo.platform.v1.GetOrganizationLoginMethodsResponse\"\x00\x12\x9d\x01\n" +
 	"\x1eUpdateOrganizationLoginMethods\x12;.wg.cosmo.platform.v1.UpdateOrganizationLoginMethodsRequest\x1a<.wg.cosmo.platform.v1.UpdateOrganizationLoginMethodsResponse\"\x00\x12\x97\x01\n" +
 	"\x1cGetProposalsByFederatedGraph\x129.wg.cosmo.platform.v1.GetProposalsByFederatedGraphRequest\x1a:.wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse\"\x00\x12v\n" +
@@ -36182,11 +36182,11 @@ var file_wg_cosmo_platform_v1_platform_proto_goTypes = []any{
 	(*ConfigureNamespaceProposalConfigResponse)(nil),                   // 441: wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse
 	(*GetNamespaceProposalConfigRequest)(nil),                          // 442: wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest
 	(*GetNamespaceProposalConfigResponse)(nil),                         // 443: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse
-	(*NamespaceSSOMapping)(nil),                                        // 444: wg.cosmo.platform.v1.NamespaceSSOMapping
-	(*UpdateNamespaceSSOMappingsRequest)(nil),                          // 445: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsRequest
-	(*UpdateNamespaceSSOMappingsResponse)(nil),                         // 446: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsResponse
-	(*ListNamespaceSSOMappingsRequest)(nil),                            // 447: wg.cosmo.platform.v1.ListNamespaceSSOMappingsRequest
-	(*ListNamespaceSSOMappingsResponse)(nil),                           // 448: wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse
+	(*NamespaceLoginMethodMapping)(nil),                                // 444: wg.cosmo.platform.v1.NamespaceLoginMethodMapping
+	(*UpdateNamespaceLoginMethodsRequest)(nil),                         // 445: wg.cosmo.platform.v1.UpdateNamespaceLoginMethodsRequest
+	(*UpdateNamespaceLoginMethodsResponse)(nil),                        // 446: wg.cosmo.platform.v1.UpdateNamespaceLoginMethodsResponse
+	(*ListNamespaceLoginMethodsRequest)(nil),                           // 447: wg.cosmo.platform.v1.ListNamespaceLoginMethodsRequest
+	(*ListNamespaceLoginMethodsResponse)(nil),                          // 448: wg.cosmo.platform.v1.ListNamespaceLoginMethodsResponse
 	(*OrganizationLoginMethods)(nil),                                   // 449: wg.cosmo.platform.v1.OrganizationLoginMethods
 	(*GetOrganizationLoginMethodsRequest)(nil),                         // 450: wg.cosmo.platform.v1.GetOrganizationLoginMethodsRequest
 	(*GetOrganizationLoginMethodsResponse)(nil),                        // 451: wg.cosmo.platform.v1.GetOrganizationLoginMethodsResponse
@@ -36729,10 +36729,10 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	18,  // 464: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	0,   // 465: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.checkSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
 	0,   // 466: wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse.publishSeverityLevel:type_name -> wg.cosmo.platform.v1.LintSeverity
-	444, // 467: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsRequest.mappings:type_name -> wg.cosmo.platform.v1.NamespaceSSOMapping
-	18,  // 468: wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	18,  // 469: wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	444, // 470: wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse.mappings:type_name -> wg.cosmo.platform.v1.NamespaceSSOMapping
+	444, // 467: wg.cosmo.platform.v1.UpdateNamespaceLoginMethodsRequest.mappings:type_name -> wg.cosmo.platform.v1.NamespaceLoginMethodMapping
+	18,  // 468: wg.cosmo.platform.v1.UpdateNamespaceLoginMethodsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	18,  // 469: wg.cosmo.platform.v1.ListNamespaceLoginMethodsResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	444, // 470: wg.cosmo.platform.v1.ListNamespaceLoginMethodsResponse.mappings:type_name -> wg.cosmo.platform.v1.NamespaceLoginMethodMapping
 	18,  // 471: wg.cosmo.platform.v1.GetOrganizationLoginMethodsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	449, // 472: wg.cosmo.platform.v1.GetOrganizationLoginMethodsResponse.login_methods:type_name -> wg.cosmo.platform.v1.OrganizationLoginMethods
 	18,  // 473: wg.cosmo.platform.v1.UpdateOrganizationLoginMethodsResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -36949,8 +36949,8 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	438, // 684: wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace:input_type -> wg.cosmo.platform.v1.EnableProposalsForNamespaceRequest
 	440, // 685: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig:input_type -> wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigRequest
 	442, // 686: wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig:input_type -> wg.cosmo.platform.v1.GetNamespaceProposalConfigRequest
-	445, // 687: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMappings:input_type -> wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsRequest
-	447, // 688: wg.cosmo.platform.v1.PlatformService.ListNamespaceSSOMappings:input_type -> wg.cosmo.platform.v1.ListNamespaceSSOMappingsRequest
+	445, // 687: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceLoginMethods:input_type -> wg.cosmo.platform.v1.UpdateNamespaceLoginMethodsRequest
+	447, // 688: wg.cosmo.platform.v1.PlatformService.ListNamespaceLoginMethods:input_type -> wg.cosmo.platform.v1.ListNamespaceLoginMethodsRequest
 	450, // 689: wg.cosmo.platform.v1.PlatformService.GetOrganizationLoginMethods:input_type -> wg.cosmo.platform.v1.GetOrganizationLoginMethodsRequest
 	452, // 690: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationLoginMethods:input_type -> wg.cosmo.platform.v1.UpdateOrganizationLoginMethodsRequest
 	432, // 691: wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph:input_type -> wg.cosmo.platform.v1.GetProposalsByFederatedGraphRequest
@@ -37139,8 +37139,8 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	439, // 874: wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace:output_type -> wg.cosmo.platform.v1.EnableProposalsForNamespaceResponse
 	441, // 875: wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig:output_type -> wg.cosmo.platform.v1.ConfigureNamespaceProposalConfigResponse
 	443, // 876: wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig:output_type -> wg.cosmo.platform.v1.GetNamespaceProposalConfigResponse
-	446, // 877: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceSSOMappings:output_type -> wg.cosmo.platform.v1.UpdateNamespaceSSOMappingsResponse
-	448, // 878: wg.cosmo.platform.v1.PlatformService.ListNamespaceSSOMappings:output_type -> wg.cosmo.platform.v1.ListNamespaceSSOMappingsResponse
+	446, // 877: wg.cosmo.platform.v1.PlatformService.UpdateNamespaceLoginMethods:output_type -> wg.cosmo.platform.v1.UpdateNamespaceLoginMethodsResponse
+	448, // 878: wg.cosmo.platform.v1.PlatformService.ListNamespaceLoginMethods:output_type -> wg.cosmo.platform.v1.ListNamespaceLoginMethodsResponse
 	451, // 879: wg.cosmo.platform.v1.PlatformService.GetOrganizationLoginMethods:output_type -> wg.cosmo.platform.v1.GetOrganizationLoginMethodsResponse
 	453, // 880: wg.cosmo.platform.v1.PlatformService.UpdateOrganizationLoginMethods:output_type -> wg.cosmo.platform.v1.UpdateOrganizationLoginMethodsResponse
 	433, // 881: wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph:output_type -> wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse
