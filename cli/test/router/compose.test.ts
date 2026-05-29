@@ -16,7 +16,7 @@ export const mockPlatformTransport = () =>
     service(PlatformService, {});
   });
 
-describe('router compose command', () => {
+describe('router compose command tests', () => {
   test('that generated router config matches expected snapshot when config splitting is disabled', async () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),

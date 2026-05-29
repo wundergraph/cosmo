@@ -57,7 +57,7 @@ export const mockPlatformTransport = (splitConfigsEnabled: boolean) =>
     });
   });
 
-describe('federated-graph fetch command', () => {
+describe('federated-graph fetch command tests', () => {
   afterEach(vi.clearAllMocks);
 
   test('that router config matches expected snapshot when config splitting is disabled', async () => {
