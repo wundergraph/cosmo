@@ -86,7 +86,10 @@ describe('NamespaceSsoMappingRepository', () => {
   });
 
   test('restricts namespaces once a mapping row exists', async () => {
-    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc', 'login-method-restrictions'] });
+    const { client, server, users } = await SetupTest({
+      dbname,
+      enabledFeatures: ['oidc', 'login-method-restrictions'],
+    });
     const orgId = users.adminAliceCompanyA.organizationId;
 
     const defaultNsId = await getNamespaceId(client, DEFAULT_NAMESPACE);
@@ -114,7 +117,10 @@ describe('NamespaceSsoMappingRepository', () => {
   });
 
   test('gates namespace access by login method (full matrix)', async () => {
-    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc', 'login-method-restrictions'] });
+    const { client, server, users } = await SetupTest({
+      dbname,
+      enabledFeatures: ['oidc', 'login-method-restrictions'],
+    });
     const orgId = users.adminAliceCompanyA.organizationId;
 
     // The default namespace has no mapping rows, so it doubles as `legacy-ns`.
@@ -287,7 +293,10 @@ describe('NamespaceSsoMappingRepository', () => {
   });
 
   test('deleting an SSO provider cascades to namespace mappings (reopens namespace)', async () => {
-    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc', 'login-method-restrictions'] });
+    const { client, server, users } = await SetupTest({
+      dbname,
+      enabledFeatures: ['oidc', 'login-method-restrictions'],
+    });
     const orgId = users.adminAliceCompanyA.organizationId;
 
     const nsId = await createNamespace(client, 'sso-only-ns');
