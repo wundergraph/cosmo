@@ -14,7 +14,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository, UpdateSubgraphSchemaData } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { SubgraphDTO } from '../../../types/index.js';
+import { FederatedGraphDTO, SubgraphDTO } from '../../../types/index.js';
 import {
   clamp,
   enrichLogger,
@@ -239,22 +239,37 @@ export function publishFederatedSubgraphs(
       };
     }
 
-    const { compositionErrors, compositionWarnings, deploymentErrors, updatedFederatedGraphs, changedSubgraphNames } =
-      await opts.db.transaction((tx) => {
-        const subgraphRepoTx = new SubgraphRepository(logger, tx, authContext.organizationId);
-        const compositionService = new CompositionService(
-          tx,
-          authContext.organizationId,
-          logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
-          opts.chClient,
-          opts.webhookProxyUrl,
-          req.disableResolvabilityValidation,
-        );
+    // Phase 1: persist all schema versions and collect the deduplicated union of affected graphs/flags in a single
+    // short transaction.
+    const { affectedFederatedGraphs, affectedFeatureFlags, changedSubgraphNames } =
+      await subgraphRepo.batchWriteAndCollect(items);
 
-        return subgraphRepoTx.batchUpdate(items, compositionService);
+    // Phase 2: compose and deploy the affected graphs OUTSIDE the transaction. Composition is long-running (worker
+    // composition, blob uploads, admission webhooks); holding a DB transaction open across it — for the whole batch —
+    // would tie up a connection and risk timeouts and lock contention.
+    const compositionService = new CompositionService(
+      opts.db,
+      authContext.organizationId,
+      logger,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.blobStorage,
+      opts.chClient,
+      opts.webhookProxyUrl,
+      req.disableResolvabilityValidation,
+    );
+
+    const { compositionErrors, compositionWarnings, deploymentErrors } =
+      await compositionService.recomposeAndDeployAffected({
+        actorId: authContext.userId,
+        affectedFederatedGraphs,
+        affectedFeatureFlags,
+        isFeatureSubgraph: false,
       });
+
+    // Re-fetch the affected federated graphs to pick up the updated composedSchemaVersionId for the webhook payloads.
+    const updatedFederatedGraphs = (
+      await Promise.all(affectedFederatedGraphs.map((graph) => fedGraphRepo.byId(graph.id)))
+    ).filter((graph): graph is FederatedGraphDTO => graph !== undefined);
 
     // Send a schema-updated webhook for each federated graph that was recomposed.
     for (const graph of updatedFederatedGraphs) {

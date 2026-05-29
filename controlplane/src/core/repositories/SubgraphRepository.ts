@@ -629,41 +629,31 @@ export class SubgraphRepository {
   }
 
   /**
-   * Publishes multiple subgraphs (and feature subgraphs) in a single transaction. ALL schema versions are written
-   * first; the deduplicated union of affected federated graphs and feature flags is then composed exactly once
-   * each — so the number of compositions scales with the number of affected graphs, not the number of published
-   * subgraphs. There is no per-subgraph composition.
+   * Writes the schema versions for multiple subgraphs (and feature subgraphs) in a single transaction and returns
+   * the deduplicated union of affected federated graphs and feature flags — WITHOUT composing them.
+   *
+   * Composition is intentionally NOT performed here. It is long-running (worker composition, blob uploads, admission
+   * webhooks) and must not hold a database transaction open — especially for a batch, where the union can span many
+   * graphs. The caller composes the returned graphs once each, outside this transaction.
    */
-  public async batchUpdate(
-    items: (UpdateSubgraphSchemaData & { name: string })[],
-    compositionService: CompositionService,
-  ): Promise<
-    ComposeAndDeployResult & {
-      updatedFederatedGraphs: FederatedGraphDTO[];
-      changedSubgraphNames: string[];
-    }
-  > {
-    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
-    const updatedFederatedGraphs: FederatedGraphDTO[] = [];
+  public async batchWriteAndCollect(items: (UpdateSubgraphSchemaData & { name: string })[]): Promise<{
+    affectedFederatedGraphs: FederatedGraphDTO[];
+    affectedFeatureFlags: FeatureFlagDTO[];
+    changedSubgraphNames: string[];
+  }> {
     const changedSubgraphNames: string[] = [];
+    const mergedFederatedGraphById = new Map<string, FederatedGraphDTO>();
+    const mergedFeatureFlagIds = new Set<string>();
+    let affectedFeatureFlags: FeatureFlagDTO[] = [];
 
     if (items.length === 0) {
-      return { compositionErrors, compositionWarnings, deploymentErrors, updatedFederatedGraphs, changedSubgraphNames };
+      return { affectedFederatedGraphs: [], affectedFeatureFlags: [], changedSubgraphNames };
     }
 
     const namespaceId = items[0].namespaceId;
-    const actorId = items[0].updatedBy;
 
     await this.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
-
-      // The deduplicated union of affected graphs/flags across every published subgraph.
-      const mergedFederatedGraphById = new Map<string, FederatedGraphDTO>();
-      const mergedFeatureFlagIds = new Set<string>();
-
-      // Phase 1: write every schema version and collect affected graphs/flags. NO composition happens here.
+      // Write every schema version and collect the affected graphs/flags. NO composition happens here.
       for (const item of items) {
         const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds, subgraphChanged, labelChanged } =
           await this.#writeSchemaAndCollectAffected(tx, item);
@@ -682,40 +672,14 @@ export class SubgraphRepository {
         }
       }
 
-      const affectedFeatureFlags = await this.#resolveFeatureFlags(tx, namespaceId, mergedFeatureFlagIds);
-
-      if (mergedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
-        return;
-      }
-
-      // Phase 2: compose the deduplicated union exactly once. `isFeatureSubgraph: false` composes every affected
-      // base federated graph (from regular subgraphs) plus every affected feature flag; each base graph's
-      // contracts are recomposed inside `composeAndDeployFederatedGraph`.
-      updatedFederatedGraphs.push(...mergedFederatedGraphById.values());
-      const result = await compositionService.recomposeAndDeployAffected({
-        actorId,
-        affectedFederatedGraphs: [...mergedFederatedGraphById.values()],
-        affectedFeatureFlags,
-        isFeatureSubgraph: false,
-      });
-
-      deploymentErrors.push(...result.deploymentErrors);
-      compositionErrors.push(...result.compositionErrors);
-      compositionWarnings.push(...result.compositionWarnings);
-
-      // Re-fetch the federated graphs to get the updated composedSchemaVersionId
-      const refreshedGraphs = await Promise.all(
-        [...mergedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
-      );
-      for (let i = 0; i < updatedFederatedGraphs.length; i++) {
-        const refreshedGraph = refreshedGraphs[i];
-        if (refreshedGraph) {
-          updatedFederatedGraphs[i] = refreshedGraph;
-        }
-      }
+      affectedFeatureFlags = await this.#resolveFeatureFlags(tx, namespaceId, mergedFeatureFlagIds);
     });
 
-    return { compositionErrors, compositionWarnings, deploymentErrors, updatedFederatedGraphs, changedSubgraphNames };
+    return {
+      affectedFederatedGraphs: [...mergedFederatedGraphById.values()],
+      affectedFeatureFlags,
+      changedSubgraphNames,
+    };
   }
 
   public async move(
