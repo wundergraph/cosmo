@@ -1,5 +1,9 @@
 import { EmptyState } from '@/components/empty-state';
-import { MappingRow, NamespaceLite, NamespaceMappingRows } from '@/components/namespace-login-methods/namespace-mapping-rows';
+import {
+  MappingRow,
+  NamespaceLite,
+  NamespaceMappingRows,
+} from '@/components/namespace-login-methods/namespace-mapping-rows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from '@/components/ui/loader';
@@ -50,7 +54,7 @@ const SectionCard = ({ children }: { children: React.ReactNode }) => {
       <CardContent>{children}</CardContent>
     </Card>
   );
-}
+};
 
 export function NamespaceLoginMethodSettings() {
   const router = useRouter();

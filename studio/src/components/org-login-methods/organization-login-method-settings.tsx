@@ -56,7 +56,7 @@ const SectionCard = ({ children }: { children: React.ReactNode }) => {
       <CardContent>{children}</CardContent>
     </Card>
   );
-}
+};
 
 // Map the server's allow-flags into the multiselect's selected values.
 const toSelected = (m: {
