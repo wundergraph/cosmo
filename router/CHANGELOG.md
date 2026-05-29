@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.321.0](https://github.com/wundergraph/cosmo/compare/router@0.320.0...router@0.321.0) (2026-05-29)
+
+### Bug Fixes
+
+* allow header propagation for router-plugins ([#2877](https://github.com/wundergraph/cosmo/issues/2877)) ([c441f55](https://github.com/wundergraph/cosmo/commit/c441f55485731c4005553b92af84ec2d83dbd2af)) (@Noroth)
+
+### Features
+
+* **router:** add TLS/mTLS support to gRPC subgraphs ([#2861](https://github.com/wundergraph/cosmo/issues/2861)) ([13e814f](https://github.com/wundergraph/cosmo/commit/13e814fa67c9309dbb21291663cfffdfef678445)) (@dkorittki)
+* support manifest for local development ([#2892](https://github.com/wundergraph/cosmo/issues/2892)) ([b852f91](https://github.com/wundergraph/cosmo/commit/b852f91b33c00adabd7c63de14722bbab10f8f7d)) (@Noroth)
+
 # [0.320.0](https://github.com/wundergraph/cosmo/compare/router@0.319.0...router@0.320.0) (2026-05-27)
 
 ### Features
