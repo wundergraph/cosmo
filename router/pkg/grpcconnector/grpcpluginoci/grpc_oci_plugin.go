@@ -29,6 +29,7 @@ type GRPCPluginConfig struct {
 	StartupConfig      grpccommon.GRPCStartupParams
 	Tracer             trace.Tracer
 	GetTraceAttributes grpccommon.GRPCTraceAttributeGetter
+	DialOptions        []grpc.DialOption
 }
 
 type GRPCPlugin struct {
@@ -54,6 +55,8 @@ type GRPCPlugin struct {
 
 	tracer             trace.Tracer
 	getTraceAttributes grpccommon.GRPCTraceAttributeGetter
+
+	dialOptions []grpc.DialOption
 }
 
 func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
@@ -85,6 +88,8 @@ func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 		tracer:             config.Tracer,
 		startupConfig:      config.StartupConfig,
 		getTraceAttributes: config.GetTraceAttributes,
+
+		dialOptions: config.DialOptions,
 	}, nil
 }
 
@@ -128,6 +133,7 @@ func (p *GRPCPlugin) startPluginProcess() error {
 		Plugins: map[string]plugin.Plugin{
 			"grpc_datasource": &grpccommon.ThinPlugin{},
 		},
+		GRPCDialOptions: p.dialOptions,
 	})
 
 	clientProtocol, err := pluginClient.Client()

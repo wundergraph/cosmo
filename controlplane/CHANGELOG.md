@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.228.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.227.0...controlplane@0.228.0) (2026-05-29)
+
+### Features
+
+* add options to restrict certain namespaces to certain login methods ([#2876](https://github.com/wundergraph/cosmo/issues/2876)) ([42b307b](https://github.com/wundergraph/cosmo/commit/42b307b1b5ec9d91d9fb4dad90ecae5e364ac189)) (@JivusAyrus)
+
 # [0.227.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.226.0...controlplane@0.227.0) (2026-05-27)
 
 ### Features
