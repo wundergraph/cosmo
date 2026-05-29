@@ -285,11 +285,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  // TODO: add skeleton
-  if (isFetching) {
-    return <Loader />;
-  }
-
   if (shouldSeeInvitationsJoinPage({ router, invitations: data?.invitations })) {
     return (
       <TransportProvider transport={transport}>
