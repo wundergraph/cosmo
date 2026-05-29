@@ -14441,9 +14441,9 @@ export class CreateOIDCProviderRequest extends Message<CreateOIDCProviderRequest
   clientID = "";
 
   /**
-   * @generated from field: string clientSecrect = 4;
+   * @generated from field: string clientSecret = 4;
    */
-  clientSecrect = "";
+  clientSecret = "";
 
   /**
    * @generated from field: repeated wg.cosmo.platform.v1.GroupMapper mappers = 5;
@@ -14461,7 +14461,7 @@ export class CreateOIDCProviderRequest extends Message<CreateOIDCProviderRequest
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "discoveryEndpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "clientID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "clientSecrect", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "clientSecret", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "mappers", kind: "message", T: GroupMapper, repeated: true },
   ]);
 

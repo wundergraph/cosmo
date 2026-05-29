@@ -45,7 +45,7 @@ describe('IdP gate (namespace ↔ SSO/password mapping)', () => {
     const createProvider = await client.createOIDCProvider({
       name: 'okta',
       clientID: 'client',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       mappers: [],
     });

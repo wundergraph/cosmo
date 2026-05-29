@@ -16597,7 +16597,7 @@ type CreateOIDCProviderRequest struct {
 	Name              string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	DiscoveryEndpoint string                 `protobuf:"bytes,2,opt,name=discoveryEndpoint,proto3" json:"discoveryEndpoint,omitempty"`
 	ClientID          string                 `protobuf:"bytes,3,opt,name=clientID,proto3" json:"clientID,omitempty"`
-	ClientSecrect     string                 `protobuf:"bytes,4,opt,name=clientSecrect,proto3" json:"clientSecrect,omitempty"`
+	ClientSecret      string                 `protobuf:"bytes,4,opt,name=clientSecret,proto3" json:"clientSecret,omitempty"`
 	Mappers           []*GroupMapper         `protobuf:"bytes,5,rep,name=mappers,proto3" json:"mappers,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
@@ -16654,9 +16654,9 @@ func (x *CreateOIDCProviderRequest) GetClientID() string {
 	return ""
 }
 
-func (x *CreateOIDCProviderRequest) GetClientSecrect() string {
+func (x *CreateOIDCProviderRequest) GetClientSecret() string {
 	if x != nil {
-		return x.ClientSecrect
+		return x.ClientSecret
 	}
 	return ""
 }
@@ -34242,12 +34242,12 @@ const file_wg_cosmo_platform_v1_platform_proto_rawDesc = "" +
 	"\fis_installed\x18\x02 \x01(\bR\visInstalled\"C\n" +
 	"\vGroupMapper\x12\x18\n" +
 	"\agroupId\x18\x01 \x01(\tR\agroupId\x12\x1a\n" +
-	"\bssoGroup\x18\x02 \x01(\tR\bssoGroup\"\xdc\x01\n" +
+	"\bssoGroup\x18\x02 \x01(\tR\bssoGroup\"\xda\x01\n" +
 	"\x19CreateOIDCProviderRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
 	"\x11discoveryEndpoint\x18\x02 \x01(\tR\x11discoveryEndpoint\x12\x1a\n" +
-	"\bclientID\x18\x03 \x01(\tR\bclientID\x12$\n" +
-	"\rclientSecrect\x18\x04 \x01(\tR\rclientSecrect\x12;\n" +
+	"\bclientID\x18\x03 \x01(\tR\bclientID\x12\"\n" +
+	"\fclientSecret\x18\x04 \x01(\tR\fclientSecret\x12;\n" +
 	"\amappers\x18\x05 \x03(\v2!.wg.cosmo.platform.v1.GroupMapperR\amappers\"\xb2\x01\n" +
 	"\x1aCreateOIDCProviderResponse\x12:\n" +
 	"\bresponse\x18\x01 \x01(\v2\x1e.wg.cosmo.platform.v1.ResponseR\bresponse\x12\x1c\n" +

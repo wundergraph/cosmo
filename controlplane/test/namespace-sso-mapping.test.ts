@@ -29,7 +29,7 @@ async function createOidcProvider(client: TestSetup['client'], name: string): Pr
   const created = await client.createOIDCProvider({
     name,
     clientID: genID('client'),
-    clientSecrect: 'secret',
+    clientSecret: 'secret',
     discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
     mappers: [],
   });
