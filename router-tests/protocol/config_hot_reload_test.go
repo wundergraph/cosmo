@@ -413,6 +413,12 @@ func TestConfigHotReloadFile(t *testing.T) {
 
 }
 
+// TestConfigHotReloadManifest mirrors TestConfigHotReloadFile, but the router loads its
+// configuration from a manifest directory instead of a single JSON file. A manifest
+// consists of mapper.json (maps the base graph and each feature flag to a version),
+// latest.json (the base graph config), and feature-flags/<name>.json (per-flag configs).
+// The watcher detects updates by observing mapper.json's mtime, so any change — base
+// graph swap, flag addition, or flag mutation — must be reflected by rewriting mapper.json.
 func TestConfigHotReloadManifest(t *testing.T) {
 	t.Parallel()
 
@@ -550,6 +556,9 @@ func TestConfigHotReloadManifest(t *testing.T) {
 		})
 	})
 
+	// Unique to the manifest format: feature flags live in separate files and the mapper
+	// can grow over time. The single-file config can't express this — adding a new flag
+	// there is just a normal config swap.
 	t.Run("reload picks up newly added feature flag", func(t *testing.T) {
 		t.Parallel()
 
@@ -585,6 +594,10 @@ func TestConfigHotReloadManifest(t *testing.T) {
 		})
 	})
 
+	// Unique to the manifest format: because flag configs are separate files, the mapper
+	// can reference a flag whose file hasn't been written yet. SkipMissingFeatureFlags
+	// lets the router boot anyway instead of failing. No analog exists for the single-file
+	// config, where the config either parses or it doesn't.
 	t.Run("skip_missing_feature_flags allows the router to start with a mapper entry that has no config file", func(t *testing.T) {
 		t.Parallel()
 
