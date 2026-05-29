@@ -743,11 +743,9 @@ export class FederatedGraphRepository {
       })
       .from(targets)
       .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targetId))
-      .where(and(
-        eq(targets.type, 'federated'),
-        eq(targets.organizationId, this.organizationId),
-        eq(targets.id, targetId),
-      ))
+      .where(
+        and(eq(targets.type, 'federated'), eq(targets.organizationId, this.organizationId), eq(targets.id, targetId)),
+      )
       .execute();
 
     if (federatedGraph === undefined) {
