@@ -6,13 +6,13 @@ import { Loader } from '@/components/ui/loader';
 import { MultiSelectOption } from '@/components/ui/multi-select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { docsBaseURL } from '@/lib/constants';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { ExclamationTriangleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getOrganizationLoginMethods,
-  getWorkspace,
   listNamespaceSSOMappings,
   listOIDCProviders,
   updateNamespaceSSOMappings,
@@ -55,12 +55,9 @@ export function NamespaceLoginMethodSettings() {
   const organizationSlug = router.query.organizationSlug as string;
   const { toast } = useToast();
 
-  const {
-    data: workspaceData,
-    isLoading: isLoadingWorkspace,
-    error: workspaceError,
-    refetch: refetchWorkspace,
-  } = useQuery(getWorkspace, {});
+  // Namespaces come from the app-wide workspace context (already fetched by the
+  // dashboard layout) instead of a duplicate getWorkspace query.
+  const { namespaceByName, isLoading: isLoadingWorkspace } = useWorkspace();
 
   const {
     data: providersData,
@@ -76,13 +73,18 @@ export function NamespaceLoginMethodSettings() {
     refetch: refetchMappings,
   } = useQuery(listNamespaceSSOMappings, {});
 
-  const { data: orgLoginMethodsData } = useQuery(getOrganizationLoginMethods, {});
+  const {
+    data: orgLoginMethodsData,
+    isLoading: isLoadingOrgLoginMethods,
+    error: orgLoginMethodsError,
+    refetch: refetchOrgLoginMethods,
+  } = useQuery(getOrganizationLoginMethods, {});
 
   const { mutate, isPending } = useMutation(updateNamespaceSSOMappings);
 
   const namespaces = useMemo<NamespaceLite[]>(
-    () => (workspaceData?.namespaces ?? []).map((wns) => ({ id: wns.id, name: wns.name })),
-    [workspaceData?.namespaces],
+    () => Array.from(namespaceByName.values()).map((ns) => ({ id: ns.id, name: ns.name })),
+    [namespaceByName],
   );
 
   const providers = useMemo(() => providersData?.providers ?? [], [providersData?.providers]);
@@ -197,20 +199,20 @@ export function NamespaceLoginMethodSettings() {
     );
   };
 
-  if (isLoadingWorkspace || isLoadingProviders || isLoadingMappings) {
+  if (isLoadingWorkspace || isLoadingProviders || isLoadingMappings || isLoadingOrgLoginMethods) {
     return sectionCard(<Loader />);
   }
 
   if (
-    workspaceError ||
     providersError ||
     mappingsError ||
-    !workspaceData ||
+    orgLoginMethodsError ||
     !providersData ||
     !mappingsData ||
-    workspaceData.response?.code !== EnumStatusCode.OK ||
+    !orgLoginMethodsData ||
     providersData.response?.code !== EnumStatusCode.OK ||
-    mappingsData.response?.code !== EnumStatusCode.OK
+    mappingsData.response?.code !== EnumStatusCode.OK ||
+    orgLoginMethodsData.response?.code !== EnumStatusCode.OK
   ) {
     return sectionCard(
       <EmptyState
@@ -218,20 +220,20 @@ export function NamespaceLoginMethodSettings() {
         icon={<ExclamationTriangleIcon />}
         title="Could not load namespace login methods"
         description={
-          workspaceData?.response?.details ||
           providersData?.response?.details ||
           mappingsData?.response?.details ||
-          workspaceError?.message ||
+          orgLoginMethodsData?.response?.details ||
           providersError?.message ||
           mappingsError?.message ||
+          orgLoginMethodsError?.message ||
           'Please try again'
         }
         actions={
           <Button
             onClick={() => {
-              refetchWorkspace();
               refetchProviders();
               refetchMappings();
+              refetchOrgLoginMethods();
             }}
           >
             Retry
