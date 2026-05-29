@@ -5,14 +5,13 @@ import { NamespaceLoginMethodSettings } from '@/components/org-login-methods/nam
 import { Button } from '@/components/ui/button';
 import { useFeature } from '@/hooks/use-feature';
 import { useIsAdmin } from '@/hooks/use-is-admin';
-import { useUser } from '@/hooks/use-user';
 import { NextPageWithLayout } from '@/lib/page';
 import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/router';
 
 const LoginMethodsPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const user = useUser();
+  const organizationSlug = router.query.organizationSlug as string;
   const isAdmin = useIsAdmin();
   const isFeatureEnabled = !!useFeature('login-method-restrictions')?.enabled;
 
@@ -32,7 +31,7 @@ const LoginMethodsPage: NextPageWithLayout = () => {
         icon={<InfoCircledIcon className="h-12 w-12" />}
         title="Login method restrictions are not available"
         description="Upgrade to the Enterprise plan to restrict which login methods can access your organization and its namespaces."
-        actions={<Button onClick={() => router.push(`/${user?.currentOrganization.slug}/billing`)}>Upgrade</Button>}
+        actions={<Button onClick={() => router.push(`/${organizationSlug}/billing`)}>Upgrade</Button>}
       />
     );
   }
