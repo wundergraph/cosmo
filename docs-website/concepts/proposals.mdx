@@ -86,21 +86,21 @@ When enabled, changes to the schema will need to go through a proposal process, 
 
 ### Proposal Configuration
 
-The proposal configuration allows you to set severity levels for subgraph checks and publishes. This makes sure that the schema used for checks and publishes matches a proposal in the namespace. Proposal matching considers proposals in any state.
+The proposal configuration allows you to set severity levels for subgraph checks and publishes. This makes sure that the schema used for a check or publish matches a proposal in the namespace. The proposals considered depend on the operation. Checks match against draft and approved proposals. Publishes match against approved proposals only.
 
 #### Check Severity Level
 
-This sets the severity level for subgraph checks during proposal evaluation. Available levels include:
+This sets the severity level for subgraph checks during proposal evaluation. A check matches against draft and approved proposals. Available levels include:
 
-- **Error**: Returns an error if the schema used for the check doesn't match any proposal in the namespace.
-- **Warn**: Returns a warning if the schema used for the check doesn't match any proposal in the namespace.
+- **Error**: Returns an error if the schema used for the check doesn't match any draft or approved proposal in the namespace.
+- **Warn**: Returns a warning if the schema used for the check doesn't match any draft or approved proposal in the namespace.
 
 #### Publish Severity Level
 
-This determines the severity level for subgraph publishes during proposal evaluation. Options include:
+This determines the severity level for subgraph publishes during proposal evaluation. A publish matches against approved proposals only. Options include:
 
-- **Error**: Returns an error if the schema used for the publish doesn't match any proposal in the namespace.
-- **Warn**: Returns a warning if the schema used for the publish doesn't match any proposal in the namespace.
+- **Error**: Returns an error if the schema used for the publish doesn't match any approved proposal in the namespace.
+- **Warn**: Returns a warning if the schema used for the publish doesn't match any approved proposal in the namespace.
 
 Configuring these severity levels allows you to enforce different levels of strictness in your proposal workflow.
 
