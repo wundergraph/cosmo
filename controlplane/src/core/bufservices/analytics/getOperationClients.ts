@@ -9,6 +9,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { isoDateRangeToTimestamps, getDateRange } from '../../repositories/analytics/util.js';
 
@@ -43,6 +44,10 @@ export function getOperationClients(
         },
         clients: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     const analyticsRetention = await orgRepo.getFeature({
