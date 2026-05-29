@@ -20,7 +20,7 @@ import database from '../src/core/plugins/database.js';
 import fastifyRedis from '../src/core/plugins/redis.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 import { BillingRepository, billingSchema } from '../src/core/repositories/BillingRepository.js';
-import { NamespaceSsoMappingRepository } from '../src/core/repositories/NamespaceSsoMappingRepository.js';
+import { NamespaceLoginMethodRepository } from '../src/core/repositories/NamespaceLoginMethodRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import { RBACEvaluator } from '../src/core/services/RBACEvaluator.js';
@@ -650,7 +650,7 @@ export const createFederatedGraph = async (
  * The mocked test authenticator returns a static context, so the part of
  * `Authentication.authenticate()` that derives the IdP gate from the session's
  * idp_alias never runs. This reproduces exactly that step — resolving the
- * allowed-namespace set via the same `NamespaceSsoMappingRepository` the real
+ * allowed-namespace set via the same `NamespaceLoginMethodRepository` the real
  * code uses — and injects the result into the auth context's RBACEvaluator so
  * every RPC enforces the gate. Pass `base = users.<someUser>` as the identity.
  */
@@ -665,7 +665,7 @@ export async function loginAs({
   base: UserTestData & AuthContext;
   loginMethod: LoginMethod;
 }) {
-  const ssoMappingRepo = new NamespaceSsoMappingRepository(db);
+  const ssoMappingRepo = new NamespaceLoginMethodRepository(db);
   const namespaceAccess = await ssoMappingRepo.allowedNamespaces({
     organizationId: base.organizationId,
     loginMethod,
