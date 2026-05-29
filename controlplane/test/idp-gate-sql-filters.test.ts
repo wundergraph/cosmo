@@ -36,7 +36,7 @@ describe('IdP gate (namespace ↔ SSO/password mapping)', () => {
 
   beforeAll(async () => {
     dbname = await beforeAllSetup();
-    setup = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    setup = await SetupTest({ dbname, enabledFeatures: ['oidc', 'login-method-restrictions'] });
     base = setup.users.adminAliceCompanyA;
 
     const { client } = setup;

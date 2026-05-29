@@ -11,7 +11,9 @@ type TestSetup = Awaited<ReturnType<typeof SetupTest>>;
 // SetupTest's authenticator is an org admin, so the namespace/SSO RPCs below
 // authorize cleanly. Everything goes through the platform RPCs; creating and
 // deleting OIDC providers therefore drives Keycloak, so the tests that use them
-// enable the `oidc` feature via SetupTest.
+// enable the `oidc` feature via SetupTest. The namespace SSO mapping RPCs are
+// gated behind the enterprise `login-method-restrictions` feature, so tests that
+// call them enable it too.
 async function createNamespace(client: TestSetup['client'], name: string): Promise<string> {
   const created = await client.createNamespace({ name });
   expect(created.response?.code).toBe(EnumStatusCode.OK);
@@ -84,7 +86,7 @@ describe('NamespaceSsoMappingRepository', () => {
   });
 
   test('restricts namespaces once a mapping row exists', async () => {
-    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc', 'login-method-restrictions'] });
     const orgId = users.adminAliceCompanyA.organizationId;
 
     const defaultNsId = await getNamespaceId(client, DEFAULT_NAMESPACE);
@@ -112,7 +114,7 @@ describe('NamespaceSsoMappingRepository', () => {
   });
 
   test('gates namespace access by login method (full matrix)', async () => {
-    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc', 'login-method-restrictions'] });
     const orgId = users.adminAliceCompanyA.organizationId;
 
     // The default namespace has no mapping rows, so it doubles as `legacy-ns`.
@@ -168,7 +170,7 @@ describe('NamespaceSsoMappingRepository', () => {
   });
 
   test('gates namespace access by social login (google/github are separate)', async () => {
-    const { client, server, users } = await SetupTest({ dbname });
+    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['login-method-restrictions'] });
     const orgId = users.adminAliceCompanyA.organizationId;
 
     const legacyNsId = await getNamespaceId(client, DEFAULT_NAMESPACE);
@@ -208,7 +210,7 @@ describe('NamespaceSsoMappingRepository', () => {
   });
 
   test('updateNamespaceSSOMappings replaces the org mappings in one call', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['login-method-restrictions'] });
 
     const nsA = await createNamespace(client, 'bulk-a');
     const nsB = await createNamespace(client, 'bulk-b');
@@ -243,7 +245,7 @@ describe('NamespaceSsoMappingRepository', () => {
   });
 
   test('updateNamespaceSSOMappings rejects a namespace listed more than once', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['login-method-restrictions'] });
 
     const nsId = await createNamespace(client, 'dup-ns');
     const res = await client.updateNamespaceSSOMappings({
@@ -261,8 +263,31 @@ describe('NamespaceSsoMappingRepository', () => {
     await server.close();
   });
 
+  test('namespace SSO mapping RPCs return ERR_UPGRADE_PLAN without the login-method-restrictions feature', async () => {
+    // Default plan does not include the enterprise feature.
+    const { client, server } = await SetupTest({ dbname });
+
+    const list = await client.listNamespaceSSOMappings({});
+    expect(list.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
+
+    const update = await client.updateNamespaceSSOMappings({
+      mappings: [
+        {
+          namespaceId: await getNamespaceId(client, DEFAULT_NAMESPACE),
+          allowedSsoProviderIds: [],
+          allowPasswordLogin: true,
+          allowGoogleLogin: false,
+          allowGithubLogin: false,
+        },
+      ],
+    });
+    expect(update.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
+
+    await server.close();
+  });
+
   test('deleting an SSO provider cascades to namespace mappings (reopens namespace)', async () => {
-    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    const { client, server, users } = await SetupTest({ dbname, enabledFeatures: ['oidc', 'login-method-restrictions'] });
     const orgId = users.adminAliceCompanyA.organizationId;
 
     const nsId = await createNamespace(client, 'sso-only-ns');
