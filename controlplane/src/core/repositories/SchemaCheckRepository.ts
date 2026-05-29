@@ -990,7 +990,7 @@ export class SchemaCheckRepository {
 
           if (matches.length === 0) {
             if (proposalConfig.checkSeverityLevel === 'warn') {
-              proposalMatchMessage += `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.\n`;
+              proposalMatchMessage += `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved or draft proposals.\n`;
             } else {
               await this.update({
                 schemaCheckID,
@@ -1004,7 +1004,7 @@ export class SchemaCheckRepository {
               return {
                 response: {
                   code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
-                  details: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+                  details: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved or draft proposals.`,
                 },
                 breakingChanges: [],
                 nonBreakingChanges: [],
@@ -1016,7 +1016,7 @@ export class SchemaCheckRepository {
                 graphPruneWarnings: [],
                 graphPruneErrors: [],
                 compositionWarnings: [],
-                proposalMatchMessage: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+                proposalMatchMessage: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved or draft proposals.`,
               };
             }
           }
