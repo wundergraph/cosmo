@@ -1010,7 +1010,7 @@ export class FeatureFlagRepository {
         }
       }
 
-      const baseSubgraphName = baseSubgraphNameById.get(graph.baseSubgraphId);
+      const baseSubgraphName = baseSubgraphNameById[graph.baseSubgraphId];
       if (!baseSubgraphName) {
         continue;
       }

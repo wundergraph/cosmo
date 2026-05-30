@@ -1016,8 +1016,8 @@ export class SubgraphRepository {
       : Promise.resolve([]);
   }
 
-  public async getSubgraphNameByIds(subgraphIds: string[]): Promise<Map<string, string>> {
-    const results = new Map<string, string>();
+  public async getSubgraphNameByIds(subgraphIds: string[]): Promise<Record<string, string>> {
+    const results: Record<string, string> = {};
     if (subgraphIds.length === 0) {
       return results;
     }
@@ -1036,7 +1036,7 @@ export class SubgraphRepository {
         .execute();
 
       for (const subgraph of chunkOfSubgraphNames) {
-        results.set(subgraph.id, subgraph.name);
+        results[subgraph.id] = subgraph.name;
       }
 
       if (chunkOfIds.length < 100) {
