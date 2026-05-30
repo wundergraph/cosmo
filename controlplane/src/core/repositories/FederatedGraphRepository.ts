@@ -783,7 +783,7 @@ export class FederatedGraphRepository {
       await this.db.insert(federatedGraphsToFeatureFlagSchemaVersions).values({
         composedSchemaVersionId: schemaVersionId,
         federatedGraphId: federatedGraph.id,
-        baseCompositionSchemaVersionId: federatedGraph.composedSchemaVersionId || '',
+        baseCompositionSchemaVersionId: federatedGraph.composedSchemaVersionId!,
         featureFlagId,
       });
     } else {
