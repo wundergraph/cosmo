@@ -24,6 +24,9 @@ import type { FederationResult, FederationResultWithContracts } from '@wundergra
 import type { RouterSubgraph } from '@wundergraph/cosmo-shared';
 import * as Sentry from '@sentry/node';
 import { workerId } from 'tinypool';
+import { z } from 'zod';
+import { eventLoopBlockIntegration } from '@sentry/node-native';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import type { SubgraphDTO } from '../../types/index.js';
 import type {
   ComposeGraphsTaskInput,
@@ -31,7 +34,60 @@ import type {
   SerializedContractCompositionArtifact,
   SerializedComposedGraphArtifact,
 } from './composeGraphs.types.js';
-import './../sentry.config.js';
+
+/**
+ * Because of the isolation, we need to handle the Sentry configuration/initialization here as we can't import it from
+ * source (see header comment)
+ */
+const sentryEnvVariables = z.object({
+  SENTRY_ENABLED: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_SEND_DEFAULT_PII: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional().default(1),
+  SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional().default(1),
+  SENTRY_PROFILE_LIFECYCLE: z.enum(['manual', 'trace']).optional().default('manual'),
+  SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().int().min(0).optional().default(100),
+  SENTRY_ENABLE_LOGS: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
+});
+
+const {
+  SENTRY_ENABLED,
+  SENTRY_DSN,
+  SENTRY_SEND_DEFAULT_PII,
+  SENTRY_TRACES_SAMPLE_RATE,
+  SENTRY_PROFILE_SESSION_SAMPLE_RATE,
+  SENTRY_PROFILE_LIFECYCLE,
+  SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
+  SENTRY_ENABLE_LOGS,
+} = sentryEnvVariables.parse(process.env);
+
+if (SENTRY_ENABLED && SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    integrations: [
+      eventLoopBlockIntegration({ threshold: SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS }),
+      nodeProfilingIntegration(),
+    ],
+    profileSessionSampleRate: SENTRY_PROFILE_SESSION_SAMPLE_RATE,
+    sendDefaultPii: SENTRY_SEND_DEFAULT_PII,
+    tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
+    profileLifecycle: SENTRY_PROFILE_LIFECYCLE,
+    enableLogs: SENTRY_ENABLE_LOGS,
+    spotlight: process.env.NODE_ENV !== 'production',
+  });
+}
 
 function parseGRPCMapping(mappings: string): GRPCMapping {
   return Sentry.startSpan({ name: 'parseGRPCMapping' }, () => {

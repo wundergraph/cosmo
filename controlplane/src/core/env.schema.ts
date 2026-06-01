@@ -207,6 +207,29 @@ export const envVariables = z
      * Admission Webhook
      */
     AUTH_ADMISSION_JWT_SECRET: z.string(),
+    /**
+     * Sentry
+     */
+    SENTRY_ENABLED: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true')
+      .default('false'),
+    SENTRY_DSN: z.string().optional(),
+    SENTRY_SEND_DEFAULT_PII: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true')
+      .default('false'),
+    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().optional().default(1),
+    SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().optional().default(1),
+    SENTRY_PROFILE_LIFECYCLE: z.enum(['manual', 'trace']).optional().default('manual'),
+    SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().optional().default(100),
+    SENTRY_ENABLE_LOGS: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true')
+      .default('false'),
   })
   .refine((input) => {
     if (input.STRIPE_WEBHOOK_SECRET && !input.STRIPE_SECRET_KEY) {
@@ -214,29 +237,3 @@ export const envVariables = z
     }
     return true;
   }, 'STRIPE_WEBHOOK_SECRET requires STRIPE_SECRET_KEY');
-
-/**
- * Sentry
- */
-export const sentryEnvVariables = z.object({
-  SENTRY_ENABLED: z
-    .string()
-    .optional()
-    .transform((val) => val === 'true')
-    .default('false'),
-  SENTRY_DSN: z.string().optional(),
-  SENTRY_SEND_DEFAULT_PII: z
-    .string()
-    .optional()
-    .transform((val) => val === 'true')
-    .default('false'),
-  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional().default(1),
-  SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional().default(1),
-  SENTRY_PROFILE_LIFECYCLE: z.enum(['manual', 'trace']).optional().default('manual'),
-  SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().int().min(0).optional().default(100),
-  SENTRY_ENABLE_LOGS: z
-    .string()
-    .optional()
-    .transform((val) => val === 'true')
-    .default('false'),
-});

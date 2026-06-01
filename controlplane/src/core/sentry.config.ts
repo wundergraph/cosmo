@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
 import { fastifyIntegration, pinoIntegration } from '@sentry/node';
-import { sentryEnvVariables } from './env.schema.js';
+import { envVariables } from './env.schema.js';
 
 const {
   SENTRY_ENABLED,
@@ -14,7 +14,7 @@ const {
   SENTRY_PROFILE_LIFECYCLE,
   SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
   SENTRY_ENABLE_LOGS,
-} = sentryEnvVariables.parse(process.env);
+} = envVariables.parse(process.env);
 
 if (SENTRY_ENABLED && SENTRY_DSN) {
   Sentry.init({

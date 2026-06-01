@@ -11,10 +11,10 @@ import { fileURLToPath } from 'node:url';
 import { availableParallelism } from 'node:os';
 import { Warning } from '@wundergraph/composition';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import WorkerPool from 'tinypool';
+import WorkerPool, { Options } from 'tinypool';
 import * as Sentry from '@sentry/node';
 import { FederatedGraphDTO } from '../../types/index.js';
-import { sentryEnvVariables } from '../env.schema.js';
+import { envVariables } from '../env.schema.js';
 import { validateRouterCompatibilityVersion } from './composition.js';
 import { ComposedFederatedGraph, CompositionSubgraphRecord } from './composer.js';
 import {
@@ -58,18 +58,21 @@ function getComposeGraphsPool() {
     return composeGraphsPool;
   }
 
-  const maxThreads = getMaxThreads();
-  return Sentry.startSpan({ name: 'getComposeGraphsPool', attributes: { maxThreads } }, () => {
+  const options = {
+    minThreads: 1,
+    maxThreads: getMaxThreads(),
+    runtime: 'child_process',
+    concurrentTasksPerWorker: 2,
+    serialization: 'advanced',
+  };
+
+  return Sentry.startSpan({ name: 'getComposeGraphsPool', attributes: options }, () => {
     const { filename } = getWorkerFilename();
 
-    const env = sentryEnvVariables.parse(process.env);
+    const env = envVariables.parse(process.env);
     composeGraphsPool = new WorkerPool({
       filename,
-      minThreads: 1,
-      maxThreads,
-      runtime: 'child_process',
-      concurrentTasksPerWorker: 2,
-      serialization: 'advanced',
+      ...(options as Options),
       env: {
         SENTRY_ENABLED: env.SENTRY_ENABLED ? 'true' : 'false',
         SENTRY_DSN: env.SENTRY_DSN || '',
