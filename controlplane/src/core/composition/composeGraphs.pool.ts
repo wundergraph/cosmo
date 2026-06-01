@@ -12,6 +12,7 @@ import { availableParallelism } from 'node:os';
 import { Warning } from '@wundergraph/composition';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import WorkerPool from 'tinypool';
+import * as Sentry from '@sentry/node';
 import { FederatedGraphDTO } from '../../types/index.js';
 import { validateRouterCompatibilityVersion } from './composition.js';
 import { ComposedFederatedGraph, CompositionSubgraphRecord } from './composer.js';
@@ -111,12 +112,27 @@ export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: Ret
   return RouterConfig.fromJson(routerExecutionConfigJson);
 }
 
-export function composeGraphsInWorker(task: Omit<ComposeGraphsTaskInput, 'routerCompatibilityVersion'>) {
+export function composeGraphsInWorker(
+  task: Omit<ComposeGraphsTaskInput, 'routerCompatibilityVersion'>,
+): Promise<ComposeGraphsTaskResult> {
   const fullTask: ComposeGraphsTaskInput = {
     ...task,
     routerCompatibilityVersion: validateRouterCompatibilityVersion(task.federatedGraph.routerCompatibilityVersion),
   };
-  return getComposeGraphsPool().run(fullTask) as Promise<ComposeGraphsTaskResult>;
+
+  return Sentry.startSpan(
+    {
+      name: 'composeGraphsInWorker',
+      attributes: {
+        federatedGraphId: task.federatedGraph.id,
+        federatedGraphName: task.federatedGraph.name,
+        subgraphsCount: task.federatedGraph.subgraphsCount,
+        organizationId: task.federatedGraph.organizationId,
+        namespaceId: task.federatedGraph.namespaceId,
+      },
+    },
+    () => getComposeGraphsPool().run(fullTask) as Promise<ComposeGraphsTaskResult>,
+  );
 }
 
 export function configureComposeGraphsPool(options: ConfigureComposeGraphsPoolOptions) {

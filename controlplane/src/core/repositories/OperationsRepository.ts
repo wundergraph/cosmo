@@ -20,8 +20,6 @@ import {
 import { traced } from '../tracing.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
-export const MAX_MANIFEST_OPERATIONS = 3000;
-
 export interface PQLManifest {
   version: 1;
   revision: string;

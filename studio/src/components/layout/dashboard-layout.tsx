@@ -229,8 +229,8 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
           icon: <AiOutlineAudit className="size-4" />,
         },
         {
-          title: 'Namespace SSO',
-          href: basePath + `/namespace-sso`,
+          title: 'Login Methods',
+          href: basePath + `/login-methods`,
           icon: <PiLockKey className="size-4" />,
           separator: !isAdminOrDeveloper,
         },
@@ -288,7 +288,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   // When the current route is namespace-scoped and the workspace returns zero
   // namespaces (most often because the IdP gate blocks the user's login method
   // from every namespace), render an explainer in place of the page content.
-  // Org-level routes (settings, members, namespace-sso, audit log, ...) are
+  // Org-level routes (settings, members, login-methods, audit log, ...) are
   // unaffected so admins can still navigate to fix the mapping.
   //
   // Two flavors of namespace-scoped routes exist:

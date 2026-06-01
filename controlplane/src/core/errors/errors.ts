@@ -26,6 +26,20 @@ export class UnauthorizedError extends AuthorizationError {
   }
 }
 
+/**
+ * Thrown when a user authenticates via a login method the organization does not
+ * allow. Extends AuthenticationError so it surfaces as a not-authenticated
+ * failure with a message guiding the user to sign in with an allowed method.
+ */
+export class LoginMethodNotAllowedError extends AuthenticationError {
+  constructor() {
+    super(
+      EnumStatusCode.ERROR_NOT_AUTHENTICATED,
+      'Your login method is not permitted for this organization. Sign in with one of the allowed methods.',
+    );
+  }
+}
+
 export function isAuthenticationError(e: Error): e is AuthenticationError {
   return e instanceof AuthenticationError;
 }
