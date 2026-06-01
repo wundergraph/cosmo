@@ -22,6 +22,8 @@ import { GRPCMapping, ImageReference, RouterConfig } from '@wundergraph/cosmo-co
 import { parse } from 'graphql';
 import type { FederationResult, FederationResultWithContracts } from '@wundergraph/composition';
 import type { RouterSubgraph } from '@wundergraph/cosmo-shared';
+import * as Sentry from '@sentry/node';
+import { workerId } from 'tinypool';
 import type { SubgraphDTO } from '../../types/index.js';
 import type {
   ComposeGraphsTaskInput,
@@ -29,13 +31,16 @@ import type {
   SerializedContractCompositionArtifact,
   SerializedComposedGraphArtifact,
 } from './composeGraphs.types.js';
+import './../sentry.config.js';
 
 function parseGRPCMapping(mappings: string): GRPCMapping {
-  try {
-    return GRPCMapping.fromJson(JSON.parse(mappings));
-  } catch (error) {
-    throw new Error(`Failed to parse gRPC mappings: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  return Sentry.startSpan({ name: 'parseGRPCMapping' }, () => {
+    try {
+      return GRPCMapping.fromJson(JSON.parse(mappings));
+    } catch (error) {
+      throw new Error(`Failed to parse gRPC mappings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  });
 }
 
 /**
@@ -47,70 +52,72 @@ function subgraphDTOsToRouterSubgraphs(
   subgraphs: SubgraphDTO[],
   result: FederationResult,
 ): RouterSubgraph[] {
-  return subgraphs.map((subgraph) => {
-    const subgraphConfig = result.success ? result.subgraphConfigBySubgraphName.get(subgraph.name) : undefined;
-    const schema = subgraphConfig?.schema;
-    const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
-    const costs = subgraphConfig?.costs;
+  return Sentry.startSpan({ name: 'subgraphDTOsToRouterSubgraphs' }, () =>
+    subgraphs.map((subgraph) => {
+      const subgraphConfig = result.success ? result.subgraphConfigBySubgraphName.get(subgraph.name) : undefined;
+      const schema = subgraphConfig?.schema;
+      const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+      const costs = subgraphConfig?.costs;
 
-    if (subgraph.type === 'grpc_plugin') {
-      if (!subgraph.proto?.pluginData) {
-        throw new Error(`Subgraph ${subgraph.name} is a plugin but does not have a plugin data`);
+      if (subgraph.type === 'grpc_plugin') {
+        if (!subgraph.proto?.pluginData) {
+          throw new Error(`Subgraph ${subgraph.name} is a plugin but does not have a plugin data`);
+        }
+
+        return {
+          kind: SubgraphKind.Plugin,
+          id: subgraph.id,
+          version: subgraph.proto.pluginData.version,
+          name: subgraph.name,
+          sdl: subgraph.schemaSDL,
+          url: subgraph.routingUrl,
+          configurationDataByTypeName,
+          schema,
+          costs,
+          protoSchema: subgraph.proto.schema,
+          mapping: parseGRPCMapping(subgraph.proto.mappings),
+          imageReference: new ImageReference({
+            repository: `${organizationId}/${subgraph.id}`,
+            reference: subgraph.proto.pluginData.version,
+          }),
+        };
+      }
+
+      if (subgraph.type === 'grpc_service') {
+        if (!subgraph.proto) {
+          throw new Error(`Subgraph ${subgraph.name} is a GRPC service but does not have a proto`);
+        }
+
+        return {
+          kind: SubgraphKind.GRPC,
+          id: subgraph.id,
+          name: subgraph.name,
+          sdl: subgraph.schemaSDL,
+          url: subgraph.routingUrl,
+          configurationDataByTypeName,
+          schema,
+          costs,
+          protoSchema: subgraph.proto.schema,
+          mapping: parseGRPCMapping(subgraph.proto.mappings),
+        };
       }
 
       return {
-        kind: SubgraphKind.Plugin,
+        kind: SubgraphKind.Standard,
         id: subgraph.id,
-        version: subgraph.proto.pluginData.version,
         name: subgraph.name,
-        sdl: subgraph.schemaSDL,
         url: subgraph.routingUrl,
+        sdl: subgraph.schemaSDL,
+        subscriptionUrl: subgraph.subscriptionUrl,
+        subscriptionProtocol: subgraph.subscriptionProtocol,
+        websocketSubprotocol:
+          subgraph.subscriptionProtocol === 'ws' ? subgraph.websocketSubprotocol || 'auto' : undefined,
         configurationDataByTypeName,
         schema,
         costs,
-        protoSchema: subgraph.proto.schema,
-        mapping: parseGRPCMapping(subgraph.proto.mappings),
-        imageReference: new ImageReference({
-          repository: `${organizationId}/${subgraph.id}`,
-          reference: subgraph.proto.pluginData.version,
-        }),
       };
-    }
-
-    if (subgraph.type === 'grpc_service') {
-      if (!subgraph.proto) {
-        throw new Error(`Subgraph ${subgraph.name} is a GRPC service but does not have a proto`);
-      }
-
-      return {
-        kind: SubgraphKind.GRPC,
-        id: subgraph.id,
-        name: subgraph.name,
-        sdl: subgraph.schemaSDL,
-        url: subgraph.routingUrl,
-        configurationDataByTypeName,
-        schema,
-        costs,
-        protoSchema: subgraph.proto.schema,
-        mapping: parseGRPCMapping(subgraph.proto.mappings),
-      };
-    }
-
-    return {
-      kind: SubgraphKind.Standard,
-      id: subgraph.id,
-      name: subgraph.name,
-      url: subgraph.routingUrl,
-      sdl: subgraph.schemaSDL,
-      subscriptionUrl: subgraph.subscriptionUrl,
-      subscriptionProtocol: subgraph.subscriptionProtocol,
-      websocketSubprotocol:
-        subgraph.subscriptionProtocol === 'ws' ? subgraph.websocketSubprotocol || 'auto' : undefined,
-      configurationDataByTypeName,
-      schema,
-      costs,
-    };
-  });
+    }),
+  );
 }
 
 // Serialize the worker-side composition result into a structured-clone-safe
@@ -124,127 +131,162 @@ function serializeComposedGraphArtifact(
   result: FederationResult,
   includeRouterExecutionConfig: boolean,
 ): SerializedComposedGraphArtifact {
-  const composedSchema = result.success ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined;
-  const federatedClientSchema = result.success
-    ? printSchemaWithDirectives(result.federatedGraphClientSchema)
-    : undefined;
-  const shouldIncludeClientSchema = result.success ? (result.shouldIncludeClientSchema ?? false) : false;
-  const fieldConfigurations = result.success ? result.fieldConfigurations : [];
+  return Sentry.startSpan({ name: 'serializeComposedGraphArtifact' }, () => {
+    const composedSchema = result.success
+      ? Sentry.startSpan({ name: 'printSchemaWithDirectives' }, () =>
+          printSchemaWithDirectives(result.federatedGraphSchema),
+        )
+      : undefined;
 
-  let routerExecutionConfigJson: ReturnType<RouterConfig['toJson']> | undefined;
-  if (includeRouterExecutionConfig && result.success && composedSchema) {
-    const routerSubgraphs = subgraphDTOsToRouterSubgraphs(organizationId, subgraphs, result);
-    const routerExecutionConfig = buildRouterConfig({
-      federatedClientSDL: shouldIncludeClientSchema ? federatedClientSchema || '' : '',
-      federatedSDL: composedSchema,
+    const federatedClientSchema = result.success
+      ? Sentry.startSpan({ name: 'printSchemaWithDirectives' }, () =>
+          printSchemaWithDirectives(result.federatedGraphClientSchema),
+        )
+      : undefined;
+
+    const shouldIncludeClientSchema = result.success ? (result.shouldIncludeClientSchema ?? false) : false;
+    const fieldConfigurations = result.success ? result.fieldConfigurations : [];
+
+    let routerExecutionConfigJson: ReturnType<RouterConfig['toJson']> | undefined;
+    if (includeRouterExecutionConfig && result.success && composedSchema) {
+      const routerSubgraphs = subgraphDTOsToRouterSubgraphs(organizationId, subgraphs, result);
+      const routerExecutionConfig = Sentry.startSpan({ name: 'buildRouterConfig' }, () =>
+        buildRouterConfig({
+          federatedClientSDL: shouldIncludeClientSchema ? federatedClientSchema || '' : '',
+          federatedSDL: composedSchema,
+          fieldConfigurations,
+          routerCompatibilityVersion,
+          subgraphs: routerSubgraphs,
+          schemaVersionId: randomUUID(),
+        }),
+      );
+      routerExecutionConfigJson = routerExecutionConfig.toJson();
+    }
+
+    return {
+      success: result.success,
+      errors: result.success ? [] : result.errors.map((error) => error.message),
+      warnings: result.warnings.map((warning) => ({
+        message: warning.message,
+        subgraphName: warning.subgraph?.name,
+      })),
+      composedSchema,
+      federatedClientSchema,
+      shouldIncludeClientSchema,
       fieldConfigurations,
-      routerCompatibilityVersion,
-      subgraphs: routerSubgraphs,
-      schemaVersionId: randomUUID(),
-    });
-    routerExecutionConfigJson = routerExecutionConfig.toJson();
-  }
-
-  return {
-    success: result.success,
-    errors: result.success ? [] : result.errors.map((error) => error.message),
-    warnings: result.warnings.map((warning) => ({
-      message: warning.message,
-      subgraphName: warning.subgraph?.name,
-    })),
-    composedSchema,
-    federatedClientSchema,
-    shouldIncludeClientSchema,
-    fieldConfigurations,
-    subgraphs: subgraphs.map((subgraph) => ({
-      id: subgraph.id,
-      isFeatureSubgraph: subgraph.isFeatureSubgraph,
-      name: subgraph.name,
-      sdl: subgraph.schemaSDL,
-      schemaVersionId: subgraph.schemaVersionId,
-      targetId: subgraph.targetId,
-    })),
-    routerExecutionConfigJson,
-  };
+      subgraphs: subgraphs.map((subgraph) => ({
+        id: subgraph.id,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
+        name: subgraph.name,
+        sdl: subgraph.schemaSDL,
+        schemaVersionId: subgraph.schemaVersionId,
+        targetId: subgraph.targetId,
+      })),
+      routerExecutionConfigJson,
+    };
+  });
 }
 
 function toCompositionSubgraphs(subgraphs: SubgraphDTO[]) {
-  return subgraphs
-    .filter((s) => s.schemaSDL !== '')
-    .map((subgraph) => ({
-      name: subgraph.name,
-      url: subgraph.routingUrl,
-      definitions: parse(subgraph.schemaSDL),
-    }));
+  return Sentry.startSpan({ name: 'toCompositionSubgraphs' }, () =>
+    subgraphs
+      .filter((s) => s.schemaSDL !== '')
+      .map((subgraph) => ({
+        name: subgraph.name,
+        url: subgraph.routingUrl,
+        definitions: parse(subgraph.schemaSDL),
+      })),
+  );
 }
 
 export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): ComposeGraphsTaskResult {
-  const tagOptionsByContractName = new Map(
-    task.tagOptionsByContractName.map((tagOptions) => [
-      tagOptions.contractName,
-      newContractTagOptionsFromArrays(tagOptions.excludeTags, tagOptions.includeTags),
-    ]),
-  );
+  return Sentry.continueTrace({ sentryTrace: task.trace?.sentryTrace, baggage: task.trace?.baggage }, () =>
+    Sentry.startSpan(
+      {
+        name: 'worker.composeGraphsInWorker',
+        attributes: {
+          workerId,
+          federatedGraphId: task.federatedGraph.id,
+          federatedGraphName: task.federatedGraph.name,
+          subgraphsCount: task.federatedGraph.subgraphsCount,
+          organizationId: task.federatedGraph.organizationId,
+          namespaceId: task.federatedGraph.namespaceId,
+        },
+      },
+      () => {
+        const tagOptionsByContractName = new Map(
+          task.tagOptionsByContractName.map((tagOptions) => [
+            tagOptions.contractName,
+            newContractTagOptionsFromArrays(tagOptions.excludeTags, tagOptions.includeTags),
+          ]),
+        );
 
-  return {
-    results: task.subgraphsToCompose.map((subgraphsToCompose) => {
-      const compositionSubgraphs = toCompositionSubgraphs(subgraphsToCompose.subgraphs);
+        return {
+          results: task.subgraphsToCompose.map((subgraphsToCompose) => {
+            const compositionSubgraphs = toCompositionSubgraphs(subgraphsToCompose.subgraphs);
 
-      // Version is validated on the main thread before dispatching to the worker.
-      const version = task.routerCompatibilityVersion;
+            // Version is validated on the main thread before dispatching to the worker.
+            const version = task.routerCompatibilityVersion;
 
-      const result: FederationResult | FederationResultWithContracts = task.federatedGraph.contract
-        ? federateSubgraphsContract({
-            contractTagOptions: newContractTagOptionsFromArrays(
-              task.federatedGraph.contract.excludeTags,
-              task.federatedGraph.contract.includeTags,
-            ),
-            options: task.compositionOptions,
-            subgraphs: compositionSubgraphs,
-            version,
-          })
-        : federateSubgraphsWithContracts({
-            options: task.compositionOptions,
-            subgraphs: compositionSubgraphs,
-            tagOptionsByContractName,
-            version,
-          });
+            const result: FederationResult | FederationResultWithContracts = task.federatedGraph.contract
+              ? Sentry.startSpan({ name: 'federateSubgraphsContract' }, () =>
+                  federateSubgraphsContract({
+                    contractTagOptions: newContractTagOptionsFromArrays(
+                      task.federatedGraph.contract!.excludeTags,
+                      task.federatedGraph.contract!.includeTags,
+                    ),
+                    options: task.compositionOptions,
+                    subgraphs: compositionSubgraphs,
+                    version,
+                  }),
+                )
+              : Sentry.startSpan({ name: 'federateSubgraphsWithContracts' }, () =>
+                  federateSubgraphsWithContracts({
+                    options: task.compositionOptions,
+                    subgraphs: compositionSubgraphs,
+                    tagOptionsByContractName,
+                    version,
+                  }),
+                );
 
-      const includeRouterConfig = !task.skipRouterConfig;
-      const base = serializeComposedGraphArtifact(
-        task.federatedGraph.organizationId,
-        task.federatedGraph.routerCompatibilityVersion,
-        subgraphsToCompose.subgraphs,
-        result,
-        includeRouterConfig,
-      );
-
-      const contracts: SerializedContractCompositionArtifact[] = [];
-      if ('federationResultByContractName' in result && result.success) {
-        for (const [contractName, contractResult] of result.federationResultByContractName as Map<
-          string,
-          FederationResult
-        >) {
-          contracts.push({
-            contractName,
-            artifact: serializeComposedGraphArtifact(
+            const includeRouterConfig = !task.skipRouterConfig;
+            const base = serializeComposedGraphArtifact(
               task.federatedGraph.organizationId,
               task.federatedGraph.routerCompatibilityVersion,
               subgraphsToCompose.subgraphs,
-              contractResult,
+              result,
               includeRouterConfig,
-            ),
-          });
-        }
-      }
+            );
 
-      return {
-        isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
-        featureFlagName: subgraphsToCompose.featureFlagName,
-        featureFlagId: subgraphsToCompose.featureFlagId,
-        base,
-        contracts,
-      };
-    }),
-  };
+            const contracts: SerializedContractCompositionArtifact[] = [];
+            if ('federationResultByContractName' in result && result.success) {
+              for (const [contractName, contractResult] of result.federationResultByContractName as Map<
+                string,
+                FederationResult
+              >) {
+                contracts.push({
+                  contractName,
+                  artifact: serializeComposedGraphArtifact(
+                    task.federatedGraph.organizationId,
+                    task.federatedGraph.routerCompatibilityVersion,
+                    subgraphsToCompose.subgraphs,
+                    contractResult,
+                    includeRouterConfig,
+                  ),
+                });
+              }
+            }
+
+            return {
+              isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
+              featureFlagName: subgraphsToCompose.featureFlagName,
+              featureFlagId: subgraphsToCompose.featureFlagId,
+              base,
+              contracts,
+            };
+          }),
+        };
+      },
+    ),
+  );
 }

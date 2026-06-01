@@ -1,8 +1,9 @@
+import process from 'node:process';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
 import { fastifyIntegration, pinoIntegration } from '@sentry/node';
-import { envVariables } from './env.schema.js';
+import { sentryEnvVariables } from './env.schema.js';
 
 const {
   SENTRY_ENABLED,
@@ -13,7 +14,7 @@ const {
   SENTRY_PROFILE_LIFECYCLE,
   SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
   SENTRY_ENABLE_LOGS,
-} = envVariables.parse(process.env);
+} = sentryEnvVariables.parse(process.env);
 
 if (SENTRY_ENABLED && SENTRY_DSN) {
   Sentry.init({
@@ -31,5 +32,8 @@ if (SENTRY_ENABLED && SENTRY_DSN) {
     enableLogs: SENTRY_ENABLE_LOGS,
     spotlight: process.env.NODE_ENV !== 'production',
   });
-  console.log('Sentry is initialized.');
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Sentry is initialized.');
+  }
 }

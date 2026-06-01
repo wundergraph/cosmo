@@ -5,7 +5,7 @@ import * as Sentry from '@sentry/node';
 import pino from 'pino';
 
 import build, { BuildConfig } from './core/build-server.js';
-import { envVariables } from './core/env.schema.js';
+import { envVariables, sentryEnvVariables } from './core/env.schema.js';
 
 const {
   LOG_LEVEL,
@@ -77,9 +77,9 @@ const {
   REDIS_PASSWORD,
   AUTH_ADMISSION_JWT_SECRET,
   CDN_BASE_URL,
-  SENTRY_ENABLED,
-  SENTRY_DSN,
 } = envVariables.parse(process.env);
+
+const { SENTRY_ENABLED, SENTRY_DSN } = sentryEnvVariables.parse(process.env);
 
 const options: BuildConfig = {
   database: {
