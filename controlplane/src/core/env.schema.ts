@@ -230,10 +230,10 @@ export const sentryEnvVariables = z.object({
     .optional()
     .transform((val) => val === 'true')
     .default('false'),
-  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().optional().default(1),
-  SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().optional().default(1),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional().default(1),
+  SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional().default(1),
   SENTRY_PROFILE_LIFECYCLE: z.enum(['manual', 'trace']).optional().default('manual'),
-  SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().optional().default(100),
+  SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().int().min(0).optional().default(100),
   SENTRY_ENABLE_LOGS: z
     .string()
     .optional()
