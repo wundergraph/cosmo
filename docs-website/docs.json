@@ -376,6 +376,7 @@
                 ]
               },
               "studio/namespace-login-methods",
+              "studio/organization-login-methods",
               {
                 "group": "SCIM",
                 "icon": "file-user",

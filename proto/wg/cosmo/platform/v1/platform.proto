@@ -1874,7 +1874,7 @@ message CreateOIDCProviderRequest {
   string name = 1;
   string discoveryEndpoint = 2;
   string clientID = 3;
-  string clientSecrect = 4;
+  string clientSecret = 4;
   repeated GroupMapper mappers = 5;
 }
 
@@ -3092,7 +3092,7 @@ message GetNamespaceProposalConfigResponse {
   LintSeverity publishSeverityLevel = 4;
 }
 
-message NamespaceSSOMapping {
+message NamespaceLoginMethodMapping {
   string namespace_id = 1;
   repeated string allowed_sso_provider_ids = 2;
   bool allow_password_login = 3;
@@ -3100,21 +3100,56 @@ message NamespaceSSOMapping {
   bool allow_github_login = 5;
 }
 
-message UpdateNamespaceSSOMappingsRequest {
-  repeated NamespaceSSOMapping mappings = 1;
+message UpdateNamespaceLoginMethodsRequest {
+  repeated NamespaceLoginMethodMapping mappings = 1;
 }
 
-message UpdateNamespaceSSOMappingsResponse {
+message UpdateNamespaceLoginMethodsResponse {
   Response response = 1;
 }
 
-message ListNamespaceSSOMappingsRequest {}
+message ListNamespaceLoginMethodsRequest {}
 
-message ListNamespaceSSOMappingsResponse {
+message ListNamespaceLoginMethodsResponse {
   Response response = 1;
   // One entry per namespace that is restricted to specific login methods.
   // Namespaces with no mapping (default-open) are omitted.
-  repeated NamespaceSSOMapping mappings = 2;
+  repeated NamespaceLoginMethodMapping mappings = 2;
+}
+
+message OrganizationLoginMethods {
+  repeated string allowed_sso_provider_ids = 1;
+  bool allow_password_login = 2;
+  bool allow_google_login = 3;
+  bool allow_github_login = 4;
+  // Output only. False when the org has no restriction configured (all methods allowed).
+  bool is_restricted = 5;
+}
+
+message GetOrganizationLoginMethodsRequest {}
+
+message GetOrganizationLoginMethodsResponse {
+  Response response = 1;
+  OrganizationLoginMethods login_methods = 2;
+}
+
+message UpdateOrganizationLoginMethodsRequest {
+  repeated string allowed_sso_provider_ids = 1;
+  bool allow_password_login = 2;
+  bool allow_google_login = 3;
+  bool allow_github_login = 4;
+  // Set true to confirm that namespace mappings may be altered by this change.
+  // Left false (a preview), if the change would strip methods from existing
+  // namespace mappings the server returns requires_confirmation and makes no changes.
+  bool confirm_namespace_changes = 5;
+}
+
+message UpdateOrganizationLoginMethodsResponse {
+  Response response = 1;
+  // True when the change needs confirmation because it would alter namespace
+  // mappings listed in affected_namespaces. No changes were made in this case.
+  bool requires_confirmation = 2;
+  repeated Namespace affected_namespaces = 3;
 }
 
 enum OperationsFetchBasedOn {
@@ -3722,10 +3757,14 @@ service PlatformService {
   rpc ConfigureNamespaceProposalConfig(ConfigureNamespaceProposalConfigRequest) returns (ConfigureNamespaceProposalConfigResponse) {}
   // GetNamespaceProposalConfig returns the proposal config of the namespace passed.
   rpc GetNamespaceProposalConfig(GetNamespaceProposalConfigRequest) returns (GetNamespaceProposalConfigResponse) {}
-  // UpdateNamespaceSSOMappings replaces the org's namespace SSO mapping configuration in one call.
-  rpc UpdateNamespaceSSOMappings(UpdateNamespaceSSOMappingsRequest) returns (UpdateNamespaceSSOMappingsResponse) {}
-  // ListNamespaceSSOMappings returns the SSO mapping configuration for every restricted namespace in the org.
-  rpc ListNamespaceSSOMappings(ListNamespaceSSOMappingsRequest) returns (ListNamespaceSSOMappingsResponse) {}
+  // UpdateNamespaceLoginMethods replaces the org's per-namespace login-method configuration in one call.
+  rpc UpdateNamespaceLoginMethods(UpdateNamespaceLoginMethodsRequest) returns (UpdateNamespaceLoginMethodsResponse) {}
+  // ListNamespaceLoginMethods returns the login-method configuration for every restricted namespace in the org.
+  rpc ListNamespaceLoginMethods(ListNamespaceLoginMethodsRequest) returns (ListNamespaceLoginMethodsResponse) {}
+  // GetOrganizationLoginMethods returns the org's allowed login methods (empty restriction = all allowed).
+  rpc GetOrganizationLoginMethods(GetOrganizationLoginMethodsRequest) returns (GetOrganizationLoginMethodsResponse) {}
+  // UpdateOrganizationLoginMethods replaces the org's allowed login methods and reconciles namespace mappings.
+  rpc UpdateOrganizationLoginMethods(UpdateOrganizationLoginMethodsRequest) returns (UpdateOrganizationLoginMethodsResponse) {}
   // GetProposalsByFederatedGraph returns proposals for a federated graph.
   rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
   // GetProposalChecks returns checks for a proposal.
