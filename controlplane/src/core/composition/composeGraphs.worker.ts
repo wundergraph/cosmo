@@ -90,7 +90,7 @@ if (SENTRY_ENABLED && SENTRY_DSN) {
 }
 
 function parseGRPCMapping(mappings: string): GRPCMapping {
-  return Sentry.startSpan({ name: 'composeGraphsWorker.parseGRPCMapping' }, () => {
+  return Sentry.startSpan({ name: 'ComposeGraphsWorker.parseGRPCMapping' }, () => {
     try {
       return GRPCMapping.fromJson(JSON.parse(mappings));
     } catch (error) {
@@ -108,7 +108,7 @@ function subgraphDTOsToRouterSubgraphs(
   subgraphs: SubgraphDTO[],
   result: FederationResult,
 ): RouterSubgraph[] {
-  return Sentry.startSpan({ name: 'composeGraphsWorker.subgraphDTOsToRouterSubgraphs' }, () =>
+  return Sentry.startSpan({ name: 'ComposeGraphsWorker.subgraphDTOsToRouterSubgraphs' }, () =>
     subgraphs.map((subgraph) => {
       const subgraphConfig = result.success ? result.subgraphConfigBySubgraphName.get(subgraph.name) : undefined;
       const schema = subgraphConfig?.schema;
@@ -187,15 +187,15 @@ function serializeComposedGraphArtifact(
   result: FederationResult,
   includeRouterExecutionConfig: boolean,
 ): SerializedComposedGraphArtifact {
-  return Sentry.startSpan({ name: 'composeGraphsWorker.serializeComposedGraphArtifact' }, () => {
+  return Sentry.startSpan({ name: 'ComposeGraphsWorker.serializeComposedGraphArtifact' }, () => {
     const composedSchema = result.success
-      ? Sentry.startSpan({ name: 'composeGraphsWorker.printSchemaWithDirectives' }, () =>
+      ? Sentry.startSpan({ name: 'ComposeGraphsWorker.printSchemaWithDirectives' }, () =>
           printSchemaWithDirectives(result.federatedGraphSchema),
         )
       : undefined;
 
     const federatedClientSchema = result.success
-      ? Sentry.startSpan({ name: 'composeGraphsWorker.printSchemaWithDirectives' }, () =>
+      ? Sentry.startSpan({ name: 'ComposeGraphsWorker.printSchemaWithDirectives' }, () =>
           printSchemaWithDirectives(result.federatedGraphClientSchema),
         )
       : undefined;
@@ -206,7 +206,7 @@ function serializeComposedGraphArtifact(
     let routerExecutionConfigJson: ReturnType<RouterConfig['toJson']> | undefined;
     if (includeRouterExecutionConfig && result.success && composedSchema) {
       const routerSubgraphs = subgraphDTOsToRouterSubgraphs(organizationId, subgraphs, result);
-      const routerExecutionConfig = Sentry.startSpan({ name: 'composeGraphsWorker.buildRouterConfig' }, () =>
+      const routerExecutionConfig = Sentry.startSpan({ name: 'ComposeGraphsWorker.buildRouterConfig' }, () =>
         buildRouterConfig({
           federatedClientSDL: shouldIncludeClientSchema ? federatedClientSchema || '' : '',
           federatedSDL: composedSchema,
@@ -244,7 +244,7 @@ function serializeComposedGraphArtifact(
 }
 
 function toCompositionSubgraphs(subgraphs: SubgraphDTO[]) {
-  return Sentry.startSpan({ name: 'composeGraphsWorker.toCompositionSubgraphs' }, () =>
+  return Sentry.startSpan({ name: 'ComposeGraphsWorker.toCompositionSubgraphs' }, () =>
     subgraphs
       .filter((s) => s.schemaSDL !== '')
       .map((subgraph) => ({
@@ -259,7 +259,7 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
   return Sentry.continueTrace({ sentryTrace: task.trace?.sentryTrace, baggage: task.trace?.baggage }, () =>
     Sentry.startSpan(
       {
-        name: 'composeGraphsWorker.composeGraphsInWorker',
+        name: 'ComposeGraphsWorker.composeGraphsInWorker',
         attributes: {
           workerId,
           federatedGraphId: task.federatedGraph.id,
@@ -285,7 +285,7 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
             const version = task.routerCompatibilityVersion;
 
             const result: FederationResult | FederationResultWithContracts = task.federatedGraph.contract
-              ? Sentry.startSpan({ name: 'composeGraphsWorker.federateSubgraphsContract' }, () =>
+              ? Sentry.startSpan({ name: 'ComposeGraphsWorker.federateSubgraphsContract' }, () =>
                   federateSubgraphsContract({
                     contractTagOptions: newContractTagOptionsFromArrays(
                       task.federatedGraph.contract!.excludeTags,
@@ -296,7 +296,7 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
                     version,
                   }),
                 )
-              : Sentry.startSpan({ name: 'composeGraphsWorker.federateSubgraphsWithContracts' }, () =>
+              : Sentry.startSpan({ name: 'ComposeGraphsWorker.federateSubgraphsWithContracts' }, () =>
                   federateSubgraphsWithContracts({
                     options: task.compositionOptions,
                     subgraphs: compositionSubgraphs,

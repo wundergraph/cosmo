@@ -66,7 +66,7 @@ function getComposeGraphsPool() {
     serialization: 'advanced',
   };
 
-  return Sentry.startSpan({ name: 'composeGraphsPool.getComposeGraphsPool', attributes: options }, () => {
+  return Sentry.startSpan({ name: 'ComposeGraphsPool.getComposeGraphsPool', attributes: options }, () => {
     const { filename } = getWorkerFilename();
 
     const env = sentryEnvVariables.parse(process.env);
@@ -106,7 +106,7 @@ export function deserializeComposedGraphArtifact(
   federatedGraph: Pick<FederatedGraphDTO, 'id' | 'targetId' | 'name' | 'namespace' | 'namespaceId'>,
   artifact: SerializedComposedGraphArtifact,
 ): DeserializedComposedGraph {
-  return Sentry.startSpan({ name: 'composeGraphsPool.deserializeComposedGraphArtifact' }, () => ({
+  return Sentry.startSpan({ name: 'ComposeGraphsPool.deserializeComposedGraphArtifact' }, () => ({
     id: federatedGraph.id,
     targetID: federatedGraph.targetId,
     name: federatedGraph.name,
@@ -127,7 +127,7 @@ export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: Ret
     return;
   }
 
-  return Sentry.startSpan({ name: 'composeGraphsPool.deserializeRouterExecutionConfig' }, () =>
+  return Sentry.startSpan({ name: 'ComposeGraphsPool.deserializeRouterExecutionConfig' }, () =>
     RouterConfig.fromJson(routerExecutionConfigJson),
   );
 }
@@ -142,7 +142,7 @@ export function composeGraphsInWorker(
 
   return Sentry.startSpan(
     {
-      name: 'composeGraphsPool.composeGraphsInWorker',
+      name: 'ComposeGraphsPool.composeGraphsInWorker',
       attributes: {
         federatedGraphId: task.federatedGraph.id,
         federatedGraphName: task.federatedGraph.name,
