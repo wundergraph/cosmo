@@ -14,7 +14,7 @@ import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import WorkerPool, { Options } from 'tinypool';
 import * as Sentry from '@sentry/node';
 import { FederatedGraphDTO } from '../../types/index.js';
-import { envVariables } from '../env.schema.js';
+import { sentryEnvVariables } from '../env.schema.js';
 import { validateRouterCompatibilityVersion } from './composition.js';
 import { ComposedFederatedGraph, CompositionSubgraphRecord } from './composer.js';
 import {
@@ -69,7 +69,7 @@ function getComposeGraphsPool() {
   return Sentry.startSpan({ name: 'getComposeGraphsPool', attributes: options }, () => {
     const { filename } = getWorkerFilename();
 
-    const env = envVariables.parse(process.env);
+    const env = sentryEnvVariables.parse(process.env);
     composeGraphsPool = new WorkerPool({
       filename,
       ...(options as Options),
