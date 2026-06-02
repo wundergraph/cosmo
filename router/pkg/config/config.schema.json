@@ -4645,6 +4645,25 @@
               "enum": ["operation_name"]
             }
           }
+        },
+        "from_file": {
+          "type": "object",
+          "description": "Source the header value from a file's contents. The file is loaded into memory and refreshed at refresh_interval, so request-time reads do not touch disk. Currently only valid in requests.",
+          "additionalProperties": false,
+          "required": ["path"],
+          "properties": {
+            "path": {
+              "type": "string",
+              "examples": ["/etc/secrets/api.key"],
+              "description": "Absolute path to the file whose contents become the header value. Trailing whitespace is trimmed."
+            },
+            "refresh_interval": {
+              "type": "string",
+              "duration": {},
+              "examples": ["30s"],
+              "description": "How often the file is re-read into memory. Set to 0 to load once at startup and never refresh. The default value is 30s."
+            }
+          }
         }
       },
       "required": ["op", "name"],
@@ -4657,6 +4676,9 @@
         },
         {
           "required": ["value_from"]
+        },
+        {
+          "required": ["from_file"]
         }
       ]
     },

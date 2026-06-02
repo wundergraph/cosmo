@@ -1,10 +1,12 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"reflect"
 	"regexp"
 	"sort"
@@ -22,6 +24,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -149,12 +152,21 @@ type HeaderPropagation struct {
 	rules                       *config.HeaderRules
 	compiledRules               map[string]*vm.Program
 	compiledRouterResponseRules map[string]*vm.Program
+	fileSourceContents          map[string]*FileSourceContent
 	hasRequestRules             bool
 	hasResponseRules            bool
 	// Precomputed request rule presence for fast-path checks
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
 	postResponseRules       *PostResponseRules
+}
+
+// FileSourceContent is a wrapper around a bytes.Buffer that is used to store the content of a file source.
+// It is used to synchronize access to the content of the file source.
+type FileSourceContent struct {
+	m       *sync.Mutex
+	buffer  bytes.Buffer
+	watcher watcher.WatcherFunc
 }
 
 // PostResponseRules holds response rules that execute after all user-defined
@@ -181,7 +193,7 @@ func initHeaderRules(rules *config.HeaderRules) {
 	}
 }
 
-func NewHeaderPropagation(rules *config.HeaderRules, postRules *PostResponseRules) (*HeaderPropagation, error) {
+func NewHeaderPropagation(logger *zap.Logger, rules *config.HeaderRules, postRules *PostResponseRules) (*HeaderPropagation, error) {
 	if rules == nil && !postRules.hasRules() {
 		return nil, nil
 	}
@@ -196,6 +208,7 @@ func NewHeaderPropagation(rules *config.HeaderRules, postRules *PostResponseRule
 		regex:                       map[string]*regexp.Regexp{},
 		compiledRules:               map[string]*vm.Program{},
 		compiledRouterResponseRules: map[string]*vm.Program{},
+		fileSourceContents:          map[string]*FileSourceContent{},
 		postResponseRules:           postRules,
 	}
 
@@ -220,6 +233,10 @@ func NewHeaderPropagation(rules *config.HeaderRules, postRules *PostResponseRule
 	}
 
 	if err := hf.compileExpressionRules(rhrs, rrs); err != nil {
+		return nil, err
+	}
+
+	if err := hf.setupFileSourceRules(logger, rhrs); err != nil {
 		return nil, err
 	}
 
@@ -339,6 +356,107 @@ func (h *HeaderPropagation) compileExpressionRules(requestRules []*config.Reques
 		h.compiledRouterResponseRules[rule.Expression] = program
 	}
 	return nil
+}
+
+func (h *HeaderPropagation) setupFileSourceRules(logger *zap.Logger, requestRules []*config.RequestHeaderRule) error {
+	for _, rule := range requestRules {
+		if !isValidFileSourceRule(rule) {
+			continue
+		}
+
+		if rule.FromFile.RefreshInterval <= 0 {
+			rule.FromFile.RefreshInterval = 30 * time.Second
+		}
+
+		_, err := os.Stat(rule.FromFile.Path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("file %s does not exist", rule.FromFile.Path)
+			}
+			return fmt.Errorf("error statting file %s: %w", rule.FromFile.Path, err)
+		}
+
+		// If the file source content is already in memory, skip the watcher creation
+		if _, ok := h.fileSourceContents[rule.FromFile.Path]; ok {
+			continue
+		}
+
+		h.fileSourceContents[rule.FromFile.Path] = &FileSourceContent{
+			m:      &sync.Mutex{},
+			buffer: bytes.Buffer{},
+		}
+
+		getContent := func() error {
+			content, ok := h.fileSourceContents[rule.FromFile.Path]
+			if !ok {
+				return fmt.Errorf("file source content not found for file %s", rule.FromFile.Path)
+			}
+
+			content.m.Lock()
+			defer content.m.Unlock()
+
+			content.buffer.Reset()
+
+			f, err := os.Open(rule.FromFile.Path)
+			if err != nil {
+				return fmt.Errorf("error opening file %s: %w", rule.FromFile.Path, err)
+			}
+			defer f.Close()
+
+			if _, err = content.buffer.ReadFrom(f); err != nil {
+				return fmt.Errorf("error reading file %s: %w", rule.FromFile.Path, err)
+			}
+
+			h.fileSourceContents[rule.FromFile.Path] = content
+
+			return nil
+		}
+
+		if err := getContent(); err != nil {
+			return err
+		}
+
+		watcher, err := watcher.New(watcher.Options{
+			Interval: rule.FromFile.RefreshInterval,
+			Paths:    []string{rule.FromFile.Path},
+			Logger:   logger.With(zap.String("file_source", rule.FromFile.Path)),
+			Callback: func() {
+				if err := getContent(); err != nil {
+					logger.Error("Error refreshing file source content", zap.Error(err))
+				}
+			},
+		})
+
+		if err != nil {
+			return fmt.Errorf("error creating watcher for file %s: %w", rule.FromFile.Path, err)
+		}
+
+		content, found := h.fileSourceContents[rule.FromFile.Path]
+		if !found {
+			return fmt.Errorf("file source content not found for file %s", rule.FromFile.Path)
+		}
+
+		content.watcher = watcher
+		go content.watcher(context.Background())
+	}
+
+	return nil
+}
+
+func isValidFileSourceRule(rule *config.RequestHeaderRule) bool {
+	if rule.Operation != config.HeaderRuleOperationSet {
+		return false
+	}
+
+	if rule.Expression != "" {
+		return false
+	}
+
+	if rule.FromFile == nil {
+		return false
+	}
+
+	return true
 }
 
 func (h *HeaderPropagation) HasRequestRules() bool {
@@ -587,6 +705,18 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 			} else if value != "" {
 				header.Set(rule.Name, value)
 			}
+			return
+		}
+
+		if rule.FromFile != nil {
+			content, ok := h.fileSourceContents[rule.FromFile.Path]
+			if !ok {
+				ctx.SetError(fmt.Errorf("file source content not found for file %s", rule.FromFile.Path))
+			}
+
+			content.m.Lock()
+			header.Set(rule.Name, content.buffer.String())
+			content.m.Unlock()
 			return
 		}
 

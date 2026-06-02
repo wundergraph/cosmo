@@ -291,6 +291,10 @@ headers:
       - op: 'set'
         name: 'x-expression-header'
         expression: "request.header.Get('X-Operation-Name')"
+      - op: 'set'
+        name: 'x-from-file-header'
+        from_file:
+          path: '/etc/secrets/api-key'
     response:
       - op: 'propagate'
         algorithm: 'append'

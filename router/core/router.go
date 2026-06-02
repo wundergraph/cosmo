@@ -324,7 +324,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	postRules := CreateCacheControlPolicyHeaderRules(r.cacheControlPolicy)
 	var err error
-	r.headerPropagation, err = NewHeaderPropagation(r.headerRules, postRules)
+	r.headerPropagation, err = NewHeaderPropagation(r.logger, r.headerRules, postRules)
 	if err != nil {
 		return nil, err
 	}
