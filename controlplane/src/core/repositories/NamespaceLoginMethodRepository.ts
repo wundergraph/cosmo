@@ -1,21 +1,21 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, inArray, SQL } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
-import { namespaces, namespaceSsoProviders } from '../../db/schema.js';
+import { namespaces, namespaceLoginMethods } from '../../db/schema.js';
 import { traced } from '../tracing.js';
-import { applyIdpNamespaceGate } from '../util.js';
+import { applyIdpNamespaceGate, loginMethodMatchesRow } from '../util.js';
 import type { LoginMethod, NamespaceAccess } from '../../types/index.js';
 import type { RBACEvaluator } from '../services/RBACEvaluator.js';
 
 @traced
-export class NamespaceSsoMappingRepository {
+export class NamespaceLoginMethodRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
   /**
    * Evaluates which namespaces the given login method may access within the org.
    *
    * Semantics:
-   * - A namespace with zero rows in namespace_sso_providers is open to all login methods (default-open).
+   * - A namespace with zero rows in namespace_login_methods is open to all login methods (default-open).
    * - A namespace with one or more rows is restricted to the listed login methods only.
    *
    * Returns {@link NamespaceAccess}: `all` when the org has no mapping rows (or
@@ -34,13 +34,13 @@ export class NamespaceSsoMappingRepository {
     const rows = await this.db
       .select({
         namespaceId: namespaces.id,
-        ssoProviderId: namespaceSsoProviders.ssoProviderId,
-        isPasswordLogin: namespaceSsoProviders.isPasswordLogin,
-        isGoogleLogin: namespaceSsoProviders.isGoogleLogin,
-        isGithubLogin: namespaceSsoProviders.isGithubLogin,
+        ssoProviderId: namespaceLoginMethods.ssoProviderId,
+        isPasswordLogin: namespaceLoginMethods.isPasswordLogin,
+        isGoogleLogin: namespaceLoginMethods.isGoogleLogin,
+        isGithubLogin: namespaceLoginMethods.isGithubLogin,
       })
       .from(namespaces)
-      .leftJoin(namespaceSsoProviders, eq(namespaceSsoProviders.namespaceId, namespaces.id))
+      .leftJoin(namespaceLoginMethods, eq(namespaceLoginMethods.namespaceId, namespaces.id))
       .where(eq(namespaces.organizationId, input.organizationId))
       .execute();
 
@@ -52,28 +52,12 @@ export class NamespaceSsoMappingRepository {
     }
 
     const { loginMethod } = input;
-    const rowMatchesLogin = (r: (typeof rows)[number]): boolean => {
-      switch (loginMethod.type) {
-        case 'sso': {
-          return r.ssoProviderId === loginMethod.ssoProviderId;
-        }
-        case 'social': {
-          return loginMethod.provider === 'google' ? !!r.isGoogleLogin : !!r.isGithubLogin;
-        }
-        case 'password': {
-          return !!r.isPasswordLogin;
-        }
-        default: {
-          return false;
-        }
-      }
-    };
 
     // Build the allowed set: open namespaces always; restricted namespaces only
     // when at least one of their mapping rows matches the current login method.
     const namespaceIds = new Set<string>();
     for (const row of rows) {
-      if (isUnmapped(row) || rowMatchesLogin(row)) {
+      if (isUnmapped(row) || loginMethodMatchesRow(loginMethod, row)) {
         namespaceIds.add(row.namespaceId);
       }
     }
@@ -104,14 +88,14 @@ export class NamespaceSsoMappingRepository {
 
     const rows = await this.db
       .select({
-        namespaceId: namespaceSsoProviders.namespaceId,
-        ssoProviderId: namespaceSsoProviders.ssoProviderId,
-        isPasswordLogin: namespaceSsoProviders.isPasswordLogin,
-        isGoogleLogin: namespaceSsoProviders.isGoogleLogin,
-        isGithubLogin: namespaceSsoProviders.isGithubLogin,
+        namespaceId: namespaceLoginMethods.namespaceId,
+        ssoProviderId: namespaceLoginMethods.ssoProviderId,
+        isPasswordLogin: namespaceLoginMethods.isPasswordLogin,
+        isGoogleLogin: namespaceLoginMethods.isGoogleLogin,
+        isGithubLogin: namespaceLoginMethods.isGithubLogin,
       })
-      .from(namespaceSsoProviders)
-      .innerJoin(namespaces, eq(namespaces.id, namespaceSsoProviders.namespaceId))
+      .from(namespaceLoginMethods)
+      .innerJoin(namespaces, eq(namespaces.id, namespaceLoginMethods.namespaceId))
       .where(and(...conditions))
       .execute();
 
@@ -186,8 +170,8 @@ export class NamespaceSsoMappingRepository {
         const accessibleNamespaceIds = accessibleNamespaces.map((n) => n.id);
         if (accessibleNamespaceIds.length > 0) {
           await tx
-            .delete(namespaceSsoProviders)
-            .where(inArray(namespaceSsoProviders.namespaceId, accessibleNamespaceIds))
+            .delete(namespaceLoginMethods)
+            .where(inArray(namespaceLoginMethods.namespaceId, accessibleNamespaceIds))
             .execute();
         }
       }
@@ -213,7 +197,7 @@ export class NamespaceSsoMappingRepository {
         }
       }
       if (rows.length > 0) {
-        await tx.insert(namespaceSsoProviders).values(rows).execute();
+        await tx.insert(namespaceLoginMethods).values(rows).execute();
       }
     });
   }
