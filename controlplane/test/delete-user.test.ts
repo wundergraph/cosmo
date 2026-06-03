@@ -340,7 +340,7 @@ describe.sequential('Delete user tests', (ctx) => {
 
     const createOIDCRes = await client.createOIDCProvider({
       clientID: '123',
-      clientSecrect: '345',
+      clientSecret: '345',
       discoveryEndpoint: `http://localhost:8080/realms/${realm}/.well-known/openid-configuration`,
       mappers: [],
     });
