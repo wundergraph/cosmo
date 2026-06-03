@@ -4,6 +4,21 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.230.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.229.0...controlplane@0.230.0) (2026-06-02)
+
+### Features
+
+* add more tracing instrumentation to the composition worker pool ([#2905](https://github.com/wundergraph/cosmo/issues/2905)) ([81f82e7](https://github.com/wundergraph/cosmo/commit/81f82e7fc78e136436aa04944d5a463a4fd0b469)) (@wilsonrivera)
+
+# [0.229.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.228.0...controlplane@0.229.0) (2026-06-01)
+
+### Features
+
+* add functionality to restrict the login methods of an organization ([#2896](https://github.com/wundergraph/cosmo/issues/2896)) ([2c2cb71](https://github.com/wundergraph/cosmo/commit/2c2cb717f485666aa0bc94297d7c94469e0ce894)) (@JivusAyrus)
+* add span for `composeGraphsInWorker` ([#2901](https://github.com/wundergraph/cosmo/issues/2901)) ([254810f](https://github.com/wundergraph/cosmo/commit/254810f7edf14fab284f25d0f09c0fb8c62e7ded)) (@wilsonrivera)
+* make persisted operations limit configurable per organization plan ([#2894](https://github.com/wundergraph/cosmo/issues/2894)) ([c395857](https://github.com/wundergraph/cosmo/commit/c395857d7c0b36234890d0d0c788f25185b565b9)) (@JivusAyrus)
+* restrict proposal matching to approved and draft states ([#2898](https://github.com/wundergraph/cosmo/issues/2898)) ([0da10d7](https://github.com/wundergraph/cosmo/commit/0da10d7d4750baed13cbb140495df8ae68f34e61)) (@JivusAyrus)
+
 # [0.228.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.227.0...controlplane@0.228.0) (2026-05-29)
 
 ### Features

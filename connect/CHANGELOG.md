@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.147.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.146.0...@wundergraph/cosmo-connect@0.147.0) (2026-06-01)
+
+### Features
+
+* add functionality to restrict the login methods of an organization ([#2896](https://github.com/wundergraph/cosmo/issues/2896)) ([2c2cb71](https://github.com/wundergraph/cosmo/commit/2c2cb717f485666aa0bc94297d7c94469e0ce894)) (@JivusAyrus)
+
 # [0.146.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.145.0...@wundergraph/cosmo-connect@0.146.0) (2026-05-29)
 
 ### Features
