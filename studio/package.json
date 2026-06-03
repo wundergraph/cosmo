@@ -90,7 +90,7 @@
     "fuse.js": "^7.0.0",
     "graphql": "catalog:",
     "graphql-ws": "^5.14.1",
-    "js-cookie": "^3.0.5",
+    "js-cookie": "^3.0.6",
     "lodash": "catalog:",
     "lz-string": "^1.5.0",
     "monaco-editor": "^0.45.0",
