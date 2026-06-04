@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'pathe';
 import { Command, program } from 'commander';
 import ora from 'ora';
