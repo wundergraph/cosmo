@@ -1,5 +1,4 @@
-import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { access, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'pathe';
 import { Command, program } from 'commander';
 import ora from 'ora';
@@ -10,6 +9,7 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
 import { limitMaxValue } from '../../../constants.js';
+import { fileExists } from '../../../utils.js';
 
 const entrySchema = z.object({
   name: z.string().trim().min(1, 'a non-empty "name" is required'),
@@ -55,10 +55,12 @@ export default (opts: BaseCommandOptions) => {
     'The maximum number of composition errors, warnings, and deployment errors to display.',
     '50',
   );
+  command.option('-r, --raw', 'Prints to the console in json format instead of table');
+  command.option('-j, --json', 'Prints to the console in json format instead of table');
 
   command.action(async (options) => {
     const configFile = resolve(options.config);
-    if (!existsSync(configFile)) {
+    if (!(await fileExists(configFile))) {
       program.error(
         pc.red(
           pc.bold(`The config file '${pc.bold(configFile)}' does not exist. Please check the path and try again.`),
@@ -97,7 +99,7 @@ export default (opts: BaseCommandOptions) => {
       Promise.all(
         entries.map(async (entry) => {
           const schemaFile = resolve(configDir, entry.schema);
-          if (!existsSync(schemaFile)) {
+          if (!(await fileExists(schemaFile))) {
             program.error(
               pc.red(
                 pc.bold(
@@ -118,7 +120,11 @@ export default (opts: BaseCommandOptions) => {
 
     const subgraphs = await readEntries(subgraphEntries);
 
-    const spinner = ora('Subgraphs are being published...').start();
+    const shouldOutputJson = options.json || options.raw;
+    const spinner = ora('Subgraphs are being published...');
+    if (!shouldOutputJson) {
+      spinner.start();
+    }
 
     const resp = await opts.client.platform.publishFederatedSubgraphs(
       {
@@ -150,6 +156,7 @@ export default (opts: BaseCommandOptions) => {
       deploymentErrorMessage:
         'The schemas were published, but the updated composition could not be deployed.\nThis means the updated composition will not be accessible to the router.\n',
       defaultErrorMessage: 'Failed to publish the subgraphs.',
+      shouldOutputJson,
       suppressWarnings: options.suppressWarnings,
       failOnCompositionError: options.failOnCompositionError,
       failOnCompositionErrorMessage: `The publish was successful, but the command failed because composition errors were produced.`,
