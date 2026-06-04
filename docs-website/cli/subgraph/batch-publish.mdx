@@ -1,0 +1,72 @@
+---
+title: "Batch Publish"
+description: "Publishes the schemas of multiple existing subgraphs in a single request using a config file."
+icon: layer-group
+---
+
+## **Usage**
+
+```bash
+npx wgc subgraph batch-publish --config [configFilePath] --namespace [namespace]
+```
+
+<Note>
+  **Batch publish** is an irreversible action. Changes become visible to the routers only after composition succeeds. Until then, the routers operate with the most recent valid composition. Use [subgraph check](/cli/subgraph/check) to understand the impact of your changes first.
+</Note>
+
+## **Description**
+
+The `npx wgc subgraph batch-publish` command publishes new schemas for several subgraphs in one command. List the subgraphs and their schema files in a config file, and they are published together. Use this when you update multiple subgraphs at the same time instead of running [subgraph publish](/cli/subgraph/publish) for each one.
+
+Every subgraph and feature subgraph listed in the config must already exist in the namespace. If any does not exist, the command fails and reports the missing names without publishing anything. Regular subgraphs and feature subgraphs go in the same `subgraphs` list.
+
+<Warning>
+  Batch publish does not create subgraphs and does not publish plugin or gRPC service subgraphs. Use [subgraph create](/cli/subgraph/create) to create a subgraph, [subgraph publish](/cli/subgraph/publish) to create and publish in one step, [router plugin publish](/cli/router/plugin/publish) for plugins, and [grpc-service publish](/cli/grpc-service/publish) for gRPC services.
+</Warning>
+
+## **Config file**
+
+The config file is YAML. It contains a `subgraphs` list, where each entry has a `name` and a `schema` file path. Schema paths are resolved relative to the config file.
+
+```yaml
+subgraphs:
+  - name: products
+    schema: ./subgraphs/products.graphql
+  - name: reviews
+    schema: ./subgraphs/reviews.graphql
+  # Feature subgraphs are listed here too; they are detected automatically.
+  - name: products-feature
+    schema: ./subgraphs/products-feature.graphql
+```
+
+## **Options**
+
+* `-c, --config`: The path to the YAML config file listing the subgraphs to publish. Required.
+
+  * Example: `--config ./batch-publish.yaml`
+
+* `-n, --namespace`: The namespace of the subgraphs (Default: "default").
+
+* `--fail-on-composition-error`: If set, the command fails if the composition of any federated graph fails.
+
+* `--fail-on-admission-webhook-error`: If set, the command fails if the admission webhook fails.
+
+* `--suppress-warnings`: Suppresses any warnings produced by composition.
+
+* `--disable-resolvability-validation`: Disables the validation for whether all nodes of the federated graph are resolvable. Do not use unless troubleshooting.
+
+* `-l, --limit <number>`: The maximum number of entries to display for each category of results, such as composition errors, composition warnings, and deployment errors. Defaults to `50`.
+
+## **Example**
+
+```bash
+npx wgc subgraph batch-publish --config ./batch-publish.yaml --namespace production
+```
+
+## **Notes**
+
+* All subgraphs and feature subgraphs in the config must already exist. A missing subgraph fails the entire request and nothing is published.
+
+* Schema file paths in the config are resolved relative to the config file location.
+
+* Composition and deployment errors are reported per federated graph. Graphs that compose successfully are still deployed, matching the behavior of [subgraph publish](/cli/subgraph/publish).
