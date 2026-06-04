@@ -79,6 +79,13 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 	return s.FieldName
 }
 
+// Clone returns a deep copy of the configuration.
+func (s *SubscriptionEventConfiguration) Clone() datasource.SubscriptionEventConfiguration {
+	c := *s
+	c.Channels = slices.Clone(s.Channels)
+	return &c
+}
+
 // publishData is a private type that is used to pass data from the engine to the provider
 
 type publishData struct {

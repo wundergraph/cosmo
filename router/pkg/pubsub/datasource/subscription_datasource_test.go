@@ -34,6 +34,10 @@ func (t testSubscriptionEventConfiguration) RootFieldName() string {
 	return "testSubscription"
 }
 
+func (t testSubscriptionEventConfiguration) Clone() SubscriptionEventConfiguration {
+	return t
+}
+
 type testRequestContextStore struct {
 	mu     sync.RWMutex
 	values map[string]any

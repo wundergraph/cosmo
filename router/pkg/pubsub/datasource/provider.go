@@ -102,6 +102,10 @@ type SubscriptionEventConfiguration interface {
 	ProviderID() string
 	ProviderType() ProviderType
 	RootFieldName() string // the root field name of the subscription in the schema
+	// Clone returns a deep copy of the configuration. It is used to hand out
+	// copies to module hooks so callers cannot mutate the live configuration in
+	// place; changes are only applied when passed back via SetSubscriptionEventConfiguration.
+	Clone() SubscriptionEventConfiguration
 }
 
 // PublishEventConfiguration is the interface that all publish event configurations must implement

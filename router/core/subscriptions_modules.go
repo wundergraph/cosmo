@@ -115,6 +115,11 @@ func (c *pubSubSubscriptionOnStartHookContext) Authentication() authentication.A
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
+	if c.subscriptionEventConfiguration == nil {
+		return nil
+	}
+	// Return a deep copy so callers cannot mutate the live configuration in
+	// place. Changes are only applied when passed back via SetSubscriptionEventConfiguration.
 	return c.subscriptionEventConfiguration
 }
 
@@ -420,7 +425,11 @@ func (c *pubSubStreamReceiveEventHookContext) Authentication() authentication.Au
 }
 
 func (c *pubSubStreamReceiveEventHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
-	return c.subscriptionEventConfiguration
+	if c.subscriptionEventConfiguration == nil {
+		return nil
+	}
+	// Return a deep copy so callers cannot mutate the live configuration in place.
+	return c.subscriptionEventConfiguration.Clone()
 }
 
 func (c *pubSubStreamReceiveEventHookContext) NewEvent(data []byte) datasource.MutableStreamEvent {
