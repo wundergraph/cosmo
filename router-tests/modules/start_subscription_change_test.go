@@ -91,7 +91,7 @@ func TestStartSubscriptionChangeHook(t *testing.T) {
 			xEnv.WaitForTriggerCount(1, time.Second*10)
 
 			// produce a message (retry until subscription pipeline is confirmed active)
-			xEnv.RedisPublishUntilReceived(newChannel, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 10*time.Second)
+			xEnv.RedisPublishUntilReceived(logicalChannel, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 10*time.Second)
 
 			// The SubscriptionOnStart hook may be called asynchronously after
 			// WaitForSubscriptionCount returns, so poll until it fires.
