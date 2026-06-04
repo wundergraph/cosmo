@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 
@@ -100,7 +101,10 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	msgChan := sub.Channel()
 
 	cleanup := func() {
-		err := sub.PUnsubscribe(context.Background(), subConf.Channels...)
+		unsubCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		err := sub.PUnsubscribe(unsubCtx, subConf.Channels...)
 		if err != nil {
 			log.Error(fmt.Sprintf("error unsubscribing from redis for topics %v", subConf.Channels), zap.Error(err))
 		}
