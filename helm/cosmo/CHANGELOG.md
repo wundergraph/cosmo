@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.18.0...helm-cosmo@0.19.0) (2026-06-04)
+
+
+### Features
+
+* **helm:** add unhealthy pod eviction policy support to pdb ([#2907](https://github.com/wundergraph/cosmo/issues/2907)) ([39a83f2](https://github.com/wundergraph/cosmo/commit/39a83f2d2053b5a93af99244d584392c7fae65e6))
+
 ## [0.18.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.17.0...helm-cosmo@0.18.0) (2026-05-11)
 
 
