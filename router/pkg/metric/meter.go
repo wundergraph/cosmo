@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -277,6 +278,7 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 				return nil, err
 			}
 
+			opts = append(opts, sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter))
 			opts = append(opts, sdkmetric.WithReader(
 				sdkmetric.NewPeriodicReader(exporter,
 					sdkmetric.WithTimeout(defaultExportTimeout),
