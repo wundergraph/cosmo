@@ -23,6 +23,9 @@ type SubscriptionOnStartHandlerContext interface {
 	Authentication() authentication.Authentication
 	// SubscriptionEventConfiguration is the subscription event configuration (will return nil for engine subscription)
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
+	// SetSubscriptionEventConfiguration replaces the event configuration used to start
+	// a pub/sub subscription. It returns false for engine subscriptions or nil configs.
+	SetSubscriptionEventConfiguration(config datasource.SubscriptionEventConfiguration) bool
 	// EmitEvent sends an event directly to the subscription stream of the
 	// currently connected client.
 	//
@@ -115,6 +118,14 @@ func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 	return c.subscriptionEventConfiguration
 }
 
+func (c *pubSubSubscriptionOnStartHookContext) SetSubscriptionEventConfiguration(config datasource.SubscriptionEventConfiguration) bool {
+	if config == nil {
+		return false
+	}
+	c.subscriptionEventConfiguration = config
+	return true
+}
+
 func (c *pubSubSubscriptionOnStartHookContext) EmitEvent(event datasource.StreamEvent) bool {
 	c.emitEventFn(event.GetData())
 
@@ -199,6 +210,10 @@ func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 	return nil
 }
 
+func (c *engineSubscriptionOnStartHookContext) SetSubscriptionEventConfiguration(config datasource.SubscriptionEventConfiguration) bool {
+	return false
+}
+
 type SubscriptionOnStartHandler interface {
 	// SubscriptionOnStart is called once at subscription start
 	// The error is propagated to the client.
@@ -211,7 +226,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 		return nil
 	}
 
-	return func(resolveCtx resolve.StartupHookContext, subConf datasource.SubscriptionEventConfiguration, eventBuilder datasource.EventBuilderFn) error {
+	return func(resolveCtx resolve.StartupHookContext, subConf datasource.SubscriptionEventConfiguration, eventBuilder datasource.EventBuilderFn) (datasource.SubscriptionEventConfiguration, error) {
 		requestContext := getRequestContext(resolveCtx.Context)
 
 		logger := requestContext.Logger()
@@ -236,7 +251,11 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 			eventBuilder:                   eventBuilder,
 		}
 
-		return fn(hookCtx)
+		if err := fn(hookCtx); err != nil {
+			return nil, err
+		}
+
+		return hookCtx.subscriptionEventConfiguration, nil
 	}
 }
 
