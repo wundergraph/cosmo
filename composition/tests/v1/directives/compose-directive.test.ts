@@ -480,6 +480,85 @@ describe('@composeDirective tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
+    test('BUG: @composeDirective usages are silently dropped when a composing subgraph that does not apply the directive is processed first', () => {
+      /*
+       * Reproducer for a bug in `upsertFederatedDirectiveData`
+       * (composition/src/v1/normalization/utils.ts) interacting with
+       * `getRouterSchemaDirectiveNodes`'s `isReferenced` check
+       * (composition/src/schema-building/utils.ts:481).
+       *
+       * When BatchNormalizer processes subgraphs:
+       *   1. The first composing subgraph "wins" `existingDataByName` for the
+       *      directive (including its `isReferenced` flag, which is false when the
+       *      subgraph composes the directive but never applies it).
+       *   2. Subsequent composing subgraphs only replace `existingDataByName` for the directive
+       *      when they bump the minor version. `isReferenced` is never merged across subgraphs.
+       *   3. At render time, the schema-builder drops every usage of any
+       *      composed directive whose merged `isReferenced` is false. As a result,
+       *      any later applications of `@a` are silently stripped.
+       *
+       * The bug is ordering-sensitive: if the subgraph that applies the
+       * directive happens to be processed first, the schema composes correctly.
+       */
+      const composesButDoesNotApply = createSubgraph(
+        'composesButDoesNotApply',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.0")
+        @composeDirective(name: "@a") {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query {
+          first: ID
+        }
+        `,
+      );
+      const composesAndApplies = createSubgraph(
+        'composesAndApplies',
+        `
+        schema
+        @link(import: ["@a"], url: "https://a/a/v1.0")
+        @composeDirective(name: "@a") {
+          query: Query
+        }
+        
+        directive @a on FIELD_DEFINITION
+        
+        type Query {
+          second: ID @a
+        }
+        `,
+      );
+      const expected = normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        directive @a on FIELD_DEFINITION
+        
+        type Query {
+          first: ID
+          second: ID @a
+        }
+      `,
+      );
+      // Sanity check: when the applying subgraph is processed first, composition is correct.
+      const appliesFirst = federateSubgraphsSuccess(
+        [composesAndApplies, composesButDoesNotApply],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(appliesFirst.federatedGraphSchema)).toBe(expected);
+      expect(appliesFirst.warnings).toHaveLength(0);
+      // Bug: when the non-applying subgraph is processed first, `@a` is silently stripped.
+      const composesFirst = federateSubgraphsSuccess(
+        [composesButDoesNotApply, composesAndApplies],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(composesFirst.federatedGraphSchema)).toBe(expected);
+      expect(composesFirst.warnings).toHaveLength(0);
+    });
+
     test('that a custom directive is propagated in the federated graph successfully (extend schema)', () => {
       const aaaaa = createSubgraph(
         'aaaaa',
