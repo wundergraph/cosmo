@@ -120,7 +120,7 @@ func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 	}
 	// Return a deep copy so callers cannot mutate the live configuration in
 	// place. Changes are only applied when passed back via SetSubscriptionEventConfiguration.
-	return c.subscriptionEventConfiguration
+	return c.subscriptionEventConfiguration.Clone()
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) SetSubscriptionEventConfiguration(config datasource.SubscriptionEventConfiguration) bool {
