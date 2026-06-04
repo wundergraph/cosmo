@@ -1406,6 +1406,7 @@ export class OrganizationRepository {
       'feature-flags': 0,
       'field-pruning-grace-period': 0,
       plugins: 0,
+      'persisted-operations': 3000,
       users: 25,
       requests: 30,
       // Boolean features
@@ -1421,6 +1422,7 @@ export class OrganizationRepository {
       'subgraph-check-extensions': false,
       support: false,
       'split-config-loading': false,
+      'login-method-restrictions': false,
     };
 
     for (const feature of features) {
