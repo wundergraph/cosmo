@@ -224,30 +224,38 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 	// when network metrics are disabled, so unconditionally calling these is
 	// cheap on the disabled path.
 	if !trace.phases.DNSStart.IsZero() && !trace.phases.DNSDone.IsZero() {
+		dur := trace.phases.DNSDone.Sub(trace.phases.DNSStart)
+		exprContext.Subgraph.Request.ClientTrace.DNSLookupDuration = dur
 		t.connectionMetricStore.MeasureDNSLookupDuration(
 			ctx,
-			msSince(trace.phases.DNSStart, trace.phases.DNSDone),
+			msFromDuration(dur),
 			serverAttributes...,
 		)
 	}
 	if !trace.phases.ConnectStart.IsZero() && !trace.phases.ConnectDone.IsZero() {
+		dur := trace.phases.ConnectDone.Sub(trace.phases.ConnectStart)
+		exprContext.Subgraph.Request.ClientTrace.TCPConnectDuration = dur
 		t.connectionMetricStore.MeasureTCPConnectDuration(
 			ctx,
-			msSince(trace.phases.ConnectStart, trace.phases.ConnectDone),
+			msFromDuration(dur),
 			serverAttributes...,
 		)
 	}
 	if !trace.phases.TLSStart.IsZero() && !trace.phases.TLSDone.IsZero() {
+		dur := trace.phases.TLSDone.Sub(trace.phases.TLSStart)
+		exprContext.Subgraph.Request.ClientTrace.TLSHandshakeDuration = dur
 		t.connectionMetricStore.MeasureTLSHandshakeDuration(
 			ctx,
-			msSince(trace.phases.TLSStart, trace.phases.TLSDone),
+			msFromDuration(dur),
 			serverAttributes...,
 		)
 	}
 	if !trace.phases.WroteRequest.IsZero() && !trace.phases.FirstByte.IsZero() {
+		dur := trace.phases.FirstByte.Sub(trace.phases.WroteRequest)
+		exprContext.Subgraph.Request.ClientTrace.TimeToFirstByte = dur
 		t.connectionMetricStore.MeasureTimeToFirstByte(
 			ctx,
-			msSince(trace.phases.WroteRequest, trace.phases.FirstByte),
+			msFromDuration(dur),
 			serverAttributes...,
 		)
 	}
@@ -286,6 +294,6 @@ func (t *TraceInjectingRoundTripper) emitPhaseSpans(trace *ClientTrace, attrs []
 	emit(spanTimeToFirstByte, trace.phases.WroteRequest, trace.phases.FirstByte)
 }
 
-func msSince(start, end time.Time) float64 {
-	return float64(end.Sub(start)) / float64(time.Millisecond)
+func msFromDuration(d time.Duration) float64 {
+	return float64(d) / float64(time.Millisecond)
 }

@@ -281,6 +281,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
 
+		reqCtx.expressionContext.Request.Operation.ResolverAcquireDuration = info.ResolveAcquireWaitTime
+
 		if h.emitResolverSpans {
 			emitResolverAcquireSpan(executionSpanContext, h.tracer, resolveStart, info.ResolveAcquireWaitTime, info.ResolveDeduplicated)
 			emitRouterPhaseSpan(executionSpanContext, h.tracer, "Operation - Resolve Response", info.ResponseResolveStartTime, info.ResponseResolveDuration, rotel.WgComponentName.String("engine-resolver"))

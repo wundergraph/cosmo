@@ -90,7 +90,7 @@ func TestEmitResolverPhaseSpan(t *testing.T) {
 	tracer := tp.Tracer("test")
 
 	parentCtx, parentSpan := tracer.Start(context.Background(), "Operation - Execute")
-	parentCtx = trace.ContextWithSpan(context.Background(), parentSpan)
+	parentCtx = trace.ContextWithSpan(parentCtx, parentSpan)
 	start := time.Now().Add(-time.Millisecond)
 	emitRouterPhaseSpan(parentCtx, tracer, "Operation - Resolve Response", start, time.Millisecond, rotel.WgComponentName.String("engine-resolver"))
 	emitRouterPhaseSpan(parentCtx, tracer, "Router - Write Response", start.Add(time.Millisecond), time.Millisecond, rotel.WgComponentName.String("router-server"))
