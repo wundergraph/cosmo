@@ -100,9 +100,14 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	msgChan := sub.Channel()
 
 	cleanup := func() {
-		err := sub.PUnsubscribe(ctx, subConf.Channels...)
+		err := sub.PUnsubscribe(context.Background(), subConf.Channels...)
 		if err != nil {
 			log.Error(fmt.Sprintf("error unsubscribing from redis for topics %v", subConf.Channels), zap.Error(err))
+		}
+
+		err = sub.Close()
+		if err != nil {
+			log.Error(fmt.Sprintf("error closing connection to redis: %w", zap.Error(err)))
 		}
 	}
 
