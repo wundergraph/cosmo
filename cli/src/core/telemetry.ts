@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import os from 'node:os';
 import { PostHog } from 'posthog-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { checkAuth } from '../commands/auth/utils.js';
 import { config, getBaseHeaders } from './config.js';
 import { CreateClient } from './client/client.js';
 
@@ -127,6 +128,22 @@ const getIdentity = async (): Promise<TelemetryIdentity> => {
       return {
         organizationId: 'anonymous',
       };
+    }
+
+    try {
+      await checkAuth(false);
+    } catch {
+      // ignore
+    }
+
+    if (!config.apiKey) {
+      /**
+       * `checkAuth` perform access token refresh and updates the value for `config.apiKey` accordingly  (if needed);
+       * however, if the value for `config.apiKey` remains empty, that means the user is not authenticated or the
+       * token refresh failed, for this reason, we can assume the call to the `WhoAmI` RPC will fail and we can
+       * just exit early
+       */
+      return { organizationId: 'anonymous' };
     }
 
     const resp = await apiClient.platform.whoAmI(

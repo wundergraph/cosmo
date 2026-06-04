@@ -137,10 +137,11 @@ export const startPollingForAccessToken = async ({
 
 // checks if either of access token or api key are present
 // if not, it will try to refresh the access token
-export async function checkAuth() {
+// if `showErrorMessage` is `false`, any and all error message will be skipped
+export async function checkAuth(showErrorMessage = true): Promise<void> {
   const userConfig = readConfigFile();
 
-  if (config.apiKey && userConfig.accessToken) {
+  if (config.apiKey && userConfig.accessToken && showErrorMessage) {
     console.error(
       `${pc.yellow('Warning')} ${pc.dim(
         'Both COSMO_API_KEY and login credentials found. Environment variable has precedence.\n',
@@ -154,6 +155,10 @@ export async function checkAuth() {
   }
 
   if (!userConfig.organizationSlug) {
+    if (!showErrorMessage) {
+      return;
+    }
+
     program.error(pc.red('Organization slug is not set. Please run `wgc auth login` to set the organization slug.'));
   }
 
@@ -170,6 +175,10 @@ export async function checkAuth() {
 
   // Check if refresh token is expired
   if (userConfig?.refreshToken && userConfig?.refreshExpiresAt && new Date(userConfig.refreshExpiresAt) < new Date()) {
+    if (!showErrorMessage) {
+      return;
+    }
+
     program.error(pc.red('Refresh token has expired. Please login again with `wgc auth login`'));
   }
 
