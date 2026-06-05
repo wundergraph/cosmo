@@ -1,5 +1,6 @@
 /* eslint-disable import/named */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { access } from 'node:fs/promises';
 import {
   CompositionOptions,
   federateSubgraphs,
@@ -191,6 +192,18 @@ export function composeSubgraphs(subgraphs: Subgraph[], options?: CompositionOpt
 }
 
 export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;
+
+/**
+ * Asynchronously checks whether a file (or directory) exists at the given path.
+ */
+export const fileExists = async (filePath: string): Promise<boolean> => {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 export const readConfigFile = (): ConfigData => {
   if (!existsSync(configFile)) {
