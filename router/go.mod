@@ -33,7 +33,7 @@ require (
 	github.com/twmb/franz-go v1.16.1
 	github.com/wundergraph/graphql-go-tools/v2 v2.4.2
 	// Do not upgrade, it renames attributes we rely on
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.44.0
 	go.opentelemetry.io/contrib/propagators/jaeger v1.44.0
 	go.opentelemetry.io/otel v1.44.0

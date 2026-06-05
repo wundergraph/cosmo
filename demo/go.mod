@@ -12,7 +12,7 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.30
 	github.com/wundergraph/cosmo/router v0.0.0-20260330183556-dc4388d100a4
 	github.com/wundergraph/cosmo/router-tests v0.0.0-20260330183556-dc4388d100a4
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0
 	go.opentelemetry.io/otel/sdk v1.44.0
