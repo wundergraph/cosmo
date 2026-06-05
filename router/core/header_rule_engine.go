@@ -104,7 +104,7 @@ type headerPropagationWriter struct {
 	routerHeaderPropagation   *HeaderPropagation
 	reqCtx                    *requestContext
 	didApplyRouterRespHeaders bool
-	costHeaderSetter          func(arrayStats map[string]resolve.ArrayStats)
+	costHeaderSetter          func(typeStats map[string]resolve.TypeNameStats)
 	didSetCostHeaders         bool
 }
 
@@ -138,7 +138,7 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	}
 	if h.costHeaderSetter != nil && !h.didSetCostHeaders {
 		h.didSetCostHeaders = true
-		h.costHeaderSetter(h.resolveCtx.ArrayStats)
+		h.costHeaderSetter(h.resolveCtx.TypeNameStats)
 	}
 	return h.writer.Write(p)
 }
