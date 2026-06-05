@@ -153,7 +153,9 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 	if err != nil {
 		return nil, nil, err
 	}
-	opts = append(opts, sdkmetric.WithReader(promExporter))
+	opts = append(opts,
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
+		sdkmetric.WithReader(promExporter))
 
 	return sdkmetric.NewMeterProvider(opts...), registry, nil
 }
@@ -264,6 +266,8 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 		return nil, err
 	}
 
+	opts = append(opts, sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter))
+
 	if c.OpenTelemetry.TestReader != nil {
 		opts = append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))
 	} else {
@@ -278,7 +282,6 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 				return nil, err
 			}
 
-			opts = append(opts, sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter))
 			opts = append(opts, sdkmetric.WithReader(
 				sdkmetric.NewPeriodicReader(exporter,
 					sdkmetric.WithTimeout(defaultExportTimeout),
