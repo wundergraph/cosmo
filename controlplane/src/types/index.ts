@@ -23,11 +23,13 @@ export type FeatureIds =
   | 'trace-sampling-rate'
   | 'requests'
   | 'feature-flags'
+  | 'persisted-operations'
   // Boolean features
   | 'ai'
   | 'cache-warmer'
   | 'composition-ignore-external-keys' // COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
   | 'field-pruning-grace-period'
+  | 'login-method-restrictions'
   | 'oidc'
   | 'plugins'
   | 'proposals'

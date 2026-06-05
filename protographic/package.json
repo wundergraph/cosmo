@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/protographic",
-  "version": "0.23.10",
+  "version": "0.23.11",
   "module": "src/index.ts",
   "type": "module",
   "main": "dist/src/index.js",
@@ -45,6 +45,6 @@
     "@wundergraph/cosmo-connect": "workspace:*",
     "graphql": "catalog:",
     "lodash-es": "catalog:",
-    "protobufjs": "^7.5.5"
+    "protobufjs": "^7.6.0"
   }
 }

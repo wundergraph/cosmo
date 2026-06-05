@@ -36,7 +36,7 @@ describe('IdP gate (namespace ↔ SSO/password mapping)', () => {
 
   beforeAll(async () => {
     dbname = await beforeAllSetup();
-    setup = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    setup = await SetupTest({ dbname, enabledFeatures: ['oidc', 'login-method-restrictions'] });
     base = setup.users.adminAliceCompanyA;
 
     const { client } = setup;
@@ -45,7 +45,7 @@ describe('IdP gate (namespace ↔ SSO/password mapping)', () => {
     const createProvider = await client.createOIDCProvider({
       name: 'okta',
       clientID: 'client',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       mappers: [],
     });
@@ -69,7 +69,7 @@ describe('IdP gate (namespace ↔ SSO/password mapping)', () => {
     const { namespaces } = await client.getNamespaces({});
     const idOf = (name: string) => namespaces.find((n) => n.name === name)!.id;
 
-    const mapped = await client.updateNamespaceSSOMappings({
+    const mapped = await client.updateNamespaceLoginMethods({
       mappings: [
         { namespaceId: idOf(ssoNs), allowedSsoProviderIds: [providerId] },
         { namespaceId: idOf(passwordNs), allowPasswordLogin: true },

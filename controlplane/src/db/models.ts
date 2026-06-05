@@ -61,7 +61,8 @@ export type AuditableType =
   | 'operation_change_override'
   | 'operation_ignore_all_override'
   | 'proposal'
-  | 'namespace_sso_mapping';
+  | 'namespace_sso_mapping'
+  | 'organization_login_methods';
 
 export type AuditTargetType =
   | 'organization'
@@ -175,6 +176,7 @@ export type AuditLogFullAction =
   | 'proposal.disabled'
   | 'namespace_proposal_config.updated'
   | 'namespace_sso_mapping.updated'
+  | 'organization_login_methods.updated'
   | 'scim.organization_invitation_created'
   | 'scim.update_organization_member'
   | 'scim.activate_organization_member'

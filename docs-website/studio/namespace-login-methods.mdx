@@ -6,6 +6,12 @@ icon: "lock-keyhole"
 
 Namespace login methods let you control which login methods can access each [namespace](/concepts/namespaces) in your organization. A user who authenticates through a login method that a namespace does not allow cannot see or act on that namespace or the graphs inside it.
 
+Login methods must also be allowed at the organization level. See [Organization Login Methods](/studio/organization-login-methods).
+
+<Note>
+  Login method restrictions are an Enterprise plan feature.
+</Note>
+
 This is useful when different environments must be reached through different identities. Map your `production` namespace to a production [SSO](/studio/sso) app and your `staging` namespace to a staging app, and a user who signs in through the staging app no longer has access to production.
 
 ## Login methods
@@ -41,7 +47,7 @@ The restriction applies to both visibility and actions. A user whose login metho
     Connect the SSO providers and enable the social logins you intend to use. See [SSO](/studio/sso).
   </Step>
   <Step>
-    Navigate to **Namespace SSO**.
+    Go to **Login Methods** and use the **Namespaces** section.
   </Step>
   <Step>
     Add a row for each namespace you want to restrict, then select the login methods allowed for it. Namespaces you do not add stay open to all login methods.

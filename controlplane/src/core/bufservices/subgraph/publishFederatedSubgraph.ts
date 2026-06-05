@@ -149,6 +149,7 @@ export function publishFederatedSubgraph(
           schemaSDL: subgraphSchemaSDL,
           routerCompatibilityVersion,
           isDeleted: false,
+          approvedOnly: true,
         });
         if (matches.length === 0) {
           const message = `The subgraph ${req.name}'s schema does not match to this subgraph's schema in any approved proposal.`;

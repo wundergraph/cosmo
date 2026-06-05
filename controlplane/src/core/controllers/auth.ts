@@ -12,11 +12,12 @@ import { lru } from 'tiny-lru';
 import cookie from 'cookie';
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
-import { isSocialLoginProvider } from '../util.js';
+import { isSocialLoginProvider, resolveLoginMethod } from '../util.js';
 import * as schema from '../../db/schema.js';
 import { sessions } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
+import { OrganizationLoginMethodRepository } from '../repositories/OrganizationLoginMethodRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
@@ -98,6 +99,19 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       });
 
       const oidcRepo = new OidcRepository(opts.db);
+      const orgLoginMethodRepo = new OrganizationLoginMethodRepository(opts.db);
+
+      const loginMethodAllowedByOrg = new Map<string, boolean>();
+      await Promise.all(
+        orgs.map(async (o) => {
+          const method = await resolveLoginMethod(
+            { oidcRepo },
+            { organizationId: o.id, idpAlias: userSession.idpAlias },
+          );
+          const allowed = await orgLoginMethodRepo.isLoginMethodAllowed({ organizationId: o.id, loginMethod: method });
+          loginMethodAllowedByOrg.set(o.id, allowed);
+        }),
+      );
 
       const emptyLoginMethod = {
         ssoProviderId: '',
@@ -138,6 +152,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             groups: rbac.groups.map(({ description, kcGroupId, ...rest }) => ({
               ...rest,
             })),
+            loginMethodAllowed: loginMethodAllowedByOrg.get(org.id) ?? true,
           })),
         invitations,
         expiresAt: userSession.expiresAt,

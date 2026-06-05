@@ -1985,8 +1985,8 @@ export const oidcProviders = pgTable(
   },
 );
 
-export const namespaceSsoProviders = pgTable(
-  'namespace_sso_providers', // nssp
+export const namespaceLoginMethods = pgTable(
+  'namespace_login_methods', // nlm
   {
     id: uuid('id').notNull().primaryKey().defaultRandom(),
     namespaceId: uuid('namespace_id')
@@ -2000,19 +2000,53 @@ export const namespaceSsoProviders = pgTable(
   },
   (t) => {
     return {
-      namespaceIdIndex: index('nssp_namespace_id_idx').on(t.namespaceId),
-      ssoProviderIdIndex: index('nssp_sso_provider_id_idx').on(t.ssoProviderId),
-      uniqueSsoPerNamespace: uniqueIndex('nssp_unique_sso')
+      namespaceIdIndex: index('nlm_namespace_id_idx').on(t.namespaceId),
+      ssoProviderIdIndex: index('nlm_sso_provider_id_idx').on(t.ssoProviderId),
+      uniqueSsoPerNamespace: uniqueIndex('nlm_unique_sso')
         .on(t.namespaceId, t.ssoProviderId)
         .where(sql`${t.ssoProviderId} IS NOT NULL`),
       // At most one built-in-methods row (password/google/github) per namespace.
-      uniqueBuiltinPerNamespace: uniqueIndex('nssp_unique_builtin')
+      uniqueBuiltinPerNamespace: uniqueIndex('nlm_unique_builtin')
         .on(t.namespaceId)
         .where(sql`${t.ssoProviderId} IS NULL`),
       // A row is either an SSO-provider row (provider id, no built-in flags) or a
       // built-in-methods row (no provider id, at least one flag) — never both, never neither.
       builtinXorSsoCheck: check(
-        'nssp_builtin_xor_sso_check',
+        'nlm_builtin_xor_sso_check',
+        sql`(${t.ssoProviderId} IS NOT NULL) <> (${t.isPasswordLogin} OR ${t.isGoogleLogin} OR ${t.isGithubLogin})`,
+      ),
+    };
+  },
+);
+
+export const organizationLoginMethods = pgTable(
+  'organization_login_methods', // olm
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    ssoProviderId: uuid('sso_provider_id').references(() => oidcProviders.id, { onDelete: 'cascade' }),
+    isPasswordLogin: boolean('is_password_login').notNull().default(false),
+    isGoogleLogin: boolean('is_google_login').notNull().default(false),
+    isGithubLogin: boolean('is_github_login').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      organizationIdIndex: index('olm_organization_id_idx').on(t.organizationId),
+      ssoProviderIdIndex: index('olm_sso_provider_id_idx').on(t.ssoProviderId),
+      // At most one row per allowed SSO app per org.
+      uniqueSsoPerOrg: uniqueIndex('olm_unique_sso')
+        .on(t.organizationId, t.ssoProviderId)
+        .where(sql`${t.ssoProviderId} IS NOT NULL`),
+      // At most one built-in-methods row (password/google/github) per org.
+      uniqueBuiltinPerOrg: uniqueIndex('olm_unique_builtin')
+        .on(t.organizationId)
+        .where(sql`${t.ssoProviderId} IS NULL`),
+      // A row is either an SSO-provider row or a built-in-methods row, never both, never neither.
+      builtinXorSsoCheck: check(
+        'olm_builtin_xor_sso_check',
         sql`(${t.ssoProviderId} IS NOT NULL) <> (${t.isPasswordLogin} OR ${t.isGoogleLogin} OR ${t.isGithubLogin})`,
       ),
     };
