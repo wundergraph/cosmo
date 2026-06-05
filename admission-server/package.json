@@ -12,12 +12,12 @@
   "dependencies": {
     "@hono/node-server": "1.19.13",
     "@wundergraph/cosmo-shared": "workspace:^",
-    "dotenv": "^16.4.5",
-    "hono": "4.12.12"
+    "dotenv": "catalog:",
+    "hono": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^20.11.17",
-    "tsx": "^4.16.0",
-    "typescript": "^5.3.2"
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
   }
 }

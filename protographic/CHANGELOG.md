@@ -4,6 +4,68 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.23.11](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.10...@wundergraph/protographic@0.23.11) (2026-06-01)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.10](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.9...@wundergraph/protographic@0.23.10) (2026-05-29)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.9](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.8...@wundergraph/protographic@0.23.9) (2026-05-27)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.8](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.7...@wundergraph/protographic@0.23.8) (2026-05-27)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.7](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.6...@wundergraph/protographic@0.23.7) (2026-05-18)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.5...@wundergraph/protographic@0.23.6) (2026-05-14)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.4...@wundergraph/protographic@0.23.5) (2026-05-12)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.3...@wundergraph/protographic@0.23.4) (2026-05-07)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.2...@wundergraph/protographic@0.23.3) (2026-05-01)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.1...@wundergraph/protographic@0.23.2) (2026-05-01)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.23.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.23.0...@wundergraph/protographic@0.23.1) (2026-04-30)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.22.1...@wundergraph/protographic@0.23.0) (2026-04-29)
+
+### Features
+
+* centralize TS dependency management via catalogs ([#2782](https://github.com/wundergraph/cosmo/issues/2782)) ([a6a6956](https://github.com/wundergraph/cosmo/commit/a6a69565727f01a942a16e6d560d0fedabcb531e)) (@comatory)
+
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.22.0...@wundergraph/protographic@0.22.1) (2026-04-27)
+
+### Bug Fixes
+
+* **protographic:** update protobufjs to remediate vulnerability ([#2794](https://github.com/wundergraph/cosmo/issues/2794)) ([0c2ca73](https://github.com/wundergraph/cosmo/commit/0c2ca7333c64499fdce7605cbdb8266c775003ab)) (@pepol)
+
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.21.0...@wundergraph/protographic@0.22.0) (2026-04-24)
+
+### Features
+
+* update `lodash` and `lodash-es` ([#2780](https://github.com/wundergraph/cosmo/issues/2780)) ([bbf1e38](https://github.com/wundergraph/cosmo/commit/bbf1e38b3a346363fe742801f2982dbafb267454)) (@wilsonrivera)
+
 # [0.21.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.20.3...@wundergraph/protographic@0.21.0) (2026-04-16)
 
 ### Features

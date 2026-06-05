@@ -16,7 +16,7 @@ import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
-import _ from 'lodash';
+import { cloneDeep } from 'lodash-es';
 import pLimit from 'p-limit';
 import { NewSchemaChangeOperationUsage, ProposalMatch, SchemaCheckChangeAction } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
@@ -305,7 +305,7 @@ export class SchemaCheckRepository {
   }) {
     let hasUnsafeClientTraffic = false;
 
-    const result = _.cloneDeep(data.inspectorResultsByChangeId);
+    const result = cloneDeep(data.inspectorResultsByChangeId);
 
     const changeActionsByOperationHash: Map<string, typeof data.changes> = new Map();
 
@@ -959,7 +959,7 @@ export class SchemaCheckRepository {
       });
     }
 
-    let proposalMatchMessage: string | undefined;
+    let proposalMatchMessage = '';
     for (const [subgraphName, checkSubgraph] of checkSubgraphs.entries()) {
       const {
         subgraph,
@@ -990,7 +990,7 @@ export class SchemaCheckRepository {
 
           if (matches.length === 0) {
             if (proposalConfig.checkSeverityLevel === 'warn') {
-              proposalMatchMessage += `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.\n`;
+              proposalMatchMessage += `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved or draft proposals.\n`;
             } else {
               await this.update({
                 schemaCheckID,
@@ -1004,7 +1004,7 @@ export class SchemaCheckRepository {
               return {
                 response: {
                   code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
-                  details: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+                  details: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved or draft proposals.`,
                 },
                 breakingChanges: [],
                 nonBreakingChanges: [],
@@ -1016,7 +1016,7 @@ export class SchemaCheckRepository {
                 graphPruneWarnings: [],
                 graphPruneErrors: [],
                 compositionWarnings: [],
-                proposalMatchMessage: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+                proposalMatchMessage: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved or draft proposals.`,
               };
             }
           }
@@ -1482,7 +1482,7 @@ export class SchemaCheckRepository {
       graphPruneErrors,
       compositionWarnings,
       operationUsageStats: collectOperationUsageStats(inspectedOperations),
-      proposalMatchMessage,
+      proposalMatchMessage: proposalMatchMessage || undefined,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
     };

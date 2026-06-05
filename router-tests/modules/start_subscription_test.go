@@ -90,7 +90,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
@@ -183,7 +182,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
@@ -268,17 +266,17 @@ func TestStartSubscriptionHook(t *testing.T) {
 			}, "StartSubscription callback was not invoked")
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 
-			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
-				require.NoError(t, err)
-
-			}, "unable to close client before timeout")
+			testenv.AwaitChannelWithT(t, time.Second*10, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.Error(t, args.errValue)
+				require.Empty(t, args.dataValue)
+			}, "subscription error was not delivered to handler")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 
-			require.Len(t, subscriptionArgsCh, 1)
-			subscriptionArgs := <-subscriptionArgsCh
-			require.Error(t, subscriptionArgs.errValue)
-			require.Empty(t, subscriptionArgs.dataValue)
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
 		})
 	})
 
@@ -381,9 +379,11 @@ func TestStartSubscriptionHook(t *testing.T) {
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
+			require.Eventually(t, func() bool {
+				return customModule.HookCallCount.Load() >= 2
+			}, time.Second*10, time.Millisecond*50)
 			assert.Equal(t, int32(2), customModule.HookCallCount.Load())
 			t.Cleanup(func() {
 				require.Len(t, subscriptionOneArgsCh, 0)
@@ -473,7 +473,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
@@ -511,7 +510,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			var subscriptionCountEmp struct {
 				CountEmp int `graphql:"countEmp(max: $max, intervalMilliseconds: $interval)"`
 			}
@@ -584,7 +582,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			var subscriptionCountEmp struct {
 				CountEmp int `graphql:"countEmp(max: $max, intervalMilliseconds: $interval)"`
 			}
@@ -594,7 +591,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			vars := map[string]interface{}{
 				"max":      0,
-				"interval": 0,
+				"interval": 500,
 			}
 
 			type subscriptionArgs struct {
@@ -632,7 +629,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
@@ -713,13 +709,14 @@ func TestStartSubscriptionHook(t *testing.T) {
 				require.Empty(t, args.dataValue)
 			})
 
-			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
-				require.NoError(t, err)
-			}, "unable to close client before timeout")
-
 			require.Empty(t, originResponseCalled)
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
 		})
 	})
 }

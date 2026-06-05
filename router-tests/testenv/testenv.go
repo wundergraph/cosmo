@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"mime/multipart"
 	"net"
@@ -53,6 +52,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
@@ -322,13 +322,14 @@ type Config struct {
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
+	ModifySubgraphExtensionPropagation func(subgraphExtensionPropagation *config.SubgraphExtensionPropagationConfiguration)
 	ModifyWebsocketConfiguration       func(websocketConfiguration *config.WebSocketConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
 	DemoMode                           bool
 	KafkaSeeds                         []string
 	DisableWebSockets                  bool
 	DisableParentBasedSampler          bool
-	TLSConfig                          *core.TlsConfig
+	TLSConfig                          config.TLSConfiguration
 	TraceExporter                      trace.SpanExporter
 	TracingSanitizeUTF8                *config.SanitizeUTF8Config
 	IPAnonymization                    *core.IPAnonymizationConfig
@@ -422,6 +423,10 @@ type SubgraphConfig struct {
 	// TLSConfig enables TLS on this subgraph server. When set, the subgraph uses StartTLS()
 	// instead of Start(). This is useful for testing mTLS between the router and subgraphs.
 	TLSConfig *tls.Config
+
+	// GRPCTLSConfig enables TLS on the gRPC subgraph server. When set, the gRPC server
+	// uses TLS credentials instead of plain connections.
+	GRPCTLSConfig *tls.Config
 }
 
 type LogObservationConfig struct {
@@ -434,8 +439,10 @@ type MCPConfig struct {
 	Port    int
 }
 
-var redisHost = "redis://localhost:6379"
-var redisClusterHost = "redis://localhost:7001"
+var (
+	redisHost        = "redis://localhost:6379"
+	redisClusterHost = "redis://localhost:7001"
+)
 
 // CreateTestSupervisorEnv is currently tailored specifically for /lifecycle/supervisor_test.go, refer to that test
 // for usage example. CreateTestSupervisorEnv is not a drop-in replacement for CreateTestEnv!
@@ -628,7 +635,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor, cfg.Subgraphs.Projects.GRPCTLSConfig)
 	}
 
 	replacements := map[string]string{
@@ -714,20 +721,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	})
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
-
-		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+	if cfg.TLSConfig.Server.Enabled {
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.CertFile, cfg.TLSConfig.Server.KeyFile)
 		require.NoError(t, err)
 
-		caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
-		if err != nil {
-			log.Fatal(err)
-		}
+		caCert, err := os.ReadFile(cfg.TLSConfig.Server.CertFile)
+		require.NoError(t, err)
 
 		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
-			t.Fatalf("could not append ca cert to pool")
-		}
+		require.True(t, caCertPool.AppendCertsFromPEM(caCert), "could not append ca cert to pool")
 
 		// Retain the default transport settings
 		httpClient := cleanhttp.DefaultPooledClient()
@@ -1071,7 +1073,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor, cfg.Subgraphs.Projects.GRPCTLSConfig)
 	}
 
 	replacements := map[string]string{
@@ -1145,20 +1147,15 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		return nil, err
 	}
 
-	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
-
-		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+	if cfg.TLSConfig.Server.Enabled {
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.Server.CertFile, cfg.TLSConfig.Server.KeyFile)
 		require.NoError(t, err)
 
-		caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
-		if err != nil {
-			log.Fatal(err)
-		}
+		caCert, err := os.ReadFile(cfg.TLSConfig.Server.CertFile)
+		require.NoError(t, err)
 
 		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
-			t.Fatalf("could not append ca cert to pool")
-		}
+		require.True(t, caCertPool.AppendCertsFromPEM(caCert), "could not append ca cert to pool")
 
 		// Retain the default transport settings
 		httpClient := cleanhttp.DefaultPooledClient()
@@ -1383,9 +1380,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			PrintQueryPlans:            false,
 			EnableCacheResponseHeaders: true,
 		},
-		WebSocketClientPollTimeout:    300 * time.Millisecond,
-		WebSocketClientConnBufferSize: 1,
-		WebSocketClientReadTimeout:    1 * time.Second,
+		WebSocketServerPollTimeout:    300 * time.Millisecond,
+		WebSocketServerConnBufferSize: 1,
+		WebSocketServerReadTimeout:    1 * time.Second,
+		WebSocketServerWriteTimeout:   2 * time.Second,
 		WebSocketClientWriteTimeout:   2 * time.Second,
 		// Avoid get in conflict with any test that doesn't expect to handle pings
 		WebSocketClientPingInterval:    30 * time.Second,
@@ -1407,6 +1405,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	if testConfig.ModifySubgraphErrorPropagation != nil {
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
+	}
+
+	if testConfig.ModifySubgraphExtensionPropagation != nil {
+		testConfig.ModifySubgraphExtensionPropagation(&cfg.SubgraphExtensionPropagation)
 	}
 
 	var natsEventSources []config.NatsEventSource
@@ -1488,6 +1490,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			OmitExtensions:        testConfig.BatchingConfig.OmitExtensions,
 		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
+		core.WithSubgraphExtensionPropagation(cfg.SubgraphExtensionPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
@@ -1540,7 +1543,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			return nil, fmt.Errorf("RegistryURL must be a host-only OCI registry address (no http:// or https:// scheme), got %q", testConfig.Plugins.RegistryURL)
 		}
 		pluginsCfg.Registry = config.PluginRegistryConfiguration{
-			URL: testConfig.Plugins.RegistryURL,
+			URL:      testConfig.Plugins.RegistryURL,
+			Insecure: true,
 		}
 	}
 	routerOpts = append(routerOpts, core.WithPlugins(pluginsCfg))
@@ -1767,7 +1771,7 @@ func makeSubgraphTestServer(_ testing.TB, handler http.Handler, tlsConfig *tls.C
 	return s
 }
 
-func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interceptor grpc.UnaryServerInterceptor) (*grpc.Server, string) {
+func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interceptor grpc.UnaryServerInterceptor, tlsConfig *tls.Config) (*grpc.Server, string) {
 	t.Helper()
 
 	// We could use freeport here, but it is easy to use ephemeral port and get the endpoint
@@ -1781,6 +1785,9 @@ func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interce
 	var opts []grpc.ServerOption
 	if interceptor != nil {
 		opts = append(opts, grpc.ChainUnaryInterceptor(interceptor))
+	}
+	if tlsConfig != nil {
+		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)))
 	}
 
 	s := grpc.NewServer(opts...)
@@ -1804,23 +1811,33 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
-			require.NoError(t, err)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(requestLog)
-			require.NoError(t, err)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			return
 		}
+
 		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
-		if authorization == "" {
-			require.NotEmpty(t, authorization, "missing authorization header")
+		token, ok := strings.CutPrefix(authorization, "Bearer ")
+		if !ok {
+			http.Error(w, "missing or malformed Bearer token", http.StatusUnauthorized)
+			return
 		}
-		token := authorization[len("Bearer "):]
 		parsedClaims := make(jwt.MapClaims)
 		jwtParser := new(jwt.Parser)
-		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		require.NoError(t, err)
+		if _, _, err := jwtParser.ParseUnverified(token, parsedClaims); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
 		cdnFileServer.ServeHTTP(w, r)
 	})
 	cdnServer = httptest.NewServer(handler)
@@ -1840,10 +1857,10 @@ func grpcURL(endpoint string) string {
 	return "dns:///" + endpoint
 }
 
-func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v any) (err error) {
 	_, payload, err := conn.ReadMessage()
 	if err != nil {
-		return err
+		return fmt.Errorf("read message: %w", err)
 	}
 	if err := json.Unmarshal(payload, &v); err != nil {
 		t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
@@ -2428,8 +2445,9 @@ type WebSocketMessage struct {
 }
 
 type GraphQLResponse struct {
-	Data   json.RawMessage `json:"data,omitempty"`
-	Errors []GraphQLError  `json:"errors,omitempty"`
+	Data       json.RawMessage `json:"data,omitempty"`
+	Errors     []GraphQLError  `json:"errors,omitempty"`
+	Extensions json.RawMessage `json:"extensions,omitempty"`
 }
 
 type GraphQLErrorExtensions struct {
@@ -3005,6 +3023,8 @@ func ReadSSEField(t testing.TB, reader *bufio.Reader) string {
 }
 
 func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	t.Helper()
+
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
 	attempts := 0

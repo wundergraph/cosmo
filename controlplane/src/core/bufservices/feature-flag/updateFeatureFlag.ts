@@ -1,24 +1,17 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
-  CompositionError,
-  CompositionWarning,
-  DeploymentError,
   UpdateFeatureFlagRequest,
   UpdateFeatureFlagResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, FederatedGraphDTO } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
-import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidLabels } from '../../util.js';
-import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function updateFeatureFlag(
   opts: RouterOptions,
@@ -33,14 +26,6 @@ export function updateFeatureFlag(
 
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-    const orgWebhooks = new OrganizationWebhookService(
-      opts.db,
-      authContext.organizationId,
-      opts.logger,
-      opts.billingDefaultPlanId,
-      opts.webhookProxyUrl,
-    );
 
     req.namespace = req.namespace || DefaultNamespace;
 
@@ -111,140 +96,98 @@ export function updateFeatureFlag(
       };
     }
 
-    const auditLogRepo = new AuditLogRepository(opts.db);
-
-    const allFederatedGraphsToCompose: FederatedGraphDTO[] = [];
-    const allFederatedGraphIdsToCompose = new Set<string>();
-
     const prevFederatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
       featureFlagId: featureFlagDTO.id,
       namespaceId: namespace.id,
       excludeDisabled: true,
     });
 
-    for (const prevFederatedGraph of prevFederatedGraphs) {
-      allFederatedGraphIdsToCompose.add(prevFederatedGraph.id);
-      allFederatedGraphsToCompose.push(prevFederatedGraph);
-    }
+    const { deploymentErrors, compositionErrors, compositionWarnings, notFoundError } = await opts.db.transaction(
+      async (tx) => {
+        const txFeatureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
+        await txFeatureFlagRepo.updateFeatureFlag({
+          featureFlag: featureFlagDTO,
+          labels: req.labels,
+          featureSubgraphIds,
+          unsetLabels: req.unsetLabels ?? false,
+        });
 
-    await featureFlagRepo.updateFeatureFlag({
-      featureFlag: featureFlagDTO,
-      labels: req.labels,
-      featureSubgraphIds,
-      unsetLabels: req.unsetLabels ?? false,
-    });
+        const auditLogRepo = new AuditLogRepository(tx);
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+          auditAction: 'feature_flag.updated',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableType: 'feature_flag',
+          auditableDisplayName: featureFlagDTO.name,
+          apiKeyName: authContext.apiKeyName,
+          actorDisplayName: authContext.userDisplayName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+          targetNamespaceId: namespace.id,
+          targetNamespaceDisplayName: namespace.name,
+        });
 
-    await auditLogRepo.addAuditLog({
-      organizationId: authContext.organizationId,
-      organizationSlug: authContext.organizationSlug,
-      auditAction: 'feature_flag.updated',
-      action: 'updated',
-      actorId: authContext.userId,
-      auditableType: 'feature_flag',
-      auditableDisplayName: featureFlagDTO.name,
-      apiKeyName: authContext.apiKeyName,
-      actorDisplayName: authContext.userDisplayName,
-      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-      targetNamespaceId: namespace.id,
-      targetNamespaceDisplayName: namespace.name,
-    });
+        const updatedFeatureFlag = await txFeatureFlagRepo.getFeatureFlagById({
+          featureFlagId: featureFlagDTO.id,
+          namespaceId: namespace.id,
+          includeSubgraphs: true,
+        });
 
-    const newFederatedGraphs = await featureFlagRepo.getFederatedGraphsByFeatureFlag({
-      featureFlagId: featureFlagDTO.id,
-      namespaceId: namespace.id,
-      excludeDisabled: true,
-    });
+        if (!updatedFeatureFlag) {
+          return {
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            notFoundError: `Feature flag "${featureFlagDTO.name}" was not found after updating.`,
+          };
+        }
 
-    for (const newFederatedGraph of newFederatedGraphs) {
-      if (allFederatedGraphIdsToCompose.has(newFederatedGraph.id)) {
-        continue;
-      }
-      allFederatedGraphsToCompose.push(newFederatedGraph);
-    }
+        const compositionService = new CompositionService(
+          tx,
+          authContext.organizationId,
+          logger,
+          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+          opts.blobStorage,
+          opts.chClient,
+          opts.webhookProxyUrl,
+          req.disableResolvabilityValidation,
+        );
 
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-    });
+        const compositionResult = await compositionService.composeAndDeployFeatureFlag({
+          actorId: authContext.userId,
+          featureFlag: updatedFeatureFlag,
+          prevFederatedGraphs,
+        });
 
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+        return {
+          deploymentErrors: compositionResult.deploymentErrors,
+          compositionErrors: compositionResult.compositionErrors,
+          compositionWarnings: compositionResult.compositionWarnings,
+        };
+      },
+    );
 
-    await opts.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
-
-      const composition = await fedGraphRepo.composeAndDeployGraphs({
-        actorId: authContext.userId,
-        admissionConfig: {
-          cdnBaseUrl: opts.cdnBaseUrl,
-          webhookJWTSecret: opts.admissionWebhookJWTSecret,
-        },
-        blobStorage: opts.blobStorage,
-        chClient: opts.chClient!,
-        compositionOptions: {
-          disableResolvabilityValidation: req.disableResolvabilityValidation,
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-        },
-        federatedGraphs: allFederatedGraphsToCompose,
-        webhookProxyUrl: opts.webhookProxyUrl,
-      });
-
-      compositionErrors.push(...composition.compositionErrors);
-      deploymentErrors.push(...composition.deploymentErrors);
-      compositionWarnings.push(...composition.compositionWarnings);
-    });
-
-    for (const graph of allFederatedGraphsToCompose) {
-      const hasErrors =
-        compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
-        deploymentErrors.some((error) => error.federatedGraphName === graph.name);
-      orgWebhooks.send(
-        {
-          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-          payload: {
-            federated_graph: {
-              id: graph.id,
-              name: graph.name,
-              namespace: graph.namespace,
-            },
-            organization: {
-              id: authContext.organizationId,
-              slug: authContext.organizationSlug,
-            },
-            errors: hasErrors,
-            actor_id: authContext.userId,
-          },
-        },
-        authContext.userId,
-      );
-    }
-
-    if (compositionErrors.length > 0) {
+    if (notFoundError) {
       return {
         response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        deploymentErrors: [],
-        compositionWarnings,
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: notFoundError,
         },
         compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
+        deploymentErrors: [],
+        compositionWarnings: [],
       };
     }
 
     return {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
       compositionErrors,
       deploymentErrors,

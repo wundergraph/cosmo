@@ -19,7 +19,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/errs"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
@@ -28,12 +28,6 @@ import (
 
 const (
 	sigResponseHeaderName = "X-Signature-SHA256"
-)
-
-var (
-	ErrMissingSignatureHeader       = errors.New("signature header not found in CDN response")
-	ErrInvalidSignature             = errors.New("invalid config signature, potential tampering detected")
-	ErrConfigNotFound         error = &routerConfigNotFoundError{}
 )
 
 type Options struct {
@@ -57,20 +51,8 @@ type Client struct {
 	routerCompatibilityVersion int
 }
 
-type routerConfigNotFoundError struct {
-	federatedGraphId string
-}
-
 type getRouterConfigRequestBody struct {
 	Version string `json:"version"`
-}
-
-func (e *routerConfigNotFoundError) FederatedGraphId() string {
-	return e.federatedGraphId
-}
-
-func (e *routerConfigNotFoundError) Error() string {
-	return fmt.Sprintf("router config of the federated graph %s not found. This is expected if you have not deployed any subgraphs yet", e.federatedGraphId)
 }
 
 // NewClient creates a new CDN client. URL is the URL of the CDN.
@@ -147,7 +129,7 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusNotFound {
-			return nil, ErrConfigNotFound
+			return nil, errs.ErrRouterConfigNotFound
 		}
 		if resp.StatusCode == http.StatusUnauthorized {
 			return nil, errors.New("could not authenticate against CDN")
@@ -156,7 +138,7 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 			return nil, errors.New("bad request")
 		}
 		if resp.StatusCode == http.StatusNotModified {
-			return nil, configpoller.ErrConfigNotModified
+			return nil, errs.ErrConfigNotModified
 		}
 
 		return nil, fmt.Errorf("unexpected status code when loading router config, statusCode: %d", resp.StatusCode)
@@ -193,9 +175,9 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 		if configSignature == "" {
 			cdn.logger.Error(
 				"Signature header not found in CDN response. Ensure that your Admission Controller was able to sign the config. Open the compositions page in the Studio to check the status of the last deployment",
-				zap.Error(ErrMissingSignatureHeader),
+				zap.Error(errs.ErrMissingSignatureHeader),
 			)
-			return nil, ErrMissingSignatureHeader
+			return nil, errs.ErrMissingSignatureHeader
 		}
 
 		// create a signature of the received config body
@@ -214,9 +196,9 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 		if subtle.ConstantTimeCompare(rawSignature, dataHmac) != 1 {
 			cdn.logger.Error(
 				"Invalid config signature, potential tampering detected. Ensure that your Admission Controller has signed the config correctly. Open the compositions page in the Studio to check the status of the last deployment",
-				zap.Error(ErrInvalidSignature),
+				zap.Error(errs.ErrInvalidSignature),
 			)
-			return nil, ErrInvalidSignature
+			return nil, errs.ErrInvalidSignature
 		}
 
 		cdn.logger.Info("Config signature validation successful",
@@ -232,8 +214,8 @@ func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSin
 	res := &routerconfig.Response{}
 
 	body, err := cdn.getRouterConfig(ctx, version, modifiedSince)
-	if err != nil && errors.Is(err, ErrConfigNotFound) {
-		return nil, configpoller.ErrConfigNotFound
+	if err != nil && errors.Is(err, errs.ErrFileNotFound) {
+		return nil, errs.ErrRouterConfigNotFound
 	} else if err != nil {
 		return nil, err
 	}

@@ -62,6 +62,42 @@ telemetry:
 
 For detailed information on the configuration, click [here](/router/configuration#cache-warmer).
 
+#### Cache Warmer Optimization
+
+Three settings shape warmup throughput: `workers`, `items_per_second`, and `item_delay`. The `timeout` bounds how long startup will wait for warmup to complete. Tune them to balance warm-up speed against system load and deploy time.
+
+```yaml
+cache_warmup:
+  enabled: true
+  workers: 8
+  items_per_second: 50
+  item_delay: 0s
+  timeout: 30s
+```
+
+For detailed information on the configuration, click [here](/router/configuration#cache-warmer).
+
+`workers` is the number of concurrent workers processing warmup items. Each worker pulls from a shared queue. Raising `workers` increases parallelism but does not raise the `items_per_second` ceiling, since the rate limiter sits in front of the pool rather than per worker.
+
+`items_per_second` is a ceiling, not a target. The router uses a rate limiter that prevents workers from exceeding this rate, but actual throughput can be lower when planning is slow or there are fewer items than the limit allows. The limit is shared across all workers, not applied per worker. A single rate limiter sits in front of the worker pool, so `workers: 9` with `items_per_second: 50` means the 9 workers collectively process at most 50 items per second, not 50 each.
+
+`item_delay` is a fixed pause applied after each item is processed, per worker. It defaults to `0s` (disabled). Reach for it when `items_per_second` alone is not enough. Planning some operations can take longer than one second, and when that happens the rate limiter has already moved to its next tick, so the next item starts immediately. `item_delay` enforces a minimum gap after every item, so a run of slow plans cannot burst the system. Use it together with `items_per_second` when warmup runs alongside production traffic and you need predictable headroom for subgraphs.
+
+Size `timeout` based on the throughput the above three settings allow. Two things put a floor on warmup duration: the `items_per_second` rate limit, and the `item_delay` pause that each worker takes after every item. Whichever is slower wins.
+
+For example, warming 200 items with 1 worker at 2 items per second takes at least 100 seconds — the rate limit sets the pace. Add `item_delay: 1s` and the floor rises to 200 seconds, because every item now also costs a full second of pause and there's only one worker absorbing it. Doubling to 2 workers brings the delay's contribution back down to 100 seconds, so the rate limit takes over again.
+
+Actual runtime is always longer because each item also has to be planned.
+
+If you are using the [slow plan cache](#slow-plan-cache) as the warmup source, to get an estimate of how many operations the router actually warms, inspect the cache warmer logs. The `Warmup completed`, `Warmup timeout`, and `Warmup error` messages all include a `processed_items` attribute. Use that number to size `timeout` for future restarts.
+
+**Tuning guidance**
+
+- For fastest warmup, raise `workers` and `items_per_second` together. Workers without throughput headroom will idle.
+- For lowest startup load, lower `items_per_second` and keep `workers` modest.
+- For a hard floor on per-item spacing when some plans run slow, set `item_delay`. It pairs with `items_per_second` rather than replacing it.
+- For predictable deploy time, keep `timeout` aligned with your deployment health-check window.
+
 ### Customization Options
 
 **Manually Prioritized Operations**

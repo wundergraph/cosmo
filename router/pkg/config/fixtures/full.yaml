@@ -49,6 +49,20 @@ tls:
         key_file: '/path/to/products-client.key'
         ca_file: '/path/to/products-ca.crt'
         insecure_skip_ca_verification: false
+  client_grpc:
+    all:
+      enabled: true
+      cert_file: '/path/to/grpc-client.crt'
+      key_file: '/path/to/grpc-client.key'
+      ca_file: '/path/to/grpc-ca.crt'
+      insecure_skip_ca_verification: false
+    subgraphs:
+      my-grpc-subgraph:
+        enabled: true
+        cert_file: '/path/to/my-grpc-subgraph-client.crt'
+        key_file: '/path/to/my-grpc-subgraph-client.key'
+        ca_file: '/path/to/my-grpc-subgraph-ca.crt'
+        insecure_skip_ca_verification: false
 instance_id: ''
 graphql_metrics:
   enabled: true
@@ -321,6 +335,7 @@ authentication:
       - url: 'https://example.com/.well-known/jwks3.json'
     header_name: Authorization
     header_value_prefix: Bearer
+    scope_claim: customscp
     header_sources:
       - type: header
         name: X-Authorization
@@ -371,17 +386,20 @@ events:
 engine:
   enable_single_flight: true
   enable_request_tracing: true
+  force_unauthenticated_request_tracing: false
   enable_execution_plan_cache_response_header: false
   max_concurrent_resolvers: 32
   enable_net_poll: true
   enable_subgraph_fetch_operation_name: true
-  websocket_client_poll_timeout: 1s
-  websocket_client_conn_buffer_size: 128
-  websocket_client_read_timeout: 5s
   websocket_client_write_timeout: 10s
-  websocket_client_frame_timeout: 100ms
+  websocket_server_read_timeout: 5s
+  websocket_server_write_timeout: 10s
+  websocket_server_poll_timeout: 1s
+  websocket_server_conn_buffer_size: 128
+  websocket_client_read_limit: 1MB
   websocket_client_ping_interval: 10s
   websocket_client_ping_timeout: 30s
+  websocket_client_ack_timeout: 30s
   execution_plan_cache_size: 1024
   resolver_max_recyclable_parser_size: 4096
   debug:
@@ -528,10 +546,23 @@ subgraph_error_propagation:
     - 'field2'
   allow_all_extension_fields: true
 
+subgraph_extension_propagation:
+  enabled: true
+  allowed_extension_fields:
+    - rateLimit
+    - auth
+  algorithm: last_write
+
 execution_config:
   storage:
     provider_id: s3
     object_path: '5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json'
+
+split_config_poller:
+  skip_missing_feature_flags: true
+  ignored_feature_flags:
+    - 'experimental-checkout'
+    - 'ab-test-foo'
 
 router_config_path: 'latest.json'
 

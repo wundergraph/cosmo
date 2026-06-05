@@ -60,7 +60,9 @@ export type AuditableType =
   | 'router_config'
   | 'operation_change_override'
   | 'operation_ignore_all_override'
-  | 'proposal';
+  | 'proposal'
+  | 'namespace_sso_mapping'
+  | 'organization_login_methods';
 
 export type AuditTargetType =
   | 'organization'
@@ -128,6 +130,7 @@ export type AuditLogFullAction =
   | 'feature_flag.deleted'
   | 'feature_flag.disabled'
   | 'feature_flag.enabled'
+  | 'feature_flag.recomposed'
   | 'feature_subgraph.created'
   | 'feature_subgraph.deleted'
   | 'feature_subgraph.published'
@@ -172,6 +175,8 @@ export type AuditLogFullAction =
   | 'proposal.enabled'
   | 'proposal.disabled'
   | 'namespace_proposal_config.updated'
+  | 'namespace_sso_mapping.updated'
+  | 'organization_login_methods.updated'
   | 'scim.organization_invitation_created'
   | 'scim.update_organization_member'
   | 'scim.activate_organization_member'

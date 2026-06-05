@@ -3,22 +3,18 @@ import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
-  CompositionError,
-  CompositionWarning,
-  DeploymentError,
   UpdateFederatedGraphRequest,
   UpdateFederatedGraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { CompositionService } from '../../services/CompositionService.js';
 
 export function updateFederatedGraph(
   opts: RouterOptions,
@@ -32,7 +28,6 @@ export function updateFederatedGraph(
     logger = enrichLogger(ctx, logger, authContext);
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
@@ -110,49 +105,32 @@ export function updateFederatedGraph(
       };
     }
 
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    const result = await opts.db.transaction((tx) => {
+      const compositionService = new CompositionService(
+        tx,
+        authContext.organizationId,
+        logger,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.blobStorage,
+        opts.chClient,
+        opts.webhookProxyUrl,
+        req.disableResolvabilityValidation,
+      );
+
+      const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+      return fedGraphRepo.update({
+        compositionService,
+        admissionWebhookSecret: req.admissionWebhookSecret,
+        admissionWebhookURL: req.admissionWebhookURL,
+        labelMatchers: req.labelMatchers,
+        namespaceId: federatedGraph.namespaceId,
+        readme: req.readme,
+        routingUrl: req.routingUrl,
+        targetId: federatedGraph.targetId,
+        unsetLabelMatchers: req.unsetLabelMatchers,
+        updatedBy: authContext.userId,
+      });
     });
-
-    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-    let compositionErrors: PlainMessage<CompositionError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
-
-    const result = await fedGraphRepo.update({
-      admissionConfig: {
-        cdnBaseUrl: opts.cdnBaseUrl,
-        jwtSecret: opts.admissionWebhookJWTSecret,
-      },
-      admissionWebhookSecret: req.admissionWebhookSecret,
-      admissionWebhookURL: req.admissionWebhookURL,
-      blobStorage: opts.blobStorage,
-      chClient: opts.chClient!,
-      compositionOptions: {
-        disableResolvabilityValidation: req.disableResolvabilityValidation,
-        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-      },
-      labelMatchers: req.labelMatchers,
-      namespaceId: federatedGraph.namespaceId,
-      readme: req.readme,
-      routingUrl: req.routingUrl,
-      targetId: federatedGraph.targetId,
-      unsetLabelMatchers: req.unsetLabelMatchers,
-      updatedBy: authContext.userId,
-      webhookProxyUrl: opts.webhookProxyUrl,
-    });
-
-    if (result?.deploymentErrors) {
-      deploymentErrors.push(...result.deploymentErrors);
-    }
-
-    if (result?.compositionErrors) {
-      compositionErrors = result.compositionErrors;
-    }
-
-    if (result?.compositionWarnings) {
-      compositionWarnings.push(...result.compositionWarnings);
-    }
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
@@ -184,7 +162,7 @@ export function updateFederatedGraph(
               id: authContext.organizationId,
               slug: authContext.organizationSlug,
             },
-            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+            errors: result.compositionErrors.length > 0 || result.deploymentErrors.length > 0,
             actor_id: authContext.userId,
           },
         },
@@ -192,35 +170,18 @@ export function updateFederatedGraph(
       );
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        deploymentErrors: [],
-        compositionErrors,
-        compositionWarnings,
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        deploymentErrors,
-        compositionErrors: [],
-        compositionWarnings,
-      };
-    }
-
     return {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          result && result.compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : result && result.deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
-      compositionErrors: [],
-      deploymentErrors: [],
-      compositionWarnings,
+      compositionErrors: result?.compositionErrors || [],
+      deploymentErrors: result?.deploymentErrors || [],
+      compositionWarnings: result?.compositionWarnings || [],
     };
   });
 }

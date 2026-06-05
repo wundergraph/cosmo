@@ -33,6 +33,22 @@ This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-opti
 
 We use [Connect](https://connect.build/) to unify the communication between all components of the cosmo platform. Connect is a framework build on top of [gRPC](https://grpc.io/) and simplify code-generation and reuse between `Studio` -> `Controlplane`.
 
+## Source Maps (Firefox)
+
+Firefox does not handle webpack's default `eval-source-map` devtool correctly ([webpack#9267](https://github.com/webpack/webpack/issues/9267)). To get proper source maps in Firefox DevTools, set:
+
+```bash
+NEXT_DEVTOOL=source-map pnpm dev
+```
+
+or with make:
+
+```bash
+NEXT_DEVTOOL=source-map make start-studio
+```
+
+This generates separate `.map` files instead of eval-based inline maps. Note: incremental rebuilds will be slower.
+
 ## Docker Info
 
 We want runtime envs for docker for each on prem customer. Therefore we have two files to achieve this. One is .env.docker that uses a placeholder env name and an entrypoint.sh script that replaces all placeholder env name with the correct one at runtime in the .next folder. This also requires us to SSR the studio.

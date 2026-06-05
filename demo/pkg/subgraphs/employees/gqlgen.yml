@@ -28,6 +28,8 @@ resolver:
 directives:
   cost:
     skip_runtime: true
+  expensiveOp:
+    skip_runtime: true
   listSize:
     skip_runtime: true
   openfed__requireFetchReasons:

@@ -10,6 +10,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, fromProposalOriginEnum, getLogger, handleError } from '../../util.js';
 
 export function getProposal(
@@ -47,6 +48,10 @@ export function getProposal(
         },
         currentSubgraphs: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);

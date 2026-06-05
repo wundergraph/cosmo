@@ -1,6 +1,3 @@
-/* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
- FIELD_DEFINITION | INPUT_FIELD_DEFINITION
-*/
 import { DEFAULT_DEPRECATION_REASON, type DirectiveDefinitionNode, Kind } from 'graphql';
 import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
@@ -232,6 +229,9 @@ export const COST_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
+/* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
+ FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+*/
 export const DEPRECATED_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {

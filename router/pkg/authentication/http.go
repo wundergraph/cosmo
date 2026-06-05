@@ -13,7 +13,7 @@ func (a httpRequestProvider) AuthenticationHeaders() http.Header {
 
 // AuthenticateHTTPRequest is a convenience function that calls Authenticate
 // when the authentication information is provided by an *http.Request
-func AuthenticateHTTPRequest(ctx context.Context, authenticators []Authenticator, r *http.Request) (Authentication, error) {
+func AuthenticateHTTPRequest(ctx context.Context, authenticators []Authenticator, r *http.Request, scopeClaim string) (Authentication, error) {
 	provider := (*httpRequestProvider)(r)
-	return Authenticate(ctx, authenticators, provider)
+	return Authenticate(ctx, authenticators, provider, scopeClaim)
 }

@@ -399,8 +399,76 @@
               }
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "manifest": {
+              "type": "object",
+              "description": "The configuration for loading the execution config from a manifest directory on the local file system. The manifest describes the base graph and any feature flag execution configs as separate files in a directory.",
+              "additionalProperties": false,
+              "required": ["path"],
+              "dependentSchemas": {
+                "watch_interval": {
+                  "properties": {
+                    "watch": {
+                      "const": true
+                    }
+                  }
+                }
+              },
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "format": "directory-path",
+                  "description": "The path to the manifest directory. The directory contains the manifest file and the individual execution config files referenced by it."
+                },
+                "skip_missing_feature_flags": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip feature flags listed in the manifest whose execution config file cannot be loaded, instead of aborting the load. Use this when occasional missing feature flag files should not prevent the router from loading the rest of the manifest."
+                },
+                "ignored_feature_flags": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Feature flag names to skip entirely when loading the manifest. Listed flags are not loaded even when referenced by the manifest."
+                },
+                "watch": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the watch mode. The watch mode is used to watch the manifest directory for changes. If a file changes, the router will reload the execution config without downtime."
+                },
+                "watch_interval": {
+                  "type": "string",
+                  "description": "The interval at which the manifest directory is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                  "default": "1s",
+                  "duration": {
+                    "minimum": "100ms"
+                  }
+                }
+              }
+            }
+          }
         }
       ]
+    },
+    "split_config_poller": {
+      "type": "object",
+      "description": "Behavior overrides for the split-config polling strategy, which assembles the final router execution config by fetching the base graph and each feature flag config as separate files from the CDN. Only applied when the router is enrolled in split-config loading.",
+      "additionalProperties": false,
+      "properties": {
+        "skip_missing_feature_flags": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip feature flags that cannot be fetched instead of aborting the poll cycle. Use this when occasional feature flag fetch failures should not stop the router from picking up changes to other graphs."
+        },
+        "ignored_feature_flags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Feature flag names to skip entirely during config polling. Listed flags are not fetched even when present in the mapper."
+        }
+      }
     },
     "graphql_metrics": {
       "type": "object",
@@ -420,7 +488,7 @@
     "dev_mode": {
       "type": "boolean",
       "default": false,
-      "description": "Enable the development mode. The development mode is used to enable the development features like ART (Advanced Request Tracing) and pretty logs."
+      "description": "Enable the development mode. Development mode enables developer-focused behavior (such as pretty logs) and allows ART request options without request-token authentication."
     },
     "tls": {
       "type": "object",
@@ -540,6 +608,88 @@
                     "description": "Skip verification of this subgraph's server certificate. Only use for development or testing."
                   }
                 },
+                "dependencies": {
+                  "cert_file": ["key_file"],
+                  "key_file": ["cert_file"]
+                }
+              }
+            }
+          }
+        },
+        "client_grpc": {
+          "type": "object",
+          "description": "The TLS configuration for outbound gRPC connections from the router to gRPC subgraphs. Enables TLS/mTLS by presenting a client certificate when connecting to gRPC subgraphs.",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "object",
+              "description": "TLS configuration applied to all gRPC subgraph connections.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable TLS for all gRPC subgraph connections."
+                },
+                "cert_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client certificate chain file. Used to authenticate the router to gRPC subgraphs. May include intermediate certificates."
+                },
+                "key_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client private key file."
+                },
+                "ca_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the CA certificate file. Used to verify gRPC subgraph server certificates. If not set, the system's root CAs are used."
+                },
+                "insecure_skip_ca_verification": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip verification of the gRPC subgraph server certificate. Only use for development or testing."
+                }
+              },
+              "required": ["enabled"],
+              "dependencies": {
+                "cert_file": ["key_file"],
+                "key_file": ["cert_file"]
+              }
+            },
+            "subgraphs": {
+              "type": "object",
+              "description": "Per-subgraph gRPC TLS configuration overrides. Each key is a subgraph name. Fully overrides the 'all' config for that subgraph.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Enable TLS for this gRPC subgraph connection."
+                  },
+                  "cert_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client certificate chain file for this gRPC subgraph. May include intermediate certificates."
+                  },
+                  "key_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client private key file for this gRPC subgraph."
+                  },
+                  "ca_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the CA certificate file for verifying this gRPC subgraph's server certificate."
+                  },
+                  "insecure_skip_ca_verification": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip verification of this gRPC subgraph's server certificate. Only use for development or testing."
+                  }
+                },
+                "required": ["enabled"],
                 "dependencies": {
                   "cert_file": ["key_file"],
                   "key_file": ["cert_file"]
@@ -2108,6 +2258,12 @@
                 ]
               }
             },
+            "scope_claim": {
+              "type": "string",
+              "description": "The JWT claim to use when reading scopes for authorization. Only top level claims are supported. The default value is 'scope'.",
+              "default": "scope",
+              "minLength": 1
+            },
             "header_name": {
               "type": "string",
               "description": "The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.",
@@ -2515,11 +2671,7 @@
                     "default": ["sig"],
                     "items": {
                       "type": "string",
-                      "enum": [
-                        "sig",
-                        "enc",
-                        ""
-                      ]
+                      "enum": ["sig", "enc", ""]
                     }
                   },
                   "algorithms": {
@@ -2788,6 +2940,37 @@
                       }
                     ]
                   },
+                  "tls": {
+                    "type": "object",
+                    "description": "TLS configuration for the NATS provider.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "insecure_skip_ca_verification": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Skip server certificate verification. Not recommended for production use."
+                      },
+                      "ca_file": {
+                        "type": "string",
+                        "description": "Path to a custom CA certificate file (PEM) used to verify the server certificate.",
+                        "format": "file-path"
+                      },
+                      "cert_file": {
+                        "type": "string",
+                        "description": "Path to the client certificate file (PEM) for mTLS. If set 'key_file' has to be set as well.",
+                        "format": "file-path"
+                      },
+                      "key_file": {
+                        "type": "string",
+                        "description": "Path to the client private key file (PEM) for mTLS. If set 'cert_file' has to be set as well.",
+                        "format": "file-path"
+                      }
+                    },
+                    "dependencies": {
+                      "cert_file": ["key_file"],
+                      "key_file": ["cert_file"]
+                    }
+                  },
                   "experiment_delete_durable_consumers_on_shutdown": {
                     "type": "boolean",
                     "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down normally. Defaults to false. NOTE: This option is experimental and may change in future versions.",
@@ -3007,6 +3190,11 @@
           "type": "integer",
           "description": "The number of cache warmup items to process per second. Higher numbers decrease the time to warm up the cache but increase the load on the system.",
           "default": 50
+        },
+        "item_delay": {
+          "type": "string",
+          "description": "A fixed delay applied after each cache warmup item is processed, per worker. Use to further smooth load during warmup. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. Defaults to 0s (no delay).",
+          "default": "0s"
         },
         "timeout": {
           "type": "string",
@@ -3500,7 +3688,12 @@
         "enable_request_tracing": {
           "type": "boolean",
           "default": true,
-          "description": "Enable the advanced request tracing. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art for more information."
+          "description": "Capability gate for Advanced Request Tracing (ART). When false, ART is disabled regardless of headers, query parameters, or authentication."
+        },
+        "force_unauthenticated_request_tracing": {
+          "type": "boolean",
+          "default": false,
+          "description": "UNSAFE — DO NOT ENABLE IN PRODUCTION. Bypasses the authorization gate for Advanced Request Tracing (ART) when dev_mode is false. If false (default), ART request options require a valid WG request token. If true, ART request options are allowed without request-token authentication; this exposes internal subgraph URLs, request and response payloads, propagated headers (which may include auth tokens or API keys), and full query plans to any client that can reach the router. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art."
         },
         "enable_execution_plan_cache_response_header": {
           "type": "boolean",
@@ -3518,28 +3711,34 @@
           "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
           "default": true
         },
-        "websocket_client_poll_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "default": "1s",
-          "description": "The timeout for the poll loop of the WebSocket client implementation. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
-        "websocket_client_conn_buffer_size": {
-          "type": "integer",
-          "default": 128,
-          "description": "The buffer size for the poll buffer of the WebSocket client implementation. The buffer size determines how many connections can be handled in one loop."
-        },
-        "websocket_client_read_timeout": {
-          "type": "string",
-          "format": "go-duration",
-          "default": "5s",
-          "description": "Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
         "websocket_client_write_timeout": {
           "type": "string",
           "format": "go-duration",
           "default": "10s",
-          "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "The write timeout for WebSocket operations when the router connects to subgraphs (subscribe, unsubscribe, ping, pong). The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "websocket_server_read_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The read timeout for the server-side WebSocket handler. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "5s"
+        },
+        "websocket_server_write_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The write timeout for the server-side WebSocket handler. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s"
+        },
+        "websocket_server_poll_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The poll timeout for the server-side WebSocket net poller. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "1s"
+        },
+        "websocket_server_conn_buffer_size": {
+          "type": "integer",
+          "default": 128,
+          "description": "The buffer size for the server-side WebSocket net poller. Determines how many connections can be handled in one poll loop."
         },
         "websocket_client_ping_interval": {
           "type": "string",
@@ -3559,13 +3758,22 @@
             "minimum": "5s"
           }
         },
-        "websocket_client_frame_timeout": {
+        "websocket_client_ack_timeout": {
           "type": "string",
           "format": "go-duration",
-          "description": "The Websocket client frame timeout to the subgraph. Defines how long the router will wait for a frame response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-          "default": "100ms",
+          "description": "The maximum time to wait for a connection_ack message after sending connection_init to a subgraph WebSocket. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "30s",
           "duration": {
-            "minimum": "10ms"
+            "minimum": "1s"
+          }
+        },
+        "websocket_client_read_limit": {
+          "type": "string",
+          "format": "bytes-string",
+          "description": "The maximum size of an incoming WebSocket message from a subgraph. The size is specified as a string with a number and a unit, e.g. 1KB, 1MB, 10MB. The supported units are 'KB', 'MB', 'GB'.",
+          "default": "1MB",
+          "bytes": {
+            "minimum": "1KB"
           }
         },
         "execution_plan_cache_size": {
@@ -3742,6 +3950,31 @@
         }
       }
     },
+    "subgraph_extension_propagation": {
+      "type": "object",
+      "description": "Configuration for forwarding the response 'extensions' object from subgraphs to the client. Allows controlling which extension fields are propagated and how conflicts between subgraphs are resolved.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable forwarding of subgraph response extensions to the client."
+        },
+        "allowed_extension_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The extension fields that are allowed to be propagated from subgraphs to the client. If left empty, all extension fields will be forwarded."
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["first_write", "last_write"],
+          "default": "first_write",
+          "description": "The conflict resolution algorithm when multiple subgraphs return the same extension field. 'first_write' propagates the first response that wrote the field; 'last_write' propagates the last."
+        }
+      }
+    },
     "apollo_compatibility_flags": {
       "type": "object",
       "description": "To enable full compatibility with Apollo Federation, Apollo Gateway and Apollo Router, you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo.",
@@ -3868,6 +4101,11 @@
               "type": "string",
               "default": "cosmo-registry.wundergraph.com",
               "description": "The URL of the plugin registry."
+            },
+            "insecure": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, the plugin registry is accessed over plaintext HTTP without authentication. Intended for local development against an unauthenticated registry; never enable in production."
             }
           }
         }

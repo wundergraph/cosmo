@@ -4,6 +4,88 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.121.3](https://github.com/wundergraph/cosmo/compare/wgc@0.121.2...wgc@0.121.3) (2026-06-01)
+
+**Note:** Version bump only for package wgc
+
+## [0.121.2](https://github.com/wundergraph/cosmo/compare/wgc@0.121.1...wgc@0.121.2) (2026-05-29)
+
+**Note:** Version bump only for package wgc
+
+## [0.121.1](https://github.com/wundergraph/cosmo/compare/wgc@0.121.0...wgc@0.121.1) (2026-05-27)
+
+**Note:** Version bump only for package wgc
+
+# [0.121.0](https://github.com/wundergraph/cosmo/compare/wgc@0.120.0...wgc@0.121.0) (2026-05-27)
+
+### Features
+
+* studio handles analytics downtime gracefully ([#2878](https://github.com/wundergraph/cosmo/issues/2878)) ([716b786](https://github.com/wundergraph/cosmo/commit/716b786bd55008292015ec8950182aa61e98cb16)) (@comatory)
+
+# [0.120.0](https://github.com/wundergraph/cosmo/compare/wgc@0.118.1...wgc@0.120.0) (2026-05-18)
+
+### Features
+
+* local cosmo cloud registry ([#2778](https://github.com/wundergraph/cosmo/issues/2778)) ([3dc95e7](https://github.com/wundergraph/cosmo/commit/3dc95e7a539e1326ad526698d4c7d39ff12b6df8)) (@)
+
+# [0.119.0](https://github.com/wundergraph/cosmo/compare/wgc@0.118.1...wgc@0.119.0) (2026-05-18)
+
+### Features
+
+* local cosmo cloud registry ([#2778](https://github.com/wundergraph/cosmo/issues/2778)) ([3dc95e7](https://github.com/wundergraph/cosmo/commit/3dc95e7a539e1326ad526698d4c7d39ff12b6df8)) (@comatory)
+
+## [0.118.1](https://github.com/wundergraph/cosmo/compare/wgc@0.118.0...wgc@0.118.1) (2026-05-14)
+
+### Bug Fixes
+
+* exit with code 1 on proposal match failure during subgraph publish ([#2855](https://github.com/wundergraph/cosmo/issues/2855)) ([f5b67a5](https://github.com/wundergraph/cosmo/commit/f5b67a58eb700b5aef32fe6e8f929feffbf6edfe)) (@JivusAyrus)
+
+# [0.118.0](https://github.com/wundergraph/cosmo/compare/wgc@0.117.3...wgc@0.118.0) (2026-05-12)
+
+### Features
+
+* add feature flag recomposition support ([#2853](https://github.com/wundergraph/cosmo/issues/2853)) ([3f125a2](https://github.com/wundergraph/cosmo/commit/3f125a2effce36a1a2040f219bc1aa5a872aab93)) (@wilsonrivera)
+
+## [0.117.3](https://github.com/wundergraph/cosmo/compare/wgc@0.117.2...wgc@0.117.3) (2026-05-07)
+
+**Note:** Version bump only for package wgc
+
+## [0.117.2](https://github.com/wundergraph/cosmo/compare/wgc@0.117.1...wgc@0.117.2) (2026-05-01)
+
+**Note:** Version bump only for package wgc
+
+## [0.117.1](https://github.com/wundergraph/cosmo/compare/wgc@0.117.0...wgc@0.117.1) (2026-05-01)
+
+**Note:** Version bump only for package wgc
+
+# [0.117.0](https://github.com/wundergraph/cosmo/compare/wgc@0.116.0...wgc@0.117.0) (2026-04-30)
+
+### Bug Fixes
+
+* drop NodeJS 20 support ([#2805](https://github.com/wundergraph/cosmo/issues/2805)) ([7a61b3c](https://github.com/wundergraph/cosmo/commit/7a61b3c1be86566847d2baa39d7b30cd2c0e6d32)) (@comatory)
+
+### Features
+
+* onboarding wizard ([#2790](https://github.com/wundergraph/cosmo/issues/2790)) ([3227519](https://github.com/wundergraph/cosmo/commit/3227519b3cc7b2dbc163856967bfe36cebf81887)) (@comatory)
+
+# [0.116.0](https://github.com/wundergraph/cosmo/compare/wgc@0.115.1...wgc@0.116.0) (2026-04-29)
+
+### Features
+
+* centralize TS dependency management via catalogs ([#2782](https://github.com/wundergraph/cosmo/issues/2782)) ([a6a6956](https://github.com/wundergraph/cosmo/commit/a6a69565727f01a942a16e6d560d0fedabcb531e)) (@comatory)
+
+## [0.115.1](https://github.com/wundergraph/cosmo/compare/wgc@0.115.0...wgc@0.115.1) (2026-04-27)
+
+### Bug Fixes
+
+* remediate several vulnerabilities ([#2787](https://github.com/wundergraph/cosmo/issues/2787)) ([fdd035b](https://github.com/wundergraph/cosmo/commit/fdd035b8bfd491a45e00e2b60e9c28b695b64f48)) (@pepol)
+
+# [0.115.0](https://github.com/wundergraph/cosmo/compare/wgc@0.114.2...wgc@0.115.0) (2026-04-24)
+
+### Features
+
+* update `lodash` and `lodash-es` ([#2780](https://github.com/wundergraph/cosmo/issues/2780)) ([bbf1e38](https://github.com/wundergraph/cosmo/commit/bbf1e38b3a346363fe742801f2982dbafb267454)) (@wilsonrivera)
+
 ## [0.114.2](https://github.com/wundergraph/cosmo/compare/wgc@0.114.1...wgc@0.114.2) (2026-04-17)
 
 ### Bug Fixes

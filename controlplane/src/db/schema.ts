@@ -1,6 +1,7 @@
 import { relations, sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   integer,
   bigint,
   pgEnum,
@@ -1205,6 +1206,7 @@ export const sessions = pgTable(
     accessToken: text('access_token').notNull(),
     refreshToken: text('refresh_token').notNull(),
     idToken: text('id_token').notNull(),
+    idpAlias: text('idp_alias'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
@@ -1974,10 +1976,79 @@ export const oidcProviders = pgTable(
     name: text('name').notNull(),
     alias: text('alias').notNull().unique(),
     endpoint: text('endpoint').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
     return {
       organizationIdIndex: index('oidcp_organization_id_idx').on(t.organizationId),
+    };
+  },
+);
+
+export const namespaceLoginMethods = pgTable(
+  'namespace_login_methods', // nlm
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .references(() => namespaces.id, { onDelete: 'cascade' }),
+    ssoProviderId: uuid('sso_provider_id').references(() => oidcProviders.id, { onDelete: 'cascade' }),
+    isPasswordLogin: boolean('is_password_login').notNull().default(false),
+    isGoogleLogin: boolean('is_google_login').notNull().default(false),
+    isGithubLogin: boolean('is_github_login').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      namespaceIdIndex: index('nlm_namespace_id_idx').on(t.namespaceId),
+      ssoProviderIdIndex: index('nlm_sso_provider_id_idx').on(t.ssoProviderId),
+      uniqueSsoPerNamespace: uniqueIndex('nlm_unique_sso')
+        .on(t.namespaceId, t.ssoProviderId)
+        .where(sql`${t.ssoProviderId} IS NOT NULL`),
+      // At most one built-in-methods row (password/google/github) per namespace.
+      uniqueBuiltinPerNamespace: uniqueIndex('nlm_unique_builtin')
+        .on(t.namespaceId)
+        .where(sql`${t.ssoProviderId} IS NULL`),
+      // A row is either an SSO-provider row (provider id, no built-in flags) or a
+      // built-in-methods row (no provider id, at least one flag) — never both, never neither.
+      builtinXorSsoCheck: check(
+        'nlm_builtin_xor_sso_check',
+        sql`(${t.ssoProviderId} IS NOT NULL) <> (${t.isPasswordLogin} OR ${t.isGoogleLogin} OR ${t.isGithubLogin})`,
+      ),
+    };
+  },
+);
+
+export const organizationLoginMethods = pgTable(
+  'organization_login_methods', // olm
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    ssoProviderId: uuid('sso_provider_id').references(() => oidcProviders.id, { onDelete: 'cascade' }),
+    isPasswordLogin: boolean('is_password_login').notNull().default(false),
+    isGoogleLogin: boolean('is_google_login').notNull().default(false),
+    isGithubLogin: boolean('is_github_login').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      organizationIdIndex: index('olm_organization_id_idx').on(t.organizationId),
+      ssoProviderIdIndex: index('olm_sso_provider_id_idx').on(t.ssoProviderId),
+      // At most one row per allowed SSO app per org.
+      uniqueSsoPerOrg: uniqueIndex('olm_unique_sso')
+        .on(t.organizationId, t.ssoProviderId)
+        .where(sql`${t.ssoProviderId} IS NOT NULL`),
+      // At most one built-in-methods row (password/google/github) per org.
+      uniqueBuiltinPerOrg: uniqueIndex('olm_unique_builtin')
+        .on(t.organizationId)
+        .where(sql`${t.ssoProviderId} IS NULL`),
+      // A row is either an SSO-provider row or a built-in-methods row, never both, never neither.
+      builtinXorSsoCheck: check(
+        'olm_builtin_xor_sso_check',
+        sql`(${t.ssoProviderId} IS NOT NULL) <> (${t.isPasswordLogin} OR ${t.isGoogleLogin} OR ${t.isGithubLogin})`,
+      ),
     };
   },
 );
@@ -2635,6 +2706,52 @@ export const namespaceSubgraphCheckExtensionConfig = pgTable(
   (t) => {
     return {
       namespaceIdIndex: index('nsce_namespace_id_idx').on(t.namespaceId),
+    };
+  },
+);
+
+export const routerConfigHash = pgTable(
+  'router_config_hash',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
+    featureFlagId: uuid('feature_flag_id').references(() => featureFlags.id, { onDelete: 'cascade' }),
+    hash: text('hash').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at'),
+  },
+  (t) => {
+    return {
+      graphFlagIndex: unique('fed_graph_feature_flag_idx').on(t.federatedGraphId, t.featureFlagId).nullsNotDistinct(),
+    };
+  },
+);
+
+export const onboarding = pgTable(
+  'onboarding',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    version: integer('version').notNull().default(1),
+    slack: boolean('slack').notNull().default(true),
+    email: boolean('email').notNull().default(true),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+  },
+  (t) => {
+    return {
+      uniqueUserOrgVersion: unique('onboarding_user_id_organization_id_version_unique').on(
+        t.userId,
+        t.organizationId,
+        t.version,
+      ),
     };
   },
 );

@@ -1,8 +1,10 @@
 import { identify, resetTracking } from '@/lib/track';
+import { PlainMessage } from '@bufbuild/protobuf';
 import { Transport } from '@connectrpc/connect';
 import { TransportProvider } from '@connectrpc/connect-query';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
+import { LoginMethod as ProtoLoginMethod } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { useRouter } from 'next/router';
 import { ReactNode, createContext, useEffect, useState } from 'react';
 import { useCookieOrganization } from '@/hooks/use-cookie-organization';
@@ -15,7 +17,11 @@ const sessionQueryClient = new QueryClient();
 export const UserContext = createContext<User | undefined>(undefined);
 export const SessionClientContext = createContext<QueryClient>(sessionQueryClient);
 
-const publicPaths = ['/login', '/signup'];
+const publicPaths = ['/login', '/signup', '/login-method-restricted'];
+
+// The /session endpoint returns the same shape as the platform LoginMethod proto
+// message (plain JSON), so reuse the generated type instead of duplicating it.
+export type LoginMethod = PlainMessage<ProtoLoginMethod>;
 
 export interface User {
   id: string;
@@ -23,6 +29,7 @@ export interface User {
   currentOrganization: Organization;
   organizations: Organization[];
   invitations: InvitedOrgs[];
+  loginMethod?: LoginMethod;
 }
 
 export interface InvitedOrgs {
@@ -36,6 +43,7 @@ export interface Organization {
   name: string;
   slug: string;
   plan?: string;
+  loginMethodAllowed?: boolean;
   creatorUserId?: string;
   groups: {
     groupId: string;
@@ -74,8 +82,12 @@ export interface Organization {
 export interface Session {
   id: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
   organizations: Organization[];
   invitations: InvitedOrgs[];
+  loginMethod?: LoginMethod;
 }
 
 export class UnauthorizedError extends Error {
@@ -147,9 +159,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const redirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}${router.asPath}`;
       router.replace(`/login?redirectURL=${redirectURL}`);
     } else if (data && !error) {
-      const currentOrg = data.organizations.find((org) => org.slug === cookieOrgSlug);
+      // Orgs accessible with the current login method (treat missing field as allowed).
+      const accessibleOrganizations = data.organizations.filter((org) => org.loginMethodAllowed !== false);
 
-      const organization = currentOrg || data.organizations[0];
+      // If the user has memberships but none are accessible, redirect to the dedicated page.
+      if (data.organizations.length > 0 && accessibleOrganizations.length === 0) {
+        if (router.pathname !== '/login-method-restricted') {
+          router.replace('/login-method-restricted');
+        }
+        return;
+      }
+
+      // Prefer the cookie-selected org if it is accessible; otherwise fall back to first accessible.
+      const currentOrg = accessibleOrganizations.find((org) => org.slug === cookieOrgSlug);
+
+      const organization = currentOrg || accessibleOrganizations[0];
 
       setUser({
         id: data.id,
@@ -157,8 +181,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         currentOrganization: {
           ...organization,
         },
-        organizations: data.organizations,
+        organizations: accessibleOrganizations,
         invitations: data.invitations,
+        loginMethod: data.loginMethod,
       });
 
       if (process.env.NEXT_PUBLIC_SENTRY_ENABLED) {
@@ -176,6 +201,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       identify({
         id: data.id,
         email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        fullName: data.fullName,
         organizationId: organization.id,
         organizationName: organization.name,
         organizationSlug: organization.slug,
@@ -186,7 +214,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (
         (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
-        router.pathname !== '/account/invitations'
+        router.pathname !== '/account/invitations' &&
+        // match onboarding URL `/onboarding/1` etc
+        !/^\/onboarding(?:\/\d+)?(?:\/|$)/.test(router.pathname)
       ) {
         const url = new URL(window.location.origin + router.basePath + router.asPath);
         const params = new URLSearchParams(url.search);

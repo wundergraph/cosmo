@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
@@ -125,6 +126,23 @@ func InitializeConfigPoller(r *Router, registry *ProviderRegistry) (*configpolle
 		return nil, nil
 	}
 
+	// Check whether the router JWT requests the split-config-loading strategy.
+	// Split config is only supported with the default Cosmo CDN (no custom storage provider).
+	hasSplitCfgFeature, err := hasSplitConfigFeature(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if hasSplitCfgFeature {
+		providerID := r.routerConfigPollerConfig.Storage.ProviderID
+		if providerID == "" {
+			r.logger.Debug("Use split-config poller to fetch execution config")
+			return newSplitConfigPoller(r)
+		}
+		r.logger.Info("split-config-loading feature is enabled but a custom storage provider is configured; falling back to regular config polling",
+			zap.String("provider_id", providerID))
+	}
+
 	primaryClient, err := getConfigClient(r, registry, r.routerConfigPollerConfig.Storage.ProviderID, false)
 	if err != nil {
 		return nil, err
@@ -158,4 +176,47 @@ func InitializeConfigPoller(r *Router, registry *ProviderRegistry) (*configpolle
 	configPoller := configpoller.New(r.graphApiToken, opts...)
 
 	return &configPoller, nil
+}
+
+func hasSplitConfigFeature(r *Router) (bool, error) {
+	if r.graphApiToken == "" {
+		return false, nil
+	}
+
+	claims, err := rjwt.ExtractFederatedGraphTokenClaims(r.graphApiToken)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse graph API token: %w", err)
+	}
+
+	return claims.HasFeature(rjwt.FeatureSplitConfigLoading), nil
+}
+
+func newSplitConfigPoller(r *Router) (*configpoller.ConfigPoller, error) {
+	fetcher, err := configCDNProvider.NewSplitFetcher(
+		r.cdnConfig.URL,
+		r.graphApiToken,
+		&configCDNProvider.Options{
+			Logger:       r.logger,
+			SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create split config fetcher: %w", err)
+	}
+
+	ignoredFeatureFlags := make(map[string]struct{})
+	for _, featureFlag := range r.routerConfigPollerConfig.SplitConfigPoller.IgnoredFeatureFlags {
+		ignoredFeatureFlags[featureFlag] = struct{}{}
+	}
+
+	splitPoller := configpoller.NewSplitConfigPoller(
+		fetcher,
+		configpoller.WithSplitLogger(r.logger),
+		configpoller.WithSplitPolling(r.routerConfigPollerConfig.PollInterval, r.routerConfigPollerConfig.PollJitter),
+		configpoller.WithConfigRules(configpoller.ConfigRules{
+			SkipMissingFeatureFlags: r.routerConfigPollerConfig.SplitConfigPoller.SkipMissingFeatureFlags,
+			IgnoredFeatureFlags:     ignoredFeatureFlags,
+		}),
+	)
+	return &splitPoller, nil
 }

@@ -1,0 +1,112 @@
+---
+title: "@link"
+icon: "link"
+description: "@link is a federation V2-only directive. Examples and usages are outlined herein."
+---
+
+## Definition
+
+```graphql
+directive @link(
+  as: String,
+  for: link__Purpose,
+  import: [link__Import],
+  url: String!
+) repeatable on SCHEMA
+```
+
+### Arguments
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `import` | `[link__Import]` | The name of the directive to import with leading `@` or a valid object (see [import validation](#import-validation)). |
+| `url` | `String!` | The feature URL for the import (see [URL validation](#url-validation). |
+
+## Overview
+
+The `@link` directive allows the importing of other directives.
+This is necessary to propagate a (custom) directive into the router schema through the
+[@composeDirective directive](./composeddirective).
+
+
+### Usage
+
+<Warning>
+  WunderGraph Cosmo does not currently support renaming federation directives.
+</Warning>
+
+When using WunderGraph Cosmo, explicitly importing federation directives is not necessary.
+These directives are inferred and injected into the schema automatically.
+
+If importing a custom directive, the directive definition must still be provided in the schema if the directive is
+used within the subgraph schema.
+For example:
+
+```graphql
+# subgraph 1
+schema
+@link(import: ["@shareable"], url: "https://specs.apollo.dev/federation/v2.3")
+@link(import: ["@myDirective"], url: "https://company.org/my-feature/myDirective/v1.0") {
+  query: Query
+}
+
+directive @myDirective on FIELD_DEFINITION
+
+type Query @shareable {
+    echo(string: String!): String! @myDirective
+}
+```
+
+<Note>
+  For brevity, "composing a directive" will henceforth serve as a substitute for providing the name of an imported an
+  defined directive to the `name` argument of a `@composeDirective`.
+</Note>
+
+### Validation
+#### Import validation
+
+Directives are imported through a list.
+List values can provided in one of two ways:
+- A string of the directive name (with leading `@`)
+- An object of the following form:
+
+```graphql
+input link__Import {
+  name: String!
+  as: String
+}
+```
+
+Any other type of value will result in a composition error.
+If renaming an import, the import must also begin with a leading `@`.
+An example valid import might be:
+
+```graphql
+# subgraph 1
+extend schema @link(
+  import: ["@myDirective", { name: "@anotherDirective", as: "@hello" }],
+  url: "https://company.org/directives/v1.0"
+)
+```
+
+#### URL validation
+
+A URL must contain a path component, a feature component, and end with a version component.
+The version component must strictly match the format `vMajor.Minor` where `Major` and `Minor` represent integers, e.g., `v1.2`.
+An example valid URL might be:
+
+```graphql
+# subgraph 1
+extend schema @link(
+  import: ["@myDirective"],
+  url: "https://path/feature-name/v1.2"
+)
+```
+
+### Errors
+
+`@link` will produce composition error(s) if:
+- A feature URL is invalid.
+- The same base feature URL is used across subgraphs but the major versions do not match.
+- An import value is not a valid string (`@{string}`) or object (`{ name: String! as: String }`) form.
+- A directive name (or its renamed value) do not both start with leading `@`.

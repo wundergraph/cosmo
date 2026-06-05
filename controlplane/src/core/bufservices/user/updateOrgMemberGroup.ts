@@ -60,9 +60,12 @@ export function updateOrgMemberGroup(
         };
       }
 
-      // Ensure that the organization member has not signed in with SSO
-      const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
-      if (provider) {
+      // Ensure that the organization member has not signed in with SSO via any
+      // of the org's configured providers.
+      const providers = await oidcRepo.listOidcProvidersByOrganizationId({
+        organizationId: authContext.organizationId,
+      });
+      for (const provider of providers) {
         // checking if the user has logged in using the sso
         const ssoUser = await opts.keycloakClient.client.users.find({
           realm: opts.keycloakRealm,

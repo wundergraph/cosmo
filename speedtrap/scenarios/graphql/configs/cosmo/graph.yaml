@@ -1,0 +1,10 @@
+version: 1
+subgraphs:
+  - name: subgraph-a
+    routing_url: http://localhost:14001/graphql
+    schema:
+      file: ../../subgraph-a.graphqls
+  - name: subgraph-b
+    routing_url: http://localhost:14002/graphql
+    schema:
+      file: ../../subgraph-b.graphqls

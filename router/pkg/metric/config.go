@@ -170,7 +170,7 @@ func DefaultConfig(serviceVersion string) *Config {
 				{
 					Disabled: false,
 					Endpoint: "http://localhost:4318",
-					Exporter: otelconfig.ExporterOLTPHTTP,
+					Exporter: otelconfig.ExporterOTLPHTTP,
 					HTTPPath: otelconfig.DefaultMetricsPath,
 				},
 			},

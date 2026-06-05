@@ -86,6 +86,34 @@ message SubgraphPublishStats {
   int32 deploymentErrors = 3;
 }
 
+// A single subgraph entry to publish as part of a batch publish request.
+message PublishSubgraph {
+  // The name of the subgraph to publish.
+  string name = 1;
+  // The schema to publish for the subgraph.
+  string schema = 2;
+}
+
+message PublishFederatedSubgraphsRequest {
+  // The namespace all the subgraphs belong to.
+  string namespace = 1;
+  // The subgraphs to publish. Each must already exist in the namespace. Feature subgraphs are detected automatically.
+  repeated PublishSubgraph subgraphs = 2;
+  optional bool disable_resolvability_validation = 3;
+  // Optional limit for the number of errors/warnings returned.
+  optional int32 limit = 4;
+}
+
+message PublishFederatedSubgraphsResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
+  optional SubgraphPublishStats counts = 5;
+  // The names of the subgraphs whose schema actually changed as a result of this batch publish.
+  repeated string updatedSubgraphNames = 6;
+}
+
 message GitInfo {
   string commit_sha = 1;
   string account_id = 2;
@@ -166,7 +194,7 @@ message CreateFederatedSubgraphRequest {
   repeated Label labels = 3;
   // subscription protocol to use when subscribing to this subgraph
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
-    // url used for subscriptions
+  // url used for subscriptions
   optional string subscription_url = 6;
   // readme of the subgraph
   optional string readme = 7;
@@ -1106,6 +1134,21 @@ message InviteUserResponse {
   Response response = 1;
 }
 
+message InviteUsersRequest {
+  repeated string emails = 1;
+  repeated string groups = 2;
+}
+
+message InviteUsersInvitationError {
+  string email = 1;
+  string error = 2;
+}
+
+message InviteUsersResponse {
+  Response response = 1;
+  repeated InviteUsersInvitationError invitationErrors = 2;
+}
+
 message APIKey{
   message Group {
     string id = 1;
@@ -1232,6 +1275,31 @@ message WhoAmIResponse {
   optional string userEmail = 3;
   string organizationSlug = 4;
   string organizationId = 5;
+  LoginMethod login_method = 6;
+}
+
+enum LoginMethodType {
+  LOGIN_METHOD_TYPE_UNSPECIFIED = 0;
+  LOGIN_METHOD_TYPE_SSO = 1;
+  LOGIN_METHOD_TYPE_PASSWORD = 2;
+  LOGIN_METHOD_TYPE_API_KEY = 3;
+  LOGIN_METHOD_TYPE_SOCIAL = 4;
+}
+
+enum SocialLoginProvider {
+  SOCIAL_LOGIN_PROVIDER_UNSPECIFIED = 0;
+  SOCIAL_LOGIN_PROVIDER_GOOGLE = 1;
+  SOCIAL_LOGIN_PROVIDER_GITHUB = 2;
+}
+
+message LoginMethod {
+  LoginMethodType type = 1;
+  // Only populated when type = LOGIN_METHOD_TYPE_SSO.
+  string sso_provider_id = 2;
+  string sso_provider_name = 3;
+  string sso_alias = 4;
+  // Only populated when type = LOGIN_METHOD_TYPE_SOCIAL.
+  SocialLoginProvider social_provider = 5;
 }
 
 message RouterToken {
@@ -1601,7 +1669,7 @@ message UpgradePlanResponse {
 /**
  * MetricsDashboard
  */
- message GetGraphMetricsRequest {
+message GetGraphMetricsRequest {
   string federatedGraphName = 1;
   int32 range = 2;
   DateRange dateRange = 3;
@@ -1670,7 +1738,7 @@ message MetricsErrorRateSeriesItem {
   float errorRate = 3;
 }
 
- message GetSubgraphMetricsRequest {
+message GetSubgraphMetricsRequest {
   string subgraphName = 1;
   string namespace = 2;
   int32 range = 4;
@@ -1834,7 +1902,7 @@ message CreateOIDCProviderRequest {
   string name = 1;
   string discoveryEndpoint = 2;
   string clientID = 3;
-  string clientSecrect = 4;
+  string clientSecret = 4;
   repeated GroupMapper mappers = 5;
 }
 
@@ -1845,7 +1913,27 @@ message CreateOIDCProviderResponse {
   string loginURL = 4;
 }
 
-message GetOIDCProviderRequest {}
+message OIDCProvider {
+  string id = 1;
+  string name = 2;
+  string alias = 3;
+  string endpoint = 4;
+  string login_url = 5;
+  string sign_in_redirect_url = 6;
+  string sign_out_redirect_url = 7;
+  string createdAt = 8;
+}
+
+message ListOIDCProvidersRequest {}
+
+message ListOIDCProvidersResponse {
+  Response response = 1;
+  repeated OIDCProvider providers = 2;
+}
+
+message GetOIDCProviderRequest {
+  string id = 1;
+}
 
 message GetOIDCProviderResponse {
   Response response = 1;
@@ -1857,7 +1945,9 @@ message GetOIDCProviderResponse {
   repeated GroupMapper mappers = 7;
 }
 
-message DeleteOIDCProviderRequest {}
+message DeleteOIDCProviderRequest {
+  string id = 1;
+}
 
 message DeleteOIDCProviderResponse {
   Response response = 1;
@@ -1865,6 +1955,7 @@ message DeleteOIDCProviderResponse {
 
 message UpdateIDPMappersRequest {
   repeated GroupMapper mappers = 1;
+  string id = 2;
 }
 
 message UpdateIDPMappersResponse {
@@ -1895,18 +1986,18 @@ message GetAuditLogsRequest {
 }
 
 message AuditLog {
-   string id = 1;
-   string actorDisplayName = 2;
-   string action = 3;
-   string actorType = 4;
-   string auditAction = 5;
-   string auditableDisplayName = 6;
-   string targetDisplayName = 7;
-   string targetType = 8;
-   string createdAt = 9;
-   string targetNamespaceId = 10;
-   string targetNamespaceDisplayName = 11;
-   string apiKeyName = 12;
+  string id = 1;
+  string actorDisplayName = 2;
+  string action = 3;
+  string actorType = 4;
+  string auditAction = 5;
+  string auditableDisplayName = 6;
+  string targetDisplayName = 7;
+  string targetType = 8;
+  string createdAt = 9;
+  string targetNamespaceId = 10;
+  string targetNamespaceDisplayName = 11;
+  string apiKeyName = 12;
 }
 
 message GetAuditLogsResponse {
@@ -2236,7 +2327,7 @@ message GetNamespaceLintConfigResponse {
 }
 
 message GetNamespaceChecksConfigurationRequest {
-   string namespace = 1;
+  string namespace = 1;
 }
 
 message GetNamespaceChecksConfigurationResponse {
@@ -2792,20 +2883,20 @@ message GetSubgraphCheckExtensionsConfigResponse {
 }
 
 message ConfigureSubgraphCheckExtensionsRequest {
-   string namespace = 1;
-   bool enableSubgraphCheckExtensions = 2;
-   string endpoint = 3;
-   optional string secretKey = 4;
-   bool includeComposedSdl = 5;
-   bool includeLintingIssues = 6;
-   bool includePruningIssues = 7;
-   bool includeSchemaChanges = 8;
-   bool includeAffectedOperations = 9;
+  string namespace = 1;
+  bool enableSubgraphCheckExtensions = 2;
+  string endpoint = 3;
+  optional string secretKey = 4;
+  bool includeComposedSdl = 5;
+  bool includeLintingIssues = 6;
+  bool includePruningIssues = 7;
+  bool includeSchemaChanges = 8;
+  bool includeAffectedOperations = 9;
 }
 
 message ConfigureSubgraphCheckExtensionsResponse {
   Response response = 1;
- }
+}
 
 message DeleteCacheWarmerOperationRequest {
   string id = 1;
@@ -2875,8 +2966,8 @@ message ProposalSubgraph {
 }
 
 enum ProposalOrigin {
-   INTERNAL = 0;
-   EXTERNAL = 1;
+  INTERNAL = 0;
+  EXTERNAL = 1;
 }
 
 enum ProposalNamingConvention {
@@ -2911,7 +3002,7 @@ message CreateProposalResponse {
   string checkUrl = 15;
   string proposalUrl = 16;
   string proposalName = 17;
-   // If true, it means the traffic check failed for the linked check
+  // If true, it means the traffic check failed for the linked check
   optional bool isLinkedTrafficCheckFailed = 18;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 19;
@@ -2991,7 +3082,7 @@ message UpdateProposalResponse {
   bool lintingSkipped = 12;
   bool graphPruningSkipped = 13;
   string checkUrl = 14;
-   // If true, it means the traffic check failed for the linked check
+  // If true, it means the traffic check failed for the linked check
   optional bool isLinkedTrafficCheckFailed = 15;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 16;
@@ -3027,6 +3118,66 @@ message GetNamespaceProposalConfigResponse {
   bool enabled = 2;
   LintSeverity checkSeverityLevel = 3;
   LintSeverity publishSeverityLevel = 4;
+}
+
+message NamespaceLoginMethodMapping {
+  string namespace_id = 1;
+  repeated string allowed_sso_provider_ids = 2;
+  bool allow_password_login = 3;
+  bool allow_google_login = 4;
+  bool allow_github_login = 5;
+}
+
+message UpdateNamespaceLoginMethodsRequest {
+  repeated NamespaceLoginMethodMapping mappings = 1;
+}
+
+message UpdateNamespaceLoginMethodsResponse {
+  Response response = 1;
+}
+
+message ListNamespaceLoginMethodsRequest {}
+
+message ListNamespaceLoginMethodsResponse {
+  Response response = 1;
+  // One entry per namespace that is restricted to specific login methods.
+  // Namespaces with no mapping (default-open) are omitted.
+  repeated NamespaceLoginMethodMapping mappings = 2;
+}
+
+message OrganizationLoginMethods {
+  repeated string allowed_sso_provider_ids = 1;
+  bool allow_password_login = 2;
+  bool allow_google_login = 3;
+  bool allow_github_login = 4;
+  // Output only. False when the org has no restriction configured (all methods allowed).
+  bool is_restricted = 5;
+}
+
+message GetOrganizationLoginMethodsRequest {}
+
+message GetOrganizationLoginMethodsResponse {
+  Response response = 1;
+  OrganizationLoginMethods login_methods = 2;
+}
+
+message UpdateOrganizationLoginMethodsRequest {
+  repeated string allowed_sso_provider_ids = 1;
+  bool allow_password_login = 2;
+  bool allow_google_login = 3;
+  bool allow_github_login = 4;
+  // Set true to confirm that namespace mappings may be altered by this change.
+  // Left false (a preview), if the change would strip methods from existing
+  // namespace mappings the server returns requires_confirmation and makes no changes.
+  bool confirm_namespace_changes = 5;
+}
+
+message UpdateOrganizationLoginMethodsResponse {
+  Response response = 1;
+  // True when the change needs confirmation because it would alter namespace
+  // mappings listed in affected_namespaces. No changes were made in this case.
+  bool requires_confirmation = 2;
+  repeated Namespace affected_namespaces = 3;
 }
 
 enum OperationsFetchBasedOn {
@@ -3178,25 +3329,25 @@ message VerifyAPIKeyGraphAccessResponse {
 }
 
 message InitializeCosmoUserRequest {
-   string token = 1;
+  string token = 1;
 }
 
 message InitializeCosmoUserResponse {
-   Response response = 1;
+  Response response = 1;
 }
 
 message ListOrganizationsRequest {}
 
 message ListOrganizationsResponse {
-   message OrganizationMembership {
-     string id = 1;
-     string slug = 2;
-     string name = 3;
-     repeated string roles = 4;
-   }
+  message OrganizationMembership {
+    string id = 1;
+    string slug = 2;
+    string name = 3;
+    repeated string roles = 4;
+  }
 
-   Response response = 1;
-   repeated OrganizationMembership organizations = 2;
+  Response response = 1;
+  repeated OrganizationMembership organizations = 2;
 }
 
 message RecomposeGraphRequest {
@@ -3213,6 +3364,46 @@ message RecomposeGraphResponse {
   repeated DeploymentError deploymentErrors = 3;
   repeated CompositionWarning compositionWarnings = 4;
   optional SubgraphPublishStats errorCounts = 5;
+}
+
+message RecomposeFeatureFlagRequest {
+  string name = 1;
+  string namespace = 2;
+  optional int32 limit = 3;
+  optional bool disable_resolvability_validation = 5;
+}
+
+message RecomposeFeatureFlagResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
+  optional SubgraphPublishStats errorCounts = 5;
+}
+
+message GetOnboardingRequest {}
+
+message GetOnboardingResponse {
+  Response response = 1;
+  optional string finishedAt = 3;
+  int32 federatedGraphsCount = 4;
+  bool enabled = 5;
+}
+
+message CreateOnboardingRequest {}
+
+message CreateOnboardingResponse {
+  Response response = 1;
+  optional string finishedAt = 2;
+  int32 federatedGraphsCount = 3;
+}
+
+message FinishOnboardingRequest {}
+
+message FinishOnboardingResponse {
+  Response response = 1;
+  int32 federatedGraphsCount = 2;
+  string finishedAt = 3;
 }
 
 service PlatformService {
@@ -3255,6 +3446,9 @@ service PlatformService {
   rpc CreateFederatedSubgraph(CreateFederatedSubgraphRequest) returns (CreateFederatedSubgraphResponse) {}
   // PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
   rpc PublishFederatedSubgraph(PublishFederatedSubgraphRequest) returns (PublishFederatedSubgraphResponse) {}
+  // PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
+  // request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
+  rpc PublishFederatedSubgraphs(PublishFederatedSubgraphsRequest) returns (PublishFederatedSubgraphsResponse) {}
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
   // DeleteFederatedGraph deletes a federated graph from the control plane.
@@ -3359,6 +3553,8 @@ service PlatformService {
   rpc IsMemberLimitReached(IsMemberLimitReachedRequest) returns (IsMemberLimitReachedResponse){}
   // InviteUser invites an user to join the organization
   rpc InviteUser(InviteUserRequest) returns (InviteUserResponse){}
+  // InviteUsers invites multiple users to join the organization
+  rpc InviteUsers(InviteUsersRequest) returns (InviteUsersResponse){}
   // GetAPIKeys returns a list of API keys of the organization
   rpc GetAPIKeys(GetAPIKeysRequest) returns (GetAPIKeysResponse){}
   // CreateAPIKey creates an API key for the organization
@@ -3433,6 +3629,8 @@ service PlatformService {
   rpc CreateOIDCProvider(CreateOIDCProviderRequest) returns (CreateOIDCProviderResponse) {}
   // GetOIDCProvider gets the oidc provider connected the organization
   rpc GetOIDCProvider(GetOIDCProviderRequest) returns (GetOIDCProviderResponse) {}
+  // ListOIDCProviders lists all OIDC providers configured for the organization
+  rpc ListOIDCProviders(ListOIDCProvidersRequest) returns (ListOIDCProvidersResponse) {}
   // DeleteOIDCProvider deletes the oidc provider connected the organization
   rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
   // UpdateIDPMappers updates the mappings of the oidc provider
@@ -3447,7 +3645,7 @@ service PlatformService {
   rpc AcceptOrDeclineInvitation(AcceptOrDeclineInvitationRequest) returns (AcceptOrDeclineInvitationResponse) {}
   // GetCompositions returns all the compositions of the federated graph
   rpc GetCompositions(GetCompositionsRequest) returns (GetCompositionsResponse) {}
-   // GetCompositionDetails returns the details of that composition
+  // GetCompositionDetails returns the details of that composition
   rpc GetCompositionDetails(GetCompositionDetailsRequest) returns (GetCompositionDetailsResponse) {}
   // GetSdlBySchemaVersion returns the sdl based on the schema version
   rpc GetSdlBySchemaVersion(GetSdlBySchemaVersionRequest) returns (GetSdlBySchemaVersionResponse) {}
@@ -3590,6 +3788,14 @@ service PlatformService {
   rpc ConfigureNamespaceProposalConfig(ConfigureNamespaceProposalConfigRequest) returns (ConfigureNamespaceProposalConfigResponse) {}
   // GetNamespaceProposalConfig returns the proposal config of the namespace passed.
   rpc GetNamespaceProposalConfig(GetNamespaceProposalConfigRequest) returns (GetNamespaceProposalConfigResponse) {}
+  // UpdateNamespaceLoginMethods replaces the org's per-namespace login-method configuration in one call.
+  rpc UpdateNamespaceLoginMethods(UpdateNamespaceLoginMethodsRequest) returns (UpdateNamespaceLoginMethodsResponse) {}
+  // ListNamespaceLoginMethods returns the login-method configuration for every restricted namespace in the org.
+  rpc ListNamespaceLoginMethods(ListNamespaceLoginMethodsRequest) returns (ListNamespaceLoginMethodsResponse) {}
+  // GetOrganizationLoginMethods returns the org's allowed login methods (empty restriction = all allowed).
+  rpc GetOrganizationLoginMethods(GetOrganizationLoginMethodsRequest) returns (GetOrganizationLoginMethodsResponse) {}
+  // UpdateOrganizationLoginMethods replaces the org's allowed login methods and reconciles namespace mappings.
+  rpc UpdateOrganizationLoginMethods(UpdateOrganizationLoginMethodsRequest) returns (UpdateOrganizationLoginMethodsResponse) {}
   // GetProposalsByFederatedGraph returns proposals for a federated graph.
   rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
   // GetProposalChecks returns checks for a proposal.
@@ -3614,4 +3820,11 @@ service PlatformService {
   rpc VerifyAPIKeyGraphAccess(VerifyAPIKeyGraphAccessRequest) returns (VerifyAPIKeyGraphAccessResponse) {}
   // RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
   rpc RecomposeGraph(RecomposeGraphRequest) returns (RecomposeGraphResponse) {}
+  // RecomposeFeatureFlag triggers a recomposition of the feature flag using its current subgraphs
+  rpc RecomposeFeatureFlag(RecomposeFeatureFlagRequest) returns (RecomposeFeatureFlagResponse) {}
+
+  // Onboarding
+  rpc GetOnboarding(GetOnboardingRequest) returns (GetOnboardingResponse) {}
+  rpc CreateOnboarding(CreateOnboardingRequest) returns (CreateOnboardingResponse) {}
+  rpc FinishOnboarding(FinishOnboardingRequest) returns (FinishOnboardingResponse) {}
 }

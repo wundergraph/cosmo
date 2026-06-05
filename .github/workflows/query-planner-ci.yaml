@@ -1,13 +1,13 @@
 name: Query Planner CI
 on:
   pull_request:
-    types: 
+    types:
       - opened
       - synchronize
       - reopened
       - labeled
       - unlabeled
-    
+
     paths:
       # This workflow should run every time router-ci and cli-ci runs
       - 'pnpm-lock.yaml'
@@ -164,6 +164,21 @@ jobs:
       workflow_url: ${{ steps.trigger_workflow.outputs.workflow_url }}
       workflow_id: ${{ steps.trigger_workflow.outputs.workflow_id }}
     steps:
+      - name: Authenticate
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: |
+            cosmo
+            cosmo-celestial
+          permission-actions: write
+          permission-contents: write
+          permission-pull-requests: write
+          permission-statuses: write
+          permission-workflows: write
+
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         if: ${{ (needs.check-labels-and-engine-changes.outputs.has_label == 'true' || needs.check-labels-and-engine-changes.outputs.engine_changed == 'true') && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true' }}
         id: trigger_workflow
@@ -172,7 +187,7 @@ jobs:
           owner: wundergraph
           repo: cosmo-celestial
           ref: master
-          github_token: ${{ secrets.GH_TOKEN_CELESTIAL_TRIGGER }}
+          github_token: ${{ steps.app-token.outputs.token }}
           propagate_failure: true
           workflow_file_name: 'query-planner-tester.yaml'
           client_payload: >-
@@ -188,10 +203,25 @@ jobs:
     outputs:
       pullrequest_url: ${{ steps.get_url.outputs.pr_url }}
     steps:
+      - name: Authenticate
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: |
+            cosmo
+            cosmo-celestial
+          permission-actions: write
+          permission-contents: write
+          permission-pull-requests: write
+          permission-statuses: write
+          permission-workflows: write
+
       - name: Download PR info artifact
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GH_TOKEN_CELESTIAL_TRIGGER }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const fs = require('fs');
             const artifacts = await github.rest.actions.listWorkflowRunArtifacts({

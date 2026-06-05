@@ -30,13 +30,14 @@ import (
 )
 
 const (
-	employeesQuery                  = `{"query":"{ employees { id } }"}`
-	employeesQueryRequiringClaims   = `{"query":"{ employees { id startDate } }"}`
-	employeesExpectedData           = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-	unauthorizedExpectedData        = `{"errors":[{"message":"unauthorized"}]}`
-	xAuthenticatedByHeader          = "X-Authenticated-By"
-	simpleIntrospectionQuery        = `{"query":"{ __type(name: \"Query\") { name } }"}`
-	simpleIntrospectionExpectedData = `{"data":{"__type":{"name":"Query"}}}`
+	employeesQuery                    = `{"query":"{ employees { id } }"}`
+	employeesQueryRequiringClaims     = `{ employees { id startDate } }`
+	employeesQueryBodyRequiringClaims = `{"query":"` + employeesQueryRequiringClaims + `"}`
+	employeesExpectedData             = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+	unauthorizedExpectedData          = `{"errors":[{"message":"unauthorized"}]}`
+	xAuthenticatedByHeader            = "X-Authenticated-By"
+	simpleIntrospectionQuery          = `{"query":"{ __type(name: \"Query\") { name } }"}`
+	simpleIntrospectionExpectedData   = `{"data":{"__type":{"name":"Query"}}}`
 )
 
 func TestAuthentication(t *testing.T) {
@@ -529,7 +530,7 @@ func TestAuthentication(t *testing.T) {
 				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQueryRequiringClaims))
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQueryBodyRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
@@ -561,7 +562,7 @@ func TestAuthentication(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryBodyRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
@@ -596,12 +597,64 @@ func TestAuthentication(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryBodyRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			require.Equal(t, testutils.JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
+		})
+	})
+	t.Run("scopes are read from custom scope claim", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(
+			testutils.NewContextWithCancel(t),
+			zap.NewNop(),
+			[]authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+		)
+		require.NoError(t, err)
+
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
+			Name:         testutils.JwksName,
+			TokenDecoder: tokenDecoder,
+		})
+		require.NoError(t, err)
+
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           []authentication.Authenticator{authenticator},
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+			ScopeClaim:               "scp",
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scp": "read:employee read:private",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: header,
+				Query:  employeesQueryRequiringClaims,
+			})
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, testutils.JwksName, res.Response.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Response.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
 		})
@@ -665,7 +718,7 @@ func TestAuthentication(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryBodyRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
@@ -703,7 +756,7 @@ func TestAuthentication(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryBodyRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
@@ -740,7 +793,7 @@ func TestAuthentication(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryBodyRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
@@ -775,7 +828,7 @@ func TestAuthentication(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer token"},
 			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryBodyRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
@@ -805,7 +858,7 @@ func TestAuthentication(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQueryRequiringClaims))
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQueryBodyRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
@@ -840,7 +893,7 @@ func TestAuthentication(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryBodyRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
@@ -875,7 +928,7 @@ func TestAuthentication(t *testing.T) {
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
 			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryBodyRequiringClaims))
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)

@@ -3,8 +3,6 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/gobwas/ws"
 )
 
 // See protocol at https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md
@@ -55,7 +53,10 @@ func (p *graphQLWSProtocol) Initialize() (json.RawMessage, error) {
 		return nil, fmt.Errorf("error reading connection_init: %w", err)
 	}
 	if msg.Type != graphQLWSMessageTypeConnectionInit {
-		return nil, fmt.Errorf("first message should be %s, got %s", graphQLWSMessageTypeConnectionInit, msg.Type)
+		return nil, &CloseError{
+			Err:  fmt.Errorf("first message should be %s, got %s", graphQLWSMessageTypeConnectionInit, msg.Type),
+			Kind: CloseKindUnauthorized,
+		}
 	}
 	if err := p.conn.WriteJSON(graphQLWSMessage{Type: graphQLWSMessageTypeConnectionAck}); err != nil {
 		return nil, fmt.Errorf("sending %s: %w", graphQLWSMessageTypeConnectionAck, err)
@@ -78,8 +79,23 @@ func (p *graphQLWSProtocol) ReadMessage() (*Message, error) {
 		messageType = MessageTypeSubscribe
 	case graphQLWSMessageTypeComplete:
 		messageType = MessageTypeComplete
+	case graphQLWSMessageTypeConnectionInit:
+		return nil, &CloseError{
+			Err:  fmt.Errorf("duplicate connection_init"),
+			Kind: CloseKindTooManyInits,
+		}
 	default:
-		return nil, fmt.Errorf("unsupported message type %s", msg.Type)
+		// graphql-transport-ws spec requires closing with 4400 for unknown types.
+		return nil, &CloseError{
+			Err:  fmt.Errorf("unsupported message type %s", msg.Type),
+			Kind: CloseKindInvalidMessageType,
+		}
+	}
+
+	if messageType == MessageTypeSubscribe || messageType == MessageTypeComplete {
+		if msg.ID == "" {
+			return nil, fmt.Errorf("missing id in %s message", msg.Type)
+		}
 	}
 
 	return &Message{
@@ -114,14 +130,6 @@ func (p *graphQLWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage
 		Payload:    errors,
 		Extensions: extensions,
 	})
-}
-
-func (p *graphQLWSProtocol) Close(code ws.StatusCode, reason string) error {
-	if err := p.conn.WriteCloseFrame(code, reason); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (p *graphQLWSProtocol) Complete(id string) error {

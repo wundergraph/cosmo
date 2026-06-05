@@ -43,3 +43,7 @@ subgraphs:
   - name: employeeupdated
     schema:
       file: ./pkg/subgraphs/employeeupdated/subgraph/schema.graphqls
+  - name: employee-events
+    routing_url: http://localhost:4099/graphql
+    schema:
+      file: ./pkg/subgraphs/employee-events/subgraph/schema.graphqls

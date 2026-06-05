@@ -285,6 +285,38 @@ func TestPlayground(t *testing.T) {
 	})
 }
 
+// TestPlaygroundWithCustomPath verifies that when the playground is mounted at a
+// non-root path via the new playground.path config, the embedded JS receives the
+// actual playground path so itcan correctly strip it from window.location.href
+// when constructing the GraphQL URL.
+func TestPlaygroundWithCustomPath(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{
+			core.WithPlaygroundConfig(config.PlaygroundConfig{
+				Enabled: true,
+				Path:    "/playgroundTestPath",
+			}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeRequest(http.MethodGet, "/playgroundTestPath", http.Header{
+			"Accept": []string{"text/html"},
+		}, nil)
+		require.NoError(t, err)
+		defer res.Body.Close()
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		body, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.Contains(t, string(body), `WunderGraph Playground`)
+		// The embedded JS calls constructGraphQLURL(window.location.href, "<graphqlURL>", "<playgroundPath>").
+		// Both placeholders must be replaced with their actual values so the playground
+		// strips its own path from the location and points requests at /graphql, not
+		// /playground/graphql.
+		require.Contains(t, string(body), `(window.location.href,"/graphql","/playgroundTestPath")`)
+	})
+}
+
 func TestExecutionPlanCache(t *testing.T) {
 	t.Parallel()
 
