@@ -138,7 +138,7 @@ func TestMCP(t *testing.T) {
 					Description: "This is a GraphQL query that retrieves a list of employees.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
-						Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}},
+						Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "properties": map[string]interface{}{"hasPets": map[string]interface{}{"type": []interface{}{"boolean", "null"}}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN", nil}, "type": []interface{}{"string", "null"}}, "nested": map[string]interface{}{"additionalProperties": false, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"type": []interface{}{"boolean", "null"}}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED", nil}, "type": []interface{}{"string", "null"}}}, "type": []interface{}{"object", "null"}}}, "type": "object"}},
 						Required:   []string(nil)},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
@@ -298,7 +298,7 @@ Description: This is a GraphQL query that retrieves a list of employees.
 
 Input Schema:
 ` + bt + `json
-{"additionalProperties":false,"description":"This is a GraphQL query that retrieves a list of employees.","nullable":true,"properties":{"criteria":{"additionalProperties":false,"description":"Allows to filter employees by their details.","nullable":false,"properties":{"hasPets":{"nullable":true,"type":"boolean"},"nationality":{"enum":["AMERICAN","DUTCH","ENGLISH","GERMAN","INDIAN","SPANISH","UKRAINIAN"],"nullable":true,"type":"string"},"nested":{"additionalProperties":false,"nullable":true,"properties":{"hasChildren":{"nullable":true,"type":"boolean"},"maritalStatus":{"enum":["ENGAGED","MARRIED"],"nullable":true,"type":"string"}},"type":"object"}},"type":"object"}},"type":"object"}
+{"additionalProperties":false,"description":"This is a GraphQL query that retrieves a list of employees.","properties":{"criteria":{"additionalProperties":false,"description":"Allows to filter employees by their details.","properties":{"hasPets":{"type":["boolean","null"]},"nationality":{"enum":["AMERICAN","DUTCH","ENGLISH","GERMAN","INDIAN","SPANISH","UKRAINIAN",null],"type":["string","null"]},"nested":{"additionalProperties":false,"properties":{"hasChildren":{"type":["boolean","null"]},"maritalStatus":{"enum":["ENGAGED","MARRIED",null],"type":["string","null"]}},"type":["object","null"]}},"type":"object"}},"type":"object"}
 ` + bt + `
 
 GraphQL Query:

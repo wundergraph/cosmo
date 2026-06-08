@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.149.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.148.0...@wundergraph/cosmo-connect@0.149.0) (2026-06-08)
+
+### Features
+
+* implement early stop for feature flag updates with no changes ([#2932](https://github.com/wundergraph/cosmo/issues/2932)) ([ccbcb76](https://github.com/wundergraph/cosmo/commit/ccbcb76839c0c5f37af19fddd0b7c872332fb275)) (@JivusAyrus)
+
+# [0.148.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.147.0...@wundergraph/cosmo-connect@0.148.0) (2026-06-06)
+
+### Features
+
+* **cli:** add subgraph batch-publish command ([#2899](https://github.com/wundergraph/cosmo/issues/2899)) ([9361a30](https://github.com/wundergraph/cosmo/commit/9361a3073dc207ae9bfb5b9661108c09b42028c8)) (@thisisnithin)
+
 # [0.147.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.146.0...@wundergraph/cosmo-connect@0.147.0) (2026-06-01)
 
 ### Features
