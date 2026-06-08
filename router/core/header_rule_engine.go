@@ -364,7 +364,6 @@ func (h *HeaderPropagation) compileExpressionRules(requestRules []*config.Reques
 func (h *HeaderPropagation) setupFileSourceRules(ctx context.Context, logger *zap.Logger, requestRules []*config.RequestHeaderRule) error {
 	for _, rule := range requestRules {
 		if !isValidFileSourceRule(rule) {
-			logger.Warn("invalid file source rule", zap.Any("rule", rule))
 			continue
 		}
 
