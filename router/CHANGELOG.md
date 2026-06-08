@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.321.2](https://github.com/wundergraph/cosmo/compare/router@0.321.1...router@0.321.2) (2026-06-08)
+
+### Bug Fixes
+
+* calculate costs for abstract fields correctly ([#2925](https://github.com/wundergraph/cosmo/issues/2925)) ([474722f](https://github.com/wundergraph/cosmo/commit/474722f750064750d2cd4742374eddd6610057f3)) (@ysmolski)
+
 ## [0.321.1](https://github.com/wundergraph/cosmo/compare/router@0.321.0...router@0.321.1) (2026-06-04)
 
 **Note:** Version bump only for package router

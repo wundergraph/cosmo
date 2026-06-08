@@ -2507,6 +2507,7 @@ message UpdateFeatureFlagResponse {
   repeated CompositionError composition_errors = 2;
   repeated DeploymentError deployment_errors = 3;
   repeated CompositionWarning compositionWarnings = 4;
+  optional bool has_changed = 5;
 }
 
 message EnableFeatureFlagRequest {

@@ -227,13 +227,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				pw.reqCtx = reqCtx
 			}
 			if h.enableCostResponseHeaders && reqCtx.operation.costEstimatedSet {
-				// actualListSizes is populated by the resolver after resolution completes,
+				// ArrayStats is populated by the resolver after resolution completes,
 				// and we need to set headers before actual write happens in the same resolver.
-				pw.costHeaderSetter = func(actualListSizes map[string]int) {
+				pw.costHeaderSetter = func(typeStats map[string]resolve.TypeNameStats) {
 					pw.writer.Header().Set(CostEstimatedHeader, strconv.Itoa(reqCtx.operation.costEstimated))
-					if actualListSizes != nil {
+					if typeStats != nil {
 						if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-							actual := costCalc.ActualCost(resolveCtx.VariablesView(), actualListSizes)
+							actual := costCalc.ActualCost(resolveCtx.VariablesView(), typeStats)
 							reqCtx.operation.costActual = actual
 							reqCtx.operation.costActualSet = true
 							pw.writer.Header().Set(CostActualHeader, strconv.Itoa(actual))
@@ -252,10 +252,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Compute actual cost for metrics/telemetry if not already set by the header callback
-		if !reqCtx.operation.costActualSet && resolveCtx.ActualListSizes != nil &&
+		if !reqCtx.operation.costActualSet && resolveCtx.TypeNameStats != nil &&
 			reqCtx.operation.preparedPlan != nil && reqCtx.operation.preparedPlan.preparedPlan != nil {
 			if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
-				reqCtx.operation.costActual = costCalc.ActualCost(resolveCtx.VariablesView(), resolveCtx.ActualListSizes)
+				reqCtx.operation.costActual = costCalc.ActualCost(resolveCtx.VariablesView(), resolveCtx.TypeNameStats)
 				reqCtx.operation.costActualSet = true
 			}
 		}
