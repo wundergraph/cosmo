@@ -193,7 +193,7 @@ func initHeaderRules(rules *config.HeaderRules) {
 	}
 }
 
-func NewHeaderPropagation(logger *zap.Logger, rules *config.HeaderRules, postRules *PostResponseRules) (*HeaderPropagation, error) {
+func NewHeaderPropagation(ctx context.Context, logger *zap.Logger, rules *config.HeaderRules, postRules *PostResponseRules) (*HeaderPropagation, error) {
 	if rules == nil && !postRules.hasRules() {
 		return nil, nil
 	}
@@ -236,7 +236,7 @@ func NewHeaderPropagation(logger *zap.Logger, rules *config.HeaderRules, postRul
 		return nil, err
 	}
 
-	if err := hf.setupFileSourceRules(logger, rhrs); err != nil {
+	if err := hf.setupFileSourceRules(ctx, logger, rhrs); err != nil {
 		return nil, err
 	}
 
@@ -358,7 +358,7 @@ func (h *HeaderPropagation) compileExpressionRules(requestRules []*config.Reques
 	return nil
 }
 
-func (h *HeaderPropagation) setupFileSourceRules(logger *zap.Logger, requestRules []*config.RequestHeaderRule) error {
+func (h *HeaderPropagation) setupFileSourceRules(ctx context.Context, logger *zap.Logger, requestRules []*config.RequestHeaderRule) error {
 	for _, rule := range requestRules {
 		if !isValidFileSourceRule(rule) {
 			continue
@@ -437,7 +437,7 @@ func (h *HeaderPropagation) setupFileSourceRules(logger *zap.Logger, requestRule
 		}
 
 		content.watcher = watcher
-		go content.watcher(context.Background())
+		go content.watcher(ctx)
 	}
 
 	return nil

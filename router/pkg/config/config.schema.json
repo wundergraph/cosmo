@@ -4650,7 +4650,7 @@
           "type": "object",
           "description": "Source the header value from a file's contents. The file is loaded into memory and refreshed at refresh_interval, so request-time reads do not touch disk. Currently only valid in requests.",
           "additionalProperties": false,
-          "required": ["path"],
+          "required": ["path", "refresh_interval"],
           "properties": {
             "path": {
               "type": "string",
@@ -4659,9 +4659,12 @@
             },
             "refresh_interval": {
               "type": "string",
-              "duration": {},
-              "examples": ["30s"],
-              "description": "How often the file is re-read into memory. Set to 0 to load once at startup and never refresh. The default value is 30s."
+              "format": "go-duration",
+              "duration": {
+                "minimum": "100ms"
+              },
+              "default": "1m",
+              "description": "Determines how often the file is checked for changes and re-read into memory. The minimum value is 100ms."
             }
           }
         }

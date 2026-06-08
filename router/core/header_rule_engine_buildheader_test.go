@@ -16,7 +16,7 @@ import (
 )
 
 func TestBuildRequestHeaderForSubgraph_GlobalRulesAndHashStable(t *testing.T) {
-	ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
@@ -54,7 +54,7 @@ func TestBuildRequestHeaderForSubgraph_GlobalRulesAndHashStable(t *testing.T) {
 }
 
 func TestBuildRequestHeaderForSubgraph_SubgraphSpecificRules(t *testing.T) {
-	ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-Global"},
@@ -112,7 +112,7 @@ func BenchmarkHashHeaderStable(b *testing.B) {
 
 func BenchmarkBuildRequestHeaderForSubgraph(b *testing.B) {
 	// Build rules that propagate and set a few headers
-	ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+	ht, err := NewHeaderPropagation(b.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
@@ -148,7 +148,7 @@ func BenchmarkBuildRequestHeaderForSubgraph(b *testing.B) {
 
 func TestSubgraphHeadersBuilder_PrePopulatesAndClones_SyncPlan(t *testing.T) {
 	// Header rules to propagate X-A and set X-Static
-	ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
@@ -208,7 +208,7 @@ func TestSubgraphHeadersBuilder_PrePopulatesAndClones_SyncPlan(t *testing.T) {
 }
 
 func TestSubgraphHeadersBuilder_IgnoresClientHeaderChangesAfterPrepopulate(t *testing.T) {
-	ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
@@ -252,7 +252,7 @@ func TestSubgraphHeadersBuilder_IgnoresClientHeaderChangesAfterPrepopulate(t *te
 // and the actual usage in the codebase.
 
 func TestSubgraphHeadersBuilder_SubscriptionPlan_IncludesTriggerAndResponse(t *testing.T) {
-	ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
@@ -325,7 +325,7 @@ func TestSubgraphHeadersBuilder_SubscriptionPlan_IncludesTriggerAndResponse(t *t
 }
 
 func TestSubgraphHeadersBuilder_MissingPrePopulatedCache(t *testing.T) {
-	ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},
@@ -389,7 +389,7 @@ func TestBuildRequestHeaderForSubgraph_FromFile(t *testing.T) {
 		t.Parallel()
 
 		path := writeHeaderSourceFile(t, "secret-token")
-		ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{Operation: "set", Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: time.Second}},
@@ -420,7 +420,7 @@ func TestBuildRequestHeaderForSubgraph_FromFile(t *testing.T) {
 		pathA := writeHeaderSourceFile(t, "value-a")
 		pathB := writeHeaderSourceFile(t, "value-b")
 
-		ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{Operation: "set", Name: "X-A", FromFile: &config.FileHeaderSource{Path: pathA, RefreshInterval: time.Second}},
@@ -450,7 +450,7 @@ func TestBuildRequestHeaderForSubgraph_FromFile(t *testing.T) {
 		t.Parallel()
 
 		path := writeHeaderSourceFile(t, "sg1-secret")
-		ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"sg-1": {
 					Request: []*config.RequestHeaderRule{
@@ -487,7 +487,7 @@ func TestBuildRequestHeaderForSubgraph_FromFile(t *testing.T) {
 		allPath := writeHeaderSourceFile(t, "default-token")
 		sg1Path := writeHeaderSourceFile(t, "sg1-token")
 
-		ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{Operation: "set", Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: allPath, RefreshInterval: time.Second}},
@@ -536,7 +536,7 @@ func TestBuildRequestHeaderForSubgraph_FromFile(t *testing.T) {
 		allPath := writeHeaderSourceFile(t, "global-value")
 		sg1Path := writeHeaderSourceFile(t, "sg1-value")
 
-		ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{Operation: "set", Name: "X-Global", FromFile: &config.FileHeaderSource{Path: allPath, RefreshInterval: time.Second}},
@@ -582,7 +582,7 @@ func TestBuildRequestHeaderForSubgraph_FromFile(t *testing.T) {
 		// wires the refresh through to the header path.
 		path := writeHeaderSourceFile(t, "initial-token")
 
-		ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{Operation: "set", Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: 50 * time.Millisecond}},
@@ -632,7 +632,7 @@ func TestBuildRequestHeaderForSubgraph_FromFile(t *testing.T) {
 		// carry that newline into the outbound header. If trimming is later added,
 		// this test should be updated accordingly.
 		path := writeHeaderSourceFile(t, "token-with-newline\n")
-		ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{Operation: "set", Name: "X-Auth", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: time.Second}},
@@ -658,7 +658,7 @@ func TestBuildRequestHeaderForSubgraph_FromFile(t *testing.T) {
 }
 
 func TestSubgraphHeadersBuilder_ConcurrentAccessSameSubgraph(t *testing.T) {
-	ht, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+	ht, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 		All: &config.GlobalHeaderRule{
 			Request: []*config.RequestHeaderRule{
 				{Operation: "propagate", Named: "X-A"},

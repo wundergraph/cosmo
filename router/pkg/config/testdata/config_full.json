@@ -361,7 +361,7 @@
           "ValueFrom": null,
           "FromFile": {
             "Path": "/etc/secrets/api-key",
-            "RefreshInterval": 30000000000
+            "RefreshInterval": 60000000000
           }
         }
       ],

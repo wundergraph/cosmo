@@ -384,21 +384,21 @@ func TestNewHeaderPropagation(t *testing.T) {
 
 	t.Run("nil rules returns nil", func(t *testing.T) {
 		t.Parallel()
-		hp, err := NewHeaderPropagation(zap.NewNop(), nil, nil)
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), nil, nil)
 		require.NoError(t, err)
 		assert.Nil(t, hp)
 	})
 
 	t.Run("empty rules returns valid instance", func(t *testing.T) {
 		t.Parallel()
-		hp, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{}, nil)
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{}, nil)
 		require.NoError(t, err)
 		require.NotNil(t, hp)
 	})
 
 	t.Run("invalid regex in request rule returns error", func(t *testing.T) {
 		t.Parallel()
-		_, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		_, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{Operation: config.HeaderRuleOperationPropagate, Matching: "[invalid"},
@@ -410,7 +410,7 @@ func TestNewHeaderPropagation(t *testing.T) {
 
 	t.Run("invalid regex in response rule returns error", func(t *testing.T) {
 		t.Parallel()
-		_, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		_, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Response: []*config.ResponseHeaderRule{
 					{Operation: config.HeaderRuleOperationPropagate, Matching: "[invalid"},
@@ -436,7 +436,7 @@ func TestNewHeaderPropagation_FromFile(t *testing.T) {
 
 		path := writeHeaderSourceFile(t, "secret-token")
 
-		hp, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{
@@ -460,7 +460,7 @@ func TestNewHeaderPropagation_FromFile(t *testing.T) {
 		t.Parallel()
 
 		missing := filepath.Join(t.TempDir(), "does-not-exist")
-		_, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		_, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{
@@ -480,7 +480,7 @@ func TestNewHeaderPropagation_FromFile(t *testing.T) {
 
 		path := writeHeaderSourceFile(t, "shared-value")
 
-		hp, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{Operation: config.HeaderRuleOperationSet, Name: "X-A", FromFile: &config.FileHeaderSource{Path: path, RefreshInterval: time.Second}},
@@ -503,7 +503,7 @@ func TestNewHeaderPropagation_FromFile(t *testing.T) {
 			FromFile:  &config.FileHeaderSource{Path: path},
 		}
 
-		_, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		_, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{Request: []*config.RequestHeaderRule{rule}},
 		}, nil)
 		require.NoError(t, err)
@@ -515,7 +515,7 @@ func TestNewHeaderPropagation_FromFile(t *testing.T) {
 
 		path := writeHeaderSourceFile(t, "sg-secret")
 
-		hp, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			Subgraphs: map[string]*config.GlobalHeaderRule{
 				"sg-1": {
 					Request: []*config.RequestHeaderRule{
@@ -537,7 +537,7 @@ func TestNewHeaderPropagation_FromFile(t *testing.T) {
 		path := writeHeaderSourceFile(t, "file-value")
 		expression := "request.header.Get('X-Origin')"
 
-		hp, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{
@@ -565,7 +565,7 @@ func TestNewHeaderPropagation_FromFile(t *testing.T) {
 
 		path := writeHeaderSourceFile(t, "ignored")
 
-		hp, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{
@@ -591,7 +591,7 @@ func TestNewHeaderPropagation_FromFile(t *testing.T) {
 		missing := filepath.Join(t.TempDir(), "never-read")
 		expression := "request.header.Get('X-Origin')"
 
-		hp, err := NewHeaderPropagation(zap.NewNop(), &config.HeaderRules{
+		hp, err := NewHeaderPropagation(t.Context(), zap.NewNop(), &config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
 					{

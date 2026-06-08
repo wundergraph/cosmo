@@ -295,6 +295,7 @@ headers:
         name: 'x-from-file-header'
         from_file:
           path: '/etc/secrets/api-key'
+          refresh_interval: 1m
     response:
       - op: 'propagate'
         algorithm: 'append'
