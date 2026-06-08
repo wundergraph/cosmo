@@ -25,6 +25,7 @@ import type { RouterSubgraph } from '@wundergraph/cosmo-shared';
 import * as Sentry from '@sentry/node';
 import { workerId } from 'tinypool';
 import { z } from 'zod';
+import { fastifyIntegration, pinoIntegration } from '@sentry/node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import type { SubgraphDTO } from '../../types/index.js';
@@ -77,8 +78,10 @@ if (SENTRY_ENABLED && SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     integrations: [
+      fastifyIntegration(),
       eventLoopBlockIntegration({ threshold: SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS }),
       nodeProfilingIntegration(),
+      pinoIntegration({ log: { levels: ['info', 'warn', 'error'] } }),
     ],
     profileSessionSampleRate: SENTRY_PROFILE_SESSION_SAMPLE_RATE,
     sendDefaultPii: SENTRY_SEND_DEFAULT_PII,
@@ -255,7 +258,7 @@ function toCompositionSubgraphs(subgraphs: SubgraphDTO[]) {
   );
 }
 
-export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): ComposeGraphsTaskResult {
+function composeGraphsInWorker(task: ComposeGraphsTaskInput): ComposeGraphsTaskResult {
   return Sentry.continueTrace({ sentryTrace: task.trace?.sentryTrace, baggage: task.trace?.baggage }, () =>
     Sentry.startSpan(
       {
@@ -345,4 +348,14 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
       },
     ),
   );
+}
+
+export default async function composeGraphsInWorkerActual(
+  task: ComposeGraphsTaskInput,
+): Promise<ComposeGraphsTaskResult> {
+  try {
+    return composeGraphsInWorker(task);
+  } finally {
+    await Sentry.flush();
+  }
 }
