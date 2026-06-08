@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.231.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.230.0...controlplane@0.231.0) (2026-06-06)
+
+### Features
+
+* **cli:** add subgraph batch-publish command ([#2899](https://github.com/wundergraph/cosmo/issues/2899)) ([9361a30](https://github.com/wundergraph/cosmo/commit/9361a3073dc207ae9bfb5b9661108c09b42028c8)) (@thisisnithin)
+
 # [0.230.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.229.0...controlplane@0.230.0) (2026-06-02)
 
 ### Features
