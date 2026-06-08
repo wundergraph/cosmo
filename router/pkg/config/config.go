@@ -340,7 +340,7 @@ type RequestHeaderRule struct {
 
 type FileHeaderSource struct {
 	Path            string        `yaml:"path"`
-	RefreshInterval time.Duration `yaml:"refresh_interval,omitempty" envDefault:"1m"`
+	RefreshInterval time.Duration `yaml:"refresh_interval,omitempty"`
 }
 
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
