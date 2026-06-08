@@ -711,7 +711,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			return &config.Config{}, nil
 		},
 		RouterFactory: func(ctx context.Context, res *core.RouterResources) (*core.Router, error) {
-			rr, err := configureRouter(t.Context(), listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
+			rr, err := configureRouter(ctx, listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 			if err != nil {
 				cancel(err)
 				return nil, err
@@ -1141,7 +1141,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
-	rr, err := configureRouter(t.Context(), listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
+	rr, err := configureRouter(ctx, listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
 		cancel(err)
 		return nil, err
