@@ -33,27 +33,29 @@ const createFeatureSubgraph = async (client: Parameters<typeof createFeatureFlag
   return featureSubgraphName;
 };
 
-// The update handler skips the write + recomposition when nothing actually changes. For labels
-  // this is decided by `currentLabels.some((label, i) => label !== newLabels[i])` over two arrays
-  // that `normalizeLabels` has already sorted and deduped, guarded by a length check. `hasChanged`
-  // is `false` only when that early no-op return is taken, so it is the precise signal to assert.
-  const createFlagWithLabels = async (
-    client: Parameters<typeof createFeatureFlag>[0],
-    labels: { key: string; value: string }[],
-  ) => {
-    const subgraphName = genID('subgraph');
-    const featureSubgraphName = genID('featureSubgraph');
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
-    const featureFlagName = genID('flag');
-    await createFeatureFlag(client, featureFlagName, labels, [featureSubgraphName]);
-    return featureFlagName;
-  };
+/**
+ * The update handler skips the write + recomposition when nothing actually changes. For labels
+ * this is decided by `currentLabels.some((label, i) => label !== newLabels[i])` over two arrays
+ * that `normalizeLabels` has already sorted and deduped, guarded by a length check. `hasChanged`
+ * is `false` only when that early no-op return is taken, so it is the precise signal to assert.
+ */
+const createFlagWithLabels = async (
+  client: Parameters<typeof createFeatureFlag>[0],
+  labels: { key: string; value: string }[],
+) => {
+  const subgraphName = genID('subgraph');
+  const featureSubgraphName = genID('featureSubgraph');
+  await createBaseAndFeatureSubgraph(
+    client,
+    subgraphName,
+    featureSubgraphName,
+    DEFAULT_SUBGRAPH_URL_ONE,
+    DEFAULT_SUBGRAPH_URL_TWO,
+  );
+  const featureFlagName = genID('flag');
+  await createFeatureFlag(client, featureFlagName, labels, [featureSubgraphName]);
+  return featureFlagName;
+};
 
 describe('Update feature flag tests', () => {
   beforeAll(async () => {
