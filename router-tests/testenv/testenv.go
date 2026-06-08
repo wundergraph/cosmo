@@ -173,6 +173,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	}
 	b.StartTimer()
 	f(b, env)
+	b.StopTimer()
 	if cfg.AssertCacheMetrics != nil {
 		assertCacheMetrics(b, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
 
@@ -180,6 +181,7 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 			assertCacheMetrics(b, env, v, ff)
 		}
 	}
+	b.StartTimer()
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
