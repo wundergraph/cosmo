@@ -257,6 +257,7 @@ export class SubgraphRepository {
       subgraphChanged: boolean;
     }
   > {
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
@@ -266,48 +267,55 @@ export class SubgraphRepository {
     let subgraphChanged = false;
     let labelChanged = false;
 
-    await this.db.transaction(async (tx) => {
-      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
+    const collected = await this.writeSchemaAndCollectAffected(this.db, data);
+    const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds } = collected;
+    subgraphChanged = collected.subgraphChanged;
+    labelChanged = collected.labelChanged;
 
-      const collected = await this.writeSchemaAndCollectAffected(tx, data);
-      const { subgraph, affectedFederatedGraphById, affectedFeatureFlagIds } = collected;
-      subgraphChanged = collected.subgraphChanged;
-      labelChanged = collected.labelChanged;
+    if (!subgraph) {
+      return {
+        compositionErrors,
+        compositionWarnings,
+        updatedFederatedGraphs,
+        deploymentErrors,
+        subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
+      };
+    }
 
-      if (!subgraph) {
-        return;
-      }
+    // Resolve the affected feature flag DTOs.
+    const affectedFeatureFlags = await this.resolveFeatureFlags(this.db, data.namespaceId, affectedFeatureFlagIds);
+    if (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
+      return {
+        compositionErrors,
+        compositionWarnings,
+        updatedFederatedGraphs,
+        deploymentErrors,
+        subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
+      };
+    }
 
-      // Resolve the affected feature flag DTOs.
-      const affectedFeatureFlags = await this.resolveFeatureFlags(tx, data.namespaceId, affectedFeatureFlagIds);
-
-      if (affectedFederatedGraphById.size === 0 && affectedFeatureFlags.length === 0) {
-        return;
-      }
-
-      updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
-      const result = await compositionService.recomposeAndDeployAffected({
-        actorId: data.updatedBy,
-        affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
-        affectedFeatureFlags,
-        isFeatureSubgraph: subgraph.isFeatureSubgraph,
-      });
-
-      deploymentErrors.push(...result.deploymentErrors);
-      compositionErrors.push(...result.compositionErrors);
-      compositionWarnings.push(...result.compositionWarnings);
-
-      // Re-fetch the federated graphs to get the updated composedSchemaVersionId
-      const refreshedGraphs = await Promise.all(
-        [...affectedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
-      );
-      for (let i = 0; i < updatedFederatedGraphs.length; i++) {
-        const refreshedGraph = refreshedGraphs[i];
-        if (refreshedGraph) {
-          updatedFederatedGraphs[i] = refreshedGraph;
-        }
-      }
+    updatedFederatedGraphs.push(...affectedFederatedGraphById.values());
+    const result = await compositionService.recomposeAndDeployAffected({
+      actorId: data.updatedBy,
+      affectedFederatedGraphs: [...affectedFederatedGraphById.values()],
+      affectedFeatureFlags,
+      isFeatureSubgraph: subgraph.isFeatureSubgraph,
     });
+
+    deploymentErrors.push(...result.deploymentErrors);
+    compositionErrors.push(...result.compositionErrors);
+    compositionWarnings.push(...result.compositionWarnings);
+
+    // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+    const refreshedGraphs = await Promise.all(
+      [...affectedFederatedGraphById.keys()].map((id) => fedGraphRepo.byId(id)),
+    );
+    for (let i = 0; i < updatedFederatedGraphs.length; i++) {
+      const refreshedGraph = refreshedGraphs[i];
+      if (refreshedGraph) {
+        updatedFederatedGraphs[i] = refreshedGraph;
+      }
+    }
 
     return {
       compositionErrors,
