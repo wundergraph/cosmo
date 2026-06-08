@@ -715,6 +715,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 			content, ok := h.fileSourceContents[rule.FromFile.Path]
 			if !ok {
 				ctx.SetError(fmt.Errorf("file source content not found for file %s", rule.FromFile.Path))
+				return
 			}
 
 			content.m.Lock()
