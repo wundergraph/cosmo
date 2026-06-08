@@ -1068,6 +1068,185 @@ export class SubgraphPublishStats extends Message<SubgraphPublishStats> {
 }
 
 /**
+ * A single subgraph entry to publish as part of a batch publish request.
+ *
+ * @generated from message wg.cosmo.platform.v1.PublishSubgraph
+ */
+export class PublishSubgraph extends Message<PublishSubgraph> {
+  /**
+   * The name of the subgraph to publish.
+   *
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * The schema to publish for the subgraph.
+   *
+   * @generated from field: string schema = 2;
+   */
+  schema = "";
+
+  constructor(data?: PartialMessage<PublishSubgraph>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PublishSubgraph";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishSubgraph {
+    return new PublishSubgraph().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PublishSubgraph {
+    return new PublishSubgraph().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PublishSubgraph {
+    return new PublishSubgraph().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PublishSubgraph | PlainMessage<PublishSubgraph> | undefined, b: PublishSubgraph | PlainMessage<PublishSubgraph> | undefined): boolean {
+    return proto3.util.equals(PublishSubgraph, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.PublishFederatedSubgraphsRequest
+ */
+export class PublishFederatedSubgraphsRequest extends Message<PublishFederatedSubgraphsRequest> {
+  /**
+   * The namespace all the subgraphs belong to.
+   *
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  /**
+   * The subgraphs to publish. Each must already exist in the namespace. Feature subgraphs are detected automatically.
+   *
+   * @generated from field: repeated wg.cosmo.platform.v1.PublishSubgraph subgraphs = 2;
+   */
+  subgraphs: PublishSubgraph[] = [];
+
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 3;
+   */
+  disableResolvabilityValidation?: boolean;
+
+  /**
+   * Optional limit for the number of errors/warnings returned.
+   *
+   * @generated from field: optional int32 limit = 4;
+   */
+  limit?: number;
+
+  constructor(data?: PartialMessage<PublishFederatedSubgraphsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PublishFederatedSubgraphsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "subgraphs", kind: "message", T: PublishSubgraph, repeated: true },
+    { no: 3, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphsRequest {
+    return new PublishFederatedSubgraphsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PublishFederatedSubgraphsRequest {
+    return new PublishFederatedSubgraphsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PublishFederatedSubgraphsRequest {
+    return new PublishFederatedSubgraphsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PublishFederatedSubgraphsRequest | PlainMessage<PublishFederatedSubgraphsRequest> | undefined, b: PublishFederatedSubgraphsRequest | PlainMessage<PublishFederatedSubgraphsRequest> | undefined): boolean {
+    return proto3.util.equals(PublishFederatedSubgraphsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.PublishFederatedSubgraphsResponse
+ */
+export class PublishFederatedSubgraphsResponse extends Message<PublishFederatedSubgraphsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.SubgraphPublishStats counts = 5;
+   */
+  counts?: SubgraphPublishStats;
+
+  /**
+   * The names of the subgraphs whose schema actually changed as a result of this batch publish.
+   *
+   * @generated from field: repeated string updatedSubgraphNames = 6;
+   */
+  updatedSubgraphNames: string[] = [];
+
+  constructor(data?: PartialMessage<PublishFederatedSubgraphsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PublishFederatedSubgraphsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 5, name: "counts", kind: "message", T: SubgraphPublishStats, opt: true },
+    { no: 6, name: "updatedSubgraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphsResponse {
+    return new PublishFederatedSubgraphsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PublishFederatedSubgraphsResponse {
+    return new PublishFederatedSubgraphsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PublishFederatedSubgraphsResponse {
+    return new PublishFederatedSubgraphsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PublishFederatedSubgraphsResponse | PlainMessage<PublishFederatedSubgraphsResponse> | undefined, b: PublishFederatedSubgraphsResponse | PlainMessage<PublishFederatedSubgraphsResponse> | undefined): boolean {
+    return proto3.util.equals(PublishFederatedSubgraphsResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GitInfo
  */
 export class GitInfo extends Message<GitInfo> {
@@ -19375,6 +19554,11 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
    */
   compositionWarnings: CompositionWarning[] = [];
 
+  /**
+   * @generated from field: optional bool has_changed = 5;
+   */
+  hasChanged?: boolean;
+
   constructor(data?: PartialMessage<UpdateFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -19387,6 +19571,7 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
     { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
     { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 5, name: "has_changed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagResponse {

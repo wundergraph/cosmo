@@ -86,6 +86,34 @@ message SubgraphPublishStats {
   int32 deploymentErrors = 3;
 }
 
+// A single subgraph entry to publish as part of a batch publish request.
+message PublishSubgraph {
+  // The name of the subgraph to publish.
+  string name = 1;
+  // The schema to publish for the subgraph.
+  string schema = 2;
+}
+
+message PublishFederatedSubgraphsRequest {
+  // The namespace all the subgraphs belong to.
+  string namespace = 1;
+  // The subgraphs to publish. Each must already exist in the namespace. Feature subgraphs are detected automatically.
+  repeated PublishSubgraph subgraphs = 2;
+  optional bool disable_resolvability_validation = 3;
+  // Optional limit for the number of errors/warnings returned.
+  optional int32 limit = 4;
+}
+
+message PublishFederatedSubgraphsResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
+  optional SubgraphPublishStats counts = 5;
+  // The names of the subgraphs whose schema actually changed as a result of this batch publish.
+  repeated string updatedSubgraphNames = 6;
+}
+
 message GitInfo {
   string commit_sha = 1;
   string account_id = 2;
@@ -2479,6 +2507,7 @@ message UpdateFeatureFlagResponse {
   repeated CompositionError composition_errors = 2;
   repeated DeploymentError deployment_errors = 3;
   repeated CompositionWarning compositionWarnings = 4;
+  optional bool has_changed = 5;
 }
 
 message EnableFeatureFlagRequest {
@@ -3418,6 +3447,9 @@ service PlatformService {
   rpc CreateFederatedSubgraph(CreateFederatedSubgraphRequest) returns (CreateFederatedSubgraphResponse) {}
   // PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
   rpc PublishFederatedSubgraph(PublishFederatedSubgraphRequest) returns (PublishFederatedSubgraphResponse) {}
+  // PublishFederatedSubgraphs pushes the schemas of multiple existing subgraphs to the control plane in a single
+  // request. Affected federated graphs (and their contracts / feature flags) are composed exactly once each.
+  rpc PublishFederatedSubgraphs(PublishFederatedSubgraphsRequest) returns (PublishFederatedSubgraphsResponse) {}
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
   // DeleteFederatedGraph deletes a federated graph from the control plane.
