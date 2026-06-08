@@ -270,7 +270,7 @@ func TestOperationCost(t *testing.T) {
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Query 1: weight from both subgraphs is applied
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `{ products { __typename ... on Cosmo { upc repositoryURL engineers { id } } } }`,
+					Query: `{ products { ... on Cosmo { upc repositoryURL engineers { id } } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
 				require.NotContains(t, res.Body, `"errors":`)
@@ -287,7 +287,7 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "230", estimated)
 
 				actual := res.Response.Header.Get(core.CostActualHeader)
-				require.Equal(t, "24", actual) // 3 * (5.67 + 1*7/3 )
+				require.Equal(t, "24", actual) // 3 * (5.67 + 1*7/3)
 
 				// Query 2: only employees-subgraph fields — Cosmo @cost(weight: 5) from employees applies
 				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
