@@ -1,6 +1,6 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, eq, inArray, like, or, sql, arrayOverlaps } from 'drizzle-orm';
+import { SQL, and, asc, count, desc, eq, inArray, like, or, sql, arrayOverlaps } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
@@ -1342,25 +1342,31 @@ export class FeatureFlagRepository {
     baseSchemaVersionId: string;
     featureFlagId: string;
   }) {
-    const schemaVersion = await this.db
+    const schemaVersions = await this.db
       .select({
         id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
       })
       .from(federatedGraphsToFeatureFlagSchemaVersions)
+      .innerJoin(
+        schemaVersion,
+        eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
+      )
       .where(
         and(
           eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
           eq(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, featureFlagId),
         ),
       )
+      .orderBy(desc(schemaVersion.createdAt))
+      .limit(1)
       .execute();
 
-    if (schemaVersion.length === 0) {
+    if (schemaVersions.length === 0) {
       return;
     }
 
     const federatedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
-    const ffSchemaVersion = await federatedGraphRepo.getSchemaVersionById({ schemaVersionId: schemaVersion[0].id });
+    const ffSchemaVersion = await federatedGraphRepo.getSchemaVersionById({ schemaVersionId: schemaVersions[0].id });
 
     return ffSchemaVersion;
   }
