@@ -1580,6 +1580,7 @@ func BenchmarkSequentialBig(b *testing.B) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: bigEmployeesQuery,
 			})
+			// Not worth stopping the timer.
 			if len(res.Body) < 3000 {
 				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
 			}
@@ -1604,6 +1605,7 @@ func BenchmarkSequentialBigCostControl(b *testing.B) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: bigEmployeesQuery,
 			})
+			b.StopTimer()
 			if len(res.Body) < 3000 {
 				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
 			}
@@ -1611,6 +1613,7 @@ func BenchmarkSequentialBigCostControl(b *testing.B) {
 			require.Equal(b, "4650", estimated)
 			actual := res.Response.Header.Get(core.CostActualHeader)
 			require.Equal(b, "189", actual)
+			b.StartTimer()
 		}
 	})
 }
@@ -1631,6 +1634,7 @@ func BenchmarkSequentialBigNotCached(b *testing.B) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: bigEmployeesQuery,
 			})
+			// Not worth stopping the timer.
 			if len(res.Body) < 3000 {
 				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
 			}
