@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.321.2](https://github.com/wundergraph/cosmo/compare/router@0.321.1...router@0.321.2) (2026-06-08)
+
+### Bug Fixes
+
+* calculate costs for abstract fields correctly ([#2925](https://github.com/wundergraph/cosmo/issues/2925)) ([474722f](https://github.com/wundergraph/cosmo/commit/474722f750064750d2cd4742374eddd6610057f3)) (@ysmolski)
+
+## [0.321.1](https://github.com/wundergraph/cosmo/compare/router@0.321.0...router@0.321.1) (2026-06-04)
+
+**Note:** Version bump only for package router
+
+# [0.321.0](https://github.com/wundergraph/cosmo/compare/router@0.320.0...router@0.321.0) (2026-05-29)
+
+### Bug Fixes
+
+* allow header propagation for router-plugins ([#2877](https://github.com/wundergraph/cosmo/issues/2877)) ([c441f55](https://github.com/wundergraph/cosmo/commit/c441f55485731c4005553b92af84ec2d83dbd2af)) (@Noroth)
+
+### Features
+
+* **router:** add TLS/mTLS support to gRPC subgraphs ([#2861](https://github.com/wundergraph/cosmo/issues/2861)) ([13e814f](https://github.com/wundergraph/cosmo/commit/13e814fa67c9309dbb21291663cfffdfef678445)) (@dkorittki)
+* support manifest for local development ([#2892](https://github.com/wundergraph/cosmo/issues/2892)) ([b852f91](https://github.com/wundergraph/cosmo/commit/b852f91b33c00adabd7c63de14722bbab10f8f7d)) (@Noroth)
+
+# [0.320.0](https://github.com/wundergraph/cosmo/compare/router@0.319.0...router@0.320.0) (2026-05-27)
+
+### Features
+
+* add a delay after each item is processed for cache warmer ([#2885](https://github.com/wundergraph/cosmo/issues/2885)) ([cdee362](https://github.com/wundergraph/cosmo/commit/cdee36265db1f257716b14be18520d8dab3cf8b8)) (@SkArchon)
+
+# [0.319.0](https://github.com/wundergraph/cosmo/compare/router@0.318.4...router@0.319.0) (2026-05-27)
+
+### Features
+
+* **dx:** add .gitattributes to collapse generated files in GitHub PRs ([#2891](https://github.com/wundergraph/cosmo/issues/2891)) ([b96296a](https://github.com/wundergraph/cosmo/commit/b96296acc66763fb59f9879573658350079fc19c)) (@comatory)
+* studio handles analytics downtime gracefully ([#2878](https://github.com/wundergraph/cosmo/issues/2878)) ([716b786](https://github.com/wundergraph/cosmo/commit/716b786bd55008292015ec8950182aa61e98cb16)) (@comatory)
+
 ## [0.318.4](https://github.com/wundergraph/cosmo/compare/router@0.318.3...router@0.318.4) (2026-05-25)
 
 **Note:** Version bump only for package router

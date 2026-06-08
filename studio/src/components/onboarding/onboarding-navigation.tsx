@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import { ArrowLeftIcon, ArrowRightIcon, InfoCircledIcon } from '@radix-ui/react-icons';
 import { cn } from '@/lib/utils';
 import { Link } from '../ui/link';
 import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { motion, useAnimate } from 'framer-motion';
 
 export const OnboardingNavigation = ({
   backHref,
@@ -10,13 +12,30 @@ export const OnboardingNavigation = ({
   forwardLabel = 'Next',
   onSkip,
   className,
+  jiggleForward = 0,
 }: {
   backHref?: string;
   forward: { href: string } | { onClick: () => void; isLoading?: boolean; disabled?: boolean };
   forwardLabel?: string;
   onSkip: () => void;
   className?: string;
+  jiggleForward?: number;
 }) => {
+  const [scope, animate] = useAnimate();
+
+  useEffect(() => {
+    if (jiggleForward > 0) {
+      animate(
+        scope.current,
+        {
+          rotate: [0, -6, 6, -5, 5, -3, 3, 0],
+          transformOrigin: ['50% 50%', '100% 50%', '0% 50%', '100% 50%', '0% 50%', '100% 50%', '0% 50%', '50% 50%'],
+        },
+        { duration: 0.55, ease: 'easeInOut' },
+      );
+    }
+  }, [jiggleForward, animate, scope]);
+
   return (
     <div className={cn('mt-auto flex w-full justify-between pt-8', className)}>
       <div className="flex items-center gap-1">
@@ -50,24 +69,26 @@ export const OnboardingNavigation = ({
             Back
           </Button>
         )}
-        {'href' in forward ? (
-          <Button className="group" asChild>
-            <Link href={forward.href}>
+        <motion.div ref={scope} style={{ display: 'inline-flex' }}>
+          {'href' in forward ? (
+            <Button className="group" asChild>
+              <Link href={forward.href}>
+                {forwardLabel}
+                <ArrowRightIcon className="ml-2 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              className="group"
+              onClick={forward.onClick}
+              isLoading={forward.isLoading}
+              disabled={forward.isLoading || forward.disabled}
+            >
               {forwardLabel}
               <ArrowRightIcon className="ml-2 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </Button>
-        ) : (
-          <Button
-            className="group"
-            onClick={forward.onClick}
-            isLoading={forward.isLoading}
-            disabled={forward.isLoading || forward.disabled}
-          >
-            {forwardLabel}
-            <ArrowRightIcon className="ml-2 transition-transform group-hover:translate-x-1" />
-          </Button>
-        )}
+            </Button>
+          )}
+        </motion.div>
       </div>
     </div>
   );

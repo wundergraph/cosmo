@@ -25,20 +25,22 @@ import (
 
 var (
 	clientTLSAllInsecureSkipVerify = config.TLSConfiguration{
-		Client: config.ClientTLSConfiguration{
-			All: config.TLSClientCertConfiguration{
-				InsecureSkipCaVerification: true,
-			},
+		Client: config.HTTPClientTLSConfiguration{
+			All: config.HTTPTLSClientCertConfiguration{
+				TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+					InsecureSkipCaVerification: true,
+				}},
 		},
 	}
 	clientTLSEmployeesInsecureSkipVerifyWithTestdataCert = config.TLSConfiguration{
-		Client: config.ClientTLSConfiguration{
-			Subgraphs: map[string]config.TLSClientCertConfiguration{
+		Client: config.HTTPClientTLSConfiguration{
+			Subgraphs: map[string]config.HTTPTLSClientCertConfiguration{
 				"employees": {
-					InsecureSkipCaVerification: true,
-					CertFile:                   "../testdata/tls/cert.pem",
-					KeyFile:                    "../testdata/tls/key.pem",
-				},
+					TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+						InsecureSkipCaVerification: true,
+						CertFile:                   "../testdata/tls/cert.pem",
+						KeyFile:                    "../testdata/tls/key.pem",
+					}},
 			},
 		},
 	}
@@ -84,10 +86,11 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: false,
-								},
+							Client: config.HTTPClientTLSConfiguration{
+								All: config.HTTPTLSClientCertConfiguration{
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										InsecureSkipCaVerification: false,
+									}},
 							},
 						}),
 					},
@@ -119,14 +122,16 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									CaFile: certPath,
-								},
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
+							Client: config.HTTPClientTLSConfiguration{
+								All: config.HTTPTLSClientCertConfiguration{
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										CaFile: certPath,
+									}},
+								Subgraphs: map[string]config.HTTPTLSClientCertConfiguration{
 									"employees": {
-										InsecureSkipCaVerification: true,
-									},
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											InsecureSkipCaVerification: true,
+										}},
 								},
 							},
 						}),
@@ -158,12 +163,13 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert.pem",
-									KeyFile:                    "../testdata/tls/key.pem",
-								},
+							Client: config.HTTPClientTLSConfiguration{
+								All: config.HTTPTLSClientCertConfiguration{
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										InsecureSkipCaVerification: true,
+										CertFile:                   "../testdata/tls/cert.pem",
+										KeyFile:                    "../testdata/tls/key.pem",
+									}},
 							},
 						}),
 					},
@@ -207,12 +213,13 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert-2.pem",
-									KeyFile:                    "../testdata/tls/key-2.pem",
-								},
+							Client: config.HTTPClientTLSConfiguration{
+								All: config.HTTPTLSClientCertConfiguration{
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										InsecureSkipCaVerification: true,
+										CertFile:                   "../testdata/tls/cert-2.pem",
+										KeyFile:                    "../testdata/tls/key-2.pem",
+									}},
 							},
 						}),
 					},
@@ -262,18 +269,20 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert-2.pem",
-									KeyFile:                    "../testdata/tls/key-2.pem",
-								},
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
-									"employees": {
+							Client: config.HTTPClientTLSConfiguration{
+								All: config.HTTPTLSClientCertConfiguration{
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
 										InsecureSkipCaVerification: true,
-										CertFile:                   "../testdata/tls/cert.pem",
-										KeyFile:                    "../testdata/tls/key.pem",
-									},
+										CertFile:                   "../testdata/tls/cert-2.pem",
+										KeyFile:                    "../testdata/tls/key-2.pem",
+									}},
+								Subgraphs: map[string]config.HTTPTLSClientCertConfiguration{
+									"employees": {
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											InsecureSkipCaVerification: true,
+											CertFile:                   "../testdata/tls/cert.pem",
+											KeyFile:                    "../testdata/tls/key.pem",
+										}},
 								},
 							},
 						}),
@@ -299,18 +308,20 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert.pem",
-									KeyFile:                    "../testdata/tls/key.pem",
-								},
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
-									"employees": {
+							Client: config.HTTPClientTLSConfiguration{
+								All: config.HTTPTLSClientCertConfiguration{
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
 										InsecureSkipCaVerification: true,
-										CertFile:                   "../testdata/tls/cert-2.pem",
-										KeyFile:                    "../testdata/tls/key-2.pem",
-									},
+										CertFile:                   "../testdata/tls/cert.pem",
+										KeyFile:                    "../testdata/tls/key.pem",
+									}},
+								Subgraphs: map[string]config.HTTPTLSClientCertConfiguration{
+									"employees": {
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											InsecureSkipCaVerification: true,
+											CertFile:                   "../testdata/tls/cert-2.pem",
+											KeyFile:                    "../testdata/tls/key-2.pem",
+										}},
 								},
 							},
 						}),
@@ -339,17 +350,19 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-									CertFile:                   "../testdata/tls/cert.pem",
-									KeyFile:                    "../testdata/tls/key.pem",
-								},
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
-									"employees": {
+							Client: config.HTTPClientTLSConfiguration{
+								All: config.HTTPTLSClientCertConfiguration{
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
 										InsecureSkipCaVerification: true,
-										// NO CertFile/KeyFile — proves fields are NOT inherited from All
-									},
+										CertFile:                   "../testdata/tls/cert.pem",
+										KeyFile:                    "../testdata/tls/key.pem",
+									}},
+								Subgraphs: map[string]config.HTTPTLSClientCertConfiguration{
+									"employees": {
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											InsecureSkipCaVerification: true,
+											// NO CertFile/KeyFile — proves fields are NOT inherited from All
+										}},
 								},
 							},
 						}),
@@ -388,10 +401,11 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									CaFile: certPath,
-								},
+							Client: config.HTTPClientTLSConfiguration{
+								All: config.HTTPTLSClientCertConfiguration{
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										CaFile: certPath,
+									}},
 							},
 						}),
 					},
@@ -424,11 +438,11 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
-									"employees": {
+							Client: config.HTTPClientTLSConfiguration{
+								Subgraphs: map[string]config.HTTPTLSClientCertConfiguration{
+									"employees": {TLSClientCertConfiguration: config.TLSClientCertConfiguration{
 										CaFile: certPath,
-									},
+									}},
 								},
 							},
 						}),
@@ -460,14 +474,15 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									InsecureSkipCaVerification: true,
-								},
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
-									"employees": {
+							Client: config.HTTPClientTLSConfiguration{
+								All: config.HTTPTLSClientCertConfiguration{
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										InsecureSkipCaVerification: true,
+									}},
+								Subgraphs: map[string]config.HTTPTLSClientCertConfiguration{
+									"employees": {TLSClientCertConfiguration: config.TLSClientCertConfiguration{
 										CaFile: certPath,
-									},
+									}},
 								},
 							},
 						}),
@@ -511,12 +526,13 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								All: config.TLSClientCertConfiguration{
-									CaFile:   certPath,
-									CertFile: "../testdata/tls/cert.pem",
-									KeyFile:  "../testdata/tls/key.pem",
-								},
+							Client: config.HTTPClientTLSConfiguration{
+								All: config.HTTPTLSClientCertConfiguration{
+									TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+										CaFile:   certPath,
+										CertFile: "../testdata/tls/cert.pem",
+										KeyFile:  "../testdata/tls/key.pem",
+									}},
 							},
 						}),
 					},
@@ -555,13 +571,14 @@ func TestSubgraphMTLS(t *testing.T) {
 					},
 					RouterOptions: []core.Option{
 						core.WithTLSConfig(config.TLSConfiguration{
-							Client: config.ClientTLSConfiguration{
-								Subgraphs: map[string]config.TLSClientCertConfiguration{
+							Client: config.HTTPClientTLSConfiguration{
+								Subgraphs: map[string]config.HTTPTLSClientCertConfiguration{
 									"employees": {
-										CaFile:   certPath,
-										CertFile: "../testdata/tls/cert.pem",
-										KeyFile:  "../testdata/tls/key.pem",
-									},
+										TLSClientCertConfiguration: config.TLSClientCertConfiguration{
+											CaFile:   certPath,
+											CertFile: "../testdata/tls/cert.pem",
+											KeyFile:  "../testdata/tls/key.pem",
+										}},
 								},
 							},
 						}),

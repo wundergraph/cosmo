@@ -143,7 +143,10 @@ export class RouterMetricsRepository {
     };
   }
 
-  public async getActiveRouters(input: { federatedGraphId: string; organizationId: string }): Promise<RouterDTO[]> {
+  public async getActiveRouters(input: { federatedGraphId: string; organizationId: string }): Promise<{
+    routers: RouterDTO[];
+    ok: boolean;
+  }> {
     const query = `
       select
         first_value(Timestamp) as timestamp,
@@ -179,21 +182,21 @@ export class RouterMetricsRepository {
       organizationId: input.organizationId,
     };
 
-    const res = await this.client.queryPromise(query, params);
+    const { data: routers, ok } = await this.client.queryPromiseWithDefault<RouterDTO>(query, {
+      params,
+      defaultValue: [],
+    });
 
-    if (Array.isArray(res)) {
-      return res.map((p) => ({
-        hostname: p.hostname,
-        serviceName: p.serviceName,
-        serviceVersion: p.serviceVersion,
-        serviceInstanceId: p.serviceInstanceId,
-        processId: p.processId,
-        clusterName: p.clusterName,
-        configVersionId: p.configVersionId,
-        processUptimeSeconds: p.processUptimeSeconds,
-      }));
+    if (Array.isArray(routers)) {
+      return {
+        routers,
+        ok,
+      };
     }
 
-    return [];
+    return {
+      routers: [],
+      ok,
+    };
   }
 }

@@ -17,6 +17,8 @@ export type WebAuthAuthContext = {
   userId: string;
   organizationSlug: string;
   userDisplayName: string;
+  sessionId: string;
+  idpAlias: string | null;
 };
 
 @traced
@@ -84,6 +86,8 @@ export default class WebSessionAuthenticator {
           userId: decryptedJwt.iss,
           organizationSlug,
           userDisplayName: user.email,
+          sessionId: existingSessions[0].id,
+          idpAlias: existingSessions[0].idpAlias ?? null,
         };
       }
     }

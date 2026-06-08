@@ -287,7 +287,7 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "230", estimated)
 
 				actual := res.Response.Header.Get(core.CostActualHeader)
-				require.Equal(t, "46", actual) // (7/3 + 13) * 3
+				require.Equal(t, "24", actual) // 3 * (5.67 + 1*7/3)
 
 				// Query 2: only employees-subgraph fields — Cosmo @cost(weight: 5) from employees applies
 				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -300,7 +300,7 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "150", estimated2)
 
 				actual2 := res2.Response.Header.Get(core.CostActualHeader)
-				require.Equal(t, "22", actual2)
+				require.Equal(t, "14", actual2)
 			})
 		})
 

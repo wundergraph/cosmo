@@ -881,9 +881,10 @@ type AnonymizeIpConfiguration struct {
 	Method  string `yaml:"method" envDefault:"redact" env:"SECURITY_ANONYMIZE_IP_METHOD"`
 }
 
-type TLSClientAuthConfiguration struct {
-	CertFile string `yaml:"cert_file,omitempty" env:"TLS_CLIENT_AUTH_CERT_FILE"`
-	Required bool   `yaml:"required" envDefault:"false" env:"TLS_CLIENT_AUTH_REQUIRED"`
+type TLSConfiguration struct {
+	Server     TLSServerConfiguration     `yaml:"server"`
+	Client     HTTPClientTLSConfiguration `yaml:"client"`
+	ClientGRPC GRPCClientTLSConfiguration `yaml:"client_grpc"`
 }
 
 type TLSServerConfiguration struct {
@@ -895,33 +896,76 @@ type TLSServerConfiguration struct {
 	ClientAuth TLSClientAuthConfiguration `yaml:"client_auth,omitempty"`
 }
 
+type TLSClientAuthConfiguration struct {
+	CertFile string `yaml:"cert_file,omitempty" env:"TLS_CLIENT_AUTH_CERT_FILE"`
+	Required bool   `yaml:"required" envDefault:"false" env:"TLS_CLIENT_AUTH_REQUIRED"`
+}
+
+type HTTPClientTLSConfiguration struct {
+	// All applies to all subgraph connections.
+	All HTTPTLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
+	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
+	Subgraphs map[string]HTTPTLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
+func (c *HTTPClientTLSConfiguration) GetAll() HTTPTLSClientCertConfiguration {
+	return c.All
+}
+
+func (c *HTTPClientTLSConfiguration) GetSubgraphs() map[string]HTTPTLSClientCertConfiguration {
+	return c.Subgraphs
+}
+
+// Enabled returns true if anything in c has been configured.
+func (c *HTTPClientTLSConfiguration) Enabled() bool {
+	allConfigured := c.All.InsecureSkipCaVerification ||
+		c.All.CaFile != "" ||
+		c.All.KeyFile != "" ||
+		c.All.CertFile != ""
+
+	return allConfigured || len(c.Subgraphs) > 0
+}
+
+type GRPCClientTLSConfiguration struct {
+	// All applies to all gRPC subgraph connections.
+	All GRPCTLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_GRPC_ALL_"`
+	// Subgraphs overrides per-subgraph gRPC TLS config. Key is the subgraph name.
+	Subgraphs map[string]GRPCTLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
+func (c *GRPCClientTLSConfiguration) GetAll() GRPCTLSClientCertConfiguration {
+	return c.All
+}
+
+func (c *GRPCClientTLSConfiguration) GetSubgraphs() map[string]GRPCTLSClientCertConfiguration {
+	return c.Subgraphs
+}
+
+// Enabled returns true if any subgraph or the default settings have TLS enabled.
+func (c *GRPCClientTLSConfiguration) Enabled() bool {
+	for _, v := range c.Subgraphs {
+		if v.Enabled {
+			return true
+		}
+	}
+
+	return c.All.Enabled
+}
+
+type HTTPTLSClientCertConfiguration struct {
+	TLSClientCertConfiguration `yaml:",inline"`
+}
+
+type GRPCTLSClientCertConfiguration struct {
+	TLSClientCertConfiguration `yaml:",inline"`
+	Enabled                    bool `yaml:"enabled" env:"ENABLED"`
+}
+
 type TLSClientCertConfiguration struct {
 	CertFile                   string `yaml:"cert_file,omitempty" env:"CERT_FILE"`
 	KeyFile                    string `yaml:"key_file,omitempty" env:"KEY_FILE"`
 	CaFile                     string `yaml:"ca_file,omitempty" env:"CA_FILE"`
 	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
-}
-
-type ClientTLSConfiguration struct {
-	// All applies to all subgraph connections.
-	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
-	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
-	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
-}
-
-// Enabled returns true if anything in s has been configured.©
-func (s ClientTLSConfiguration) Enabled() bool {
-	allConfigured := s.All.InsecureSkipCaVerification ||
-		s.All.CaFile != "" ||
-		s.All.KeyFile != "" ||
-		s.All.CertFile != ""
-
-	return allConfigured || len(s.Subgraphs) > 0
-}
-
-type TLSConfiguration struct {
-	Server TLSServerConfiguration `yaml:"server"`
-	Client ClientTLSConfiguration `yaml:"client"`
 }
 
 type SubgraphErrorPropagationMode string
@@ -1041,6 +1085,15 @@ type ExecutionConfig struct {
 	File            ExecutionConfigFile            `yaml:"file,omitempty"`
 	Storage         ExecutionConfigStorage         `yaml:"storage,omitempty" envPrefix:"EXECUTION_CONFIG_STORAGE_"`
 	FallbackStorage FallbackExecutionConfigStorage `yaml:"fallback_storage,omitempty" envPrefix:"EXECUTION_CONFIG_FALLBACK_STORAGE_"`
+	Manifest        ExecutionConfigManifest        `yaml:"manifest,omitempty" envPrefix:"EXECUTION_CONFIG_MANIFEST_"`
+}
+
+type ExecutionConfigManifest struct {
+	Path                    string        `yaml:"path,omitempty" env:"PATH"`
+	SkipMissingFeatureFlags bool          `yaml:"skip_missing_feature_flags" envDefault:"false" env:"SKIP_MISSING_FEATURE_FLAGS"`
+	IgnoredFeatureFlags     []string      `yaml:"ignored_feature_flags,omitempty" env:"IGNORED_FEATURE_FLAGS"`
+	Watch                   bool          `yaml:"watch,omitempty" envDefault:"false" env:"WATCH"`
+	WatchInterval           time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"WATCH_INTERVAL"`
 }
 
 type PersistedOperationsCacheConfig struct {
@@ -1180,6 +1233,7 @@ type CacheWarmupConfiguration struct {
 	Source           CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`
 	Workers          int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
 	ItemsPerSecond   int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
+	ItemDelay        time.Duration     `yaml:"item_delay" envDefault:"0s" env:"CACHE_WARMUP_ITEM_DELAY"`
 	Timeout          time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 	InMemoryFallback bool              `yaml:"in_memory_fallback" envDefault:"true" env:"CACHE_WARMUP_IN_MEMORY_FALLBACK"`
 }

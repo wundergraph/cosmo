@@ -33,8 +33,6 @@ export function getOnboarding(
         },
         federatedGraphsCount,
         enabled: false,
-        slack: false,
-        email: false,
       };
     }
 
@@ -48,8 +46,6 @@ export function getOnboarding(
         },
         federatedGraphsCount,
         enabled: true,
-        slack: false,
-        email: false,
       };
     }
 
@@ -60,8 +56,6 @@ export function getOnboarding(
       finishedAt: onboarding.finishedAt?.toISOString(),
       federatedGraphsCount,
       enabled: true,
-      slack: onboarding.slack,
-      email: onboarding.email,
     };
   });
 }

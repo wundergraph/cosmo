@@ -8,7 +8,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
@@ -20,8 +20,10 @@ import database from '../src/core/plugins/database.js';
 import fastifyRedis from '../src/core/plugins/redis.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
 import { BillingRepository, billingSchema } from '../src/core/repositories/BillingRepository.js';
+import { NamespaceLoginMethodRepository } from '../src/core/repositories/NamespaceLoginMethodRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
+import { RBACEvaluator } from '../src/core/services/RBACEvaluator.js';
 import routes from '../src/core/routes.js';
 import ApiKeyAuthenticator from '../src/core/services/ApiKeyAuthenticator.js';
 import { Authorization } from '../src/core/services/Authorization.js';
@@ -31,6 +33,7 @@ import {
   createTestAuthenticator,
   createTestContext,
   seedTest,
+  TestAuthenticator,
   TestAuthenticatorOptions,
   UserTestData,
 } from '../src/core/test-util.js';
@@ -38,7 +41,7 @@ import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhook
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { DeleteOrganizationQueue } from '../src/core/workers/DeleteOrganizationWorker.js';
 import * as schema from '../src/db/schema.js';
-import { FeatureIds, Label } from '../src/types/index.js';
+import { AuthContext, FeatureIds, Label, LoginMethod } from '../src/types/index.js';
 import { NewBillingPlan, OrganizationRole } from '../src/db/models.js';
 import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrganizationWorker.js';
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
@@ -640,6 +643,37 @@ export const createFederatedGraph = async (
   expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
   return createFedGraphRes;
 };
+
+/**
+ * Simulates authenticating as the given login method for the supplied user.
+ *
+ * The mocked test authenticator returns a static context, so the part of
+ * `Authentication.authenticate()` that derives the IdP gate from the session's
+ * idp_alias never runs. This reproduces exactly that step — resolving the
+ * allowed-namespace set via the same `NamespaceLoginMethodRepository` the real
+ * code uses — and injects the result into the auth context's RBACEvaluator so
+ * every RPC enforces the gate. Pass `base = users.<someUser>` as the identity.
+ */
+export async function loginAs({
+  authenticator,
+  db,
+  base,
+  loginMethod,
+}: {
+  authenticator: TestAuthenticator;
+  db: PostgresJsDatabase<typeof schema>;
+  base: UserTestData & AuthContext;
+  loginMethod: LoginMethod;
+}) {
+  const ssoMappingRepo = new NamespaceLoginMethodRepository(db);
+  const namespaceAccess = await ssoMappingRepo.allowedNamespaces({
+    organizationId: base.organizationId,
+    loginMethod,
+  });
+  const rbac = new RBACEvaluator(base.rbac.groups, base.userId, loginMethod.type === 'api-key', namespaceAccess);
+  authenticator.changeUserWithSuppliedContext({ ...base, loginMethod, rbac });
+  return { namespaceAccess, rbac };
+}
 
 export class InMemoryBlobStorage implements BlobStorage {
   private objects: Map<string, Buffer> = new Map();

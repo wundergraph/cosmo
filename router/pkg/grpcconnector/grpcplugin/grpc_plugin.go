@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/trace"
 	"os"
 	"os/exec"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
@@ -25,6 +26,7 @@ type GRPCPluginConfig struct {
 	StartupConfig      grpccommon.GRPCStartupParams
 	Tracer             trace.Tracer
 	GetTraceAttributes grpccommon.GRPCTraceAttributeGetter
+	DialOptions        []grpc.DialOption
 }
 
 type GRPCPlugin struct {
@@ -42,6 +44,8 @@ type GRPCPlugin struct {
 	tracer        trace.Tracer
 
 	getTraceAttributes grpccommon.GRPCTraceAttributeGetter
+
+	dialOptions []grpc.DialOption
 }
 
 var _ grpcconnector.ClientProvider = (*GRPCPlugin)(nil)
@@ -74,6 +78,8 @@ func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 		tracer: config.Tracer,
 
 		getTraceAttributes: config.GetTraceAttributes,
+
+		dialOptions: config.DialOptions,
 	}, nil
 }
 
@@ -121,6 +127,7 @@ func (p *GRPCPlugin) fork() error {
 		Plugins: map[string]plugin.Plugin{
 			p.pluginName: &grpccommon.ThinPlugin{},
 		},
+		GRPCDialOptions: p.dialOptions,
 	})
 
 	clientProtocol, err := pluginClient.Client()
