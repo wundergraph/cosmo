@@ -107,9 +107,6 @@ export function updateFeatureFlag(
       labelsChanged = currentLabels.length > 0;
     } else if (req.labels.length > 0) {
       const newLabels = normalizeLabels(req.labels).map((l) => joinLabel(l));
-      // Both arrays are normalized (sorted + deduped) joined labels. The length check catches
-      // additions/removals; `includes` then compares by membership rather than position, so it does
-      // not rely on both arrays being in the same order.
       labelsChanged =
         currentLabels.length !== newLabels.length || currentLabels.some((label) => !newLabels.includes(label));
     }
