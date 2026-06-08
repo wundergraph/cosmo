@@ -3,8 +3,10 @@ package core
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"reflect"
@@ -361,6 +363,7 @@ func (h *HeaderPropagation) compileExpressionRules(requestRules []*config.Reques
 func (h *HeaderPropagation) setupFileSourceRules(ctx context.Context, logger *zap.Logger, requestRules []*config.RequestHeaderRule) error {
 	for _, rule := range requestRules {
 		if !isValidFileSourceRule(rule) {
+			logger.Warn("invalid file source rule", zap.Any("rule", rule))
 			continue
 		}
 
@@ -370,10 +373,10 @@ func (h *HeaderPropagation) setupFileSourceRules(ctx context.Context, logger *za
 
 		_, err := os.Stat(rule.FromFile.Path)
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				return fmt.Errorf("file %s does not exist", rule.FromFile.Path)
 			}
-			return fmt.Errorf("error statting file %s: %w", rule.FromFile.Path, err)
+			return fmt.Errorf("error getting file stats for %s: %w", rule.FromFile.Path, err)
 		}
 
 		// If the file source content is already in memory, skip the watcher creation
