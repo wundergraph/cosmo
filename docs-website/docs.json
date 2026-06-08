@@ -498,6 +498,7 @@
                   "cli/subgraph",
                   "cli/subgraph/create",
                   "cli/subgraph/publish",
+                  "cli/subgraph/batch-publish",
                   "cli/subgraph/list",
                   "cli/subgraph/check",
                   "cli/subgraph/update",

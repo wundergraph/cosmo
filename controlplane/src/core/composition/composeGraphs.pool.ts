@@ -11,9 +11,10 @@ import { fileURLToPath } from 'node:url';
 import { availableParallelism } from 'node:os';
 import { Warning } from '@wundergraph/composition';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import WorkerPool from 'tinypool';
+import WorkerPool, { Options } from 'tinypool';
 import * as Sentry from '@sentry/node';
 import { FederatedGraphDTO } from '../../types/index.js';
+import { sentryEnvVariables } from '../env.schema.js';
 import { validateRouterCompatibilityVersion } from './composition.js';
 import { ComposedFederatedGraph, CompositionSubgraphRecord } from './composer.js';
 import {
@@ -57,18 +58,35 @@ function getComposeGraphsPool() {
     return composeGraphsPool;
   }
 
-  const { filename } = getWorkerFilename();
-
-  composeGraphsPool = new WorkerPool({
-    filename,
+  const options = {
     minThreads: 1,
     maxThreads: getMaxThreads(),
     runtime: 'child_process',
     concurrentTasksPerWorker: 2,
     serialization: 'advanced',
-  });
+  };
 
-  return composeGraphsPool;
+  return Sentry.startSpan({ name: 'ComposeGraphsPool.getComposeGraphsPool', attributes: options }, () => {
+    const { filename } = getWorkerFilename();
+
+    const env = sentryEnvVariables.parse(process.env);
+    composeGraphsPool = new WorkerPool({
+      filename,
+      ...(options as Options),
+      env: {
+        SENTRY_ENABLED: env.SENTRY_ENABLED ? 'true' : 'false',
+        SENTRY_DSN: env.SENTRY_DSN || '',
+        SENTRY_SEND_DEFAULT_PII: env.SENTRY_SEND_DEFAULT_PII ? 'true' : 'false',
+        SENTRY_TRACES_SAMPLE_RATE: String(env.SENTRY_TRACES_SAMPLE_RATE),
+        SENTRY_PROFILE_SESSION_SAMPLE_RATE: String(env.SENTRY_PROFILE_SESSION_SAMPLE_RATE),
+        SENTRY_PROFILE_LIFECYCLE: env.SENTRY_PROFILE_LIFECYCLE,
+        SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: String(env.SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS),
+        SENTRY_ENABLE_LOGS: env.SENTRY_ENABLE_LOGS ? 'true' : 'false',
+      },
+    });
+
+    return composeGraphsPool;
+  });
 }
 
 function deserializeWarning(message: string, subgraphName?: string) {
@@ -88,7 +106,7 @@ export function deserializeComposedGraphArtifact(
   federatedGraph: Pick<FederatedGraphDTO, 'id' | 'targetId' | 'name' | 'namespace' | 'namespaceId'>,
   artifact: SerializedComposedGraphArtifact,
 ): DeserializedComposedGraph {
-  return {
+  return Sentry.startSpan({ name: 'ComposeGraphsPool.deserializeComposedGraphArtifact' }, () => ({
     id: federatedGraph.id,
     targetID: federatedGraph.targetId,
     name: federatedGraph.name,
@@ -101,7 +119,7 @@ export function deserializeComposedGraphArtifact(
     fieldConfigurations: artifact.fieldConfigurations,
     subgraphs: artifact.subgraphs,
     warnings: artifact.warnings.map((warning) => deserializeWarning(warning.message, warning.subgraphName)),
-  };
+  }));
 }
 
 export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: ReturnType<RouterConfig['toJson']>) {
@@ -109,11 +127,13 @@ export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: Ret
     return;
   }
 
-  return RouterConfig.fromJson(routerExecutionConfigJson);
+  return Sentry.startSpan({ name: 'ComposeGraphsPool.deserializeRouterExecutionConfig' }, () =>
+    RouterConfig.fromJson(routerExecutionConfigJson),
+  );
 }
 
 export function composeGraphsInWorker(
-  task: Omit<ComposeGraphsTaskInput, 'routerCompatibilityVersion'>,
+  task: Omit<ComposeGraphsTaskInput, 'routerCompatibilityVersion' | 'trace'>,
 ): Promise<ComposeGraphsTaskResult> {
   const fullTask: ComposeGraphsTaskInput = {
     ...task,
@@ -122,7 +142,7 @@ export function composeGraphsInWorker(
 
   return Sentry.startSpan(
     {
-      name: 'composeGraphsInWorker',
+      name: 'ComposeGraphsPool.composeGraphsInWorker',
       attributes: {
         federatedGraphId: task.federatedGraph.id,
         federatedGraphName: task.federatedGraph.name,
@@ -131,7 +151,16 @@ export function composeGraphsInWorker(
         namespaceId: task.federatedGraph.namespaceId,
       },
     },
-    () => getComposeGraphsPool().run(fullTask) as Promise<ComposeGraphsTaskResult>,
+    () => {
+      const traceData = Sentry.getTraceData();
+      return getComposeGraphsPool().run({
+        ...fullTask,
+        trace: {
+          sentryTrace: traceData['sentry-trace'],
+          baggage: traceData.baggage,
+        },
+      } satisfies ComposeGraphsTaskInput) as Promise<ComposeGraphsTaskResult>;
+    },
   );
 }
 
