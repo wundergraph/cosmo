@@ -135,9 +135,11 @@ export const startPollingForAccessToken = async ({
   }
 };
 
-// checks if either of access token or api key are present
-// if not, it will try to refresh the access token
-// if `showErrorMessage` is `false`, any and all error message will be skipped
+/**
+ * checks if either of access token or api key are present
+ * if not, it will try to refresh the access token
+ * if `showErrorMessage` is `false`, any and all error message will be skipped
+ */
 export async function checkAuth(showErrorMessage = true): Promise<void> {
   const userConfig = readConfigFile();
 
@@ -222,4 +224,14 @@ export async function checkAuth(showErrorMessage = true): Promise<void> {
         e.toString(),
     );
   }
+}
+
+export async function isAuthenticated(): Promise<boolean> {
+  try {
+    await checkAuth(false);
+  } catch {
+    // ignore
+  }
+
+  return Boolean(config.apiKey);
 }

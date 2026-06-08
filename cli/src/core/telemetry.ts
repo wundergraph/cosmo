@@ -2,13 +2,14 @@ import crypto from 'node:crypto';
 import os from 'node:os';
 import { PostHog } from 'posthog-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { checkAuth } from '../commands/auth/utils.js';
+import { isAuthenticated } from '../commands/auth/utils.js';
 import { config, getBaseHeaders } from './config.js';
 import { CreateClient } from './client/client.js';
 
 // Environment variables to allow opting out of telemetry
 // Support for COSMO_TELEMETRY_DISABLED and Console Do Not Track standard
 const TELEMETRY_DISABLED = process.env.COSMO_TELEMETRY_DISABLED === 'true' || process.env.DO_NOT_TRACK === '1';
+const UNAUTHENTICATED_CONTEXT_METADATA = Object.freeze({ organizationId: 'anonymous' });
 
 let client: PostHog | null = null;
 
@@ -125,25 +126,17 @@ export const initTelemetry = () => {
 const getIdentity = async (): Promise<TelemetryIdentity> => {
   try {
     if (!apiClient) {
-      return {
-        organizationId: 'anonymous',
-      };
+      return UNAUTHENTICATED_CONTEXT_METADATA;
     }
 
-    try {
-      await checkAuth(false);
-    } catch {
-      // ignore
-    }
-
-    if (!config.apiKey) {
+    if (!(await isAuthenticated())) {
       /**
        * `checkAuth` perform access token refresh and updates the value for `config.apiKey` accordingly  (if needed);
        * however, if the value for `config.apiKey` remains empty, that means the user is not authenticated or the
        * token refresh failed, for this reason, we can assume the call to the `WhoAmI` RPC will fail and we can
        * just exit early
        */
-      return { organizationId: 'anonymous' };
+      return UNAUTHENTICATED_CONTEXT_METADATA;
     }
 
     const resp = await apiClient.platform.whoAmI(
@@ -165,9 +158,8 @@ const getIdentity = async (): Promise<TelemetryIdentity> => {
       console.debug('Failed to get identity for telemetry, using anonymous.', err);
     }
   }
-  return {
-    organizationId: 'anonymous',
-  };
+
+  return UNAUTHENTICATED_CONTEXT_METADATA;
 };
 
 /**
