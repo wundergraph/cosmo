@@ -20,6 +20,10 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/expr-lang/expr/vm"
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
+
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/headers"
@@ -30,9 +34,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
 )
 
 var (
@@ -108,7 +109,7 @@ type headerPropagationWriter struct {
 	routerHeaderPropagation   *HeaderPropagation
 	reqCtx                    *requestContext
 	didApplyRouterRespHeaders bool
-	costHeaderSetter          func(actualListSizes map[string]int)
+	costHeaderSetter          func(typeStats map[string]resolve.TypeNameStats)
 	didSetCostHeaders         bool
 }
 
@@ -142,7 +143,7 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	}
 	if h.costHeaderSetter != nil && !h.didSetCostHeaders {
 		h.didSetCostHeaders = true
-		h.costHeaderSetter(h.resolveCtx.ActualListSizes)
+		h.costHeaderSetter(h.resolveCtx.TypeNameStats)
 	}
 	return h.writer.Write(p)
 }
