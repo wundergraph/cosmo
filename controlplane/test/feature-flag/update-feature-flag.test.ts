@@ -18,6 +18,43 @@ import {
 
 let dbname = '';
 
+// Feature-subgraph change detection compares the new id set against the stored set (length +
+// membership), so it is order-independent. `hasChanged` is the same early-no-op signal as above.
+const createFeatureSubgraph = async (client: Parameters<typeof createFeatureFlag>[0]) => {
+  const subgraphName = genID('subgraph');
+  const featureSubgraphName = genID('featureSubgraph');
+  await createBaseAndFeatureSubgraph(
+    client,
+    subgraphName,
+    featureSubgraphName,
+    DEFAULT_SUBGRAPH_URL_ONE,
+    DEFAULT_SUBGRAPH_URL_TWO,
+  );
+  return featureSubgraphName;
+};
+
+// The update handler skips the write + recomposition when nothing actually changes. For labels
+  // this is decided by `currentLabels.some((label, i) => label !== newLabels[i])` over two arrays
+  // that `normalizeLabels` has already sorted and deduped, guarded by a length check. `hasChanged`
+  // is `false` only when that early no-op return is taken, so it is the precise signal to assert.
+  const createFlagWithLabels = async (
+    client: Parameters<typeof createFeatureFlag>[0],
+    labels: { key: string; value: string }[],
+  ) => {
+    const subgraphName = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+    await createBaseAndFeatureSubgraph(
+      client,
+      subgraphName,
+      featureSubgraphName,
+      DEFAULT_SUBGRAPH_URL_ONE,
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(client, featureFlagName, labels, [featureSubgraphName]);
+    return featureFlagName;
+  };
+
 describe('Update feature flag tests', () => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
@@ -431,5 +468,165 @@ describe('Update feature flag tests', () => {
       featureSubgraphNames: [featureSubgraphName],
     });
     expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+  });
+
+  test('that updating a feature flag with the same labels in a different order is a no-op (hasChanged is false)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const featureFlagName = await createFlagWithLabels(client, [
+      { key: 'team', value: 'A' },
+      { key: 'env', value: 'prod' },
+    ]);
+
+    // Same set of labels, reversed order.
+    const res = await client.updateFeatureFlag({
+      name: featureFlagName,
+      labels: [
+        { key: 'env', value: 'prod' },
+        { key: 'team', value: 'A' },
+      ],
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+    expect(res.hasChanged).toBe(false);
+  });
+
+  test('that updating a feature flag with the identical labels is a no-op (hasChanged is false)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const labels = [
+      { key: 'team', value: 'A' },
+      { key: 'env', value: 'prod' },
+    ];
+    const featureFlagName = await createFlagWithLabels(client, labels);
+
+    const res = await client.updateFeatureFlag({ name: featureFlagName, labels });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+    expect(res.hasChanged).toBe(false);
+  });
+
+  test('that updating a feature flag with the same labels plus a duplicate is a no-op (hasChanged is false)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const featureFlagName = await createFlagWithLabels(client, [{ key: 'team', value: 'A' }]);
+
+    // Duplicate of the existing label — `normalizeLabels` dedupes, so this is not a change.
+    const res = await client.updateFeatureFlag({
+      name: featureFlagName,
+      labels: [
+        { key: 'team', value: 'A' },
+        { key: 'team', value: 'A' },
+      ],
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+    expect(res.hasChanged).toBe(false);
+  });
+
+  test('that updating a feature flag with a changed label value triggers a change (hasChanged is true)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const featureFlagName = await createFlagWithLabels(client, [
+      { key: 'team', value: 'A' },
+      { key: 'env', value: 'prod' },
+    ]);
+
+    const res = await client.updateFeatureFlag({
+      name: featureFlagName,
+      labels: [
+        { key: 'team', value: 'B' }, // value changed A -> B
+        { key: 'env', value: 'prod' },
+      ],
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+    expect(res.hasChanged).toBe(true);
+  });
+
+  test('that updating a feature flag with an added label triggers a change (hasChanged is true)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const featureFlagName = await createFlagWithLabels(client, [{ key: 'team', value: 'A' }]);
+
+    const res = await client.updateFeatureFlag({
+      name: featureFlagName,
+      labels: [
+        { key: 'team', value: 'A' },
+        { key: 'env', value: 'prod' }, // added
+      ],
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+    expect(res.hasChanged).toBe(true);
+  });
+
+  test('that updating a feature flag with the same feature subgraphs is a no-op (hasChanged is false)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const featureSubgraphName = await createFeatureSubgraph(client);
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(client, featureFlagName, [], [featureSubgraphName]);
+
+    const res = await client.updateFeatureFlag({
+      name: featureFlagName,
+      featureSubgraphNames: [featureSubgraphName],
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+    expect(res.hasChanged).toBe(false);
+  });
+
+  test('that updating a feature flag with the same feature subgraphs in a different order is a no-op (hasChanged is false)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const featureSubgraphOne = await createFeatureSubgraph(client);
+    const featureSubgraphTwo = await createFeatureSubgraph(client);
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(client, featureFlagName, [], [featureSubgraphOne, featureSubgraphTwo]);
+
+    // Same set of feature subgraphs, reversed order.
+    const res = await client.updateFeatureFlag({
+      name: featureFlagName,
+      featureSubgraphNames: [featureSubgraphTwo, featureSubgraphOne],
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+    expect(res.hasChanged).toBe(false);
+  });
+
+  test('that updating a feature flag with an added feature subgraph triggers a change (hasChanged is true)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const featureSubgraphOne = await createFeatureSubgraph(client);
+    const featureSubgraphTwo = await createFeatureSubgraph(client);
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(client, featureFlagName, [], [featureSubgraphOne]);
+
+    const res = await client.updateFeatureFlag({
+      name: featureFlagName,
+      featureSubgraphNames: [featureSubgraphOne, featureSubgraphTwo], // added featureSubgraphTwo
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+    expect(res.hasChanged).toBe(true);
+  });
+
+  test('that updating a feature flag with a swapped feature subgraph triggers a change (hasChanged is true)', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const featureSubgraphOne = await createFeatureSubgraph(client);
+    const featureSubgraphTwo = await createFeatureSubgraph(client);
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(client, featureFlagName, [], [featureSubgraphOne]);
+
+    // Same count, different member.
+    const res = await client.updateFeatureFlag({
+      name: featureFlagName,
+      featureSubgraphNames: [featureSubgraphTwo],
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+    expect(res.hasChanged).toBe(true);
   });
 });

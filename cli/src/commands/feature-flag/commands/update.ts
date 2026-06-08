@@ -71,7 +71,10 @@ export default (opts: BaseCommandOptions) => {
         compositionWarnings: resp.compositionWarnings,
         deploymentErrors: resp.deploymentErrors,
         spinner,
-        successMessage: `The feature flag "${name}" was updated successfully.`,
+        successMessage:
+          resp.hasChanged === false
+            ? `The feature flag "${name}" has no new changes.`
+            : `The feature flag "${name}" was updated successfully.`,
         subgraphCompositionBaseErrorMessage: `The feature flag "${name}" was updated but with composition errors.`,
         subgraphCompositionDetailedErrorMessage:
           `There were composition errors when composing at least one federated graph related to the` +

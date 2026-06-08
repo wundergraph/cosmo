@@ -5,11 +5,12 @@ import {
   UpdateFeatureFlagRequest,
   UpdateFeatureFlagResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { joinLabel } from '@wundergraph/cosmo-shared';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidLabels } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidLabels, normalizeLabels } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
 
@@ -93,6 +94,59 @@ export function updateFeatureFlag(
         compositionErrors: [],
         deploymentErrors: [],
         compositionWarnings: [],
+      };
+    }
+
+    // Determine whether the request actually changes anything. The update only touches the labels
+    // (when labels are provided or unsetLabels is set) and the feature subgraph set (when feature
+    // subgraph names are provided). If neither differs from what is currently stored, there is
+    // nothing to recompose, so we skip the write and composition entirely.
+    let labelsChanged = false;
+    const currentLabels = normalizeLabels(featureFlagDTO.labels).map((l) => joinLabel(l));
+    if (req.unsetLabels) {
+      labelsChanged = currentLabels.length > 0;
+    } else if (req.labels.length > 0) {
+      const newLabels = normalizeLabels(req.labels).map((l) => joinLabel(l));
+      // Both arrays are normalized (sorted + deduped) joined labels. The length check catches
+      // additions/removals; `includes` then compares by membership rather than position, so it does
+      // not rely on both arrays being in the same order.
+      labelsChanged =
+        currentLabels.length !== newLabels.length || currentLabels.some((label) => !newLabels.includes(label));
+    }
+
+    let featureSubgraphsChanged = false;
+    if (featureSubgraphIds.length > 0) {
+      const currentFeatureSubgraphIds = new Set(featureFlagDTO.featureSubgraphs.map((fs) => fs.id));
+      featureSubgraphsChanged =
+        featureSubgraphIds.length !== currentFeatureSubgraphIds.size ||
+        featureSubgraphIds.some((id) => !currentFeatureSubgraphIds.has(id));
+    }
+
+    if (!labelsChanged && !featureSubgraphsChanged) {
+      const auditLogRepo = new AuditLogRepository(opts.db);
+      await auditLogRepo.addAuditLog({
+        organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
+        auditAction: 'feature_flag.updated',
+        action: 'updated',
+        actorId: authContext.userId,
+        auditableType: 'feature_flag',
+        auditableDisplayName: featureFlagDTO.name,
+        apiKeyName: authContext.apiKeyName,
+        actorDisplayName: authContext.userDisplayName,
+        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        targetNamespaceId: namespace.id,
+        targetNamespaceDisplayName: namespace.name,
+      });
+
+      return {
+        response: {
+          code: EnumStatusCode.OK,
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+        compositionWarnings: [],
+        hasChanged: false,
       };
     }
 
@@ -192,6 +246,7 @@ export function updateFeatureFlag(
       compositionErrors,
       deploymentErrors,
       compositionWarnings,
+      hasChanged: true,
     };
   });
 }
