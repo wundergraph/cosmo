@@ -136,9 +136,10 @@ export const startPollingForAccessToken = async ({
 };
 
 /**
- * checks if either of access token or api key are present
- * if not, it will try to refresh the access token
- * if `showErrorMessage` is `false`, any and all error message will be skipped
+ * Checks if either of access token or api key are present.
+ * If not, it will try to refresh the access token
+ *
+ * @param [showErrorMessage] - when `false`, any and all error message will be skipped
  */
 export async function checkAuth(showErrorMessage = true): Promise<void> {
   const userConfig = readConfigFile();
