@@ -176,3 +176,28 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		}`, string(result))
 	})
 }
+
+// TestConvertGraphQLResponseToProtoJSON covers the response direction (GraphQL -> proto),
+// the inverse of convertProtoJSONToGraphQLVariables. The GraphQL subgraph emits bare enum
+// values (e.g. "HAPPY"), but the proto descriptor only knows the prefixed value names
+// (e.g. "MOOD_HAPPY"). Without re-adding the prefix, the Vanguard transcoder cannot map the
+// value and silently drops the enum field on the binary wire / falls back to *_UNSPECIFIED on
+// the JSON wire. Regression test for https://github.com/wundergraph/cosmo/issues/2924.
+func TestConvertGraphQLResponseToProtoJSON(t *testing.T) {
+	t.Run("re-adds proto enum prefix to response enum value", func(t *testing.T) {
+		handler := setupHandlerWithSchema(t)
+
+		// GetEmployeeResponse has fields { string name; Mood mood; } where Mood.MOOD_HAPPY = 1.
+		// The subgraph returns the bare GraphQL enum name "HAPPY".
+		graphqlJSON := []byte(`{"name": "John", "mood": "HAPPY"}`)
+		result, err := handler.convertGraphQLResponseToProtoJSON("test.EmployeeService", "GetEmployee", graphqlJSON)
+		require.NoError(t, err)
+
+		// The enum must be rewritten to the proto-prefixed value name so proto3-JSON parsing
+		// (done by the Vanguard transcoder) maps it to the correct integer instead of dropping it.
+		assert.JSONEq(t, `{
+			"name": "John",
+			"mood": "MOOD_HAPPY"
+		}`, string(result))
+	})
+}
