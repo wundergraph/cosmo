@@ -1,6 +1,7 @@
 import { OrganizationRole } from '../../db/models.js';
-import { OrganizationGroupDTO } from '../../types/index.js';
+import { NamespaceAccess, OrganizationGroupDTO } from '../../types/index.js';
 import { traced } from '../tracing.js';
+import { isNamespaceAllowed } from '../util.js';
 
 interface RuleData {
   namespaces: string[];
@@ -48,6 +49,7 @@ export class RBACEvaluator {
     readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount'>[],
     private readonly userId?: string,
     isApiKey?: boolean,
+    readonly idpNamespaceAccess: NamespaceAccess = { kind: 'all' },
   ) {
     this.isApiKey = !!isApiKey;
     this.isLegacyApiKey = this.isApiKey && groups.length === 0;
@@ -89,94 +91,114 @@ export class RBACEvaluator {
     return this.rules.get(role);
   }
 
+  private isAllowedByIdpGate(namespaceId: string): boolean {
+    return isNamespaceAllowed(this.idpNamespaceAccess, namespaceId);
+  }
+
   canDeleteNamespace(namespace: Namespace) {
-    return this.isOrganizationAdminOrDeveloper || this.checkNamespaceAccess(namespace, ['namespace-admin']);
+    const baseAllowed =
+      this.isOrganizationAdminOrDeveloper || this.checkNamespaceAccess(namespace, ['namespace-admin']);
+    return baseAllowed && this.isAllowedByIdpGate(namespace.id);
   }
 
   hasNamespaceWriteAccess(namespace: Namespace) {
-    return this.isOrganizationAdminOrDeveloper || this.checkNamespaceAccess(namespace, ['namespace-admin']);
+    const baseAllowed =
+      this.isOrganizationAdminOrDeveloper || this.checkNamespaceAccess(namespace, ['namespace-admin']);
+    return baseAllowed && this.isAllowedByIdpGate(namespace.id);
   }
 
   hasNamespaceReadAccess(namespace: Namespace) {
-    return this.isOrganizationViewer || this.checkNamespaceAccess(namespace, ['namespace-admin', 'namespace-viewer']);
+    const baseAllowed =
+      this.isOrganizationViewer || this.checkNamespaceAccess(namespace, ['namespace-admin', 'namespace-viewer']);
+    return baseAllowed && this.isAllowedByIdpGate(namespace.id);
   }
 
   canCreateContract(namespace: Namespace) {
-    return this.canCreateFederatedGraph(namespace);
+    return this.canCreateFederatedGraph(namespace) && this.isAllowedByIdpGate(namespace.id);
   }
 
-  canCreateFeatureFlag(_: Namespace) {
-    return this.isOrganizationAdminOrDeveloper;
+  canCreateFeatureFlag(namespace: Namespace) {
+    return this.isOrganizationAdminOrDeveloper && this.isAllowedByIdpGate(namespace.id);
   }
 
-  hasFeatureFlagWriteAccess(_: FeatureFlag) {
-    return this.isOrganizationAdminOrDeveloper;
+  hasFeatureFlagWriteAccess(ff: FeatureFlag) {
+    return this.isOrganizationAdminOrDeveloper && this.isAllowedByIdpGate(ff.namespaceId);
   }
 
-  hasFeatureFlagReadAccess(_: FeatureFlag) {
-    return this.isOrganizationViewer;
+  hasFeatureFlagReadAccess(ff: FeatureFlag) {
+    return this.isOrganizationViewer && this.isAllowedByIdpGate(ff.namespaceId);
   }
 
   canCreateFederatedGraph(namespace: Namespace) {
-    return (
-      this.isOrganizationAdminOrDeveloper || this.hasRoleWithAccessToAllOrGivenNamespace('graph-admin', namespace.id)
-    );
+    const baseAllowed =
+      this.isOrganizationAdminOrDeveloper || this.hasRoleWithAccessToAllOrGivenNamespace('graph-admin', namespace.id);
+    return baseAllowed && this.isAllowedByIdpGate(namespace.id);
   }
 
   canDeleteFederatedGraph(graph: Target) {
-    return (
+    const baseAllowed =
       this.isOrganizationAdminOrDeveloper ||
       this.isTargetOwnedByUser(graph) ||
-      this.hasRoleWithAccessToAllOrGivenNamespace('graph-admin', graph.namespaceId)
-    );
+      this.hasRoleWithAccessToAllOrGivenNamespace('graph-admin', graph.namespaceId);
+    return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
 
   hasFederatedGraphWriteAccess(graph: Target) {
-    return this.isOrganizationAdminOrDeveloper || this.checkTargetAccess(graph, ['graph-admin']);
+    const baseAllowed = this.isOrganizationAdminOrDeveloper || this.checkTargetAccess(graph, ['graph-admin']);
+    return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
 
   hasFederatedGraphReadAccess(graph: Target) {
-    return (
+    const baseAllowed =
       this.isOrganizationViewer ||
-      this.hasFederatedGraphWriteAccess(graph) ||
-      this.checkTargetAccess(graph, ['graph-viewer'])
-    );
+      this.isOrganizationAdminOrDeveloper ||
+      this.checkTargetAccess(graph, ['graph-admin']) ||
+      this.checkTargetAccess(graph, ['graph-viewer']);
+    return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
 
   canCreateSubGraph(namespace: Namespace) {
-    return (
-      this.isOrganizationAdminOrDeveloper || this.hasRoleWithAccessToAllOrGivenNamespace('subgraph-admin', namespace.id)
-    );
+    const baseAllowed =
+      this.isOrganizationAdminOrDeveloper ||
+      this.hasRoleWithAccessToAllOrGivenNamespace('subgraph-admin', namespace.id);
+    return baseAllowed && this.isAllowedByIdpGate(namespace.id);
   }
 
   canUpdateSubGraph(graph: Target) {
-    return this.isOrganizationAdminOrDeveloper || this.checkTargetAccess(graph, ['subgraph-admin']);
+    const baseAllowed = this.isOrganizationAdminOrDeveloper || this.checkTargetAccess(graph, ['subgraph-admin']);
+    return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
 
   canDeleteSubGraph(graph: Target) {
-    return (
+    const baseAllowed =
       this.isOrganizationAdminOrDeveloper ||
       this.isTargetOwnedByUser(graph) ||
-      this.hasRoleWithAccessToAllOrGivenNamespace('subgraph-admin', graph.namespaceId)
-    );
+      this.hasRoleWithAccessToAllOrGivenNamespace('subgraph-admin', graph.namespaceId);
+    return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
 
   hasSubGraphWriteAccess(graph: Target) {
-    return (
-      this.isOrganizationAdminOrDeveloper || this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher'])
-    );
+    const baseAllowed =
+      this.isOrganizationAdminOrDeveloper || this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher']);
+    return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
 
   hasSubGraphCheckAccess(graph: Target) {
-    return this.hasSubGraphWriteAccess(graph) || this.checkTargetAccess(graph, ['subgraph-checker']);
+    const baseAllowed =
+      this.isOrganizationAdminOrDeveloper ||
+      this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher']) ||
+      this.checkTargetAccess(graph, ['subgraph-checker']);
+    return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
 
   hasSubGraphReadAccess(graph: Target) {
-    return (
+    const baseAllowed =
       this.isOrganizationViewer ||
-      this.hasSubGraphCheckAccess(graph) ||
-      this.checkTargetAccess(graph, ['subgraph-viewer'])
-    );
+      this.isOrganizationAdminOrDeveloper ||
+      this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher']) ||
+      this.checkTargetAccess(graph, ['subgraph-checker']) ||
+      this.checkTargetAccess(graph, ['subgraph-viewer']);
+    return baseAllowed && this.isAllowedByIdpGate(graph.namespaceId);
   }
 
   private hasRoleWithAccessToAllOrGivenNamespace(role: OrganizationRole, namespaceId: string) {

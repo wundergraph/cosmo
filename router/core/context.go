@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
+
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/expr"
@@ -655,6 +656,10 @@ type operationContext struct {
 
 func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
+}
+
+func (c *operationContext) VariablesView() resolve.VariablesView {
+	return resolve.NewVariablesView(c.variables, c.remapVariables)
 }
 
 func (o *operationContext) Files() []*httpclient.FileUpload {

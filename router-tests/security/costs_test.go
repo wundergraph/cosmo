@@ -224,7 +224,7 @@ func TestOperationCost(t *testing.T) {
 				// 50 * (employees(1) + id(0) + 1 * (role(1) + 3 * departments(1) + 5 * title(1)))
 				require.Equal(t, "500", res.Response.Header.Get(core.CostEstimatedHeader))
 				// 10 * (employees(1) + id(0) + 1 * (role(1) + 1.2 * departments(1) + 1.4 * title(1)))
-				require.Equal(t, "40", res.Response.Header.Get(core.CostActualHeader))
+				require.Equal(t, "46", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
@@ -280,14 +280,14 @@ func TestOperationCost(t *testing.T) {
 				// (not merged) because resolving from two subgraphs means more work for the router.
 				//
 				// products field (abstract, both DSes): fieldCost = 5 + 8 = 13
-				// engineers (list, EstimatedListSize=10): (0 + 1) × 10 = 10
+				// engineers (list, EstimatedListSize=10): (0 + 1) * 10 = 10
 				// upc, repositoryURL, id: 0 (scalars)
-				// total: (10 + 13) × 10 = 230
+				// total: (10 + 13) * 10 = 230
 				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
 				require.Equal(t, "230", estimated)
 
 				actual := res.Response.Header.Get(core.CostActualHeader)
-				require.Equal(t, "45", actual)
+				require.Equal(t, "24", actual) // 3 * (5.67 + 1*7/3)
 
 				// Query 2: only employees-subgraph fields — Cosmo @cost(weight: 5) from employees applies
 				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -300,7 +300,7 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "150", estimated2)
 
 				actual2 := res2.Response.Header.Get(core.CostActualHeader)
-				require.Equal(t, "21", actual2)
+				require.Equal(t, "14", actual2)
 			})
 		})
 
@@ -457,6 +457,135 @@ func TestOperationCost(t *testing.T) {
 		})
 	})
 
+	t.Run("variables remap", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("dot-path slicingArgument via input-object variable", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 100,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query S($searchInput: ProductSearchInput!) { searchThings(input: $searchInput) { a } }`,
+					Variables: []byte(`{"searchInput": {"pagination": {"first": 7}}}`),
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors":`)
+
+				// pagination.first=7 must drive the estimated cost, not EstimatedListSize(100).
+				require.Equal(t, "7", res.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "7", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("multiple remapped variables", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 100,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query S($firstCount: Int!, $secondCount: Int!) { sharedThings(numOfA: $firstCount, numOfB: $secondCount) { a } }`,
+					Variables: []byte(`{"firstCount": 13, "secondCount": 99}`),
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors":`)
+				require.Equal(t, "13", res.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "13", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("explicit null in remapped dot-path variable does not fall back to schema default", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled: true,
+						Mode:    config.CostControlModeMeasure,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Explicit null at pagination.first must be preserved through the remap
+				// (it overrides any schema default), so requireOneSlicingArgument sees
+				// "no slicing argument provided" rather than a defaulted value.
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:     `query S($searchInput: ProductSearchInput!) { searchThings(input: $searchInput) { a } }`,
+					Variables: []byte(`{"searchInput": {"pagination": {"first": null}}}`),
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"errors"`)
+				require.Contains(t, res.Body, `requires exactly one slicing argument, but none was provided`)
+				require.NotContains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("requireOneSlicingArgument validation across two remapped variables", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled: true,
+						Mode:    config.CostControlModeMeasure,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:     `query S($firstCount: Int, $lastCount: Int) { slicedThings(first: $firstCount, last: $lastCount) { a } }`,
+					Variables: []byte(`{"firstCount": 5, "lastCount": 3}`),
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"errors"`)
+				require.Contains(t, res.Body, `requires exactly one slicing argument, but 2 were provided`)
+				require.NotContains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("disabled variable remapping still computes cost correctly", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+					// With remapping disabled, cost calc must read variables by their original names directly.
+					engineExecutionConfiguration.DisableVariablesRemapping = true
+				},
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 100,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query S($firstCount: Int!, $secondCount: Int!) { sharedThings(numOfA: $firstCount, numOfB: $secondCount) { a } }`,
+					Variables: []byte(`{"firstCount": 13, "secondCount": 99}`),
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.NotContains(t, res.Body, `"errors":`)
+				require.Equal(t, "13", res.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "13", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+	})
+
 	t.Run("requireOneSlicingArgument validation", func(t *testing.T) {
 		t.Parallel()
 
@@ -519,8 +648,8 @@ func TestOperationCost(t *testing.T) {
 				ModifySecurityConfiguration: measureCostControl,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-					Query:     `query($f: Int) { slicedThings(first: $f) { a } }`,
-					Variables: []byte(`{"f": null}`),
+					Query:     `query($some: Int) { slicedThings(first: $some) { a } }`,
+					Variables: []byte(`{"some": null}`),
 				})
 				require.NoError(t, err)
 				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
@@ -1003,7 +1132,7 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, uint64(3), totalCount, "should have 3 cost recordings (1 miss + 2 hits)")
 
 				// employee(id:1) cost = 8 per request.  3 requests = 24.
-				require.Equal(t, int64(24), totalSum, "total estimated cost sum should be 3×8=24")
+				require.Equal(t, int64(24), totalSum, "total estimated cost sum should be 3*8=24")
 			})
 		})
 

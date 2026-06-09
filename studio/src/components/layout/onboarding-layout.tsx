@@ -25,12 +25,12 @@ export const OnboardingLayout = ({
           {title && <h1 className="text-lg font-semibold tracking-tight">{title}</h1>}
           <Stepper steps={ONBOARDING_STEPS} currentStep={(currentStep ?? 1) - 1} className="ml-auto" />
         </header>
-        <main className="w-full flex-1 px-6 pb-4 pt-12">
+        <main className="w-full flex-1 px-6 py-4">
           {bare ? (
             <div className="mx-auto w-full max-w-2xl">{children}</div>
           ) : (
             <Card className="mx-auto w-full max-w-2xl">
-              <CardContent className="flex min-h-[788px] flex-col p-6">{children}</CardContent>
+              <CardContent className="flex min-h-[300px] flex-col p-6">{children}</CardContent>
             </Card>
           )}
         </main>

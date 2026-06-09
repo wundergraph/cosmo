@@ -256,7 +256,7 @@ describe('Organization Group tests', () => {
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       mappers: [],
       name: 'okta',
     });
@@ -287,7 +287,7 @@ describe('Organization Group tests', () => {
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       mappers: [
         new GroupMapper({
           groupId: createGroupResponse.group!.groupId,
@@ -328,7 +328,7 @@ describe('Organization Group tests', () => {
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
-      clientSecrect: 'secret',
+      clientSecret: 'secret',
       mappers: [
         new GroupMapper({
           groupId: createGroupResponse.group!.groupId,
@@ -349,7 +349,12 @@ describe('Organization Group tests', () => {
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Ensure that the mapper was updated
-    const getProviderResponse = await client.getOIDCProvider({});
+    const { providers } = await client.listOIDCProviders({});
+    const provider = providers.find((p) => p.name === oidcName)!;
+    expect(provider).toBeDefined();
+    expect(provider.id).toBeTruthy();
+
+    const getProviderResponse = await client.getOIDCProvider({ id: provider.id });
     expect(getProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const mapper = getProviderResponse.mappers?.find((m) => m.groupId === adminGroup.groupId);

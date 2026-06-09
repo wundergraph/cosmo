@@ -1,32 +1,32 @@
-# Give everyone ownership for everything expections listed below
-* @wundergraph/Cosmo @wundergraph/Router
+# Give everyone ownership for everything exceptions listed below
+*                   @wundergraph/Cosmo @wundergraph/Router
 
 # Protect the CODEOWNERS file
-/.github/CODEOWNERS @StarpTech @Aenimus
+/.github/CODEOWNERS @wundergraph/Owners
 
-/admission-server/ @JivusAyrus @StarpTech @thisisnithin @wilsonrivera @Aenimus
-/cdn-server/ @JivusAyrus @StarpTech @thisisnithin @wilsonrivera @Aenimus
-/cli/ @endigma @JivusAyrus @StarpTech @jensneuse @wilsonrivera @Aenimus @thisisnithin
-/composition/ @Aenimus @JivusAyrus @StarpTech @thisisnithin @wilsonrivera
-/connect/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera @thisisnithin
-/connect-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera @thisisnithin
-/controlplane/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin @Aenimus
-/graphqlmetrics/ @Noroth @pepol @StarpTech
-/helm/ @Noroth @pepol @StarpTech
-/infrastructure/ @Noroth @pepol @StarpTech
-/keycloak/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin @Aenimus
-/otelcollector/ @Noroth @pepol @StarpTech
-/playground/ @wundergraph/Router @thisisnithin @StarpTech @Aenimus @JivusAyrus
-/proto/ @JivusAyrus @wilsonrivera @StarpTech @endigma
-/protographic/ @Noroth @StarpTech @endigma @dkorittki
-# Same owner for router and tests to avoid requesting too many reviewers
-/router/ @Noroth @devsergiy @StarpTech @jensneuse @endigma @SkArchon
-/router-tests/ @Noroth @devsergiy @StarpTech @jensneuse @endigma @SkArchon
-/router-plugin/ @Noroth @StarpTech @endigma @devsergiy @SkArchon
-/shared/ @Aenimus @JivusAyrus @StarpTech @thisisnithin @wilsonrivera
-/studio/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin @Aenimus
-# Cosmo Streams / EDFS
-/router/pkg/pubsub @alepane21 @StarpTech @jensneuse @dkorittki
+/.github/actions/   @wundergraph/Platform
+/.github/scripts/   @wundergraph/Platform
+/.github/workflows/ @wundergraph/Platform
+/admission-server/  @wundergraph/Cosmo
+/cdn-server/        @wundergraph/Cosmo @wundergraph/Platform
+/cli/               @wundergraph/Cosmo
+/composition/       @wundergraph/Cosmo
+/connect/           @wundergraph/Router
+/connect-go/        @wundergraph/Router
+/controlplane/      @wundergraph/Cosmo
+/graphqlmetrics/    @wundergraph/Platform
+/helm/              @wundergraph/Platform
+/infrastructure/    @wundergraph/Platform
+/keycloak/          @wundergraph/Cosmo
+/otelcollector/     @wundergraph/Platform
+/playground/        @wundergraph/Cosmo
+/protographic/      @wundergraph/Router
+/router/            @wundergraph/Router
+/router-tests/      @wundergraph/Router
+/router-plugin/     @wundergraph/Router
+/studio/            @wundergraph/Cosmo
+
+/.release-please-manifest.json @wundergraph/Platform
 
 # generated protobuf files, sourced from /proto/
 /router/gen/

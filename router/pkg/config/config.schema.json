@@ -399,6 +399,57 @@
               }
             }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "manifest": {
+              "type": "object",
+              "description": "The configuration for loading the execution config from a manifest directory on the local file system. The manifest describes the base graph and any feature flag execution configs as separate files in a directory.",
+              "additionalProperties": false,
+              "required": ["path"],
+              "dependentSchemas": {
+                "watch_interval": {
+                  "properties": {
+                    "watch": {
+                      "const": true
+                    }
+                  }
+                }
+              },
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "format": "directory-path",
+                  "description": "The path to the manifest directory. The directory contains the manifest file and the individual execution config files referenced by it."
+                },
+                "skip_missing_feature_flags": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip feature flags listed in the manifest whose execution config file cannot be loaded, instead of aborting the load. Use this when occasional missing feature flag files should not prevent the router from loading the rest of the manifest."
+                },
+                "ignored_feature_flags": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Feature flag names to skip entirely when loading the manifest. Listed flags are not loaded even when referenced by the manifest."
+                },
+                "watch": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the watch mode. The watch mode is used to watch the manifest directory for changes. If a file changes, the router will reload the execution config without downtime."
+                },
+                "watch_interval": {
+                  "type": "string",
+                  "description": "The interval at which the manifest directory is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                  "default": "1s",
+                  "duration": {
+                    "minimum": "100ms"
+                  }
+                }
+              }
+            }
+          }
         }
       ]
     },
@@ -557,6 +608,88 @@
                     "description": "Skip verification of this subgraph's server certificate. Only use for development or testing."
                   }
                 },
+                "dependencies": {
+                  "cert_file": ["key_file"],
+                  "key_file": ["cert_file"]
+                }
+              }
+            }
+          }
+        },
+        "client_grpc": {
+          "type": "object",
+          "description": "The TLS configuration for outbound gRPC connections from the router to gRPC subgraphs. Enables TLS/mTLS by presenting a client certificate when connecting to gRPC subgraphs.",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "object",
+              "description": "TLS configuration applied to all gRPC subgraph connections.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable TLS for all gRPC subgraph connections."
+                },
+                "cert_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client certificate chain file. Used to authenticate the router to gRPC subgraphs. May include intermediate certificates."
+                },
+                "key_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client private key file."
+                },
+                "ca_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the CA certificate file. Used to verify gRPC subgraph server certificates. If not set, the system's root CAs are used."
+                },
+                "insecure_skip_ca_verification": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip verification of the gRPC subgraph server certificate. Only use for development or testing."
+                }
+              },
+              "required": ["enabled"],
+              "dependencies": {
+                "cert_file": ["key_file"],
+                "key_file": ["cert_file"]
+              }
+            },
+            "subgraphs": {
+              "type": "object",
+              "description": "Per-subgraph gRPC TLS configuration overrides. Each key is a subgraph name. Fully overrides the 'all' config for that subgraph.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Enable TLS for this gRPC subgraph connection."
+                  },
+                  "cert_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client certificate chain file for this gRPC subgraph. May include intermediate certificates."
+                  },
+                  "key_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client private key file for this gRPC subgraph."
+                  },
+                  "ca_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the CA certificate file for verifying this gRPC subgraph's server certificate."
+                  },
+                  "insecure_skip_ca_verification": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip verification of this gRPC subgraph's server certificate. Only use for development or testing."
+                  }
+                },
+                "required": ["enabled"],
                 "dependencies": {
                   "cert_file": ["key_file"],
                   "key_file": ["cert_file"]
@@ -3057,6 +3190,11 @@
           "type": "integer",
           "description": "The number of cache warmup items to process per second. Higher numbers decrease the time to warm up the cache but increase the load on the system.",
           "default": 50
+        },
+        "item_delay": {
+          "type": "string",
+          "description": "A fixed delay applied after each cache warmup item is processed, per worker. Use to further smooth load during warmup. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. Defaults to 0s (no delay).",
+          "default": "0s"
         },
         "timeout": {
           "type": "string",

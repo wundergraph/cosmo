@@ -10,6 +10,7 @@ on:
     paths-ignore:
       - 'docs-website/**'
       - '*.md'
+      - '.github/CODEOWNERS'
 
 permissions:
   contents: write
@@ -27,6 +28,20 @@ jobs:
     timeout-minutes: 5
 
     steps:
+      - name: Authenticate
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: |
+            cosmo
+          permission-actions: write
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+          permission-statuses: write
+
       - name: checkout
         uses: actions/checkout@v4
 
@@ -37,7 +52,7 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           target-branch: ${{ env.RELEASE_BRANCH }}
-          token: ${{ secrets.GH_TOKEN_HELM_RELEASES }}
+          token: ${{ steps.app-token.outputs.token }}
           skip-github-release: false
           skip-github-pull-request: false
 

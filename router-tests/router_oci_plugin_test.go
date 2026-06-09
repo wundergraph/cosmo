@@ -111,6 +111,27 @@ func TestOCIPlugin_Restart(t *testing.T) {
 	})
 }
 
+func TestOCIPluginWithHeaderForwarding(t *testing.T) {
+	t.Parallel()
+
+	registryHost := startTestOCIRegistry(t)
+
+	projectsBinary := fmt.Sprintf("../router/plugins/projects/bin/%s_%s", runtime.GOOS, runtime.GOARCH)
+	coursesBinary := fmt.Sprintf("../router/plugins/courses/bin/%s_%s", runtime.GOOS, runtime.GOARCH)
+
+	buildAndPushPluginImage(t, registryHost, "test-org/projects", "v1", projectsBinary)
+	buildAndPushPluginImage(t, registryHost, "test-org/courses", "v1", coursesBinary)
+
+	testenv.RunGRPCPluginHeaderCases(t, testenv.Config{
+		RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+		ModifyRouterConfig:       addOCIImageReferences,
+		Plugins: testenv.PluginConfig{
+			Enabled:     true,
+			RegistryURL: registryHost,
+		},
+	})
+}
+
 // addOCIImageReferences adds imageReference fields to plugin datasources,
 // deriving the OCI config from the base plugins config at runtime.
 func addOCIImageReferences(routerConfig *nodev1.RouterConfig) {

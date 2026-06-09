@@ -34,7 +34,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
           },
         );
 
-        if (resp.response?.code !== EnumStatusCode.OK) {
+        if (resp.response?.code !== EnumStatusCode.OK && resp.response?.code !== EnumStatusCode.WARN_PARTIAL_DATA) {
           throw new Error(`Could not fetch federated graphs: ${resp.response?.details || ''}`);
         }
 

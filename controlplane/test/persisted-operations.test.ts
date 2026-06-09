@@ -4,7 +4,8 @@ import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi, type Mock } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
-import { MAX_MANIFEST_OPERATIONS, OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
+import { OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
+import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -1058,7 +1059,7 @@ describe('Persisted operations', (ctx) => {
     });
 
     test('Should reject publish when operation limit would be exceeded', async (testContext) => {
-      const { client, server, blobStorage, users } = await SetupTest({
+      const { client, server, users } = await SetupTest({
         dbname,
         chClient,
       });
@@ -1076,11 +1077,20 @@ describe('Persisted operations', (ctx) => {
       const fedGraph = await fedGraphRepo.byName(fedGraphName, 'default');
       expect(fedGraph).toBeDefined();
 
+      // Override the per-org persisted operations limit so we don't have to seed thousands of ops.
+      const maxManifestOperations = 5;
+      const orgRepo = new OrganizationRepository(logger, db);
+      await orgRepo.updateFeature({
+        organizationId: user.organizationId,
+        id: 'persisted-operations',
+        limit: maxManifestOperations,
+      });
+
       // Seed operations directly in the DB to fill up to the limit.
       const opsRepo = new OperationsRepository(db, fedGraph!.id);
       const clientId = await opsRepo.registerClient('test-client', user.userId);
 
-      const seedOps = Array.from({ length: MAX_MANIFEST_OPERATIONS }, (_, i) => ({
+      const seedOps = Array.from({ length: maxManifestOperations }, (_, i) => ({
         operationId: `seed-op-${i}`,
         hash: crypto.createHash('sha256').update(`seed-op-${i}`).digest('hex'),
         filePath: `seed-op-${i}.graphql`,

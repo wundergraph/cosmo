@@ -8,7 +8,11 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import { getDateRange } from '../../repositories/analytics/util.js';
 import type { RouterOptions } from '../../routes.js';
+<<<<<<< HEAD
 import { defaultRetentionLimitInDays } from '../../constants.js';
+=======
+import { UnauthorizedError } from '../../errors/errors.js';
+>>>>>>> origin/main
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getClients(
@@ -33,6 +37,11 @@ export function getClients(
         clients: [],
       };
     }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
+    }
+
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
 
     if (req.includeTraffic && opts.chClient) {

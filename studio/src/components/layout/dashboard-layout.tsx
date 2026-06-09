@@ -1,3 +1,4 @@
+import { NamespaceGateEmptyState } from '@/components/dashboard/namespace-gate-empty-state';
 import { useCurrentOrganization } from '@/hooks/use-current-organization';
 import { formatDateTime } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,7 @@ import {
   PiGear,
   PiGraphLight,
   PiKey,
+  PiLockKey,
   PiReceipt,
   PiUserGear,
   PiUsers,
@@ -107,7 +109,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const organizationSlug = router.query.organizationSlug as string;
   const checkUserAccess = useCheckUserAccess();
   const [isStarBannerDisabled, setDisableStarBanner] = useStarBannerDisabled();
-  const { namespace } = useWorkspace();
+  const { namespace, namespaceByName, isLoading: isWorkspaceLoading } = useWorkspace();
 
   const isAdmin = checkUserAccess({ rolesToBe: ['organization-admin'] });
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
@@ -220,12 +222,19 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     }
 
     if (isAdmin) {
-      navigation.push({
-        title: 'Audit log',
-        href: basePath + '/audit-log',
-        icon: <AiOutlineAudit className="size-4" />,
-        separator: !isAdminOrDeveloper,
-      });
+      navigation.push(
+        {
+          title: 'Audit log',
+          href: basePath + '/audit-log',
+          icon: <AiOutlineAudit className="size-4" />,
+        },
+        {
+          title: 'Login Methods',
+          href: basePath + `/login-methods`,
+          icon: <PiLockKey className="size-4" />,
+          separator: !isAdminOrDeveloper,
+        },
+      );
     }
 
     if (isAdminOrDeveloper) {
@@ -276,6 +285,30 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     user?.invitations,
   ]);
 
+  // When the current route is namespace-scoped and the workspace returns zero
+  // namespaces (most often because the IdP gate blocks the user's login method
+  // from every namespace), render an explainer in place of the page content.
+  // Org-level routes (settings, members, login-methods, audit log, ...) are
+  // unaffected so admins can still navigate to fix the mapping.
+  //
+  // Two flavors of namespace-scoped routes exist:
+  //   1. Index pages at `/[organizationSlug]/<page>` that take a `?namespace=`
+  //      query (graphs, subgraphs, feature-flags, policies, etc.).
+  //   2. Deep-link pages under `/[organizationSlug]/[namespace]/...`.
+  const NAMESPACE_SCOPED_PATH_PREFIXES = [
+    '/[organizationSlug]/graphs',
+    '/[organizationSlug]/subgraphs',
+    '/[organizationSlug]/feature-flags',
+    '/[organizationSlug]/policies',
+    '/[organizationSlug]/check-extensions',
+    '/[organizationSlug]/cache-warmer',
+  ];
+  const isNamespaceScopedRoute =
+    router.pathname.includes('[namespace]') ||
+    NAMESPACE_SCOPED_PATH_PREFIXES.some((prefix) => router.pathname.startsWith(prefix));
+  const hasNoNamespaces = !isWorkspaceLoading && namespaceByName.size === 0;
+  const bodyContent = isNamespaceScopedRoute && hasNoNamespaces ? <NamespaceGateEmptyState /> : children;
+
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
       <StarBanner isDisabled={isStarBannerDisabled} setDisableStarBanner={setDisableStarBanner} />
@@ -290,9 +323,9 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         )}
       >
         <SideNav links={links} isBannerDisplayed={isBannerDisplayed}>
-          {children}
+          {bodyContent}
         </SideNav>
-        <main className="flex-1 lg:pt-0">{children}</main>
+        <main className="flex-1 lg:pt-0">{bodyContent}</main>
       </div>
     </div>
   );

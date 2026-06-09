@@ -14,7 +14,8 @@ import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate 
 import { PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { MAX_MANIFEST_OPERATIONS, OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -22,6 +23,8 @@ import { createBlobStoragePath } from './utils.js';
 
 const MAX_PERSISTED_OPERATIONS = 100;
 const PARALLEL_PERSISTED_OPERATIONS_LIMIT = 25;
+// Fallback used when no `persisted-operations` limit is configured for the organization's plan.
+const DEFAULT_MAX_MANIFEST_OPERATIONS = 3000;
 
 export function publishPersistedOperations(
   opts: RouterOptions,
@@ -166,11 +169,18 @@ export function publishPersistedOperations(
       return !existingHashes.has(hash);
     }).length;
 
-    if (allExistingOperations.length + newOperationCount > MAX_MANIFEST_OPERATIONS) {
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const operationsFeature = await orgRepo.getFeature({
+      organizationId,
+      featureId: 'persisted-operations',
+    });
+    const maxManifestOperations = operationsFeature?.limit ?? DEFAULT_MAX_MANIFEST_OPERATIONS;
+
+    if (allExistingOperations.length + newOperationCount > maxManifestOperations) {
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: `Operation limit exceeded: adding ${newOperationCount} new operations would bring the total to ${allExistingOperations.length + newOperationCount}, which exceeds the maximum of ${MAX_MANIFEST_OPERATIONS} operations per graph`,
+          details: `Operation limit exceeded: adding ${newOperationCount} new operations would bring the total to ${allExistingOperations.length + newOperationCount}, which exceeds the maximum of ${maxManifestOperations} operations per graph`,
         },
         operations: [],
       };
