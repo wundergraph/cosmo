@@ -11,6 +11,7 @@
  * is safe for local modules. Value imports from npm packages are fine.
  */
 import { randomUUID } from 'node:crypto';
+import os from 'node:os';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   federateSubgraphsContract,
@@ -90,6 +91,8 @@ if (SENTRY_ENABLED && SENTRY_DSN) {
     enableLogs: SENTRY_ENABLE_LOGS,
     spotlight: process.env.NODE_ENV !== 'production',
   });
+
+  Sentry.setTag('hostname', os.hostname());
 }
 
 function parseGRPCMapping(mappings: string): GRPCMapping {
