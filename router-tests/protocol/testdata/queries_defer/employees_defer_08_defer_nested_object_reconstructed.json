@@ -2,32 +2,19 @@
   "data": {
     "employees": [
       {
-        "id": 1,
-        "notes": "Jens notes resolved by products",
-        "role": {
-          "departments": [
-            "ENGINEERING",
-            "MARKETING"
-          ],
-          "title": [
-            "Founder",
-            "CEO"
-          ],
-          "engineerType": "BACKEND"
-        },
         "details": {
           "forename": "Jens",
-          "surname": "Neuse",
+          "hasChildren": true,
           "location": {
             "key": {
               "name": "Germany"
             },
             "language": "German"
           },
-          "hasChildren": true,
           "maritalStatus": "MARRIED",
           "nationality": "GERMAN",
-          "pets": null
+          "pets": null,
+          "surname": "Neuse"
         },
         "hobbies": [
           {
@@ -60,40 +47,41 @@
             ]
           }
         ],
+        "id": 1,
+        "notes": "Jens notes resolved by products",
         "products": [
           "CONSULTANCY",
           "COSMO",
           "ENGINE",
           "MARKETING",
           "SDK"
-        ]
-      },
-      {
-        "id": 2,
-        "notes": "Dustin notes resolved by products",
+        ],
         "role": {
           "departments": [
-            "ENGINEERING"
+            "ENGINEERING",
+            "MARKETING"
           ],
+          "engineerType": "BACKEND",
           "title": [
-            "Co-founder",
-            "Tech Lead"
-          ],
-          "engineerType": "FULLSTACK"
-        },
+            "Founder",
+            "CEO"
+          ]
+        }
+      },
+      {
         "details": {
           "forename": "Dustin",
-          "surname": "Deus",
+          "hasChildren": false,
           "location": {
             "key": {
               "name": "Germany"
             },
             "language": "German"
           },
-          "hasChildren": false,
           "maritalStatus": "ENGAGED",
           "nationality": "GERMAN",
-          "pets": null
+          "pets": null,
+          "surname": "Deus"
         },
         "hobbies": [
           {
@@ -113,43 +101,44 @@
             ]
           }
         ],
+        "id": 2,
+        "notes": "Dustin notes resolved by products",
         "products": [
           "COSMO",
           "SDK"
-        ]
-      },
-      {
-        "id": 3,
-        "notes": "Stefan notes resolved by products",
+        ],
         "role": {
           "departments": [
-            "MARKETING"
+            "ENGINEERING"
           ],
+          "engineerType": "FULLSTACK",
           "title": [
             "Co-founder",
-            "Head of Growth"
+            "Tech Lead"
           ]
-        },
+        }
+      },
+      {
         "details": {
           "forename": "Stefan",
-          "surname": "Avram",
+          "hasChildren": false,
           "location": {
             "key": {
               "name": "America"
             },
             "language": "English"
           },
-          "hasChildren": false,
           "maritalStatus": "ENGAGED",
           "nationality": "AMERICAN",
           "pets": [
             {
               "class": "REPTILE",
+              "dangerous": "yes",
               "gender": "UNKNOWN",
-              "name": "Snappy",
-              "dangerous": "yes"
+              "name": "Snappy"
             }
-          ]
+          ],
+          "surname": "Avram"
         },
         "hobbies": [
           {
@@ -172,53 +161,48 @@
             ]
           }
         ],
+        "id": 3,
+        "notes": "Stefan notes resolved by products",
         "products": [
           "CONSULTANCY",
           "MARKETING"
-        ]
-      },
-      {
-        "id": 4,
-        "notes": "Björn notes resolved by products",
+        ],
         "role": {
           "departments": [
-            "OPERATIONS",
             "MARKETING"
           ],
           "title": [
             "Co-founder",
-            "COO"
-          ],
-          "operatorType": [
-            "HUMAN_RESOURCES",
-            "FINANCE"
+            "Head of Growth"
           ]
-        },
+        }
+      },
+      {
         "details": {
           "forename": "Björn",
-          "surname": "Schwenzer",
+          "hasChildren": true,
           "location": {
             "key": {
               "name": "Germany"
             },
             "language": "German"
           },
-          "hasChildren": true,
           "maritalStatus": "MARRIED",
           "nationality": "GERMAN",
           "pets": [
             {
+              "breed": "GOLDEN_RETRIEVER",
               "class": "MAMMAL",
               "gender": "FEMALE",
-              "name": "Abby",
-              "breed": "GOLDEN_RETRIEVER"
+              "name": "Abby"
             },
             {
               "class": "MAMMAL",
               "gender": "MALE",
               "name": "Survivor"
             }
-          ]
+          ],
+          "surname": "Schwenzer"
         },
         "hobbies": [
           {
@@ -251,34 +235,38 @@
             ]
           }
         ],
+        "id": 4,
+        "notes": "Björn notes resolved by products",
         "products": [
           "FINANCE",
           "HUMAN_RESOURCES",
           "MARKETING"
-        ]
-      },
-      {
-        "id": 5,
-        "notes": "Sergiy notes resolved by products",
+        ],
         "role": {
           "departments": [
-            "ENGINEERING"
+            "OPERATIONS",
+            "MARKETING"
+          ],
+          "operatorType": [
+            "HUMAN_RESOURCES",
+            "FINANCE"
           ],
           "title": [
-            "Senior GO Engineer"
-          ],
-          "engineerType": "BACKEND"
-        },
+            "Co-founder",
+            "COO"
+          ]
+        }
+      },
+      {
         "details": {
           "forename": "Sergiy",
-          "surname": "Petrunin",
+          "hasChildren": false,
           "location": {
             "key": {
               "name": "Ukraine"
             },
             "language": "Ukrainian"
           },
-          "hasChildren": false,
           "maritalStatus": "ENGAGED",
           "nationality": "UKRAINIAN",
           "pets": [
@@ -342,7 +330,8 @@
               "name": "Vasya",
               "type": "HOME"
             }
-          ]
+          ],
+          "surname": "Petrunin"
         },
         "hobbies": [
           {
@@ -355,36 +344,36 @@
             "name": "Raising cats"
           }
         ],
+        "id": 5,
+        "notes": "Sergiy notes resolved by products",
         "products": [
           "ENGINE",
           "SDK"
-        ]
-      },
-      {
-        "id": 7,
-        "notes": "Suvij notes resolved by products",
+        ],
         "role": {
           "departments": [
             "ENGINEERING"
           ],
+          "engineerType": "BACKEND",
           "title": [
-            "Software Engineer"
-          ],
-          "engineerType": "FULLSTACK"
-        },
+            "Senior GO Engineer"
+          ]
+        }
+      },
+      {
         "details": {
           "forename": "Suvij",
-          "surname": "Surya",
+          "hasChildren": false,
           "location": {
             "key": {
               "name": "India"
             },
             "language": "Hindi"
           },
-          "hasChildren": false,
           "maritalStatus": null,
           "nationality": "INDIAN",
-          "pets": null
+          "pets": null,
+          "surname": "Surya"
         },
         "hobbies": [
           {
@@ -398,36 +387,36 @@
             "name": "Watching anime"
           }
         ],
+        "id": 7,
+        "notes": "Suvij notes resolved by products",
         "products": [
           "COSMO",
           "SDK"
-        ]
-      },
-      {
-        "id": 8,
-        "notes": "Nithin notes resolved by products",
+        ],
         "role": {
           "departments": [
             "ENGINEERING"
           ],
+          "engineerType": "FULLSTACK",
           "title": [
             "Software Engineer"
-          ],
-          "engineerType": "FULLSTACK"
-        },
+          ]
+        }
+      },
+      {
         "details": {
           "forename": "Nithin",
-          "surname": "Kumar",
+          "hasChildren": false,
           "location": {
             "key": {
               "name": "India"
             },
             "language": "Hindi"
           },
-          "hasChildren": false,
           "maritalStatus": null,
           "nationality": "INDIAN",
-          "pets": null
+          "pets": null,
+          "surname": "Kumar"
         },
         "hobbies": [
           {
@@ -447,33 +436,32 @@
             "name": "Watching anime"
           }
         ],
+        "id": 8,
+        "notes": "Nithin notes resolved by products",
         "products": [
           "COSMO",
           "SDK"
-        ]
-      },
-      {
-        "id": 10,
-        "notes": "Eelco notes resolved by products",
+        ],
         "role": {
           "departments": [
             "ENGINEERING"
           ],
+          "engineerType": "FULLSTACK",
           "title": [
-            "Senior Frontend Engineer"
-          ],
-          "engineerType": "FRONTEND"
-        },
+            "Software Engineer"
+          ]
+        }
+      },
+      {
         "details": {
           "forename": "Eelco",
-          "surname": "Wiersma",
+          "hasChildren": false,
           "location": {
             "key": {
               "name": "Netherlands"
             },
             "language": "Dutch"
           },
-          "hasChildren": false,
           "maritalStatus": null,
           "nationality": "DUTCH",
           "pets": [
@@ -482,7 +470,8 @@
               "gender": "UNKNOWN",
               "name": "Vanson"
             }
-          ]
+          ],
+          "surname": "Wiersma"
         },
         "hobbies": [
           {
@@ -525,71 +514,70 @@
             ]
           }
         ],
+        "id": 10,
+        "notes": "Eelco notes resolved by products",
         "products": [
           "CONSULTANCY",
           "COSMO",
           "SDK"
-        ]
-      },
-      {
-        "id": 11,
-        "notes": "Alexandra notes resolved by products",
+        ],
         "role": {
           "departments": [
-            "OPERATIONS"
+            "ENGINEERING"
           ],
+          "engineerType": "FRONTEND",
           "title": [
-            "Accounting & Finance"
-          ],
-          "operatorType": [
-            "FINANCE"
+            "Senior Frontend Engineer"
           ]
-        },
+        }
+      },
+      {
         "details": {
           "forename": "Alexandra",
-          "surname": "Neuse",
+          "hasChildren": true,
           "location": {
             "key": {
               "name": "Germany"
             },
             "language": "German"
           },
-          "hasChildren": true,
           "maritalStatus": "MARRIED",
           "nationality": "GERMAN",
-          "pets": null
+          "pets": null,
+          "surname": "Neuse"
         },
         "hobbies": [
           {
             "name": "Spending time with the family"
           }
         ],
+        "id": 11,
+        "notes": "Alexandra notes resolved by products",
         "products": [
           "FINANCE"
-        ]
-      },
-      {
-        "id": 12,
-        "notes": "David notes resolved by products",
+        ],
         "role": {
           "departments": [
-            "ENGINEERING"
+            "OPERATIONS"
+          ],
+          "operatorType": [
+            "FINANCE"
           ],
           "title": [
-            "Software Engineer"
-          ],
-          "engineerType": "FULLSTACK"
-        },
+            "Accounting \u0026 Finance"
+          ]
+        }
+      },
+      {
         "details": {
           "forename": "David",
-          "surname": "Stutt",
+          "hasChildren": false,
           "location": {
             "key": {
               "name": "England"
             },
             "language": "English"
           },
-          "hasChildren": false,
           "maritalStatus": "MARRIED",
           "nationality": "ENGLISH",
           "pets": [
@@ -599,7 +587,8 @@
               "name": "Pepper",
               "type": "HOME"
             }
-          ]
+          ],
+          "surname": "Stutt"
         },
         "hobbies": [
           {
@@ -640,12 +629,23 @@
             ]
           }
         ],
+        "id": 12,
+        "notes": "David notes resolved by products",
         "products": [
           "CONSULTANCY",
           "COSMO",
           "ENGINE",
           "SDK"
-        ]
+        ],
+        "role": {
+          "departments": [
+            "ENGINEERING"
+          ],
+          "engineerType": "FULLSTACK",
+          "title": [
+            "Software Engineer"
+          ]
+        }
       }
     ]
   }

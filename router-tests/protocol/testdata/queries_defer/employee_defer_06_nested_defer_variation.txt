@@ -2,17 +2,17 @@
 --graphql
 Content-Type: application/json
 
-{"data":{"employee":{},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"hasNext":true}
+{"data":{"employee":{},"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"pending":[{"id":"1","path":["employee"]},{"id":"2","path":["employee"]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"id":1,"details":{"forename":"Jens","location":{"language":"German"}}},"path":["employee"]}],"hasNext":true}
+{"incremental":[{"data":{"id":1,"details":{"forename":"Jens","location":{"language":"German"}}},"id":"1"}],"completed":[{"id":"1"}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"path":["employee"]}],"hasNext":false}
+{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"id":"2"}],"completed":[{"id":"2"}],"hasNext":false}
 
 --graphql
 --graphql--

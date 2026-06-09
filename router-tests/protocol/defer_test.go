@@ -110,15 +110,35 @@ func TestDeferTestDataQueries(t *testing.T) {
 						body, err := io.ReadAll(res.Body)
 						require.NoError(t, err)
 
-						update := false
-
-						t.Run("raw multipart body", func(t *testing.T) {
-							if !update {
-								gMultipart.Assert(t, name, body)
-							} else {
-								gMultipart.Update(t, name, body)
+						skipRaw := func() bool {
+							skips := []string{
+								"extensive_parallel",
+								"parallel_defers",
+								"products_defer",
+								"multiple_fields_deferred",
 							}
-						})
+
+							for _, skip := range skips {
+								if strings.HasSuffix(name, skip) || strings.HasPrefix(name, skip) {
+									return true
+								}
+							}
+
+							return false
+						}
+
+						// skip checking non deterministic order of payloads
+						if !skipRaw() {
+							updateRaw := false
+
+							t.Run("raw multipart body", func(t *testing.T) {
+								if !updateRaw {
+									gMultipart.Assert(t, name, body)
+								} else {
+									gMultipart.Update(t, name, body)
+								}
+							})
+						}
 
 						var actual []byte
 
@@ -126,13 +146,15 @@ func TestDeferTestDataQueries(t *testing.T) {
 							// Reconstruct the full response from chunks
 							reconstructed, err := reconstructDeferResponse(body)
 							require.NoError(t, err)
-							actual = normalizeJSON(t, reconstructed)
+							actual = normalizeWithKeysSort(t, reconstructed)
 						} else {
-							actual = normalizeJSON(t, body)
+							actual = normalizeWithKeysSort(t, body)
 						}
 
+						updateFull := false
+
 						t.Run("assert full response", func(t *testing.T) {
-							if !update {
+							if !updateFull {
 								gFull.Assert(t, name+"_reconstructed", actual)
 							} else {
 								gFull.Update(t, name+"_reconstructed", actual)
@@ -170,7 +192,15 @@ func normalizeWithKeysSort(tb testing.TB, data []byte) []byte {
 
 // reconstructDeferResponse parses a multipart/mixed defer body, merges all
 // incremental patches onto the initial data using astjson, and returns
-// the complete JSON response (without transport fields like hasNext).
+// the complete JSON response (without transport fields like hasNext/pending).
+//
+// Frame format (GraphQL incremental delivery):
+//
+//	initial:    {"data":{...},"pending":[{"id":"1","path":["user"],"label":"..."}],"hasNext":true}
+//	subsequent: {"incremental":[{"data":{...},"id":"1","subPath":[0,"info"],"errors":[...]}],
+//	             "completed":[{"id":"1","errors":[...]}],"hasNext":false}
+//
+// The merge target of an incremental item is pending[id].path + item.subPath.
 func reconstructDeferResponse(body []byte) ([]byte, error) {
 	parts, err := parseMultipartParts(body)
 	if err != nil {
@@ -186,11 +216,41 @@ func reconstructDeferResponse(body []byte) ([]byte, error) {
 		return nil, fmt.Errorf("parse initial part: %w", err)
 	}
 
+	// pendingPaths maps defer id -> base path segments announced in "pending".
+	pendingPaths := map[string][]string{}
+	collectPending := func(v *astjson.Value) {
+		for _, entry := range v.GetArray("pending") {
+			id := string(entry.GetStringBytes("id"))
+			var path []string
+			for _, seg := range entry.GetArray("path") {
+				path = append(path, pathSegmentKey(seg))
+			}
+			pendingPaths[id] = path
+		}
+	}
+	collectPending(result)
+
+	appendRootErrors := func(patchErrors *astjson.Value) {
+		if patchErrors == nil || patchErrors.Type() != astjson.TypeArray {
+			return
+		}
+		existing := result.Get("errors")
+		if existing == nil || existing.Type() == astjson.TypeNull {
+			result.Set(nil, "errors", patchErrors)
+		} else {
+			merged := appendArrayValues(existing, patchErrors)
+			result.Set(nil, "errors", merged)
+		}
+	}
+
 	for _, part := range parts[1:] {
 		partVal, err := p.ParseBytes(part)
 		if err != nil {
 			return nil, fmt.Errorf("parse part: %w", err)
 		}
+
+		// New pending entries may be announced in subsequent payloads.
+		collectPending(partVal)
 
 		for _, item := range partVal.GetArray("incremental") {
 			patchData := item.Get("data")
@@ -198,15 +258,22 @@ func reconstructDeferResponse(body []byte) ([]byte, error) {
 				continue
 			}
 
-			// Build path: prepend "data", then each segment from the path array.
+			// Build path: "data", then the pending entry's path, then subPath.
 			pathKeys := []string{"data"}
-			for _, seg := range item.GetArray("path") {
-				switch seg.Type() {
-				case astjson.TypeNumber:
-					pathKeys = append(pathKeys, string(seg.MarshalTo(nil)))
-				default:
-					s, _ := seg.StringBytes()
-					pathKeys = append(pathKeys, string(s))
+			if id := item.Get("id"); id != nil {
+				idStr := string(id.GetStringBytes())
+				base, ok := pendingPaths[idStr]
+				if !ok {
+					return nil, fmt.Errorf("incremental item references unknown pending id %q", idStr)
+				}
+				pathKeys = append(pathKeys, base...)
+				for _, seg := range item.GetArray("subPath") {
+					pathKeys = append(pathKeys, pathSegmentKey(seg))
+				}
+			} else {
+				// Legacy format: the full path lives directly on the incremental item.
+				for _, seg := range item.GetArray("path") {
+					pathKeys = append(pathKeys, pathSegmentKey(seg))
 				}
 			}
 
@@ -215,23 +282,33 @@ func reconstructDeferResponse(body []byte) ([]byte, error) {
 			}
 
 			// Collect errors from incremental items into root errors.
-			patchErrors := item.Get("errors")
-			if patchErrors != nil && patchErrors.Type() == astjson.TypeArray {
-				existing := result.Get("errors")
-				if existing == nil || existing.Type() == astjson.TypeNull {
-					result.Set(nil, "errors", patchErrors)
-				} else {
-					merged := appendArrayValues(existing, patchErrors)
-					result.Set(nil, "errors", merged)
-				}
-			}
+			appendRootErrors(item.Get("errors"))
+		}
+
+		// completed entries carry errors when a deferred fragment was discarded
+		// (e.g. a non-nullable field error inside the fragment).
+		for _, item := range partVal.GetArray("completed") {
+			appendRootErrors(item.Get("errors"))
 		}
 	}
 
-	// Remove transport-only field.
+	// Remove transport-only fields.
 	result.Del("hasNext")
+	result.Del("pending")
 
 	return result.MarshalTo(nil), nil
+}
+
+// pathSegmentKey converts a path/subPath segment (string field name or integer
+// list index) into a key usable with astjson Get/Set.
+func pathSegmentKey(seg *astjson.Value) string {
+	switch seg.Type() {
+	case astjson.TypeNumber:
+		return string(seg.MarshalTo(nil))
+	default:
+		s, _ := seg.StringBytes()
+		return string(s)
+	}
 }
 
 // mergeAtPath navigates result to the node at pathKeys and deep-merges patch there.

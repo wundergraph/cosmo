@@ -2,32 +2,32 @@
 --graphql
 Content-Type: application/json
 
-{"data":{"products":[{},{},{}],"productTypes":[{"__typename":"Cosmo"},{"__typename":"Consultancy","lead":{"details":{"forename":"Jens"}},"name":"CONSULTANCY"},{"__typename":"Documentation"}]},"hasNext":true}
+{"data":{"products":[{},{},{}],"productTypes":[{"__typename":"Cosmo"},{"__typename":"Consultancy","lead":{"details":{"forename":"Jens"}},"name":"CONSULTANCY"},{"__typename":"Documentation"}]},"pending":[{"id":"1","path":["products"]},{"id":"2","path":["products"]},{"id":"3","path":["products"]},{"id":"4","path":["productTypes"]},{"id":"5","path":["productTypes"]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"upc":"cosmo"},"path":["products",1]},{"data":{"upc":"sdk"},"path":["products",2]}],"hasNext":true}
+{"incremental":[{"data":{"upc":"cosmo"},"id":"1","subPath":[1]},{"data":{"upc":"sdk"},"id":"1","subPath":[2]}],"completed":[{"id":"1"}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"name":"COSMO","lead":{"details":{"forename":"Dustin"}},"repositoryURL":"https://github.com/wundergraph/cosmo"},"path":["products",1]}],"hasNext":true}
+{"incremental":[{"data":{"upc":"cosmo"},"id":"5","subPath":[0]}],"completed":[{"id":"5"}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"owner":{"details":{"forename":"Jens"}},"clientLanguages":["RUST","TYPESCRIPT"],"unicode":"😀♥!\u0015\u0010🝥"},"path":["products",2]}],"hasNext":true}
+{"incremental":[{"data":{"url":"https://cosmo-docs.wundergraph.com/","urls":["https://cal.com/stefan-avram-wundergraph/wundergraph-introduction","https://github.com/wundergraph/graphql-go-tools/blob/master/README.md","N/A","https://docs.wundergraph.com/"]},"id":"4","subPath":[2]}],"completed":[{"id":"4"}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"url":"https://cosmo-docs.wundergraph.com/","urls":["https://cal.com/stefan-avram-wundergraph/wundergraph-introduction","https://github.com/wundergraph/graphql-go-tools/blob/master/README.md","N/A","https://docs.wundergraph.com/"]},"path":["productTypes",2]}],"hasNext":true}
+{"incremental":[{"data":{"name":"COSMO","lead":{"details":{"forename":"Dustin"}},"repositoryURL":"https://github.com/wundergraph/cosmo"},"id":"2","subPath":[1]}],"completed":[{"id":"2"}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"upc":"cosmo"},"path":["productTypes",0]}],"hasNext":false}
+{"incremental":[{"data":{"owner":{"details":{"forename":"Jens"}},"clientLanguages":["RUST","TYPESCRIPT"],"unicode":"😀♥!\u0015\u0010🝥"},"id":"3","subPath":[2]}],"completed":[{"id":"3"}],"hasNext":false}
 
 --graphql
 --graphql--

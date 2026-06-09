@@ -3,12 +3,12 @@
     "products": [
       {
         "__typename": "Consultancy",
+        "isLeadAvailable": false,
         "lead": {
           "__typename": "Employee",
-          "id": 1,
-          "derivedMood": "HAPPY"
-        },
-        "isLeadAvailable": false
+          "derivedMood": "HAPPY",
+          "id": 1
+        }
       },
       {
         "__typename": "Cosmo"

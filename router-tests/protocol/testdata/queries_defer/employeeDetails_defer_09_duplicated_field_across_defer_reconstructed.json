@@ -2,70 +2,69 @@
   "data": {
     "employees": [
       {
-        "id": 1,
         "hobbies": [
           {
             "__typename": "Exercise",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -73,34 +72,34 @@
             "__typename": "Gaming",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -108,58 +107,58 @@
             "__typename": "Other",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 11,
                 "details": {
                   "forename": "Alexandra"
-                }
+                },
+                "id": 11
               }
             ]
           },
@@ -167,28 +166,28 @@
             "__typename": "Programming",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -196,105 +195,105 @@
             "__typename": "Travelling",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           }
         ],
+        "id": 1,
         "notes": "Jens notes resolved by products"
       },
       {
-        "id": 2,
         "hobbies": [
           {
             "__typename": "Exercise",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -302,34 +301,34 @@
             "__typename": "Gaming",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -337,99 +336,99 @@
             "__typename": "Programming",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           }
         ],
+        "id": 2,
         "notes": "Dustin notes resolved by products"
       },
       {
-        "id": 3,
         "hobbies": [
           {
             "__typename": "Exercise",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -437,64 +436,64 @@
             "__typename": "Exercise",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -502,58 +501,58 @@
             "__typename": "Other",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 11,
                 "details": {
                   "forename": "Alexandra"
-                }
+                },
+                "id": 11
               }
             ]
           },
@@ -561,105 +560,105 @@
             "__typename": "Travelling",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           }
         ],
+        "id": 3,
         "notes": "Stefan notes resolved by products"
       },
       {
-        "id": 4,
         "hobbies": [
           {
             "__typename": "Exercise",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -667,10 +666,10 @@
             "__typename": "Flying",
             "employees": [
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               }
             ]
           },
@@ -678,99 +677,99 @@
             "__typename": "Travelling",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           }
         ],
+        "id": 4,
         "notes": "Björn notes resolved by products"
       },
       {
-        "id": 5,
         "hobbies": [
           {
             "__typename": "Other",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 11,
                 "details": {
                   "forename": "Alexandra"
-                }
+                },
+                "id": 11
               }
             ]
           },
@@ -778,58 +777,58 @@
             "__typename": "Other",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 11,
                 "details": {
                   "forename": "Alexandra"
-                }
+                },
+                "id": 11
               }
             ]
           },
@@ -837,99 +836,99 @@
             "__typename": "Other",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 11,
                 "details": {
                   "forename": "Alexandra"
-                }
+                },
+                "id": 11
               }
             ]
           }
         ],
+        "id": 5,
         "notes": "Sergiy notes resolved by products"
       },
       {
-        "id": 7,
         "hobbies": [
           {
             "__typename": "Gaming",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -937,129 +936,129 @@
             "__typename": "Other",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 11,
                 "details": {
                   "forename": "Alexandra"
-                }
+                },
+                "id": 11
               }
             ]
           }
         ],
+        "id": 7,
         "notes": "Suvij notes resolved by products"
       },
       {
-        "id": 8,
         "hobbies": [
           {
             "__typename": "Exercise",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -1067,34 +1066,34 @@
             "__typename": "Gaming",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -1102,93 +1101,93 @@
             "__typename": "Other",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 11,
                 "details": {
                   "forename": "Alexandra"
-                }
+                },
+                "id": 11
               }
             ]
           }
         ],
+        "id": 8,
         "notes": "Nithin notes resolved by products"
       },
       {
-        "id": 10,
         "hobbies": [
           {
             "__typename": "Programming",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -1196,64 +1195,64 @@
             "__typename": "Exercise",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -1261,64 +1260,64 @@
             "__typename": "Exercise",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -1326,64 +1325,64 @@
             "__typename": "Exercise",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -1391,58 +1390,58 @@
             "__typename": "Other",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 11,
                 "details": {
                   "forename": "Alexandra"
-                }
+                },
+                "id": 11
               }
             ]
           },
@@ -1450,134 +1449,134 @@
             "__typename": "Travelling",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           }
         ],
+        "id": 10,
         "notes": "Eelco notes resolved by products"
       },
       {
-        "id": 11,
         "hobbies": [
           {
             "__typename": "Other",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 5,
                 "details": {
                   "forename": "Sergiy"
-                }
+                },
+                "id": 5
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 11,
                 "details": {
                   "forename": "Alexandra"
-                }
+                },
+                "id": 11
               }
             ]
           }
         ],
+        "id": 11,
         "notes": "Alexandra notes resolved by products"
       },
       {
-        "id": 12,
         "hobbies": [
           {
             "__typename": "Programming",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -1585,64 +1584,64 @@
             "__typename": "Exercise",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -1650,34 +1649,34 @@
             "__typename": "Gaming",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 2,
                 "details": {
                   "forename": "Dustin"
-                }
+                },
+                "id": 2
               },
               {
-                "id": 7,
                 "details": {
                   "forename": "Suvij"
-                }
+                },
+                "id": 7
               },
               {
-                "id": 8,
                 "details": {
                   "forename": "Nithin"
-                }
+                },
+                "id": 8
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           },
@@ -1685,38 +1684,39 @@
             "__typename": "Travelling",
             "employees": [
               {
-                "id": 1,
                 "details": {
                   "forename": "Jens"
-                }
+                },
+                "id": 1
               },
               {
-                "id": 3,
                 "details": {
                   "forename": "Stefan"
-                }
+                },
+                "id": 3
               },
               {
-                "id": 4,
                 "details": {
                   "forename": "Björn"
-                }
+                },
+                "id": 4
               },
               {
-                "id": 10,
                 "details": {
                   "forename": "Eelco"
-                }
+                },
+                "id": 10
               },
               {
-                "id": 12,
                 "details": {
                   "forename": "David"
-                }
+                },
+                "id": 12
               }
             ]
           }
         ],
+        "id": 12,
         "notes": "David notes resolved by products"
       }
     ]

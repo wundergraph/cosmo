@@ -2,12 +2,12 @@
 --graphql
 Content-Type: application/json
 
-{"data":{"products":[{"__typename":"Consultancy","lead":{"__typename":"Employee","id":1}},{"__typename":"Cosmo"},{"__typename":"SDK"}]},"hasNext":true}
+{"data":{"products":[{"__typename":"Consultancy","lead":{"__typename":"Employee","id":1}},{"__typename":"Cosmo"},{"__typename":"SDK"}]},"pending":[{"id":"1","path":["products"]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"isLeadAvailable":false},"path":["products",0]},{"data":{"derivedMood":"HAPPY"},"path":["products",0,"lead"]}],"hasNext":false}
+{"incremental":[{"data":{"isLeadAvailable":false},"id":"1","subPath":[0]},{"data":{"derivedMood":"HAPPY"},"id":"1","subPath":[0,"lead"]}],"completed":[{"id":"1"}],"hasNext":false}
 
 --graphql
 --graphql--

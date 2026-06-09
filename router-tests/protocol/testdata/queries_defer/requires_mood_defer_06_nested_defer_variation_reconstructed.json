@@ -4,8 +4,8 @@
       {
         "lead": {
           "__typename": "Employee",
-          "id": 1,
-          "derivedMood": "HAPPY"
+          "derivedMood": "HAPPY",
+          "id": 1
         }
       },
       {},

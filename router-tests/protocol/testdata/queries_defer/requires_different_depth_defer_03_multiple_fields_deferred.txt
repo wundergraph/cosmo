@@ -2,17 +2,17 @@
 --graphql
 Content-Type: application/json
 
-{"data":{"products":[{"__typename":"Consultancy"},{"__typename":"Cosmo"},{"__typename":"SDK"}]},"hasNext":true}
+{"data":{"products":[{"__typename":"Consultancy"},{"__typename":"Cosmo"},{"__typename":"SDK"}]},"pending":[{"id":"1","path":["products"]},{"id":"2","path":["products"]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"isLeadAvailable":false},"path":["products",0]}],"hasNext":true}
+{"incremental":[{"data":{"lead":{"__typename":"Employee","id":1,"derivedMood":"HAPPY"}},"id":"2","subPath":[0]}],"completed":[{"id":"2"}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"lead":{"__typename":"Employee","id":1,"derivedMood":"HAPPY"}},"path":["products",0]}],"hasNext":false}
+{"incremental":[{"data":{"isLeadAvailable":false},"id":"1","subPath":[0]}],"completed":[{"id":"1"}],"hasNext":false}
 
 --graphql
 --graphql--

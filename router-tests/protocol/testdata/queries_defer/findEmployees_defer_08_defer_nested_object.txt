@@ -2,12 +2,12 @@
 --graphql
 Content-Type: application/json
 
-{"data":{"a":[{},{},{},{},{}],"b":[{"details":{"forename":"Jens"}},{"details":{"forename":"Alexandra"}}],"c":[{"details":{"forename":"David"}}],"d":[]},"hasNext":true}
+{"data":{"a":[{},{},{},{},{}],"b":[{"details":{"forename":"Jens"}},{"details":{"forename":"Alexandra"}}],"c":[{"details":{"forename":"David"}}],"d":[]},"pending":[{"id":"1","path":["a"]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"details":{"forename":"Stefan"}},"path":["a",0]},{"data":{"details":{"forename":"Björn"}},"path":["a",1]},{"data":{"details":{"forename":"Sergiy"}},"path":["a",2]},{"data":{"details":{"forename":"Eelco"}},"path":["a",3]},{"data":{"details":{"forename":"David"}},"path":["a",4]}],"hasNext":false}
+{"incremental":[{"data":{"details":{"forename":"Stefan"}},"id":"1","subPath":[0]},{"data":{"details":{"forename":"Björn"}},"id":"1","subPath":[1]},{"data":{"details":{"forename":"Sergiy"}},"id":"1","subPath":[2]},{"data":{"details":{"forename":"Eelco"}},"id":"1","subPath":[3]},{"data":{"details":{"forename":"David"}},"id":"1","subPath":[4]}],"completed":[{"id":"1"}],"hasNext":false}
 
 --graphql
 --graphql--

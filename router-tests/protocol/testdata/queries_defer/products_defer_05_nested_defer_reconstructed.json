@@ -1,31 +1,5 @@
 {
   "data": {
-    "products": [
-      {},
-      {
-        "name": "COSMO",
-        "upc": "cosmo",
-        "repositoryURL": "https://github.com/wundergraph/cosmo",
-        "lead": {
-          "details": {
-            "forename": "Dustin"
-          }
-        }
-      },
-      {
-        "owner": {
-          "details": {
-            "forename": "Jens"
-          }
-        },
-        "clientLanguages": [
-          "RUST",
-          "TYPESCRIPT"
-        ],
-        "unicode": "😀♥!\u0015\u0010🝥",
-        "upc": "sdk"
-      }
-    ],
     "productTypes": [
       {
         "__typename": "Cosmo",
@@ -49,6 +23,32 @@
           "N/A",
           "https://docs.wundergraph.com/"
         ]
+      }
+    ],
+    "products": [
+      {},
+      {
+        "lead": {
+          "details": {
+            "forename": "Dustin"
+          }
+        },
+        "name": "COSMO",
+        "repositoryURL": "https://github.com/wundergraph/cosmo",
+        "upc": "cosmo"
+      },
+      {
+        "clientLanguages": [
+          "RUST",
+          "TYPESCRIPT"
+        ],
+        "owner": {
+          "details": {
+            "forename": "Jens"
+          }
+        },
+        "unicode": "😀♥!\u0015\u0010🝥",
+        "upc": "sdk"
       }
     ]
   }

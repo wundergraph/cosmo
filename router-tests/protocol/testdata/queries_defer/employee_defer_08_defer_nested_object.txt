@@ -2,17 +2,17 @@
 --graphql
 Content-Type: application/json
 
-{"data":{"employee":{"id":1,"details":{"forename":"Jens","location":{"language":"German"}}},"teammates":[{"id":4},{"id":11}]},"hasNext":true}
+{"data":{"employee":{"id":1,"details":{"forename":"Jens","location":{"language":"German"}}},"teammates":[{"id":4},{"id":11}]},"pending":[{"id":"1","path":["employee"]},{"id":"2","path":["teammates"]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"path":["employee"]}],"hasNext":true}
+{"incremental":[{"data":{"hobbies":[{"__typename":"Exercise"},{"__typename":"Gaming"},{"__typename":"Other"},{"__typename":"Programming"},{"__typename":"Travelling"}]},"id":"1"}],"completed":[{"id":"1"}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},"path":["teammates",0]},{"data":{"details":{"forename":"Alexandra"},"products":["FINANCE"]},"path":["teammates",1]}],"hasNext":false}
+{"incremental":[{"data":{"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},"id":"2","subPath":[0]},{"data":{"details":{"forename":"Alexandra"},"products":["FINANCE"]},"id":"2","subPath":[1]}],"completed":[{"id":"2"}],"hasNext":false}
 
 --graphql
 --graphql--
