@@ -19554,6 +19554,11 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
    */
   compositionWarnings: CompositionWarning[] = [];
 
+  /**
+   * @generated from field: optional bool has_changed = 5;
+   */
+  hasChanged?: boolean;
+
   constructor(data?: PartialMessage<UpdateFeatureFlagResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -19566,6 +19571,7 @@ export class UpdateFeatureFlagResponse extends Message<UpdateFeatureFlagResponse
     { no: 2, name: "composition_errors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deployment_errors", kind: "message", T: DeploymentError, repeated: true },
     { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 5, name: "has_changed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagResponse {
