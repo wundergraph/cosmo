@@ -6,14 +6,12 @@ import { formatMetric } from '@/lib/format-metric';
 import { useChartData } from '@/lib/insights-helpers';
 import { cn } from '@/lib/utils';
 import {
-  BoltIcon,
-  BookmarkIcon,
   ChevronDoubleRightIcon,
   CommandLineIcon,
   DocumentArrowDownIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
-import { Component2Icon } from '@radix-ui/react-icons';
+import { ArrowRightIcon, Component2Icon, LightningBoltIcon, PlayIcon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { migrateFromApollo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import { FederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -413,65 +411,73 @@ export const Empty = ({
     namespace: { name: namespace },
   } = useWorkspace();
 
+  const { onboarding, enabled, currentStep } = useOnboarding();
+  const displayOnboardingEmptyState = enabled && onboarding && onboarding.federatedGraphsCount === 0;
+
   let labels = 'team=A';
   return (
-    <EmptyState
-      className="h-auto"
-      icon={<CommandLineIcon />}
-      title="No graphs found"
-      description={
-        <>
-          Use the CLI tool to create either a federated graph ({' '}
-          <a
-            target="_blank"
-            rel="noreferrer"
-            href={docsBaseURL + '/cli/federated-graph/create'}
-            className="text-primary"
-          >
-            docs
-          </a>{' '}
-          ) or a monograph ({' '}
-          <a target="_blank" rel="noreferrer" href={docsBaseURL + '/cli/monograph/create'} className="text-primary">
-            docs
-          </a>{' '}
-          ).
-        </>
-      }
-      actions={
-        <div className="flex flex-col gap-y-6">
-          <Tabs defaultValue="federated" className="mt-8 w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="federated">Federated Graph</TabsTrigger>
-              <TabsTrigger value="monograph">Monograph</TabsTrigger>
-            </TabsList>
-            <TabsContent value="federated">
-              <CLI
-                command={`npx wgc federated-graph create production --namespace ${namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
-              />
-            </TabsContent>
-            <TabsContent value="monograph">
-              <CLI
-                command={`npx wgc monograph create production --namespace ${namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
-              />
-            </TabsContent>
-          </Tabs>
+    <>
+      {displayOnboardingEmptyState && (
+        <OnboardingEmptyState step={currentStep} isFinished={Boolean(onboarding.finishedAt)} />
+      )}
+      <EmptyState
+        className="h-auto"
+        icon={<CommandLineIcon />}
+        title="No graphs found"
+        description={
+          <>
+            Use the CLI tool to create either a federated graph ({' '}
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href={docsBaseURL + '/cli/federated-graph/create'}
+              className="text-primary"
+            >
+              docs
+            </a>{' '}
+            ) or a monograph ({' '}
+            <a target="_blank" rel="noreferrer" href={docsBaseURL + '/cli/monograph/create'} className="text-primary">
+              docs
+            </a>{' '}
+            ).
+          </>
+        }
+        actions={
+          <div className="flex flex-col gap-y-6">
+            <Tabs defaultValue="federated" className="mt-8 w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="federated">Federated Graph</TabsTrigger>
+                <TabsTrigger value="monograph">Monograph</TabsTrigger>
+              </TabsList>
+              <TabsContent value="federated">
+                <CLI
+                  command={`npx wgc federated-graph create production --namespace ${namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
+                />
+              </TabsContent>
+              <TabsContent value="monograph">
+                <CLI
+                  command={`npx wgc monograph create production --namespace ${namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
+                />
+              </TabsContent>
+            </Tabs>
 
-          {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
-            <>
-              <span className="text-sm font-bold">OR</span>
-              <MigrationDialog
-                refetch={refetch}
-                setIsMigrationSuccess={setIsMigrationSuccess}
-                isEmptyState={true}
-                setToken={setToken}
-                isMigrating={isMigrating}
-                setIsMigrating={setIsMigrating}
-              />
-            </>
-          )}
-        </div>
-      }
-    />
+            {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
+              <>
+                <span className="text-sm font-bold">OR</span>
+                <MigrationDialog
+                  refetch={refetch}
+                  setIsMigrationSuccess={setIsMigrationSuccess}
+                  isEmptyState={true}
+                  setToken={setToken}
+                  isMigrating={isMigrating}
+                  setIsMigrating={setIsMigrating}
+                />
+              </>
+            )}
+          </div>
+        }
+      />
+    </>
   );
 };
 
@@ -636,45 +642,41 @@ const GraphCard = ({ graph, hasStaleMetrics }: { graph: FederatedGraph; hasStale
   );
 };
 
-function OnboardingEmptyState() {
-  const { onboarding, enabled, currentStep } = useOnboarding();
+function OnboardingBoltIcon() {
+  return <LightningBoltIcon className="size-10 text-primary" />;
+}
 
-  if (!enabled || !onboarding || onboarding.federatedGraphsCount !== 0) {
-    return null;
-  }
-
-  const emptyState =
-    currentStep !== undefined && !onboarding.finishedAt ? (
-      <EmptyState
-        className="h-auto"
-        icon={<BookmarkIcon />}
-        title="Dive right back in"
-        description="Want to finish the onboarding and create your first federated graph?"
-        actions={
-          <Button asChild>
-            <Link href={`/onboarding/${currentStep}`}>Continue</Link>
-          </Button>
-        }
-      />
-    ) : (
-      <EmptyState
-        className="h-auto"
-        icon={<BoltIcon />}
-        title="Need help?"
-        description="Take a quick 5-minute tour to help you set up your first federated graph"
-        actions={
-          <Button asChild>
-            <Link href={`/onboarding/1`}>Start here</Link>
-          </Button>
-        }
-      />
-    );
+function OnboardingEmptyState({ step, isFinished }: { step?: number; isFinished: boolean }) {
+  const shouldContinue = step !== undefined && !isFinished;
 
   return (
-    <>
-      {emptyState}
-      <span className="text-sm font-bold">OR</span>
-    </>
+    <div className="flex w-full max-w-xl flex-col items-center px-4 text-center">
+      <OnboardingBoltIcon />
+      <h3 className="mt-7 text-2xl font-bold tracking-tight">Create your first graph</h3>
+      <p className="mt-4 text-sm text-muted-foreground">
+        No graphs yet. Take the guided tour, or set one up from the CLI.
+      </p>
+      <Link
+        href={`/onboarding/${shouldContinue ? step : 1}`}
+        className="mt-5 flex w-full items-center rounded-xl bg-pink-600 px-5 py-4 text-left text-white transition-colors hover:bg-pink-700"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white/20">
+          <PlayIcon className="size-5" />
+        </span>
+        <span className="ml-4 min-w-0 flex-1">
+          <span className="block text-base font-bold leading-5">
+            {shouldContinue ? 'Continue the 5-minute tour' : 'Start the 5-minute tour'}
+          </span>
+          <span className="block text-sm leading-5 text-white/85">Set up your first federated graph step by step</span>
+        </span>
+        <ArrowRightIcon className="ml-4 size-5 shrink-0" />
+      </Link>
+      <div className="mt-7 flex w-full items-center gap-4">
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-xs font-bold text-muted-foreground">OR</span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+    </div>
   );
 }
 
@@ -702,7 +704,6 @@ export const FederatedGraphsCards = ({
   if (!graphs || graphs.length === 0)
     return (
       <div className="flex flex-col items-center gap-y-8">
-        <OnboardingEmptyState />
         <Empty
           refetch={refetch}
           setIsMigrationSuccess={setIsMigrationSuccess}
