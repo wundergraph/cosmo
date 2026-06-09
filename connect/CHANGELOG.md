@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.149.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.148.0...@wundergraph/cosmo-connect@0.149.0) (2026-06-08)
+
+### Features
+
+* implement early stop for feature flag updates with no changes ([#2932](https://github.com/wundergraph/cosmo/issues/2932)) ([ccbcb76](https://github.com/wundergraph/cosmo/commit/ccbcb76839c0c5f37af19fddd0b7c872332fb275)) (@JivusAyrus)
+
+# [0.148.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.147.0...@wundergraph/cosmo-connect@0.148.0) (2026-06-06)
+
+### Features
+
+* **cli:** add subgraph batch-publish command ([#2899](https://github.com/wundergraph/cosmo/issues/2899)) ([9361a30](https://github.com/wundergraph/cosmo/commit/9361a3073dc207ae9bfb5b9661108c09b42028c8)) (@thisisnithin)
+
+# [0.147.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.146.0...@wundergraph/cosmo-connect@0.147.0) (2026-06-01)
+
+### Features
+
+* add functionality to restrict the login methods of an organization ([#2896](https://github.com/wundergraph/cosmo/issues/2896)) ([2c2cb71](https://github.com/wundergraph/cosmo/commit/2c2cb717f485666aa0bc94297d7c94469e0ce894)) (@JivusAyrus)
+
+# [0.146.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.145.0...@wundergraph/cosmo-connect@0.146.0) (2026-05-29)
+
+### Features
+
+* add options to restrict certain namespaces to certain login methods ([#2876](https://github.com/wundergraph/cosmo/issues/2876)) ([42b307b](https://github.com/wundergraph/cosmo/commit/42b307b1b5ec9d91d9fb4dad90ecae5e364ac189)) (@JivusAyrus)
+
 # [0.145.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.144.0...@wundergraph/cosmo-connect@0.145.0) (2026-05-27)
 
 ### Features

@@ -11,6 +11,7 @@ import { parseTimeFilters } from '../../repositories/analytics/util.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 
 export function getDashboardAnalyticsView(
@@ -48,6 +49,10 @@ export function getDashboardAnalyticsView(
         requestSeries: [],
         subgraphMetrics: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);

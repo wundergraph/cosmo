@@ -26,6 +26,8 @@
 /router-plugin/     @wundergraph/Router
 /studio/            @wundergraph/Cosmo
 
+/.release-please-manifest.json @wundergraph/Platform
+
 # generated protobuf files, sourced from /proto/
 /router/gen/
 /connect-go/gen/

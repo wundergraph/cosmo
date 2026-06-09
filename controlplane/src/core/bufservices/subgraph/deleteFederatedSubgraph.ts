@@ -103,6 +103,7 @@ export function deleteFederatedSubgraph(
           schemaSDL: '',
           routerCompatibilityVersion: getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
           isDeleted: true,
+          approvedOnly: true,
         });
         if (matches.length === 0) {
           if (proposalConfig.publishSeverityLevel === 'warn') {

@@ -90,6 +90,10 @@ import { getOnboarding } from './onboarding/getOnboarding.js';
 import { createNamespace } from './namespace/createNamespace.js';
 import { deleteNamespace } from './namespace/deleteNamespace.js';
 import { getNamespace } from './namespace/getNamespace.js';
+import { updateNamespaceLoginMethods } from './namespace/updateNamespaceLoginMethods.js';
+import { listNamespaceLoginMethods } from './namespace/listNamespaceLoginMethods.js';
+import { getOrganizationLoginMethods } from './organization/getOrganizationLoginMethods.js';
+import { updateOrganizationLoginMethods } from './organization/updateOrganizationLoginMethods.js';
 import { getNamespaces } from './namespace/getNamespaces.js';
 import { renameNamespace } from './namespace/renameNamespace.js';
 import { createIntegration } from './notification/createIntegration.js';
@@ -135,6 +139,7 @@ import { getSdlBySchemaVersion } from './schema-version/getSdlBySchemaVersion.js
 import { createOIDCProvider } from './sso/createOIDCProvider.js';
 import { deleteOIDCProvider } from './sso/deleteOIDCProvider.js';
 import { getOIDCProvider } from './sso/getOIDCProvider.js';
+import { listOIDCProviders } from './sso/listOIDCProviders.js';
 import { updateIDPMappers } from './sso/updateIDPMappers.js';
 import { addReadme } from './subgraph/addReadme.js';
 import { checkSubgraphSchema } from './subgraph/checkSubgraphSchema.js';
@@ -149,6 +154,7 @@ import { getSubgraphSDLFromLatestComposition } from './subgraph/getSubgraphSDLFr
 import { getSubgraphs } from './subgraph/getSubgraphs.js';
 import { moveSubgraph } from './subgraph/moveSubgraph.js';
 import { publishFederatedSubgraph } from './subgraph/publishFederatedSubgraph.js';
+import { publishFederatedSubgraphs } from './subgraph/publishFederatedSubgraphs.js';
 import { updateSubgraph } from './subgraph/updateSubgraph.js';
 import { acceptOrDeclineInvitation } from './user/acceptOrDeclineInvitation.js';
 import { deleteUser } from './user/deleteUser.js';
@@ -263,6 +269,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     publishFederatedSubgraph: (req, ctx) => {
       return publishFederatedSubgraph(opts, req, ctx);
+    },
+
+    publishFederatedSubgraphs: (req, ctx) => {
+      return publishFederatedSubgraphs(opts, req, ctx);
     },
 
     forceCheckSuccess: (req, ctx) => {
@@ -649,6 +659,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getOIDCProvider(opts, req, ctx);
     },
 
+    listOIDCProviders: (req, ctx) => {
+      return listOIDCProviders(opts, req, ctx);
+    },
+
     getPersistedOperations: (req, ctx) => {
       return getPersistedOperations(opts, req, ctx);
     },
@@ -888,6 +902,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getNamespaceProposalConfig: (req, ctx) => {
       return getNamespaceProposalConfig(opts, req, ctx);
+    },
+
+    updateNamespaceLoginMethods: (req, ctx) => {
+      return updateNamespaceLoginMethods(opts, req, ctx);
+    },
+    listNamespaceLoginMethods: (req, ctx) => {
+      return listNamespaceLoginMethods(opts, req, ctx);
+    },
+    getOrganizationLoginMethods: (req, ctx) => {
+      return getOrganizationLoginMethods(opts, req, ctx);
+    },
+    updateOrganizationLoginMethods: (req, ctx) => {
+      return updateOrganizationLoginMethods(opts, req, ctx);
     },
 
     getOperations: (req, ctx) => {

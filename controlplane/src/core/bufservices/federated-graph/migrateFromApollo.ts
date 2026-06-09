@@ -66,6 +66,10 @@ export function migrateFromApollo(
       };
     }
 
+    if (!authContext.rbac.canCreateFederatedGraph(namespace)) {
+      throw new UnauthorizedError();
+    }
+
     const org = await orgRepo.byId(authContext.organizationId);
     if (!org) {
       return {

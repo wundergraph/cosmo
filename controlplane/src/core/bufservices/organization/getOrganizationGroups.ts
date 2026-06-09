@@ -28,25 +28,28 @@ export function getOrganizationGroups(
 
     const groups = await orgGroupRepo.forOrganization(authContext.organizationId);
 
-    let oidcMappers: { groupId: string }[] = [];
-    const oidc = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
-    if (oidc) {
-      // Retrieve all the OIDC mappers from Keycloak
+    const oidcMappers: { groupId: string }[] = [];
+    const providers = await oidcRepo.listOidcProvidersByOrganizationId({ organizationId: authContext.organizationId });
+    if (providers.length > 0) {
+      // Retrieve the OIDC mappers from Keycloak for every configured provider.
       await opts.keycloakClient.authenticateClient();
-      oidcMappers = await oidcProvider.fetchIDPMappers({
-        kcClient: opts.keycloakClient,
-        kcRealm: opts.keycloakRealm,
-        alias: oidc.alias,
-        organizationId: authContext.organizationId,
-        db: opts.db,
-      });
+      for (const provider of providers) {
+        const mappers = await oidcProvider.fetchIDPMappers({
+          kcClient: opts.keycloakClient,
+          kcRealm: opts.keycloakRealm,
+          alias: provider.alias,
+          organizationId: authContext.organizationId,
+          db: opts.db,
+        });
+        oidcMappers.push(...mappers);
+      }
     }
 
     return {
       response: {
         code: EnumStatusCode.OK,
       },
-      hasConnectedOidc: !!oidc,
+      hasConnectedOidc: providers.length > 0,
       groups: groups.map(({ kcGroupId, ...rest }) => ({
         ...rest,
         hasOidcMappers: oidcMappers.some((mapper) => mapper.groupId === rest.groupId),

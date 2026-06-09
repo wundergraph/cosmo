@@ -45,9 +45,10 @@ export function getFeatureFlags(
       offset: req.offset,
       namespaceId,
       query: req.query,
+      rbac: authContext.rbac,
     });
 
-    const totalCount = await featureFlagRepo.getFeatureFlagsCount({ namespaceId });
+    const totalCount = await featureFlagRepo.getFeatureFlagsCount({ namespaceId, rbac: authContext.rbac });
 
     return {
       response: {

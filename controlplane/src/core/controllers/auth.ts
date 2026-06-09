@@ -1,14 +1,23 @@
 import { FastifyPluginCallback, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
+import { PlainMessage } from '@bufbuild/protobuf';
+import {
+  LoginMethod,
+  LoginMethodType,
+  SocialLoginProvider,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import cookie from 'cookie';
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
+import { isSocialLoginProvider, resolveLoginMethod } from '../util.js';
 import * as schema from '../../db/schema.js';
 import { sessions } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
+import { OrganizationLoginMethodRepository } from '../repositories/OrganizationLoginMethodRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
@@ -89,6 +98,47 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         userId: userSession.userId,
       });
 
+      const oidcRepo = new OidcRepository(opts.db);
+      const orgLoginMethodRepo = new OrganizationLoginMethodRepository(opts.db);
+
+      const loginMethodAllowedByOrg = new Map<string, boolean>();
+      await Promise.all(
+        orgs.map(async (o) => {
+          const method = await resolveLoginMethod(
+            { oidcRepo },
+            { organizationId: o.id, idpAlias: userSession.idpAlias },
+          );
+          const allowed = await orgLoginMethodRepo.isLoginMethodAllowed({ organizationId: o.id, loginMethod: method });
+          loginMethodAllowedByOrg.set(o.id, allowed);
+        }),
+      );
+
+      const emptyLoginMethod = {
+        ssoProviderId: '',
+        ssoProviderName: '',
+        ssoAlias: '',
+        socialProvider: SocialLoginProvider.UNSPECIFIED,
+      };
+      let loginMethod: PlainMessage<LoginMethod> = { ...emptyLoginMethod, type: LoginMethodType.PASSWORD };
+      if (userSession.idpAlias) {
+        const provider = await oidcRepo.getOidcProviderByAliasUnscoped({ alias: userSession.idpAlias });
+        if (provider) {
+          loginMethod = {
+            ...emptyLoginMethod,
+            type: LoginMethodType.SSO,
+            ssoProviderId: provider.id,
+            ssoProviderName: provider.name,
+            ssoAlias: userSession.idpAlias,
+          };
+        } else if (isSocialLoginProvider(userSession.idpAlias)) {
+          loginMethod = {
+            ...emptyLoginMethod,
+            type: LoginMethodType.SOCIAL,
+            socialProvider: userSession.idpAlias === 'google' ? SocialLoginProvider.GOOGLE : SocialLoginProvider.GITHUB,
+          };
+        }
+      }
+
       return {
         id: userSession.userId,
         email: userInfoData.email,
@@ -102,9 +152,11 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             groups: rbac.groups.map(({ description, kcGroupId, ...rest }) => ({
               ...rest,
             })),
+            loginMethodAllowed: loginMethodAllowedByOrg.get(org.id) ?? true,
           })),
         invitations,
         expiresAt: userSession.expiresAt,
+        loginMethod,
       };
     } catch (err: any) {
       if (err instanceof AuthenticationError) {

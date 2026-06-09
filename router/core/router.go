@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -164,6 +166,14 @@ type (
 		Watch         bool
 		WatchInterval time.Duration
 		Path          string
+	}
+
+	ManifestConfig struct {
+		Path                    string
+		SkipMissingFeatureFlags bool
+		IgnoredFeatureFlags     []string
+		Watch                   bool
+		WatchInterval           time.Duration
 	}
 
 	AccessLogsConfig struct {
@@ -1071,6 +1081,22 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to read execution config: %w", err)
 		}
+
+		r.staticExecutionConfig = executionConfig
+	}
+
+	if r.manifestConfig != nil && r.manifestConfig.Path != "" {
+		executionConfig, err := routerconfig.AssembleStaticExecutionConfigFromManifest(
+			r.manifestConfig.Path,
+			routerconfig.AssembleConfigRules{
+				SkipMissingFeatureFlags: r.manifestConfig.SkipMissingFeatureFlags,
+				IgnoredFeatureFlags:     r.manifestConfig.IgnoredFeatureFlags,
+			})
+
+		if err != nil {
+			return fmt.Errorf("failed to assemble static execution config from manifest: %w", err)
+		}
+
 		r.staticExecutionConfig = executionConfig
 	}
 
@@ -1493,88 +1519,7 @@ func (r *Router) Start(ctx context.Context) error {
 
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
-
-		r.trackExecutionConfigUsage(r.staticExecutionConfig, true)
-
-		if err := r.listenAndServe(); err != nil {
-			return err
-		}
-
-		if err := r.newServer(ctx, &routerconfig.Response{Config: r.staticExecutionConfig}); err != nil {
-			return err
-		}
-
-		r.startPQLPoller(ctx)
-
-		defer func() {
-			r.httpServer.healthcheck.SetReady(true)
-
-			r.logger.Info("Server initialized and ready to serve requests",
-				zap.String("listen_addr", r.listenAddr),
-				zap.Bool("playground", r.playgroundConfig.Enabled),
-				zap.Bool("introspection", r.introspection),
-				zap.String("config_version", r.staticExecutionConfig.Version),
-			)
-		}()
-
-		if r.executionConfig != nil && r.executionConfig.Watch {
-			ll := r.logger.With(zap.String("watcher_label", "execution_config"))
-
-			w, err := watcher.New(watcher.Options{
-				Logger:   ll,
-				Paths:    []string{r.executionConfig.Path},
-				Interval: r.executionConfig.WatchInterval,
-				Callback: func() {
-					if r.shutdown.Load() {
-						ll.Warn("Router is in shutdown state. Skipping config update")
-						return
-					}
-
-					data, err := os.ReadFile(r.executionConfig.Path)
-					if err != nil {
-						ll.Error("Failed to read config file", zap.Error(err))
-						return
-					}
-
-					ll.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
-
-					cfg, err := execution_config.UnmarshalConfig(data)
-					if err != nil {
-						ll.Error("Failed to unmarshal config file", zap.Error(err))
-						return
-					}
-
-					if err := r.newServer(ctx, &routerconfig.Response{Config: cfg}); err != nil {
-						ll.Error("Failed to update server with new config", zap.Error(err))
-						return
-					}
-				},
-			})
-
-			if err != nil {
-				return fmt.Errorf("failed to create watcher: %w", err)
-			}
-
-			go func() {
-				if err := w(ctx); err != nil {
-					if !errors.Is(err, context.Canceled) {
-						ll.Error("Error watching execution config", zap.Error(err))
-					} else {
-						ll.Debug("Watcher context cancelled, shutting down")
-					}
-				}
-			}()
-
-			r.logger.Info("Watching config file for changes. Router will hot-reload automatically without downtime",
-				zap.String("path", r.executionConfig.Path),
-			)
-
-			return nil
-		}
-
-		r.logger.Info("Static execution config provided. Polling and watching is disabled. Updating execution config is only possible by restarting the router")
-
-		return nil
+		return r.startWithStaticExecutionConfig(ctx)
 	}
 
 	// when no static config is provided and no poller is configured, we can't start the server
@@ -1650,6 +1595,153 @@ func (r *Router) Start(ctx context.Context) error {
 	)
 
 	return nil
+}
+
+func (r *Router) startWithStaticExecutionConfig(ctx context.Context) error {
+	r.trackExecutionConfigUsage(r.staticExecutionConfig, true)
+
+	if err := r.listenAndServe(); err != nil {
+		return err
+	}
+
+	if err := r.newServer(ctx, &routerconfig.Response{Config: r.staticExecutionConfig}); err != nil {
+		return err
+	}
+
+	r.startPQLPoller(ctx)
+
+	var (
+		w          watcher.WatcherFunc
+		watcherErr error
+		ll         *zap.Logger
+		path       string
+	)
+
+	if r.executionConfig != nil && r.executionConfig.Watch {
+		ll = r.logger.With(zap.String("watcher_label", "execution_config"))
+		path = r.executionConfig.Path
+
+		if w, watcherErr = r.buildExecutionConfigWatcher(ctx, ll); watcherErr != nil {
+			return fmt.Errorf("failed to create execution config watcher: %w", watcherErr)
+		}
+	}
+
+	if r.manifestConfig != nil && r.manifestConfig.Watch {
+		ll = r.logger.With(zap.String("watcher_label", "manifest_config"))
+		path = r.manifestConfig.Path
+
+		if w, watcherErr = r.buildManifestConfigWatcher(ctx, ll); watcherErr != nil {
+			return fmt.Errorf("failed to create manifest config watcher: %w", watcherErr)
+		}
+	}
+
+	r.httpServer.healthcheck.SetReady(true)
+
+	r.logger.Info("Server initialized and ready to serve requests",
+		zap.String("listen_addr", r.listenAddr),
+		zap.Bool("playground", r.playgroundConfig.Enabled),
+		zap.Bool("introspection", r.introspection),
+		zap.String("config_version", r.staticExecutionConfig.Version),
+	)
+
+	if w != nil {
+		go func() {
+			if err := w(ctx); err != nil {
+				if !errors.Is(err, context.Canceled) {
+					ll.Error("Error watching execution config", zap.Error(err))
+				} else {
+					ll.Debug("Watcher context cancelled, shutting down")
+				}
+			}
+		}()
+
+		r.logger.Info("Watching config file for changes. Router will hot-reload automatically without downtime",
+			zap.String("path", path),
+		)
+
+		return nil
+	}
+
+	r.logger.Info("Static execution config provided. Polling and watching is disabled. Updating execution config is only possible by restarting the router")
+
+	return nil
+}
+
+func (r *Router) buildExecutionConfigWatcher(ctx context.Context, ll *zap.Logger) (watcher.WatcherFunc, error) {
+	w, err := watcher.New(watcher.Options{
+		Logger:   ll,
+		Paths:    []string{r.executionConfig.Path},
+		Interval: r.executionConfig.WatchInterval,
+		Callback: func() {
+			if r.shutdown.Load() {
+				ll.Warn("Router is in shutdown state. Skipping config update")
+				return
+			}
+
+			data, err := os.ReadFile(r.executionConfig.Path)
+			if err != nil {
+				ll.Error("Failed to read config file", zap.Error(err))
+				return
+			}
+
+			ll.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
+
+			cfg, err := execution_config.UnmarshalConfig(data)
+			if err != nil {
+				ll.Error("Failed to unmarshal config file", zap.Error(err))
+				return
+			}
+
+			if err := r.newServer(ctx, &routerconfig.Response{Config: cfg}); err != nil {
+				ll.Error("Failed to update server with new config", zap.Error(err))
+				return
+			}
+		},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create watcher: %w", err)
+	}
+
+	return w, nil
+}
+
+func (r *Router) buildManifestConfigWatcher(ctx context.Context, ll *zap.Logger) (watcher.WatcherFunc, error) {
+	w, err := watcher.New(watcher.Options{
+		Logger:   ll,
+		Paths:    []string{filepath.Join(r.manifestConfig.Path, "mapper.json")},
+		Interval: r.manifestConfig.WatchInterval,
+		Callback: func() {
+			if r.shutdown.Load() {
+				ll.Warn("Router is in shutdown state. Skipping config update")
+				return
+			}
+
+			cfg, err := routerconfig.AssembleStaticExecutionConfigFromManifest(
+				r.manifestConfig.Path, routerconfig.AssembleConfigRules{
+					SkipMissingFeatureFlags: r.manifestConfig.SkipMissingFeatureFlags,
+					IgnoredFeatureFlags:     r.manifestConfig.IgnoredFeatureFlags,
+				})
+
+			if err != nil {
+				ll.Error("Failed to assemble static execution config from manifest", zap.Error(err))
+				return
+			}
+
+			ll.Info("Manifest config changed. Updating server with new config", zap.String("path", r.manifestConfig.Path))
+
+			if err := r.newServer(ctx, &routerconfig.Response{Config: cfg}); err != nil {
+				ll.Error("Failed to update server with new config", zap.Error(err))
+				return
+			}
+		},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create watcher: %w", err)
+	}
+
+	return w, nil
 }
 
 type UsageTrackerNoOp struct{}
@@ -1972,6 +2064,12 @@ func WithModulesConfig(config map[string]interface{}) Option {
 func WithExecutionConfig(cfg *ExecutionConfig) Option {
 	return func(r *Router) {
 		r.executionConfig = cfg
+	}
+}
+
+func WithManifestConfig(cfg *ManifestConfig) Option {
+	return func(r *Router) {
+		r.manifestConfig = cfg
 	}
 }
 
@@ -2438,6 +2536,14 @@ func WithMCP(cfg config.MCPConfiguration) Option {
 func WithPlugins(cfg config.PluginsConfiguration) Option {
 	return func(r *Router) {
 		r.plugins = cfg
+	}
+}
+
+// WithGRPCPluginDialOptions appends gRPC dial options used when the router
+// connects to gRPC plugin subgraphs. This function is primarily used for testing purposes.
+func WithGRPCPluginDialOptions(opts ...grpc.DialOption) Option {
+	return func(r *Router) {
+		r.grpcPluginDialOptions = append(r.grpcPluginDialOptions, opts...)
 	}
 }
 
