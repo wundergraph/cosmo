@@ -172,7 +172,7 @@ export function updateContract(
       });
     });
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,

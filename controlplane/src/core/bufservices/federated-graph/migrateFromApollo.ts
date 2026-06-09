@@ -184,7 +184,7 @@ export function migrateFromApollo(
       };
     }
 
-    await cbsq.processQueue();
+    await cbsq.drainQueue();
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,

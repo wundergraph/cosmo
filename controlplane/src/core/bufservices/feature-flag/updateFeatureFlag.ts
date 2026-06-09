@@ -243,7 +243,7 @@ export function updateFeatureFlag(
       };
     }
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     return {
       response: {

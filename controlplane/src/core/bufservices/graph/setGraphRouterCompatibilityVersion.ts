@@ -156,7 +156,7 @@ export function setGraphRouterCompatibilityVersion(
       return await compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
     });
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     return {
       response: {

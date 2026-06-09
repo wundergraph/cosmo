@@ -230,7 +230,7 @@ export function updateSubgraph(
         );
       });
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,

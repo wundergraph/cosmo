@@ -169,7 +169,7 @@ export function moveFederatedGraph(
           federatedGraph: movedFederatedGraph,
         });
 
-      deploymentErrors.push(...(await cbsq.processQueue()));
+      deploymentErrors.push(...(await cbsq.drainQueue()));
 
       for (const movedGraph of movedGraphs) {
         await auditLogRepo.addAuditLog({

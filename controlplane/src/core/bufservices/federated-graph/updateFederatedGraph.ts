@@ -142,7 +142,7 @@ export function updateFederatedGraph(
       });
     });
 
-    const deploymentErrors = await cbsq.processQueue();
+    const deploymentErrors = await cbsq.drainQueue();
     result?.deploymentErrors.push(...deploymentErrors);
 
     await auditLogRepo.addAuditLog({

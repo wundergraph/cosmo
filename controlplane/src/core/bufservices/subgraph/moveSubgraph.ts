@@ -155,7 +155,7 @@ export function moveSubgraph(
         return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
       });
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(

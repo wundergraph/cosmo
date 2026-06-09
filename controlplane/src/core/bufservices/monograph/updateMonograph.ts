@@ -171,8 +171,6 @@ export function updateMonograph(
         admissionWebhookSecret: req.admissionWebhookSecret,
       });
 
-      await cbsq.processQueue();
-
       // Update the subgraph
       await subgraphRepo.update(
         {
@@ -192,6 +190,7 @@ export function updateMonograph(
         compositionService,
       );
 
+      await cbsq.drainQueue();
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
         organizationSlug: authContext.organizationSlug,

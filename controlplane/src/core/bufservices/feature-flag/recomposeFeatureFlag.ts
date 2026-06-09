@@ -118,7 +118,7 @@ export function recomposeFeatureFlag(
       });
     });
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     const auditLogRepo = new AuditLogRepository(opts.db);
     await auditLogRepo.addAuditLog({

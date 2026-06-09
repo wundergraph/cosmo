@@ -209,7 +209,7 @@ export function createContract(
           federatedGraph: { ...contractGraph, contract },
         });
 
-      deploymentErrors.push(...(await cbsq.processQueue()));
+      deploymentErrors.push(...(await cbsq.drainQueue()));
 
       return {
         response: {

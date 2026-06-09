@@ -239,7 +239,7 @@ export function deleteFederatedSubgraph(
         return { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings };
       });
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published
     // and if all proposal subgraphs are published, collect proposal details for the webhook

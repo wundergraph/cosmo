@@ -232,7 +232,7 @@ export function createFederatedGraph(
       return compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
     });
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     orgWebhooks.send(
       {

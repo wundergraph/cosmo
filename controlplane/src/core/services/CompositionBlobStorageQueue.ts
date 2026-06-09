@@ -58,7 +58,7 @@ export class CompositionBlobStorageQueue {
     });
   }
 
-  async processQueue(): Promise<PlainMessage<DeploymentError>[]> {
+  async drainQueue(): Promise<PlainMessage<DeploymentError>[]> {
     const errors: PlainMessage<DeploymentError>[] = [];
     if (this.#queue.length === 0) {
       return errors;
@@ -99,8 +99,8 @@ export class CompositionBlobStorageQueue {
         case 'upload-blob': {
           try {
             await this.blobStorage.putObject(entry.params);
-          } catch {
-            // ignore
+          } catch (err) {
+            this.logger.error(`Failed to upload blob "${entry.params.key}": ${err}`);
           }
           break;
         }

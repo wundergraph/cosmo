@@ -276,7 +276,7 @@ export function publishFederatedSubgraphs(
         isFeatureSubgraph: false,
       });
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     // Re-fetch the affected federated graphs to pick up the updated composedSchemaVersionId for the webhook payloads.
     const updatedFederatedGraphs = (

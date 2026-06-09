@@ -92,7 +92,7 @@ export function recomposeGraph(
       return compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph: graph });
     });
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     sendOrgWebhooks({
       authContext,

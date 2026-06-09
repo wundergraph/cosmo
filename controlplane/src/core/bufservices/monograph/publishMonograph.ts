@@ -178,7 +178,7 @@ export function publishMonograph(
         );
       });
 
-    deploymentErrors.push(...(await cbsq.processQueue()));
+    deploymentErrors.push(...(await cbsq.drainQueue()));
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(
