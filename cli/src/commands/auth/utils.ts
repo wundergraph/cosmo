@@ -227,6 +227,13 @@ export async function checkAuth(showErrorMessage = true): Promise<void> {
   }
 }
 
+/**
+ * Perform access token refresh and updates the value for `config.apiKey` accordingly  (if needed);
+ * however, if the value for `config.apiKey` remains empty, that means the user is not authenticated or the
+ * token refresh failed
+ *
+ * @returns {boolean} A value indicating whether the client is authenticated
+ */
 export async function isAuthenticated(): Promise<boolean> {
   try {
     await checkAuth(false);

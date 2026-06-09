@@ -130,12 +130,6 @@ const getIdentity = async (): Promise<TelemetryIdentity> => {
     }
 
     if (!(await isAuthenticated())) {
-      /**
-       * `checkAuth` perform access token refresh and updates the value for `config.apiKey` accordingly  (if needed);
-       * however, if the value for `config.apiKey` remains empty, that means the user is not authenticated or the
-       * token refresh failed, for this reason, we can assume the call to the `WhoAmI` RPC will fail and we can
-       * just exit early
-       */
       return UNAUTHENTICATED_CONTEXT_METADATA;
     }
 
