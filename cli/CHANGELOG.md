@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.123.0](https://github.com/wundergraph/cosmo/compare/wgc@0.122.0...wgc@0.123.0) (2026-06-08)
+
+### Features
+
+* implement early stop for feature flag updates with no changes ([#2932](https://github.com/wundergraph/cosmo/issues/2932)) ([ccbcb76](https://github.com/wundergraph/cosmo/commit/ccbcb76839c0c5f37af19fddd0b7c872332fb275)) (@JivusAyrus)
+
 # [0.122.0](https://github.com/wundergraph/cosmo/compare/wgc@0.121.3...wgc@0.122.0) (2026-06-06)
 
 ### Features
