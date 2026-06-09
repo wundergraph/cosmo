@@ -1307,13 +1307,21 @@ export class FeatureFlagRepository {
   }: {
     baseSchemaVersionId: string;
   }) {
+    // A feature flag can have multiple composed schema versions against the same base schema version
+    // (e.g. recomposing the feature flag recomposes it against the unchanged base, so rows accumulate).
+    // Deduplicate by feature flag, keeping the latest composed version, so callers get one entry per flag.
     const ffSchemaVersions = await this.db
-      .select({
+      .selectDistinctOn([federatedGraphsToFeatureFlagSchemaVersions.featureFlagId], {
         id: federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId,
         featureFlagId: federatedGraphsToFeatureFlagSchemaVersions.featureFlagId,
       })
       .from(federatedGraphsToFeatureFlagSchemaVersions)
+      .innerJoin(
+        schemaVersion,
+        eq(schemaVersion.id, federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId),
+      )
       .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId))
+      .orderBy(federatedGraphsToFeatureFlagSchemaVersions.featureFlagId, desc(schemaVersion.createdAt))
       .execute();
 
     if (ffSchemaVersions.length === 0) {
