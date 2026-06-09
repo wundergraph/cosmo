@@ -15,6 +15,14 @@ type Response struct {
 	// have changed since the last successful config apply.
 	// Nil means changes are unknown -> expect everything to be changed.
 	Changes *Changes
+	// Hashes holds the execution config hashes (map value) of each feature flag (map key)
+	// currently used by the router as determined by the config poller.
+	Hashes map[string]HashInfo
+}
+
+type HashInfo struct {
+	OldHash string
+	NewHash string
 }
 
 type Changes struct {
