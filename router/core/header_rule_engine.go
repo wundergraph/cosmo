@@ -181,17 +181,14 @@ func (f *FileSourceContent) writeToBuffer(path string) error {
 	f.m.Lock()
 	defer f.m.Unlock()
 
-	f.buffer.Reset()
-
-	file, err := os.Open(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("error opening file %s: %w", path, err)
-	}
-	defer file.Close()
-
-	if _, err = f.buffer.ReadFrom(file); err != nil {
 		return fmt.Errorf("error reading file %s: %w", path, err)
 	}
+
+	f.buffer.Reset()
+	// buffer Write is guaranteed to never return an error
+	_, _ = f.buffer.Write(content)
 
 	return nil
 }
