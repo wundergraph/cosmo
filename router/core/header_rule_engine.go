@@ -167,9 +167,41 @@ type HeaderPropagation struct {
 // FileSourceContent is a wrapper around a bytes.Buffer that is used to store the content of a file source.
 // It is used to synchronize access to the content of the file source.
 type FileSourceContent struct {
-	m       *sync.Mutex
-	buffer  bytes.Buffer
+	// m is used to synchronize access to the content of the file source.
+	m *sync.RWMutex
+	// buffer is used to store the content of the file source.
+	buffer bytes.Buffer
+	// watcher is used to watch the file source and refresh the content of the file source.
+	// It is set once in setupFileSourceRules before any watcher goroutine or request handler runs.
 	watcher watcher.WatcherFunc
+}
+
+// writeToBuffer writes the content of the file source to the buffer.
+func (f *FileSourceContent) writeToBuffer(path string) error {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	f.buffer.Reset()
+
+	file, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("error opening file %s: %w", path, err)
+	}
+	defer file.Close()
+
+	if _, err = f.buffer.ReadFrom(file); err != nil {
+		return fmt.Errorf("error reading file %s: %w", path, err)
+	}
+
+	return nil
+}
+
+// getBufferString returns the content of the file source as a string.
+func (f *FileSourceContent) getBufferString() string {
+	f.m.RLock()
+	defer f.m.RUnlock()
+
+	return f.buffer.String()
 }
 
 // PostResponseRules holds response rules that execute after all user-defined
@@ -380,66 +412,40 @@ func (h *HeaderPropagation) setupFileSourceRules(ctx context.Context, logger *za
 		}
 
 		// If the file source content is already in memory, skip the watcher creation
-		if _, ok := h.fileSourceContents[rule.FromFile.Path]; ok {
+		if _, found := h.fileSourceContents[rule.FromFile.Path]; found {
 			continue
 		}
 
-		h.fileSourceContents[rule.FromFile.Path] = &FileSourceContent{
-			m:      &sync.Mutex{},
+		content := &FileSourceContent{
+			m:      &sync.RWMutex{},
 			buffer: bytes.Buffer{},
 		}
+		h.fileSourceContents[rule.FromFile.Path] = content
 
-		getContent := func() error {
-			content, ok := h.fileSourceContents[rule.FromFile.Path]
-			if !ok {
-				return fmt.Errorf("file source content not found for file %s", rule.FromFile.Path)
-			}
-
-			content.m.Lock()
-			defer content.m.Unlock()
-
-			content.buffer.Reset()
-
-			f, err := os.Open(rule.FromFile.Path)
-			if err != nil {
-				return fmt.Errorf("error opening file %s: %w", rule.FromFile.Path, err)
-			}
-			defer f.Close()
-
-			if _, err = content.buffer.ReadFrom(f); err != nil {
-				return fmt.Errorf("error reading file %s: %w", rule.FromFile.Path, err)
-			}
-
-			h.fileSourceContents[rule.FromFile.Path] = content
-
-			return nil
+		if err := content.writeToBuffer(rule.FromFile.Path); err != nil {
+			return fmt.Errorf("error reading file source content for %s: %w", rule.FromFile.Path, err)
 		}
 
-		if err := getContent(); err != nil {
-			return err
-		}
-
-		watcher, err := watcher.New(watcher.Options{
+		w, err := watcher.New(watcher.Options{
 			Interval: rule.FromFile.RefreshInterval,
 			Paths:    []string{rule.FromFile.Path},
 			Logger:   logger.With(zap.String("file_source", rule.FromFile.Path)),
 			Callback: func() {
-				if err := getContent(); err != nil {
+				if err := content.writeToBuffer(rule.FromFile.Path); err != nil {
 					logger.Error("Error refreshing file source content", zap.Error(err))
 				}
 			},
 		})
-
 		if err != nil {
 			return fmt.Errorf("error creating watcher for file %s: %w", rule.FromFile.Path, err)
 		}
 
-		content, found := h.fileSourceContents[rule.FromFile.Path]
-		if !found {
-			return fmt.Errorf("file source content not found for file %s", rule.FromFile.Path)
-		}
+		content.watcher = w
+	}
 
-		content.watcher = watcher
+	// All map entries are built. Start watcher goroutines now so the map is
+	// frozen before any concurrent reader exists.
+	for _, content := range h.fileSourceContents {
 		go content.watcher(ctx)
 	}
 
@@ -712,15 +718,13 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 		}
 
 		if rule.FromFile != nil {
-			content, ok := h.fileSourceContents[rule.FromFile.Path]
-			if !ok {
+			content, found := h.fileSourceContents[rule.FromFile.Path]
+			if !found {
 				ctx.SetError(fmt.Errorf("file source content not found for file %s", rule.FromFile.Path))
 				return
 			}
 
-			content.m.Lock()
-			header.Set(rule.Name, content.buffer.String())
-			content.m.Unlock()
+			header.Set(rule.Name, content.getBufferString())
 			return
 		}
 
