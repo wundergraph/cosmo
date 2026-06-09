@@ -422,29 +422,36 @@ export const Empty = ({
       )}
       <EmptyState
         className="h-auto"
-        icon={<CommandLineIcon />}
-        title="No graphs found"
+        icon={displayOnboardingEmptyState ? undefined : <CommandLineIcon />}
+        title={displayOnboardingEmptyState ? undefined : 'No graphs found'}
         description={
-          <>
-            Use the CLI tool to create either a federated graph ({' '}
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href={docsBaseURL + '/cli/federated-graph/create'}
-              className="text-primary"
-            >
-              docs
-            </a>{' '}
-            ) or a monograph ({' '}
-            <a target="_blank" rel="noreferrer" href={docsBaseURL + '/cli/monograph/create'} className="text-primary">
-              docs
-            </a>{' '}
-            ).
-          </>
+          displayOnboardingEmptyState ? undefined : (
+            <>
+              Use the CLI tool to create either a federated graph ({' '}
+              <a
+                target="_blank"
+                rel="noreferrer"
+                href={docsBaseURL + '/cli/federated-graph/create'}
+                className="text-primary"
+              >
+                docs
+              </a>{' '}
+              ) or a monograph ({' '}
+              <a target="_blank" rel="noreferrer" href={docsBaseURL + '/cli/monograph/create'} className="text-primary">
+                docs
+              </a>{' '}
+              ).
+            </>
+          )
         }
         actions={
           <div className="flex flex-col gap-y-6">
-            <Tabs defaultValue="federated" className="mt-8 w-full">
+            <Tabs
+              defaultValue="federated"
+              className={cn('w-full', {
+                'mt-8': !displayOnboardingEmptyState,
+              })}
+            >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="federated">Federated Graph</TabsTrigger>
                 <TabsTrigger value="monograph">Monograph</TabsTrigger>
