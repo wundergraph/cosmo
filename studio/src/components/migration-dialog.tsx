@@ -42,6 +42,7 @@ export const MigrationDialog = ({
     namespace: { name: namespace },
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
+  const graphsPath = organizationSlug ? `/${organizationSlug}/graphs` : '/graphs';
   const migrate = !!router.query.migrate;
 
   const migrateInputSchema = z.object({
@@ -119,7 +120,7 @@ export const MigrationDialog = ({
             setIsMigrating(false);
             toast({ description: d.response.details, duration: 3000 });
           }
-          router.replace(`/${organizationSlug}/graphs`);
+          router.replace(graphsPath);
         },
         onError: (_) => {
           toast({
@@ -128,7 +129,7 @@ export const MigrationDialog = ({
           });
           setOpen(false);
           setIsMigrating(false);
-          router.replace(`/${organizationSlug}/graphs`);
+          router.replace(graphsPath);
         },
       },
     );
