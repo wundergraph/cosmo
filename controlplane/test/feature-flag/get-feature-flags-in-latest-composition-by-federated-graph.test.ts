@@ -144,7 +144,9 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     });
     expect(afterDisable.response?.code).toBe(EnumStatusCode.OK);
     expect(afterDisable.featureFlags).toHaveLength(1);
-    expect(afterDisable.featureFlags).toStrictEqual(expect.arrayContaining([expect.objectContaining({ name: flagName })]));
+    expect(afterDisable.featureFlags).toStrictEqual(
+      expect.arrayContaining([expect.objectContaining({ name: flagName })]),
+    );
   });
 
   test('Should return empty list when no feature flags exist', async (testContext) => {
