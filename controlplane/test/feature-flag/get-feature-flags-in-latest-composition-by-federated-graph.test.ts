@@ -12,7 +12,7 @@ import {
   DEFAULT_ROUTER_URL,
   DEFAULT_SUBGRAPH_URL_ONE,
   SetupTest,
-  toggleFeatureFlag
+  toggleFeatureFlag,
 } from '../test-util.js';
 
 let dbname = '';
@@ -103,10 +103,11 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     // recomposeFeatureFlag recomposes only the feature flag against the existing base composition (the base
     // schema version is unchanged). Each call creates another feature flag composition for the same
     // (base composition, feature flag) pair, which is the source of the duplicates in the dropdown.
-    for (let i = 0; i < 2; i++) {
-      const recomposeResp = await client.recomposeFeatureFlag({ name: flagName, namespace: 'default' });
-      expect(recomposeResp.response?.code).toBe(EnumStatusCode.OK);
-    }
+    const recomposeResp1 = await client.recomposeFeatureFlag({ name: flagName, namespace: 'default' });
+    expect(recomposeResp1.response?.code).toBe(EnumStatusCode.OK);
+
+    const recomposeResp2 = await client.recomposeFeatureFlag({ name: flagName, namespace: 'default' });
+    expect(recomposeResp2.response?.code).toBe(EnumStatusCode.OK);
 
     const resp = await client.getFeatureFlagsInLatestCompositionByFederatedGraph({
       federatedGraphName,
@@ -115,7 +116,7 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
     // Despite multiple accumulated composition rows, the flag must appear exactly once.
-    expect(resp.featureFlags.filter((f) => f.name === flagName)).toHaveLength(1);
+    expect(resp.featureFlags).toEqual([flagName]);
     expect(resp.featureFlags).toHaveLength(1);
 
     // Create a second, enabled feature flag. It is composed into the latest composition, so it shows up too.
@@ -128,6 +129,7 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     });
     expect(withSecondFlag.response?.code).toBe(EnumStatusCode.OK);
     expect(withSecondFlag.featureFlags.map((f) => f.name).sort()).toEqual([flagName, secondFlagName].sort());
+    expect(withSecondFlag.featureFlags).toHaveLength(2);
 
     await toggleFeatureFlag(client, secondFlagName, false, 'default');
 
@@ -137,7 +139,7 @@ describe('GetFeatureFlagsInLatestCompositionByFederatedGraph', () => {
     });
     expect(afterDisable.response?.code).toBe(EnumStatusCode.OK);
     expect(afterDisable.featureFlags).toHaveLength(1);
-    expect(afterDisable.featureFlags[0].name).toBe(flagName);
+    expect(afterDisable.featureFlags).toEqual([flagName]);
   });
 
   test('Should return empty list when no feature flags exist', async (testContext) => {
