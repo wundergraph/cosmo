@@ -491,7 +491,7 @@ export const Empty = ({
             {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
               <>
                 {displayOnboardingEmptyState ? (
-                  <OnboardingOrSeparator />
+                  <OnboardingOrSeparator className="my-4" />
                 ) : (
                   <span className="text-sm font-bold">OR</span>
                 )}
@@ -678,9 +678,9 @@ function OnboardingBoltIcon() {
   return <LightningBoltIcon className="size-10 text-primary" />;
 }
 
-function OnboardingOrSeparator() {
+function OnboardingOrSeparator({ className }: { className?: string }) {
   return (
-    <div className="mt-7 flex w-full items-center gap-4">
+    <div className={cn('mt-7 flex w-full items-center gap-4', className)}>
       <span className="h-px flex-1 bg-border" />
       <span className="text-xs font-bold text-muted-foreground">OR</span>
       <span className="h-px flex-1 bg-border" />
@@ -692,7 +692,7 @@ function OnboardingEmptyState({ step, isFinished }: { step?: number; isFinished:
   const shouldContinue = step !== undefined && !isFinished;
 
   return (
-    <div className="flex w-full max-w-2xl flex-col items-center px-4 text-center">
+    <div className="flex w-full max-w-2xl flex-col items-center px-6 text-center">
       <OnboardingBoltIcon />
       <h3 className="mt-7 text-2xl font-bold tracking-tight">Create your first graph</h3>
       <p className="mt-4 text-sm text-muted-foreground">
