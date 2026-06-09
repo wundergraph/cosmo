@@ -432,7 +432,12 @@ func (h *HeaderPropagation) setupFileSourceRules(ctx context.Context, logger *za
 			Logger:   logger.With(zap.String("file_source", rule.FromFile.Path)),
 			Callback: func() {
 				if err := content.writeToBuffer(rule.FromFile.Path); err != nil {
-					logger.Error("Error refreshing file source content", zap.Error(err))
+					logger.Error(
+						"error refreshing file source content.",
+						zap.String("file_source", rule.FromFile.Path),
+						zap.String("refresh_interval", rule.FromFile.RefreshInterval.String()),
+						zap.Error(err),
+					)
 				}
 			},
 		})
