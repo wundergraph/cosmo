@@ -13,6 +13,8 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidLabels, normalizeLabels } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
+import { ComposeAndDeployResult } from '../../../types/index.js';
 
 export function updateFeatureFlag(
   opts: RouterOptions,
@@ -153,6 +155,16 @@ export function updateFeatureFlag(
       excludeDisabled: true,
     });
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings, notFoundError } = await opts.db.transaction(
       async (tx) => {
         const txFeatureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
@@ -191,15 +203,14 @@ export function updateFeatureFlag(
             deploymentErrors: [],
             compositionWarnings: [],
             notFoundError: `Feature flag "${featureFlagDTO.name}" was not found after updating.`,
-          };
+          } as ComposeAndDeployResult & { notFoundError: string };
         }
 
         const compositionService = new CompositionService(
           tx,
           authContext.organizationId,
           logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
+          cbsq,
           opts.chClient,
           opts.webhookProxyUrl,
           req.disableResolvabilityValidation,
@@ -215,6 +226,7 @@ export function updateFeatureFlag(
           deploymentErrors: compositionResult.deploymentErrors,
           compositionErrors: compositionResult.compositionErrors,
           compositionWarnings: compositionResult.compositionWarnings,
+          notFoundError: undefined,
         };
       },
     );
@@ -230,6 +242,8 @@ export function updateFeatureFlag(
         compositionWarnings: [],
       };
     }
+
+    deploymentErrors.push(...(await cbsq.processQueue()));
 
     return {
       response: {

@@ -17,6 +17,7 @@ import { enrichLogger, getLogger, handleError, isValidGraphName, isValidLabelMat
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function createFederatedGraph(
   opts: RouterOptions,
@@ -207,13 +208,22 @@ export function createFederatedGraph(
       };
     }
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction((tx) => {
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
         logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
+        cbsq,
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
@@ -221,6 +231,8 @@ export function createFederatedGraph(
 
       return compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph });
     });
+
+    deploymentErrors.push(...(await cbsq.processQueue()));
 
     orgWebhooks.send(
       {

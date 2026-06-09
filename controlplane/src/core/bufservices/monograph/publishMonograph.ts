@@ -16,6 +16,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function publishMonograph(
   opts: RouterOptions,
@@ -140,6 +141,16 @@ export function publishMonograph(
       authContext,
     });
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
       await opts.db.transaction((tx) => {
         const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
@@ -147,8 +158,7 @@ export function publishMonograph(
           tx,
           authContext.organizationId,
           logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
+          cbsq,
           opts.chClient,
           opts.webhookProxyUrl,
           false,
@@ -167,6 +177,8 @@ export function publishMonograph(
           compositionService,
         );
       });
+
+    deploymentErrors.push(...(await cbsq.processQueue()));
 
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(

@@ -13,6 +13,7 @@ import { AuthContext, FederatedGraphDTO } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { maxRowLimitForChecks } from '../../constants.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function recomposeGraph(
   opts: RouterOptions,
@@ -67,13 +68,22 @@ export function recomposeGraph(
       authContext,
     });
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { compositionErrors, compositionWarnings, deploymentErrors } = await opts.db.transaction((tx) => {
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
         logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
+        cbsq,
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
@@ -81,6 +91,8 @@ export function recomposeGraph(
 
       return compositionService.composeAndDeployFederatedGraph({ actorId: authContext.userId, federatedGraph: graph });
     });
+
+    deploymentErrors.push(...(await cbsq.processQueue()));
 
     sendOrgWebhooks({
       authContext,

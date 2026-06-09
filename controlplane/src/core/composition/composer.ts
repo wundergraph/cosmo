@@ -139,18 +139,42 @@ export type CheckSubgraph = {
   labels?: Label[];
 };
 
+export type ComposeAndUploadRouterConfigParams = {
+  admissionConfig: {
+    jwtSecret: string;
+    cdnBaseUrl: string;
+  };
+  baseCompositionRouterExecutionConfig: RouterConfig;
+  baseCompositionSchemaVersionId: string;
+  blobStorage: BlobStorage;
+  featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
+  federatedGraphId: string;
+  organizationId: string;
+  federatedGraphAdmissionWebhookURL?: string;
+  federatedGraphAdmissionWebhookSecret?: string;
+  actorId: string;
+  pathOverride?: { ready: string; draft: string };
+};
+
 @traced
 export class Composer {
+  readonly #federatedGraphRepo: FederatedGraphRepository;
+  readonly #subgraphRepo: SubgraphRepository;
+  readonly #contractRepo: ContractRepository;
+  readonly #graphCompositionRepository: GraphCompositionRepository;
+
   constructor(
     private logger: FastifyBaseLogger,
     private db: PostgresJsDatabase<typeof schema>,
-    private federatedGraphRepo: FederatedGraphRepository,
-    private subgraphRepo: SubgraphRepository,
-    private contractRepo: ContractRepository,
-    private graphCompositionRepository: GraphCompositionRepository,
+    organizationId: string,
     private chClient?: ClickHouseClient,
     private proxyUrl?: string,
-  ) {}
+  ) {
+    this.#federatedGraphRepo = new FederatedGraphRepository(logger, db, organizationId);
+    this.#subgraphRepo = new SubgraphRepository(logger, db, organizationId);
+    this.#contractRepo = new ContractRepository(logger, db, organizationId);
+    this.#graphCompositionRepository = new GraphCompositionRepository(logger, db);
+  }
 
   composeRouterConfigWithFeatureFlags({
     featureFlagRouterExecutionConfigByFeatureFlagName,
@@ -334,13 +358,13 @@ export class Composer {
     }
 
     if (deploymentError || admissionError) {
-      await this.graphCompositionRepository.updateComposition({
+      await this.#graphCompositionRepository.updateComposition({
         fedGraphSchemaVersionId: federatedSchemaVersionId,
         deploymentErrorString: deploymentError?.message,
         admissionErrorString: admissionError?.message,
       });
     } else if (signatureSha256) {
-      await this.graphCompositionRepository.updateComposition({
+      await this.#graphCompositionRepository.updateComposition({
         fedGraphSchemaVersionId: federatedSchemaVersionId,
         routerConfigSignature: signatureSha256,
       });
@@ -371,28 +395,13 @@ export class Composer {
     federatedGraphAdmissionWebhookSecret,
     actorId,
     pathOverride,
-  }: {
-    admissionConfig: {
-      jwtSecret: string;
-      cdnBaseUrl: string;
-    };
-    baseCompositionRouterExecutionConfig: RouterConfig;
-    baseCompositionSchemaVersionId: string;
-    blobStorage: BlobStorage;
-    featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
-    federatedGraphId: string;
-    organizationId: string;
-    federatedGraphAdmissionWebhookURL?: string;
-    federatedGraphAdmissionWebhookSecret?: string;
-    actorId: string;
-    pathOverride?: { ready: string; draft: string };
-  }) {
+  }: ComposeAndUploadRouterConfigParams) {
     const baseRouterConfig = this.composeRouterConfigWithFeatureFlags({
       featureFlagRouterExecutionConfigByFeatureFlagName,
       baseCompositionRouterExecutionConfig,
     });
 
-    const federatedGraph = await this.federatedGraphRepo.byId(federatedGraphId);
+    const federatedGraph = await this.#federatedGraphRepo.byId(federatedGraphId);
     if (!federatedGraph) {
       throw new Error(`Federated graph not found.`);
     }
@@ -451,11 +460,11 @@ export class Composer {
     routerExecutionConfig?: RouterConfig;
     featureFlagId: string;
   }): Promise<CompositionDeployResult> {
-    const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion({
+    const prevValidFederatedSDL = await this.#federatedGraphRepo.getLatestValidSchemaVersion({
       targetId: composedGraph.targetID,
     });
 
-    const updatedFederatedGraph = await this.federatedGraphRepo.addSchemaVersion({
+    const updatedFederatedGraph = await this.#federatedGraphRepo.addSchemaVersion({
       targetId: composedGraph.targetID,
       composedSDL: composedGraph.composedSchema,
       clientSchema: composedGraph.federatedClientSchema,
@@ -497,7 +506,7 @@ export class Composer {
     }
 
     if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
-      await this.federatedGraphRepo.createFederatedGraphChangelog({
+      await this.#federatedGraphRepo.createFederatedGraphChangelog({
         schemaVersionID: updatedFederatedGraph.composedSchemaVersionId,
         changes: schemaChanges.changes,
       });
@@ -516,7 +525,7 @@ export class Composer {
   ): Promise<CompositionResult> {
     const composedGraphs: DeserializedComposedGraph[] = [];
 
-    const graphs = await this.federatedGraphRepo.bySubgraphLabels({
+    const graphs = await this.#federatedGraphRepo.bySubgraphLabels({
       labels: subgraphLabels,
       namespaceId,
       excludeContracts: true,
@@ -524,12 +533,12 @@ export class Composer {
 
     for await (const graph of graphs) {
       try {
-        const allSubgraphs = await this.subgraphRepo.listByFederatedGraph({
+        const allSubgraphs = await this.#subgraphRepo.listByFederatedGraph({
           federatedGraphTargetId: graph.targetId,
         });
         const subgraphsToSend = mapSubgraphs(allSubgraphs);
 
-        const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
+        const contracts = await this.#contractRepo.bySourceFederatedGraphId(graph.id);
         const tagOptionsByContractName = contracts.map((c) => ({
           contractName: c.downstreamFederatedGraph.target.name,
           excludeTags: c.excludeTags,
@@ -555,7 +564,7 @@ export class Composer {
         composedGraphs.push(deserializeComposedGraphArtifact(graph, base.base));
 
         for (const contractArtifact of base.contracts) {
-          const contractGraph = await this.federatedGraphRepo.byName(contractArtifact.contractName, graph.namespace);
+          const contractGraph = await this.#federatedGraphRepo.byName(contractArtifact.contractName, graph.namespace);
           if (!contractGraph) {
             throw new Error(`Contract graph ${contractArtifact.contractName} not found`);
           }
@@ -617,7 +626,7 @@ export class Composer {
     const checkSubgraphsByFedGraph = new Map<string, string[]>();
     for (const graph of graphs) {
       try {
-        const subgraphsOfFedGraph = await this.subgraphRepo.listByFederatedGraph({
+        const subgraphsOfFedGraph = await this.#subgraphRepo.listByFederatedGraph({
           federatedGraphTargetId: graph.targetId,
         });
 
@@ -644,7 +653,7 @@ export class Composer {
             continue;
           }
           // get the fed graphs which match the labels of the new subgraph
-          const fedGraphsOfNewSubgraphs = await this.federatedGraphRepo.bySubgraphLabels({
+          const fedGraphsOfNewSubgraphs = await this.#federatedGraphRepo.bySubgraphLabels({
             labels: subgraph.labels || [],
             namespaceId: graph.namespaceId,
             excludeContracts: true,
@@ -678,7 +687,7 @@ export class Composer {
           } as SubgraphDTO);
         }
 
-        const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
+        const contracts = await this.#contractRepo.bySourceFederatedGraphId(graph.id);
         const tagOptionsByContractName = contracts.map((c) => ({
           contractName: c.downstreamFederatedGraph.target.name,
           excludeTags: c.excludeTags,
@@ -704,7 +713,7 @@ export class Composer {
         composedGraphs.push(deserializeComposedGraphArtifact(graph, base.base));
 
         for (const contractArtifact of base.contracts) {
-          const contractGraph = await this.federatedGraphRepo.byName(contractArtifact.contractName, graph.namespace);
+          const contractGraph = await this.#federatedGraphRepo.byName(contractArtifact.contractName, graph.namespace);
           if (!contractGraph) {
             throw new Error(`Contract graph ${contractArtifact.contractName} not found`);
           }

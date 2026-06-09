@@ -10,9 +10,7 @@ import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/inde
 import { Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
 import { OpenAIGraphql } from '../../openai-graphql/index.js';
-import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
@@ -32,20 +30,9 @@ export function fixSubgraphSchema(
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-    const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
-    const graphCompositionRepo = new GraphCompositionRepository(logger, opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-    const composer = new Composer(
-      logger,
-      opts.db,
-      fedGraphRepo,
-      subgraphRepo,
-      contractRepo,
-      graphCompositionRepo,
-      opts.chClient,
-      opts.webhookProxyUrl,
-    );
+    const composer = new Composer(logger, opts.db, authContext.organizationId, opts.chClient, opts.webhookProxyUrl);
 
     req.namespace = req.namespace || DefaultNamespace;
 

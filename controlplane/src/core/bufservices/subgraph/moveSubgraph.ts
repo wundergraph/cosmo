@@ -12,6 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function moveSubgraph(
   opts: RouterOptions,
@@ -84,6 +85,16 @@ export function moveSubgraph(
       authContext,
     });
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const auditLogRepo = new AuditLogRepository(tx);
@@ -107,8 +118,7 @@ export function moveSubgraph(
           tx,
           authContext.organizationId,
           logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
+          cbsq,
           opts.chClient,
           opts.webhookProxyUrl,
           req.disableResolvabilityValidation,
@@ -145,6 +155,8 @@ export function moveSubgraph(
         return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
       });
 
+    deploymentErrors.push(...(await cbsq.processQueue()));
+
     for (const graph of updatedFederatedGraphs) {
       orgWebhooks.send(
         {
@@ -167,34 +179,17 @@ export function moveSubgraph(
       );
     }
 
-    if (compositionErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
-        compositionErrors,
-        compositionWarnings,
-        deploymentErrors: [],
-      };
-    }
-
-    if (deploymentErrors.length > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
-        compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
-      };
-    }
-
     return {
       response: {
-        code: EnumStatusCode.OK,
+        code:
+          compositionErrors.length > 0
+            ? EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+            : deploymentErrors.length > 0
+              ? EnumStatusCode.ERR_DEPLOYMENT_FAILED
+              : EnumStatusCode.OK,
       },
-      compositionErrors: [],
-      deploymentErrors: [],
+      compositionErrors,
+      deploymentErrors,
       compositionWarnings,
     };
   });

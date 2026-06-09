@@ -22,6 +22,7 @@ import {
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function updateMonograph(
   opts: RouterOptions,
@@ -136,12 +137,21 @@ export function updateMonograph(
         authContext,
       });
 
+      const cbsq = new CompositionBlobStorageQueue(
+        logger,
+        opts.db,
+        opts.blobStorage,
+        authContext.organizationId,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.chClient,
+        opts.webhookProxyUrl,
+      );
+
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
         logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
+        cbsq,
         opts.chClient!,
         opts.webhookProxyUrl,
         false,
@@ -160,6 +170,8 @@ export function updateMonograph(
         admissionWebhookURL: req.admissionWebhookURL,
         admissionWebhookSecret: req.admissionWebhookSecret,
       });
+
+      await cbsq.processQueue();
 
       // Update the subgraph
       await subgraphRepo.update(

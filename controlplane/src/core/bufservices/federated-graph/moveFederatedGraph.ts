@@ -12,6 +12,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function moveFederatedGraph(
   opts: RouterOptions,
@@ -141,12 +142,21 @@ export function moveFederatedGraph(
         throw new Error('Federated graph not found');
       }
 
+      const cbsq = new CompositionBlobStorageQueue(
+        logger,
+        opts.db,
+        opts.blobStorage,
+        authContext.organizationId,
+        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+        opts.chClient,
+        opts.webhookProxyUrl,
+      );
+
       const compositionService = new CompositionService(
         tx,
         authContext.organizationId,
         logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
+        cbsq,
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
@@ -158,6 +168,8 @@ export function moveFederatedGraph(
           actorId: authContext.userId,
           federatedGraph: movedFederatedGraph,
         });
+
+      deploymentErrors.push(...(await cbsq.processQueue()));
 
       for (const movedGraph of movedGraphs) {
         await auditLogRepo.addAuditLog({

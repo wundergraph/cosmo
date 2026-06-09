@@ -20,6 +20,14 @@ export interface BlobObject {
   stream: ReadableStream;
 }
 
+export type PutObjectParams<Metadata extends Record<string, string>> = {
+  key: string;
+  abortSignal?: AbortSignal;
+  body: Buffer;
+  contentType: string;
+  metadata?: Metadata;
+};
+
 /**
  * Describes the interface for a blob storage service
  */
@@ -36,13 +44,7 @@ export interface BlobStorage {
     body,
     contentType,
     metadata,
-  }: {
-    key: string;
-    abortSignal?: AbortSignal;
-    body: Buffer;
-    contentType: string;
-    metadata?: Metadata;
-  }): Promise<void>;
+  }: PutObjectParams<Metadata>): Promise<void>;
   /**
    * Retrieves an object from the blob storage using the given key. If the blob doesn't exist, it throws
    * BlobNotFoundError.

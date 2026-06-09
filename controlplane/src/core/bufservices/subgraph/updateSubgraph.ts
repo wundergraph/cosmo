@@ -25,6 +25,7 @@ import {
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function updateSubgraph(
   opts: RouterOptions,
@@ -187,6 +188,16 @@ export function updateSubgraph(
       throw new UnauthorizedError();
     }
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings, updatedFederatedGraphs } =
       await opts.db.transaction((tx) => {
         const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
@@ -194,8 +205,7 @@ export function updateSubgraph(
           tx,
           authContext.organizationId,
           logger,
-          { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-          opts.blobStorage,
+          cbsq,
           opts.chClient,
           opts.webhookProxyUrl,
           req.disableResolvabilityValidation,
@@ -219,6 +229,8 @@ export function updateSubgraph(
           compositionService,
         );
       });
+
+    deploymentErrors.push(...(await cbsq.processQueue()));
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,

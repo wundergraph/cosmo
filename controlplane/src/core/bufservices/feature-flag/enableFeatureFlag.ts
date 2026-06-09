@@ -12,6 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function enableFeatureFlag(
   opts: RouterOptions,
@@ -79,6 +80,16 @@ export function enableFeatureFlag(
       };
     }
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
       const txFeatureFlagRepo = new FeatureFlagRepository(logger, tx, authContext.organizationId);
       await txFeatureFlagRepo.enableFeatureFlag({
@@ -91,8 +102,7 @@ export function enableFeatureFlag(
         tx,
         authContext.organizationId,
         logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
+        cbsq,
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
@@ -104,6 +114,8 @@ export function enableFeatureFlag(
         isEnabled: req.enabled,
       });
     });
+
+    deploymentErrors.push(...(await cbsq.processQueue()));
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,

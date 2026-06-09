@@ -12,6 +12,7 @@ import { enrichLogger, getLogger, handleError, isValidSchemaTags } from '../../u
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { CompositionService } from '../../services/CompositionService.js';
+import { CompositionBlobStorageQueue } from '../../services/CompositionBlobStorageQueue.js';
 
 export function updateContract(
   opts: RouterOptions,
@@ -111,6 +112,16 @@ export function updateContract(
       };
     }
 
+    const cbsq = new CompositionBlobStorageQueue(
+      logger,
+      opts.db,
+      opts.blobStorage,
+      authContext.organizationId,
+      { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
+      opts.chClient,
+      opts.webhookProxyUrl,
+    );
+
     const { deploymentErrors, compositionErrors, compositionWarnings } = await opts.db.transaction(async (tx) => {
       const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -118,8 +129,7 @@ export function updateContract(
         tx,
         authContext.organizationId,
         logger,
-        { cdnBaseUrl: opts.cdnBaseUrl, webhookJWTSecret: opts.admissionWebhookJWTSecret },
-        opts.blobStorage,
+        cbsq,
         opts.chClient,
         opts.webhookProxyUrl,
         req.disableResolvabilityValidation,
@@ -162,6 +172,7 @@ export function updateContract(
       });
     });
 
+    deploymentErrors.push(...(await cbsq.processQueue()));
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,

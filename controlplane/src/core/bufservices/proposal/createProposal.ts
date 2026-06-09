@@ -10,9 +10,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Composer } from '../../composition/composer.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
@@ -383,19 +381,8 @@ export function createProposal(
     const schemaLintRepo = new SchemaLintRepository(opts.db);
     const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
     const schemaCheckRepo = new SchemaCheckRepository(opts.db);
-    const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
-    const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
     const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
-    const composer = new Composer(
-      logger,
-      opts.db,
-      fedGraphRepo,
-      subgraphRepo,
-      contractRepo,
-      graphCompostionRepo,
-      opts.chClient,
-      opts.webhookProxyUrl,
-    );
+    const composer = new Composer(logger, opts.db, authContext.organizationId, opts.chClient, opts.webhookProxyUrl);
 
     const {
       response,
