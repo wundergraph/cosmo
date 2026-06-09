@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 
 export interface EmptyStateProps {
   icon?: React.ReactNode;
-  title: React.ReactNode;
+  title?: React.ReactNode;
   description?: React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
