@@ -64,6 +64,7 @@ const MigrationDialog = ({
   setIsMigrationSuccess,
   setToken,
   isEmptyState,
+  compact,
 }: {
   refetch: () => void;
   isMigrating: boolean;
@@ -71,6 +72,7 @@ const MigrationDialog = ({
   setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
   setToken: Dispatch<SetStateAction<string | undefined>>;
   isEmptyState?: boolean;
+  compact?: boolean;
 }) => {
   const router = useRouter();
   const {
@@ -101,6 +103,32 @@ const MigrationDialog = ({
   const { mutate } = useMutation(migrateFromApollo);
 
   const [open, setOpen] = useState(migrate || false);
+
+  const trigger = compact ? (
+    <Card className="flex w-full items-center rounded-xl border-primary/70 bg-primary/10 px-5 py-4 text-left transition-colors hover:bg-primary/15">
+      <div className="flex shrink-0 items-center gap-x-2 text-foreground">
+        <SiApollographql className="size-5" />
+        <ChevronDoubleRightIcon className="size-4 text-muted-foreground" />
+        <Logo width={22} height={22} />
+      </div>
+      <div className="ml-5 min-w-0 flex-1">
+        <p className="text-base font-semibold leading-5 text-primary">Migrate from Apollo</p>
+        <p className="text-sm leading-5 text-muted-foreground">Bring your existing supergraph over</p>
+      </div>
+      <ArrowRightIcon className="ml-4 size-5 shrink-0 text-muted-foreground" />
+    </Card>
+  ) : (
+    <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
+      <div className="flex items-center justify-center gap-x-5">
+        <SiApollographql className="h-10 w-10" />
+        <ChevronDoubleRightIcon className="animation h-8 w-8" />
+        <Logo width={50} height={50} />
+      </div>
+      <p className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-xl font-semibold text-transparent">
+        Migrate from Apollo
+      </p>
+    </Card>
+  );
 
   const onSubmit: SubmitHandler<MigrateInput> = (data) => {
     setIsMigrating(true);
@@ -147,20 +175,12 @@ const MigrationDialog = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        className={cn({
+        className={cn('w-full', {
           'min-h-[254px]': !isEmptyState,
+          'text-left': compact,
         })}
       >
-        <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
-          <div className="flex items-center justify-center gap-x-5">
-            <SiApollographql className="h-10 w-10" />
-            <ChevronDoubleRightIcon className="animation h-8 w-8" />
-            <Logo width={50} height={50} />
-          </div>
-          <p className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-xl font-semibold text-transparent">
-            Migrate from Apollo
-          </p>
-        </Card>
+        {trigger}
       </DialogTrigger>
       <DialogContent>
         {!isMigrating ? (
@@ -475,6 +495,7 @@ export const Empty = ({
                   refetch={refetch}
                   setIsMigrationSuccess={setIsMigrationSuccess}
                   isEmptyState={true}
+                  compact={displayOnboardingEmptyState}
                   setToken={setToken}
                   isMigrating={isMigrating}
                   setIsMigrating={setIsMigrating}
