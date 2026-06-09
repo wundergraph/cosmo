@@ -490,7 +490,11 @@ export const Empty = ({
 
             {checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] }) && (
               <>
-                <span className="text-sm font-bold">OR</span>
+                {displayOnboardingEmptyState ? (
+                  <OnboardingOrSeparator />
+                ) : (
+                  <span className="text-sm font-bold">OR</span>
+                )}
                 <MigrationDialog
                   refetch={refetch}
                   setIsMigrationSuccess={setIsMigrationSuccess}
@@ -674,11 +678,21 @@ function OnboardingBoltIcon() {
   return <LightningBoltIcon className="size-10 text-primary" />;
 }
 
+function OnboardingOrSeparator() {
+  return (
+    <div className="mt-7 flex w-full items-center gap-4">
+      <span className="h-px flex-1 bg-border" />
+      <span className="text-xs font-bold text-muted-foreground">OR</span>
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
+
 function OnboardingEmptyState({ step, isFinished }: { step?: number; isFinished: boolean }) {
   const shouldContinue = step !== undefined && !isFinished;
 
   return (
-    <div className="flex w-full max-w-xl flex-col items-center px-4 text-center">
+    <div className="flex w-full max-w-2xl flex-col items-center px-4 text-center">
       <OnboardingBoltIcon />
       <h3 className="mt-7 text-2xl font-bold tracking-tight">Create your first graph</h3>
       <p className="mt-4 text-sm text-muted-foreground">
@@ -699,11 +713,7 @@ function OnboardingEmptyState({ step, isFinished }: { step?: number; isFinished:
         </span>
         <ArrowRightIcon className="ml-4 size-5 shrink-0" />
       </Link>
-      <div className="mt-7 flex w-full items-center gap-4">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-xs font-bold text-muted-foreground">OR</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
+      <OnboardingOrSeparator />
     </div>
   );
 }
