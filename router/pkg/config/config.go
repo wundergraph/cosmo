@@ -1239,15 +1239,16 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPConfiguration struct {
-	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	Server                    MCPServer        `yaml:"server,omitempty"`
-	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
-	Session                   MCPSessionConfig `yaml:"session,omitempty"`
-	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
-	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
-	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
-	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
-	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	Enabled                   bool                     `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer                `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig         `yaml:"storage,omitempty"`
+	Session                   MCPSessionConfig         `yaml:"session,omitempty"`
+	CodeMode                  MCPCodeModeConfiguration `yaml:"code_mode,omitempty" envPrefix:"MCP_CODE_MODE_"`
+	GraphName                 string                   `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool                     `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool                     `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool                     `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	RouterURL                 string                   `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
 	OmitToolNamePrefix bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
@@ -1255,6 +1256,105 @@ type MCPConfiguration struct {
 	// ResourceDocumentation is a URL to a human-readable page describing this MCP resource,
 	// its access policies, and how to get started. Included in RFC 9728 Protected Resource Metadata if set.
 	ResourceDocumentation string `yaml:"resource_documentation,omitempty" env:"MCP_RESOURCE_DOCUMENTATION"`
+
+	// Servers is the list of MCP servers ("collections") to expose on the shared HTTP listener.
+	// When empty, the legacy top-level fields above define a single implicit server at path "/mcp".
+	// When non-empty, each entry is fully self-described — no inheritance from top-level fields.
+	Servers []MCPServerEntry `yaml:"servers,omitempty"`
+}
+
+// MCPServerEntry describes a single MCP server (collection) mounted at a path on the shared listener.
+type MCPServerEntry struct {
+	// Name is a unique identifier for this server, used in metrics, logs, and tool descriptions.
+	Name string `yaml:"name"`
+	// Path is the URL path this server is mounted at (e.g. "/mcp", "/internal"). Must start with "/".
+	Path string `yaml:"path"`
+	// Storage references a file_system storage provider that holds operation files for this server.
+	Storage MCPStorageConfig `yaml:"storage,omitempty"`
+	// Upstream optionally overrides the local Cosmo supergraph as the GraphQL backend.
+	// When nil, the server routes to the local supergraph (default behavior).
+	Upstream *MCPUpstreamConfig `yaml:"upstream,omitempty"`
+	// OAuth configures authentication for this server; absent or enabled=false means no auth.
+	OAuth MCPOAuthConfiguration `yaml:"oauth,omitempty"`
+	// Per-server feature toggles (see MCPConfiguration for descriptions).
+	ExcludeMutations          bool             `yaml:"exclude_mutations"`
+	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations"`
+	ExposeSchema              bool             `yaml:"expose_schema"`
+	OmitToolNamePrefix        bool             `yaml:"omit_tool_name_prefix"`
+	Session                   MCPSessionConfig `yaml:"session,omitempty"`
+	ResourceDocumentation     string           `yaml:"resource_documentation,omitempty"`
+}
+
+// MCPUpstreamConfig points an MCP server at a non-Cosmo GraphQL endpoint.
+type MCPUpstreamConfig struct {
+	// URL is the GraphQL endpoint to which operations are forwarded.
+	URL string `yaml:"url"`
+	// Schema describes how to obtain the GraphQL schema for this upstream
+	// (used to compile operations into MCP tools).
+	Schema MCPUpstreamSchemaConfig `yaml:"schema,omitempty"`
+	// Headers are forwarded to the upstream on every request (in addition to per-request headers).
+	Headers map[string]string `yaml:"headers,omitempty"`
+}
+
+// MCPUpstreamSchemaConfig describes the schema source for an upstream-bound collection.
+type MCPUpstreamSchemaConfig struct {
+	// File is the path to an SDL file. If the file does not exist, the upstream is introspected
+	// at startup and the result is written to this path (introspection fallback is a v2 feature
+	// — for v1, the file must exist).
+	File string `yaml:"file,omitempty"`
+}
+
+// NormalizeServers returns the canonical list of MCPServerEntry the router will mount.
+//
+// When Servers is non-empty, entries are returned as-is after uniqueness/format validation.
+// When Servers is empty, a single implicit entry is synthesized from the legacy top-level
+// fields and mounted at "/mcp" — preserving backwards compatibility with existing configs.
+func (c *MCPConfiguration) NormalizeServers() ([]MCPServerEntry, error) {
+	if len(c.Servers) > 0 {
+		seenPaths := make(map[string]struct{}, len(c.Servers))
+		seenNames := make(map[string]struct{}, len(c.Servers))
+		for i := range c.Servers {
+			srv := &c.Servers[i]
+			if srv.Name == "" {
+				return nil, fmt.Errorf("mcp.servers[%d]: name is required", i)
+			}
+			if srv.Path == "" {
+				return nil, fmt.Errorf("mcp.servers[%d] (%q): path is required", i, srv.Name)
+			}
+			if !strings.HasPrefix(srv.Path, "/") {
+				return nil, fmt.Errorf("mcp.servers[%d] (%q): path must start with '/'", i, srv.Name)
+			}
+			if _, dup := seenPaths[srv.Path]; dup {
+				return nil, fmt.Errorf("mcp.servers: duplicate path %q", srv.Path)
+			}
+			seenPaths[srv.Path] = struct{}{}
+			if _, dup := seenNames[srv.Name]; dup {
+				return nil, fmt.Errorf("mcp.servers: duplicate name %q", srv.Name)
+			}
+			seenNames[srv.Name] = struct{}{}
+			if srv.Upstream != nil && srv.Upstream.URL == "" {
+				return nil, fmt.Errorf("mcp.servers[%d] (%q): upstream.url is required when upstream is set", i, srv.Name)
+			}
+		}
+		return c.Servers, nil
+	}
+
+	name := c.GraphName
+	if name == "" {
+		name = "mygraph"
+	}
+	return []MCPServerEntry{{
+		Name:                      name,
+		Path:                      "/mcp",
+		Storage:                   c.Storage,
+		OAuth:                     c.OAuth,
+		ExcludeMutations:          c.ExcludeMutations,
+		EnableArbitraryOperations: c.EnableArbitraryOperations,
+		ExposeSchema:              c.ExposeSchema,
+		OmitToolNamePrefix:        c.OmitToolNamePrefix,
+		Session:                   c.Session,
+		ResourceDocumentation:     c.ResourceDocumentation,
+	}}, nil
 }
 
 type MCPOAuthConfiguration struct {
@@ -1300,8 +1400,65 @@ type MCPSessionConfig struct {
 	Stateless bool `yaml:"stateless" envDefault:"true" env:"MCP_SESSION_STATELESS"`
 }
 
+type MCPCodeModeConfiguration struct {
+	Enabled                 bool                      `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Server                  MCPCodeModeServerConfig   `yaml:"server,omitempty" envPrefix:""`
+	RequireMutationApproval bool                      `yaml:"require_mutation_approval" envDefault:"true" env:"REQUIRE_MUTATION_APPROVAL"`
+	ExecuteTimeout          time.Duration             `yaml:"execute_timeout" envDefault:"120s" env:"EXECUTE_TIMEOUT"`
+	MaxResultBytes          int                       `yaml:"max_result_bytes" envDefault:"32768" env:"MAX_RESULT_BYTES"`
+	Sandbox                 MCPCodeModeSandboxConfig  `yaml:"sandbox,omitempty" envPrefix:"SANDBOX_"`
+	QueryGeneration         MCPCodeModeQueryGenConfig `yaml:"query_generation,omitempty" envPrefix:"QUERY_GENERATION_"`
+	NamedOps                MCPCodeModeNamedOpsConfig `yaml:"named_ops,omitempty" envPrefix:"NAMED_OPS_"`
+}
+
+type MCPCodeModeServerConfig struct {
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5027" env:"LISTEN_ADDR"`
+}
+
+type MCPCodeModeSandboxConfig struct {
+	Timeout            time.Duration `yaml:"timeout" envDefault:"5s" env:"TIMEOUT"`
+	MaxMemoryMB        int           `yaml:"max_memory_mb" envDefault:"16" env:"MAX_MEMORY_MB"`
+	MaxInputSizeBytes  int           `yaml:"max_input_size_bytes" envDefault:"65536" env:"MAX_INPUT_SIZE_BYTES"`
+	MaxOutputSizeBytes int           `yaml:"max_output_size_bytes" envDefault:"1048576" env:"MAX_OUTPUT_SIZE_BYTES"`
+}
+
+type MCPCodeModeQueryGenConfig struct {
+	Enabled  bool                          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Endpoint string                        `yaml:"endpoint,omitempty" env:"ENDPOINT"`
+	Timeout  time.Duration                 `yaml:"timeout" envDefault:"10s" env:"TIMEOUT"`
+	Auth     MCPCodeModeQueryGenAuthConfig `yaml:"auth,omitempty" envPrefix:"AUTH_"`
+}
+
+type MCPCodeModeQueryGenAuthConfig struct {
+	Type          string `yaml:"type" envDefault:"static" env:"TYPE"`
+	StaticToken   string `yaml:"static_token,omitempty" env:"STATIC_TOKEN"`
+	TokenEndpoint string `yaml:"token_endpoint,omitempty" env:"TOKEN_ENDPOINT"`
+	ClientID      string `yaml:"client_id,omitempty" env:"CLIENT_ID"`
+	ClientSecret  string `yaml:"client_secret,omitempty" env:"CLIENT_SECRET"`
+}
+
+type MCPCodeModeNamedOpsConfig struct {
+	Enabled        bool                             `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	SessionTTL     time.Duration                    `yaml:"session_ttl" envDefault:"30m" env:"SESSION_TTL"`
+	MaxSessions    int                              `yaml:"max_sessions" envDefault:"1000" env:"MAX_SESSIONS"`
+	MaxBundleBytes int                              `yaml:"max_bundle_bytes" envDefault:"262144" env:"MAX_BUNDLE_BYTES"`
+	Storage        MCPCodeModeNamedOpsStorageConfig `yaml:"storage,omitempty" envPrefix:"STORAGE_"`
+}
+
+type MCPCodeModeNamedOpsStorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	KeyPrefix  string `yaml:"key_prefix" envDefault:"cosmo_code_mode" env:"KEY_PREFIX"`
+}
+
 type MCPStorageConfig struct {
 	ProviderID string `yaml:"provider_id,omitempty" env:"MCP_STORAGE_PROVIDER_ID"`
+	// Watch enables periodic scanning of the storage provider directory for added,
+	// modified, or removed operation files. When a change is detected, the MCP
+	// collection's tools are reloaded without restarting the router.
+	// Currently only supported when the referenced provider is a file_system provider.
+	Watch bool `yaml:"watch,omitempty" envDefault:"false" env:"MCP_STORAGE_WATCH"`
+	// WatchInterval is the polling interval used when Watch is true. Defaults to 1s.
+	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"MCP_STORAGE_WATCH_INTERVAL"`
 }
 
 type MCPServer struct {
@@ -1561,6 +1718,10 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
 		cfg.Config.SubgraphErrorPropagation.OmitLocations = false
 		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
+	}
+
+	if err := ValidateMCPCodeMode(&cfg.Config.MCP.CodeMode, cfg.Config.MCP.Session.Stateless); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil

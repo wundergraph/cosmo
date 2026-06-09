@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "yoko": {
+      "type": "http",
+      "url": "http://localhost:5027/mcp"
+    }
+  }
+}

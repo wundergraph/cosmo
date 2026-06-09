@@ -31,6 +31,7 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
+	codemodeserver "github.com/wundergraph/cosmo/router/internal/codemode/server"
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
@@ -986,6 +987,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	if err := r.startMCPServer(ctx); err != nil {
 		return err
 	}
+	if err := r.startCodeModeServer(ctx); err != nil {
+		return err
+	}
 
 	if r.connectRPC.Enabled {
 		r.logger.Debug("ConnectRPC configuration",
@@ -1122,87 +1126,241 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	return nil
 }
 
-// startMCPServer initializes and starts the MCP server if enabled.
+// startMCPServer initializes and starts the MCP server(s) if enabled.
+//
+// When mcp.servers is configured, each entry is mounted as its own collection on
+// the shared HTTP listener. When absent, a single implicit collection is synthesized
+// from the legacy top-level mcp.* fields and mounted at "/mcp" — preserving
+// backwards compatibility.
 func (r *Router) startMCPServer(ctx context.Context) error {
 	if !r.mcp.Enabled {
 		return nil
 	}
 
-	var operationsDir string
+	entries, err := r.mcp.NormalizeServers()
+	if err != nil {
+		return fmt.Errorf("invalid mcp configuration: %w", err)
+	}
 
-	// If storage provider ID is set, resolve it to a directory path
-	if r.mcp.Storage.ProviderID != "" {
-		r.logger.Debug("Resolving storage provider for MCP operations",
-			zap.String("provider_id", r.mcp.Storage.ProviderID))
+	defaultGraphQLEndpoint := r.graphqlEndpointURL
+	if r.mcp.RouterURL != "" {
+		defaultGraphQLEndpoint = r.mcp.RouterURL
+	}
 
-		provider, ok := r.providerRegistry.FileSystem(r.mcp.Storage.ProviderID)
-		if !ok {
-			return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
+	handlers := make([]*mcpserver.GraphQLSchemaServer, 0, len(entries))
+	for i := range entries {
+		entry := &entries[i]
+		handler, hErr := r.buildMCPHandler(ctx, entry, defaultGraphQLEndpoint)
+		if hErr != nil {
+			return fmt.Errorf("mcp server %q: %w", entry.Name, hErr)
 		}
-		r.logger.Debug("Found file_system storage provider for MCP",
-			zap.String("id", provider.ID),
-			zap.String("path", provider.Path))
+		handlers = append(handlers, handler)
+	}
+
+	multi, err := mcpserver.NewMultiServer(r.mcp.Server.ListenAddr, r.logger, handlers...)
+	if err != nil {
+		return fmt.Errorf("failed to create mcp multi-server: %w", err)
+	}
+
+	if err := multi.Start(); err != nil {
+		if stopErr := multi.Stop(ctx); stopErr != nil {
+			r.logger.Warn("Failed to stop MCP server during error cleanup", zap.Error(stopErr))
+		}
+		return fmt.Errorf("failed to start MCP server: %w", err)
+	}
+
+	r.mcpServer = multi
+	return nil
+}
+
+// loadOrIntrospectUpstreamSDL resolves the SDL for an upstream-bound MCP collection.
+// Resolution order:
+//  1. If schema.file is configured and exists on disk, load it.
+//  2. Else introspect the upstream at startup. If schema.file is configured (but missing),
+//     write the result to disk so subsequent runs are deterministic and offline-safe.
+func loadOrIntrospectUpstreamSDL(ctx context.Context, entry *config.MCPServerEntry, logger *zap.Logger) (string, error) {
+	filePath := entry.Upstream.Schema.File
+	if filePath != "" {
+		data, err := os.ReadFile(filePath)
+		if err == nil {
+			return string(data), nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("read upstream SDL file %q: %w", filePath, err)
+		}
+	}
+
+	logger.Info("introspecting upstream GraphQL endpoint",
+		zap.String("mcp_server_name", entry.Name),
+		zap.String("url", entry.Upstream.URL))
+
+	sdl, err := mcpserver.IntrospectUpstreamSDL(ctx, entry.Upstream.URL, entry.Upstream.Headers)
+	if err != nil {
+		return "", fmt.Errorf("introspect upstream %s: %w", entry.Upstream.URL, err)
+	}
+
+	if filePath != "" {
+		if writeErr := os.WriteFile(filePath, []byte(sdl), 0o644); writeErr != nil {
+			logger.Warn("failed to cache introspected SDL to disk; continuing in-memory only",
+				zap.String("mcp_server_name", entry.Name),
+				zap.String("file", filePath),
+				zap.Error(writeErr))
+		} else {
+			logger.Info("cached introspected SDL",
+				zap.String("mcp_server_name", entry.Name),
+				zap.String("file", filePath))
+		}
+	}
+
+	return sdl, nil
+}
+
+// buildMCPHandler constructs a single per-collection MCP handler from an MCPServerEntry.
+// Supergraph-bound collections (no Upstream) route to defaultGraphQLEndpoint; upstream-bound
+// collections route to the configured Upstream.URL and load their schema from the SDL file.
+func (r *Router) buildMCPHandler(ctx context.Context, entry *config.MCPServerEntry, defaultGraphQLEndpoint string) (*mcpserver.GraphQLSchemaServer, error) {
+	var operationsDir string
+	if entry.Storage.ProviderID != "" {
+		provider, ok := r.providerRegistry.FileSystem(entry.Storage.ProviderID)
+		if !ok {
+			return nil, fmt.Errorf("storage provider with id %q not found", entry.Storage.ProviderID)
+		}
 		operationsDir = provider.Path
 	}
 
-	logFields := []zap.Field{
-		zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
+	endpoint := defaultGraphQLEndpoint
+	var upstreamSDL string
+	var upstreamHeaders map[string]string
+	if entry.Upstream != nil {
+		endpoint = entry.Upstream.URL
+		upstreamHeaders = entry.Upstream.Headers
+		sdl, err := loadOrIntrospectUpstreamSDL(ctx, entry, r.logger)
+		if err != nil {
+			return nil, err
+		}
+		upstreamSDL = sdl
 	}
 
-	// Initialize the MCP server with the resolved operations directory
+	logFields := []zap.Field{
+		zap.String("mcp_server_name", entry.Name),
+		zap.String("mcp_server_path", entry.Path),
+		zap.String("storage_provider_id", entry.Storage.ProviderID),
+	}
+
 	mcpOpts := []func(*mcpserver.Options){
-		mcpserver.WithGraphName(r.mcp.GraphName),
+		mcpserver.WithGraphName(entry.Name),
+		mcpserver.WithPath(entry.Path),
 		mcpserver.WithOperationsDir(operationsDir),
 		mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
 		mcpserver.WithLogger(r.logger.With(logFields...)),
-		mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
-		mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
-		mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
-		mcpserver.WithOmitToolNamePrefix(r.mcp.OmitToolNamePrefix),
-		mcpserver.WithStateless(r.mcp.Session.Stateless),
+		mcpserver.WithExcludeMutations(entry.ExcludeMutations),
+		mcpserver.WithEnableArbitraryOperations(entry.EnableArbitraryOperations),
+		mcpserver.WithExposeSchema(entry.ExposeSchema),
+		mcpserver.WithOmitToolNamePrefix(entry.OmitToolNamePrefix),
+		mcpserver.WithStateless(entry.Session.Stateless),
+	}
+
+	if upstreamSDL != "" {
+		mcpOpts = append(mcpOpts, mcpserver.WithUpstreamSchemaSDL(upstreamSDL))
+	}
+	if len(upstreamHeaders) > 0 {
+		mcpOpts = append(mcpOpts, mcpserver.WithUpstreamHeaders(upstreamHeaders))
+	}
+	if entry.Storage.Watch && operationsDir != "" {
+		interval := entry.Storage.WatchInterval
+		if interval <= 0 {
+			interval = time.Second
+		}
+		mcpOpts = append(mcpOpts, mcpserver.WithWatchOperations(true, interval))
 	}
 
 	if r.corsOptions != nil {
 		mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
 	}
 
-	// Add OAuth configuration if enabled
-	if r.mcp.OAuth.Enabled {
-		mcpOpts = append(mcpOpts, mcpserver.WithOAuth(&r.mcp.OAuth))
-
+	if entry.OAuth.Enabled {
+		oauthCfg := entry.OAuth
+		mcpOpts = append(mcpOpts, mcpserver.WithOAuth(&oauthCfg))
 		if r.mcp.Server.BaseURL != "" {
 			mcpOpts = append(mcpOpts, mcpserver.WithServerBaseURL(r.mcp.Server.BaseURL))
 		}
 	}
 
-	if r.mcp.ResourceDocumentation != "" {
-		mcpOpts = append(mcpOpts, mcpserver.WithResourceDocumentation(r.mcp.ResourceDocumentation))
+	if entry.ResourceDocumentation != "" {
+		mcpOpts = append(mcpOpts, mcpserver.WithResourceDocumentation(entry.ResourceDocumentation))
 	}
 
-	mcpGraphQLEndpoint := r.graphqlEndpointURL
-	if r.mcp.RouterURL != "" {
-		mcpGraphQLEndpoint = r.mcp.RouterURL
-	}
+	return mcpserver.NewGraphQLSchemaServer(ctx, endpoint, mcpOpts...)
+}
 
-	mcpss, err := mcpserver.NewGraphQLSchemaServer(
-		ctx,
-		mcpGraphQLEndpoint,
-		mcpOpts...,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create mcp server: %w", err)
-	}
-
-	if err := mcpss.Start(); err != nil {
-		// Cleanup the server if Start() fails to prevent resource leaks
-		if stopErr := mcpss.Stop(ctx); stopErr != nil {
-			r.logger.Warn("Failed to stop MCP server during error cleanup", zap.Error(stopErr))
+// startCodeModeServer initializes and starts the separate Code Mode MCP server if enabled.
+func (r *Router) startCodeModeServer(ctx context.Context) error {
+	var redisProvider *config.RedisStorageProvider
+	if r.mcp.CodeMode.Enabled && r.mcp.CodeMode.NamedOps.Enabled {
+		if providerID := r.mcp.CodeMode.NamedOps.Storage.ProviderID; providerID != "" {
+			provider, ok := r.providerRegistry.Redis(providerID)
+			if !ok {
+				return fmt.Errorf("redis storage provider with id '%s' for mcp code_mode named_ops not found", providerID)
+			}
+			redisProvider = &provider
 		}
-		return fmt.Errorf("failed to start MCP server: %w", err)
 	}
 
-	r.mcpServer = mcpss
-	return nil
+	cm, err := codemodeserver.BuildFromConfig(codemodeserver.BuildOptions{
+		Config:           r.mcp.CodeMode,
+		SessionStateless: r.mcp.Session.Stateless,
+		RouterGraphQLURL: r.graphqlEndpointURL,
+		Logger:           r.logger,
+		TracerProvider:   r.tracerProvider,
+		MeterProvider:    r.otlpMeterProvider,
+		RedisProvider:    redisProvider,
+		RedisFactory: func(opts *rd.RedisCloserOptions) (rd.RDCloser, error) {
+			if opts.Logger == nil {
+				opts.Logger = r.logger
+			}
+			return rd.NewRedisCloser(opts)
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create code mode MCP server: %w", err)
+	}
+	r.codeModeServer = cm
+
+	if !r.mcp.CodeMode.Enabled {
+		return nil
+	}
+
+	errs := make(chan error, 1)
+	go func() {
+		errs <- cm.Start(ctx)
+	}()
+
+	deadline := time.NewTimer(5 * time.Second)
+	defer deadline.Stop()
+	tick := time.NewTicker(10 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		select {
+		case err := <-errs:
+			if err != nil {
+				return fmt.Errorf("failed to start code mode MCP server: %w", err)
+			}
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-deadline.C:
+			return fmt.Errorf("failed to start code mode MCP server: listener was not bound")
+		case <-tick.C:
+			if cm.Addr() != "" {
+				go func() {
+					if err := <-errs; err != nil {
+						r.logger.Error("Code Mode MCP server stopped unexpectedly", zap.Error(err))
+					}
+				}()
+				return nil
+			}
+		}
+	}
 }
 
 // buildClients initializes the storage clients for persisted operations and router config.
@@ -1843,6 +2001,14 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		wg.Go(func() {
 			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
+			}
+		})
+	}
+
+	if r.codeModeServer != nil {
+		wg.Go(func() {
+			if subErr := r.codeModeServer.Stop(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown code mode MCP server: %w", subErr))
 			}
 		})
 	}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	codemodeserver "github.com/wundergraph/cosmo/router/internal/codemode/server"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
@@ -113,7 +114,8 @@ type Config struct {
 	accessController                *AccessController
 	retryOptions                    retrytransport.RetryOptions
 	redisClient                     rd.RDCloser
-	mcpServer                       *mcpserver.GraphQLSchemaServer
+	mcpServer                       *mcpserver.MultiServer
+	codeModeServer                  *codemodeserver.Server
 	connectRPCServer                *connectrpc.Server
 	processStartTime                time.Time
 	developmentMode                 bool

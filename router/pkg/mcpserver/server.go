@@ -3,12 +3,15 @@ package mcpserver
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -19,6 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/codemode/sandbox"
 	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -67,8 +71,13 @@ type Options struct {
 	GraphName string
 	// OperationsDir is the directory where GraphQL operations are stored
 	OperationsDir string
-	// ListenAddr is the address where the server should listen to
+	// ListenAddr is the address where the server should listen to.
+	// Only used when this server is started standalone via Serve(); ignored when
+	// mounted on a shared listener via RegisterRoutes(mux).
 	ListenAddr string
+	// Path is the URL path this MCP server is mounted at (e.g. "/mcp", "/internal").
+	// Defaults to "/mcp" when empty.
+	Path string
 	// Enabled determines whether the MCP server should be started
 	Enabled bool
 	// Logger is the logger to be used
@@ -93,6 +102,19 @@ type Options struct {
 	ServerBaseURL string
 	// ResourceDocumentation is a URL to a human-readable page describing this resource
 	ResourceDocumentation string
+	// UpstreamSchemaSDL is the GraphQL schema (as SDL text) for upstream-bound collections
+	// that don't share the local supergraph's schema. When set, Reload uses this schema
+	// instead of the supergraph schema passed in to Reload().
+	UpstreamSchemaSDL string
+	// UpstreamHeaders are forwarded to the upstream GraphQL endpoint on every request
+	// (in addition to per-request headers).
+	UpstreamHeaders map[string]string
+	// WatchOperations enables periodic scanning of OperationsDir for added,
+	// modified, or removed .graphql / .gql files. When a change is detected,
+	// the collection's tools are reloaded without restarting the router.
+	WatchOperations bool
+	// OperationsWatchInterval is the polling interval used when WatchOperations is true.
+	OperationsWatchInterval time.Duration
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -101,6 +123,7 @@ type GraphQLSchemaServer struct {
 	graphName                 string
 	operationsDir             string
 	listenAddr                string
+	path                      string
 	logger                    *zap.Logger
 	httpClient                *http.Client
 	requestTimeout            time.Duration
@@ -120,6 +143,34 @@ type GraphQLSchemaServer struct {
 	serverBaseURL             string
 	resourceDocumentation     string
 	authMiddleware            *MCPAuthMiddleware
+	upstreamSchemaSDL         string
+	upstreamHeaders           map[string]string
+	watchOperations           bool
+	operationsWatchInterval   time.Duration
+	// lastSchema and lastFieldConfigs are remembered so ReloadOperations() can
+	// re-run the operations directory load without a fresh schema input.
+	lastSchema       *ast.Document
+	lastFieldConfigs []*nodev1.FieldConfiguration
+	// lastToolFingerprints is the fingerprint of every tool currently registered
+	// with s.server. Used by Reload to compute a diff and only emit Remove/Add
+	// calls for tools that actually changed — avoiding spurious tools/list_changed
+	// notifications when an mtime touch produced no semantic change.
+	lastToolFingerprints map[string]string
+	// ctx is the per-server context (cancelled on Stop) — used for operation watchers.
+	ctx context.Context
+	// codeModeSandbox is the V8 isolate used by the code_mode_run_js tool.
+	// Lazily initialized on first use; reused across reloads since it only
+	// depends on the upstream endpoint, not the op catalog.
+	codeModeSandbox *sandbox.Sandbox
+}
+
+// desiredTool bundles a Tool spec, its handler, and a content fingerprint so
+// the diff-aware reload path can compare against the prior set without
+// re-invoking the SDK's AddTool when nothing has changed.
+type desiredTool struct {
+	tool        *mcp.Tool
+	handler     mcp.ToolHandler
+	fingerprint string
 }
 
 type graphqlRequest struct {
@@ -206,6 +257,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		GraphName:      "graph",
 		OperationsDir:  "operations",
 		ListenAddr:     "0.0.0.0:5025",
+		Path:           "/mcp",
 		Enabled:        false,
 		Logger:         zap.NewNop(),
 		RequestTimeout: 30 * time.Second,
@@ -216,6 +268,13 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 	// Apply all option functions
 	for _, opt := range opts {
 		opt(options)
+	}
+
+	if options.Path == "" {
+		options.Path = "/mcp"
+	}
+	if !strings.HasPrefix(options.Path, "/") {
+		return nil, fmt.Errorf("MCP server path must start with '/': got %q", options.Path)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -261,10 +320,12 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 			return nil, fmt.Errorf("failed to create token decoder: %w", err)
 		}
 
-		// Build resource metadata URL for WWW-Authenticate header
+		// Build resource metadata URL for WWW-Authenticate header.
+		// Per RFC 9728, each protected resource gets its own metadata endpoint
+		// at /.well-known/oauth-protected-resource{path}.
 		resourceMetadataURL := ""
 		if options.ServerBaseURL != "" {
-			resourceMetadataURL = fmt.Sprintf("%s/.well-known/oauth-protected-resource/mcp", options.ServerBaseURL)
+			resourceMetadataURL = fmt.Sprintf("%s/.well-known/oauth-protected-resource%s", options.ServerBaseURL, options.Path)
 		}
 
 		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, resourceMetadataURL, options.OAuthConfig.Scopes, options.OAuthConfig.ScopeChallengeIncludeTokenScopes)
@@ -304,6 +365,7 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		graphName:                 options.GraphName,
 		operationsDir:             options.OperationsDir,
 		listenAddr:                options.ListenAddr,
+		path:                      options.Path,
 		logger:                    options.Logger,
 		httpClient:                httpClient,
 		requestTimeout:            options.RequestTimeout,
@@ -319,6 +381,11 @@ func NewGraphQLSchemaServer(ctx context.Context, routerGraphQLEndpoint string, o
 		serverBaseURL:             options.ServerBaseURL,
 		resourceDocumentation:     options.ResourceDocumentation,
 		authMiddleware:            authMiddleware,
+		upstreamSchemaSDL:         options.UpstreamSchemaSDL,
+		upstreamHeaders:           options.UpstreamHeaders,
+		watchOperations:           options.WatchOperations,
+		operationsWatchInterval:   options.OperationsWatchInterval,
+		ctx:                       ctx,
 	}
 
 	return gs, nil
@@ -347,6 +414,38 @@ func WithOperationsDir(operationsDir string) func(*Options) {
 func WithListenAddr(listenAddr string) func(*Options) {
 	return func(o *Options) {
 		o.ListenAddr = listenAddr
+	}
+}
+
+// WithPath sets the URL path this MCP server is mounted at (e.g. "/mcp", "/internal").
+func WithPath(path string) func(*Options) {
+	return func(o *Options) {
+		o.Path = path
+	}
+}
+
+// WithUpstreamSchemaSDL sets the SDL text used as this server's GraphQL schema.
+// When set, Reload uses this schema instead of the supergraph schema passed in.
+func WithUpstreamSchemaSDL(sdl string) func(*Options) {
+	return func(o *Options) {
+		o.UpstreamSchemaSDL = sdl
+	}
+}
+
+// WithUpstreamHeaders sets headers forwarded to the upstream GraphQL endpoint
+// on every request (in addition to per-request headers).
+func WithUpstreamHeaders(headers map[string]string) func(*Options) {
+	return func(o *Options) {
+		o.UpstreamHeaders = headers
+	}
+}
+
+// WithWatchOperations enables periodic scanning of the operations directory and
+// hot-reload of MCP tools when files are added, modified, or removed.
+func WithWatchOperations(enabled bool, interval time.Duration) func(*Options) {
+	return func(o *Options) {
+		o.WatchOperations = enabled
+		o.OperationsWatchInterval = interval
 	}
 }
 
@@ -426,18 +525,13 @@ func WithResourceDocumentation(url string) func(*Options) {
 	}
 }
 
-// Serve starts the server with the configured options and returns the HTTP server.
-func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
-	// Create custom HTTP server
-	httpServer := &http.Server{
-		Addr:         s.listenAddr,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-
-	// Create MCP streamable HTTP handler
-	// The getServer function returns our MCP server instance for each request
+// RegisterRoutes registers this server's HTTP handlers (the MCP endpoint and,
+// if OAuth is enabled, the RFC 9728 Protected Resource Metadata endpoint) on the
+// given mux. The CORS middleware configured on this server is applied to its handlers.
+//
+// Use RegisterRoutes when mounting multiple MCP servers on a shared HTTP listener
+// (see MultiServer). Use Serve when running a single server with its own listener.
+func (s *GraphQLSchemaServer) RegisterRoutes(mux *http.ServeMux) {
 	// Disable the SDK's built-in cross-origin protection (Sec-Fetch-Site check)
 	// because the router already applies its own CORS middleware around the handler.
 	cop := http.NewCrossOriginProtection()
@@ -455,11 +549,10 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 
 	middleware := cors.New(s.corsConfig)
 
-	mux := http.NewServeMux()
-
-	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — public discovery endpoint
+	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — per-resource discovery endpoint.
+	// Each MCP server gets its own /.well-known/oauth-protected-resource{path} entry.
 	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
-		mux.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
+		mux.Handle("/.well-known/oauth-protected-resource"+s.path, middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
 	}
 
 	// Inject request headers into context so tool handlers can forward them
@@ -469,16 +562,29 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 		streamableHTTPHandler.ServeHTTP(w, r)
 	})
 	if s.authMiddleware != nil {
-		mux.Handle("/mcp", middleware(s.authMiddleware.HTTPMiddleware(mcpHandler)))
+		mux.Handle(s.path, middleware(s.authMiddleware.HTTPMiddleware(mcpHandler)))
 	} else {
-		mux.Handle("/mcp", middleware(mcpHandler))
+		mux.Handle(s.path, middleware(mcpHandler))
+	}
+}
+
+// Serve starts the server with the configured options and returns the HTTP server.
+func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
+	// Create custom HTTP server
+	httpServer := &http.Server{
+		Addr:         s.listenAddr,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
+	mux := http.NewServeMux()
+	s.RegisterRoutes(mux)
 	httpServer.Handler = mux
 
 	logger := []zap.Field{
 		zap.String("listen_addr", s.listenAddr),
-		zap.String("path", "/mcp"),
+		zap.String("path", s.path),
 		zap.String("operations_dir", s.operationsDir),
 		zap.String("graph_name", s.graphName),
 		zap.Bool("exclude_mutations", s.excludeMutations),
@@ -519,6 +625,8 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 		return fmt.Errorf("server is not started")
 	}
 
+	s.lastSchema = schema
+	s.lastFieldConfigs = fieldConfigs
 	s.schemaCompiler = NewSchemaCompiler(s.logger)
 	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
 
@@ -539,14 +647,86 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 		s.authMiddleware.SetScopeExtractor(NewScopeExtractor(fieldConfigs, schema, maxScopeCombinations))
 	}
 
-	s.server.RemoveTools(s.registeredTools...)
-	s.registeredTools = nil
-
-	if err := s.registerTools(); err != nil {
-		return fmt.Errorf("failed to register tools: %w", err)
+	desired, err := s.buildDesiredTools()
+	if err != nil {
+		return fmt.Errorf("failed to build tool set: %w", err)
 	}
 
+	s.applyToolDiff(desired)
+
 	return nil
+}
+
+// applyToolDiff applies the difference between the currently-registered tools
+// (s.lastToolFingerprints) and the desired set. Tools whose fingerprint has not
+// changed are left untouched — the SDK fires a tools/list_changed notification
+// on every AddTool/RemoveTools call, so skipping unchanged tools keeps client
+// chatter to a minimum and means an mtime-only file touch produces zero
+// notifications.
+func (s *GraphQLSchemaServer) applyToolDiff(desired map[string]desiredTool) {
+	addNames := make([]string, 0, len(desired))
+	for name := range desired {
+		addNames = append(addNames, name)
+	}
+	sort.Strings(addNames)
+
+	var added, changed []string
+	for _, name := range addNames {
+		d := desired[name]
+		prev, existed := s.lastToolFingerprints[name]
+		switch {
+		case !existed:
+			added = append(added, name)
+		case prev != d.fingerprint:
+			changed = append(changed, name)
+		}
+	}
+
+	var removed []string
+	for name := range s.lastToolFingerprints {
+		if _, keep := desired[name]; !keep {
+			removed = append(removed, name)
+		}
+	}
+	sort.Strings(removed)
+
+	// Apply the diff. RemoveTools batches into one notification; AddTool sends
+	// one per call but we only invoke it for actually-changed tools.
+	if len(removed) > 0 {
+		s.server.RemoveTools(removed...)
+	}
+	for _, name := range added {
+		d := desired[name]
+		s.server.AddTool(d.tool, d.handler)
+	}
+	for _, name := range changed {
+		d := desired[name]
+		s.server.AddTool(d.tool, d.handler)
+	}
+
+	if len(added)+len(changed)+len(removed) == 0 {
+		s.logger.Debug("MCP tool refresh: no changes detected, no notification sent to clients")
+	} else {
+		s.logger.Info("MCP tool refresh broadcast to connected clients (tools/list_changed)",
+			zap.Strings("added", added),
+			zap.Strings("changed", changed),
+			zap.Strings("removed", removed),
+			zap.Int("total_tools", len(desired)),
+		)
+	}
+
+	// Remember the current state for the next reload's diff.
+	s.lastToolFingerprints = make(map[string]string, len(desired))
+	for name, d := range desired {
+		s.lastToolFingerprints[name] = d.fingerprint
+	}
+
+	// Maintain s.registeredTools as a sorted slice for any code that still
+	// reads it (collision detection in buildDesiredTools, etc.).
+	s.registeredTools = s.registeredTools[:0]
+	for _, name := range addNames {
+		s.registeredTools = append(s.registeredTools, name)
+	}
 }
 
 // Stop gracefully shuts down the MCP server
@@ -573,34 +753,38 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 	return nil
 }
 
-// registerTools registers all tools for the MCP server
-func (s *GraphQLSchemaServer) registerTools() error {
-	// Only register the schema tool if exposeSchema is enabled
+// buildDesiredTools computes the full set of tools that should be registered
+// with the MCP server given the current operations and config flags. It does
+// NOT register them — the caller (Reload via applyToolDiff) compares against the
+// previous set and only emits SDK Add/Remove calls for actual differences.
+func (s *GraphQLSchemaServer) buildDesiredTools() (map[string]desiredTool, error) {
+	desired := make(map[string]desiredTool)
+
+	// get_schema — only when exposeSchema is enabled.
 	if s.exposeSchema {
-		// Create a schema with empty properties since get_schema takes no input
-		getSchemaInputSchema := map[string]any{
+		schemaInput := map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},
 		}
-
 		tool := &mcp.Tool{
 			Name:        "get_schema",
 			Description: "Provides the full GraphQL schema of the API.",
-			InputSchema: getSchemaInputSchema,
+			InputSchema: schemaInput,
 			Annotations: &mcp.ToolAnnotations{
 				Title:        "Get GraphQL Schema",
 				ReadOnlyHint: true,
 			},
 		}
-
-		s.server.AddTool(tool, s.handleGetGraphQLSchema())
-		s.registeredTools = append(s.registeredTools, "get_schema")
+		desired[tool.Name] = desiredTool{
+			tool:        tool,
+			handler:     s.handleGetGraphQLSchema(),
+			fingerprint: fingerprintTool(tool, ""),
+		}
 	}
 
-	// Only register the execute_graphql tool if enableArbitraryOperations is enabled
+	// execute_graphql — only when arbitrary operations are enabled.
 	if s.enableArbitraryOperations {
-		// Add a tool to execute arbitrary GraphQL queries
-		executeGraphQLSchema := map[string]any{
+		execInput := map[string]any{
 			"type":        "object",
 			"description": "The query and variables to execute.",
 			"properties": map[string]any{
@@ -617,31 +801,28 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			"additionalProperties": false,
 			"required":             []string{"query"},
 		}
-
-		destructiveHint := true
-		openWorldHint := true
+		destructive := true
+		openWorld := true
 		tool := &mcp.Tool{
 			Name:        "execute_graphql",
 			Description: "Executes a GraphQL query or mutation.",
-			InputSchema: executeGraphQLSchema,
+			InputSchema: execInput,
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Execute GraphQL Query",
-				DestructiveHint: &destructiveHint,
+				DestructiveHint: &destructive,
 				IdempotentHint:  false,
-				OpenWorldHint:   &openWorldHint,
+				OpenWorldHint:   &openWorld,
 			},
 		}
-
-		s.server.AddTool(tool, s.handleExecuteGraphQL())
-		s.registeredTools = append(s.registeredTools, "execute_graphql")
+		desired[tool.Name] = desiredTool{
+			tool:        tool,
+			handler:     s.handleExecuteGraphQL(),
+			fingerprint: fingerprintTool(tool, ""),
+		}
 	}
 
-	// Get operations filtered by the excludeMutations setting
 	operations := s.operationsManager.GetFilteredOperations()
-
 	graphqlOperationNames := make([]string, 0, len(operations))
-
-	// Build per-tool scope map for the auth middleware
 	toolScopes := make(map[string][][]string)
 
 	for _, op := range operations {
@@ -651,35 +832,33 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		graphqlOperationNames = append(graphqlOperationNames, op.Name)
 
 		if len(op.JSONSchema) > 0 {
-			// Validate the JSON schema before compiling it
 			if err := s.schemaCompiler.ValidateJSONSchema(op.JSONSchema); err != nil {
 				s.logger.Error("invalid schema for operation",
-					zap.String("operation", op.Name),
-					zap.Error(err))
+					zap.String("operation", op.Name), zap.Error(err))
 				continue
 			}
-
-			// Now compile the validated schema
 			schemaName := fmt.Sprintf("schema-%s.json", op.Name)
 			compiledSchema, err = s.schemaCompiler.CompileJSONSchema(op.JSONSchema, schemaName)
 			if err != nil {
 				s.logger.Error("failed to compile schema for operation",
-					zap.String("operation", op.Name),
-					zap.Error(err))
+					zap.String("operation", op.Name), zap.Error(err))
 				continue
 			}
 		}
 
-		// Create handler with pre-compiled schema
-		handler := &operationHandler{
-			operation:      op,
-			compiledSchema: compiledSchema,
+		handler := &operationHandler{operation: op, compiledSchema: compiledSchema}
+
+		operationToolName := strcase.ToSnake(op.Name)
+		toolName := operationToolName
+		if !s.omitToolNamePrefix {
+			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
+		} else if _, dup := desired[operationToolName]; dup || slices.Contains(reservedToolNames, operationToolName) {
+			s.logger.Error("Skipping operation due to tool name collision",
+				zap.String("operation", op.Name),
+				zap.String("conflicting_tool", operationToolName))
+			continue
 		}
 
-		// Convert the operation name to snake_case for consistent tool naming
-		operationToolName := strcase.ToSnake(op.Name)
-
-		// Use the operation description directly if provided, otherwise generate a default description
 		var toolDescription string
 		if op.Description != "" {
 			toolDescription = op.Description
@@ -687,23 +866,11 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
 
-		toolName := operationToolName
-		if !s.omitToolNamePrefix {
-			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
-		} else if slices.Contains(s.registeredTools, operationToolName) || slices.Contains(reservedToolNames, operationToolName) {
-			s.logger.Error("Skipping operation due to tool name collision",
-				zap.String("operation", op.Name),
-				zap.String("conflicting_tool", operationToolName),
-			)
-			continue
-		}
-		// Parse JSON schema into map for the official SDK
 		var inputSchema any
 		if len(op.JSONSchema) > 0 {
 			if err := json.Unmarshal(op.JSONSchema, &inputSchema); err != nil {
 				s.logger.Error("failed to parse JSON schema for operation",
-					zap.String("operation", op.Name),
-					zap.Error(err))
+					zap.String("operation", op.Name), zap.Error(err))
 				continue
 			}
 		} else {
@@ -723,22 +890,30 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			},
 		}
 
-		s.server.AddTool(tool, s.handleOperation(handler))
+		// Per-operation tools incorporate the query body and required scopes
+		// into the fingerprint, so editing the operation triggers a re-add and
+		// editing whitespace alone does not (the parser normalizes the body).
+		extra := op.OperationString + scopesFingerprint(op.RequiredScopes)
+		desired[toolName] = desiredTool{
+			tool:        tool,
+			handler:     s.handleOperation(handler),
+			fingerprint: fingerprintTool(tool, extra),
+		}
 
-		s.registeredTools = append(s.registeredTools, toolName)
-
-		// Record per-tool scope requirements for auth middleware enforcement
 		if len(op.RequiredScopes) > 0 {
 			toolScopes[toolName] = op.RequiredScopes
 		}
 	}
 
-	// Update auth middleware with per-tool scopes (thread-safe)
 	if s.authMiddleware != nil {
 		s.authMiddleware.SetToolScopes(toolScopes)
 	}
 
-	getOperationInfoTool := &mcp.Tool{
+	// get_operation_info — always present, but its description includes the list
+	// of operation names, so its fingerprint changes when operations are added or
+	// removed (correctly triggering a notification only when the enum actually shifts).
+	sort.Strings(graphqlOperationNames)
+	getOpInfo := &mcp.Tool{
 		Name:        "get_operation_info",
 		Description: "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application.",
 		InputSchema: map[string]any{
@@ -757,12 +932,76 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			ReadOnlyHint: true,
 		},
 	}
+	desired[getOpInfo.Name] = desiredTool{
+		tool:        getOpInfo,
+		handler:     s.handleGraphQLOperationInfo(),
+		fingerprint: fingerprintTool(getOpInfo, ""),
+	}
 
-	s.server.AddTool(getOperationInfoTool, s.handleGraphQLOperationInfo())
+	// code_mode_run_js — when at least one operation is loaded, expose a single
+	// V8-sandboxed tool where every operation is bound as `tools.<name>(vars)`.
+	// Lets an LLM compose multiple ops in one round-trip instead of N MCP calls.
+	if len(operations) > 0 {
+		codeModeTool := s.codeModeToolDescriptor()
+		desired[codeModeTool.Name] = desiredTool{
+			tool:        codeModeTool,
+			handler:     s.handleCodeModeRunJS(),
+			fingerprint: fingerprintTool(codeModeTool, fmt.Sprintf("ops=%d", len(operations))),
+		}
+	}
 
-	s.registeredTools = append(s.registeredTools, "get_operation_info")
+	return desired, nil
+}
 
-	return nil
+// fingerprintTool computes a stable hash of the tool's user-visible content:
+// name, description, input schema, annotations, plus an operation-specific extra
+// (query body + scopes for operation tools, empty for built-ins).
+//
+// Two tools with the same fingerprint produce identical tools/list and
+// tools/call experiences for an MCP client — so we can skip re-registering
+// (and skip the tools/list_changed notification).
+func fingerprintTool(t *mcp.Tool, extra string) string {
+	h := sha256.New()
+	h.Write([]byte(t.Name))
+	h.Write([]byte{0})
+	h.Write([]byte(t.Description))
+	h.Write([]byte{0})
+	if t.InputSchema != nil {
+		if buf, err := json.Marshal(t.InputSchema); err == nil {
+			h.Write(buf)
+		}
+	}
+	h.Write([]byte{0})
+	if t.Annotations != nil {
+		if buf, err := json.Marshal(t.Annotations); err == nil {
+			h.Write(buf)
+		}
+	}
+	h.Write([]byte{0})
+	h.Write([]byte(extra))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// scopesFingerprint produces a stable string for an OR-of-AND scope list.
+func scopesFingerprint(scopes [][]string) string {
+	if len(scopes) == 0 {
+		return ""
+	}
+	cp := make([][]string, len(scopes))
+	for i, group := range scopes {
+		grp := make([]string, len(group))
+		copy(grp, group)
+		sort.Strings(grp)
+		cp[i] = grp
+	}
+	sort.Slice(cp, func(i, j int) bool {
+		return strings.Join(cp[i], ",") < strings.Join(cp[j], ",")
+	})
+	parts := make([]string, len(cp))
+	for i, grp := range cp {
+		parts[i] = strings.Join(grp, "&")
+	}
+	return strings.Join(parts, "|")
 }
 
 // handleOperation handles a specific operation
@@ -1098,7 +1337,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 		scopes = []string{} // Ensure non-nil for JSON encoding
 	}
 
-	mcpResourceURL := strings.TrimRight(resourceURL, "/") + "/mcp"
+	mcpResourceURL := strings.TrimRight(resourceURL, "/") + s.path
 
 	metadata := ProtectedResourceMetadata{
 		Resource:               mcpResourceURL,
@@ -1124,7 +1363,43 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 // GetResourceMetadataURL returns the URL for the OAuth 2.0 Protected Resource Metadata endpoint
 func (s *GraphQLSchemaServer) GetResourceMetadataURL() string {
 	if s.serverBaseURL != "" {
-		return fmt.Sprintf("%s/.well-known/oauth-protected-resource/mcp", s.serverBaseURL)
+		return fmt.Sprintf("%s/.well-known/oauth-protected-resource%s", s.serverBaseURL, s.path)
 	}
 	return ""
+}
+
+// Path returns the URL path this MCP server is mounted at.
+func (s *GraphQLSchemaServer) Path() string { return s.path }
+
+// Name returns the configured graph name (used in metrics/logs).
+func (s *GraphQLSchemaServer) Name() string { return s.graphName }
+
+// HasUpstreamSchema reports whether this server uses an SDL-provided upstream schema
+// (i.e. it does not track the local supergraph schema).
+func (s *GraphQLSchemaServer) HasUpstreamSchema() bool { return s.upstreamSchemaSDL != "" }
+
+// OperationsDir returns the configured operations directory for this server,
+// or "" if no storage provider is wired up.
+func (s *GraphQLSchemaServer) OperationsDir() string { return s.operationsDir }
+
+// WatchSettings returns the operations-directory watcher configuration.
+// (enabled, interval). Used by MultiServer to start watchers after Reload.
+func (s *GraphQLSchemaServer) WatchSettings() (bool, time.Duration) {
+	return s.watchOperations, s.operationsWatchInterval
+}
+
+// Context returns the per-server context (cancelled on Stop). Used by
+// background goroutines (operations watcher, etc.) to know when to exit.
+func (s *GraphQLSchemaServer) Context() context.Context { return s.ctx }
+
+// ReloadOperations re-reads the operations directory using the most recently
+// loaded schema and field configurations. Used by the per-collection storage
+// directory watcher to hot-reload tools when files change. Safe to call
+// before any initial Reload — in that case it returns an error rather than
+// panicking on a nil schema.
+func (s *GraphQLSchemaServer) ReloadOperations() error {
+	if s.lastSchema == nil {
+		return fmt.Errorf("ReloadOperations called before initial Reload")
+	}
+	return s.Reload(s.lastSchema, s.lastFieldConfigs)
 }

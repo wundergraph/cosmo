@@ -368,6 +368,10 @@ type Config struct {
 	MCP                                config.MCPConfiguration
 	MCPOperationsPath                  string
 	MCPAuthToken                       string // Optional Bearer token for MCP authentication
+	// CodeModeRedisURL, when paired with MCP.CodeMode.NamedOps.Storage.ProviderID,
+	// registers a Redis storage provider with that ID so the named-ops backend can
+	// resolve it from the central provider registry.
+	CodeModeRedisURL string
 	EnableRedis                        bool
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
@@ -1520,14 +1524,23 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		if testConfig.MCPOperationsPath != "" {
 			mcpOperationsPath = testConfig.MCPOperationsPath
 		}
-		routerOpts = append(routerOpts, core.WithStorageProviders(config.StorageProviders{
+		storageProviders := config.StorageProviders{
 			FileSystem: []config.FileSystemStorageProvider{
 				{
 					ID:   "test",
 					Path: mcpOperationsPath,
 				},
 			},
-		}))
+		}
+		// Append a Redis provider for code mode named ops when the test set a
+		// provider_id and supplied a URL via CodeModeRedisURL.
+		if id := testConfig.MCP.CodeMode.NamedOps.Storage.ProviderID; id != "" && testConfig.CodeModeRedisURL != "" {
+			storageProviders.Redis = append(storageProviders.Redis, config.RedisStorageProvider{
+				ID:   id,
+				URLs: []string{testConfig.CodeModeRedisURL},
+			})
+		}
+		routerOpts = append(routerOpts, core.WithStorageProviders(storageProviders))
 
 		testConfig.MCP.Storage.ProviderID = "test"
 

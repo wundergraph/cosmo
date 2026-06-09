@@ -1,0 +1,825 @@
+schema {
+  query: Query
+}
+
+"""
+Pylon — customer support tickets, accounts, contacts, surveys.
+All types vendor-prefixed with `pylon_` to keep the federated schema collision-free.
+"""
+scalar pylon_DateTime
+
+scalar pylon_JSON
+
+"""
+Slack — read shared customer channels, message history, user info.
+All types vendor-prefixed with `slack_`.
+"""
+type Query {
+  pylon_searchAccounts(input: pylon_SearchAccountsInput!): [pylon_Account!]!
+  pylon_getAccount(id: ID!): pylon_Account
+  pylon_searchIssues(input: pylon_SearchIssuesInput!): [pylon_Issue!]!
+  pylon_getIssue(id: ID!): pylon_Issue
+  pylon_listIssueMessages(issueId: ID!): [pylon_Message!]!
+  pylon_listContacts(input: pylon_ListContactsInput!): [pylon_Contact!]!
+  pylon_listSurveys(limit: Int, cursor: String): [pylon_Survey!]!
+  pylon_getSurveyResponses(surveyId: ID!): [pylon_SurveyResponse!]!
+  """
+  Canonical custom-field slugs: arr, renewal_date, segment, csm_owner, health_status.
+  """
+  pylon_listAccountCustomFields: [pylon_CustomField!]!
+  pylon_listUsers: [pylon_User!]!
+  linear_customer(id: ID!): linear_Customer
+  linear_customerByDomain(domain: String!): linear_Customer
+  linear_customers(filter: linear_CustomersFilter): [linear_Customer!]!
+  linear_customerNeeds(filter: linear_CustomerNeedsFilter): [linear_CustomerNeed!]!
+  linear_issue(id: ID!): linear_Issue
+  linear_issues(filter: linear_IssuesFilter): [linear_Issue!]!
+  linear_team(id: ID!): linear_Team
+  linear_teams: [linear_Team!]!
+  linear_cycles(teamId: ID): [linear_Cycle!]!
+  linear_project(id: ID!): linear_Project
+  linear_user(id: ID!): linear_User
+  """
+  Run a HogQL query. Two modes are supported:
+  
+  1. **Preset (recommended)** — set `input.preset` to one of the values
+  of `posthog_HogQLPreset`. These map 1:1 to the curated mock handlers
+  and are guaranteed to execute. Pass any required parameters via
+  `input.presetParams` (see each enum value's docs for what it needs).
+  
+  2. **Freeform** — set `input.hogql` to a raw HogQL string. Only the exact
+  shapes recognised by the preset matchers will succeed; any other query
+  returns Unimplemented with the supported handler list.
+  
+  If both `preset` and `hogql` are set, `preset` takes precedence.
+  """
+  posthog_query(input: posthog_QueryInput!): posthog_QueryResult!
+  """List groups (customer orgs) for a given group type index."""
+  posthog_listGroups(input: posthog_ListGroupsInput!): [posthog_Group!]!
+  posthog_getGroup(typeIndex: Int!, key: String!): posthog_Group
+  posthog_listEvents(input: posthog_ListEventsInput!): posthog_ListEventsResult!
+  """
+  List feature flags configured for the project (used for feature-adoption mapping).
+  """
+  posthog_listFeatureFlags(limit: Int): [posthog_FeatureFlag!]!
+  """Poll an async query result by id."""
+  posthog_getAsyncQueryStatus(queryId: String!): posthog_AsyncQueryStatus!
+  circleback_searchMeetings(input: circleback_SearchMeetingsInput!): [circleback_Meeting!]!
+  circleback_readMeetings(meetingIds: [ID!]!): [circleback_Meeting!]!
+  circleback_getTranscripts(meetingIds: [ID!]!): [circleback_Transcript!]!
+  circleback_searchTranscripts(query: String!, limit: Int): [circleback_TranscriptHit!]!
+  circleback_searchActionItems(query: String!, limit: Int): [circleback_ActionItem!]!
+  circleback_findDomains(query: String!): [circleback_Domain!]!
+  circleback_findProfiles(query: String!): [circleback_Profile!]!
+  circleback_searchCalendarEvents(input: circleback_SearchCalendarInput!): [circleback_CalendarEvent!]!
+  circleback_listTags: [String!]!
+  slack_listChannels(input: slack_ListChannelsInput!): [slack_Channel!]!
+  slack_getChannel(channelId: ID!): slack_Channel
+  slack_history(input: slack_HistoryInput!): slack_HistoryResult!
+  slack_replies(channelId: ID!, threadTs: String!, limit: Int): [slack_Message!]!
+  slack_userInfo(userId: ID!): slack_User
+  slack_listUsers(limit: Int, cursor: String): [slack_User!]!
+  slack_searchMessages(query: String!, count: Int, page: Int): [slack_Message!]!
+  slack_authTest: slack_AuthTestResult!
+  notion_search(input: notion_SearchInput!): [notion_SearchResult!]!
+  notion_getPage(pageId: ID!): notion_Page
+  notion_getDatabase(databaseId: ID!): notion_Database
+  notion_queryDataSource(input: notion_QueryDataSourceInput!): notion_QueryDataSourceResult!
+  notion_getBlockChildren(blockId: ID!, limit: Int, cursor: String): notion_BlockChildrenResult!
+  notion_listUsers(limit: Int, cursor: String): [notion_User!]!
+}
+
+type pylon_Account {
+  id: ID!
+  name: String!
+  domains: [String!]!
+  tags: [String!]!
+  customFields: [pylon_CustomFieldValue!]!
+}
+
+type pylon_CustomField {
+  slug: String!
+  label: String!
+  objectType: String!
+  type: String!
+}
+
+type pylon_CustomFieldValue {
+  slug: String!
+  label: String!
+  value: String!
+}
+
+type pylon_Issue {
+  id: ID!
+  title: String!
+  state: String!
+  accountId: ID
+  priority: pylon_IssuePriority!
+  number: Int!
+  assignee: pylon_User
+  requester: pylon_Contact
+  tags: [String!]!
+  latestMessageAt: pylon_DateTime
+  slaBreached: Boolean!
+  createdAt: pylon_DateTime!
+  resolvedAt: pylon_DateTime
+  firstResponseSeconds: Int
+  resolutionSeconds: Int
+  resolutionBreachTime: pylon_DateTime
+  numberOfTouches: Int
+  externalIssues: [pylon_ExternalIssueLink!]!
+  csatResponses: [pylon_SurveyResponse!]!
+}
+
+enum pylon_IssuePriority {
+  P1
+  P2
+  P3
+  P4
+}
+
+type pylon_ExternalIssueLink {
+  source: String!
+  externalId: String!
+  url: String
+}
+
+type pylon_Message {
+  id: ID!
+  issueId: ID!
+  authorId: ID
+  body: String!
+  createdAt: pylon_DateTime!
+}
+
+type pylon_Contact {
+  id: ID!
+  email: String
+  name: String
+  accountId: ID
+}
+
+type pylon_User {
+  id: ID!
+  name: String!
+  email: String!
+}
+
+type pylon_Survey {
+  id: ID!
+  type: pylon_SurveyType!
+  name: String!
+}
+
+enum pylon_SurveyType {
+  CSAT
+  NPS
+  CES
+}
+
+type pylon_SurveyResponse {
+  id: ID!
+  surveyId: ID!
+  accountId: ID
+  contactId: ID
+  score: Int!
+  comment: String
+  createdAt: pylon_DateTime!
+}
+
+input pylon_SearchAccountsInput {
+  name: String
+  domain: String
+  tag: String
+  limit: Int
+  cursor: String
+}
+
+input pylon_SearchIssuesInput {
+  accountId: ID
+  state: String
+  createdAfter: pylon_DateTime
+  createdBefore: pylon_DateTime
+  resolvedAfter: pylon_DateTime
+  resolvedBefore: pylon_DateTime
+  priority: pylon_IssuePriority
+  tags: [String!]
+  slaBreached: Boolean
+  limit: Int
+}
+
+input pylon_ListContactsInput {
+  accountId: ID
+  email: String
+  limit: Int
+  cursor: String
+}
+
+"""
+Linear — engineering issues, projects, and the native Customer entity.
+All types vendor-prefixed with `linear_`.
+"""
+scalar linear_DateTime
+
+type linear_Customer {
+  id: ID!
+  name: String!
+  domains: [String!]!
+  externalIds: [String!]!
+  revenue: Float
+  size: Int
+  ownerId: ID
+  slackChannelId: String
+}
+
+type linear_CustomerNeed {
+  id: ID!
+  customerId: ID!
+  issueId: ID
+  projectId: ID
+  important: Boolean!
+  body: String
+  createdAt: linear_DateTime!
+}
+
+type linear_Issue {
+  id: ID!
+  identifier: String!
+  title: String!
+  description: String
+  priority: Int!
+  priorityLabel: String!
+  state: linear_IssueState!
+  needs: [linear_CustomerNeed!]!
+  customerTicketCount: Int!
+  teamId: ID!
+  assigneeId: ID
+  cycleId: ID
+  projectId: ID
+  labels: [String!]!
+  url: String!
+  createdAt: linear_DateTime!
+  updatedAt: linear_DateTime!
+  completedAt: linear_DateTime
+  addedToCycleAt: linear_DateTime
+}
+
+enum linear_IssueState {
+  TRIAGE
+  BACKLOG
+  UNSTARTED
+  STARTED
+  COMPLETED
+  CANCELED
+  DUPLICATE
+}
+
+type linear_Project {
+  id: ID!
+  name: String!
+  description: String
+  state: String!
+  health: linear_ProjectHealth!
+  progress: Float!
+  leadId: ID
+  teamId: ID!
+  startDate: linear_DateTime
+  targetDate: linear_DateTime
+  url: String!
+}
+
+enum linear_ProjectHealth {
+  ON_TRACK
+  AT_RISK
+  OFF_TRACK
+}
+
+type linear_Cycle {
+  id: ID!
+  teamId: ID!
+  number: Int!
+  name: String
+  startsAt: linear_DateTime!
+  endsAt: linear_DateTime!
+  progress: Float!
+}
+
+type linear_Team {
+  id: ID!
+  key: String!
+  name: String!
+}
+
+type linear_User {
+  id: ID!
+  name: String!
+  email: String!
+  active: Boolean!
+}
+
+input linear_CustomersFilter {
+  domain: String
+  externalId: String
+  search: String
+  limit: Int
+}
+
+input linear_CustomerNeedsFilter {
+  customerId: ID
+  createdAfter: linear_DateTime
+  createdBefore: linear_DateTime
+  important: Boolean
+  limit: Int
+}
+
+input linear_IssuesFilter {
+  customerId: ID
+  teamId: ID
+  cycleId: ID
+  priority: Int
+  state: linear_IssueState
+  createdAfter: linear_DateTime
+  createdBefore: linear_DateTime
+  updatedAfter: linear_DateTime
+  limit: Int
+}
+
+"""
+PostHog — product telemetry queryable via HogQL.
+Customers/orgs are modeled as PostHog `groups` (typeIndex 0..4).
+All types vendor-prefixed with `posthog_`.
+
+Mock auth requires both X-Posthog-Token and X-Posthog-Project-Id metadata.
+"""
+scalar posthog_JSON
+
+type posthog_QueryResult {
+  columns: [String!]!
+  types: [String!]!
+  rows: [posthog_JSON!]!
+  hasMore: Boolean!
+  queryId: String
+  asyncStatus: posthog_AsyncQueryStatus
+}
+
+type posthog_AsyncQueryStatus {
+  queryId: String!
+  state: posthog_AsyncQueryState!
+  errorMessage: String
+}
+
+enum posthog_AsyncQueryState {
+  PENDING
+  RUNNING
+  COMPLETED
+  ERROR
+}
+
+input posthog_QueryInput {
+  """
+  Pre-defined query to execute. Recommended path — runs a curated mock
+  handler and is guaranteed to succeed. Takes precedence over `hogql`
+  when both are set.
+  """
+  preset: posthog_HogQLPreset
+  """
+  Parameters consumed by the chosen `preset`. See each enum value's docs
+  for which fields it requires.
+  """
+  presetParams: posthog_HogQLPresetParams
+  """
+  Freeform HogQL string. Only the exact shapes recognised by the preset
+  matchers will succeed; any other query returns Unimplemented.
+  Prefer `preset` for new callers. Omit when `preset` is set.
+  """
+  hogql: String
+  refresh: posthog_RefreshMode
+  filtersOverride: posthog_JSON
+}
+
+"""
+Pre-defined HogQL queries available in the mock. Each value runs a
+curated handler over the seeded event data and is guaranteed to execute.
+"""
+enum posthog_HogQLPreset {
+  """
+  Quarter-over-quarter event count for one company.
+  Required params: `domain` (e.g. "ebay.com").
+  Returns rows of (quarter DateTime, events UInt64).
+  """
+  QOQ_COMPANY
+  """
+  Daily-active-users + per-day event count for one company over the
+  last 30 days.
+  Required params: `domain`.
+  Returns rows of (day Date, dau UInt64, events UInt64).
+  """
+  DAU_TIMESERIES_COMPANY
+  """
+  Accounts whose 30-day event volume dropped >20% versus the prior 30
+  days, sorted ascending by pct_change (most-at-risk first).
+  Required params: none.
+  Returns rows of (key, recent, prior, delta, pct_change).
+  """
+  AT_RISK_ACCOUNTS
+  """
+  Feature-adoption matrix across the top-10 customers (one row per
+  customer × feature_slug used).
+  Required params: none.
+  Returns rows of (key, feature_slug, uses).
+  """
+  FEATURE_ADOPTION_TOP10
+  """
+  P95 request latency bucketed hourly for one company in a time window.
+  Required params: `domain`, `start`, `end` (RFC3339, e.g.
+  "2026-04-21T14:00:00Z").
+  Returns rows of (hour DateTime, p95_ms Float64).
+  """
+  LATENCY_HOURLY_COMPANY
+  """
+  Per-event-name count for one company in a time window.
+  Required params: `domain`, `start` (RFC3339); optional: `end` (RFC3339).
+  Returns rows of (event String, count UInt64).
+  """
+  EVENT_BREAKDOWN_WINDOW
+  """
+  Week-over-week event delta across the entire portfolio (per group_0),
+  sorted by delta descending.
+  Required params: none.
+  Returns rows of (key, this_count, prev_count, delta).
+  """
+  WEEKLY_PORTFOLIO_DELTA
+}
+
+"""
+Parameters for a `posthog_HogQLPreset` query. Only the fields required
+by the chosen preset need to be set; extras are ignored.
+"""
+input posthog_HogQLPresetParams {
+  """Group key, typically a customer domain like "ebay.com"."""
+  domain: String
+  """
+  RFC3339 start timestamp with time component, e.g. "2026-04-21T14:00:00Z".
+  """
+  start: String
+  """
+  RFC3339 end timestamp with time component, e.g. "2026-04-21T15:00:00Z".
+  """
+  end: String
+}
+
+enum posthog_RefreshMode {
+  BLOCKING
+  ASYNC
+  LAZY
+  FORCE_BLOCKING
+  FORCE_ASYNC
+}
+
+type posthog_Group {
+  typeIndex: Int!
+  key: String!
+  properties: posthog_JSON!
+  createdAt: String
+}
+
+input posthog_ListGroupsInput {
+  typeIndex: Int!
+  search: String
+  limit: Int
+}
+
+type posthog_Event {
+  timestamp: String!
+  distinctId: String!
+  event: String!
+  group0: String!
+  properties: posthog_JSON!
+}
+
+type posthog_ListEventsResult {
+  events: [posthog_Event!]!
+  nextCursor: String
+  hasMore: Boolean!
+}
+
+input posthog_ListEventsInput {
+  groupKey: String
+  eventName: String
+  startTime: String
+  endTime: String
+  limit: Int
+  cursor: String
+}
+
+type posthog_FeatureFlag {
+  id: ID!
+  key: String!
+  name: String
+  active: Boolean!
+  filters: posthog_JSON!
+  topRolloutPercentage: Float
+}
+
+"""
+Circleback — meeting transcripts, summaries, action items.
+This subgraph serves deterministic embedded Circleback-style mock fixtures.
+All types vendor-prefixed with `circleback_`.
+"""
+scalar circleback_DateTime
+
+type circleback_Meeting {
+  id: ID!
+  name: String!
+  createdAt: circleback_DateTime!
+  duration: Int!
+  url: String
+  recordingUrl: String
+  tags: [String!]!
+  attendees: [circleback_Attendee!]!
+  notes: String
+  actionItems: [circleback_ActionItem!]!
+  icalUid: String
+  organizerEmail: String!
+}
+
+type circleback_Attendee {
+  email: String!
+  name: String
+}
+
+enum circleback_ActionItemStatus {
+  PENDING
+  DONE
+}
+
+type circleback_ActionItem {
+  id: ID!
+  meetingId: ID!
+  meetingName: String
+  title: String!
+  description: String
+  status: circleback_ActionItemStatus!
+  assignee: circleback_Attendee
+}
+
+type circleback_Transcript {
+  meetingId: ID!
+  segments: [circleback_TranscriptSegment!]!
+}
+
+type circleback_TranscriptSegment {
+  speaker: String!
+  startMs: Int!
+  endMs: Int!
+  text: String!
+}
+
+type circleback_TranscriptHit {
+  meetingId: ID!
+  speaker: String!
+  text: String!
+  startMs: Int!
+  score: Float!
+}
+
+type circleback_Domain {
+  domain: String!
+  meetingCount: Int!
+}
+
+type circleback_Profile {
+  email: String!
+  name: String
+  domain: String
+  meetingCount: Int!
+}
+
+type circleback_CalendarEvent {
+  id: ID!
+  title: String!
+  startsAt: circleback_DateTime!
+  endsAt: circleback_DateTime!
+  attendees: [circleback_Attendee!]!
+  icalUid: String!
+  tags: [String!]!
+  notes: String
+  actionItems: [circleback_ActionItem!]!
+  organizerEmail: String!
+}
+
+input circleback_SearchMeetingsInput {
+  attendeeEmail: String
+  attendeeDomain: String
+  tag: String
+  keyword: String
+  startDate: circleback_DateTime
+  endDate: circleback_DateTime
+  limit: Int
+}
+
+input circleback_SearchCalendarInput {
+  query: String
+  startDate: circleback_DateTime
+  endDate: circleback_DateTime
+  limit: Int
+}
+
+type slack_Channel {
+  id: ID!
+  name: String!
+  isPrivate: Boolean!
+  isArchived: Boolean!
+  isMember: Boolean!
+  isShared: Boolean!
+  isExtShared: Boolean!
+  created: Int!
+  creatorId: ID!
+  topic: String
+  purpose: String
+  numMembers: Int
+}
+
+type slack_Message {
+  ts: String!
+  channelId: ID!
+  userId: ID
+  text: String!
+  threadTs: String
+  permalink: String!
+  username: String
+  subtype: String
+  editedTs: String
+  replyCount: Int
+  replyUsersCount: Int
+  latestReplyTs: String
+  reactions: [slack_Reaction!]!
+}
+
+type slack_Reaction {
+  name: String!
+  count: Int!
+  userIds: [ID!]!
+}
+
+type slack_HistoryResult {
+  messages: [slack_Message!]!
+  hasMore: Boolean!
+  nextCursor: String
+}
+
+type slack_User {
+  id: ID!
+  name: String!
+  realName: String
+  email: String
+  title: String
+  displayName: String
+  image: String
+  tz: String
+  isBot: Boolean!
+  deleted: Boolean!
+}
+
+type slack_AuthTestResult {
+  ok: Boolean!
+  url: String!
+  team: String!
+  user: String!
+  teamId: ID!
+  userId: ID!
+  botId: ID
+}
+
+input slack_ListChannelsInput {
+  types: [slack_ChannelType!]
+  excludeArchived: Boolean
+  namePrefix: String
+  limit: Int
+}
+
+enum slack_ChannelType {
+  PUBLIC_CHANNEL
+  PRIVATE_CHANNEL
+  MPIM
+  IM
+}
+
+input slack_HistoryInput {
+  channelId: ID!
+  oldest: String
+  latest: String
+  limit: Int
+  cursor: String
+}
+
+"""
+Notion — internal knowledge base / feature documentation.
+All types vendor-prefixed with `notion_`.
+"""
+scalar notion_JSON
+
+scalar notion_DateTime
+
+type notion_Page {
+  id: ID!
+  """
+  Synthesized convenience field. Notion stores page titles in the title property
+  (usually properties["Name"].title[0].plain_text), and the resolver derives this value.
+  """
+  title: String!
+  url: String!
+  parentId: ID
+  parentType: notion_ParentType
+  createdAt: notion_DateTime!
+  updatedAt: notion_DateTime!
+  archived: Boolean!
+  properties: notion_JSON!
+}
+
+type notion_Database {
+  id: ID!
+  title: String!
+  url: String!
+  createdAt: notion_DateTime!
+  updatedAt: notion_DateTime!
+  dataSources: [notion_DataSource!]!
+}
+
+type notion_DataSource {
+  id: ID!
+  databaseId: ID!
+  name: String
+}
+
+type notion_Block {
+  id: ID!
+  type: String!
+  hasChildren: Boolean!
+  archived: Boolean!
+  content: notion_JSON!
+}
+
+type notion_BlockChildrenResult {
+  blocks: [notion_Block!]!
+  hasMore: Boolean!
+  nextCursor: String
+}
+
+type notion_QueryDataSourceResult {
+  pages: [notion_Page!]!
+  hasMore: Boolean!
+  nextCursor: String
+}
+
+type notion_SearchResult {
+  objectType: notion_ObjectType!
+  id: ID!
+  title: String!
+  url: String!
+}
+
+enum notion_ObjectType {
+  PAGE
+  DATABASE
+  DATA_SOURCE
+}
+
+enum notion_ParentType {
+  PAGE
+  DATABASE
+  DATA_SOURCE
+  WORKSPACE
+  BLOCK
+}
+
+type notion_User {
+  id: ID!
+  name: String!
+  email: String
+  type: notion_UserType!
+}
+
+enum notion_UserType {
+  PERSON
+  BOT
+}
+
+input notion_SearchInput {
+  query: String
+  filterType: notion_ObjectType
+  limit: Int
+}
+
+input notion_QueryDataSourceInput {
+  dataSourceId: ID!
+  """
+  Best-effort Notion-style property equals filter. The mock supports Status,
+  Segment, Health, Slug, and Domain; unsupported filter JSON is ignored.
+  """
+  filter: notion_JSON
+  sorts: notion_JSON
+  limit: Int
+  cursor: String
+}

@@ -164,10 +164,49 @@
       "BaseURL": ""
     },
     "Storage": {
-      "ProviderID": ""
+      "ProviderID": "",
+      "Watch": false,
+      "WatchInterval": 1000000000
     },
     "Session": {
       "Stateless": true
+    },
+    "CodeMode": {
+      "Enabled": false,
+      "Server": {
+        "ListenAddr": "localhost:5027"
+      },
+      "RequireMutationApproval": true,
+      "ExecuteTimeout": 120000000000,
+      "MaxResultBytes": 32768,
+      "Sandbox": {
+        "Timeout": 5000000000,
+        "MaxMemoryMB": 16,
+        "MaxInputSizeBytes": 65536,
+        "MaxOutputSizeBytes": 1048576
+      },
+      "QueryGeneration": {
+        "Enabled": false,
+        "Endpoint": "",
+        "Timeout": 10000000000,
+        "Auth": {
+          "Type": "static",
+          "StaticToken": "",
+          "TokenEndpoint": "",
+          "ClientID": "",
+          "ClientSecret": ""
+        }
+      },
+      "NamedOps": {
+        "Enabled": false,
+        "SessionTTL": 1800000000000,
+        "MaxSessions": 1000,
+        "MaxBundleBytes": 262144,
+        "Storage": {
+          "ProviderID": "",
+          "KeyPrefix": "cosmo_code_mode"
+        }
+      }
     },
     "GraphName": "mygraph",
     "ExcludeMutations": false,
@@ -190,7 +229,8 @@
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
     },
-    "ResourceDocumentation": ""
+    "ResourceDocumentation": "",
+    "Servers": null
   },
   "ConnectRPC": {
     "Enabled": false,

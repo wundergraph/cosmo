@@ -1,0 +1,1 @@
+Cumulative TypeScript definitions for the current Code Mode MCP session's named operations.

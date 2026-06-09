@@ -217,10 +217,49 @@
       "BaseURL": "http://localhost:5025"
     },
     "Storage": {
-      "ProviderID": "mcp"
+      "ProviderID": "mcp",
+      "Watch": false,
+      "WatchInterval": 1000000000
     },
     "Session": {
-      "Stateless": true
+      "Stateless": false
+    },
+    "CodeMode": {
+      "Enabled": true,
+      "Server": {
+        "ListenAddr": "localhost:6027"
+      },
+      "RequireMutationApproval": false,
+      "ExecuteTimeout": 45000000000,
+      "MaxResultBytes": 64000,
+      "Sandbox": {
+        "Timeout": 7000000000,
+        "MaxMemoryMB": 32,
+        "MaxInputSizeBytes": 131072,
+        "MaxOutputSizeBytes": 2097152
+      },
+      "QueryGeneration": {
+        "Enabled": true,
+        "Endpoint": "https://yoko.example.com",
+        "Timeout": 15000000000,
+        "Auth": {
+          "Type": "jwt",
+          "StaticToken": "static-token",
+          "TokenEndpoint": "https://auth.example.com/token",
+          "ClientID": "router-client",
+          "ClientSecret": "router-secret"
+        }
+      },
+      "NamedOps": {
+        "Enabled": true,
+        "SessionTTL": 2700000000000,
+        "MaxSessions": 2000,
+        "MaxBundleBytes": 524288,
+        "Storage": {
+          "ProviderID": "my_redis",
+          "KeyPrefix": "custom_code_mode"
+        }
+      }
     },
     "GraphName": "cosmo",
     "ExcludeMutations": false,
@@ -243,7 +282,8 @@
       "ScopeChallengeIncludeTokenScopes": false,
       "MaxScopeCombinations": 2048
     },
-    "ResourceDocumentation": ""
+    "ResourceDocumentation": "",
+    "Servers": null
   },
   "ConnectRPC": {
     "Enabled": false,

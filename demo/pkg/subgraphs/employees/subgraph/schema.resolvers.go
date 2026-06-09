@@ -61,25 +61,9 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 	defer r.mux.Unlock()
 	for _, employee := range r.EmployeesData {
 		if id == employee.ID {
-			details := &model.Details{}
-			if employee.Details != nil {
-				details.Forename = employee.Details.Forename
-				details.Surname = employee.Details.Surname
-				details.Location = employee.Details.Location
-			}
-			return &model.Employee{
-				ID:              employee.ID,
-				Details:         details,
-				Tag:             tag,
-				Expertise:       employee.Expertise,
-				Role:            employee.Role,
-				Notes:           employee.Notes,
-				UpdatedAt:       time.Now().String(),
-				StartDate:       employee.StartDate,
-				PrimaryWorkItem: employee.PrimaryWorkItem,
-				LastWorkReview:  employee.LastWorkReview,
-				WorkSetup:       employee.WorkSetup,
-			}, nil
+			employee.Tag = tag
+			employee.UpdatedAt = time.Now().String()
+			return employee, nil
 		}
 	}
 	return nil, nil

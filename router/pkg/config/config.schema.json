@@ -2546,6 +2546,150 @@
             }
           }
         },
+        "code_mode": {
+          "type": "object",
+          "description": "Configuration for the Code Mode MCP server surface.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "server": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "listen_addr": {
+                  "type": "string",
+                  "default": "localhost:5027",
+                  "format": "hostname-port"
+                }
+              }
+            },
+            "require_mutation_approval": {
+              "type": "boolean",
+              "default": true
+            },
+            "execute_timeout": {
+              "type": "string",
+              "default": "120s",
+              "duration": {
+                "minimum": "0s"
+              }
+            },
+            "max_result_bytes": {
+              "type": "integer",
+              "default": 32768
+            },
+            "sandbox": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "timeout": {
+                  "type": "string",
+                  "default": "5s",
+                  "duration": {
+                    "minimum": "0s"
+                  }
+                },
+                "max_memory_mb": {
+                  "type": "integer",
+                  "default": 16
+                },
+                "max_input_size_bytes": {
+                  "type": "integer",
+                  "default": 65536
+                },
+                "max_output_size_bytes": {
+                  "type": "integer",
+                  "default": 1048576
+                }
+              }
+            },
+            "query_generation": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "endpoint": {
+                  "type": "string"
+                },
+                "timeout": {
+                  "type": "string",
+                  "default": "10s",
+                  "duration": {
+                    "minimum": "0s"
+                  }
+                },
+                "auth": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "default": "static"
+                    },
+                    "static_token": {
+                      "type": "string"
+                    },
+                    "token_endpoint": {
+                      "type": "string"
+                    },
+                    "client_id": {
+                      "type": "string"
+                    },
+                    "client_secret": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "named_ops": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "session_ttl": {
+                  "type": "string",
+                  "default": "30m",
+                  "duration": {
+                    "minimum": "0s"
+                  }
+                },
+                "max_sessions": {
+                  "type": "integer",
+                  "default": 1000
+                },
+                "max_bundle_bytes": {
+                  "type": "integer",
+                  "default": 262144
+                },
+                "storage": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "provider_id": {
+                      "type": "string",
+                      "description": "ID of an entry in storage_providers.redis used to back named ops. When unset, the in-memory backend is used."
+                    },
+                    "key_prefix": {
+                      "type": "string",
+                      "default": "cosmo_code_mode",
+                      "description": "Key prefix applied to all named-ops keys written to the Redis storage provider."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "graph_name": {
           "type": "string",
           "default": "mygraph",
@@ -2776,6 +2920,87 @@
                     }
                   }
                 ]
+              }
+            }
+          }
+        },
+        "servers": {
+          "type": "array",
+          "description": "List of MCP servers (collections) mounted on the shared HTTP listener. When empty, the legacy top-level fields define a single implicit server at path '/mcp'. When non-empty, each entry is fully self-described — no inheritance from top-level fields.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "path"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Unique identifier for this server, used in metrics, logs, and tool descriptions."
+              },
+              "path": {
+                "type": "string",
+                "description": "URL path this server is mounted at (e.g. '/mcp', '/internal'). Must start with '/' and be unique across servers."
+              },
+              "storage": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Storage provider for this server's operation files.",
+                "properties": {
+                  "provider_id": {
+                    "type": "string",
+                    "description": "ID of a configured file_system storage provider."
+                  },
+                  "watch": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Periodically scan the storage provider directory for changes and hot-reload the collection's tools when files are added, modified, or removed. Currently only honored for file_system providers."
+                  },
+                  "watch_interval": {
+                    "type": "string",
+                    "default": "1s",
+                    "description": "Polling interval used when watch is true (e.g. '500ms', '1s', '10s')."
+                  }
+                },
+                "required": ["provider_id"]
+              },
+              "upstream": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Override the local Cosmo supergraph as the GraphQL backend for this server. When omitted, this server routes to the local supergraph.",
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "GraphQL endpoint URL to which operations are forwarded.",
+                    "format": "http-url"
+                  },
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "Schema source for this upstream (used to compile operations into MCP tools).",
+                    "properties": {
+                      "file": {
+                        "type": "string",
+                        "description": "Path to an SDL file containing the upstream's GraphQL schema."
+                      }
+                    }
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": { "type": "string" },
+                    "description": "Headers forwarded to the upstream on every request."
+                  }
+                }
+              },
+              "oauth": { "$ref": "#/properties/mcp/properties/oauth" },
+              "session": { "$ref": "#/properties/mcp/properties/session" },
+              "exclude_mutations": { "type": "boolean", "default": false },
+              "enable_arbitrary_operations": { "type": "boolean", "default": false },
+              "expose_schema": { "type": "boolean", "default": false },
+              "omit_tool_name_prefix": { "type": "boolean", "default": false },
+              "resource_documentation": {
+                "type": "string",
+                "description": "URL to a human-readable page describing this MCP resource. Included in RFC 9728 Protected Resource Metadata if set.",
+                "format": "http-url"
               }
             }
           }

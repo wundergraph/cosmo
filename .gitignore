@@ -26,3 +26,7 @@ go.work.sum
 
 # Serena
 .serena/
+
+# Local agent / planning artifacts (not for public commits)
+.claude/
+docs/superpowers/

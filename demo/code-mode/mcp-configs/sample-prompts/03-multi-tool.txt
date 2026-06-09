@@ -1,0 +1,1 @@
+Use yoko. Discover ops to (a) get the first employee and (b) get the family of a specific employee id; then run a single code_mode_run_js program that fetches the first employee, then their family, and returns both.

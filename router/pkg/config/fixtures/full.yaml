@@ -78,11 +78,43 @@ mcp:
   omit_tool_name_prefix: false
   graph_name: cosmo
   router_url: https://cosmo-router.wundergraph.com
+  session:
+    stateless: false
   server:
     listen_addr: localhost:5025
     base_url: 'http://localhost:5025'
   storage:
     provider_id: mcp
+  code_mode:
+    enabled: true
+    server:
+      listen_addr: localhost:6027
+    require_mutation_approval: false
+    execute_timeout: 45s
+    max_result_bytes: 64000
+    sandbox:
+      timeout: 7s
+      max_memory_mb: 32
+      max_input_size_bytes: 131072
+      max_output_size_bytes: 2097152
+    query_generation:
+      enabled: true
+      endpoint: https://yoko.example.com
+      timeout: 15s
+      auth:
+        type: jwt
+        static_token: static-token
+        token_endpoint: https://auth.example.com/token
+        client_id: router-client
+        client_secret: router-secret
+    named_ops:
+      enabled: true
+      session_ttl: 45m
+      max_sessions: 2000
+      max_bundle_bytes: 524288
+      storage:
+        provider_id: my_redis
+        key_prefix: custom_code_mode
 
 watch_config:
   enabled: true

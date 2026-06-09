@@ -1,0 +1,56 @@
+version: "1"
+
+listen_addr: "localhost:3002"
+graphql_path: "/graphql"
+playground_enabled: false
+json_log: false
+log_level: info
+dev_mode: true
+router_registration: false
+
+execution_config:
+  file:
+    path: "demo/code-mode/config.json"
+    watch: false
+
+graphql_metrics:
+  enabled: false
+
+telemetry:
+  tracing:
+    enabled: false
+  metrics:
+    otlp:
+      enabled: false
+    prometheus:
+      enabled: false
+
+mcp:
+  enabled: false
+  graph_name: code-mode-demo
+  router_url: http://localhost:3002/graphql
+  session:
+    stateless: false
+  code_mode:
+    enabled: true
+    server:
+      # Bind IPv4 explicitly. On macOS, "localhost:5027" binds only IPv4
+      # but clients that resolve "localhost" to ::1 first (Go's resolver,
+      # the MCP stdio proxy) get refused — point them at 127.0.0.1 directly
+      # in start.sh and the proxy defaults.
+      listen_addr: 127.0.0.1:5027
+    require_mutation_approval: true
+    # Sandbox wall-clock cap. Default is 5s (plan §13), which is fine for
+    # compute-only agent code but too short whenever the host blocks the JS
+    # thread on an interactive elicitation. Bump to 180s so a human can review
+    # a mutation prompt without the qjs runtime context expiring under us.
+    sandbox:
+      timeout: 180s
+    query_generation:
+      enabled: true
+      endpoint: http://localhost:5028
+      timeout: 180s
+    execute_timeout: 180s
+    named_ops:
+      enabled: true
+      # storage.provider_id intentionally unset -> in-memory backend (the default)

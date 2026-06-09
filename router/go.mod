@@ -81,6 +81,7 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
+	github.com/tdewolff/parse/v2 v2.8.12
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
 	github.com/wundergraph/astjson v1.1.0
 	github.com/wundergraph/go-arena v1.1.0
@@ -91,6 +92,8 @@ require (
 	golang.org/x/text v0.35.0
 	golang.org/x/time v0.9.0
 )
+
+require github.com/tetratelabs/wazero v1.9.0 // indirect
 
 require (
 	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
@@ -108,6 +111,8 @@ require (
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/evanw/esbuild v0.27.3
+	github.com/fastschema/qjs v0.0.6
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/frankban/quicktest v1.14.6 // indirect

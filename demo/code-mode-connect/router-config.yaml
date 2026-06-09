@@ -1,0 +1,82 @@
+version: "1"
+
+# Different ports than demo/code-mode/router-config.yaml so both demos can run
+# side-by-side. See demo/code-mode-connect/start.sh for the matching yoko-mock
+# port.
+listen_addr: "localhost:3012"
+graphql_path: "/graphql"
+playground_enabled: false
+json_log: false
+log_level: info
+dev_mode: true
+router_registration: false
+
+# These paths are resolved relative to the router's CWD. start.sh runs the
+# router from inside the yoko project dir, so "config.json" and "plugins" are
+# the composed supergraph and the plugin binaries that ship with that repo.
+execution_config:
+  file:
+    path: "config.json"
+    watch: false
+
+plugins:
+  enabled: true
+  path: "plugins"
+
+# Header propagation for the yoko plugins. Mirrors yoko/config.yaml so the
+# plugins receive the same auth headers when the code-mode router fronts them.
+headers:
+  all:
+    request:
+      - op: propagate
+        named: X-Pylon-Token
+      - op: propagate
+        named: X-Linear-Token
+      - op: propagate
+        named: X-Linear-Auth-Scheme
+      - op: propagate
+        named: X-Posthog-Token
+      - op: propagate
+        named: X-Posthog-Host
+      - op: propagate
+        named: X-Posthog-Project-Id
+      - op: propagate
+        named: X-Circleback-Token
+      - op: propagate
+        named: X-Slack-Token
+      - op: propagate
+        named: X-Notion-Token
+
+graphql_metrics:
+  enabled: false
+
+telemetry:
+  tracing:
+    enabled: false
+  metrics:
+    otlp:
+      enabled: false
+    prometheus:
+      enabled: false
+
+mcp:
+  enabled: false
+  graph_name: code-mode-connect-demo
+  router_url: http://localhost:3012/graphql
+  session:
+    stateless: false
+  code_mode:
+    enabled: true
+    server:
+      # IPv4-only bind, see demo/code-mode/router-config.yaml for the why.
+      listen_addr: 127.0.0.1:5037
+    require_mutation_approval: true
+    sandbox:
+      timeout: 180s
+    query_generation:
+      enabled: true
+      endpoint: http://localhost:5038
+      timeout: 180s
+    execute_timeout: 180s
+    named_ops:
+      enabled: true

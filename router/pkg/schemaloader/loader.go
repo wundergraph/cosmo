@@ -12,6 +12,7 @@ import (
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
@@ -121,12 +122,27 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 		// Extract description from operation definition
 		opDescription := extractOperationDescription(&opDoc)
 
+		// Strip operation/fragment descriptions before storing OperationString.
+		// Descriptions on OperationDefinition / FragmentDefinition are a September 2025
+		// GraphQL spec addition; most upstream parsers (including third-party APIs like
+		// rickandmorty, anilist, countries) still reject them as syntax errors. We keep
+		// the description on Operation.Description for MCP tool metadata.
+		clearOperationAndFragmentDescriptions(&opDoc)
+		cleanedOperationString, printErr := astprinter.PrintString(&opDoc)
+		if printErr != nil {
+			l.Logger.Error("failed to re-print MCP operation after stripping descriptions",
+				zap.String("operation", opName),
+				zap.String("file", path),
+				zap.Error(printErr))
+			return nil
+		}
+
 		// Add to our list of operations
 		operations = append(operations, Operation{
 			Name:            opName,
 			FilePath:        path,
 			Document:        opDoc,
-			OperationString: operationString,
+			OperationString: cleanedOperationString,
 			OperationType:   opType,
 			Description:     opDescription,
 		})
@@ -186,6 +202,19 @@ func GetOperationNameAndType(doc *ast.Document) (string, string, error) {
 		}
 	}
 	return "", "", fmt.Errorf("no operation found in document")
+}
+
+// clearOperationAndFragmentDescriptions marks every OperationDefinition and
+// FragmentDefinition description in the document as undefined so the printer
+// emits a description-free GraphQL document. Used when forwarding operations
+// to upstreams that don't yet support the September 2025 description spec.
+func clearOperationAndFragmentDescriptions(doc *ast.Document) {
+	for i := range doc.OperationDefinitions {
+		doc.OperationDefinitions[i].Description.IsDefined = false
+	}
+	for i := range doc.FragmentDefinitions {
+		doc.FragmentDefinitions[i].Description.IsDefined = false
+	}
 }
 
 // extractOperationDescription extracts the description string from an operation definition

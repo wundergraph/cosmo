@@ -61,6 +61,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 )
 
 const (
@@ -1535,6 +1536,14 @@ func (s *graphServer) buildGraphMux(
 	if opts.IsBaseGraph() && s.mcpServer != nil {
 		if mErr := s.mcpServer.Reload(executor.ClientSchema, opts.EngineConfig.FieldConfigurations); mErr != nil {
 			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
+		}
+	}
+	if opts.IsBaseGraph() && s.codeModeServer != nil {
+		sdl, printErr := astprinter.PrintString(executor.ClientSchema)
+		if printErr != nil {
+			s.logger.Error("failed to reload MCP server", zap.Error(fmt.Errorf("failed to print Code Mode schema SDL: %w", printErr)))
+		} else if mErr := s.codeModeServer.Reload(executor.ClientSchema, sdl); mErr != nil {
+			s.logger.Error("failed to reload MCP server", zap.Error(mErr))
 		}
 	}
 
