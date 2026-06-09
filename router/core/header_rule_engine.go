@@ -187,7 +187,7 @@ func (f *FileSourceContent) writeToBuffer(path string) error {
 	}
 
 	f.buffer.Reset()
-	// buffer Write is guaranteed to never return an error
+	// buffer Write err will always be nil as documented in the library function
 	_, _ = f.buffer.Write(content)
 
 	return nil
