@@ -4,7 +4,9 @@ go 1.25.0
 
 require (
 	connectrpc.com/connect v1.19.1
+	github.com/99designs/gqlgen v0.17.76
 	github.com/MicahParks/jwkset v0.11.0
+	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/buger/jsonparser v1.1.2
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -25,13 +27,13 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/astjson v1.1.0
+	github.com/wundergraph/astjson v1.1.1-0.20260419105127-f600d161463f
 	github.com/wundergraph/cosmo/demo v0.0.0-20260323091151-a7de617c31d0
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
 	github.com/wundergraph/cosmo/router v0.0.0-20260330183556-dc4388d100a4
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 	github.com/wundergraph/cosmo/speedtrap v0.0.0-00010101000000-000000000000
-	github.com/wundergraph/graphql-go-tools/v2 v2.4.4
+	github.com/wundergraph/graphql-go-tools/v2 v2.4.5-0.20260610161004-63fa1c88eaea
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/sdk v1.43.0
 	go.opentelemetry.io/otel/sdk/metric v1.43.0
@@ -48,10 +50,10 @@ require (
 
 require (
 	connectrpc.com/vanguard v0.3.0 // indirect
-	github.com/99designs/gqlgen v0.17.76 // indirect
 	github.com/KimMachineGun/automemlimit v0.6.1 // indirect
 	github.com/MicahParks/keyfunc/v3 v3.6.2 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
+	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/antithesishq/antithesis-sdk-go v0.6.0-default-no-op // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
@@ -164,9 +166,10 @@ require (
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.30 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
-	github.com/wundergraph/go-arena v1.1.0 // indirect
+	github.com/wundergraph/go-arena v1.2.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0 // indirect

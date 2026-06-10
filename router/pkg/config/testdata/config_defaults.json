@@ -549,7 +549,28 @@
     "S3": null,
     "CDN": null,
     "Redis": null,
+    "Memory": null,
     "FileSystem": null
+  },
+  "EntityCaching": {
+    "Enabled": false,
+    "GlobalCacheKeyPrefix": "",
+    "L1": {
+      "Enabled": true
+    },
+    "L2": {
+      "Enabled": true,
+      "Storage": {
+        "ProviderID": "",
+        "KeyPrefix": "cosmo_entity_cache"
+      },
+      "CircuitBreaker": {
+        "Enabled": false,
+        "FailureThreshold": 5,
+        "CooldownPeriod": 10000000000
+      }
+    },
+    "SubgraphCacheOverrides": null
   },
   "ExecutionConfig": {
     "File": {

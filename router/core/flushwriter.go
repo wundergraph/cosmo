@@ -220,7 +220,7 @@ func wrapMultipartMessage(resp []byte, wrapPayload bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	respValue, _, err := astjson.MergeValuesWithPath(nil, payloadWrapper, respValuePreMerge, "payload")
+	respValue, err := astjson.MergeValuesWithPath(nil, payloadWrapper, respValuePreMerge, "payload")
 	if err != nil {
 		return nil, err
 	}

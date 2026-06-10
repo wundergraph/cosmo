@@ -674,6 +674,19 @@
                     "duration_since_start_nanoseconds": 1,
                     "duration_since_start_pretty": "1ns"
                   }
+                },
+                "cache_trace": {
+                  "duration_since_start_nanoseconds": 1,
+                  "duration_since_start_pretty": "1ns",
+                  "duration_nanoseconds": 1,
+                  "duration_pretty": "1ns",
+                  "l1_enabled": false,
+                  "l2_enabled": false,
+                  "entity_count": 0,
+                  "l1_hit": 0,
+                  "l1_miss": 0,
+                  "l2_hit": 0,
+                  "l2_miss": 0
                 }
               }
             }
@@ -1050,6 +1063,19 @@
                         "duration_since_start_nanoseconds": 1,
                         "duration_since_start_pretty": "1ns"
                       }
+                    },
+                    "cache_trace": {
+                      "duration_since_start_nanoseconds": 1,
+                      "duration_since_start_pretty": "1ns",
+                      "duration_nanoseconds": 1,
+                      "duration_pretty": "1ns",
+                      "l1_enabled": false,
+                      "l2_enabled": false,
+                      "entity_count": 0,
+                      "l1_hit": 0,
+                      "l1_miss": 0,
+                      "l2_hit": 0,
+                      "l2_miss": 0
                     }
                   }
                 }
@@ -1676,6 +1702,19 @@
                         "duration_since_start_nanoseconds": 1,
                         "duration_since_start_pretty": "1ns"
                       }
+                    },
+                    "cache_trace": {
+                      "duration_since_start_nanoseconds": 1,
+                      "duration_since_start_pretty": "1ns",
+                      "duration_nanoseconds": 1,
+                      "duration_pretty": "1ns",
+                      "l1_enabled": false,
+                      "l2_enabled": false,
+                      "entity_count": 0,
+                      "l1_hit": 0,
+                      "l1_miss": 0,
+                      "l2_hit": 0,
+                      "l2_miss": 0
                     }
                   }
                 }
@@ -2005,6 +2044,19 @@
                     "duration_since_start_nanoseconds": 1,
                     "duration_since_start_pretty": "1ns"
                   }
+                },
+                "cache_trace": {
+                  "duration_since_start_nanoseconds": 1,
+                  "duration_since_start_pretty": "1ns",
+                  "duration_nanoseconds": 1,
+                  "duration_pretty": "1ns",
+                  "l1_enabled": false,
+                  "l2_enabled": false,
+                  "entity_count": 0,
+                  "l1_hit": 0,
+                  "l1_miss": 0,
+                  "l2_hit": 0,
+                  "l2_miss": 0
                 }
               }
             }
