@@ -64,7 +64,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSource, error) {
-	uniqueRequestIdFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	triggerHashInputFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
 		val, _, _, err := jsonparser.Get(input, "topics")
 		if err != nil {
 			return err
@@ -89,7 +89,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 	}
 
 	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](
-		c.KafkaAdapter, uniqueRequestIdFn, c.logger, eventCreateFn,
+		c.KafkaAdapter, triggerHashInputFn, c.logger, eventCreateFn,
 	), nil
 }
 

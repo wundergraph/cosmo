@@ -341,7 +341,7 @@ func TestNewPubSubSubscriptionDataSource(t *testing.T) {
 
 	assert.NotNil(t, dataSource)
 	assert.Equal(t, mockAdapter, dataSource.pubSub)
-	assert.NotNil(t, dataSource.uniqueRequestID)
+	assert.NotNil(t, dataSource.triggerHashInput)
 	assert.Empty(t, dataSource.hooks.SubscriptionOnStart.Handlers)
 }
 
